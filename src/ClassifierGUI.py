@@ -583,6 +583,11 @@ class ClassifierGUI(wx.Frame):
         t4 = time()
         print 'time to fit beta binomial:',t4-t3
         
+        # Flag: positive/negative two-class experiment
+        two_classes = len(self.classes) == 2 and \
+                      self.classes[0].label.lower() == 'positive' and \
+                      self.classes[1].label.lower() == 'negative'
+            
         # Construct matrix of table data
         self.SetStatusText('Computing enrichment scores for each group...')
         tableData = []
@@ -599,7 +604,11 @@ class ClassifierGUI(wx.Frame):
             tableRow += countsRow
             scores = DirichletIntegrate.score(alpha, numpy.array(countsRow))       # compute enrichment probabilities of each class for this image OR group 
             tableRow += scores
-            logitscores = [numpy.log(score)-(numpy.log(1-score)) for score in scores]   # compute logit of each probability
+            # Special case: only calculate logit of "positives" for 2-classes
+            if two_classes:
+                logitscores = [numpy.log(scores[0])-(numpy.log(1-scores[0]))]   # compute logit of each probability
+            else:
+                logitscores = [numpy.log(score)-(numpy.log(1-score)) for score in scores]   # compute logit of each probability
             tableRow += logitscores
             tableData.append(tableRow)
         tableData = numpy.array(tableData, dtype=object)
@@ -614,8 +623,11 @@ class ClassifierGUI(wx.Frame):
             labels.append('Counts\n'+self.classes[i].label)
         for i in xrange(nClasses):
             labels.append('p(Enriched)\n'+self.classes[i].label)
-        for i in xrange(nClasses):
-            labels.append('Enriched Score\n'+self.classes[i].label)
+        if two_classes:
+            labels.append('Enriched Score\n'+self.classes[0].label)
+        else:
+            for i in xrange(nClasses):
+                labels.append('Enriched Score\n'+self.classes[i].label)
         
         grid = DataGrid(tableData, labels, grouping=group, chMap=self.chMap[:], parent=self, title='Enrichments grouped by '+group)
         grid.Show()
