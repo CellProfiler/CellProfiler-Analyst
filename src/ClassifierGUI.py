@@ -269,11 +269,19 @@ class ClassifierGUI(wx.Frame):
     def RenameClass(self, label):
         dlg = wx.TextEntryDialog(self, 'New class name:','Rename class')
         dlg.SetValue(label)
+        print 'old',label
         if dlg.ShowModal() == wx.ID_OK:
             newLabel = dlg.GetValue()
+            print 'new',newLabel
             if newLabel != label and newLabel in [cl.label for cl in self.classes]:
                 errdlg = wx.MessageDialog(self, 'There is already a class with that name.', "Can't Name Class", wx.OK|wx.ICON_EXCLAMATION)
                 if errdlg.ShowModal() == wx.ID_OK:
+                    self.RenameClass(label)
+                    return
+            if ' ' in newLabel:
+                errdlg = wx.MessageDialog(self, 'Labels can not contain spaces', "Can't Name Class", wx.OK|wx.ICON_EXCLAMATION)
+                if errdlg.ShowModal() == wx.ID_OK:
+                    self.RenameClass(label)
                     return
             for cl in self.classes:
                 if cl.label == label:
@@ -309,11 +317,14 @@ class ClassifierGUI(wx.Frame):
         
     def UpdateBoardLabels(self):
         self.findRulesBtn.Disable()
+        ts = False
         self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBoard.tiles))+')' )
         for cl in self.classes:
             cl.sizer.GetStaticBox().SetLabel( cl.label+' ('+str(len(cl.board.tiles))+')')
             if len(cl.board.tiles) > 0:
-                self.findRulesBtn.Enable()
+                if ts:
+                    self.findRulesBtn.Enable()
+                ts = True
                 
     
     def UpdateClassChoices(self):
