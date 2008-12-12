@@ -2,7 +2,7 @@
 #
 #                       Classifier 2.0 Beta README
 #
-#   Author: Adam Fraser
+#   Author: Adam Fraser, Thouis R. Jones
 #   Developers: Adam Fraser, Thouis R. Jones
 #   Copyright 2008, The Broad Institute of MIT and Harvard.
 #   CellProfiler.org
@@ -56,8 +56,8 @@ have 2 channels and your per_image table would look something like this:
   +------------------------------------------------------------------------+
   | ImgID | GFP_path | GFP_file | Hoechst_path | Hoechst_file | other cols |
   |-------+----------+-----------------------------------------------------+
-  |     1 | path     | gfp1.tif |         path | hoechst1.tif | ...        |
-  |     2 | path     | gfp2.tif |         path | hoechst2.tif | ...        |
+  |     1 | path     | gfp1.tif | path         | hoechst1.tif | ...        |
+  |     2 | path     | gfp2.tif | path         | hoechst2.tif | ...        |
   |                                    ...                                 |
   +------------------------------------------------------------------------+
 
