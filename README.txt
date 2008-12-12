@@ -2,7 +2,7 @@
 #
 #                       Classifier 2.0 Beta README
 #
-#   Author: Adam Fraser
+#   Authors: Adam Fraser, Thouis R. Jones
 #   Developers: Thouis R. Jones, Adam Fraser
 #   The Broad Institute of MIT and Harvard.  Copyright 2008
 #   www.CellProfiler.org
@@ -46,16 +46,16 @@ ie: If you took images of cells stained with GFP and Hoechst, you would have 2 c
   +------------------------------------------------------------------------+
 
 PER-OBJECT TABLE:
-The per-object table requires only 3 columns: a _unique_ object ID column, a column for the object x-location, and a column for the object y-location.  The location columns should contain values in pixel coordinates for where each object falls in it's parent image.
+The per-object table requires 4 columns: a foreign key image ID column, a _unique_ object ID column, a column for the object x-location, and a column for the object y-location.  The location columns should contain values in pixel coordinates for where each object falls in it's parent image.
 
            Example_Per_Object_Table
-  +----------------------------------------+
-  | ObjID | X_Coord | Y_Coord | other cols |
-  |-------+----------+---------------------+
-  |     1 |   3.243 | 125.234 | ...        |
-  |     2 |  411.12 |  50.001 | ...        |
-  |                ...                     |
-  +----------------------------------------+
+  +------------------------------------------------+
+  | ImgID | ObjID | X_Coord | Y_Coord | other cols |
+  |-------+----------+-----------------------------+
+  |     1 |     1 |   3.243 | 125.234 | ...        |
+  |     1 |     2 |  411.12 |  50.001 | ...        |
+  |                        ...                     |
+  +------------------------------------------------+
 
 
 
@@ -72,6 +72,7 @@ Repeating this process iteratively should yield increasingly accurate rules for 
 
 Once you are confident in the classifier rule set, you may score your entire experiment on a per-image basis (or per-group if you have defined groups in your properties file).  This will present you with a table of object counts and enrichment values for each phenotype you defined.  You may then sort by these columns to find images (or groups of images) that contain a high/low enrichment of a particular phenotype; or a high/low object count of a particular phenotype.
 
+Enrichment scores are computed as...  XXX Ray add this XXX
 
 
 ---------------------------------
