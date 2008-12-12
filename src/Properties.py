@@ -31,7 +31,12 @@ class Properties(Singleton):
         ''' Loads variables in from a properties file. '''
         self.Clear()
         f = open(filename, 'r')
-        for line in f:
+        
+        lines = f.read()
+        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
+        lines = lines.split('\n')
+            
+        for line in lines:
             if not line.strip().startswith('#') and line.strip()!='':          # skip commented and empty lines
                 
                 (name, val) = line.split('=', 1)                               # split each side of the first eq sign
@@ -75,5 +80,5 @@ class Properties(Singleton):
 if __name__ == "__main__":
     p = Properties.getInstance()
     p = Properties.getInstance()
-    p.LoadFile('../properties/nirht_test.properties')
+    p.LoadFile('/Users/afraser/Desktop/testLee.txt')#/nirht_test.properties')
     print p
