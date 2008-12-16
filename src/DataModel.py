@@ -129,6 +129,16 @@ class DataModel(Singleton):
 #        return tuple(obKey)
 
 
+    def GetObjectsFromImage(self, imKey):
+        obKeys=[]
+        for i in xrange(self.data[imKey]):
+            obKey = list(imKey)
+            obKey.append(i+1)
+            obKeys.append(tuple(obKey))
+        return obKeys
+        
+
+
     def GetObjectCountFromImage(self, imKey):
         ''' Returns the number of objects in the specified image. '''
         return self.data[imKey]
