@@ -406,7 +406,8 @@ class ClassifierGUI(wx.Frame):
                     imKeysInFilter = [imKey]
                 else:    
                     imKeysInFilter = db.GetFilteredImages(filter)
-                
+            
+            attempts = 0
             while len(obKeys) < nObjects:
                 if filter == 'experiment':
                     obKeysToTry = dm.GetRandomObjects(100)
@@ -419,6 +420,16 @@ class ClassifierGUI(wx.Frame):
                     loopMsg = ' in class "'+obClassName+'" from filter "'+filter+'"...'
                 stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames)
                 obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, obKeysToTry, stump_query, score_query, find_max_query)
+
+                attempts += 100
+                print attempts%10000.0
+                if attempts%10000.0==0:
+                    dlg = wx.MessageDialog(self, 'Found '+str(len(obKeys))+' '+p.object_name[1]+' after '+str(attempts)+' attempts. Continue searching?',
+                                           'Continue searching?', wx.YES_NO|wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    if response == wx.ID_NO:
+                        break
+
             statusMsg += loopMsg
                 
         # Create a worker thread to load the tiles!
