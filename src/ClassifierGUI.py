@@ -77,8 +77,13 @@ class ClassifierGUI(wx.Frame):
         filters = []
         if 'filters' in p.__dict__:
             filters = p.filters
-        self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment']+filters)
+        self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters)
         self.filterChoice.SetSelection(0)
+        self.imageTxt = wx.TextCtrl(self, id=wx.NewId(), value='1', size=(30,-1))
+        if 'table_id' in p.__dict__:
+            self.tableStaticTxt = wx.StaticText(self, wx.NewId(), 'in table #')
+            self.tableTxt = wx.TextCtrl(self, id=wx.NewId(), value='0', size=(30,-1))
+            self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.fetchBtn = wx.Button(self, wx.NewId(), 'Fetch!')
         self.fetchSizer.AddStretchSpacer()
         self.fetchSizer.Add(wx.StaticText(self, wx.NewId(), 'Fetch'))
@@ -93,6 +98,16 @@ class ClassifierGUI(wx.Frame):
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.filterChoice)
         self.fetchSizer.AddSpacer((10,20))
+        self.fetchFromImageSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.fetchFromImageSizer.Add(self.imageTxt)
+        self.fetchFromImageSizer.AddSpacer((10,20))
+        if 'table_id' in p.__dict__:
+            self.fetchFromImageSizer.Add(self.tableStaticTxt)
+            self.fetchFromImageSizer.AddSpacer((10,20))
+            self.fetchFromImageSizer.Add(self.tableTxt)
+            self.fetchFromImageSizer.AddSpacer((10,20))
+        self.fetchSizer.AddSizer(self.fetchFromImageSizer)
+        self.fetchSizer.Hide(self.fetchFromImageSizer, True)
         self.fetchSizer.Add(self.fetchBtn)
         self.fetchSizer.AddStretchSpacer()
         
@@ -153,6 +168,7 @@ class ClassifierGUI(wx.Frame):
         # do event binding
 #        self.Bind(wx.EVT_MENU, self.OnLoadProperties, self.loadPropertiesMenuItem)
 #        self.Bind(wx.EVT_MENU, self.OnSaveProperties, self.savePropertiesMenuItem)
+        self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
@@ -161,6 +177,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnScoreAll, self.scoreAllBtn)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
+        self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.splitter.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGING, self.OnDragSash)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
@@ -174,7 +191,6 @@ class ClassifierGUI(wx.Frame):
     
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
-        print 'classifier KEY'
         if evt.ControlDown():
             chIdx = evt.GetKeyCode()-49
             if len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
@@ -365,6 +381,13 @@ class ClassifierGUI(wx.Frame):
             if filter == 'experiment':
                 obKeys = dm.GetRandomObjects(nObjects)
                 statusMsg += ' from whole experiment...'
+            elif filter =='image':
+                if 'table_id' in p.__dict__:
+                    imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
+                else:
+                    imKey = (int(self.imageTxt.Value),)
+                obKeys = dm.GetObjectsFromImage(imKey)
+                statusMsg += ' from image '+str(imKey)
             else:
                 imKeysInFilter = db.GetFilteredImages(filter)
                 obKeys = dm.GetRandomObjects(nObjects, imKeysInFilter)
@@ -373,12 +396,24 @@ class ClassifierGUI(wx.Frame):
         else:
             hits = 0
             obKeys = []
+            
             if filter != 'experiment':
-                imKeysInFilter = db.GetFilteredImages(filter)
+                if filter =='image':
+                    if 'table_id' in p.__dict__:
+                        imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
+                    else:
+                        imKey = (int(self.imageTxt.Value),)
+                    imKeysInFilter = [imKey]
+                else:    
+                    imKeysInFilter = db.GetFilteredImages(filter)
+                
             while len(obKeys) < nObjects:
                 if filter == 'experiment':
                     obKeysToTry = dm.GetRandomObjects(100)
                     loopMsg = ' in class "'+obClassName+'" from whole experiment... '
+                elif filter == 'image':
+                    obKeysToTry = dm.GetObjectsFromImage(imKey)
+                    loopMsg = ' in class "'+obClassName+'" from image '+str(imKey)    
                 else:
                     obKeysToTry = dm.GetRandomObjects(100,imKeysInFilter)
                     loopMsg = ' in class "'+obClassName+'" from filter "'+filter+'"...'
@@ -654,13 +689,20 @@ class ClassifierGUI(wx.Frame):
         dlg = wx.FileDialog(self, "Select a the file containing your properties.", style=wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
-            
             p.LoadFile(filename)
             db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
             dm.PopulateModel()
             
             
-    
+    def OnSelectFilter(self, evt):
+        # Select from a specific image
+        if evt.Selection == 1:
+            self.fetchSizer.Show(self.fetchFromImageSizer, True)
+        else:
+            self.fetchSizer.Hide(self.fetchFromImageSizer, True)
+        self.Layout()
+        
+        
     def OnClose(self, evt):
         if self.trainingSet and self.trainingSet.saved == False:
             dlg = wx.MessageDialog(self, 'Do you want to save your training set before quitting?', 'Training Set Not Saved', wx.YES_NO|wx.CANCEL|wx.ICON_QUESTION)
