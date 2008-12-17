@@ -652,9 +652,9 @@ class ClassifierGUI(wx.Frame):
             tableRow += scores
             # Special case: only calculate logit of "positives" for 2-classes
             if two_classes:
-                logitscores = [numpy.log(scores[0])-(numpy.log(1-scores[0]))]   # compute logit of each probability
+                logitscores = [numpy.log10(scores[0])-(numpy.log10(1-scores[0]))]   # compute logit of each probability
             else:
-                logitscores = [numpy.log(score)-(numpy.log(1-score)) for score in scores]   # compute logit of each probability
+                logitscores = [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
             tableRow += logitscores
             tableData.append(tableRow)
         tableData = numpy.array(tableData, dtype=object)
