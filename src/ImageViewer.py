@@ -1,33 +1,12 @@
-'''
-ImageViewer.py
-authors: afraser
-'''
 
 import wx
-import numpy
 import ImageTools
 from Properties import Properties
+from ImagePanel import ImagePanel
+from ImageControlPanel import ImageControlPanel
 
 p = Properties.getInstance()
 
-
-
-# TODO: broadcast color-mappings to other windows
-#   these should probably be in ImageTools (?)
-EVT_COLOR_MAP_CHANGED_ID = wx.NewId()
-
-def EVT_COLOR_MAP_CHANGED(win, func):
-    win.Connect(-1, -1, EVT_COLOR_MAP_CHANGED_ID, func)
-   
-class ColorMapChangedEvent(wx.PyEvent):
-    def __init__(self, data):
-        wx.PyEvent.__init__(self)
-        self.SetEventType(EVT_COLOR_MAP_CHANGED_ID)
-        self.data = data
-        
-        
-        
-        
 
 class ImageViewer(wx.Frame):
     '''
@@ -47,24 +26,33 @@ class ImageViewer(wx.Frame):
         NOTE: imgs lists must be of the same length.
         '''
         
-        wx.Frame.__init__(self, parent, wx.NewId(), title, size=imgs[0].shape)
+        h,w = imgs[0].shape
 
+        wx.Frame.__init__(self, parent, wx.NewId(), title, size=(w,h))
+        
         self.chMap       = chMap
         self.toggleChMap = chMap[:]
-        self.images      = imgs      # image channel arrays
-        self.bitmap      = ImageTools.MergeToBitmap(imgs, self.chMap)   # displayed wx.Bitmap
-        
         self.sw = wx.ScrolledWindow(self)
+        self.imagePanel  = ImagePanel(imgs, chMap, self.sw)
+        
         self.SetMenuBar(wx.MenuBar())
         self.CreateChannelMenus()
-        w,h = self.bitmap.GetSize()
+        self.CreateMenus()
         self.SetClientSize((w,h))
         self.Centre()
-        self.sw.SetScrollbars(1,1,w,h)
-        wx.StaticBitmap(self.sw, -1, self.bitmap)
         
-        self.Bind(wx.EVT_KEY_UP, self.OnKey)
+        self.sw.SetScrollbars(1,1,w,h)
+        
+        self.Bind(wx.EVT_CHAR, self.OnKey)
+        self.Bind(wx.EVT_MENU, self.OnShowImageControls, self.imageControlsMenuItem)
+        self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
+        
 
+    def CreateMenus(self):
+        self.DisplayMenu = wx.Menu()
+        self.imageControlsMenuItem = wx.MenuItem(parentMenu=self.DisplayMenu, id=wx.NewId(), text='Image Controls', help='Launches a control panel for adjusting image brightness, size, etc.')
+        self.DisplayMenu.AppendItem(self.imageControlsMenuItem)
+        self.GetMenuBar().Append(self.DisplayMenu, 'Display')
 
 
     def CreateChannelMenus(self):
@@ -85,39 +73,42 @@ class ImageViewer(wx.Frame):
             channel_menu.InsertSeparator(8)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
-            
-    
-    def OnMapChannels(self, evt):
-        (chIdx,color) = self.chMapById[evt.GetId()]
-        self.chMap[chIdx] = color
-        if color.lower() != 'none':
-            self.toggleChMap[chIdx] = color
-        self.MapChannels(self.chMap)
 
-        
+
+    def OnMapChannels(self, evt):
+        if evt.GetId() in self.chMapById.keys():
+            (chIdx,color) = self.chMapById[evt.GetId()]
+            self.chMap[chIdx] = color
+            if color.lower() != 'none':
+                self.toggleChMap[chIdx] = color
+            self.MapChannels(self.chMap)
+
+
     def MapChannels(self, chMap):
         self.chMap = chMap
-        
-        # TODO: Need to update color menu selections
-        # broadcast to all windows open?
-#        wx.PostEvent(notify_window, ColorMapChangedEvent(chMap))
-        
-        self.bitmap = ImageTools.MergeToBitmap(self.images, self.chMap)
-        wx.StaticBitmap(self.sw, -1, self.bitmap)
-        self.Refresh()
-    
+        self.imagePanel.MapChannels(chMap)
+
 
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
         keycode = evt.GetKeyCode()
         if keycode == wx.WXK_ESCAPE:
             self.Destroy()
-            
         if evt.ControlDown():
             chIdx = evt.GetKeyCode()-49
             if len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
-            
+                    
+                
+    def OnShowImageControls(self, evt):
+        self.imageControlFrame = wx.Frame(self)
+        ImageControlPanel(self.imageControlFrame, self.imagePanel)
+        self.imageControlFrame.Show(True)
+        
+        
+    def OnResizeImagePanel(self, evt):
+        self.sw.SetVirtualSize(evt.GetSize())
+        
             
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
@@ -127,21 +118,17 @@ class ImageViewer(wx.Frame):
             self.chMap[chIdx] = 'None'
             self.MapChannels(self.chMap)
             
-            
-#    def IdentifyObjects(self, posns):
-#        self.bitmap = ImageTools.MergeToBitmap
-
-
+        
 
 
 if __name__ == "__main__":
-    p.LoadFile('../properties/nirht.properties')
+    p.LoadFile('../properties/nirht_test.properties')
     app = wx.PySimpleApp()
     from DataModel import DataModel
     from DBConnect import DBConnect
     from ImageCollection import ImageCollection
     db = DBConnect.getInstance()
-    db.Connect(db_host="imgdb01", db_user="cpadmin", db_passwd="cPus3r", db_name="cells")
+    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     dm = DataModel.getInstance()
     dm.PopulateModel()
     IC = ImageCollection.getInstance(p)
