@@ -596,7 +596,7 @@ class ClassifierGUI(wx.Frame):
         # Check if hit counts have already been calculated (since last training)
         # If not: Classify all objects into phenotype classes and count phenotype-hits per-image
         if self.keysAndCounts == None:
-            stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, self.area_column)
+            stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, p.area_scoring_column)
             self.SetStatusText('Calculating %s counts for each class...' % p.object_name[0])
             self.keysAndCounts = MulticlassSQL.HitsAndCounts(stump_query, score_query, find_max_query, class_query, count_query)
         
