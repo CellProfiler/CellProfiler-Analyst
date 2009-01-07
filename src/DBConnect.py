@@ -55,22 +55,29 @@ def UniqueObjectClause():
     Returns a clause for specifying a unique object in MySQL.
     eg: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all object keys
     '''
-    if 'table_id' in p.__dict__:
+
+    if p.table_id:
         obCl = p.table_id+','+p.image_id+','+p.object_id
     else:
         obCl = p.image_id+','+p.object_id
     return obCl
 
 
-def UniqueImageClause():
+def UniqueImageClause(table_name=None):
     '''
     Returns a clause for specifying a unique image in MySQL.
     eg: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all image keys 
     '''
-    if 'table_id' in p.__dict__:
-        imCl = p.table_id+','+p.image_id
+
+    if table_name:
+        table_name = table_name+'.'
     else:
-        imCl = p.image_id
+        table_name = ''
+
+    if p.table_id:
+        imCl = table_name+p.table_id+','+table_name+p.image_id
+    else:
+        imCl = table_name+p.image_id
     return imCl
 
 

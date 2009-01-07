@@ -15,7 +15,7 @@ def translate(weak_learners, column_names, area_column=None):
     num_features = len(weak_learners)
     num_classes = len(weak_learners[0][2])
 
-    if p.table_id
+    if p.table_id:
         columns_start = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
     else:
         columns_start = p.image_id+" INT, "+p.object_id+" INT, "
@@ -63,7 +63,7 @@ def translate(weak_learners, column_names, area_column=None):
         object_match = '%s.%s = %s.%s'%(p.object_table, p.object_id,
                                              temp_class_table, p.object_id)
         object_match_clauses = table_match + image_match + object_match
-        count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%(UniqueImageClause(), ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, area_column) for k in classidxs]), temp_class_table, p.object_table, object_match_clauses, UniqueImageClause())
+        count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%(UniqueImageClause(p.object_table), ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, area_column) for k in classidxs]), temp_class_table, p.object_table, object_match_clauses, UniqueImageClause(p.object_table))
     
     return stump_query, score_query, find_max_query, class_query, count_query
     
