@@ -7,7 +7,7 @@ db = DBConnect.getInstance()
 p = Properties.getInstance()
 
 
-def translate(weak_learners, column_names):
+def translate(weak_learners, column_names, area_column=None):
     '''translate weak learners into MySQL queries that place the resulting 
     classification in a table (name: temp_prefix_classlabels)
     '''
@@ -15,7 +15,7 @@ def translate(weak_learners, column_names):
     num_features = len(weak_learners)
     num_classes = len(weak_learners[0][2])
 
-    if 'table_id' in p.__dict__:
+    if p.table_id
         columns_start = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
     else:
         columns_start = p.image_id+" INT, "+p.object_id+" INT, "
@@ -51,6 +51,19 @@ def translate(weak_learners, column_names):
 
     # Get hit counts
     count_query = 'SELECT %s, %s FROM %s GROUP BY %s'%(UniqueImageClause(), ", ".join(["SUM(class%d)"%(k) for k in classidxs]), temp_class_table, UniqueImageClause())
+
+    # handle area-based scoring if needed, replacing count query
+    if area_column:
+        table_match = ''
+        if p.table_id:
+            table_match = '%s.%s = %s.%s AND '%(p.object_table, p.table_id,
+                                                temp_class_table, p.table_id)
+        image_match = '%s.%s = %s.%s AND '%(p.object_table, p.image_id,
+                                            temp_class_table, p.image_id)
+        object_match = '%s.%s = %s.%s'%(p.object_table, p.object_id,
+                                             temp_class_table, p.object_id)
+        object_match_clauses = table_match + image_match + object_match
+        count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%(UniqueImageClause(), ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, area_column) for k in classidxs]), temp_class_table, p.object_table, object_match_clauses, UniqueImageClause())
     
     return stump_query, score_query, find_max_query, class_query, count_query
     

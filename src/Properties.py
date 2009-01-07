@@ -22,7 +22,7 @@ class Properties(Singleton):
     
     def __getattr__(self, id):
         if( not self.__dict__.has_key(id) ):
-            print "ERROR: Properties file must specify variable: "+id
+            return None
         else:
             return self.__dict__[id]
     

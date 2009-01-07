@@ -75,7 +75,7 @@ class ClassifierGUI(wx.Frame):
         self.obClassChoice = wx.Choice(self, id=wx.NewId(), choices=['random'])
         self.obClassChoice.SetSelection(0)
         filters = []
-        if 'filters' in p.__dict__:
+        if p.filters:
             filters = p.filters
         self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters)
         self.filterChoice.SetSelection(0)
@@ -596,7 +596,7 @@ class ClassifierGUI(wx.Frame):
         # Check if hit counts have already been calculated (since last training)
         # If not: Classify all objects into phenotype classes and count phenotype-hits per-image
         if self.keysAndCounts == None:
-            stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames)
+            stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, self.area_column)
             self.SetStatusText('Calculating %s counts for each class...' % p.object_name[0])
             self.keysAndCounts = MulticlassSQL.HitsAndCounts(stump_query, score_query, find_max_query, class_query, count_query)
         
