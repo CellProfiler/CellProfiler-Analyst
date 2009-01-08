@@ -263,16 +263,12 @@ class CellBoard(wx.Panel, DropTarget):
         ''' Selects all tiles on this board. '''
         for tile in self.tiles:
             tile.Select()
-        self.classifier.Refresh()
-        self.classifier.Layout()
         
     
     def DeselectAll(self):
         ''' Deselects all tiles on this board. '''
         for tile in self.tiles:
             tile.Deselect()
-        self.classifier.Refresh() 
-        self.classifier.Layout()
     
 
     def OnLeftDown(self, evt):
@@ -282,5 +278,4 @@ class CellBoard(wx.Panel, DropTarget):
         if evt.AltDown():
             self.classifier.RemoveSortClass(self.label)
     
-
-
+    

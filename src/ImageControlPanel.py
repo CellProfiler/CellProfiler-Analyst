@@ -39,7 +39,7 @@ class ImageControlPanel(wx.Panel):
         self.sizer.Add(self.reset_btn)
         self.SetSizer(self.sizer)
         
-        self.scale_slider.Bind(wx.EVT_SLIDER, self.OnSizeSlider)
+        self.scale_slider.Bind(wx.EVT_SLIDER, self.OnScaleSlider)
         self.brightness_slider.Bind(wx.EVT_SLIDER, self.OnBrightnessSlider)
         self.reset_btn.Bind(wx.EVT_BUTTON, self.OnReset)
 
@@ -51,8 +51,8 @@ class ImageControlPanel(wx.Panel):
         self.brightness_percent.SetLabel('%'+str(self.brightness_slider.GetValue()))
 
 
-    def OnSizeSlider(self, evt):
-        pos = self.scale_slider.GetValue()/100.0        
+    def OnScaleSlider(self, evt):
+        pos = self.scale_slider.GetValue()/100.0      
         for listener in self.listeners:
             listener.SetScale(pos)
         self.scale_percent.SetLabel('%'+str(self.scale_slider.GetValue()))

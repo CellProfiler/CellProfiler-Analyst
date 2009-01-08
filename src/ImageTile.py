@@ -37,7 +37,6 @@ class ImageTile(wx.Window, DropTarget):
         self.MapChannels(chMap)
         self.CreatePopupMenu()
         
-        self.Bind(wx.EVT_SIZE, self.OnSize)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnSize)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
@@ -88,15 +87,17 @@ class ImageTile(wx.Window, DropTarget):
         
         
     def Select(self):
-        self.selected = True
-        self.imagePanel.selected = True
-        self.Refresh()
+        if not self.selected:
+            self.selected = True
+            self.imagePanel.selected = True
+            self.Refresh()
 
 
     def Deselect(self):
-        self.selected = False
-        self.imagePanel.selected = False
-        self.Refresh()
+        if self.selected:
+            self.selected = False
+            self.imagePanel.selected = False
+            self.Refresh()
         
     
     def ToggleSelect(self):
@@ -128,16 +129,10 @@ class ImageTile(wx.Window, DropTarget):
         else:
             self.ToggleSelect()
 
-        if evt.AltDown():
-            print 'Clearing selected tiles'
-            self.board.DestroySelectedTiles()
-            return
-
     
     def OnSize(self, evt):
         self.SetSizeHintsSz(evt.GetSize())
         self.SetClientSize(evt.GetSize())
-        self.board.Layout()
         evt.Skip()
         
         
@@ -146,4 +141,4 @@ class ImageTile(wx.Window, DropTarget):
             self.board.ReceiveDrop(data)
             
         
-    
+        

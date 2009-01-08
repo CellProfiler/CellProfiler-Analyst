@@ -1,4 +1,6 @@
 '''
+ImagePanel.py
+Authors: afraser
 '''
 
 import wx
@@ -28,7 +30,9 @@ class ImagePanel(wx.Panel, DropTarget):
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)        
         
+        
     def OnPaint(self, evt):
+        self.SetClientSize((self.bitmap.Width, self.bitmap.Height))
         self.dc = wx.PaintDC(self)
         self.dc.Clear()
         self.dc.DrawBitmap(self.bitmap, 0, 0)
@@ -38,7 +42,6 @@ class ImagePanel(wx.Panel, DropTarget):
             self.dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
             self.dc.DrawRectangle(1,1,self.bitmap.Width-1,self.bitmap.Height-1)
             self.dc.EndDrawing()
-        self.SetClientSize((self.bitmap.Width, self.bitmap.Height))
 
 
     def UpdateBitmap(self):
@@ -56,19 +59,16 @@ class ImagePanel(wx.Panel, DropTarget):
         
 
     def SetScale(self, scale):
-        self.scale = scale
-        self.UpdateBitmap()
+        if scale != self.scale:
+            self.scale = scale
+            self.UpdateBitmap()
         
         
     def SetBrightness(self, brightness):
-        self.brightness = brightness
-        self.UpdateBitmap()
+        if brightness != self.brightness:
+            self.brightness = brightness
+            self.UpdateBitmap()
         
-    
-    def SetContrast(self, contrast):
-        self.contrast = contrast
-        self.UpdateBitmap()
-
 
     def ReceiveDrop(self, data):
         # Pass drop data on to parent if it is a DropTarget

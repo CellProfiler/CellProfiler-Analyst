@@ -710,6 +710,10 @@ class ClassifierGUI(wx.Frame):
             p.LoadFile(filename)
             db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
             dm.PopulateModel()
+        else:
+            print 'Classifier requires a properties file.  Exiting.'
+            exit()
+            
             
             
     def OnSelectFilter(self, evt):
@@ -749,6 +753,10 @@ class ClassifierGUI(wx.Frame):
                 panels += [t.imagePanel]
         for p in panels:
             p.SetScale(scale)
+        # Layout the boards
+        self.unclassifiedBoard.Layout()
+        for cl in self.classes:
+            cl.board.Layout()
         
 
     def OnClose(self, evt):
@@ -761,9 +769,7 @@ class ClassifierGUI(wx.Frame):
                 return
         self.Destroy()
         
-        
-
-        
+                
         
 # ----------------- Testing -------------------
 
