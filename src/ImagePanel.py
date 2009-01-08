@@ -11,21 +11,22 @@ p = Properties.getInstance()
 
 
 class ImagePanel(wx.Panel, DropTarget):
-    def __init__(self, imgs, chMap, parent):
-        self.h, self.w = imgs[0].shape
-        wx.Panel.__init__(self, parent, wx.NewId(), size=(self.w,self.h))
+    def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0):
         self.chMap       = chMap
         self.toggleChMap = chMap[:]
         self.images      = imgs                                         # image channel arrays
-        self.bitmap      = ImageTools.MergeToBitmap(imgs, self.chMap)   # displayed wx.Bitmap
+        self.bitmap      = ImageTools.MergeToBitmap(imgs,
+                                                    chMap = chMap,
+                                                    scale = scale,
+                                                    brightness = brightness)   # displayed wx.Bitmap
         
-        self.brightness  = 1.0
-        self.contrast    = 1.0
-        self.scale       = 1.0
-        self.selected = False
+        wx.Panel.__init__(self, parent, wx.NewId(), size=self.bitmap.Size)
         
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.scale       = scale
+        self.brightness  = brightness
+        self.selected    = False
         
+        self.Bind(wx.EVT_PAINT, self.OnPaint)        
         
     def OnPaint(self, evt):
         self.dc = wx.PaintDC(self)
@@ -44,7 +45,6 @@ class ImagePanel(wx.Panel, DropTarget):
         self.bitmap = ImageTools.MergeToBitmap(self.images,
                                                chMap = self.chMap,
                                                brightness = self.brightness,
-                                               contrast = self.contrast,
                                                scale = self.scale)
         self.Refresh()
             

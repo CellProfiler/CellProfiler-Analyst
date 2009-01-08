@@ -14,6 +14,7 @@ from Properties import Properties
 
 from CellBoard import CellBoard
 from ImageTile import ImageTile
+from ImageControlPanel import ImageControlPanel
 from DragObject import DragObject
 from DropTarget import DropTarget
 from LoadTilesWorker import *
@@ -62,11 +63,18 @@ class ClassifierGUI(wx.Frame):
         self.binsCreated = 0
         self.chMap = p.image_channel_colors[:]
         self.toggleChMap = p.image_channel_colors[:] # this is used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
+        self.brightness = 1.0
+        self.scale = 1.0
         
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.CreateFileMenu()
         self.CreateChannelMenus()
+        self.DisplayMenu = wx.Menu()
+        self.imageControlsMenuItem = wx.MenuItem(parentMenu=self.DisplayMenu, id=wx.NewId(), text='Image Controls', help='Launches a control panel for adjusting image brightness, size, etc.')
+        self.DisplayMenu.AppendItem(self.imageControlsMenuItem)
+        self.GetMenuBar().Append(self.DisplayMenu, 'Display')
+
         self.CreateStatusBar()
         
         # Create the Fetch panel
@@ -166,8 +174,7 @@ class ClassifierGUI(wx.Frame):
         self.MapChannels(p.image_channel_colors[:])
 
         # do event binding
-#        self.Bind(wx.EVT_MENU, self.OnLoadProperties, self.loadPropertiesMenuItem)
-#        self.Bind(wx.EVT_MENU, self.OnSaveProperties, self.savePropertiesMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnShowImageControls, self.imageControlsMenuItem)
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
@@ -448,7 +455,7 @@ class ClassifierGUI(wx.Frame):
             self.SetStatusText('')
             self.worker = None
         else:
-            tile = ImageTile(self.unclassifiedBoard, obKey=evt.data[0], images=evt.data[1], chMap=self.chMap, selected=False)
+            tile = ImageTile(self.unclassifiedBoard, obKey=evt.data[0], images=evt.data[1], chMap=self.chMap, selected=False, scale=self.scale, brightness=self.brightness)
             self.unclassifiedBoard.AddTile(tile, pos='last')
             self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBoard.tiles))+')' )
         
@@ -713,7 +720,37 @@ class ClassifierGUI(wx.Frame):
             self.fetchSizer.Hide(self.fetchFromImageSizer, True)
         self.Layout()
         
+
+    def OnShowImageControls(self, evt):
+        self.imageControlFrame = wx.Frame(self)
+        ImageControlPanel(self.imageControlFrame, self)
+        self.imageControlFrame.Show(True)
         
+        
+    def SetBrightness(self, brightness):
+        self.brightness = brightness
+        panels = []
+        for t in self.unclassifiedBoard.tiles:
+            panels += [t.imagePanel]
+        for cl in self.classes:
+            for t in cl.board.tiles:
+                panels += [t.imagePanel]
+        for p in panels:
+            p.SetBrightness(brightness)
+        
+
+    def SetScale(self, scale):
+        self.scale = scale
+        panels = []
+        for t in self.unclassifiedBoard.tiles:
+            panels += [t.imagePanel]
+        for cl in self.classes:
+            for t in cl.board.tiles:
+                panels += [t.imagePanel]
+        for p in panels:
+            p.SetScale(scale)
+        
+
     def OnClose(self, evt):
         if self.trainingSet and self.trainingSet.saved == False:
             dlg = wx.MessageDialog(self, 'Do you want to save your training set before quitting?', 'Training Set Not Saved', wx.YES_NO|wx.CANCEL|wx.ICON_QUESTION)

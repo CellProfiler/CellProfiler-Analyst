@@ -8,40 +8,40 @@ import ImageTools
 from Properties import Properties
 from DropTarget import DropTarget
 from DragObject import DragObject
+from ImagePanel import ImagePanel
 
 
 p = Properties.getInstance()
 drag = DragObject.getInstance()
 
 
-class ImageTile(wx.Panel, DropTarget):
+class ImageTile(wx.Window, DropTarget):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
     between CellBoards.  They contain image data in a key=(table, image, object)
     and manage their state of selection.
     '''
-    def __init__(self, board, obKey, images, chMap, selected=False):
-
-        self.size = (int(p.image_tile_size),int(p.image_tile_size))
-        wx.Panel.__init__(self, board, size=self.size)
+    def __init__(self, board, obKey, images, chMap, selected=False, scale=1.0, brightness=1.0):
+        wx.Window.__init__(self, board)
+        
+        self.imagePanel = ImagePanel(images, chMap, self, scale=scale, brightness=brightness)
+        
+        self.SetSize(self.imagePanel.GetSize())
         
         self.board = board
         self.classifier = board.classifier
-        self.obKey = obKey         # (table, image, object)
-        self.images = images       # the image channels
-        self.bitmap = None         # the drawn image
-        self.chMap = chMap
-        self.selected = selected   # whether or not this tile is selected
-            
+        self.obKey      = obKey       # (table, image, object)
+        self.images     = images      # the image channels
+        self.selected   = selected    # whether or not this tile is selected
+        
         self.MapChannels(chMap)
         self.CreatePopupMenu()
-
-        self.SetSizeHintsSz(self.size)
+        
         self.Bind(wx.EVT_SIZE, self.OnSize)
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
-        self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
-        self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+        self.imagePanel.Bind(wx.EVT_SIZE, self.OnSize)
+        self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.imagePanel.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
+        self.imagePanel.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         
             
     def CreatePopupMenu(self):
@@ -83,20 +83,19 @@ class ImageTile(wx.Panel, DropTarget):
 
     def MapChannels(self, chMap):
         ''' Recalculates the displayed bitmap for this tile. '''
+        self.imagePanel.MapChannels(chMap)
         self.chMap = chMap
-        self.bitmap = ImageTools.MergeToBitmap(self.images, self.chMap, self.selected)
-        self.Refresh()
         
         
     def Select(self):
         self.selected = True
-        self.bitmap = ImageTools.MergeToBitmap(self.images, self.chMap, self.selected)
+        self.imagePanel.selected = True
         self.Refresh()
 
 
     def Deselect(self):
         self.selected = False
-        self.bitmap = ImageTools.MergeToBitmap(self.images, self.chMap, self.selected)
+        self.imagePanel.selected = False
         self.Refresh()
         
     
@@ -111,9 +110,9 @@ class ImageTile(wx.Panel, DropTarget):
         self.board.SetFocus()
         if drag.IsEmpty():
             self.classifier.CaptureMouse()
-            cursorImg = self.bitmap.ConvertToImage()
-            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.size[0])/2)
-            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.size[1])/2)
+#            cursorImg = self.bitmap.ConvertToImage()
+#            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.size[0])/2)
+#            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.size[1])/2)
 #            wx.SetCursor(wx.CursorFromImage(cursorImg))
 #            for tlw in wx.GetTopLevelWindows():
 #                tlw.SetCursor(wx.CursorFromImage(cursorImg))
@@ -134,16 +133,12 @@ class ImageTile(wx.Panel, DropTarget):
             self.board.DestroySelectedTiles()
             return
 
-                
     
     def OnSize(self, evt):
-        self.SetSize(evt.GetSize())
+        self.SetSizeHintsSz(evt.GetSize())
+        self.SetClientSize(evt.GetSize())
+        self.board.Layout()
         evt.Skip()
-    
-        
-    def OnPaint(self, event):
-        dc = wx.PaintDC(self)
-        dc.DrawBitmap(self.bitmap, 0, 0)
         
         
     def ReceiveDrop(self, data):

@@ -1,11 +1,12 @@
 '''
-ImageCollection.py
+ImageTools.py
 Authors: afraser
 
 A collection of tools to modify images used in CPA.
 '''
 
 import numpy
+import operator
 import wx
 from Properties import Properties
 
@@ -19,6 +20,7 @@ def ShowImage(imKey, chMap, parent=None):
     imgs = IC.FetchImage(imKey)
     frame = ImageViewer(imgs=imgs, chMap=chMap, parent=parent, title=str(imKey) )
     frame.Show(True)
+    return frame
     
 
 def Crop(imgdata, (w,h), (x,y)):
@@ -40,35 +42,54 @@ def Crop(imgdata, (w,h), (x,y)):
     return crop
 
 
-def MergeToBitmap(imgs, chMap, selected=0):
+#def GetRectangleMask(w,h):
+#    mask = numpy.zeros((h,w,3),dtype='float')
+#    mask[0:h,0,:]   = 1.0 # left
+#    mask[0,0:w,:]   = 1.0 # top
+#    mask[0:h,-1,:]  = 1.0 # right
+#    mask[-1,0:w,:]  = 1.0 # bottom
+#    return mask 
+    
+    
+
+def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[]):
     '''
     imgs  - list of numpy arrays containing pixel data for each channel of an image
     chMap - list of colors to map each corresponding channel onto.  eg: ['red', 'green', 'blue']
-    selected - 0/1, whether to draw a white outline around the image 
+    brightness - value around 1.0 to multiply color values by
+    contrast - value around 1.0 to scale contrast by
+    scale - value around 1.0 to scale the image by
     '''
     
-    imData = MergeChannels(imgs, chMap)
+    imData = MergeChannels(imgs, chMap, masks=masks)
     h,w = imgs[0].shape
-    
-    # Outline in white if selected
-    if selected: 
-        imData[0:h,0,:]  = 1.0 # left
-        imData[0,0:w,:]  = 1.0 # top
-        imData[0:h,-1,:]  = 1.0 # right
-        imData[-1,0:w,:]  = 1.0 # bottom   
     
     # Convert from float [0-1] to 8bit
     imData *= 255.0
     imData[imData>255] = 255
 
-    # Write to bitmap
+    # Write wx.Image
     img = wx.EmptyImage(w,h)
-    img.SetData( imData.astype('uint8').flatten() )
+    img.SetData(imData.astype('uint8').flatten())
+    
+    # Apply brightness, contrast & scale
+    # TODO: Add contrast adjustment
+    if brightness != 1.0:
+        img = img.AdjustChannels(brightness, brightness, brightness)
+    if scale != 1.0:
+        if w*scale>10 and h*scale>10:
+            img.Rescale(w*scale, h*scale)
+        else:
+            img.Rescale(10,10)
+    
     return img.ConvertToBitmap()
 
 
-def MergeChannels(imgs, chMap):
-    ''' Merges the given image data into the channels listed in chMap. '''
+def MergeChannels(imgs, chMap, masks=[]):
+    '''
+    Merges the given image data into the channels listed in chMap.
+    Masks are passed in pairs (mask, blendingfunc).
+    '''
     nChannels = len(p.image_channel_paths)
     h,w = imgs[0].shape
     imData = numpy.zeros((h,w,3),dtype='float')
@@ -78,32 +99,23 @@ def MergeChannels(imgs, chMap):
                 'blue'     : [0,0,1], 
                 'cyan'     : [0,1,1], 
                 'yellow'   : [1,1,0], 
-                'magenta'  : [1,0,1],
-                'gray'     : [1,1,1],
+                'magenta'  : [1,0,1], 
+                'gray'     : [1,1,1], 
                 'none'     : [0,0,0] }
     
     for i, im in enumerate(imgs):
         c = colormap[chMap[i].lower()]
         for chan in range(3):
             imData[:,:,chan] += im * c[chan]
+    
+    for mask, func in masks:
+        imData = func(imData, mask)
+        imData[imData>1.0] = 1.0
+        imData[imData<0.0] = 0.0
         
     return imData
 
 
-
-
-def HighlightCellsInClass(cl):
-    obKeysToTry = dm.GetAllObjectsFromImage(100,imKeysInGroup)
-    stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, p.object_table)
-    obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, obKeysToTry, stump_query, score_query, find_max_query)
-
-
-def AdjustBrightness():
-    pass
-
-
-def AdjustContrast():
-    pass
 
 
 

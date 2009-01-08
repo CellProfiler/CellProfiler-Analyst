@@ -67,7 +67,6 @@ class CellBoard(wx.Panel, DropTarget):
         
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
-        print 'board KEY'
         # scroll up
         if evt.GetKeyCode()==317:      # arrow down
             self.ScrollWindow(0,-10)
@@ -122,7 +121,7 @@ class CellBoard(wx.Panel, DropTarget):
         if self.IC == None:
             self.IC = ImageCollection.getInstance(p)
         imgs = self.IC.FetchTile(obKey)
-        newTile = ImageTile(self, obKey, imgs, chMap, False)
+        newTile = ImageTile(self, obKey, imgs, chMap, False, scale=self.classifier.scale, brightness=self.classifier.brightness)
         self.tiles.append(newTile)
         self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
         if refresh:
