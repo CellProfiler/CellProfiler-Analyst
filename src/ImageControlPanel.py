@@ -1,4 +1,6 @@
 '''
+ImageControlPanel.py
+Authors: afraser
 '''
 
 import wx
@@ -29,11 +31,11 @@ class ImageControlPanel(wx.Panel):
         self.scale_percent      = wx.StaticText(self, wx.NewId(), '%'+str(self.scale_slider.GetValue()))
         self.brightness_percent = wx.StaticText(self, wx.NewId(), '%'+str(self.brightness_slider.GetValue()))
         
-        self.sizer = wx.GridSizer(3,3)        
+        self.sizer = wx.GridSizer(3,3)
         self.sizer.Add(wx.StaticText(self, wx.NewId(), 'Brightness:'))
         self.sizer.Add(self.brightness_slider, wx.ALL|wx.EXPAND)
         self.sizer.Add(self.brightness_percent)
-        self.sizer.Add(wx.StaticText(self, wx.NewId(), 'Scale:'))        
+        self.sizer.Add(wx.StaticText(self, wx.NewId(), 'Scale:'))
         self.sizer.Add(self.scale_slider, wx.ALL|wx.EXPAND)
         self.sizer.Add(self.scale_percent)
         self.sizer.Add(self.reset_btn)

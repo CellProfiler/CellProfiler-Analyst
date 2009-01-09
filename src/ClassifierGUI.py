@@ -2,6 +2,7 @@
 Classifier.py
 Authors: afraser
 '''
+import ImageTools
 
 import os
 import wx
@@ -90,7 +91,7 @@ class ClassifierGUI(wx.Frame):
         self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters)
         self.filterChoice.SetSelection(0)
         self.imageTxt = wx.TextCtrl(self, id=wx.NewId(), value='1', size=(30,-1))
-        if 'table_id' in p.__dict__:
+        if p.table_id is not None:
             self.tableStaticTxt = wx.StaticText(self, wx.NewId(), 'in table #')
             self.tableTxt = wx.TextCtrl(self, id=wx.NewId(), value='0', size=(30,-1))
             self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
@@ -111,7 +112,7 @@ class ClassifierGUI(wx.Frame):
         self.fetchFromImageSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchFromImageSizer.Add(self.imageTxt)
         self.fetchFromImageSizer.AddSpacer((10,20))
-        if 'table_id' in p.__dict__:
+        if p.table_id is not None:
             self.fetchFromImageSizer.Add(self.tableStaticTxt)
             self.fetchFromImageSizer.AddSpacer((10,20))
             self.fetchFromImageSizer.Add(self.tableTxt)
@@ -133,6 +134,8 @@ class ClassifierGUI(wx.Frame):
         self.findRulesBtn.Disable()
         self.scoreAllBtn = wx.Button(self, wx.NewId(), 'Score All')
         self.scoreAllBtn.Disable()
+        self.scoreImageBtn = wx.Button(self, wx.NewId(), 'Score Image')
+        self.scoreImageBtn.Disable()
         self.addSortClassBtn = wx.Button(self, wx.NewId(), "+", size=(30,30))
         self.trainSizer2.AddStretchSpacer()
         self.trainSizer2.Add(wx.StaticText(self, wx.NewId(), 'Max number of rules:'))
@@ -142,6 +145,8 @@ class ClassifierGUI(wx.Frame):
         self.trainSizer2.Add(self.findRulesBtn)
         self.trainSizer2.Add((5,20))
         self.trainSizer2.Add(self.scoreAllBtn)
+        self.trainSizer2.Add((5,20))
+        self.trainSizer2.Add(self.scoreImageBtn)
         self.trainSizer2.Add((5,20))
         self.trainSizer2.Add(self.addSortClassBtn)
         self.trainSizer.Add(self.trainSizer2, proportion=1, flag=wx.EXPAND)
@@ -184,6 +189,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
         self.Bind(wx.EVT_BUTTON, self.OnFindRules, self.findRulesBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreAll, self.scoreAllBtn)
+        self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
@@ -391,7 +397,7 @@ class ClassifierGUI(wx.Frame):
                 obKeys = dm.GetRandomObjects(nObjects)
                 statusMsg += ' from whole experiment...'
             elif filter =='image':
-                if 'table_id' in p.__dict__:
+                if p.table_id is not None:
                     imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
                 else:
                     imKey = (int(self.imageTxt.Value),)
@@ -408,7 +414,7 @@ class ClassifierGUI(wx.Frame):
             
             if filter != 'experiment':
                 if filter =='image':
-                    if 'table_id' in p.__dict__:
+                    if p.table_id is not None:
                         imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
                     else:
                         imKey = (int(self.imageTxt.Value),)
@@ -575,6 +581,7 @@ class ClassifierGUI(wx.Frame):
         self.SetStatusText('')
         self.rulesTxt.Value = output.getvalue()
         self.scoreAllBtn.Enable()
+        self.scoreImageBtn.Enable()
 
         for cl in self.classes:
             if len(cl.board.tiles) > 0:
@@ -584,9 +591,64 @@ class ClassifierGUI(wx.Frame):
         self.UpdateClassChoices()
         
         
+    def OnScoreImage(self, evt):
+        # 1) Get the image key
+        # Start with the table_id if there is one
+        tblNum = None
+        if p.table_id:
+            dlg = wx.TextEntryDialog(self, p.table_id+':','Enter '+p.table_id)
+            dlg.SetValue('0')
+            if dlg.ShowModal() == wx.ID_OK:
+                tblNum = int(dlg.GetValue())
+                dlg.Destroy()
+            else:
+                dlg.Destroy()
+                return
+        # Then get the image_id
+        dlg = wx.TextEntryDialog(self, p.image_id+':','Enter '+p.image_id)
+        dlg.SetValue('1')
+        if dlg.ShowModal() == wx.ID_OK:
+            imgNum = int(dlg.GetValue())
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
+        # Build the imKey
+        if p.table_id:
+            imKey = (tblNum,imgNum)
+        else:
+            imKey = (imgNum,)
+        
+        # 2) Get the phenotype to highlight:
+        dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', [cl.label for cl in self.classes], wx.CHOICEDLG_STYLE)
+        if dlg.ShowModal() == wx.ID_OK:            
+            cls   = str(dlg.GetStringSelection())  # class name to print in feedback
+            clNum = dlg.GetSelection() + 1         # class index to pass to the classifier
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
+
+#
+#    def ScoreImage(self, imKey, ckass):
+        # 3) Find the hits
+        stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, [imKey])
+        obKeys = dm.GetObjectsFromImage(imKey)
+        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query)
+        self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(hits), len(obKeys), p.object_name[1], cls, imKey))
+        
+        # 4) Get object coordinates in image and display
+        coordList = []
+        for obKey in hits:
+            coordList += [db.GetObjectCoords(obKey)]
+        imViewer = ImageTools.ShowImage(imKey, self.chMap, self)
+        imViewer.imagePanel.SelectPoints(coordList)
+        
+        
+        
     def OnScoreAll(self, evt):
         groupChoices = ['Image']
-        if 'groups' in p.__dict__:
+        if p.groups is not None:
             groupChoices += p.groups
         dlg = wx.SingleChoiceDialog(self, 'Please choose a grouping method:', 'Score all', groupChoices, wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() == wx.ID_OK:            
@@ -599,13 +661,8 @@ class ClassifierGUI(wx.Frame):
         
         from time import time
         t1 = time()
-        
-        # SCORING NEEDS...
-        # weaklearners, colnames, nClasses, keysAndCounts (if already calculated),
-        
+                
         nClasses = len(self.classes)
-        
-        #worker = CalculateScoresThread(self.weaklearners, self.trainingSet.colnames, nClasses, self.keysAndCounts, group)
         
         # Check if hit counts have already been calculated (since last training)
         # If not: Classify all objects into phenotype classes and count phenotype-hits per-image
@@ -680,7 +737,10 @@ class ClassifierGUI(wx.Frame):
         # Create column labels list
         labels = ['Group Key']
         for i in xrange(nClasses):
-            labels.append('Counts\n'+self.classes[i].label)
+            if p.area_scoring_column is None:
+                labels.append('Counts\n'+self.classes[i].label)
+            else:
+                labels.append('Area Sums\n'+self.classes[i].label)
         for i in xrange(nClasses):
             labels.append('p(Enriched)\n'+self.classes[i].label)
         if two_classes:

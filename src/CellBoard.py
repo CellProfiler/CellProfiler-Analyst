@@ -28,6 +28,9 @@ class CellBoard(wx.Panel, DropTarget):
         self.classifier = classifier
         self.IC = None
         
+        # TODO: Add scrollbars
+#        self.sw = wx.ScrolledWindow(self)
+        
         self.SetBackgroundColour('#000000')
         self.sizer = ImageTileSizer()
         self.SetSizer(self.sizer)
@@ -37,6 +40,7 @@ class CellBoard(wx.Panel, DropTarget):
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
         self.Bind(wx.EVT_CHAR, self.OnKey)
         self.Bind(wx.EVT_WINDOW_CREATE, self.OnCreate)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         
         self.CreatePopupMenu()
         
@@ -278,4 +282,10 @@ class CellBoard(wx.Panel, DropTarget):
         if evt.AltDown():
             self.classifier.RemoveSortClass(self.label)
     
-    
+
+    def OnSize(self, evt):
+#        if self.label == '':
+#            print self.GetClientSize(), self.label
+#            print self.sizer.GetSize(), self.label, '  (sizer)'
+#            print self.sizer.GetMinSize(), self.label, '  (sizer)'
+        evt.Skip()

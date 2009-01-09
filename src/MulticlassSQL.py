@@ -7,9 +7,11 @@ db = DBConnect.getInstance()
 p = Properties.getInstance()
 
 
-def translate(weak_learners, column_names, area_column=None):
-    '''translate weak learners into MySQL queries that place the resulting 
-    classification in a table (name: temp_prefix_classlabels)
+def translate(weak_learners, column_names, area_column=None, imKeys=[]):
+    '''
+    Translate weak learners into MySQL queries that place the resulting 
+      classification in a MySQL temporary table named "temp_class_table"
+    If imKeys is supplied, then the queries will only include those images.
     '''
     
     num_features = len(weak_learners)
@@ -27,7 +29,10 @@ def translate(weak_learners, column_names, area_column=None):
     stump_columns = columns_start + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
     stump_select_features = ", ".join(["(%s > %f) AS stump%d"%(column_names[wl[0]], wl[1], idx) for wl,idx in zip(weak_learners, range(num_features))])
     stump_select_statement = select_start + stump_select_features + " FROM " + p.object_table
-    stump_query = 'CREATE TEMPORARY TABLE %(temp_stump_table)s (%(stump_columns)s) SELECT %(stump_select_statement)s'%(locals())
+    if not imKeys:
+        stump_query = 'CREATE TEMPORARY TABLE %(temp_stump_table)s (%(stump_columns)s) SELECT %(stump_select_statement)s'%(locals())
+    else:
+        stump_query = 'CREATE TEMPORARY TABLE %s (%s) SELECT %s WHERE (%s)'%(temp_stump_table, stump_columns, stump_select_statement, GetWhereClauseForImages(imKeys))
     
     # Create class scores table (ob x classes) <float>
     classidxs = range(1, num_classes+1)
@@ -89,6 +94,5 @@ def HitsAndCounts(stump_query, score_query, find_max_query, class_query, count_q
     db.Execute(find_max_query)
     db.Execute(class_query)
     db.Execute(count_query)
-    return db.GetResultsAsList()
-    
-    
+    return db.GetResultsAsList()    
+
