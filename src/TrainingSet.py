@@ -8,11 +8,12 @@ db = DBConnect.getInstance()
 class TrainingSet:
     "A class representing a set of manually labeled cells."
 
-    def __init__(self, properties, filename=None, include_group_info=False):
+    def __init__(self, properties, filename='', include_group_info=False):
         self.properties = properties
         self.colnames = db.GetColnamesForClassifier()
+        self.filename = filename
         print self.colnames
-        if filename is not None:
+        if filename != '':
             self.Load(filename, include_group_info)
 
 

@@ -3,6 +3,7 @@ Classifier.py
 Authors: afraser
 '''
 
+import os
 import wx
 import wx.grid
 import numpy
@@ -65,6 +66,7 @@ class ClassifierGUI(wx.Frame):
         self.toggleChMap = p.image_channel_colors[:] # this is used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.scale = 1.0
+        self.defaultTSFileName = None
         
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
@@ -466,11 +468,13 @@ class ClassifierGUI(wx.Frame):
     def LoadTrainingSet(self):
         ''' Presents the user with a file select dialog. 
         Loads the selected file, parses out object keys, and fetches the tiles. '''
-        dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.", style=wx.OPEN)
+        dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.", defaultDir=os.getcwd(), style=wx.OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             
             self.SetStatusText('Loading training set from: '+filename)
+            os.chdir(os.path.split(filename)[0])                       # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+            self.defaultTSFileName = os.path.split(filename)[1]
             
             self.trainingSet = TrainingSet(p, filename)
             
@@ -493,11 +497,14 @@ class ClassifierGUI(wx.Frame):
         self.SaveTrainingSet()
         
     def SaveTrainingSet(self):
-        import os
-        defaultFileName = 'testTrainingSet.txt'
-        saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), defaultFile=defaultFileName, wildcard='txt', style=wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+        if not self.defaultTSFileName:
+            self.defaultTSFileName = 'MyTrainingSet.txt'
+        saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), defaultFile=self.defaultTSFileName, wildcard='txt', style=wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
         if saveDialog.ShowModal()==wx.ID_OK:
-            self.SaveTrainingSetAs(saveDialog.GetPath())
+            filename = saveDialog.GetPath()
+            os.chdir(os.path.split(filename)[0])                 # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+            self.defaultTSFileName = os.path.split(filename)[1]
+            self.SaveTrainingSetAs(filename)
 
     
     def SaveTrainingSetAs(self, filename):
@@ -704,7 +711,7 @@ class ClassifierGUI(wx.Frame):
     
     
     def LoadProperties(self):
-        dlg = wx.FileDialog(self, "Select a the file containing your properties.", style=wx.OPEN)
+        dlg = wx.FileDialog(self, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             p.LoadFile(filename)
