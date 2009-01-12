@@ -9,9 +9,10 @@ from Properties import Properties
 from DropTarget import DropTarget
 from DragObject import DragObject
 from ImagePanel import ImagePanel
-
+from DBConnect import DBConnect
 
 p = Properties.getInstance()
+db = DBConnect.getInstance()
 drag = DragObject.getInstance()
 
 
@@ -77,7 +78,9 @@ class ImageTile(wx.Window, DropTarget):
             
             
     def OnDClick(self, evt):
-        ImageTools.ShowImage(self.obKey[:-1], self.chMap[:], parent=self.classifier)
+        imViewer = ImageTools.ShowImage(self.obKey[:-1], self.chMap[:], parent=self.classifier)
+        pos = db.GetObjectCoords(self.obKey)
+        imViewer.imagePanel.SelectPoints([pos])
         
 
     def MapChannels(self, chMap):
