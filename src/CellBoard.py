@@ -10,9 +10,11 @@ from ImageTileSizer import ImageTileSizer
 from ImageTile import ImageTile
 from DragObject import DragObject
 from DropTarget import DropTarget
+from DBConnect import DBConnect
 import ImageTools
 
 p  = Properties.getInstance()
+db = DBConnect.getInstance()
 
 class CellBoard(wx.Panel, DropTarget):
     '''
@@ -109,7 +111,9 @@ class CellBoard(wx.Panel, DropTarget):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for key in self.SelectedKeys():
-                ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier)
+                imViewer = ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier)
+                pos = db.GetObjectCoords(self.obKey)
+                imViewer.imagePanel.SelectPoints([pos])
         elif choice == 1:
             self.SelectAll()
         elif choice == 2:

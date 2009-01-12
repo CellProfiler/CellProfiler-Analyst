@@ -68,7 +68,9 @@ class ImageTile(wx.Window, DropTarget):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for obKey in self.board.SelectedKeys():
-                ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier)
+                imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier)
+                pos = db.GetObjectCoords(self.obKey)
+                imViewer.imagePanel.SelectPoints([pos])
         elif choice == 1:
             self.board.SelectAll()
         elif choice == 2:
