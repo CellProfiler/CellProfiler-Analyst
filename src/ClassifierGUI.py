@@ -812,12 +812,9 @@ class ClassifierGUI(wx.Frame):
 
     def SetScale(self, scale):
         self.scale = scale
-        panels = []
-        for t in self.unclassifiedBoard.tiles:
-            panels += [t.imagePanel]
-        for cl in self.classes:
-            for t in cl.board.tiles:
-                panels += [t.imagePanel]
+        panels = ([t.imagePanel for t in self.unclassifiedBoard.tiles] + 
+                  [t.imagePanel for cl in self.classes for t in cl.board.tiles])
+        
         for p in panels:
             p.SetScale(scale)
         # Layout the boards

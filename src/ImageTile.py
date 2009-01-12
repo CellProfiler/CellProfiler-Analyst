@@ -136,7 +136,6 @@ class ImageTile(wx.Window, DropTarget):
 
     
     def OnSize(self, evt):
-        self.SetSizeHintsSz(evt.GetSize())
         self.SetClientSize(evt.GetSize())
         evt.Skip()
         

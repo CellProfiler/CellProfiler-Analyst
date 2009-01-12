@@ -75,7 +75,8 @@ class ImagePanel(wx.Panel, DropTarget):
         if scale != self.scale:
             self.scale = scale
             self.UpdateBitmap()
-        
+            self.SetClientSize((self.bitmap.Width, self.bitmap.Height))
+
         
     def SetBrightness(self, brightness):
         if brightness != self.brightness:
