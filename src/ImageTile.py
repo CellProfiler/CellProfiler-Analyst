@@ -69,7 +69,7 @@ class ImageTile(wx.Window, DropTarget):
         if choice == 0:
             for obKey in self.board.SelectedKeys():
                 imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier)
-                pos = db.GetObjectCoords(self.obKey)
+                pos = db.GetObjectCoords(obKey)
                 imViewer.imagePanel.SelectPoints([pos])
         elif choice == 1:
             self.board.SelectAll()

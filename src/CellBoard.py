@@ -112,7 +112,7 @@ class CellBoard(wx.Panel, DropTarget):
         if choice == 0:
             for key in self.SelectedKeys():
                 imViewer = ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier)
-                pos = db.GetObjectCoords(self.obKey)
+                pos = db.GetObjectCoords(key)
                 imViewer.imagePanel.SelectPoints([pos])
         elif choice == 1:
             self.SelectAll()
