@@ -27,8 +27,8 @@ class ImageCollection(Singleton):
         self.tileCache  = {}    # (tblNum,imNum,obNum): cropped image channel data
         self.imageCache = {}    # (tblNum,imNum): image channel data
 
-        self.maxTiles  = self.p.tile_buffer_size    # max number of cropped image-sets to store at a time
-        self.maxImages = self.p.image_buffer_size   # max number of image-sets to store at a time
+        self.maxTiles  = int(self.p.tile_buffer_size)    # max number of cropped image-sets to store at a time
+        self.maxImages = int(self.p.image_buffer_size)   # max number of image-sets to store at a time
         
         self.tileKeyQueue  = [] # queues determine the order in which cache entries are removed
         self.imageKeyQueue = [] # queues determine the order in which cache entries are removed
@@ -71,7 +71,8 @@ class ImageCollection(Singleton):
         size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
         # add this image data to the tileCache
         self.tileCache[obKey] = [ImageTools.Crop(imData,size,pos) for imData in self.FetchImage(imKey)]
-
+        print 'tile cache:',len(self.tileCache)
+        
     
     def UpdateCache(self, imKey):
         '''
@@ -94,6 +95,8 @@ class ImageCollection(Singleton):
 
         # update the cache
         self.imageCache[imKey] = images
+         
+        print 'image cache:',len(self.imageCache)
 
 
 
