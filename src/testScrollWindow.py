@@ -28,8 +28,9 @@ class Test(wx.ScrolledWindow):
         self.Bind(wx.EVT_SIZE, self.OnSize)
         
     def OnSize(self, evt):
+        w, h = evt.GetSize()
         self.SetVirtualSize(self.GetSizer().CalcMin())
-        self.GetSizer().SetSize( evt.GetSize() )
+        #self.GetSizer().SetSize( evt.GetSize() )
 
 
 myapp=wx.PySimpleApp()

@@ -19,11 +19,11 @@ class ImageTileSizer(wx.PySizer):
         else:
             return wx.Point(max(map(wx.Size.GetWidth, sizes)),
                             max(map(wx.Size.GetHeight, sizes)))
-        
+
     def CalcMin(self):
         n = len(self.GetChildren())
         if n > 0:
-            width = self.GetSize().GetWidth()
+            width = self.GetContainingWindow().GetClientSize().GetWidth()
             self.columns = max(1, width/self.pitch().x)
             self.rows = math.ceil(1.0 * n / self.columns)
             pitch = self.pitch()
