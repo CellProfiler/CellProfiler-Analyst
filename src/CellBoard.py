@@ -16,33 +16,35 @@ import ImageTools
 p  = Properties.getInstance()
 db = DBConnect.getInstance()
 
-class CellBoard(wx.Panel, DropTarget):
+class CellBoard(wx.ScrolledWindow, DropTarget):
     '''
     CellBoards contain collections of objects as small image tiles
     that can be dragged to other CellBoards for classification.
     '''
     def __init__(self, parent, chMap=None, label='', classifier=None):
-        wx.Panel.__init__(self, parent)
+        wx.ScrolledWindow.__init__(self, parent)
         
         self.label = label
         self.tiles = []
-        self.chMap = chMap
+        if chMap:
+            self.chMap = chMap
+        else:
+            self.chMap = p.image_channel_colors
         self.classifier = classifier
         self.IC = None
-        
-        # TODO: Add scrollbars
-#        self.sw = wx.ScrolledWindow(self)
         
         self.SetBackgroundColour('#000000')
         self.sizer = ImageTileSizer()
         self.SetSizer(self.sizer)
-        
+
+        (w,h) = self.sizer.GetSize()
+        self.SetScrollbars(20,20,w/20,h/20,0,0)
+        self.EnableScrolling(x_scrolling=False, y_scrolling=True)
+                
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
         self.Bind(wx.EVT_CHAR, self.OnKey)
-        self.Bind(wx.EVT_WINDOW_CREATE, self.OnCreate)
-        self.Bind(wx.EVT_SIZE, self.OnSize)
         
         self.CreatePopupMenu()
         
@@ -50,12 +52,7 @@ class CellBoard(wx.Panel, DropTarget):
     def __str__(self):
         return str(len(self.sizer.GetChildren()))+" objects"
     
-    
-    def OnCreate(self, evt):
-        if not self.chMap:
-            self.chMap = p.image_channel_colors
-
-    
+        
     def CreatePopupMenu(self):
         popupMenuItems = ['View full images of selected',
                           '[ctrl+a] - Select all',
@@ -73,13 +70,6 @@ class CellBoard(wx.Panel, DropTarget):
         
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
-        # scroll up
-        if evt.GetKeyCode()==317:      # arrow down
-            self.ScrollWindow(0,-10)
-        # scroll down
-        if evt.GetKeyCode()==315:      # arrow up
-            self.ScrollWindow(0,10)
-        
         if evt.GetKeyCode()==8:        # delete
             self.DestroySelectedTiles()
                 
@@ -135,7 +125,8 @@ class CellBoard(wx.Panel, DropTarget):
         if refresh:
             self.Refresh()
             self.Layout()
-        
+        self.SetVirtualSize(self.sizer.CalcMin())
+                
     
     def AddTile(self, tile, refresh=True, pos='first'):
         ''' Adds the given tile. 
@@ -145,11 +136,12 @@ class CellBoard(wx.Panel, DropTarget):
         if pos == 'first':
             self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1 )
         else:
-            item = self.sizer.Add(tile, 0, wx.ALL|wx.EXPAND, 1)
+            self.sizer.Add(tile, 0, wx.ALL|wx.EXPAND, 1)
         tile.Reparent(self)
-        if refresh:
-            self.Refresh()
-            self.Layout()
+        self.SetVirtualSize(self.sizer.CalcMin())
+#        if refresh:
+#            self.Refresh()
+#            self.Layout()
         
     
 #    def RemoveTile(self, tile, refresh=True):
@@ -215,16 +207,10 @@ class CellBoard(wx.Panel, DropTarget):
                 tile.board = self
                 self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1)
                 self.tiles.append(tile)
-        # Previously we attached the tiles to the drag object
-        # instead we do the add and remove all in one place (above)
-#        for tile in drag.data:
-#            self.AddTile(tile, refresh=False)
-#            drag.source.RemoveTile(tile, refresh=False)
-        drag.source.Refresh()
-        drag.source.Layout()
-        self.Refresh()
-        self.Layout()
-
+            drag.source.SetVirtualSize(drag.source.sizer.CalcMin())
+        self.Scroll(0,0)
+        self.SetVirtualSize(self.sizer.CalcMin())
+        
         
     def MapChannels(self, chMap):
         ''' Recalculates the displayed bitmap for all tiles in this board. '''
@@ -286,10 +272,3 @@ class CellBoard(wx.Panel, DropTarget):
         if evt.AltDown():
             self.classifier.RemoveSortClass(self.label)
     
-
-    def OnSize(self, evt):
-#        if self.label == '':
-#            print self.GetClientSize(), self.label
-#            print self.sizer.GetSize(), self.label, '  (sizer)'
-#            print self.sizer.GetMinSize(), self.label, '  (sizer)'
-        evt.Skip()
