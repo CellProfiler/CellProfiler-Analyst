@@ -39,6 +39,8 @@ class ImagePanel(wx.Panel, DropTarget):
         self.dc.DrawBitmap(self.bitmap, 0, 0)
         
         for (x,y) in self.selectedPoints:
+#            x*=self.scale
+#            y*=self.scale
             x = x * self.scale - 2
             y = y * self.scale - 2
             w = h = 4
@@ -46,6 +48,8 @@ class ImagePanel(wx.Panel, DropTarget):
             self.dc.BeginDrawing()
             self.dc.SetPen(wx.Pen("WHITE",1))
             self.dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
+#            self.dc.DrawLine(x-2,y-2,x+2,y+2)
+#            self.dc.DrawLine(x+2,y-2,x-2,y+2)
             self.dc.DrawRectangle(x,y,w,h)
             self.dc.EndDrawing()
         

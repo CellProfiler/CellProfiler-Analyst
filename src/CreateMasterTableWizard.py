@@ -231,7 +231,7 @@ class Page4(wiz.WizardPageSimple):
         
         label_1 = wx.StaticText(self, -1, 'Enter a prefix name for your CPA master tables.', style=wx.ALIGN_CENTRE)
         self.txtPrefix = wx.TextCtrl(self, -1, 'CPA')
-        self.example = wx.StaticText(self, -1, 'Output tables: "CPA_per_image", "CPA_per_object"')
+        self.example = wx.StaticText(self, -1, 'Output tables: "CPA_Per_Image", "CPA_Per_Object"')
         
         sizer1 = wx.BoxSizer(wx.VERTICAL)
         sizer1.SetMinSize((600,200))
@@ -250,8 +250,8 @@ class Page4(wiz.WizardPageSimple):
     def OnText(self, evt):
         nameRules = re.compile('[a-zA-Z0-9]\w*$')
         if nameRules.match(self.txtPrefix.GetValue()):        
-            self.Parent.outPerImage = self.txtPrefix.GetValue()+'_per_image'
-            self.Parent.outPerObject = self.txtPrefix.GetValue()+'_per_object'
+            self.Parent.outPerImage = self.txtPrefix.GetValue()+'_Per_Image'
+            self.Parent.outPerObject = self.txtPrefix.GetValue()+'_Per_Object'
             self.example.SetLabel('Output tables: '+self.Parent.outPerImage+', '+self.Parent.outPerObject+', '+self.txtPrefix.GetValue()+'_table_index')
         else:
             self.example.SetLabel('Invalid table prefix.')

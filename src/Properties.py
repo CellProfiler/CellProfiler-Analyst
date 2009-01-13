@@ -35,6 +35,7 @@ class Properties(Singleton):
         lines = f.read()
         lines = lines.replace('\r', '\n')                        # replace CRs with LFs
         lines = lines.split('\n')
+#        self.lines = lines
             
         for line in lines:
             if not line.strip().startswith('#') and line.strip()!='':          # skip commented and empty lines
@@ -60,6 +61,7 @@ class Properties(Singleton):
         
     
     def SaveFile(self, filename):
+        # TODO: Save files WITH previous comments and whitespace.
         f = open(filename, 'w')
         for var, val in self.__dict__.items():
             if type(val)==list:

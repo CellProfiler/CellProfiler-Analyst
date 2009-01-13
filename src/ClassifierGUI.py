@@ -193,6 +193,9 @@ class ClassifierGUI(wx.Frame):
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
+        self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
+        self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
+        self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
         self.splitter.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGING, self.OnDragSash)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
@@ -397,7 +400,7 @@ class ClassifierGUI(wx.Frame):
                 obKeys = dm.GetRandomObjects(nObjects)
                 statusMsg += ' from whole experiment...'
             elif filter =='image':
-                if p.table_id is not None:
+                if p.table_id:
                     imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
                 else:
                     imKey = (int(self.imageTxt.Value),)
@@ -414,7 +417,7 @@ class ClassifierGUI(wx.Frame):
             
             if filter != 'experiment':
                 if filter =='image':
-                    if p.table_id is not None:
+                    if p.table_id:
                         imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
                     else:
                         imKey = (int(self.imageTxt.Value),)
@@ -557,6 +560,25 @@ class ClassifierGUI(wx.Frame):
         except(Exception):
             txtCtrl.SetForegroundColour('#FF0000')
             
+            
+    def ValidateImageKey(self, evt):
+        ''' Checks that the image field specifies an existing image. '''
+        txtCtrl = evt.GetEventObject()
+        try:
+            if p.table_id:
+                imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
+            else:
+                imKey = (int(self.imageTxt.Value),)
+            if dm.data[imKey] > 0:
+                txtCtrl.SetForegroundColour('#000001')
+                self.SetStatusText('Image contains %s %s.'%(dm.data[imKey],p.object_name[1]))
+            else:
+                txtCtrl.SetForegroundColour('#888888')   # Set field to GRAY if image contains no objects
+                self.SetStatusText('Image contains zero %s.'%(p.object_name[1]))
+        except(Exception):
+            txtCtrl.SetForegroundColour('#FF0000')       # Set field to red if image doesn't exist
+            self.SetStatusText('No such image.')
+          
     
     def OnDragSash(self, evt):
         ''' Move the splitter sash as it is dragged. '''

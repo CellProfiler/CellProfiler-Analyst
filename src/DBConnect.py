@@ -27,7 +27,7 @@ def GetWhereClauseForObjects(obKeys):
     '''
     wheres = []
     for obKey in obKeys:
-        if 'table_id' in p.__dict__:
+        if p.table_id:
             where = p.table_id+'='+str(obKey[0])+' AND '+p.image_id+'='+str(obKey[1])+' AND '+p.object_id+'='+str(obKey[2])
         else:
             where = p.image_id+'='+str(obKey[0])+' AND '+p.object_id+'='+str(obKey[1])
@@ -42,7 +42,7 @@ def GetWhereClauseForImages(imKeys):
     '''
     wheres = []
     for imKey in imKeys:
-        if 'table_id' in p.__dict__:
+        if p.table_id:
             where = p.table_id+'='+str(imKey[0])+' AND '+p.image_id+'='+str(imKey[1])
         else:
             where = p.image_id+'='+str(imKey[0])
@@ -101,7 +101,7 @@ class DBConnect(Singleton):
                 print 'WARNING <DBConnect.Connect>: Already connected to %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
             else:
                 print 'WARNING <DBConnect.Connect>: connID "%s" is already in use. Close this connection first.' % (connID)
-            return
+            return True
         try:
             conn = MySQLdb.connect(host=db_host, db=db_name, user=db_user, passwd=db_passwd)
             self.connections[connID] = conn
@@ -111,6 +111,7 @@ class DBConnect(Singleton):
             return True
         except MySQLdb.Error, e:
             raise DBException, 'ERROR <DBConnect.Connect>: Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
+            return False
 
 
     def Disconnect(self):

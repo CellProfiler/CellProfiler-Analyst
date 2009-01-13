@@ -6,11 +6,12 @@ Authors: afraser
 import wx
 from random import randint
 import numpy
-from DBConnect import DBConnect
+from DBConnect import *
 from Singleton import *
 from Properties import Properties
 
 p = Properties.getInstance()
+db = DBConnect.getInstance()
 
 class DataModel(Singleton):
     '''
@@ -23,6 +24,7 @@ class DataModel(Singleton):
                               # eg: groupMaps['Wells'][(0,4)]  ==>  (3,'A01')
         self.cumSums = []     # cumSum[i]: sum of objects in images 1..i (inclusive) 
         self.obCount = 0
+        self.keylist = []
         
     def __str__(self):
         return str(self.obCount)+" objects in "+ \
@@ -31,38 +33,32 @@ class DataModel(Singleton):
     
     def PopulateModel(self):
         self.DeleteModel()
-        db = DBConnect.getInstance()
         if db is None:
             print "Error: No database connection!"
             return
-            
-        if 'table_id' in p.__dict__:
-            imgKey = p.table_id+', '+p.image_id
-        else:
-            imgKey = p.image_id
-            
-        db.Execute("SELECT "+imgKey+" FROM "+p.image_table+" GROUP BY "+imgKey)
+        
+        # Initialize per-image object counts to zero
+        db.Execute("SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause())
         res = db.GetResultsAsList()
         for key in res:
             key = tuple([int(k) for k in key])    # convert keys to to int tuples
             self.data[key] = 0
-          
-        db.Execute("SELECT "+imgKey+", count("+p.object_id+") FROM "+str(p.object_table)+" GROUP BY "+imgKey)
+                    
+        # Compute per-image object counts
+        db.Execute("SELECT "+UniqueImageClause()+", COUNT("+p.object_id+") FROM "+str(p.object_table)+" GROUP BY "+UniqueImageClause())
         res = db.GetResultsAsList()  # = [(imKey, obCt), (imKey, obCt)...]
         for r in res:
             key = tuple([int(k) for k in r[:-1]])
             self.data[key] = r[-1]
             self.obCount += r[-1]
             
+        self.keylist = list(self.data.keys())
+
         # Build a cumulative sum array to use for generating random objects quickly
-        self.cumSums = numpy.zeros(len(self.data)+1)
-        for i in xrange(1, len(self.data)+1):
-            if 'table_id' in p.__dict__:
-                imKey = (0,i)
-            else:
-                imKey = (i,)
-            self.cumSums[i] = self.cumSums[i-1]+self.data[imKey]
-            
+        self.cumSums = numpy.zeros(len(self.data)+1, dtype='int')
+        for i, imKey in enumerate(self.keylist):
+            self.cumSums[i+1] = self.cumSums[i]+self.data[imKey]
+                    
         # Build dictionary mapping group names and image keys to group keys
         if 'groups' in p.__dict__:
             for group in p.groups:
@@ -71,7 +67,7 @@ class DataModel(Singleton):
                     res = db.GetResultsAsList()
                     groupDict = {}
                     for row in res:
-                        if 'table_id' in p.__dict__:
+                        if p.table_id:
                             imKey = row[:2]
                             groupKey = row[2:]
                         else:
@@ -89,18 +85,43 @@ class DataModel(Singleton):
         
     
     def GetRandomObject(self):
-        ''' Returns a random object key '''
-        obNum = randint(1, self.obCount)
-        imNum = numpy.searchsorted(self.cumSums, obNum, 'left')
+        ''' Returns a random object key
+        We expect self.data.keys() to return the keys in the SAME ORDER
+        every time since we build cumSums from that same ordering.  This
+        need not necessarily be in sorted order.
+        '''
+        obIdx = randint(1, self.obCount)
+#        print 'rand:',obIdx
+        imIdx = numpy.searchsorted(self.cumSums, obIdx, 'left')
         # SUBTLETY: images which have zero objects will appear as repeated
         #    sums in the cumulative array, so we must pick the first index
         #    of any repeated sum, otherwise we are picking an image with no
         #    objects
-        while self.cumSums[imNum] == self.cumSums[imNum-1]:
-            imNum -= 1
-        obNum = obNum-self.cumSums[imNum-1]  # object number relative to this image  
-        if 'table_id' in p.__dict__:
-            return (0,imNum,obNum)
+        while self.cumSums[imIdx] == self.cumSums[imIdx-1]:
+            imIdx -= 1
+#        print 'imIdx:',imIdx
+        imKey = self.data.keys()[imIdx-1]
+#        print 'imKey:',imKey
+        obIdx = obIdx-self.cumSums[imIdx-1]  # object number relative to this image
+#        print 'cumSums[imIdx-1]:',self.cumSums[imIdx-1]
+#        print 'obIdx:',obIdx
+        
+        tblNum = 0
+        imNum = imKey[-1]
+        if p.table_id:
+            tblNum = imKey[0]
+            db.Execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s LIMIT %s,1'
+                       %(p.object_id, p.object_table, p.table_id, tblNum, p.image_id, imNum, obIdx-1))
+        else:
+            db.Execute('SELECT %s FROM %s WHERE %s=%s LIMIT %s,1'
+                       %(p.object_id, p.object_table, p.image_id, imNum, obIdx-1))
+        obNum = db.GetResultsAsList()
+#        print 'res:',obNum
+        
+        obNum = obNum[0][0]
+        
+        if p.table_id:
+            return (tblNum,imNum,obNum)
         else:
             return (imNum,obNum)
 
@@ -177,17 +198,18 @@ class DataModel(Singleton):
 
 if __name__ == "__main__":
     p = Properties.getInstance()
-    p.LoadFile('../properties/nirht_NO_TABLE.properties')
+    p.LoadFile('../properties/2007_10_19_Gilliland_LeukemiaScreens02_12_Jan_09_Combo.properties')
     db = DBConnect.getInstance()
-    db.Connect(db_host="imgdb01", db_user="cpadmin", db_passwd="cPus3r", db_name="cells")
+    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     d = DataModel.getInstance()
     d.PopulateModel()
     
-    
-    imKeys = d.GetImagesInGroup('Gene', d.groupMaps['Gene'][(1,)])
-    print len(imKeys)
-    for im in imKeys:
-        print im
+#    for i in range(10000):
+    print d.GetRandomObject()
+#    imKeys = d.GetImagesInGroup('Gene', d.groupMaps['Gene'][(1,)])
+#    print len(imKeys)
+#    for im in imKeys:
+#        print im
     
 #    imKeysInGroup = db.GetImagesInGroup('Accuracy75')
 #    a = d.GetRandomObjects(1000, imKeysInGroup)
