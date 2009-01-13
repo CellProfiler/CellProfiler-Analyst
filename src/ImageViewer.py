@@ -119,6 +119,8 @@ class ImageViewer(wx.Frame):
             self.MapChannels(self.chMap)
             
         
+            
+        
 
 
 if __name__ == "__main__":

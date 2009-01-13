@@ -29,7 +29,7 @@ class ImageTile(wx.Window, DropTarget):
         
         self.SetSize(self.imagePanel.GetSize())
         
-        self.board = board
+        self.board      = board
         self.classifier = board.classifier
         self.obKey      = obKey       # (table, image, object)
         self.images     = images      # the image channels
@@ -144,5 +144,5 @@ class ImageTile(wx.Window, DropTarget):
         if self.board != drag.source:
             self.board.ReceiveDrop(data)
             
-        
+
         

@@ -29,14 +29,14 @@ class ImagePanel(wx.Panel, DropTarget):
         self.selected       = False
         self.selectedPoints = []
         
-        self.Bind(wx.EVT_PAINT, self.OnPaint)        
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
         
         
     def OnPaint(self, evt):
         self.SetClientSize((self.bitmap.Width, self.bitmap.Height))
-        self.dc = wx.PaintDC(self)
-        self.dc.Clear()
-        self.dc.DrawBitmap(self.bitmap, 0, 0)
+        dc = wx.PaintDC(self)
+        dc.Clear()
+        dc.DrawBitmap(self.bitmap, 0, 0)
         
         for (x,y) in self.selectedPoints:
 #            x*=self.scale
@@ -45,20 +45,20 @@ class ImagePanel(wx.Panel, DropTarget):
             y = y * self.scale - 2
             w = h = 4
             
-            self.dc.BeginDrawing()
-            self.dc.SetPen(wx.Pen("WHITE",1))
-            self.dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
-#            self.dc.DrawLine(x-2,y-2,x+2,y+2)
-#            self.dc.DrawLine(x+2,y-2,x-2,y+2)
-            self.dc.DrawRectangle(x,y,w,h)
-            self.dc.EndDrawing()
+            dc.BeginDrawing()
+            dc.SetPen(wx.Pen("WHITE",1))
+            dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
+#            dc.DrawLine(x-2,y-2,x+2,y+2)
+#            dc.DrawLine(x+2,y-2,x-2,y+2)
+            dc.DrawRectangle(x,y,w,h)
+            dc.EndDrawing()
         
         if self.selected:
-            self.dc.BeginDrawing()
-            self.dc.SetPen(wx.Pen("WHITE",1))
-            self.dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
-            self.dc.DrawRectangle(1,1,self.bitmap.Width-1,self.bitmap.Height-1)
-            self.dc.EndDrawing()
+            dc.BeginDrawing()
+            dc.SetPen(wx.Pen("WHITE",1))
+            dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
+            dc.DrawRectangle(1,1,self.bitmap.Width-1,self.bitmap.Height-1)
+            dc.EndDrawing()
 
 
     def UpdateBitmap(self):
@@ -98,4 +98,5 @@ class ImagePanel(wx.Panel, DropTarget):
         self.selectedPoints = coordList
         self.Refresh()
             
+
 

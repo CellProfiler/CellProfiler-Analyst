@@ -71,7 +71,6 @@ class ImageCollection(Singleton):
         size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
         # add this image data to the tileCache
         self.tileCache[obKey] = [ImageTools.Crop(imData,size,pos) for imData in self.FetchImage(imKey)]
-        print 'tile cache:',len(self.tileCache)
         
     
     def UpdateCache(self, imKey):
@@ -95,8 +94,6 @@ class ImageCollection(Singleton):
 
         # update the cache
         self.imageCache[imKey] = images
-         
-        print 'image cache:',len(self.imageCache)
 
 
 
