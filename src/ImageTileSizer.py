@@ -17,8 +17,7 @@ class ImageTileSizer(wx.PySizer):
         if sizes == []:
             return None
         else:
-            return wx.Point(max(map(wx.Size.GetWidth, sizes)),
-                            max(map(wx.Size.GetHeight, sizes)))
+            return max(sizes)
 
     def CalcMin(self):
         n = len(self.GetChildren())
