@@ -708,6 +708,11 @@ class ClassifierGUI(wx.Frame):
         else:
             groupedKeysAndCounts = numpy.array(self.keysAndCounts, dtype=object)
         
+        # Add in images with zero object count
+        for imKey, obCount in dm.data.items():
+            if obCount == 0:
+                groupedKeysAndCounts = numpy.vstack((groupedKeysAndCounts,
+                                                     list(imKey) + [0 for c in range(nClasses)] ))        
         
         t3 = time()
         print 'time to group per-image counts:',t3-t2
@@ -738,7 +743,7 @@ class ClassifierGUI(wx.Frame):
                 fraction = float(i)/float(len(groupedKeysAndCounts))
                 self.SetStatusText('Computing enrichment scores for each group... %%%d' %(100*fraction))
 
-            key = tuple(row[:-nClasses])                
+            key = tuple(row[:-nClasses].astype('int'))                
             countsRow = [int(v) for v in row[-nClasses:]]
             tableRow = [key]
             tableRow += countsRow
