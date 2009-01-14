@@ -193,7 +193,8 @@ class ClassifierGUI(wx.Frame):
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
-        self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
+	if p.table_id:
+            self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
         self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
         self.splitter.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGING, self.OnDragSash)
