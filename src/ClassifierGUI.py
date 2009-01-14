@@ -570,8 +570,7 @@ class ClassifierGUI(wx.Frame):
             else:
                 imKey = (int(self.imageTxt.Value),)
             if dm.data[imKey] > 0:
-                self.imageTxt.SetForegroundColour('#000001')
-                self.tableTxt.SetForegroundColour('#000001')
+                txtCtrl.SetForegroundColour('#000001')
                 self.SetStatusText('Image contains %s %s.'%(dm.data[imKey],p.object_name[1]))
             else:
                 txtCtrl.SetForegroundColour('#888888')   # Set field to GRAY if image contains no objects
