@@ -91,7 +91,7 @@ class ClassifierGUI(wx.Frame):
         self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters)
         self.filterChoice.SetSelection(0)
         self.imageTxt = wx.TextCtrl(self, id=wx.NewId(), value='1', size=(30,-1))
-        if p.table_id is not None:
+        if p.table_id:
             self.tableStaticTxt = wx.StaticText(self, wx.NewId(), 'in table #')
             self.tableTxt = wx.TextCtrl(self, id=wx.NewId(), value='0', size=(30,-1))
             self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
@@ -112,7 +112,7 @@ class ClassifierGUI(wx.Frame):
         self.fetchFromImageSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchFromImageSizer.Add(self.imageTxt)
         self.fetchFromImageSizer.AddSpacer((10,20))
-        if p.table_id is not None:
+        if p.table_id:
             self.fetchFromImageSizer.Add(self.tableStaticTxt)
             self.fetchFromImageSizer.AddSpacer((10,20))
             self.fetchFromImageSizer.Add(self.tableTxt)
@@ -196,7 +196,8 @@ class ClassifierGUI(wx.Frame):
 	if p.table_id:
             self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
-        self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
+        if p.table_id:
+            self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
         self.splitter.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGING, self.OnDragSash)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
