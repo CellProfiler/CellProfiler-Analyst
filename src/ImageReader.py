@@ -87,7 +87,7 @@ class ImageReader(object):
                 else: # twelve bit
                     imdata /= 4095.0
             else:
-                imdata = numpy.asarray(im.convert('L')) / 255
+                imdata = numpy.asarray(im.convert('L')) / 255.0
                 
             images.append(imdata)
             
