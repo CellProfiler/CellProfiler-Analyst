@@ -10,3 +10,4 @@ class DragObject(Singleton):
     
     def Empty(self):
         self.data = None
+        self.source = None
