@@ -24,7 +24,7 @@ class DataGrid(wx.Frame):
     Right-clicking a row label will display a popup menu of images to select for viewing.
     Clicking on a column label will sort that column in ascending then descending order.
     '''
-    def __init__(self, data, labels, grouping=IMAGE_GROUPING, chMap=None, parent=None, title='Data Grid'):
+    def __init__(self, data, labels, grouping=IMAGE_GROUPING, groupIDIndices=[0], chMap=None, parent=None, title='Data Grid'):
         wx.Frame.__init__(self, parent, id=-1, title=title)
         
         self.grid = wx.grid.Grid(parent=self)      # the grid
@@ -32,6 +32,7 @@ class DataGrid(wx.Frame):
         self.order = numpy.arange(data.shape[0])   # defines the order of the rows displayed
         self.labels = labels                       # text labels for each column
         self.grouping = grouping                   # group name string to match a group in the DataModel.  eg: 'Wells'
+        self.groupIDIndices = groupIDIndices       # column indexes for group ids
         self.chMap = chMap                         # channel-to-color map can be passed in so when an ImageViewer is launched
                                                    #    from the table, the user gets their most recent channel-color map 
         self.sortcol = 0                           # index of the current column being sorted-by
@@ -93,25 +94,23 @@ class DataGrid(wx.Frame):
         
     
     def OnLabelDClick(self, evt):
+        key = tuple( [self.data[self.order][evt.Row,idx] for idx in self.groupIDIndices] )
         if evt.Row >= 0:
             if self.grouping == IMAGE_GROUPING:
-                imKey = self.data[self.order][evt.Row,0]
-                ImageTools.ShowImage(imKey, self.chMap, parent=self)
+                ImageTools.ShowImage(key, self.chMap, parent=self)
             else:
-                groupKey = self.data[self.order][evt.Row,0]
-                imKeys = dm.GetImagesInGroup(self.grouping, tuple(groupKey))
+                imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
                 for imKey in imKeys:
                     ImageTools.ShowImage(imKey, self.chMap, parent=self)
             
             
     def OnLabelRightClick(self, evt):
         if evt.Row >= 0:
-            if self.grouping == IMAGE_GROUPING:
-                imKey = self.data[self.order][evt.Row,0]
-                self.ShowPopupMenu([imKey], evt.GetPosition())
+            key = tuple( [self.data[self.order][evt.Row,idx] for idx in self.groupIDIndices] )
+            if self.grouping == IMAGE_GROUPING:   
+                self.ShowPopupMenu([key], evt.GetPosition())
             else:
-                groupKey = self.data[self.order][evt.Row,0]
-                imKeys = dm.GetImagesInGroup(self.grouping, tuple(groupKey))
+                imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
                 self.ShowPopupMenu(imKeys, evt.GetPosition())
             
             
@@ -158,7 +157,8 @@ class DataGrid(wx.Frame):
     def SetGridData(self, data):
         assert data.shape == (self.grid.NumberRows,self.grid.NumberCols), 'ScoreGrid.SetGridData: Data shape does not match grid shape.'
         for i in xrange(data.shape[0]):      # rows
-            self.grid.SetRowLabelValue(i, str(data[i][0]))
+            rowLabel = ' : '.join( [str(self.data[self.order][i,idx]) for idx in self.groupIDIndices] )
+            self.grid.SetRowLabelValue(i, rowLabel)
             for j in xrange(data.shape[1]):  # cols
                 if ( type(data[i][j])==float or
                      type(data[i][j])==numpy.float64 or

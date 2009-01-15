@@ -19,10 +19,12 @@ class DataModel(Singleton):
     '''
     
     def __init__(self):
-        self.data = {}        # {imKey:obCount, ... }
-        self.groupMaps = {}   # { groupName:{imKey:groupKey, }, ... }
-                              # eg: groupMaps['Wells'][(0,4)]  ==>  (3,'A01')
-        self.cumSums = []     # cumSum[i]: sum of objects in images 1..i (inclusive) 
+        self.data = {}           # {imKey:obCount, ... }
+        self.groupMaps = {}      # { groupName:{imKey:groupKey, }, ... }
+                                 # eg: groupMaps['Wells'][(0,4)]  ==>  (3,'A01')
+        self.groupColNames = {}  # {groupName:[group_key_col_names], ...}
+                                 # eg: {'Gene': ['gene']}
+        self.cumSums = []        # cumSum[i]: sum of objects in images 1..i (inclusive) 
         self.obCount = 0
         self.keylist = []
         
@@ -65,6 +67,10 @@ class DataModel(Singleton):
                 if 'group_SQL_'+group in p.__dict__:
                     db.Execute( p.__dict__['group_SQL_'+group] )
                     res = db.GetResultsAsList()
+                    if p.table_id:
+                        self.groupColNames[group] = db.GetResultColumnNames()[2:]
+                    else:
+                        self.groupColNames[group] = db.GetResultColumnNames()[1:]
                     groupDict = {}
                     for row in res:
                         if p.table_id:
@@ -163,6 +169,16 @@ class DataModel(Singleton):
     def GetObjectCountFromImage(self, imKey):
         ''' Returns the number of objects in the specified image. '''
         return self.data[imKey]
+    
+    
+    def GetImageKeysAndObjectCounts(self):
+        ''' Returns pairs of imageKeys and object counts. '''
+        return self.data.items()
+    
+    
+    def GetGroupColumnNames(self, group):
+        ''' Returns the key column names associated with the specified group. '''
+        return list(self.groupColNames[group])   # return a copy of this list so it can't be modified
     
     
     def SumToGroup(self, imdata, group):

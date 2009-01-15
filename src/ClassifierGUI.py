@@ -587,9 +587,9 @@ class ClassifierGUI(wx.Frame):
                 imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
             else:
                 imKey = (int(self.imageTxt.Value),)
-            if dm.data[imKey] > 0:
+            if dm.GetObjectCountFromImage(imKey) > 0:
                 txtCtrl.SetForegroundColour('#000001')
-                self.SetStatusText('Image contains %s %s.'%(dm.data[imKey],p.object_name[1]))
+                self.SetStatusText('Image contains %s %s.'%(dm.GetObjectCountFromImage(imKey),p.object_name[1]))
             else:
                 txtCtrl.SetForegroundColour('#888888')   # Set field to GRAY if image contains no objects
                 self.SetStatusText('Image contains zero %s.'%(p.object_name[1]))
@@ -697,7 +697,6 @@ class ClassifierGUI(wx.Frame):
         else:
             dlg.Destroy()
             return
-
         
         from time import time
         t1 = time()
@@ -710,7 +709,14 @@ class ClassifierGUI(wx.Frame):
             stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, p.area_scoring_column)
             self.SetStatusText('Calculating %s counts for each class...' % p.object_name[0])
             self.keysAndCounts = MulticlassSQL.HitsAndCounts(stump_query, score_query, find_max_query, class_query, count_query)
-        
+
+            # Add in images with zero object count
+            for imKey, obCount in dm.GetImageKeysAndObjectCounts():
+                if obCount == 0:
+                    self.keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
+                
+        print self.keysAndCounts
+
         t2 = time()
         print 'time to calculate hits: ',t2-t1
         
@@ -719,21 +725,14 @@ class ClassifierGUI(wx.Frame):
             self.SetStatusText('Grouping %s counts by %s...' % (p.object_name[0], group))
             imData = {}
             for row in self.keysAndCounts:
-                key = row[:-nClasses]
+                key = tuple(row[:-nClasses])
                 imData[key] = numpy.array([float(v) for v in row[-nClasses:]])
             groupedKeysAndCounts = numpy.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
         else:
             groupedKeysAndCounts = numpy.array(self.keysAndCounts, dtype=object)
         
-        # Add in images with zero object count
-        for imKey, obCount in dm.data.items():
-            if obCount == 0:
-                groupedKeysAndCounts = numpy.vstack((groupedKeysAndCounts,
-                                                     list(imKey) + [0 for c in range(nClasses)] ))        
-        
         t3 = time()
         print 'time to group per-image counts:',t3-t2
-        
         
         # Calculate alpha
         self.SetStatusText('Fitting beta binomial distribution to data...')
@@ -754,47 +753,62 @@ class ClassifierGUI(wx.Frame):
         self.SetStatusText('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
+        
+        
         for i, row in enumerate(groupedKeysAndCounts):
             # Update the status text after every 5% is done.
             if float(i)/float(len(groupedKeysAndCounts))-fraction > 0.05:
                 fraction = float(i)/float(len(groupedKeysAndCounts))
-                self.SetStatusText('Computing enrichment scores for each group... %%%d' %(100*fraction))
-
-            key = tuple(row[:-nClasses].astype('int'))                
+                self.SetStatusText('Computing enrichment scores for each group... %d%%' %(100*fraction))
+            
+            # Start this row with the group key: 
+            tableRow = list(row[:-nClasses])
+            # Append the counts:
             countsRow = [int(v) for v in row[-nClasses:]]
-            tableRow = [key]
-            tableRow += countsRow
+            tableRow += countsRow 
+            # Append the scores:
             scores = DirichletIntegrate.score(alpha, numpy.array(countsRow))       # compute enrichment probabilities of each class for this image OR group 
             tableRow += scores
+            # Append the logit scores:
             # Special case: only calculate logit of "positives" for 2-classes
             if two_classes:
-                logitscores = [numpy.log10(scores[0])-(numpy.log10(1-scores[0]))]   # compute logit of each probability
+                tableRow += [numpy.log10(scores[0])-(numpy.log10(1-scores[0]))]   # compute logit of each probability
             else:
-                logitscores = [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
-            tableRow += logitscores
+                tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
             tableData.append(tableRow)
         tableData = numpy.array(tableData, dtype=object)
-        self.SetStatusText('Computing enrichment scores for each group... %100')
+        self.SetStatusText('Computing enrichment scores for each group... 100%')
         
         t5 = time()
         print 'time to compute enrichment scores:',t5-t4
                 
         # Create column labels list
-        labels = ['Group Key']
+        labels = []
+        # if grouping isn't per-image, then get the group key column names.
+        if group != groupChoices[0]:
+            labels = dm.GetGroupColumnNames(group)
+        elif p.table_id:
+            labels += [p.table_id, p.image_id]
+        else:
+            labels += [p.image_id]
+            
+        groupIDIndices = [i for i in range(len(labels))]
+            
         for i in xrange(nClasses):
             if p.area_scoring_column is None:
-                labels.append('Counts\n'+self.classes[i].label)
+                labels += ['Counts\n'+self.classes[i].label]
             else:
-                labels.append('Area Sums\n'+self.classes[i].label)
+                labels += ['Area Sums\n'+self.classes[i].label]
         for i in xrange(nClasses):
-            labels.append('p(Enriched)\n'+self.classes[i].label)
+            labels += ['p(Enriched)\n'+self.classes[i].label]
         if two_classes:
-            labels.append('Enriched Score\n'+self.classes[0].label)
+            labels += ['Enriched Score\n'+self.classes[0].label]
         else:
             for i in xrange(nClasses):
-                labels.append('Enriched Score\n'+self.classes[i].label)
+                labels += ['Enriched Score\n'+self.classes[i].label]
         
-        grid = DataGrid(tableData, labels, grouping=group, chMap=self.chMap[:], parent=self, title='Enrichments grouped by '+group)
+        grid = DataGrid(tableData, labels, grouping=group, groupIDIndices=groupIDIndices,
+                        chMap=self.chMap[:], parent=self, title='Enrichments grouped by '+group)
         grid.Show()
         
         self.SetStatusText('')

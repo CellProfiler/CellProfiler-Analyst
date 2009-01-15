@@ -163,6 +163,11 @@ class DBConnect(Singleton):
             l.append(r)
             r = self.GetNextResult(connID)
         return l
+    
+    
+    def GetResultColumnNames(self, connID='default'):
+        ''' Returns the column names of the last query on this connection. '''
+        return [x[0] for x in self.cursors[connID].description]
         
     
     def GetObjectCoords(self, obKey, connID='default'):
@@ -252,7 +257,7 @@ if __name__ == "__main__":
     p = Properties.getInstance()
     p.LoadFile('../properties/nirht.properties')
     db = DBConnect.getInstance()
-    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPur")
+#    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPur")
     
     db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r")
     db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r")
@@ -276,8 +281,12 @@ if __name__ == "__main__":
 #    print db.GetResultsAsList('test')    
     
     print db.GetObjectCoords((0,1,1))
+    print db.GetResultColumnNames()
     print db.GetObjectCoords((0,1,1), 'test')
+    print db.GetResultColumnNames()
     print db.GetObjectCoords((0,1,1))
+    print db.GetResultColumnNames()
+
 #    print GetWhereClauseForImages([key for key in db.GetImagesInGroup('EMPTY')[:5]])
 #    print GetWhereClauseForObjects([list(key)+[0] for key in db.GetImagesInGroup('EMPTY')[:5]])
 #    print db.GetImagesInGroup('EMPTY')[:10]
