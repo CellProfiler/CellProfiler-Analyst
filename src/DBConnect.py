@@ -172,7 +172,19 @@ class DBConnect(Singleton):
         res = self.GetResultsAsList(connID)
         assert len(res)==1, "ERROR <DBConnect.GetObjectCoords>: Returned %s objects instead of 1.\n" % len(res)
         return res[0]
-            
+
+    def GetObjectNear(self, imkey, x, y, connID='default'):
+        '''finds the closest object to x, y in an image'''
+        delta_x = p.cell_x_loc+' - %d'%(x)
+        delta_y = p.cell_y_loc+' - %d'%(y)
+        dist_clause = 'POW(%s, 2) + POW(%s, 2)'%(delta_x, delta_y)
+        select = 'SELECT '+UniqueObjectClause()+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imkey])+' ORDER BY ' +dist_clause+' LIMIT 1'
+        self.Execute(select, connID)
+        res = self.GetResultsAsList(connID)
+        if len(res) == 0:
+            return None
+        else:
+            return res[0]
     
     
     def GetFullChannelPathsForImage(self, imKey, connID='default'):

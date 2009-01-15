@@ -81,8 +81,7 @@ class ImageTile(wx.Window, DropTarget):
             
     def OnDClick(self, evt):
         imViewer = ImageTools.ShowImage(self.obKey[:-1], self.chMap[:], parent=self.classifier)
-        pos = db.GetObjectCoords(self.obKey)
-        imViewer.imagePanel.SelectPoints([pos])
+        imViewer.imagePanel.SelectPoints([db.GetObjectCoords(self.obKey)])
         
 
     def MapChannels(self, chMap):
@@ -114,9 +113,6 @@ class ImageTile(wx.Window, DropTarget):
     
     def OnLeftDown(self, evt):
         self.board.SetFocusIgnoringChildren()
-        self.classifier.CaptureMouse()
-        drag.data = self.board.SelectedKeys()
-        drag.source = self.board
 
 #            cursorImg = self.bitmap.ConvertToImage()
 #            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.size[0])/2)
@@ -134,7 +130,11 @@ class ImageTile(wx.Window, DropTarget):
         else:
             self.ToggleSelect()
 
-    
+        if self.board.SelectedKeys():
+            self.classifier.CaptureMouse()
+            drag.data = self.board.SelectedKeys()
+            drag.source = self.board
+
     def OnSize(self, evt):
         self.SetClientSize(evt.GetSize())
         evt.Skip()

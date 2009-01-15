@@ -4,9 +4,12 @@ import ImageTools
 from Properties import Properties
 from ImagePanel import ImagePanel
 from ImageControlPanel import ImageControlPanel
+from DragObject import DragObject
+from DBConnect import DBConnect
 
 p = Properties.getInstance()
-
+db = DBConnect.getInstance()
+drag = DragObject.getInstance()
 
 class ImageViewer(wx.Frame):
     '''
@@ -17,12 +20,13 @@ class ImageViewer(wx.Frame):
        of ImageViewer can have it's own chMap (if any) updated by changes
        made in the viewer.  Otherwise pass in chMap[:] for a copy.
     '''
-    def __init__(self, imgs, chMap, parent=None, title='Image Viewer'):
+    def __init__(self, imgs, chMap, img_key=None, parent=None, title='Image Viewer', classifier=None):
         '''
         imgs  : [numpy.array(dtype=float32), ... ]
         chMap : ['color', ...]
-        chMap defines the colors that will be mapped to the corresponding
-           image channels in imgs
+            defines the colors that will be mapped to the corresponding
+            image channels in imgs
+        img_key : key for this image in the database, to allow selection of cells
         NOTE: imgs lists must be of the same length.
         '''
         
@@ -32,9 +36,12 @@ class ImageViewer(wx.Frame):
         
         self.chMap       = chMap
         self.toggleChMap = chMap[:]
+        self.img_key = img_key
+        self.classifier = parent
         self.sw = wx.ScrolledWindow(self)
         self.imagePanel  = ImagePanel(imgs, chMap, self.sw)
-        
+        self.selection = []
+
         self.SetMenuBar(wx.MenuBar())
         self.CreateChannelMenus()
         self.CreateMenus()
@@ -45,6 +52,7 @@ class ImageViewer(wx.Frame):
         
         self.Bind(wx.EVT_CHAR, self.OnKey)
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, self.imageControlsMenuItem)
+        self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
         
 
@@ -121,6 +129,30 @@ class ImageViewer(wx.Frame):
         
             
         
+    def OnLeftDown(self, evt):
+        if self.img_key:
+            obkey = db.GetObjectNear(self.img_key, evt.GetPosition().x, evt.GetPosition().y)
+
+            # update selection
+            if not evt.ShiftDown():
+                self.selection = set([obkey])
+            else:
+                if obkey in self.selection:
+                    self.selection.remove(obkey)
+                else:
+                    self.selection.add(obkey)
+
+            # update drawing
+            if self.selection:
+                self.imagePanel.SelectPoints([db.GetObjectCoords(k) for k in self.selection])
+
+                # start drag
+                # self.classifier.CaptureMouse()
+                drag.data = self.selection
+                drag.source = self
+
+    
+            
 
 
 if __name__ == "__main__":

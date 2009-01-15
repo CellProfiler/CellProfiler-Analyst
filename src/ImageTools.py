@@ -18,7 +18,7 @@ def ShowImage(imKey, chMap, parent=None):
     from ImageCollection import ImageCollection
     IC = ImageCollection.getInstance()
     imgs = IC.FetchImage(imKey)
-    frame = ImageViewer(imgs=imgs, chMap=chMap, parent=parent, title=str(imKey) )
+    frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, parent=parent, title=str(imKey) )
     frame.Show(True)
     return frame
     

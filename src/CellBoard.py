@@ -192,12 +192,18 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         self.Refresh()
         self.Layout()
 
+    def find_tile_for_key(self, obkey):
+        for t in self.tiles:
+            if t.obKey == obkey:
+                return t
         
     def ReceiveDrop(self, drag):
         drag = DragObject.getInstance()
         self.DeselectAll()
         if type(drag.source) == CellBoard:
-            for tile in drag.source.Selection():
+            for obkey in drag.data:
+                # we don't want to refetch image data
+                tile = drag.source.find_tile_for_key(obkey)
                 drag.source.sizer.Remove(tile)
                 drag.source.tiles.remove(tile)
                 tile.Reparent(self)
@@ -205,6 +211,13 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
                 self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1)
                 self.tiles.append(tile)
             drag.source.SetVirtualSize(drag.source.sizer.CalcMin())
+        else:
+            print self
+            for obkey in drag.data:
+                print "adding", obkey
+                self.AddObject(obkey, self.chMap)
+                
+                
         self.SetVirtualSize(self.sizer.CalcMin())
         self.Scroll(-1, 0)
         self.SetFocusIgnoringChildren()
@@ -223,12 +236,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
     
     def SelectedKeys(self):
         ''' Returns the keys of currently selected tiles on this board. '''
-        obKeys = []
-        for tile in self.tiles:
-            if tile.selected:
-                obKeys.append(tile.obKey)
-        return obKeys
-    
+        return [tile.obKey for tile in self.tiles if tile.selected]
     
     def Selection(self):
         ''' Returns the currently selected tiles on this board. '''
