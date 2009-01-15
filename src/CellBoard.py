@@ -50,7 +50,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         
     
     def __str__(self):
-        return str(len(self.sizer.GetChildren()))+" objects"
+        return 'Board %s with %d objects'%(self.label, len(self.sizer.GetChildren()))
     
         
     def CreatePopupMenu(self):

@@ -159,7 +159,7 @@ class ClassifierGUI(wx.Frame):
         self.topSortPanel = wx.Panel(self.splitter)
         self.topSortSizer = wx.StaticBoxSizer(wx.StaticBox(self.topSortPanel, label='unclassified '+p.object_name[1]))
         self.topSortPanel.SetSizer(self.topSortSizer)
-        self.unclassifiedBoard = CellBoard(parent=self.topSortPanel, classifier=self)
+        self.unclassifiedBoard = CellBoard(parent=self.topSortPanel, classifier=self, label='unclassified')
         self.topSortSizer.Add( self.unclassifiedBoard, proportion=1, flag=wx.EXPAND )
         # bottom half
         self.bottomSortPanel = wx.Panel(self.splitter)
@@ -190,6 +190,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnFindRules, self.findRulesBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreAll, self.scoreAllBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
+        self.Bind(wx.EVT_MOUSE_CAPTURE_LOST, self.CancelCapture)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
@@ -335,20 +336,36 @@ class ClassifierGUI(wx.Frame):
         self.obClassChoice.SetSelection(sel)
         
     
+
+    def all_cell_boards(self):
+        return [self.unclassifiedBoard] + [c.board for c in self.classes]
+
     def OnLeftUp(self, evt):
-        dropTarget = wx.FindWindowAtPointer()
         drag = DragObject.getInstance()
-        if not drag.IsEmpty() and drag.source != dropTarget:
-            if isinstance(dropTarget, DropTarget):
-                dropTarget.ReceiveDrop(drag)
+        if drag.IsEmpty():
+            self.ReleaseMouse()
+            return
+
+        drop_target = None
+        mouse_screen_pos = self.ClientToScreen(evt.GetPosition())
+        for board in self.all_cell_boards():
+            if board.GetScreenRect().Contains(mouse_screen_pos):
+                drop_target = board
+
+        if drop_target and drag.source != drop_target:
+            if isinstance(drop_target, DropTarget):
+                drop_target.ReceiveDrop(drag)
                 if not self.trainingSet:
                     self.trainingSet = TrainingSet(p)
                     self.trainingSet.Create([], [])
             self.UpdateBoardLabels()
-            drag.Empty()
-            self.ReleaseMouse()
+
+        drag.Empty()
+        self.ReleaseMouse()
         #wx.SetCursor(wx.NullCursor)
-        
+
+    def CancelCapture(self, evt):
+        DragObject.getInstance().Empty()
         
     def UpdateBoardLabels(self):
         self.findRulesBtn.Disable()
