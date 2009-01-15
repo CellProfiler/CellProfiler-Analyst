@@ -44,7 +44,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
-        self.Bind(wx.EVT_CHAR, self.OnKey)
+        self.Bind(wx.EVT_SET_FOCUS, self.OnFocus)
         
         self.CreatePopupMenu()
         
@@ -70,26 +70,23 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
-        if evt.GetKeyCode()==8:        # delete
+        if evt.GetKeyCode() in [wx.WXK_DELETE, wx.WXK_BACK]:        # delete
             self.DestroySelectedTiles()
-                
-        if evt.ControlDown():
-            # Select all
-            if evt.GetKeyCode()==313:   # ctrl+a
+            self.Layout()
+            self.Refresh()
+        elif evt.ControlDown() or evt.CmdDown():
+            if evt.GetKeyCode() == ord('A'):
                 self.SelectAll()
-            # Deselect all
-            if evt.GetKeyCode()==312:   # ctrl+d
+            elif evt.GetKeyCode() == ord('D'):
                 self.DeselectAll()
-            # Invert selection
-            if evt.GetKeyCode()==9:     # ctrl+i
-                for tile in self.tiles:
-                    tile.ToggleSelect()
-            # Rename class
-            if evt.GetKeyCode()==18:    # ctrl+r
+            elif evt.GetKeyCode() == ord('I'):
+                [t.ToggleSelect() for t in self.tiles]
+            elif evt.GetKeyCode() == ord('R'):
                 self.classifier.RenameClass(self.label)
-        self.classifier.Refresh()
-        self.classifier.Layout()
-        evt.Skip()
+            else:
+                evt.Skip()
+        else:
+            evt.Skip()
             
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''
@@ -208,9 +205,10 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
                 self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1)
                 self.tiles.append(tile)
             drag.source.SetVirtualSize(drag.source.sizer.CalcMin())
-        self.Scroll(0,0)
         self.SetVirtualSize(self.sizer.CalcMin())
-        
+        self.Scroll(-1, 0)
+        self.SetFocusIgnoringChildren()
+
         
     def MapChannels(self, chMap):
         ''' Recalculates the displayed bitmap for all tiles in this board. '''
@@ -263,12 +261,15 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         ''' Deselects all tiles on this board. '''
         for tile in self.tiles:
             tile.Deselect()
-    
+
+    def OnFocus(self, evt):
+        # stop focus events from propagating to the evil
+        # wx.ScrollWindow class which otherwise causes scroll jumping.
+        pass
 
     def OnLeftDown(self, evt):
-        self.SetFocus()
+        self.SetFocusIgnoringChildren()
         if not evt.ShiftDown():
             self.DeselectAll()
         if evt.AltDown():
             self.classifier.RemoveSortClass(self.label)
-    

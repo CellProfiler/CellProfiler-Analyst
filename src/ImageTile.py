@@ -43,7 +43,7 @@ class ImageTile(wx.Window, DropTarget):
         self.imagePanel.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
         self.imagePanel.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         
-            
+
     def CreatePopupMenu(self):
         popupMenuItems = ['View full images of selected',
                           '[ctrl+a] - Select all',
@@ -113,17 +113,17 @@ class ImageTile(wx.Window, DropTarget):
     
     
     def OnLeftDown(self, evt):
-        self.board.SetFocus()
-        if drag.IsEmpty():
-            self.classifier.CaptureMouse()
+        self.board.SetFocusIgnoringChildren()
+        self.classifier.CaptureMouse()
+        drag.data = self.board.SelectedKeys()
+        drag.source = self.board
+
 #            cursorImg = self.bitmap.ConvertToImage()
 #            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.size[0])/2)
 #            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.size[1])/2)
 #            wx.SetCursor(wx.CursorFromImage(cursorImg))
 #            for tlw in wx.GetTopLevelWindows():
 #                tlw.SetCursor(wx.CursorFromImage(cursorImg))
-            drag.data = self.board.SelectedKeys()
-            drag.source = self.board
             
         if not evt.ShiftDown() and not self.selected:
             self.board.DeselectAll()
