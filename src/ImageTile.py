@@ -121,11 +121,8 @@ class ImageTile(wx.Window, DropTarget):
 #            for tlw in wx.GetTopLevelWindows():
 #                tlw.SetCursor(wx.CursorFromImage(cursorImg))
             
-        if not evt.ShiftDown() and not self.selected:
-            self.board.DeselectAll()
-            self.ToggleSelect()
-            return
         if not evt.ShiftDown():
+            self.board.DeselectAll()
             self.Select()
         else:
             self.ToggleSelect()
