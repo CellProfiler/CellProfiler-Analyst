@@ -192,7 +192,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         self.Refresh()
         self.Layout()
 
-    def find_tile_for_key(self, obkey):
+    def find__selected_tile_for_key(self, obkey):
         for t in self.tiles:
             if t.obKey == obkey:
                 return t
@@ -203,7 +203,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         if type(drag.source) == CellBoard:
             for obkey in drag.data:
                 # we don't want to refetch image data
-                tile = drag.source.find_tile_for_key(obkey)
+                tile = drag.source.find_selected_tile_for_key(obkey)
                 drag.source.sizer.Remove(tile)
                 drag.source.tiles.remove(tile)
                 tile.Reparent(self)
