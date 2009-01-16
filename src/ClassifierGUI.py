@@ -658,7 +658,7 @@ class ClassifierGUI(wx.Frame):
             imKey = (tblNum,imgNum)
         else:
             imKey = (imgNum,)
-        
+           
         # 2) Get the phenotype to highlight:
         dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', [cl.label for cl in self.classes], wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() == wx.ID_OK:            
@@ -668,13 +668,13 @@ class ClassifierGUI(wx.Frame):
         else:
             dlg.Destroy()
             return
-
-#
-#    def ScoreImage(self, imKey, ckass):
+    
         # 3) Find the hits
         stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, [imKey])
         obKeys = dm.GetObjectsFromImage(imKey)
-        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query)
+        hits = []
+        if obKeys:
+            hits = MulticlassSQL.FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query)
         self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(hits), len(obKeys), p.object_name[1], cls, imKey))
         
         # 4) Get object coordinates in image and display
