@@ -194,7 +194,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
 
     def find_selected_tile_for_key(self, obkey):
         for t in self.tiles:
-            if t.obKey == obkey:
+            if t.obKey == obkey and t.selected:
                 return t
         
     def ReceiveDrop(self, drag):
