@@ -715,8 +715,6 @@ class ClassifierGUI(wx.Frame):
                 if obCount == 0:
                     self.keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
                 
-        print self.keysAndCounts
-
         t2 = time()
         print 'time to calculate hits: ',t2-t1
         

@@ -14,6 +14,45 @@ dm = DataModel.getInstance()
 
 IMAGE_GROUPING = 'Image'
 
+class HugeTable(wx.grid.PyGridTableBase):
+
+    def __init__(self, data):
+        wx.grid.PyGridTableBase.__init__(self)
+        self.data = data
+    
+    def GetNumberRows(self):
+        return self.data.shape[0]
+
+    def GetNumberCols(self):
+        return self.data.shape[1]
+
+    def IsEmptyCell(self, row, col):
+        return False
+
+    def GetValue(self, row, col):
+        return str(self.data[row, col])
+
+    def SetValue(self, row, col, value):
+        # ignore
+        pass
+
+
+class HugeTableGrid(wx.grid.Grid):
+    def __init__(self, parent, data):
+        wx.grid.Grid.__init__(self, parent, -1)
+
+        table = HugeTable(data)
+        self.DisableCellEditControl()
+        self.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnSelectCell)
+
+        # The second parameter means that the grid is to take ownership of the
+        # table and will destroy it when done.  Otherwise you would need to keep
+        # a reference to it and call it's Destroy method later.
+        self.SetTable(table, True)
+
+    def OnSelectCell(self, evt):
+        return # prevent selection
+
 
 class DataGrid(wx.Frame):
     '''
@@ -27,7 +66,7 @@ class DataGrid(wx.Frame):
     def __init__(self, data, labels, grouping=IMAGE_GROUPING, groupIDIndices=[0], chMap=None, parent=None, title='Data Grid'):
         wx.Frame.__init__(self, parent, id=-1, title=title)
         
-        self.grid = wx.grid.Grid(parent=self)      # the grid
+        self.grid = HugeTableGrid(self, data)      # the grid
         self.data = data                           # numpy array of rows x cols
         self.order = numpy.arange(data.shape[0])   # defines the order of the rows displayed
         self.labels = labels                       # text labels for each column
@@ -47,12 +86,10 @@ class DataGrid(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.menuBar.Append(self.filemenu, 'File')
 
+        
         if self.chMap == None:
             self.chMap = p.image_channel_colors
-        self.grid.CreateGrid(self.data.shape[0], self.data.shape[1] )
         self.SetColumnLabels(self.labels)
-        self.SetGridData(self.data)
-#        self.grid.AutoSize()                        # Doesn't work for large grids 
         self.SetSize((800,500))
         self.SetSize((self.grid.Size[0], min(self.grid.Size[1], 500)+22))
         
@@ -102,6 +139,8 @@ class DataGrid(wx.Frame):
                 imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
                 for imKey in imKeys:
                     ImageTools.ShowImage(imKey, self.chMap, parent=self)
+        else:
+            self.OnLabelClick(evt)
             
             
     def OnLabelRightClick(self, evt):
@@ -135,42 +174,19 @@ class DataGrid(wx.Frame):
     def SortGridByCol(self, colIndex):
         # If this column is already sorted, flip it
         if self.sortcol == colIndex:
-            self.order = self.order[::-1]
-            if self.sortdir == 1:
-                self.sortdir = -1
-            else:
-                self.sortdir = 1
+            self.order = numpy.arange(self.data.shape[0])[::-1]
         # If this column hasn't been sorted yet, then sort descending
         else:
             self.order = self.data[:,colIndex].argsort()[::-1]
             self.sortdir = -1
             
         self.sortcol = colIndex
-        self.SetGridData( self.data[self.order] )
-
+        self.data[:] = self.data[self.order].copy()
+        self.Refresh()
     
     def SetColumnLabels(self, labels):
         for i, label in enumerate(labels):
             self.grid.SetColLabelValue(i, label)
-
-    
-    def SetGridData(self, data):
-        assert data.shape == (self.grid.NumberRows,self.grid.NumberCols), 'ScoreGrid.SetGridData: Data shape does not match grid shape.'
-        for i in xrange(data.shape[0]):      # rows
-            rowLabel = ' : '.join( [str(self.data[self.order][i,idx]) for idx in self.groupIDIndices] )
-            self.grid.SetRowLabelValue(i, rowLabel)
-            for j in xrange(data.shape[1]):  # cols
-                if ( type(data[i][j])==float or
-                     type(data[i][j])==numpy.float64 or
-                     type(data[i][j])==numpy.float32 ):
-                    self.grid.SetCellValue(i,j,'% .4f' % data[i][j])   # format floats to 4 decimal places   
-                else:
-                    self.grid.SetCellValue(i,j,str(data[i][j]))
-                self.grid.SetReadOnly(i,j)                            # set cell read only
-    
-    
-
-
 
 
 
