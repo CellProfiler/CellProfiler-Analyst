@@ -16,15 +16,23 @@ IMAGE_GROUPING = 'Image'
 
 class HugeTable(wx.grid.PyGridTableBase):
 
-    def __init__(self, data):
+    def __init__(self, data, col_labels, row_label_indices):
         wx.grid.PyGridTableBase.__init__(self)
         self.data = data
+        self.col_labels = col_labels
+        self.row_label_indices = row_label_indices
     
     def GetNumberRows(self):
         return self.data.shape[0]
 
     def GetNumberCols(self):
         return self.data.shape[1]
+
+    def GetColLabelValue(self, col):
+        return self.col_labels[col]
+
+    def GetRowLabelValue(self, row):
+        return " : ".join([str(v) for v in self.data[row, self.row_label_indices]])
 
     def IsEmptyCell(self, row, col):
         return False
@@ -38,10 +46,10 @@ class HugeTable(wx.grid.PyGridTableBase):
 
 
 class HugeTableGrid(wx.grid.Grid):
-    def __init__(self, parent, data):
+    def __init__(self, parent, data, col_labels, row_label_indices):
         wx.grid.Grid.__init__(self, parent, -1)
 
-        table = HugeTable(data)
+        table = HugeTable(data, col_labels, row_label_indices)
         self.DisableCellEditControl()
         self.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnSelectCell)
 
@@ -66,16 +74,15 @@ class DataGrid(wx.Frame):
     def __init__(self, data, labels, grouping=IMAGE_GROUPING, groupIDIndices=[0], chMap=None, parent=None, title='Data Grid'):
         wx.Frame.__init__(self, parent, id=-1, title=title)
         
-        self.grid = HugeTableGrid(self, data)      # the grid
         self.data = data                           # numpy array of rows x cols
+        self.grid = HugeTableGrid(self, data, labels, groupIDIndices)      # the grid
         self.order = numpy.arange(data.shape[0])   # defines the order of the rows displayed
         self.labels = labels                       # text labels for each column
         self.grouping = grouping                   # group name string to match a group in the DataModel.  eg: 'Wells'
         self.groupIDIndices = groupIDIndices       # column indexes for group ids
         self.chMap = chMap                         # channel-to-color map can be passed in so when an ImageViewer is launched
                                                    #    from the table, the user gets their most recent channel-color map 
-        self.sortcol = 0                           # index of the current column being sorted-by
-        self.sortdir = 1                           # direction of sorting +1 = ascending, -1 = descending
+        self.sortcol = -1                           # index of the current column being sorted-by
         
         assert len(labels) == data.shape[1], 'DataGrid.__init__: Number of column labels does not match number of columns in data.'
         
@@ -99,6 +106,10 @@ class DataGrid(wx.Frame):
         wx.grid.EVT_GRID_LABEL_RIGHT_CLICK(self.grid, self.OnLabelRightClick)
         wx.grid.EVT_GRID_LABEL_LEFT_DCLICK(self.grid, self.OnLabelDClick)
         
+        self.grid.EnableEditing(False)
+        self.grid.SetCellHighlightPenWidth(0)
+
+
         
     def OnKey(self, evt):
         keycode = evt.GetKeyCode()
@@ -177,8 +188,7 @@ class DataGrid(wx.Frame):
             self.order = numpy.arange(self.data.shape[0])[::-1]
         # If this column hasn't been sorted yet, then sort descending
         else:
-            self.order = self.data[:,colIndex].argsort()[::-1]
-            self.sortdir = -1
+            self.order = self.data[:,colIndex].argsort()
             
         self.sortcol = colIndex
         self.data[:] = self.data[self.order].copy()
@@ -201,7 +211,8 @@ if __name__ == "__main__":
     labels = ['key', 'count A' , 'count McLongtitle #1\n B' , 'P a' , 'P b' ]
         
     app = wx.PySimpleApp()
-    grid = DataGrid( hits, labels )
+    grid = DataGrid( hits, labels, groupIDIndices=[0,1] )
     grid.Show()
+
     app.MainLoop()
 
