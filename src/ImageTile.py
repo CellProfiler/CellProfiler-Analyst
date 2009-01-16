@@ -16,18 +16,14 @@ db = DBConnect.getInstance()
 drag = DragObject.getInstance()
 
 
-class ImageTile(wx.Window, DropTarget):
+class ImageTile(ImagePanel, DropTarget):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
     between CellBoards.  They contain image data in a key=(table, image, object)
     and manage their state of selection.
     '''
     def __init__(self, board, obKey, images, chMap, selected=False, scale=1.0, brightness=1.0):
-        wx.Window.__init__(self, board)
-        
-        self.imagePanel = ImagePanel(images, chMap, self, scale=scale, brightness=brightness)
-        
-        self.SetSize(self.imagePanel.GetSize())
+        ImagePanel.__init__(self, images, chMap, board, scale=scale, brightness=brightness)
         
         self.board      = board
         self.classifier = board.classifier
@@ -38,10 +34,10 @@ class ImageTile(wx.Window, DropTarget):
         self.MapChannels(chMap)
         self.CreatePopupMenu()
         
-        self.imagePanel.Bind(wx.EVT_SIZE, self.OnSize)
-        self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
-        self.imagePanel.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
-        self.imagePanel.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
+        self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         
 
     def CreatePopupMenu(self):
@@ -86,21 +82,18 @@ class ImageTile(wx.Window, DropTarget):
 
     def MapChannels(self, chMap):
         ''' Recalculates the displayed bitmap for this tile. '''
-        self.imagePanel.MapChannels(chMap)
         self.chMap = chMap
         
         
     def Select(self):
         if not self.selected:
             self.selected = True
-            self.imagePanel.selected = True
             self.Refresh()
 
 
     def Deselect(self):
         if self.selected:
             self.selected = False
-            self.imagePanel.selected = False
             self.Refresh()
         
     

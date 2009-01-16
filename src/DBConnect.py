@@ -179,7 +179,7 @@ class DBConnect(Singleton):
         return res[0]
 
     def GetObjectNear(self, imkey, x, y, connID='default'):
-        '''finds the closest object to x, y in an image'''
+        ''' Finds the closest object to x, y in an image. '''
         delta_x = p.cell_x_loc+' - %d'%(x)
         delta_y = p.cell_y_loc+' - %d'%(y)
         dist_clause = 'POW(%s, 2) + POW(%s, 2)'%(delta_x, delta_y)

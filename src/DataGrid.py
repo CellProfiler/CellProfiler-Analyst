@@ -113,9 +113,9 @@ class DataGrid(wx.Frame):
         
     def OnKey(self, evt):
         keycode = evt.GetKeyCode()
-        if keycode == wx.WXK_ESCAPE:
-            #TODO: confirm save
-            self.Close()
+        if evt.ControlDown() or evt.CmdDown():
+            if evt.GetKeyCode() == ord('W'):
+                self.Close()
         evt.Skip()
         
 

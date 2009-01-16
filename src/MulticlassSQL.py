@@ -77,7 +77,8 @@ def FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_qu
     # Drop existing temporary tables
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
-    stump_query += ' WHERE '+GetWhereClauseForObjects(obKeys)
+    if obKeys:
+        stump_query += ' WHERE '+GetWhereClauseForObjects(obKeys)
     db.Execute(stump_query)
     db.Execute(score_query)
     db.Execute(find_max_query)

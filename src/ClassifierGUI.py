@@ -340,6 +340,7 @@ class ClassifierGUI(wx.Frame):
     def all_cell_boards(self):
         return [self.unclassifiedBoard] + [c.board for c in self.classes]
 
+
     def OnLeftUp(self, evt):
         drag = DragObject.getInstance()
         if drag.IsEmpty():
@@ -364,8 +365,10 @@ class ClassifierGUI(wx.Frame):
         self.ReleaseMouse()
         #wx.SetCursor(wx.NullCursor)
 
+
     def CancelCapture(self, evt):
         DragObject.getInstance().Empty()
+
         
     def UpdateBoardLabels(self):
         self.findRulesBtn.Disable()
@@ -857,20 +860,14 @@ class ClassifierGUI(wx.Frame):
         
     def SetBrightness(self, brightness):
         self.brightness = brightness
-        panels = []
-        for t in self.unclassifiedBoard.tiles:
-            panels += [t.imagePanel]
-        for cl in self.classes:
-            for t in cl.board.tiles:
-                panels += [t.imagePanel]
-        for p in panels:
-            p.SetBrightness(brightness)
+        [t.SetBrightness(brightness) for t in self.unclassifiedBoard.tiles] 
+        [t.SetBrightness(brightness) for cl in self.classes for t in cl.board.tiles]
         
 
     def SetScale(self, scale):
         self.scale = scale
-        panels = ([t.imagePanel for t in self.unclassifiedBoard.tiles] + 
-                  [t.imagePanel for cl in self.classes for t in cl.board.tiles])
+        panels = ([t for t in self.unclassifiedBoard.tiles] + 
+                  [t for cl in self.classes for t in cl.board.tiles])
         
         for p in panels:
             p.SetScale(scale)

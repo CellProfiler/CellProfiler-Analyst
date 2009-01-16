@@ -50,7 +50,8 @@ class ImageViewer(wx.Frame):
         
         self.sw.SetScrollbars(1,1,w,h)
         
-        self.Bind(wx.EVT_CHAR, self.OnKey)
+        self.Bind(wx.EVT_KEY_UP, self.OnKey)
+        self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, self.imageControlsMenuItem)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
@@ -100,12 +101,13 @@ class ImageViewer(wx.Frame):
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
         keycode = evt.GetKeyCode()
-        if keycode == wx.WXK_ESCAPE:
-            self.Destroy()
-        if evt.ControlDown():
-            chIdx = evt.GetKeyCode()-49
-            if len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
+        chIdx = keycode-49
+        if evt.CmdDown() or evt.ControlDown():
+            if keycode == ord('W'):
+                self.Destroy()
+            elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
+        evt.Skip()
                     
                 
     def OnShowImageControls(self, evt):
