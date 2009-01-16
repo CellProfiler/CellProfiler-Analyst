@@ -192,7 +192,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         self.Refresh()
         self.Layout()
 
-    def find__selected_tile_for_key(self, obkey):
+    def find_selected_tile_for_key(self, obkey):
         for t in self.tiles:
             if t.obKey == obkey:
                 return t
