@@ -19,15 +19,15 @@ drag = DragObject.getInstance()
 class ImageTile(ImagePanel, DropTarget):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
-    between CellBoards.
+    between SortBins.
     '''
-    def __init__(self, board, obKey, images, chMap, selected=False, scale=1.0, brightness=1.0):
-        ImagePanel.__init__(self, images, chMap, board, scale=scale, brightness=brightness)
+    def __init__(self, bin, obKey, images, chMap, selected=False, scale=1.0, brightness=1.0):
+        ImagePanel.__init__(self, images, chMap, bin, scale=scale, brightness=brightness)
         
-        self.board      = board             # the CellBoard this object belongs to
-        self.classifier = board.classifier  # ClassifierGUI needs to capture the mouse on tile selection
-        self.obKey      = obKey             # (table, image, object)
-        self.selected   = selected          # whether or not this tile is selected
+        self.bin        = bin             # the SortBin this object belongs to
+        self.classifier = bin.classifier  # ClassifierGUI needs to capture the mouse on tile selection
+        self.obKey      = obKey           # (table, image, object)
+        self.selected   = selected        # whether or not this tile is selected
         
         self.MapChannels(chMap)
         self.CreatePopupMenu()
@@ -61,26 +61,21 @@ class ImageTile(ImagePanel, DropTarget):
         ''' Handles selections from the popup menu. '''
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
-            for obKey in self.board.SelectedKeys():
+            for obKey in self.bin.SelectedKeys():
                 imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier)
                 pos = db.GetObjectCoords(obKey)
                 imViewer.imagePanel.SelectPoints([pos])
         elif choice == 1:
-            self.board.SelectAll()
+            self.bin.SelectAll()
         elif choice == 2:
-            self.board.DeselectAll()
+            self.bin.DeselectAll()
         elif choice == 3:
-            self.board.DestroySelectedTiles()
+            self.bin.DestroySelectedTiles()
             
             
     def OnDClick(self, evt):
         imViewer = ImageTools.ShowImage(self.obKey[:-1], self.chMap[:], parent=self.classifier)
         imViewer.imagePanel.SelectPoints([db.GetObjectCoords(self.obKey)])
-        
-
-    def MapChannels(self, chMap):
-        ''' Recalculates the displayed bitmap for this tile. '''
-        self.chMap = chMap
         
         
     def Select(self):
@@ -103,7 +98,7 @@ class ImageTile(ImagePanel, DropTarget):
     
     
     def OnLeftDown(self, evt):
-        self.board.SetFocusIgnoringChildren()
+        self.bin.SetFocusIgnoringChildren()
 
 #            cursorImg = self.bitmap.ConvertToImage()
 #            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.size[0])/2)
@@ -113,15 +108,15 @@ class ImageTile(ImagePanel, DropTarget):
 #                tlw.SetCursor(wx.CursorFromImage(cursorImg))
             
         if not evt.ShiftDown() and not self.selected:
-            self.board.DeselectAll()
+            self.bin.DeselectAll()
             self.Select()
         elif evt.ShiftDown():
             self.ToggleSelect()
 
-        if self.board.SelectedKeys():
+        if self.bin.SelectedKeys():
             self.classifier.CaptureMouse()
-            drag.data = self.board.SelectedKeys()
-            drag.source = self.board
+            drag.data = self.bin.SelectedKeys()
+            drag.source = self.bin
 
     def OnSize(self, evt):
         self.SetClientSize(evt.GetSize())
@@ -129,8 +124,8 @@ class ImageTile(ImagePanel, DropTarget):
         
         
     def ReceiveDrop(self, data):
-        if self.board != drag.source:
-            self.board.ReceiveDrop(data)
+        if self.bin != drag.source:
+            self.bin.ReceiveDrop(data)
             
 
         

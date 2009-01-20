@@ -1,5 +1,5 @@
 '''
-CellBoard.py
+SortBin.py
 Authors: afraser
 '''
 
@@ -16,10 +16,10 @@ import ImageTools
 p  = Properties.getInstance()
 db = DBConnect.getInstance()
 
-class CellBoard(wx.ScrolledWindow, DropTarget):
+class SortBin(wx.ScrolledWindow, DropTarget):
     '''
-    CellBoards contain collections of objects as small image tiles
-    that can be dragged to other CellBoards for classification.
+    SortBins contain collections of objects as small image tiles
+    that can be dragged to other SortBins for classification.
     '''
     def __init__(self, parent, chMap=None, label='', classifier=None):
         wx.ScrolledWindow.__init__(self, parent)
@@ -50,7 +50,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         
     
     def __str__(self):
-        return 'Board %s with %d objects'%(self.label, len(self.sizer.GetChildren()))
+        return 'Bin %s with %d objects'%(self.label, len(self.sizer.GetChildren()))
     
         
     def CreatePopupMenu(self):
@@ -128,7 +128,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
     def AddTile(self, tile, refresh=True, pos='first'):
         ''' Adds the given tile. 
         Set refresh to false for faster performance, and refresh manually.'''
-        tile.board = self
+        tile.bin = self
         self.tiles.append(tile)
         if pos == 'first':
             self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1 )
@@ -183,7 +183,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
             tile.Destroy()
         self.Refresh()
         self.Layout()
-        self.classifier.UpdateBoardLabels()
+        self.classifier.UpdateBinLabels()
     
     
     def Clear(self):
@@ -200,14 +200,14 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
     def ReceiveDrop(self, drag):
         drag = DragObject.getInstance()
         self.DeselectAll()
-        if type(drag.source) == CellBoard:
+        if type(drag.source) == SortBin:
             for obkey in drag.data:
                 # we don't want to refetch image data
                 tile = drag.source.find_selected_tile_for_key(obkey)
                 drag.source.sizer.Remove(tile)
                 drag.source.tiles.remove(tile)
                 tile.Reparent(self)
-                tile.board = self
+                tile.bin = self
                 self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1)
                 self.tiles.append(tile)
             drag.source.SetVirtualSize(drag.source.sizer.CalcMin())
@@ -224,7 +224,7 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
 
         
     def MapChannels(self, chMap):
-        ''' Recalculates the displayed bitmap for all tiles in this board. '''
+        ''' Recalculates the displayed bitmap for all tiles in this bin. '''
         self.chMap = chMap
         try:
             for tile in self.tiles:
@@ -235,11 +235,11 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
             
     
     def SelectedKeys(self):
-        ''' Returns the keys of currently selected tiles on this board. '''
+        ''' Returns the keys of currently selected tiles on this bin. '''
         return [tile.obKey for tile in self.tiles if tile.selected]
     
     def Selection(self):
-        ''' Returns the currently selected tiles on this board. '''
+        ''' Returns the currently selected tiles on this bin. '''
         tiles = []
         for tile in self.tiles:
             if tile.selected:
@@ -260,13 +260,13 @@ class CellBoard(wx.ScrolledWindow, DropTarget):
         
     
     def SelectAll(self):
-        ''' Selects all tiles on this board. '''
+        ''' Selects all tiles on this bin. '''
         for tile in self.tiles:
             tile.Select()
         
     
     def DeselectAll(self):
-        ''' Deselects all tiles on this board. '''
+        ''' Deselects all tiles on this bin. '''
         for tile in self.tiles:
             tile.Deselect()
 

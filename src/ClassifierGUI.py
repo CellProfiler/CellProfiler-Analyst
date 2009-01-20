@@ -14,7 +14,7 @@ from DataModel import DataModel
 from DBConnect import DBConnect
 from Properties import Properties
 
-from CellBoard import CellBoard
+from SortBin import SortBin
 from ImageTile import ImageTile
 from ImageControlPanel import ImageControlPanel
 from DragObject import DragObject
@@ -35,9 +35,9 @@ db = DBConnect.getInstance()
 
 
 class SortClass(object):
-    def __init__(self, label, board, sizer, trained=False):
+    def __init__(self, label, bin, sizer, trained=False):
         self.label = label
-        self.board = board
+        self.bin = bin
         self.sizer = sizer
         self.trained = trained
 
@@ -159,8 +159,8 @@ class ClassifierGUI(wx.Frame):
         self.topSortPanel = wx.Panel(self.splitter)
         self.topSortSizer = wx.StaticBoxSizer(wx.StaticBox(self.topSortPanel, label='unclassified '+p.object_name[1]))
         self.topSortPanel.SetSizer(self.topSortSizer)
-        self.unclassifiedBoard = CellBoard(parent=self.topSortPanel, classifier=self, label='unclassified')
-        self.topSortSizer.Add( self.unclassifiedBoard, proportion=1, flag=wx.EXPAND )
+        self.unclassifiedBin = SortBin(parent=self.topSortPanel, classifier=self, label='unclassified')
+        self.topSortSizer.Add( self.unclassifiedBin, proportion=1, flag=wx.EXPAND )
         # bottom half
         self.bottomSortPanel = wx.Panel(self.splitter)
         self.bottomSortSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -264,13 +264,13 @@ class ClassifierGUI(wx.Frame):
 
         
     def AddSortClass(self, label):
-        ''' Create a new CellBoard in a new StaticBoxSizer with the given label.
+        ''' Create a new SortBin in a new StaticBoxSizer with the given label.
         This sizer is then added to the bottomSortSizer. '''
         sizer = wx.StaticBoxSizer(wx.StaticBox(self.bottomSortPanel, label=label), wx.VERTICAL)
-        board = CellBoard(parent=self.bottomSortPanel, label=label, classifier=self)             # NOTE: board must be created after sizer or drops events will occur on the sizer
-        sizer.Add(board, proportion=1, flag=wx.EXPAND)
+        bin = SortBin(parent=self.bottomSortPanel, label=label, classifier=self)             # NOTE: bin must be created after sizer or drops events will occur on the sizer
+        sizer.Add(bin, proportion=1, flag=wx.EXPAND)
         self.bottomSortSizer.Add(sizer, proportion=1, flag=wx.EXPAND)
-        self.classes.append( SortClass(label,board,sizer) )
+        self.classes.append( SortClass(label,bin,sizer) )
         self.bottomSortPanel.Layout()
         self.binsCreated += 1
         
@@ -280,8 +280,8 @@ class ClassifierGUI(wx.Frame):
             if cl.label == label:
                 # Remove the bin
                 self.bottomSortSizer.Remove(cl.sizer)
-                #cl.board.Clear()
-                cl.board.Destroy()
+                #cl.bin.Clear()
+                cl.bin.Destroy()
                 self.bottomSortPanel.Layout()
                 # Remove the label from the class dropdown menu
                 self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item!=cl.label])
@@ -322,10 +322,10 @@ class ClassifierGUI(wx.Frame):
             for cl in self.classes:
                 if cl.label == label:
                     cl.label = newLabel
-                    cl.board.label = newLabel
+                    cl.bin.label = newLabel
                     break
             dlg.Destroy()
-        self.UpdateBoardLabels()
+        self.UpdateBinLabels()
         
         updatedList = self.obClassChoice.GetItems()
         sel = self.obClassChoice.GetSelection()
@@ -337,8 +337,8 @@ class ClassifierGUI(wx.Frame):
         
     
 
-    def all_cell_boards(self):
-        return [self.unclassifiedBoard] + [c.board for c in self.classes]
+    def all_sort_bins(self):
+        return [self.unclassifiedBin] + [c.bin for c in self.classes]
 
 
     def OnLeftUp(self, evt):
@@ -349,9 +349,9 @@ class ClassifierGUI(wx.Frame):
 
         drop_target = None
         mouse_screen_pos = self.ClientToScreen(evt.GetPosition())
-        for board in self.all_cell_boards():
-            if board.GetScreenRect().Contains(mouse_screen_pos):
-                drop_target = board
+        for bin in self.all_sort_bins():
+            if bin.GetScreenRect().Contains(mouse_screen_pos):
+                drop_target = bin
 
         if drop_target and drag.source != drop_target:
             if isinstance(drop_target, DropTarget):
@@ -359,7 +359,7 @@ class ClassifierGUI(wx.Frame):
                 if not self.trainingSet:
                     self.trainingSet = TrainingSet(p)
                     self.trainingSet.Create([], [])
-            self.UpdateBoardLabels()
+            self.UpdateBinLabels()
 
         drag.Empty()
         self.ReleaseMouse()
@@ -370,13 +370,13 @@ class ClassifierGUI(wx.Frame):
         DragObject.getInstance().Empty()
 
         
-    def UpdateBoardLabels(self):
+    def UpdateBinLabels(self):
         self.findRulesBtn.Disable()
         ts = False
-        self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBoard.tiles))+')' )
+        self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBin.tiles))+')' )
         for cl in self.classes:
-            cl.sizer.GetStaticBox().SetLabel( cl.label+' ('+str(len(cl.board.tiles))+')')
-            if len(cl.board.tiles) > 0:
+            cl.sizer.GetStaticBox().SetLabel( cl.label+' ('+str(len(cl.bin.tiles))+')')
+            if len(cl.bin.tiles) > 0:
                 if ts:
                     self.findRulesBtn.Enable()
                 ts = True
@@ -487,9 +487,9 @@ class ClassifierGUI(wx.Frame):
             self.SetStatusText('')
             self.worker = None
         else:
-            tile = ImageTile(self.unclassifiedBoard, obKey=evt.data[0], images=evt.data[1], chMap=self.chMap, selected=False, scale=self.scale, brightness=self.brightness)
-            self.unclassifiedBoard.AddTile(tile, pos='last')
-            self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBoard.tiles))+')' )
+            tile = ImageTile(self.unclassifiedBin, obKey=evt.data[0], images=evt.data[1], chMap=self.chMap, selected=False, scale=self.scale, brightness=self.brightness)
+            self.unclassifiedBin.AddTile(tile, pos='last')
+            self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBin.tiles))+')' )
         
         
     def OnLoadTrainingSet(self, evt):
@@ -514,12 +514,12 @@ class ClassifierGUI(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 for cl in self.classes:
                     if cl.label == label:
-                        cl.board.AddObject(key, self.chMap[:], refresh=False)
+                        cl.bin.AddObject(key, self.chMap[:], refresh=False)
                         break
             for cl in self.classes:
-                cl.board.Refresh()
-                cl.board.Layout()
-        self.UpdateBoardLabels()
+                cl.bin.Refresh()
+                cl.bin.Layout()
+        self.UpdateBinLabels()
         self.SetStatusText('Training set loaded.')
         
     
@@ -540,7 +540,7 @@ class ClassifierGUI(wx.Frame):
     def SaveTrainingSetAs(self, filename):
         classDict = {}
         self.trainingSet = TrainingSet(p)
-        self.trainingSet.Create([cl.label for cl in self.classes], [cl.board.GetObjectKeys() for cl in self.classes])
+        self.trainingSet.Create([cl.label for cl in self.classes], [cl.bin.GetObjectKeys() for cl in self.classes])
         self.trainingSet.Save(filename)
         
     
@@ -563,9 +563,9 @@ class ClassifierGUI(wx.Frame):
         
         # TODO: Need to update color menu selections
         
-        self.unclassifiedBoard.MapChannels(chMap)
+        self.unclassifiedBin.MapChannels(chMap)
         for cl in self.classes:
-            cl.board.MapChannels(chMap)
+            cl.bin.MapChannels(chMap)
         self.Refresh()
         self.Layout()
 
@@ -616,7 +616,7 @@ class ClassifierGUI(wx.Frame):
         self.keysAndCounts = None    # Must erase current keysAndCounts so they will be recalculated from new rules
         
         self.trainingSet = TrainingSet(p)
-        self.trainingSet.Create([cl.label for cl in self.classes], [cl.board.GetObjectKeys() for cl in self.classes])
+        self.trainingSet.Create([cl.label for cl in self.classes], [cl.bin.GetObjectKeys() for cl in self.classes])
         labelMatrix = self.ComputeLabelMatrix()
         output = StringIO()
         self.SetStatusText('Training classifier with '+str(nRules)+' rules...')
@@ -627,7 +627,7 @@ class ClassifierGUI(wx.Frame):
         self.scoreImageBtn.Enable()
 
         for cl in self.classes:
-            if len(cl.board.tiles) > 0:
+            if len(cl.bin.tiles) > 0:
                 cl.trained = True
             else:
                 cl.trained = False
@@ -824,8 +824,8 @@ class ClassifierGUI(wx.Frame):
         m = []
         nClasses = len(self.classes)
         for cl in self.classes:
-            for obKey in cl.board.GetObjectKeys():
-                m.append( [(int(cls.board==cl.board) or -1) for cls in self.classes] )
+            for obKey in cl.bin.GetObjectKeys():
+                m.append( [(int(cls.bin==cl.bin) or -1) for cls in self.classes] )
         return numpy.array(m)
     
     
@@ -860,21 +860,21 @@ class ClassifierGUI(wx.Frame):
         
     def SetBrightness(self, brightness):
         self.brightness = brightness
-        [t.SetBrightness(brightness) for t in self.unclassifiedBoard.tiles] 
-        [t.SetBrightness(brightness) for cl in self.classes for t in cl.board.tiles]
+        [t.SetBrightness(brightness) for t in self.unclassifiedBin.tiles] 
+        [t.SetBrightness(brightness) for cl in self.classes for t in cl.bin.tiles]
         
 
     def SetScale(self, scale):
         self.scale = scale
-        panels = ([t for t in self.unclassifiedBoard.tiles] + 
-                  [t for cl in self.classes for t in cl.board.tiles])
+        panels = ([t for t in self.unclassifiedBin.tiles] + 
+                  [t for cl in self.classes for t in cl.bin.tiles])
         
         for p in panels:
             p.SetScale(scale)
-        # Layout the boards
-        self.unclassifiedBoard.Layout()
+        # Layout the bins
+        self.unclassifiedBin.Layout()
         for cl in self.classes:
-            cl.board.Layout()
+            cl.bin.Layout()
         
 
     def OnClose(self, evt):
