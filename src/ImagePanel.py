@@ -11,12 +11,15 @@ from DropTarget import DropTarget
 p = Properties.getInstance()
 
 
-
 class ImagePanel(wx.Panel, DropTarget):
+    '''
+    ImagePanels are wxPanels that display a wxBitmap and store multiple
+    image channels which can be recombined to mix different bitmaps.
+    '''
     def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0):
-        self.chMap       = chMap
+        self.chMap       = chMap                                               # channel->color mapping to use
         self.toggleChMap = chMap[:]
-        self.images      = imgs                                         # image channel arrays
+        self.images      = imgs                                                # image channel arrays
         self.bitmap      = ImageTools.MergeToBitmap(imgs,
                                                     chMap = chMap,
                                                     scale = scale,
@@ -38,21 +41,18 @@ class ImagePanel(wx.Panel, DropTarget):
         dc.Clear()
         dc.DrawBitmap(self.bitmap, 0, 0)
         
+        # Draw small boxes at each selected point
         for (x,y) in self.selectedPoints:
-#            x*=self.scale
-#            y*=self.scale
             x = x * self.scale - 2
             y = y * self.scale - 2
             w = h = 4
-            
             dc.BeginDrawing()
             dc.SetPen(wx.Pen("WHITE",1))
             dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
-#            dc.DrawLine(x-2,y-2,x+2,y+2)
-#            dc.DrawLine(x+2,y-2,x-2,y+2)
             dc.DrawRectangle(x,y,w,h)
             dc.EndDrawing()
         
+        # Outline the whole image
         if self.selected:
             dc.BeginDrawing()
             dc.SetPen(wx.Pen("WHITE",1))

@@ -19,17 +19,15 @@ drag = DragObject.getInstance()
 class ImageTile(ImagePanel, DropTarget):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
-    between CellBoards.  They contain image data in a key=(table, image, object)
-    and manage their state of selection.
+    between CellBoards.
     '''
     def __init__(self, board, obKey, images, chMap, selected=False, scale=1.0, brightness=1.0):
         ImagePanel.__init__(self, images, chMap, board, scale=scale, brightness=brightness)
         
-        self.board      = board
-        self.classifier = board.classifier
-        self.obKey      = obKey       # (table, image, object)
-        self.images     = images      # the image channels
-        self.selected   = selected    # whether or not this tile is selected
+        self.board      = board             # the CellBoard this object belongs to
+        self.classifier = board.classifier  # ClassifierGUI needs to capture the mouse on tile selection
+        self.obKey      = obKey             # (table, image, object)
+        self.selected   = selected          # whether or not this tile is selected
         
         self.MapChannels(chMap)
         self.CreatePopupMenu()
