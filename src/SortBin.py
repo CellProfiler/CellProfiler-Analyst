@@ -226,12 +226,8 @@ class SortBin(wx.ScrolledWindow, DropTarget):
     def MapChannels(self, chMap):
         ''' Recalculates the displayed bitmap for all tiles in this bin. '''
         self.chMap = chMap
-        try:
-            for tile in self.tiles:
-                tile.MapChannels(self.chMap)
-        except Exception, e:
-            # self.sizer doesn't exist until OnCreate is called
-            print e
+        for tile in self.tiles:
+            tile.MapChannels(self.chMap)
             
     
     def SelectedKeys(self):
