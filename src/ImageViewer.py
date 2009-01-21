@@ -36,11 +36,11 @@ class ImageViewer(wx.Frame):
         
         self.chMap       = chMap
         self.toggleChMap = chMap[:]
-        self.img_key = img_key
-        self.classifier = parent
-        self.sw = wx.ScrolledWindow(self)
+        self.img_key     = img_key
+        self.classifier  = parent
+        self.sw          = wx.ScrolledWindow(self)
         self.imagePanel  = ImagePanel(imgs, chMap, self.sw)
-        self.selection = []
+        self.selection   = []
 
         self.SetMenuBar(wx.MenuBar())
         self.CreateChannelMenus()
@@ -127,13 +127,15 @@ class ImageViewer(wx.Frame):
         else:
             self.chMap[chIdx] = 'None'
             self.MapChannels(self.chMap)
-            
-        
-            
+    
         
     def OnLeftDown(self, evt):
         if self.img_key:
-            obkey = db.GetObjectNear(self.img_key, evt.GetPosition().x, evt.GetPosition().y)
+            x = evt.GetPosition().x / self.imagePanel.scale
+            y = evt.GetPosition().y / self.imagePanel.scale
+            print evt.GetPosition().x, x
+            print evt.GetPosition().y, y
+            obkey = db.GetObjectNear(self.img_key, x, y)
 
             # update selection
             if not evt.ShiftDown():
@@ -147,9 +149,9 @@ class ImageViewer(wx.Frame):
             # update drawing
             if self.selection:
                 self.imagePanel.SelectPoints([db.GetObjectCoords(k) for k in self.selection])
-
                 # start drag
-                # self.classifier.CaptureMouse()
+                # TODO: fix DnD so it can't drop on bins that aren't visible
+#                self.classifier.CaptureMouse()
                 drag.data = self.selection
                 drag.source = self
 
@@ -173,7 +175,7 @@ if __name__ == "__main__":
         obKey = dm.GetRandomObject()
         print obKey
         imgs = IC.FetchImage(obKey[:-1])
-        frame = ImageViewer(imgs=imgs, chMap=p.image_channel_colors, title=str(obKey[:-1]) )
+        frame = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]) )
         frame.Show(True)
            
     app.MainLoop()
