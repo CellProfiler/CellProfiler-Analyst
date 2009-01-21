@@ -151,7 +151,7 @@ class ImageViewer(wx.Frame):
                 self.imagePanel.SelectPoints([db.GetObjectCoords(k) for k in self.selection])
                 # start drag
                 # TODO: fix DnD so it can't drop on bins that aren't visible
-#                self.classifier.CaptureMouse()
+                self.classifier.CaptureMouse()
                 drag.data = self.selection
                 drag.source = self
 
