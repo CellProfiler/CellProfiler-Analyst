@@ -112,7 +112,7 @@ class ImageViewer(wx.Frame):
                 
     def OnShowImageControls(self, evt):
         self.imageControlFrame = wx.Frame(self)
-        ImageControlPanel(self.imageControlFrame, self.imagePanel)
+        ImageControlPanel(self.imageControlFrame, self.imagePanel, brightness=self.imagePanel.brightness, scale=self.imagePanel.scale)
         self.imageControlFrame.Show(True)
         
         

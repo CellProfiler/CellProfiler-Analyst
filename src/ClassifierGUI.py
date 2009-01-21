@@ -854,7 +854,7 @@ class ClassifierGUI(wx.Frame):
 
     def OnShowImageControls(self, evt):
         self.imageControlFrame = wx.Frame(self)
-        ImageControlPanel(self.imageControlFrame, self)
+        ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale)
         self.imageControlFrame.Show(True)
         
         
@@ -908,12 +908,6 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
         db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
         dm.PopulateModel()
-#    else:
-#        propsFile = '../properties/2008_07_22_HSC_Alison_Stewart_fixed.properties'
-#        # propsFile = '/Users/thouis/CPAnalyst/pyCPAnalyst/CPA/properties/nirht_test.properties' 
-#        print 'No properties file given. Using "'+propsFile+'"'
-#        p.LoadFile(propsFile)
-
     
     app = wx.PySimpleApp()
     classifier = ClassifierGUI(None)

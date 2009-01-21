@@ -10,7 +10,7 @@ p = Properties.getInstance()
 
 
 class ImageControlPanel(wx.Panel):
-    def __init__(self, parent, listeners):
+    def __init__(self, parent, listeners, brightness=1.0, scale=1.0):
         '''
         This panel provides widgets
         listeners : list of objects to broadcast to.
@@ -23,8 +23,8 @@ class ImageControlPanel(wx.Panel):
             self.listeners = [listeners]
         
 
-        self.scale_slider      = wx.Slider(self, -1, 100, 1, 200, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
-        self.brightness_slider = wx.Slider(self, -1, 100, 1, 200, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
+        self.scale_slider      = wx.Slider(self, -1, scale*100, 1, 200, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
+        self.brightness_slider = wx.Slider(self, -1, brightness*100, 1, 200, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.reset_btn         = wx.Button(self, wx.NewId(), 'Reset')
         
         
