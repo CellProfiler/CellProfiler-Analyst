@@ -127,14 +127,11 @@ class DBConnect(DataProvider, Singleton):
             
         # SQLite database: create database from file
         elif p.db_type.lower() == 'sqlite':
-            p.image_table = 'per_image'
-            p.object_table = 'per_object'
-
             self.connections[connID] = sqlite.connect('CPA_DB')
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             # If this is the first connection, then we need to create the DB from the files
-            if len(self.connections) == 1:
+            if len(self.connections) == 0:#1:
                 print 'No database info specified. Will attempt to load tables from file.'
                 try:
                     fimg = open(p.image_csv_file)
@@ -188,7 +185,7 @@ class DBConnect(DataProvider, Singleton):
             
     def Commit(self, connID='default'):
         try:
-            print '['+connID+'] - commit'
+            print '['+connID+'] - Commit'
             self.connections[connID].commit()
         except MySQLdb.Error, e:
             raise DBException, 'ERROR <DBConnect.Commit> Commit failed for connection "%s"\n\t%s\n' %(connID, e)
@@ -278,9 +275,9 @@ class DBConnect(DataProvider, Singleton):
         ''' 
         Returns obKey of the closest object to x, y in an image.
         '''
-        delta_x = p.cell_x_loc+' - %d'%(x)
-        delta_y = p.cell_y_loc+' - %d'%(y)
-        dist_clause = 'POW(%s, 2) + POW(%s, 2)'%(delta_x, delta_y)
+        delta_x = '(%s - %d)'%(p.cell_x_loc, x)
+        delta_y = '(%s - %d)'%(p.cell_y_loc, y)
+        dist_clause = '%s*%s + %s*%s'%(delta_x, delta_x, delta_y, delta_y)
         select = 'SELECT '+UniqueObjectClause()+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imkey])+' ORDER BY ' +dist_clause+' LIMIT 1'
         self.Execute(select, connID)
         res = self.GetResultsAsList(connID)
@@ -378,10 +375,6 @@ class DBConnect(DataProvider, Singleton):
         from those tables and do everything else the same.
         '''
         import csv
-
-        p.image_table = 'per_image'
-        p.object_table = 'per_object'
-
         # CREATE THE IMAGE TABLE
         # All the ugly code is to establish the type of each column in the table
         # so we can form a proper CREATE TABLE statement.
@@ -426,8 +419,8 @@ class DBConnect(DataProvider, Singleton):
         statement += ',\nPRIMARY KEY (' + keys + ') )'
         f.close()
         
-        self.Execute('DROP TABLE IF EXISTS test_per_image')
-        # Create the image table
+        print 'Creating table:', p.image_table
+        self.Execute('DROP TABLE IF EXISTS '+p.image_table)
         self.Execute(statement)
         
         # CREATE THE OBJECT TABLE
@@ -450,7 +443,8 @@ class DBConnect(DataProvider, Singleton):
         statement += ',\nPRIMARY KEY (' + keys + ') )'
         f.close()
     
-        self.Execute('DROP TABLE IF EXISTS test_per_object')
+        print 'Creating table:', p.object_table
+        self.Execute('DROP TABLE IF EXISTS '+p.object_table)
         self.Execute(statement)
         
         # POPULATE THE IMAGE TABLE
@@ -494,7 +488,11 @@ if __name__ == "__main__":
     db = DBConnect.getInstance()
     db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     
-#    print db.GetColnamesForClassifier()
+    print db.GetColnamesForClassifier()
     print db.GetPerImageObjectCounts()
     print db.GetColumnNames('test_per_image')
     print db.GetColumnNames('test_per_object')
+    print db.GetObjectNear((0,1), 30, 30 )
+    
+    
+    
