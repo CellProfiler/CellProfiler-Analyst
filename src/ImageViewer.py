@@ -133,8 +133,6 @@ class ImageViewer(wx.Frame):
         if self.img_key:
             x = evt.GetPosition().x / self.imagePanel.scale
             y = evt.GetPosition().y / self.imagePanel.scale
-            print evt.GetPosition().x, x
-            print evt.GetPosition().y, y
             obkey = db.GetObjectNear(self.img_key, x, y)
 
             # update selection
