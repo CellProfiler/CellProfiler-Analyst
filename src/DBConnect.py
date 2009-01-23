@@ -104,7 +104,7 @@ class DBConnect(DataProvider, Singleton):
 
 
     def Connect(self, db_host, db_user, db_passwd, db_name, connID='default'):
-
+        # If this connection ID already exists print a warning
         if connID in self.connections.keys():
             if self.connectionInfo[connID] == (db_host, db_user, db_passwd, db_name):
                 print 'WARNING <DBConnect.Connect>: Already connected to %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
@@ -112,25 +112,8 @@ class DBConnect(DataProvider, Singleton):
                 print 'WARNING <DBConnect.Connect>: connID "%s" is already in use. Close this connection first.' % (connID)
             return True
 
-        # 
-        if p.db_type.lower() == 'sqlite':
-            self.connections[connID] = sqlite.connect('CPA_DB')
-            self.cursors[connID] = self.connections[connID].cursor()
-            self.connectionInfo[connID] = ('local', '', '', 'tempDB')
-            # If this is the first connection, then we need to create the DB from the files
-            if len(self.connections) == 1:
-                try:
-                    fimg = open(p.image_csv_file)
-                    fobj = open(p.object_csv_file)
-                except IOError:
-                    raise Exception, 'ERROR <DBConnect.Connect>: Failed to open tables ("%s", "%s") from file.'%(p.image_table, p.object_table)
-                else:
-                    fimg.close()
-                    fobj.close()
-                    print 'No database info specified. Will attempt to load tables from file.'
-                    self.CreateSQLiteDB()
-            return True
-        elif p.db_type.lower() == 'mysql':
+        # MySQL database: connect to db normally
+        if p.db_type.lower() == 'mysql':
             try:
                 conn = MySQLdb.connect(host=db_host, db=db_name, user=db_user, passwd=db_passwd)
                 self.connections[connID] = conn
@@ -141,6 +124,35 @@ class DBConnect(DataProvider, Singleton):
             except MySQLdb.Error, e:
                 raise DBException, 'ERROR <DBConnect.Connect>: Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
                 return False
+            
+        # SQLite database: create database from file
+        elif p.db_type.lower() == 'sqlite':
+            p.image_table = 'per_image'
+            p.object_table = 'per_object'
+
+            self.connections[connID] = sqlite.connect('CPA_DB')
+            self.cursors[connID] = self.connections[connID].cursor()
+            self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
+            # If this is the first connection, then we need to create the DB from the files
+            if len(self.connections) == 1:
+                print 'No database info specified. Will attempt to load tables from file.'
+                try:
+                    fimg = open(p.image_csv_file)
+                except IOError:
+                    raise Exception, 'ERROR <DBConnect.Connect>: Failed to open image_csv_file from file. Check your properties file.' % (p.image_csv_file)
+                    return False
+                try:
+                    fobj = open(p.object_csv_file)
+                except:
+                    raise Exception, 'ERROR <DBConnect.Connect>: Failed to open object_csv_file from file. Check your properties file.' % (p.object_csv_file)
+                    return False
+                else:
+                    fimg.close()
+                    fobj.close()
+                    self.CreateSQLiteDB()
+            return True
+        
+        # Unknown database type
         else:
             raise DBException, "ERROR <DBConnect.Connect>: Unknown db_type in properties: '%s'\n"%(p.db_type)
 
@@ -251,22 +263,6 @@ class DBConnect(DataProvider, Singleton):
         return self.GetResultsAsList(connID)
     
     
-    def GetColumnNames(self, tableName, connID='default'):
-        ''' 
-        Returns a list of the column names for the specified table. 
-        '''
-        q = 'Describe '+tableName
-        self.Execute(q, connID)
-        #print self.GetResultsAsList(connID)
-        return [x[0] for x in self.GetResultsAsList(connID)]
-    
-        
-    # TODO: there should be a better way to get the grouping column names
-    def GetResultColumnNames(self, connID='default'):
-        ''' Returns the column names of the last query on this connection. '''
-        return [x[0] for x in self.cursors[connID].description]
-        
-    
     def GetObjectCoords(self, obKey, connID='default'):
         ''' 
         Returns the specified object's x, y coordinates in an image. 
@@ -330,17 +326,37 @@ class DBConnect(DataProvider, Singleton):
         return self.GetResultsAsList(connID)
     
     
+    def GetColumnNames(self, tableName, connID='default'):
+        ''' 
+        Returns a list of the column names for the specified table. 
+        '''
+#        q = 'Describe '+tableName
+#        self.Execute(q, connID)
+        self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID)
+        self.GetResultsAsList(connID) # ditch the results
+        return self.GetResultColumnNames()   # get the column names
+        #return [x[0] for x in self.GetResultsAsList(connID)]
+            
+    
     def GetColnamesForClassifier(self, connID='default'):
         '''
         Returns a list of column names for the object_table excluding 
         those specified in Properties.classifier_ignore_substrings
         '''
         if self.classifierColNames is None:
-            self.Execute('DESCRIBE %s' % (p.object_table), connID)
-            data = self.GetResultsAsList(connID)
-            self.classifierColNames = [i[0] for i in data if not any([sub.lower() in i[0].lower() for sub in p.classifier_ignore_substrings])]
+#            self.Execute('DESCRIBE %s' % (p.object_table), connID)
+#            data = self.GetResultsAsList(connID)
+            self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID)
+            self.GetResultsAsList(connID) # ditch the results
+            labels = self.GetResultColumnNames()   # get the column names
+            self.classifierColNames = [i for i in labels if not any([sub.lower() in i.lower() for sub in p.classifier_ignore_substrings])]
         return self.classifierColNames
     
+    
+    def GetResultColumnNames(self, connID='default'):
+        ''' Returns the column names of the last query on this connection. '''
+        return [x[0] for x in self.cursors[connID].description]
+
     
     def GetCellDataForClassifier(self, obKey, connID='default'):
         '''
@@ -483,3 +499,5 @@ if __name__ == "__main__":
     
 #    print db.GetColnamesForClassifier()
     print db.GetPerImageObjectCounts()
+    print db.GetColumnNames('test_per_image')
+    print db.GetColumnNames('test_per_object')
