@@ -112,16 +112,16 @@ class DBConnect(DataProvider, Singleton):
                 print 'WARNING <DBConnect.Connect>: connID "%s" is already in use. Close this connection first.' % (connID)
             return True
 
-        # NO database info provided, check if tables are csv files.
-        if not (db_host or db_user or db_passwd or db_name):
+        # 
+        if p.db_type.lower() == 'sqlite':
             self.connections[connID] = sqlite.connect('CPA_DB')
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('local', '', '', 'tempDB')
             # If this is the first connection, then we need to create the DB from the files
             if len(self.connections) == 1:
                 try:
-                    fimg = open(p.image_table)
-                    fobj = open(p.object_table)
+                    fimg = open(p.image_csv_file)
+                    fobj = open(p.object_csv_file)
                 except IOError:
                     raise Exception, 'ERROR <DBConnect.Connect>: Failed to open tables ("%s", "%s") from file.'%(p.image_table, p.object_table)
                 else:
@@ -130,7 +130,7 @@ class DBConnect(DataProvider, Singleton):
                     print 'No database info specified. Will attempt to load tables from file.'
                     self.CreateSQLiteDB()
             return True
-        else:
+        elif p.db_type.lower() == 'mysql':
             try:
                 conn = MySQLdb.connect(host=db_host, db=db_name, user=db_user, passwd=db_passwd)
                 self.connections[connID] = conn
@@ -141,6 +141,8 @@ class DBConnect(DataProvider, Singleton):
             except MySQLdb.Error, e:
                 raise DBException, 'ERROR <DBConnect.Connect>: Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
                 return False
+        else:
+            raise DBException, "ERROR <DBConnect.Connect>: Unknown db_type in properties: '%s'\n"%(p.db_type)
 
 
     def Disconnect(self):
@@ -154,6 +156,7 @@ class DBConnect(DataProvider, Singleton):
     
     def CloseConnection(self, connID):
         if connID in self.connections.keys():
+            self.connections[connID].commit()
             self.connections.pop(connID).close()
             self.cursors.pop(connID)
             (db_host, db_user, db_passwd, db_name) = self.connectionInfo.pop(connID)
@@ -171,7 +174,17 @@ class DBConnect(DataProvider, Singleton):
         except KeyError, e:
             raise DBException, 'ERROR <DBConnect.Execute> No such connection: "%s".\n' %(connID)
             
-    
+    def Commit(self, connID='default'):
+        try:
+            print '['+connID+'] - commit'
+            self.connections[connID].commit()
+        except MySQLdb.Error, e:
+            raise DBException, 'ERROR <DBConnect.Commit> Commit failed for connection "%s"\n\t%s\n' %(connID, e)
+        except KeyError, e:
+            raise DBException, 'ERROR <DBConnect.Execute> No such connection: "%s".\n' %(connID)
+            
+
+
     def GetNextResult(self, connID='default'):
         try:
             return self.cursors[connID].next()
@@ -352,11 +365,14 @@ class DBConnect(DataProvider, Singleton):
         from those tables and do everything else the same.
         '''
         import csv
-        import os
+
+        p.image_table = 'per_image'
+        p.object_table = 'per_object'
+
         # CREATE THE IMAGE TABLE
         # All the ugly code is to establish the type of each column in the table
         # so we can form a proper CREATE TABLE statement.
-        f = open(p.image_table, 'r')
+        f = open(p.image_csv_file, 'r')
         r = csv.reader(f)
         columnLabels = r.next()
         columnLabels = [lbl.strip() for lbl in columnLabels]
@@ -391,7 +407,7 @@ class DBConnect(DataProvider, Singleton):
             except StopIteration: break
         
         # Build the CREATE TABLE statement
-        statement = 'CREATE TABLE '+os.path.splitext(os.path.split(p.image_table)[1])[0]+' ('
+        statement = 'CREATE TABLE '+p.image_table+' ('
         statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
         keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
         statement += ',\nPRIMARY KEY (' + keys + ') )'
@@ -404,7 +420,7 @@ class DBConnect(DataProvider, Singleton):
         # CREATE THE OBJECT TABLE
         # For the object table we assume that all values are type FLOAT
         # except for the primary keys
-        f = open(p.object_table, 'r')
+        f = open(p.object_csv_file, 'r')
         r = csv.reader(f)
         columnLabels = r.next()
         columnLabels = [lbl.strip() for lbl in columnLabels]
@@ -415,7 +431,7 @@ class DBConnect(DataProvider, Singleton):
                 rowTypes[i] = 'INT'
             else:
                 rowTypes[i]='FLOAT'
-        statement = 'CREATE TABLE '+os.path.splitext(os.path.split(p.object_table)[1])[0]+' ('
+        statement = 'CREATE TABLE '+p.object_table+' ('
         statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
         keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
         statement += ',\nPRIMARY KEY (' + keys + ') )'
@@ -425,12 +441,12 @@ class DBConnect(DataProvider, Singleton):
         self.Execute(statement)
         
         # POPULATE THE IMAGE TABLE
-        f = open(p.image_table, 'r')
+        f = open(p.image_csv_file, 'r')
         r = csv.reader(f)
         row = r.next() # skip the headers
         row = r.next()
         while row: 
-            self.Execute('INSERT INTO '+os.path.splitext(os.path.split(p.image_table)[1])[0]+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
+            self.Execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                          silent=True)
             try:
                 row = r.next()
@@ -439,12 +455,12 @@ class DBConnect(DataProvider, Singleton):
         f.close()
         
         # POPULATE THE OBJECT TABLE
-        f = open(p.object_table, 'r')
+        f = open(p.object_csv_file, 'r')
         r = csv.reader(f)
         row = r.next() # skip the headers
         row = r.next()
         while row: 
-            self.Execute('INSERT INTO '+os.path.splitext(os.path.split(p.object_table)[1])[0]+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
+            self.Execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                          silent=True)
             try:
                 row = r.next()
@@ -452,11 +468,8 @@ class DBConnect(DataProvider, Singleton):
                 break
         f.close()
         
-        
+        self.Commit()
 
-        #BIG FAT KLUDGE!!!
-        p.image_table = os.path.splitext(os.path.split(p.image_table)[1])[0]
-        p.object_table = os.path.splitext(os.path.split(p.object_table)[1])[0]
         
         
 
@@ -470,20 +483,3 @@ if __name__ == "__main__":
     
 #    print db.GetColnamesForClassifier()
     print db.GetPerImageObjectCounts()
-            
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
