@@ -328,14 +328,12 @@ class DBConnect(DataProvider, Singleton):
     
     def GetColumnNames(self, tableName, connID='default'):
         ''' 
-        Returns a list of the column names for the specified table. 
+        Returns a list of the column names for the specified table.
         '''
-#        q = 'Describe '+tableName
-#        self.Execute(q, connID)
+        # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
         self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID)
-        self.GetResultsAsList(connID) # ditch the results
-        return self.GetResultColumnNames()   # get the column names
-        #return [x[0] for x in self.GetResultsAsList(connID)]
+        self.GetResultsAsList(connID)        # ditch the results
+        return self.GetResultColumnNames()   # return the column names
             
     
     def GetColnamesForClassifier(self, connID='default'):
@@ -344,10 +342,9 @@ class DBConnect(DataProvider, Singleton):
         those specified in Properties.classifier_ignore_substrings
         '''
         if self.classifierColNames is None:
-#            self.Execute('DESCRIBE %s' % (p.object_table), connID)
-#            data = self.GetResultsAsList(connID)
+            # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
             self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID)
-            self.GetResultsAsList(connID) # ditch the results
+            self.GetResultsAsList(connID)          # ditch the results
             labels = self.GetResultColumnNames()   # get the column names
             self.classifierColNames = [i for i in labels if not any([sub.lower() in i.lower() for sub in p.classifier_ignore_substrings])]
         return self.classifierColNames
