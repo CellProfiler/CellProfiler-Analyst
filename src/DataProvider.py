@@ -9,7 +9,7 @@ class DataProvider(object):
         pass 
     
 
-    def GetObjectIDAtIndex(self, index, connID='default'):
+    def GetObjectIDAtIndex(self, imKey, index, connID='default'):
         ''' Returns the true object ID of the nth object in an image.
         Note: This should be used when object IDs aren't contiguous
               starting at 1.

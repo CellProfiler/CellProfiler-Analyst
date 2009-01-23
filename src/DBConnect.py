@@ -3,15 +3,16 @@ DBConnect.py
 Authors: afraser
 '''
 
+import exceptions
 import string
 import numpy
 import MySQLdb
 from MySQLdb.cursors import SSCursor
-import exceptions
+from pysqlite2 import dbapi2 as sqlite
 from Singleton import Singleton
 from Properties import Properties
+from DataProvider import DataProvider
 from sys import stderr
-
 p = Properties.getInstance()
 
 
@@ -82,8 +83,15 @@ def UniqueImageClause(table_name=None):
 
 
 
-class DBConnect(Singleton):
-    ''' Wrapper for MySQLdb functions. '''
+
+#
+# TODO: Rename _Execute, _Connect, _GetNextResult, etc
+#       If users can use non-DB tables then all DB specific functions should be
+#       completely abstracted.
+class DBConnect(DataProvider, Singleton):
+    '''
+    DBConnect abstracts calls to MySQLdb.
+    '''
     def __init__(self):
         self.classifierColNames = None
         self.connections = {}
@@ -96,22 +104,43 @@ class DBConnect(Singleton):
 
 
     def Connect(self, db_host, db_user, db_passwd, db_name, connID='default'):
+
         if connID in self.connections.keys():
             if self.connectionInfo[connID] == (db_host, db_user, db_passwd, db_name):
                 print 'WARNING <DBConnect.Connect>: Already connected to %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
             else:
                 print 'WARNING <DBConnect.Connect>: connID "%s" is already in use. Close this connection first.' % (connID)
             return True
-        try:
-            conn = MySQLdb.connect(host=db_host, db=db_name, user=db_user, passwd=db_passwd)
-            self.connections[connID] = conn
-            self.cursors[connID] = SSCursor(conn)
-            self.connectionInfo[connID] = (db_host, db_user, db_passwd, db_name)
-            print 'Connected to database: %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
+
+        # NO database info provided, check if tables are csv files.
+        if not (db_host or db_user or db_passwd or db_name):
+            self.connections[connID] = sqlite.connect('CPA_DB')
+            self.cursors[connID] = self.connections[connID].cursor()
+            self.connectionInfo[connID] = ('local', '', '', 'tempDB')
+            # If this is the first connection, then we need to create the DB from the files
+            if len(self.connections) == 1:
+                try:
+                    fimg = open(p.image_table)
+                    fobj = open(p.object_table)
+                except IOError:
+                    raise Exception, 'ERROR <DBConnect.Connect>: Failed to open tables ("%s", "%s") from file.'%(p.image_table, p.object_table)
+                else:
+                    fimg.close()
+                    fobj.close()
+                    print 'No database info specified. Will attempt to load tables from file.'
+                    self.CreateSQLiteDB()
             return True
-        except MySQLdb.Error, e:
-            raise DBException, 'ERROR <DBConnect.Connect>: Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
-            return False
+        else:
+            try:
+                conn = MySQLdb.connect(host=db_host, db=db_name, user=db_user, passwd=db_passwd)
+                self.connections[connID] = conn
+                self.cursors[connID] = SSCursor(conn)
+                self.connectionInfo[connID] = (db_host, db_user, db_passwd, db_name)
+                print 'Connected to database: %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
+                return True
+            except MySQLdb.Error, e:
+                raise DBException, 'ERROR <DBConnect.Connect>: Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
+                return False
 
 
     def Disconnect(self):
@@ -165,21 +194,81 @@ class DBConnect(Singleton):
         return l
     
     
+    
+    
+    
+    def GetObjectIDAtIndex(self, imKey, index, connID='default'):
+        '''
+        Returns the true object ID of the nth object in an image.
+        Note: This must be used when object IDs in the DB aren't
+              contiguous starting at 1.
+              (eg: if some objects have been removed)
+        '''
+        imNum = imKey[-1]
+        if p.table_id:
+            tblNum = imKey[0]
+            self.Execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s LIMIT %s,1'
+                       %(p.object_id, p.object_table, p.table_id, tblNum, p.image_id, imNum, index-1))
+            obNum = self.GetResultsAsList()
+            obNum = obNum[0][0]
+        else:
+            self.Execute('SELECT %s FROM %s WHERE %s=%s LIMIT %s,1'
+                       %(p.object_id, p.object_table, p.image_id, imNum, index-1))
+            obNum = self.GetResultsAsList()
+            obNum = obNum[0][0]
+        return tuple(list(imKey)+[int(obNum)])
+
+    
+    
+    def GetPerImageObjectCounts(self, connID='default'):
+        ''' 
+        Returns a list of (imKey, obCount) tuples. 
+        '''
+        select = "SELECT "+UniqueImageClause()+", COUNT("+p.object_id+") FROM "+str(p.object_table)+" GROUP BY "+UniqueImageClause()
+        self.Execute(select, connID)
+        return self.GetResultsAsList(connID)
+    
+    
+    def GetAllImageKeys(self, connID='default'):
+        ''' 
+        Returns a list of all image keys in the image_table. 
+        '''
+        select = "SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause()
+        self.Execute(select, connID)
+        return self.GetResultsAsList(connID)
+    
+    
+    def GetColumnNames(self, tableName, connID='default'):
+        ''' 
+        Returns a list of the column names for the specified table. 
+        '''
+        q = 'Describe '+tableName
+        self.Execute(q, connID)
+        #print self.GetResultsAsList(connID)
+        return [x[0] for x in self.GetResultsAsList(connID)]
+    
+        
+    # TODO: there should be a better way to get the grouping column names
     def GetResultColumnNames(self, connID='default'):
         ''' Returns the column names of the last query on this connection. '''
         return [x[0] for x in self.cursors[connID].description]
         
     
     def GetObjectCoords(self, obKey, connID='default'):
-        ''' Queries the database for the specified object's coordinates. '''
+        ''' 
+        Returns the specified object's x, y coordinates in an image. 
+        '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
         self.Execute(select, connID)
         res = self.GetResultsAsList(connID)
         assert len(res)==1, "ERROR <DBConnect.GetObjectCoords>: Returned %s objects instead of 1.\n" % len(res)
         return res[0]
 
+
     def GetObjectNear(self, imkey, x, y, connID='default'):
-        ''' Finds the closest object to x, y in an image. '''
+        ''' 
+        Returns obKey of the closest object to x, y in an image.
+        '''
         delta_x = p.cell_x_loc+' - %d'%(x)
         delta_y = p.cell_y_loc+' - %d'%(y)
         dist_clause = 'POW(%s, 2) + POW(%s, 2)'%(delta_x, delta_y)
@@ -193,8 +282,10 @@ class DBConnect(Singleton):
     
     
     def GetFullChannelPathsForImage(self, imKey, connID='default'):
-        ''' Queries the database for the image channel paths and filenames
-        for a particular image. '''
+        ''' 
+        Returns a list of image channel filenames for a particular image
+        including the absolute path.
+        '''
         assert len(p.image_channel_paths) == len(p.image_channel_files), "Number of image_channel_paths and image_channel_files do not match!"
         
         nChannels = len(p.image_channel_paths)
@@ -216,14 +307,9 @@ class DBConnect(Singleton):
     
     
     def GetFilteredImages(self, filter, connID='default'):
-        ''' Returns a list of imKeys from the given filter. '''
-        
-#        assert 'group_where_'+group in p.__dict__ and 'group_tables_'+group in p.__dict__, \
-#                    'ERROR <DBConnect.GetImagesInGroup>: The group '+group+' was not found in the properties file!'            
-#        where = p.__dict__['group_where_'+group]
-#        tables = p.__dict__['group_tables_'+group]
-#        query = "SELECT %s FROM %s WHERE %s" % (UniqueImageClause(), ','.join(tables), where)
-
+        '''
+        Returns a list of imKeys from the given filter.
+        '''
         if 'filter_SQL_'+filter not in p.__dict__:
             raise DBException, 'ERROR <DBConnect.GetImagesInGroup>: The filter %s was not found in the properties file!' %(filter)
         
@@ -232,6 +318,10 @@ class DBConnect(Singleton):
     
     
     def GetColnamesForClassifier(self, connID='default'):
+        '''
+        Returns a list of column names for the object_table excluding 
+        those specified in Properties.classifier_ignore_substrings
+        '''
         if self.classifierColNames is None:
             self.Execute('DESCRIBE %s' % (p.object_table), connID)
             data = self.GetResultsAsList(connID)
@@ -240,6 +330,10 @@ class DBConnect(Singleton):
     
     
     def GetCellDataForClassifier(self, obKey, connID='default'):
+        '''
+        Returns a list of measurements for the specified object excluding
+        those specified in Properties.classifier_ignore_substrings
+        '''
         if (self.classifierColNames == None):
             self.GetColnamesForClassifier()
         query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
@@ -248,49 +342,148 @@ class DBConnect(Singleton):
         if len(data) == 0:
             print 'ERROR <DBConnect.GetCellDataForClassifier>: No data for obKey:',obKey
         return numpy.array(data[0])
+    
+    
+    
+    
+    def CreateSQLiteDB(self):
+        '''
+        When the user specifies csv files as tables, we create an SQLite DB
+        from those tables and do everything else the same.
+        '''
+        import csv
+        import os
+        # CREATE THE IMAGE TABLE
+        # All the ugly code is to establish the type of each column in the table
+        # so we can form a proper CREATE TABLE statement.
+        f = open(p.image_table, 'r')
+        r = csv.reader(f)
+        columnLabels = r.next()
+        columnLabels = [lbl.strip() for lbl in columnLabels]
+        row = r.next()
+        rowTypes = {}
+        maxLen   = {}   # Maximum string length for each column (if VARCHAR)
+        for i in xrange(len(columnLabels)):
+            rowTypes[i] = ''
+            maxLen[i] = 0 
+        while row:
+            for i, e in enumerate(row):
+                if rowTypes[i]!='FLOAT' and not rowTypes[i].startswith('VARCHAR'):
+                    try:
+                        x = int(e)
+                        rowTypes[i] = 'INT'
+                        continue
+                    except ValueError: pass
+                if not rowTypes[i].startswith('VARCHAR'):
+                    try:
+                        x = float(e)
+                        rowTypes[i] = 'FLOAT'
+                        continue
+                    except ValueError: pass
+                try:
+                    x = str(e)
+                    maxLen[i] = max(len(x), maxLen[i])
+                    rowTypes[i] = 'VARCHAR(%d)'%(maxLen[i])
+                except ValueError: 
+                    raise Exception, '<ERROR>: Value in table could not be converted to string!'
+            try:
+                row = r.next()
+            except StopIteration: break
+        
+        # Build the CREATE TABLE statement
+        statement = 'CREATE TABLE '+os.path.splitext(os.path.split(p.image_table)[1])[0]+' ('
+        statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
+        keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
+        statement += ',\nPRIMARY KEY (' + keys + ') )'
+        f.close()
+        
+        self.Execute('DROP TABLE IF EXISTS test_per_image')
+        # Create the image table
+        self.Execute(statement)
+        
+        # CREATE THE OBJECT TABLE
+        # For the object table we assume that all values are type FLOAT
+        # except for the primary keys
+        f = open(p.object_table, 'r')
+        r = csv.reader(f)
+        columnLabels = r.next()
+        columnLabels = [lbl.strip() for lbl in columnLabels]
+        row = r.next()
+        rowTypes = {}
+        for i, lbl in enumerate(columnLabels):
+            if lbl in [p.table_id, p.image_id, p.object_id]:
+                rowTypes[i] = 'INT'
+            else:
+                rowTypes[i]='FLOAT'
+        statement = 'CREATE TABLE '+os.path.splitext(os.path.split(p.object_table)[1])[0]+' ('
+        statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
+        keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
+        statement += ',\nPRIMARY KEY (' + keys + ') )'
+        f.close()
+    
+        self.Execute('DROP TABLE IF EXISTS test_per_object')
+        self.Execute(statement)
+        
+        # POPULATE THE IMAGE TABLE
+        f = open(p.image_table, 'r')
+        r = csv.reader(f)
+        row = r.next() # skip the headers
+        row = r.next()
+        while row: 
+            self.Execute('INSERT INTO '+os.path.splitext(os.path.split(p.image_table)[1])[0]+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
+                         silent=True)
+            try:
+                row = r.next()
+            except StopIteration:
+                break
+        f.close()
+        
+        # POPULATE THE OBJECT TABLE
+        f = open(p.object_table, 'r')
+        r = csv.reader(f)
+        row = r.next() # skip the headers
+        row = r.next()
+        while row: 
+            self.Execute('INSERT INTO '+os.path.splitext(os.path.split(p.object_table)[1])[0]+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
+                         silent=True)
+            try:
+                row = r.next()
+            except StopIteration:
+                break
+        f.close()
+        
+        
+
+        #BIG FAT KLUDGE!!!
+        p.image_table = os.path.splitext(os.path.split(p.image_table)[1])[0]
+        p.object_table = os.path.splitext(os.path.split(p.object_table)[1])[0]
+        
         
 
 
-if __name__ == "__main__":
-    ''' This allows us to use: python DBConnect.py -v
-    to test all modules with a doctest string. '''
-    p = Properties.getInstance()
-    p.LoadFile('../properties/nirht.properties')
-    db = DBConnect.getInstance()
-#    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPur")
-    
-    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r")
-    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r")
-    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r", connID='test')
-#    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r", connID='test')
-#    db.CloseConnection('test')
-#    db.CloseConnection('test')
-#    db.CloseConnection('default')
-#    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r", connID='test')
-#    
-#    db.Execute('SELECT ImageNumber FROM CPA_per_image LIMIT 10', 'test')
-#    print db.GetResultsAsList()
-#    print db.GetResultsAsList('test')
-#    print db.GetResultsAsList('test')
-#    
-#    db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r")
-#    
-#    db.Execute('SELECT ImageNumber FROM CPA_per_image LIMIT 10', 'test')
-#    db.Execute('SELECT ImageNumber FROM CPA_per_image LIMIT 10')
-#    print db.GetResultsAsList()
-#    print db.GetResultsAsList('test')    
-    
-    print db.GetObjectCoords((0,1,1))
-    print db.GetResultColumnNames()
-    print db.GetObjectCoords((0,1,1), 'test')
-    print db.GetResultColumnNames()
-    print db.GetObjectCoords((0,1,1))
-    print db.GetResultColumnNames()
 
-#    print GetWhereClauseForImages([key for key in db.GetImagesInGroup('EMPTY')[:5]])
-#    print GetWhereClauseForObjects([list(key)+[0] for key in db.GetImagesInGroup('EMPTY')[:5]])
-#    print db.GetImagesInGroup('EMPTY')[:10]
-#    print db.GetImagesInGroup('CDKs')[:10]
-#    print db.GetImagesInGroup('Accuracy75')[:10]
+if __name__ == "__main__":
+    p = Properties.getInstance()
+    p.LoadFile('../properties/nirht_local.properties')
+    db = DBConnect.getInstance()
+    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+    
+#    print db.GetColnamesForClassifier()
+    print db.GetPerImageObjectCounts()
+            
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     

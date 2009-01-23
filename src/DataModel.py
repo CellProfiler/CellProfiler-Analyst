@@ -40,15 +40,13 @@ class DataModel(Singleton):
             return
         
         # Initialize per-image object counts to zero
-        db.Execute("SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause())
-        res = db.GetResultsAsList()
-        for key in res:
+        imKeys = db.GetAllImageKeys()
+        for key in imKeys:
             key = tuple([int(k) for k in key])    # convert keys to to int tuples
             self.data[key] = 0
                     
         # Compute per-image object counts
-        db.Execute("SELECT "+UniqueImageClause()+", COUNT("+p.object_id+") FROM "+str(p.object_table)+" GROUP BY "+UniqueImageClause())
-        res = db.GetResultsAsList()  # = [(imKey, obCt), (imKey, obCt)...]
+        res = db.GetPerImageObjectCounts()
         for r in res:
             key = tuple([int(k) for k in r[:-1]])
             self.data[key] = r[-1]
@@ -91,7 +89,8 @@ class DataModel(Singleton):
         
     
     def GetRandomObject(self):
-        ''' Returns a random object key
+        '''
+        Returns a random object key
         We expect self.data.keys() to return the keys in the SAME ORDER
         every time since we build cumSums from that same ordering.  This
         need not necessarily be in sorted order.
@@ -105,35 +104,19 @@ class DataModel(Singleton):
         #    objects
         while self.cumSums[imIdx] == self.cumSums[imIdx-1]:
             imIdx -= 1
-#        print 'imIdx:',imIdx
         imKey = self.data.keys()[imIdx-1]
-#        print 'imKey:',imKey
         obIdx = obIdx-self.cumSums[imIdx-1]  # object number relative to this image
-#        print 'cumSums[imIdx-1]:',self.cumSums[imIdx-1]
-#        print 'obIdx:',obIdx
+                    
+        obKey = db.GetObjectIDAtIndex(imKey, obIdx)
+        return obKey
         
-        tblNum = 0
-        imNum = imKey[-1]
-        if p.table_id:
-            tblNum = imKey[0]
-            db.Execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s LIMIT %s,1'
-                       %(p.object_id, p.object_table, p.table_id, tblNum, p.image_id, imNum, obIdx-1))
-        else:
-            db.Execute('SELECT %s FROM %s WHERE %s=%s LIMIT %s,1'
-                       %(p.object_id, p.object_table, p.image_id, imNum, obIdx-1))
-        obNum = db.GetResultsAsList()
-#        print 'res:',obNum
-        
-        obNum = obNum[0][0]
-        
-        if p.table_id:
-            return (tblNum,imNum,obNum)
-        else:
-            return (imNum,obNum)
-
 
     def GetRandomObjects(self, N, imKeys=None):
-        ''' imKeys: if included, GetRandomObjects will return objects from only these images '''
+        '''
+        Returns N random objects.
+        If a list of imKeys is specified, GetRandomObjects will return 
+        objects from only these images.
+        '''
         if not imKeys:
             return [self.GetRandomObject() for i in xrange(N)]
         else:
@@ -214,14 +197,15 @@ class DataModel(Singleton):
 
 if __name__ == "__main__":
     p = Properties.getInstance()
-    p.LoadFile('../properties/2007_10_19_Gilliland_LeukemiaScreens02_12_Jan_09_Combo.properties')
+    p.LoadFile('../properties/nirht_test.properties')
+#    p.LoadFile('../properties/2007_10_19_Gilliland_LeukemiaScreens02_12_Jan_09_Combo.properties')
     db = DBConnect.getInstance()
     db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     d = DataModel.getInstance()
     d.PopulateModel()
     
-#    for i in range(10000):
-    print d.GetRandomObject()
+    for i in range(10000):
+        print d.GetRandomObject()
 #    imKeys = d.GetImagesInGroup('Gene', d.groupMaps['Gene'][(1,)])
 #    print len(imKeys)
 #    for im in imKeys:
