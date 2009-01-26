@@ -142,7 +142,7 @@ class DataGrid(wx.Frame):
         
     
     def OnLabelDClick(self, evt):
-        key = tuple( [self.data[self.order][evt.Row,idx] for idx in self.groupIDIndices] )
+        key = tuple( [self.data[evt.Row,idx] for idx in self.groupIDIndices] )
         if evt.Row >= 0:
             if self.grouping == IMAGE_GROUPING:
                 ImageTools.ShowImage(key, self.chMap, parent=self)
@@ -156,7 +156,7 @@ class DataGrid(wx.Frame):
             
     def OnLabelRightClick(self, evt):
         if evt.Row >= 0:
-            key = tuple( [self.data[self.order][evt.Row,idx] for idx in self.groupIDIndices] )
+            key = tuple( [self.data[evt.Row,idx] for idx in self.groupIDIndices] )
             if self.grouping == IMAGE_GROUPING:   
                 self.ShowPopupMenu([key], evt.GetPosition())
             else:
