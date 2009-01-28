@@ -4,13 +4,11 @@ Authors: afraser
 '''
 
 import wx
-import numpy
 import ImageTools
 from Singleton import Singleton
 from DBConnect import DBConnect
 from Properties import Properties
 from ImageReader import ImageReader
-from StringIO import StringIO
 
 db = DBConnect.getInstance()
 
@@ -47,8 +45,6 @@ class ImageCollection(Singleton):
         '''
         Returns image channel data cropped around the specified object.
         '''
-        obKey = obKey
-        imKey = obKey[:-1]
         if obKey not in self.tileCache.keys():
             self.UpdateTileCache(obKey)
         return self.tileCache[obKey]
@@ -79,7 +75,6 @@ class ImageCollection(Singleton):
         reads the images associated with the key or keys specified.
         Each key and image set is added to the cache.
         '''
-
         # get the image paths
         filenames = db.GetFullChannelPathsForImage(imKey, 'ImageCollectionConn')
         # get the image data
