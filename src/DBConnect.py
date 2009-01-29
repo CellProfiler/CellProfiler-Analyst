@@ -15,10 +15,6 @@ from sys import stderr
 
 p = Properties.getInstance()
 
-if p.db_type.lower() == 'sqlite':
-    from pysqlite2 import dbapi2 as sqlite
-
-
 class DBException(Exception):
     pass
 
@@ -129,6 +125,9 @@ class DBConnect(DataProvider, Singleton):
             
         # SQLite database: create database from file
         elif p.db_type.lower() == 'sqlite':
+            
+            from pysqlite2 import dbapi2 as sqlite
+
             self.connections[connID] = sqlite.connect('CPA_DB')
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
