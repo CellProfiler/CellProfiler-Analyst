@@ -8,13 +8,15 @@ import string
 import numpy
 import MySQLdb
 from MySQLdb.cursors import SSCursor
-from pysqlite2 import dbapi2 as sqlite
 from Singleton import Singleton
 from Properties import Properties
 from DataProvider import DataProvider
 from sys import stderr
+
 p = Properties.getInstance()
 
+if p.db_type.lower() == 'sqlite':
+    from pysqlite2 import dbapi2 as sqlite
 
 
 class DBException(Exception):
