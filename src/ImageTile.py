@@ -62,7 +62,8 @@ class ImageTile(ImagePanel, DropTarget):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for obKey in self.bin.SelectedKeys():
-                imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier)
+                imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
+                                        brightness=self.brightness, scale=self.scale)
                 pos = db.GetObjectCoords(obKey)
                 imViewer.imagePanel.SelectPoints([pos])
         elif choice == 1:
@@ -74,7 +75,8 @@ class ImageTile(ImagePanel, DropTarget):
             
             
     def OnDClick(self, evt):
-        imViewer = ImageTools.ShowImage(self.obKey[:-1], self.chMap[:], parent=self.classifier)
+        imViewer = ImageTools.ShowImage(self.obKey[:-1], self.chMap[:], parent=self.classifier,
+                                        brightness=self.brightness, scale=self.scale)
         imViewer.imagePanel.SelectPoints([db.GetObjectCoords(self.obKey)])
         
         

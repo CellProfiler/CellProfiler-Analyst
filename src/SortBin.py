@@ -55,10 +55,11 @@ class SortBin(wx.ScrolledWindow, DropTarget):
         
     def CreatePopupMenu(self):
         popupMenuItems = ['View full images of selected',
-                          '[ctrl+a] - Select all',
-                          '[ctrl+d] - Deselect all',
-                          '[Delete] - Remove selected ',
-                          '[ctrl+r] - Rename class']
+                          'Select all - [ctrl+a]',
+                          'Deselect all - [ctrl+d]',
+                          'Remove selected - [Delete]',
+                          'Rename class',
+                          'Delete bin']
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
         for i, item in enumerate(popupMenuItems):
@@ -81,8 +82,8 @@ class SortBin(wx.ScrolledWindow, DropTarget):
                 self.DeselectAll()
             elif evt.GetKeyCode() == ord('I'):
                 [t.ToggleSelect() for t in self.tiles]
-            elif evt.GetKeyCode() == ord('R'):
-                self.classifier.RenameClass(self.label)
+#            elif evt.GetKeyCode() == ord('R'):
+#                self.classifier.RenameClass(self.label)
             else:
                 evt.Skip()
         else:
@@ -98,7 +99,8 @@ class SortBin(wx.ScrolledWindow, DropTarget):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for key in self.SelectedKeys():
-                imViewer = ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier)
+                imViewer = ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier,
+                                        brightness=self.classifier.brightness, scale=self.classifier.scale)
                 pos = db.GetObjectCoords(key)
                 imViewer.imagePanel.SelectPoints([pos])
         elif choice == 1:
@@ -109,6 +111,8 @@ class SortBin(wx.ScrolledWindow, DropTarget):
             self.DestroySelectedTiles()
         elif choice == 4:
             self.classifier.RenameClass(self.label)
+        elif choice == 5:
+            self.classifier.RemoveSortClass(self.label)
     
     
     def AddObject(self, obKey, chMap, refresh=True):
@@ -275,5 +279,5 @@ class SortBin(wx.ScrolledWindow, DropTarget):
         self.SetFocusIgnoringChildren()
         if not evt.ShiftDown():
             self.DeselectAll()
-        if evt.AltDown():
-            self.classifier.RemoveSortClass(self.label)
+#        if evt.AltDown():
+#            self.classifier.RemoveSortClass(self.label)

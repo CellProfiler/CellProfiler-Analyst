@@ -20,7 +20,7 @@ class ImageViewer(wx.Frame):
        of ImageViewer can have it's own chMap (if any) updated by changes
        made in the viewer.  Otherwise pass in chMap[:] for a copy.
     '''
-    def __init__(self, imgs, chMap, img_key=None, parent=None, title='Image Viewer', classifier=None):
+    def __init__(self, imgs, chMap, img_key=None, parent=None, title='Image Viewer', classifier=None, brightness=1.0, scale=1.0):
         '''
         imgs  : [numpy.array(dtype=float32), ... ]
         chMap : ['color', ...]
@@ -31,37 +31,34 @@ class ImageViewer(wx.Frame):
         '''
         
         h,w = imgs[0].shape
-
-        wx.Frame.__init__(self, parent, wx.NewId(), title, size=(w,h))
+        
+        wx.Frame.__init__(self, parent, wx.NewId(), title)
         
         self.chMap       = chMap
         self.toggleChMap = chMap[:]
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)
-        self.imagePanel  = ImagePanel(imgs, chMap, self.sw)
+        self.imagePanel  = ImagePanel(imgs, chMap, self.sw, brightness=brightness, scale=scale)
+        self.controls    = ImageControlPanel(self, self.imagePanel, brightness=brightness, scale=scale)
         self.selection   = []
 
         self.SetMenuBar(wx.MenuBar())
         self.CreateChannelMenus()
-        self.CreateMenus()
-        self.SetClientSize((w,h))
+        self.SetClientSize((w,h+135))
         self.Centre()
         
-        self.sw.SetScrollbars(1,1,w,h)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
+        sizer.Add(self.controls, proportion=0, flag=wx.EXPAND)
+        self.SetSizer(sizer)
+        
+        self.sw.SetScrollbars(1,1,w*scale,h*scale)
         
         self.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
-        self.Bind(wx.EVT_MENU, self.OnShowImageControls, self.imageControlsMenuItem)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
-        
-
-    def CreateMenus(self):
-        self.DisplayMenu = wx.Menu()
-        self.imageControlsMenuItem = wx.MenuItem(parentMenu=self.DisplayMenu, id=wx.NewId(), text='Image Controls', help='Launches a control panel for adjusting image brightness, size, etc.')
-        self.DisplayMenu.AppendItem(self.imageControlsMenuItem)
-        self.GetMenuBar().Append(self.DisplayMenu, 'Display')
 
 
     def CreateChannelMenus(self):
@@ -108,14 +105,8 @@ class ImageViewer(wx.Frame):
             elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
         evt.Skip()
-                    
-                
-    def OnShowImageControls(self, evt):
-        self.imageControlFrame = wx.Frame(self)
-        ImageControlPanel(self.imageControlFrame, self.imagePanel, brightness=self.imagePanel.brightness, scale=self.imagePanel.scale)
-        self.imageControlFrame.Show(True)
         
-        
+            
     def OnResizeImagePanel(self, evt):
         self.sw.SetVirtualSize(evt.GetSize())
         

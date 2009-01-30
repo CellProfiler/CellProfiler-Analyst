@@ -13,12 +13,13 @@ from Properties import Properties
 p = Properties.getInstance()
 
 
-def ShowImage(imKey, chMap, parent=None):
+def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0):
     from ImageViewer import ImageViewer
     from ImageCollection import ImageCollection
     IC = ImageCollection.getInstance()
     imgs = IC.FetchImage(imKey)
-    frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, parent=parent, title=str(imKey) )
+    frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, parent=parent, title=str(imKey),
+                        brightness=brightness, scale=scale )
     frame.Show(True)
     return frame
     
