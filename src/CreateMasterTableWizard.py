@@ -1,3 +1,4 @@
+# -*- Encoding: utf-8 -*-
 '''
 CreateMasterTableWizard.py
 authors: afraser
@@ -6,10 +7,12 @@ Note: My apologies, the validation mechanisms I use may seem a little bizarre,
 but this is meant as a first pass.  I hope to clean up the code later if necessary.
 '''
 
+import os
+import re
 import wx
 import wx.wizard as wiz
-import re
 from DBConnect import DBConnect
+from Properties import Properties
 
 def makePageTitle(wizPg, title):
     def __init__(self, parent):
@@ -32,74 +35,67 @@ class Page1(wiz.WizardPageSimple):
         self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         directions = wx.StaticText(self, -1, "Connect to the database that contains the tables you wish to use in your analysis.", style=wx.ALIGN_CENTRE)
+        browseBtn = wx.Button(self, wx.NewId(), 'Choose file…')
+        self.Bind(wx.EVT_BUTTON, self.OnBrowse, browseBtn)
         label_2 = wx.StaticText(self, -1, "DB Host: ")
-        self.txtDBHost = wx.TextCtrl(self, -1, "")
+        self.lblDBHost = wx.StaticText(self, -1, "")
         label_3 = wx.StaticText(self, -1, "DB Name: ")
-        self.txtDBName = wx.TextCtrl(self, -1, "")
-        label_4 = wx.StaticText(self, -1, "Username: ")
-        self.txtDBUsername = wx.TextCtrl(self, -1, "")
-        label_5 = wx.StaticText(self, -1, "Password: ")
-        self.txtDBPassword = wx.TextCtrl(self, -1, "")
+        self.lblDBName = wx.StaticText(self, -1, "")
         self.btnTest = wx.Button(self, -1, "Test")
+        width, height = self.btnTest.GetSize()
+        self.btnTest.SetMinSize((200, height))
+        self.btnTest.Disable()
         
         label_2.SetMinSize((59, 16))
-        self.txtDBHost.SetMinSize((250, 22))
+        self.lblDBHost.SetMinSize((250, 22))
         label_3.SetMinSize((66, 16))
-        self.txtDBName.SetMinSize((250, 22))
-        label_4.SetMinSize((71, 16))
-        self.txtDBUsername.SetMinSize((250, 22))
-        label_5.SetMinSize((67, 16))
-        self.txtDBPassword.SetMinSize((250, 22))
+        self.lblDBName.SetMinSize((250, 22))
         
         sizer1 = wx.BoxSizer(wx.VERTICAL)
         gridsizer = wx.GridSizer(5, 2, 5, 5)
         sizer1.Add(directions, 0, wx.ALL|wx.EXPAND, 20)
+        sizer1.Add(browseBtn, 0, wx.ALL|wx.ALIGN_CENTER, 10)
         gridsizer.Add(label_2, 0, wx.ALIGN_RIGHT, 0)
-        gridsizer.Add(self.txtDBHost, 1, 0, 0)
+        gridsizer.Add(self.lblDBHost, 1, 0, 0)
         gridsizer.Add(label_3, 0, wx.ALIGN_RIGHT, 0)
-        gridsizer.Add(self.txtDBName, 1, 0, 0)
-        gridsizer.Add(label_4, 0, wx.ALIGN_RIGHT, 0)
-        gridsizer.Add(self.txtDBUsername, 1, 0, 0)
-        gridsizer.Add(label_5, 0, wx.ALIGN_RIGHT, 0)
-        gridsizer.Add(self.txtDBPassword, 1, 0, 0)
-        gridsizer.Add((0, 0), 1, 0, 0)
-        gridsizer.Add(self.btnTest, 1, wx.EXPAND, 0)
+        gridsizer.Add(self.lblDBName, 1, 0, 0)
         sizer1.Add(gridsizer, 0, 0, 0)
+        sizer1.Add(self.btnTest, 0, wx.ALIGN_CENTER)
         
         self.sizer.Add(sizer1)
         self.SetSizer(self.sizer)
         self.sizer.Fit(self)
         
         self.btnTest.Bind(wx.EVT_BUTTON, self.OnTest)
-        self.txtDBHost.Bind(wx.EVT_TEXT, self.OnChangeDBInfo)
-        self.txtDBName.Bind(wx.EVT_TEXT, self.OnChangeDBInfo)
-        self.txtDBUsername.Bind(wx.EVT_TEXT, self.OnChangeDBInfo)
-        self.txtDBPassword.Bind(wx.EVT_TEXT, self.OnChangeDBInfo)
         self.Bind(wiz.EVT_WIZARD_PAGE_CHANGING, self.OnPageChanging)
-        
+
+    def OnBrowse(self, evt):
+        dlg = wx.FileDialog(self, "Select a property file", defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            p = Properties.getInstance()
+            p.LoadFile(dlg.GetPath())
+            self.lblDBHost.SetLabel(p.db_host)
+            self.lblDBName.SetLabel(p.db_name)
+            self.btnTest.SetLabel('Test')
+            self.btnTest.Enable()
         
     def OnTest(self, evt):
+        p = Properties.getInstance()
         db = DBConnect.getInstance()
-        if db.Connect(db_host=self.txtDBHost.GetValue(), db_name=self.txtDBName.GetValue(),
-                      db_user=self.txtDBUsername.GetValue(), db_passwd=self.txtDBPassword.GetValue()):
+        if db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd):
             self.btnTest.SetLabel('Connection OK')
             wx.FindWindowById(wx.ID_FORWARD).Enable()
         else:
             self.btnTest.SetLabel('Connection Failed')
         self.btnTest.Disable()
             
-    def OnChangeDBInfo(self, evt):
-        self.btnTest.SetLabel('Test')
-        self.btnTest.Enable()
-        
     def OnPageChanging(self,evt):
+        p = Properties.getInstance()
         db = DBConnect.getInstance()
-        if db.Connect(db_host=self.txtDBHost.GetValue(), db_name=self.txtDBName.GetValue(),
-                      db_user=self.txtDBUsername.GetValue(), db_passwd=self.txtDBPassword.GetValue()):
+        if db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd):
             self.btnTest.SetLabel('Connection OK')
             wx.FindWindowById(wx.ID_FORWARD).Enable()
-            self.Parent.inDB = self.txtDBName.GetValue()
-            self.Parent.outDB = self.Parent.inDB
+            self.Parent.inDB = self.Parent.outDB = p.db_name
         else:
             # FOR DEBUG
 #            db.Connect(db_host="imgdb01", db_name="af", db_user="cpadmin", db_passwd="cPus3r")
