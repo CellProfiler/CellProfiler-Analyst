@@ -7,6 +7,7 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
     label_matrix is an n by k numpy array containing values of either +1 or -1
     values is the n by j numpy array of cell measurements
     n = #example cells, k = #classes, j = #measurements
+    Return a list of learners.  Each learner is a tuple (column, thresh, a, b).
     '''
     computed_labels = zeros(label_matrix.shape, float32)
     num_examples, num_classes = label_matrix.shape
