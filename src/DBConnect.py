@@ -4,6 +4,8 @@ Authors: afraser
 '''
 
 import exceptions
+import sys
+import traceback
 import string
 import numpy
 import MySQLdb
@@ -16,7 +18,9 @@ from sys import stderr
 p = Properties.getInstance()
 
 class DBException(Exception):
-    pass
+    def __str__(self):
+        filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
+        return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
 
 def GetWhereClauseForObjects(obKeys):
@@ -120,7 +124,7 @@ class DBConnect(DataProvider, Singleton):
                 print 'Connected to database: %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
                 return True
             except MySQLdb.Error, e:
-                raise DBException, 'ERROR <DBConnect.Connect>: Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
+                raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
                 return False
             
         # SQLite database: create database from file
@@ -137,12 +141,12 @@ class DBConnect(DataProvider, Singleton):
                 try:
                     fimg = open(p.image_csv_file)
                 except IOError:
-                    raise Exception, 'ERROR <DBConnect.Connect>: Failed to open image_csv_file from file. Check your properties file.' % (p.image_csv_file)
+                    raise Exception, 'Failed to open image_csv_file from file. Check your properties file.' % (p.image_csv_file)
                     return False
                 try:
                     fobj = open(p.object_csv_file)
                 except:
-                    raise Exception, 'ERROR <DBConnect.Connect>: Failed to open object_csv_file from file. Check your properties file.' % (p.object_csv_file)
+                    raise Exception, 'Failed to open object_csv_file from file. Check your properties file.' % (p.object_csv_file)
                     return False
                 else:
                     fimg.close()
@@ -152,7 +156,7 @@ class DBConnect(DataProvider, Singleton):
         
         # Unknown database type
         else:
-            raise DBException, "ERROR <DBConnect.Connect>: Unknown db_type in properties: '%s'\n"%(p.db_type)
+            raise DBException, "Unknown db_type in properties: '%s'\n"%(p.db_type)
 
 
     def Disconnect(self):
@@ -180,18 +184,18 @@ class DBConnect(DataProvider, Singleton):
             if not silent: print '['+connID+'] '+query
             self.cursors[connID].execute(query)
         except MySQLdb.Error, e:
-            raise DBException, 'ERROR <DBConnect.Execute> Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
+            raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
         except KeyError, e:
-            raise DBException, 'ERROR <DBConnect.Execute> No such connection: "%s".\n' %(connID)
+            raise DBException, 'No such connection: "%s".\n' %(connID)
             
     def Commit(self, connID='default'):
         try:
             print '['+connID+'] - Commit'
             self.connections[connID].commit()
         except MySQLdb.Error, e:
-            raise DBException, 'ERROR <DBConnect.Commit> Commit failed for connection "%s"\n\t%s\n' %(connID, e)
+            raise DBException, 'Commit failed for connection "%s"\n\t%s\n' %(connID, e)
         except KeyError, e:
-            raise DBException, 'ERROR <DBConnect.Execute> No such connection: "%s".\n' %(connID)
+            raise DBException, 'No such connection: "%s".\n' %(connID)
             
 
 
@@ -199,12 +203,12 @@ class DBConnect(DataProvider, Singleton):
         try:
             return self.cursors[connID].next()
         except MySQLdb.Error, e:
-            raise DBException, 'ERROR <DBConnect.GetNextResult> Error retrieving next result from database.\n'
+            raise DBException, 'Error retrieving next result from database.\n'
             return None
         except StopIteration, e:
             return None
         except KeyError, e:
-            raise DBException, 'ERROR <DBConnect.GetNextResult> No such connection: "%s".\n' %(connID)
+            raise DBException, 'No such connection: "%s".\n' %(connID)
         
         
     def GetResultsAsList(self, connID='default'):
@@ -268,7 +272,7 @@ class DBConnect(DataProvider, Singleton):
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
         self.Execute(select, connID)
         res = self.GetResultsAsList(connID)
-        assert len(res)==1, "ERROR <DBConnect.GetObjectCoords>: Returned %s objects instead of 1.\n" % len(res)
+        assert len(res)==1, "Returned %s objects instead of 1.\n" % len(res)
         return res[0]
 
 
@@ -318,7 +322,7 @@ class DBConnect(DataProvider, Singleton):
         Returns a list of imKeys from the given filter.
         '''
         if 'filter_SQL_'+filter not in p.__dict__:
-            raise DBException, 'ERROR <DBConnect.GetFilteredImages>: The filter %s was not found in the properties file!' %(filter)
+            raise DBException, 'The filter %s was not found in the properties file!' %(filter)
         
         self.Execute(p.__dict__['filter_SQL_'+filter], connID)
         return self.GetResultsAsList(connID)
@@ -364,7 +368,7 @@ class DBConnect(DataProvider, Singleton):
         self.Execute(query, connID, silent=True)
         data = self.GetResultsAsList(connID)
         if len(data) == 0:
-            print 'ERROR <DBConnect.GetCellDataForClassifier>: No data for obKey:',obKey
+            print 'No data for obKey:',obKey
         return numpy.array(data[0])
     
     
