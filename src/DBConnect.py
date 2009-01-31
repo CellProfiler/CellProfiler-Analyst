@@ -318,7 +318,7 @@ class DBConnect(DataProvider, Singleton):
         Returns a list of imKeys from the given filter.
         '''
         if 'filter_SQL_'+filter not in p.__dict__:
-            raise DBException, 'ERROR <DBConnect.GetImagesInGroup>: The filter %s was not found in the properties file!' %(filter)
+            raise DBException, 'ERROR <DBConnect.GetFilteredImages>: The filter %s was not found in the properties file!' %(filter)
         
         self.Execute(p.__dict__['filter_SQL_'+filter], connID)
         return self.GetResultsAsList(connID)
