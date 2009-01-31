@@ -15,6 +15,8 @@ from Properties import Properties
 from DataProvider import DataProvider
 from sys import stderr
 
+verbose = True
+
 p = Properties.getInstance()
 
 class DBException(Exception):
@@ -121,7 +123,8 @@ class DBConnect(DataProvider, Singleton):
                 self.connections[connID] = conn
                 self.cursors[connID] = SSCursor(conn)
                 self.connectionInfo[connID] = (db_host, db_user, db_passwd, db_name)
-                print 'Connected to database: %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
+                if verbose:
+                    print 'Connected to database: %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
                 return True
             except MySQLdb.Error, e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
@@ -345,7 +348,7 @@ class DBConnect(DataProvider, Singleton):
         '''
         if self.classifierColNames is None:
             # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
-            self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID)
+            self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID, silent=not verbose)
             self.GetResultsAsList(connID)          # ditch the results
             labels = self.GetResultColumnNames()   # get the column names
             self.classifierColNames = [i for i in labels if not any([sub.lower() in i.lower() for sub in p.classifier_ignore_substrings])]
