@@ -12,7 +12,6 @@ class TrainingSet:
         self.properties = properties
         self.colnames = db.GetColnamesForClassifier()
         self.filename = filename
-        print self.colnames
         if filename != '':
             self.Load(filename, include_group_info)
 
@@ -30,7 +29,7 @@ class TrainingSet:
         labels   = ['class1', 'class2', ... ]
         keyLists = [[k1,k2,..], [k1,k2,..], ... ]
         '''
-        assert len(labels)==len(keyLists), 'ERROR <TrainingSet.Create> Class labels and keyLists must be equal.'
+        assert len(labels)==len(keyLists), 'ERROR <TrainingSet.Create> Class labels and keyLists must be of equal size.'
         self.Clear()
         self.labels = array(labels)
         
@@ -44,13 +43,13 @@ class TrainingSet:
 
     def Load(self, filename, include_group_info=False):
         self.Clear()
-        print 'loading training set from',filename
         f = open(filename)
+        labels = None
         for l in f:
             try:
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
-                    self.labels = l.strip().split(' ')[1:]
+                    labels = l.strip().split(' ')[1:]
                     continue
                 obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:]])
             except:
@@ -65,7 +64,7 @@ class TrainingSet:
             else:
                 self.groups.append(obKey[:-1])
 
-        self.labels = array(self.labels)
+        self.labels = array(labels or list(set([l for l, k in self.entries])))
         self.values = array(self.values)
         
         f.close()
@@ -94,7 +93,6 @@ class TrainingSet:
         sub.values = self.values[mask]
         sub.groups = [self.groups[i] for i in range(len(self.groups)) if mask[i]]
         return sub
-
 
 
 if __name__ == "__main__":
