@@ -58,28 +58,8 @@ class DataModel(Singleton):
         self.cumSums = numpy.zeros(len(self.data)+1, dtype='int')
         for i, imKey in enumerate(self.keylist):
             self.cumSums[i+1] = self.cumSums[i]+self.data[imKey]
-                    
-        # Build dictionary mapping group names and image keys to group keys
-        if 'groups' in p.__dict__:
-            for group in p.groups:
-                if 'group_SQL_'+group in p.__dict__:
-                    db.Execute( p.__dict__['group_SQL_'+group] )
-                    res = db.GetResultsAsList()
-                    if p.table_id:
-                        self.groupColNames[group] = db.GetResultColumnNames()[2:]
-                    else:
-                        self.groupColNames[group] = db.GetResultColumnNames()[1:]
-                    groupDict = {}
-                    for row in res:
-                        if p.table_id:
-                            imKey = row[:2]
-                            groupKey = row[2:]
-                        else:
-                            imKey = row[:1]
-                            groupKey = row[1:]
-                        groupDict[imKey] = groupKey
-                    self.groupMaps[group] = groupDict
-        
+
+        self.groupMaps, self.groupColNames = db.GetGroupMaps()
 
     def DeleteModel(self):
         self.data = {}

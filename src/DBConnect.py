@@ -184,7 +184,7 @@ class DBConnect(DataProvider, Singleton):
 
     def Execute(self, query, connID='default', silent=False):
         try:
-            if not silent: print '['+connID+'] '+query
+            if verbose and not silent: print '['+connID+'] '+query
             self.cursors[connID].execute(query)
         except MySQLdb.Error, e:
             raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
@@ -318,7 +318,24 @@ class DBConnect(DataProvider, Singleton):
         for i in xrange(0,len(p.image_channel_paths*2),2):
             filenames.append( imPaths[i]+'/'+imPaths[i+1] )
         return filenames
-    
+
+    def GetGroupMaps(self, connID='default'):
+        """Build dictionary mapping group names and image keys to group keys"""
+        groupColNames = {}
+        groupMaps = {}
+        key_size = p.table_id and 2 or 1
+        for group in getattr(p, 'groups', []):
+            if 'group_SQL_'+group not in p.__dict__:
+                raise DBException("Missing property: %s"%('group_SQL_' + group,))
+            self.Execute(getattr(p, 'group_SQL_'+group))
+            res = self.GetResultsAsList()
+            groupColNames[group] = self.GetResultColumnNames()[key_size:]
+            d = {}
+            for row in res:
+                d[row[:key_size]] = row[key_size:]
+            groupMaps[group] = d
+        return groupMaps, groupColNames
+        
     
     def GetFilteredImages(self, filter, connID='default'):
         '''
