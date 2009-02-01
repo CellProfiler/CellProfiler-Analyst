@@ -29,7 +29,7 @@ class TrainingSet:
         labels   = ['class1', 'class2', ... ]
         keyLists = [[k1,k2,..], [k1,k2,..], ... ]
         '''
-        assert len(labels)==len(keyLists), 'ERROR <TrainingSet.Create> Class labels and keyLists must be of equal size.'
+        assert len(labels)==len(keyLists), 'Class labels and keyLists must be of equal size.'
         self.Clear()
         self.labels = array(labels)
         
@@ -44,12 +44,11 @@ class TrainingSet:
     def Load(self, filename, include_group_info=False):
         self.Clear()
         f = open(filename)
-        labels = None
         for l in f:
             try:
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
-                    labels = l.strip().split(' ')[1:]
+                    self.labels = l.strip().split(' ')[1:]
                     continue
                 obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:]])
             except:
@@ -64,7 +63,7 @@ class TrainingSet:
             else:
                 self.groups.append(obKey[:-1])
 
-        self.labels = array(labels or list(set([l for l, k in self.entries])))
+        self.labels = array(self.labels)
         self.values = array(self.values)
         
         f.close()
