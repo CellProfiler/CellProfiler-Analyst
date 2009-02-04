@@ -34,7 +34,7 @@ class Page1(wiz.WizardPageSimple):
         self.sizer.AddWindow(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
         self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
-        directions = wx.StaticText(self, -1, "Connect to the database that contains the tables you wish to use in your analysis.", style=wx.ALIGN_CENTRE)
+        directions = wx.StaticText(self, -1, "Load a Properties file that contains the database info below.", style=wx.ALIGN_CENTRE)
         browseBtn = wx.Button(self, wx.NewId(), 'Choose file…')
         self.Bind(wx.EVT_BUTTON, self.OnBrowse, browseBtn)
         label_2 = wx.StaticText(self, -1, "DB Host: ")
