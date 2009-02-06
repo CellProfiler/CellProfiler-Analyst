@@ -461,7 +461,6 @@ class ClassifierGUI(wx.Frame):
                 obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, obKeysToTry, stump_query, score_query, find_max_query)
 
                 attempts += 100
-                print attempts%10000.0
                 if attempts%10000.0==0:
                     dlg = wx.MessageDialog(self, 'Found '+str(len(obKeys))+' '+p.object_name[1]+' after '+str(attempts)+' attempts. Continue searching?',
                                            'Continue searching?', wx.YES_NO|wx.ICON_QUESTION)
@@ -735,6 +734,10 @@ class ClassifierGUI(wx.Frame):
         t3 = time()
         print 'time to group per-image counts:',t3-t2
         
+        # TODO: validate that this works as expected
+        #       display results in a table?
+        zprimes = self.CalculateZPrimes(groupedKeysAndCounts.copy(), nClasses)
+        
         # Calculate alpha
         self.SetStatusText('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
@@ -828,6 +831,31 @@ class ClassifierGUI(wx.Frame):
                 m.append( [(int(cls.bin==cl.bin) or -1) for cls in self.classes] )
         return numpy.array(m)
     
+    
+    
+    def CalculateZPrimes(self, keysAndCounts, nClasses):
+        '''
+        Calculates Z' factor as 1-3*(Sp+Sn)/|Mp-Mn|
+        This is done for each class against all other classes combined.
+        keysAndCounts: A numpy.array([[key, nX, nY, nZ...], where nX, nY, nZ
+                       are the object counts for classes X,Y,Z...
+        nClasses: The number of classes
+        Returns: A list of Z' factors for each class in the order they came in.
+        '''
+        firstClassIdx = len(keysAndCounts[0])-nClasses
+        counts = keysAndCounts[:,firstClassIdx:].astype('float')
+        result = []
+        for i in range(nClasses):
+            ingroup = counts[:,i]
+            outgroup = numpy.hstack([counts[:,j] for j in range(nClasses) if j!=i])
+            ssd = ingroup.std() + outgroup.std()
+            r = abs(ingroup.mean() - outgroup.mean())
+            result += [1-3*ssd/r]
+            
+        print "Z' factors =", result
+        
+        return result
+        
     
     
     def LoadProperties(self):
