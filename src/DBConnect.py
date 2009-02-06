@@ -138,8 +138,23 @@ class DBConnect(DataProvider, Singleton):
             self.connections[connID] = sqlite.connect('CPA_DB')
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
+            
+            # Check if a SQLite DB has already been populated.
+            # If so prompt user for whether to use it.
+            try:
+                nImages = len(self.GetAllImageKeys())
+                if nImages:
+                    dlg = wx.MessageDialog(None, 'Classifier found an existing SQLite database with %d images.\nUse this database?'%(nImages),
+                                        'Use existing SQLite DB?', 
+                                       wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
+                    answer = dlg.ShowModal()
+                    if answer == wx.YES:
+                        return True
+            except Exception:
+                pass
+            
             # If this is the first connection, then we need to create the DB from the files
-            if len(self.connections) == 0:#1:
+            if len(self.connections) == 1:
                 print 'No database info specified. Will attempt to load tables from file.'
                 try:
                     fimg = open(p.image_csv_file)
