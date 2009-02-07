@@ -33,7 +33,7 @@ class ImageViewer(wx.Frame):
         h,w = imgs[0].shape
         
         wx.Frame.__init__(self, parent, wx.NewId(), title)
-        
+                
         self.chMap       = chMap
         self.toggleChMap = chMap[:]
         self.img_key     = img_key
@@ -42,10 +42,11 @@ class ImageViewer(wx.Frame):
         self.imagePanel  = ImagePanel(imgs, chMap, self.sw, brightness=brightness, scale=scale)
         self.controls    = ImageControlPanel(self, self.imagePanel, brightness=brightness, scale=scale)
         self.selection   = []
+        self.maxSize     = [xy-50 for xy in wx.DisplaySize()]
 
         self.SetMenuBar(wx.MenuBar())
         self.CreateChannelMenus()
-        self.SetClientSize((w,h+135))
+        self.SetClientSize(min(self.maxSize, (w,h+135)))
         self.Centre()
         
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -149,7 +150,8 @@ class ImageViewer(wx.Frame):
 
 
 if __name__ == "__main__":
-    p.LoadFile('../properties/nirht_test.properties')
+#    p.LoadFile('../properties/nirht_test.properties')
+    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
     from DataModel import DataModel
     from DBConnect import DBConnect
