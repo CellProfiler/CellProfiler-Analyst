@@ -919,6 +919,17 @@ class ClassifierGUI(wx.Frame):
         
 # ----------------- Testing -------------------
 
+def show_exception_as_dialog(type, value, tb):
+    """Exception handler that show a dialog."""
+    import traceback
+    traceback.print_exc()
+    lines = ['An error occurred in the program:\n']
+    lines += traceback.format_exception_only(type, value)
+    lines += ['\nTraceback (most recent call last):\n']
+    lines += traceback.format_tb(tb)
+    wx.MessageBox("".join(lines), 'Error')
+    raise value
+
 if __name__ == "__main__":
     p = Properties.getInstance()
     db = DBConnect.getInstance()
@@ -930,14 +941,21 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
         del sys.argv[1]
 
+    # Initialize the app early because the fancy exception handler
+    # depends on it in order to show a dialog.
+    app = wx.PySimpleApp()
+
+    # Install our own pretty exception handler unless one has already
+    # been installed (e.g., a debugger)
+    if sys.excepthook == sys.__excepthook__:
+        sys.excepthook = show_exception_as_dialog
+
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
         db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
         dm.PopulateModel()
-    
-    app = wx.PySimpleApp()
     classifier = ClassifierGUI(None)
     classifier.Show(True)
     app.MainLoop()
