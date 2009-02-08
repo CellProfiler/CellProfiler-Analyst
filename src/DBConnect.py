@@ -24,36 +24,36 @@ class DBException(Exception):
         filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
         return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
+def image_key_columns():
+    """Return, as a tuple, the names of the columns that make up the object key."""
+    if p.table_id:
+        return (p.table_id, p.image_id)
+    else:
+        return (p.image_id,)
+
+def object_key_columns():
+    """Return, as a tuple, the names of the columns that make up the object key."""
+    if p.table_id:
+        return (p.table_id, p.image_id, p.object_id)
+    else:
+        return (p.image_id, p.object_id)
 
 def GetWhereClauseForObjects(obKeys):
-    '''
-    Returns a MySQL where-clause specifying the given object keys.
-    eg: GetWhereClauseForObjects( [(1,3),(2,4)] ) = "WHERE <imnum>=1 AND <obnum>=3 OR <imnum>=2 AND <obnum>=4"
-    '''
-    wheres = []
-    for obKey in obKeys:
-        if p.table_id:
-            where = p.table_id+'='+str(obKey[0])+' AND '+p.image_id+'='+str(obKey[1])+' AND '+p.object_id+'='+str(obKey[2])
-        else:
-            where = p.image_id+'='+str(obKey[0])+' AND '+p.object_id+'='+str(obKey[1])
-        wheres.append(where)
-    return ' OR '.join(wheres)
-
+    """Return a SQL WHERE clause that matches any of the given
+    object keys.  Example: GetWhereClauseForObjects([(1, 3), (2, 4)])
+    => 'WHERE ImageNumber=1 AND ObjectNumber=3 OR ImageNumber=2 AND
+    ObjectNumber=4'"""
+    return " OR ".join([" AND ".join([col + '=' + str(value)
+                                      for col, value in zip(object_key_columns(), obKey)])
+                        for obKey in obKeys])
 
 def GetWhereClauseForImages(imKeys):
-    '''
-    Returns a MySQL where-clause specifying the given image keys.
-    eg: GetWhereClauseForObjects( [(3,),(4,)] ) = "WHERE <imnum>=3 OR <imnum>=4"
-    '''
-    wheres = []
-    for imKey in imKeys:
-        if p.table_id:
-            where = p.table_id+'='+str(imKey[0])+' AND '+p.image_id+'='+str(imKey[1])
-        else:
-            where = p.image_id+'='+str(imKey[0])
-        wheres.append(where)
-    return ' OR '.join(wheres)
-
+    """Return a SQL WHERE clause that matches any of the give image
+    keys.  Example: GetWhereClauseForObjects([(3,), (4,)]) => 'WHERE
+    ImageNumber=3 OR ImageNumber=4'"""
+    return " OR ".join([" AND ".join([col + '=' + str(value)
+                                      for col, value in zip(image_key_columns(), imKey)])
+                        for imKey in imKeys])
 
 def UniqueObjectClause():
     '''
