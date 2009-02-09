@@ -46,7 +46,7 @@ class ImageViewer(wx.Frame):
 
         self.SetMenuBar(wx.MenuBar())
         self.CreateChannelMenus()
-        self.SetClientSize(min(self.maxSize, (w,h+135)))
+        self.SetClientSize(min(self.maxSize, (w*scale,h*scale+135)))
         self.Centre()
         
         sizer = wx.BoxSizer(wx.VERTICAL)
