@@ -811,8 +811,11 @@ class ClassifierGUI(wx.Frame):
             for i in xrange(nClasses):
                 labels += ['Enriched Score\n'+self.classes[i].label]
         
-        grid = DataGrid(tableData, labels, grouping=group, groupIDIndices=groupIDIndices,
-                        chMap=self.chMap[:], parent=self, title='Enrichments grouped by '+group)
+        grid = DataGrid(tableData, labels, grouping=group,
+                        groupIDIndices=groupIDIndices,
+                        chMap=self.chMap[:], parent=self,
+                        selectableColumns=set(range(len(labels))),
+                        title='Enrichments grouped by '+group)
         grid.Show()
         
         self.SetStatusText('')

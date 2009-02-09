@@ -1,3 +1,4 @@
+# -*- Encoding: utf-8 -*-
 import wx
 import wx.grid
 import numpy
@@ -51,13 +52,17 @@ class HugeTableGrid(wx.grid.Grid):
         self.DisableCellEditControl()
         self.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnSelectCell)
 
-        # The second parameter means that the grid is to take ownership of the
-        # table and will destroy it when done.  Otherwise you would need to keep
-        # a reference to it and call it's Destroy method later.
+        # The second parameter means that the grid is to take
+        # ownership of the table and will destroy it when done.
+        # Otherwise you would need to keep a reference to it and call
+        # it's Destroy method later.
         self.SetTable(table, True)
+        # Avoid self.AutoSize() because it hangs on large tables.
+        self.SetSelectionMode(self.wxGridSelectColumns)
 
     def OnSelectCell(self, evt):
-        return # prevent selection
+        # Prevent selection.
+        evt.Skip()
 
 
 class DataGrid(wx.Frame):
@@ -76,12 +81,12 @@ class DataGrid(wx.Frame):
     
     def __init__(self, data, labels, grouping=IMAGE_GROUPING,
                  groupIDIndices=[0], chMap=None, parent=None,
-                 title='Data Grid'):
+                 selectableColumns=set(), title='Data Grid'):
         """
         Initialize the datagrid.
 
         Arguments:
-        data -- the grid as a numpy array
+        data -- the grid as a numpy object array
         labels -- text labels for each column
 
         Keyword arguments:
@@ -89,6 +94,8 @@ class DataGrid(wx.Frame):
         groupIDIndices -- column indexes for group IDs
         chMap -- channel-to-color map for ImageViewer, or None to disable
         parent -- wx parent window
+        selectableColumns -- a set of the column indices that it should be
+                             possible for the user to select
         title -- 
         
         # is launched.  If None, no images will be displayed.
@@ -121,6 +128,10 @@ class DataGrid(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.menuBar.Append(self.filemenu, 'File')
 
+        self.CreateStatusBar()
+        self.selectableColumns = selectableColumns
+        self.selectedColumns = set()
+
         self.SetColumnLabels(self.labels)
         self.SetSize((800,500))
         self.SetSize((self.grid.Size[0], min(self.grid.Size[1], 500)+22))
@@ -130,11 +141,12 @@ class DataGrid(wx.Frame):
         wx.grid.EVT_GRID_LABEL_LEFT_CLICK(self.grid, self.OnLabelClick)
         wx.grid.EVT_GRID_LABEL_RIGHT_CLICK(self.grid, self.OnLabelRightClick)
         wx.grid.EVT_GRID_LABEL_LEFT_DCLICK(self.grid, self.OnLabelDClick)
+        wx.grid.EVT_GRID_RANGE_SELECT(self.grid, self.OnSelectedRange)
         
         self.grid.EnableEditing(False)
         self.grid.SetCellHighlightPenWidth(0)
 
-
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         
     def OnKey(self, evt):
         keycode = evt.GetKeyCode()
@@ -142,7 +154,13 @@ class DataGrid(wx.Frame):
             if evt.GetKeyCode() == ord('W'):
                 self.Close()
         evt.Skip()
-        
+
+    def OnSize(self, evt):
+        # Hack: subtract 4 in order to avoid spurious scrollbar.
+        cw = evt.GetSize()[0] / (self.data.shape[1] + 1) - 4
+        self.grid.SetDefaultColSize(cw, True)
+        self.grid.SetRowLabelSize(cw)
+        evt.Skip()
 
     def OnSaveCSV(self, evt):
         defaultFileName = 'My_Enrichment_Data.csv'
@@ -164,12 +182,10 @@ class DataGrid(wx.Frame):
         f.close()
         print 'Table saved to',filename
     
-    
     def OnLabelClick(self, evt):
         if evt.Col >= 0:
             self.SortGridByCol(evt.Col)
         evt.Skip()
-        
     
     def OnLabelDClick(self, evt):
         if self.chMap:
@@ -195,7 +211,30 @@ class DataGrid(wx.Frame):
             else:
                 imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
                 self.ShowPopupMenu(imKeys, evt.GetPosition())
-            
+
+    def OnSelectedRange(self, evt):
+        cols = set(range(evt.GetLeftCol(), evt.GetRightCol() + 1))
+        if evt.Selecting():
+            self.selectedColumns.update(cols)
+        else:
+            self.selectedColumns.difference_update(cols)
+        illegal = self.selectedColumns.difference(self.selectableColumns)
+        legal = self.selectedColumns.intersection(self.selectableColumns)
+        if len(illegal) > 0:
+            labels = [self.labels[i] for i in sorted(list(illegal))]
+            self.SetStatusText("Cannot summarize column%s: %s" %
+                               (["", "s"][len(illegal) > 1],
+                                ", ".join(labels)))
+        elif len(legal) == 0:
+            self.SetStatusText("")
+        else:
+            n, m = self.data.shape[0], len(legal)
+            block = numpy.empty((n, m))
+            for k, j in enumerate(legal):
+                block[:,k] = self.data[:,j]
+            self.SetStatusText(u"Sum: %f — Mean: %f — Std: %f" %
+                               (block.sum(), block.sum() / (n * m),
+                                block.std()))
             
     def ShowPopupMenu(self, items, pos):
         self.popupItemById = {}
@@ -235,12 +274,13 @@ class DataGrid(wx.Frame):
 
 if __name__ == "__main__":
     classes = ['a', 'b']
-    hits = numpy.array([['key 0000000',10,20,-30,40.123456789],['key 1',11,21,31,41.1],['key 2',0,-22,32,42.2],['key 3',13,-3,33,43.3],['key 4',14,24,4,44.4],['key 5',5,5,5,5.12345]], dtype=object)
+    hits = numpy.array([['key 0000000',10,20,-30,40.123456789],['key 1',11,21,31,41.1],['key 2',0,-22,32,42.2],['key 3',13,-3,33,43.3],['key 4',14,24,4,44.4],['key 5',5,5,5,5.12345]] * 50, dtype=object)
     order = numpy.array([4,3,1,2,0])
     labels = ['key', 'count A' , 'count McLongtitle #1\n B' , 'P a' , 'P b' ]
-        
+    selectableColumns=set(range(1,4))
     app = wx.PySimpleApp()
-    grid = DataGrid( hits, labels, groupIDIndices=[0,1] )
+    grid = DataGrid(hits, labels, groupIDIndices=[0,1],
+                    selectableColumns=selectableColumns)
     grid.Show()
 
     app.MainLoop()
