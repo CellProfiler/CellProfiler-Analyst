@@ -3,12 +3,10 @@ import wx.grid
 import numpy
 import ImageTools
 from DataModel import DataModel
-from Properties import Properties
 from sys import stderr
 import os
 import csv
 
-p = Properties.getInstance()
 dm = DataModel.getInstance()
 
 
@@ -63,39 +61,66 @@ class HugeTableGrid(wx.grid.Grid):
 
 
 class DataGrid(wx.Frame):
-    '''
+
+    """
     A frame with a grid inside of it.
-    This grid is specifically designed to hold per-image or grouped per-image data
-       in each row.
-    Double-clicking a row label will launch an image viewer for that image or images.
-    Right-clicking a row label will display a popup menu of images to select for viewing.
-    Clicking on a column label will sort that column in ascending then descending order.
-    '''
-    def __init__(self, data, labels, grouping=IMAGE_GROUPING, groupIDIndices=[0], chMap=None, parent=None, title='Data Grid'):
+    
+    This grid is specifically designed to hold per-image or grouped
+    per-image data in each row.  Double-clicking a row label will
+    launch an image viewer for that image or images.  Right-clicking a
+    row label will display a popup menu of images to select for
+    viewing.  Clicking on a column label will sort that column in
+    ascending then descending order.
+
+    """
+    
+    def __init__(self, data, labels, grouping=IMAGE_GROUPING,
+                 groupIDIndices=[0], chMap=None, parent=None,
+                 title='Data Grid'):
+        """
+        Initialize the datagrid.
+
+        Arguments:
+        data -- the grid as a numpy array
+        labels -- text labels for each column
+
+        Keyword arguments:
+        grouping -- group name string, e.g., "Wells"
+        groupIDIndices -- column indexes for group IDs
+        chMap -- channel-to-color map for ImageViewer, or None to disable
+        parent -- wx parent window
+        title -- 
+        
+        # is launched.  If None, no images will be displayed.
+
+        """
         wx.Frame.__init__(self, parent, id=-1, title=title)
         
-        self.data = data                           # numpy array of rows x cols
-        self.grid = HugeTableGrid(self, data, labels, groupIDIndices)      # the grid
-        self.order = numpy.arange(data.shape[0])   # defines the order of the rows displayed
-        self.labels = labels                       # text labels for each column
-        self.grouping = grouping                   # group name string to match a group in the DataModel.  eg: 'Wells'
-        self.groupIDIndices = groupIDIndices       # column indexes for group ids
-        self.chMap = chMap                         # channel-to-color map can be passed in so when an ImageViewer is launched
-                                                   #    from the table, the user gets their most recent channel-color map 
-        self.sortcol = -1                           # index of the current column being sorted-by
+        self.data = data
+        self.grid = HugeTableGrid(self, data, labels, groupIDIndices)
+        # The order of the rows displayed.
+        self.order = numpy.arange(data.shape[0])
+        self.labels = labels
+        self.grouping = grouping
+        self.groupIDIndices = groupIDIndices
+        self.chMap = chMap
+        # Index of the current column being sorted by.
+        self.sortcol = -1
         
-        assert len(labels) == data.shape[1], 'DataGrid.__init__: Number of column labels does not match number of columns in data.'
+        assert len(labels) == data.shape[1], \
+               "DataGrid.__init__: Number of column labels does not match " \
+               "the number of columns in data."
         
         self.filemenu = wx.Menu()
-        self.saveCSVMenuItem = wx.MenuItem(parentMenu=self.filemenu, id=wx.NewId(), text='Save data to CSV', help='Saves data as comma separated values.')
+        self.saveCSVMenuItem = \
+            wx.MenuItem(parentMenu=self.filemenu, id=wx.NewId(),
+                        text='Save data to CSV',
+                        help='Saves data as comma separated values.')
         self.filemenu.AppendItem(self.saveCSVMenuItem)
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.menuBar.Append(self.filemenu, 'File')
 
-        
-        if self.chMap == None:
-            self.chMap = p.image_channel_colors
         self.SetColumnLabels(self.labels)
         self.SetSize((800,500))
         self.SetSize((self.grid.Size[0], min(self.grid.Size[1], 500)+22))
@@ -121,7 +146,12 @@ class DataGrid(wx.Frame):
 
     def OnSaveCSV(self, evt):
         defaultFileName = 'My_Enrichment_Data.csv'
-        saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), defaultFile=defaultFileName, wildcard='csv', style=wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+        saveDialog = wx.FileDialog(self, message="Save as:",
+                                   defaultDir=os.getcwd(),
+                                   defaultFile=defaultFileName,
+                                   wildcard='csv',
+                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                          wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
             self.SaveCSV(saveDialog.GetPath())
         
@@ -142,21 +172,24 @@ class DataGrid(wx.Frame):
         
     
     def OnLabelDClick(self, evt):
-        key = tuple( [self.data[evt.Row,idx] for idx in self.groupIDIndices] )
-        if evt.Row >= 0:
-            if self.grouping == IMAGE_GROUPING:
-                ImageTools.ShowImage(key, self.chMap, parent=self)
+        if self.chMap:
+            key = tuple([self.data[evt.Row,idx]
+                         for idx in self.groupIDIndices])
+            if evt.Row >= 0:
+                if self.grouping == IMAGE_GROUPING:
+                    ImageTools.ShowImage(key, self.chMap, parent=self)
+                else:
+                    imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
+                    for imKey in imKeys:
+                        ImageTools.ShowImage(imKey, self.chMap, parent=self)
             else:
-                imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
-                for imKey in imKeys:
-                    ImageTools.ShowImage(imKey, self.chMap, parent=self)
-        else:
-            self.OnLabelClick(evt)
+                self.OnLabelClick(evt)
             
             
     def OnLabelRightClick(self, evt):
         if evt.Row >= 0:
-            key = tuple( [self.data[evt.Row,idx] for idx in self.groupIDIndices] )
+            key = tuple([self.data[evt.Row,idx]
+                         for idx in self.groupIDIndices])
             if self.grouping == IMAGE_GROUPING:   
                 self.ShowPopupMenu([key], evt.GetPosition())
             else:
@@ -177,9 +210,10 @@ class DataGrid(wx.Frame):
             
     
     def OnSelectFromPopupMenu(self, evt):
-        ''' Handles selections from the popup menu. '''
-        imKey = self.popupItemById[evt.GetId()]
-        ImageTools.ShowImage(imKey, self.chMap, parent=self)
+        """Handles selections from the popup menu."""
+        if self.chMap:
+            imKey = self.popupItemById[evt.GetId()]
+            ImageTools.ShowImage(imKey, self.chMap, parent=self)
 
  
     def SortGridByCol(self, colIndex):
@@ -199,12 +233,7 @@ class DataGrid(wx.Frame):
             self.grid.SetColLabelValue(i, label)
 
 
-
-
 if __name__ == "__main__":
-    p = Properties.getInstance()
-    p.LoadFile('../properties/nirht_test.properties')
-    
     classes = ['a', 'b']
     hits = numpy.array([['key 0000000',10,20,-30,40.123456789],['key 1',11,21,31,41.1],['key 2',0,-22,32,42.2],['key 3',13,-3,33,43.3],['key 4',14,24,4,44.4],['key 5',5,5,5,5.12345]], dtype=object)
     order = numpy.array([4,3,1,2,0])

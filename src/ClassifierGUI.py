@@ -44,9 +44,9 @@ class SortClass(object):
 
 
 class ClassifierGUI(wx.Frame):
-    ''' =========================================================================
-    GUI Interface and functionality for the Classifier
-    ============================================================================= '''
+
+    """GUI Interface and functionality for the Classifier."""
+
     def __init__(self, parent):
         
         wx.Frame.__init__(self, parent, id=-1, title="pyClassifier", size=(800,600))
