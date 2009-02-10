@@ -85,9 +85,7 @@ class ClassifierGUI(wx.Frame):
         self.nObjectsTxt = wx.TextCtrl(self, id=wx.NewId(), value='20', size=(30,-1))
         self.obClassChoice = wx.Choice(self, id=wx.NewId(), choices=['random'])
         self.obClassChoice.SetSelection(0)
-        filters = []
-        if p.filters:
-            filters = p.filters
+        filters = p.filters_ordered
         self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters)
         self.filterChoice.SetSelection(0)
         self.imageTxt = wx.TextCtrl(self, id=wx.NewId(), value='1', size=(30,-1))
@@ -550,7 +548,12 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnMapChannels(self, evt):
-        (chIdx,color) = self.chMapById[evt.GetId()]
+        # TODO: For some reason, typing Command+Q on an ImageViewer
+        #    triggers wx.EVT_MENU here, which throws an exception
+        try:
+            (chIdx,color) = self.chMapById[evt.GetId()]
+        except Exception:
+            return
         self.chMap[chIdx] = color
         if color.lower() != 'none':
             self.toggleChMap[chIdx] = color
@@ -558,15 +561,11 @@ class ClassifierGUI(wx.Frame):
 
         
     def MapChannels(self, chMap):
-        self.chMap = chMap
-        
         # TODO: Need to update color menu selections
-        
+        self.chMap = chMap
         self.unclassifiedBin.MapChannels(chMap)
         for cl in self.classes:
             cl.bin.MapChannels(chMap)
-        self.Refresh()
-        self.Layout()
 
 
     def ValidateIntegerField(self, evt):
@@ -689,9 +688,7 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnScoreAll(self, evt):
-        groupChoices = ['Image']
-        if p.groups is not None:
-            groupChoices += p.groups
+        groupChoices = ['Image'] + p.groups_ordered
         dlg = wx.SingleChoiceDialog(self, 'Please choose a grouping method:', 'Score all', groupChoices, wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() == wx.ID_OK:            
             group = str(dlg.GetStringSelection())
@@ -733,11 +730,7 @@ class ClassifierGUI(wx.Frame):
         
         t3 = time()
         print 'time to group per-image counts:',t3-t2
-        
-        # TODO: validate that this works as expected
-        #       display results in a table?
-        zprimes = self.CalculateZPrimes(groupedKeysAndCounts.copy(), nClasses)
-        
+                
         # Calculate alpha
         self.SetStatusText('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
@@ -785,6 +778,11 @@ class ClassifierGUI(wx.Frame):
         
         t5 = time()
         print 'time to compute enrichment scores:',t5-t4
+        
+        
+        # TODO: Calculate Z' factors from enrichment scores of positive and negative controls
+#        zprimes = self.CalculateZPrimes(posScores, negScores)
+
                 
         # Create column labels list
         labels = []
@@ -836,14 +834,11 @@ class ClassifierGUI(wx.Frame):
     
     
     
-    def CalculateZPrimes(self, keysAndCounts, nClasses):
+    def CalculateZPrimes(self, keysAndCounts):
         '''
         Calculates Z' factor as 1-3*(Sp+Sn)/|Mp-Mn|
-        This is done for each class against all other classes combined.
         keysAndCounts: A numpy.array([[key, nX, nY, nZ...], where nX, nY, nZ
-                       are the object counts for classes X,Y,Z...
-        nClasses: The number of classes
-        Returns: A list of Z' factors for each class in the order they came in.
+        Returns: Z' factor as a float
         '''
         firstClassIdx = len(keysAndCounts[0])-nClasses
         counts = keysAndCounts[:,firstClassIdx:].astype('float')
@@ -933,13 +928,9 @@ def show_exception_as_dialog(type, value, tb):
     wx.MessageBox("".join(lines), 'Error')
     raise value
 
-if __name__ == "__main__":
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
-    
+
+if __name__ == "__main__":    
     import sys
-    
     # Handles args to MacOS "Apps"
     if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
         del sys.argv[1]
@@ -952,6 +943,10 @@ if __name__ == "__main__":
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
         sys.excepthook = show_exception_as_dialog
+
+    p = Properties.getInstance()
+    db = DBConnect.getInstance()
+    dm = DataModel.getInstance()
 
     # Load a properties file if passed in args
     if len(sys.argv) > 1:

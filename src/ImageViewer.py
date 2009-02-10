@@ -56,7 +56,6 @@ class ImageViewer(wx.Frame):
         
         self.sw.SetScrollbars(1,1,w*scale,h*scale)
         
-        self.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
@@ -103,9 +102,10 @@ class ImageViewer(wx.Frame):
         if evt.CmdDown() or evt.ControlDown():
             if keycode == ord('W'):
                 self.Destroy()
+            elif keycode == ord('Q'):
+                self.Destroy()
             elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
-        evt.Skip()
         
             
     def OnResizeImagePanel(self, evt):

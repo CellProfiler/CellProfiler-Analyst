@@ -24,66 +24,59 @@ class DBException(Exception):
         filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
         return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
+
 def image_key_columns():
-    """Return, as a tuple, the names of the columns that make up the object key."""
+    '''Return, as a tuple, the names of the columns that make up the image key.'''
     if p.table_id:
         return (p.table_id, p.image_id)
     else:
         return (p.image_id,)
 
+
 def object_key_columns():
-    """Return, as a tuple, the names of the columns that make up the object key."""
+    '''Return, as a tuple, the names of the columns that make up the object key.'''
     if p.table_id:
         return (p.table_id, p.image_id, p.object_id)
     else:
         return (p.image_id, p.object_id)
 
+
 def GetWhereClauseForObjects(obKeys):
-    """Return a SQL WHERE clause that matches any of the given
-    object keys.  Example: GetWhereClauseForObjects([(1, 3), (2, 4)])
-    => 'WHERE ImageNumber=1 AND ObjectNumber=3 OR ImageNumber=2 AND
-    ObjectNumber=4'"""
+    '''
+    Return a SQL WHERE clause that matches any of the given object keys.
+    Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => 'WHERE 
+    ImageNumber=1 AND ObjectNumber=3 OR ImageNumber=2 AND ObjectNumber=4'
+    '''
     return " OR ".join([" AND ".join([col + '=' + str(value)
                                       for col, value in zip(object_key_columns(), obKey)])
                         for obKey in obKeys])
 
+
 def GetWhereClauseForImages(imKeys):
-    """Return a SQL WHERE clause that matches any of the give image
-    keys.  Example: GetWhereClauseForObjects([(3,), (4,)]) => 'WHERE
-    ImageNumber=3 OR ImageNumber=4'"""
+    '''
+    Return a SQL WHERE clause that matches any of the give image keys.
+    Example: GetWhereClauseForObjects([(3,), (4,)]) => 'WHERE
+    ImageNumber=3 OR ImageNumber=4'
+    '''
     return " OR ".join([" AND ".join([col + '=' + str(value)
                                       for col, value in zip(image_key_columns(), imKey)])
                         for imKey in imKeys])
 
+
 def UniqueObjectClause():
     '''
     Returns a clause for specifying a unique object in MySQL.
-    eg: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all object keys
+    Example: "SELECT "+UniqueObjectClause()+" FROM <mydb>;" would return all object keys
     '''
-
-    if p.table_id:
-        obCl = p.table_id+','+p.image_id+','+p.object_id
-    else:
-        obCl = p.image_id+','+p.object_id
-    return obCl
+    return ','.join(object_key_columns())
 
 
 def UniqueImageClause(table_name=None):
     '''
     Returns a clause for specifying a unique image in MySQL.
-    eg: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all image keys 
+    Example: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all image keys 
     '''
-
-    if table_name:
-        table_name = table_name+'.'
-    else:
-        table_name = ''
-
-    if p.table_id:
-        imCl = table_name+p.table_id+','+table_name+p.image_id
-    else:
-        imCl = table_name+p.image_id
-    return imCl
+    return ','.join(image_key_columns())
 
 
 
@@ -139,19 +132,32 @@ class DBConnect(DataProvider, Singleton):
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             
+            # TODO:
             # Check if a SQLite DB has already been populated.
             # If so prompt user for whether to use it.
-            try:
-                nImages = len(self.GetAllImageKeys())
-                if nImages:
-                    dlg = wx.MessageDialog(None, 'Classifier found an existing SQLite database with %d images.\nUse this database?'%(nImages),
-                                        'Use existing SQLite DB?', 
-                                       wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
-                    answer = dlg.ShowModal()
-                    if answer == wx.YES:
-                        return True
-            except Exception:
-                pass
+#            try:
+#                nImages = len(self.GetAllImageKeys())
+#            except Exception:
+#                pass
+#            else:
+#                # Try prompting the user with a wx dialog:
+#                try:
+#                    import wx
+#                    dlg = wx.MessageDialog(None, 'Classifier found an existing SQLite database with %d images.\nUse this database?'%(nImages),
+#                                        'Use existing SQLite DB?', 
+#                                       wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
+#                    answer = dlg.ShowModal()
+                     # This acts wanky
+#                    print answer, wx.YES, wx.NO
+#                    if answer == wx.YES:
+#                        return True
+#                # If there is no wx App, then prompt in the console:
+#                except Exception, e:
+#                    print e
+#                    print 'Classifier found an existing SQLite database with %d images.\nUse this database? (y/n)'%(nImages)
+#                    answer = sys.stdin.readline()
+#                    if answer.strip().lower() =='y':
+#                        return True
             
             # If this is the first connection, then we need to create the DB from the files
             if len(self.connections) == 1:
@@ -334,15 +340,14 @@ class DBConnect(DataProvider, Singleton):
             filenames.append( imPaths[i]+'/'+imPaths[i+1] )
         return filenames
 
+
     def GetGroupMaps(self, connID='default'):
-        """Build dictionary mapping group names and image keys to group keys"""
+        '''Build dictionary mapping group names and image keys to group keys'''
         groupColNames = {}
         groupMaps = {}
         key_size = p.table_id and 2 or 1
-        for group in getattr(p, 'groups', []):
-            if 'group_SQL_'+group not in p.__dict__:
-                raise DBException("Missing property: %s"%('group_SQL_' + group,))
-            self.Execute(getattr(p, 'group_SQL_'+group))
+        for group, query in p.groups.items():
+            self.Execute(query)
             res = self.GetResultsAsList()
             groupColNames[group] = self.GetResultColumnNames()[key_size:]
             d = {}
@@ -356,10 +361,7 @@ class DBConnect(DataProvider, Singleton):
         '''
         Returns a list of imKeys from the given filter.
         '''
-        if 'filter_SQL_'+filter not in p.__dict__:
-            raise DBException, 'The filter %s was not found in the properties file!' %(filter)
-        
-        self.Execute(p.__dict__['filter_SQL_'+filter], connID)
+        self.Execute(p.filters[filter], connID)
         return self.GetResultsAsList(connID)
     
     
