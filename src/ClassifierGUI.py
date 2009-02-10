@@ -414,7 +414,7 @@ class ClassifierGUI(wx.Frame):
             if filter == 'experiment':
                 obKeys = dm.GetRandomObjects(nObjects)
                 statusMsg += ' from whole experiment...'
-            elif filter =='image':
+            elif filter == 'image':
                 if p.table_id:
                     imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
                 else:
@@ -423,6 +423,9 @@ class ClassifierGUI(wx.Frame):
                 statusMsg += ' from image '+str(imKey)
             else:
                 imKeysInFilter = db.GetFilteredImages(filter)
+                if imKeysInFilter == []:
+                        self.SetStatusText('No images were found in filter "%s".'%(filter))
+                        return
                 obKeys = dm.GetRandomObjects(nObjects, imKeysInFilter)
                 statusMsg += ' from filter "'+filter+'"...'
         # classified
@@ -431,14 +434,17 @@ class ClassifierGUI(wx.Frame):
             obKeys = []
             
             if filter != 'experiment':
-                if filter =='image':
+                if filter == 'image':
                     if p.table_id:
                         imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
                     else:
                         imKey = (int(self.imageTxt.Value),)
                     imKeysInFilter = [imKey]
-                else:    
+                else:
                     imKeysInFilter = db.GetFilteredImages(filter)
+                    if imKeysInFilter == []:
+                        self.SetStatusText('No images were found in filter "%s".'%(filter))
+                        return
             
             attempts = 0
             while len(obKeys) < nObjects:
