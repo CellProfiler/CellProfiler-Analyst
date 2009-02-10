@@ -100,6 +100,9 @@ a MySQL query "<QUERY>". See the README.'''
                     self.filters[filter_name] = val
                     self.filters_ordered += [filter_name]
                 
+                elif name in ['groups', 'filters']:
+                    print 'Warning: The "groups" and "filters" fields are no longer necessary in the properties file.\nOnly the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'
+                    
                 else:
                     raise Exception, 'Unrecognized field "%s" in properties file'%(name)
                     
