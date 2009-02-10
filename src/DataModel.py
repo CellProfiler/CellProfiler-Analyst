@@ -1,4 +1,3 @@
-import wx
 from random import randint
 import numpy
 from DBConnect import *
@@ -92,8 +91,10 @@ class DataModel(Singleton):
         If a list of imKeys is specified, GetRandomObjects will return 
         objects from only these images.
         '''
-        if not imKeys:
+        if imKeys == None:
             return [self.GetRandomObject() for i in xrange(N)]
+        elif imKeys == []:
+            return []
         else:
             sums = numpy.cumsum([self.data[imKey] for imKey in imKeys])
             obs = []
@@ -121,7 +122,6 @@ class DataModel(Singleton):
             obKey.append(i+1)
             obKeys.append(tuple(obKey))
         return obKeys
-        
 
 
     def GetObjectCountFromImage(self, imKey):
@@ -146,17 +146,15 @@ class DataModel(Singleton):
         and sums the data into the specified group to return:
            groupdata = { groupKey : numpy.array(values), ... }
         '''
-        # imData = {imKey: numpy.array(), ... }
         groupData = {}
         for imKey, vals in imdata.items():
-            groupKey = self.groupMaps[group][imKey]   # get the group of this image
-            
-            # add vals to running sum of this group
+            # get the group of this image
+            groupKey = self.groupMaps[group][imKey]            
+            # add values to running sum of this group
             if groupKey in groupData.keys():
                 groupData[groupKey] += vals
             else:
                 groupData[groupKey] = vals
-                
         return groupData
     
     
@@ -179,7 +177,7 @@ if __name__ == "__main__":
     d = DataModel.getInstance()
     d.PopulateModel()
     
-    for i in range(10000):
+    for i in range(100):
         print d.GetRandomObject()
 #    imKeys = d.GetImagesInGroup('Gene', d.groupMaps['Gene'][(1,)])
 #    print len(imKeys)
