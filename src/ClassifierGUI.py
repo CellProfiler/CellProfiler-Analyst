@@ -812,7 +812,7 @@ class ClassifierGUI(wx.Frame):
         grid = DataGrid(tableData, labels, grouping=group,
                         groupIDIndices=groupIDIndices,
                         chMap=self.chMap[:], parent=self,
-                        selectableColumns=set(range(len(labels))),
+                        selectableColumns=set(range(len(groupIDIndices),len(labels))),
                         title='Enrichments grouped by '+group)
         grid.Show()
         
