@@ -358,7 +358,10 @@ class DBConnect(Singleton):
         '''
         Returns a list of imKeys from the given filter.
         '''
-        self.Execute(p.filters[filter], connID)
+        try:
+            self.Execute(p.filters[filter], connID)
+        except:
+            raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
         return self.GetResultsAsList(connID)
     
     
@@ -523,15 +526,20 @@ class DBConnect(Singleton):
 
 if __name__ == "__main__":
     p = Properties.getInstance()
-    p.LoadFile('../properties/nirht_local.properties')
+#    p.LoadFile('../properties/nirht_local.properties')
+    p.LoadFile('../properties/nirht_test.properties')
     db = DBConnect.getInstance()
     db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     
-    print db.GetColnamesForClassifier()
-    print db.GetPerImageObjectCounts()
-    print db.GetColumnNames('test_per_image')
-    print db.GetColumnNames('test_per_object')
-    print db.GetObjectNear((0,1), 30, 30 )
+#    print db.GetColnamesForClassifier()
+#    print db.GetPerImageObjectCounts()
+#    print db.GetGroupMaps()
+#    print db.GetFilteredImages('CDKs')
+#    print db.GetFilteredImages('EMPTY')
+    print db.GetFilteredImages('MAPs')
+#    print db.GetColumnNames('test_per_image')
+#    print db.GetColumnNames('test_per_object')
+#    print db.GetObjectNear((0,1), 30, 30 )
     
     
     
