@@ -1,7 +1,3 @@
-'''
-LoadTilesWorker.py
-Authors: afraser
-'''
 import threading
 import wx
 from Properties import Properties

@@ -1,5 +1,0 @@
-
-
-
-def CalculateHitsAndCounts(rules):
-    pass

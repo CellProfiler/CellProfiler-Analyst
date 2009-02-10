@@ -1,7 +1,3 @@
-'''
-Classifier.py
-Authors: afraser
-'''
 import ImageTools
 
 import os

@@ -1,6 +1,5 @@
 '''
-ImageTileSizer.py
-authors: ljosa, afraser
+Special sizer for organizing image tiles.
 '''
 
 import wx

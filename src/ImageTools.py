@@ -1,7 +1,4 @@
 '''
-ImageTools.py
-Authors: afraser
-
 A collection of tools to modify images used in CPA.
 '''
 

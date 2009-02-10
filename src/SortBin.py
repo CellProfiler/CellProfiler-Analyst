@@ -1,8 +1,3 @@
-'''
-SortBin.py
-Authors: afraser
-'''
-
 import wx
 from Properties import Properties
 from ImageCollection import ImageCollection

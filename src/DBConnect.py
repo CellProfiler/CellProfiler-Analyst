@@ -1,8 +1,3 @@
-'''
-DBConnect.py
-Authors: afraser
-'''
-
 import exceptions
 import sys
 import traceback

@@ -1,6 +1,5 @@
 '''
-ImageTile.py
-Authors: afraser
+A special image panel meant to be dragged and dropped.
 '''
 
 import wx

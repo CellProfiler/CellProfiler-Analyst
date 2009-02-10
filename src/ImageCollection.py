@@ -1,8 +1,3 @@
-'''
-ImageCollection.py
-Authors: afraser
-'''
-
 import wx
 import ImageTools
 from Singleton import Singleton

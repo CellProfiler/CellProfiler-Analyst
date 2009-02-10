@@ -1,8 +1,3 @@
-'''
-DataModel.py
-Authors: afraser
-'''
-
 import wx
 from random import randint
 import numpy

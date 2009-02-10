@@ -1,8 +1,3 @@
-'''
-ImageReader.py
-Authors: afraser
-'''
-
 import wx
 from PIL import Image
 import numpy

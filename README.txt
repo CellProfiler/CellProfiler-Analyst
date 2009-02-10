@@ -12,6 +12,17 @@
 
 
 ---------------------------------
+ CONTENTS
+ -------------------------------- 
+   I. About Classifier 2.0 Beta
+  II. Requirements
+ III. Getting Started
+  IV. Other Features
+   V. Known Issues
+---------------------------------
+
+
+---------------------------------
   I. About Classifier 2.0 Beta
 ---------------------------------
 Classifier was developed at The Broad Institute Imaging Platform and is

@@ -1,8 +1,3 @@
-'''
-Properties.py
-Authors: afraser
-'''
-
 from Singleton import *
 
 class Properties(Singleton):

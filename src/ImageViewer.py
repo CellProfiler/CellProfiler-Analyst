@@ -1,4 +1,3 @@
-
 import wx
 import ImageTools
 from Properties import Properties
