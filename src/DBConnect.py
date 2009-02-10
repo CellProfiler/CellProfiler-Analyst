@@ -7,7 +7,6 @@ import MySQLdb
 from MySQLdb.cursors import SSCursor
 from Singleton import Singleton
 from Properties import Properties
-from DataProvider import DataProvider
 from sys import stderr
 
 verbose = True
@@ -80,7 +79,7 @@ def UniqueImageClause(table_name=None):
 # TODO: Rename _Execute, _Connect, _GetNextResult, etc
 #       If users can use non-DB tables then all DB specific functions should be
 #       completely abstracted.
-class DBConnect(DataProvider, Singleton):
+class DBConnect(Singleton):
     '''
     DBConnect abstracts calls to MySQLdb.
     '''
@@ -342,7 +341,10 @@ class DBConnect(DataProvider, Singleton):
         groupMaps = {}
         key_size = p.table_id and 2 or 1
         for group, query in p.groups.items():
-            self.Execute(query)
+            try:
+                self.Execute(query)
+            except Exception:
+                raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.'%(group)
             res = self.GetResultsAsList()
             groupColNames[group] = self.GetResultColumnNames()[key_size:]
             d = {}
