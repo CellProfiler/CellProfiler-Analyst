@@ -19,7 +19,7 @@ p.LoadFile('../properties/nirht_local.properties')
 def CreateSQLiteTables():
     
     # CREATE THE IMAGE TABLE
-    f = open(p.image_table, 'r')
+    f = open(p.image_csv_file, 'r')
     r = csv.reader(f)
     # Establish the type of each column in the table
     columnLabels = r.next()
@@ -57,13 +57,14 @@ def CreateSQLiteTables():
     keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
     statement += ',\nPRIMARY KEY (' + keys + ') )'
     f.close()
-        
+    
+    cursor.execute('DROP TABLE IF EXISTS %s'%p.image_table)
     cursor.execute(statement)
     
     # CREATE THE OBJECT TABLE
     # for the object table we assume that all values are FLOAT
     # except for the keys
-    f = open(p.object_table, 'r')
+    f = open(p.object_csv_file, 'r')
     r = csv.reader(f)
     columnLabels = r.next()
     columnLabels = [lbl.strip() for lbl in columnLabels]
@@ -80,7 +81,12 @@ def CreateSQLiteTables():
     statement += ',\nPRIMARY KEY (' + keys + ') )'
     f.close()
 
-    cursor.execute(statement)
+#    cursor.execute('DROP TABLE IF EXISTS %s'%p.object_table)
+#    cursor.execute(statement)
+
+
+
+
 
 
 # Create the SQLite DB
@@ -92,7 +98,7 @@ cursor = conn.cursor()
 CreateSQLiteTables()
 
 # Insert values from the file into the table
-f = open(p.image_table, 'r')
+f = open(p.image_csv_file, 'r')
 r = csv.reader(f)
 row = r.next() # skip the headers
 row = r.next()
@@ -105,7 +111,12 @@ while row:
 f.close()
 
 # QUERY THE DB
-cursor.execute('SELECT COUNT(*) FROM '+os.path.splitext(os.path.split(p.image_table)[1])[0])
+cursor.execute('SELECT * FROM %s LIMIT 1'%(os.path.splitext(os.path.split(p.image_table)[1])[0]))
+print cursor.fetchall()
+
+cursor.execute('CREATE TEMPORARY TABLE temp.db (column1 INTEGER)')
+cursor.execute('INSERT INTO temp.db ("column1") VALUES (1234)')
+cursor.execute('SELECT * FROM temp.db')
 print cursor.fetchall()
 
 

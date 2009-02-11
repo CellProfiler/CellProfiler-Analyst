@@ -1,6 +1,7 @@
 import exceptions
 import sys
 import traceback
+import threading
 import string
 import numpy
 import MySQLdb
@@ -94,7 +95,8 @@ class DBConnect(Singleton):
                             for (key, val) in self.__dict__.items()])
 
 
-    def Connect(self, db_host, db_user, db_passwd, db_name, connID='default'):
+    def Connect(self, db_host, db_user, db_passwd, db_name):
+        connID = threading.currentThread().getName()
         # If this connection ID already exists print a warning
         if connID in self.connections.keys():
             if self.connectionInfo[connID] == (db_host, db_user, db_passwd, db_name):
@@ -129,11 +131,12 @@ class DBConnect(Singleton):
             # TODO:
             # Check if a SQLite DB has already been populated.
             # If so prompt user for whether to use it.
-#            try:
-#                nImages = len(self.GetAllImageKeys())
-#            except Exception:
-#                pass
-#            else:
+            try:
+                nImages = len(self.GetAllImageKeys())
+            except Exception:
+                pass
+            else:
+                return True
 #                # Try prompting the user with a wx dialog:
 #                try:
 #                    import wx
@@ -141,7 +144,7 @@ class DBConnect(Singleton):
 #                                        'Use existing SQLite DB?', 
 #                                       wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
 #                    answer = dlg.ShowModal()
-                     # This acts wanky
+##                    This acts wanky
 #                    print answer, wx.YES, wx.NO
 #                    if answer == wx.YES:
 #                        return True
@@ -178,37 +181,53 @@ class DBConnect(Singleton):
 
 
     def Disconnect(self):
-        for conn in self.connections.values():
-            conn.close()
+        for connID in self.connections.keys():
+            self.CloseConnection(connID)
         self.connections = {}
         self.cursors = {}
         self.connectionInfo = {}
         self.classifierColNames = None
         
     
-    def CloseConnection(self, connID):
+    def CloseConnection(self, connID=None):
+        if not connID:
+            connID = threading.currentThread().getName()
         if connID in self.connections.keys():
             self.connections[connID].commit()
-            self.connections.pop(connID).close()
             self.cursors.pop(connID)
+            self.connections.pop(connID).close()
             (db_host, db_user, db_passwd, db_name) = self.connectionInfo.pop(connID)
-            print 'Closed connection: %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
+            print 'Closed connection: %s as %s@%s (connID="%s").' % (db_name, db_user, db_host, connID)
         else:
             print 'WARNING <DBConnect.CloseConnection>: No connection ID "%s" found.' %(connID)
 
 
-    def Execute(self, query, connID='default', silent=False):
+    def Execute(self, query, silent=False):
+        # Grab a new connection if this is a new thread
+        connID = threading.currentThread().getName()
+        if not connID in self.connections.keys():
+            self.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+        # Test for lost connection
         try:
-            if verbose and not silent: print '['+connID+'] '+query
+            self.connections[connID].ping()
+        except MySQLdb.OperationalError, message:
+            print 'Lost connection to database. Attempting to reconnect.'
+            self.CloseConnection(connID)
+            self.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+        # Finally make the query
+        try:
+            if verbose and not silent: print '[%s] %s'%(connID, query)
             self.cursors[connID].execute(query)
         except MySQLdb.Error, e:
             raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
         except KeyError, e:
             raise DBException, 'No such connection: "%s".\n' %(connID)
             
-    def Commit(self, connID='default'):
+            
+    def Commit(self):
+        connID = threading.currentThread().getName()
         try:
-            print '['+connID+'] - Commit'
+            print '[%s] Commit'%(connID)
             self.connections[connID].commit()
         except MySQLdb.Error, e:
             raise DBException, 'Commit failed for connection "%s"\n\t%s\n' %(connID, e)
@@ -217,7 +236,8 @@ class DBConnect(Singleton):
             
 
 
-    def GetNextResult(self, connID='default'):
+    def GetNextResult(self):
+        connID = threading.currentThread().getName()
         try:
             return self.cursors[connID].next()
         except MySQLdb.Error, e:
@@ -229,20 +249,21 @@ class DBConnect(Singleton):
             raise DBException, 'No such connection: "%s".\n' %(connID)
         
         
-    def GetResultsAsList(self, connID='default'):
+    def GetResultsAsList(self):
+        connID = threading.currentThread().getName()
         ''' Returns a list of results retrieved from the last execute query. '''
-        r = self.GetNextResult(connID)
+        r = self.GetNextResult()
         l = []
         while r:
             l.append(r)
-            r = self.GetNextResult(connID)
+            r = self.GetNextResult()
         return l
     
     
     
     
     
-    def GetObjectIDAtIndex(self, imKey, index, connID='default'):
+    def GetObjectIDAtIndex(self, imKey, index):
         '''
         Returns the true object ID of the nth object in an image.
         Note: This must be used when object IDs in the DB aren't
@@ -265,36 +286,36 @@ class DBConnect(Singleton):
 
     
     
-    def GetPerImageObjectCounts(self, connID='default'):
+    def GetPerImageObjectCounts(self):
         ''' 
         Returns a list of (imKey, obCount) tuples. 
         '''
         select = "SELECT "+UniqueImageClause()+", COUNT("+p.object_id+") FROM "+str(p.object_table)+" GROUP BY "+UniqueImageClause()
-        self.Execute(select, connID)
-        return self.GetResultsAsList(connID)
+        self.Execute(select)
+        return self.GetResultsAsList()
     
     
-    def GetAllImageKeys(self, connID='default'):
+    def GetAllImageKeys(self):
         ''' 
         Returns a list of all image keys in the image_table. 
         '''
         select = "SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause()
-        self.Execute(select, connID)
-        return self.GetResultsAsList(connID)
+        self.Execute(select)
+        return self.GetResultsAsList()
     
     
-    def GetObjectCoords(self, obKey, connID='default'):
+    def GetObjectCoords(self, obKey):
         ''' 
         Returns the specified object's x, y coordinates in an image. 
         '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
-        self.Execute(select, connID)
-        res = self.GetResultsAsList(connID)
+        self.Execute(select)
+        res = self.GetResultsAsList()
         assert len(res)==1, "Returned %s objects instead of 1.\n" % len(res)
         return res[0]
 
 
-    def GetObjectNear(self, imkey, x, y, connID='default'):
+    def GetObjectNear(self, imkey, x, y):
         ''' 
         Returns obKey of the closest object to x, y in an image.
         '''
@@ -302,15 +323,15 @@ class DBConnect(Singleton):
         delta_y = '(%s - %d)'%(p.cell_y_loc, y)
         dist_clause = '%s*%s + %s*%s'%(delta_x, delta_x, delta_y, delta_y)
         select = 'SELECT '+UniqueObjectClause()+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imkey])+' ORDER BY ' +dist_clause+' LIMIT 1'
-        self.Execute(select, connID)
-        res = self.GetResultsAsList(connID)
+        self.Execute(select)
+        res = self.GetResultsAsList()
         if len(res) == 0:
             return None
         else:
             return res[0]
     
     
-    def GetFullChannelPathsForImage(self, imKey, connID='default'):
+    def GetFullChannelPathsForImage(self, imKey):
         ''' 
         Returns a list of image channel filenames for a particular image
         including the absolute path.
@@ -324,9 +345,9 @@ class DBConnect(Singleton):
         select = select[:-2] # chop off the last ', '
         select += ' FROM '+p.image_table+' WHERE '+GetWhereClauseForImages([imKey])
         
-        self.Execute(select, connID)
-        imPaths = self.GetNextResult(connID)
-        assert self.GetNextResult(connID) == None, "Query unexpectedly returned more than one result!\n\t"+select
+        self.Execute(select)
+        imPaths = self.GetNextResult()
+        assert self.GetNextResult() == None, "Query unexpectedly returned more than one result!\n\t"+select
         
         # parse filenames out of results
         filenames = []
@@ -335,7 +356,7 @@ class DBConnect(Singleton):
         return filenames
 
 
-    def GetGroupMaps(self, connID='default'):
+    def GetGroupMaps(self):
         '''Build dictionary mapping group names and image keys to group keys'''
         groupColNames = {}
         groupMaps = {}
@@ -354,47 +375,49 @@ class DBConnect(Singleton):
         return groupMaps, groupColNames
         
     
-    def GetFilteredImages(self, filter, connID='default'):
+    def GetFilteredImages(self, filter):
         '''
         Returns a list of imKeys from the given filter.
         '''
         try:
-            self.Execute(p.filters[filter], connID)
-        except:
+            self.Execute(p.filters[filter])
+        except Exception, e:
+            print e
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
-        return self.GetResultsAsList(connID)
+        return self.GetResultsAsList()
     
     
-    def GetColumnNames(self, tableName, connID='default'):
+    def GetColumnNames(self, tableName):
         ''' 
         Returns a list of the column names for the specified table.
         '''
         # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
-        self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID)
-        self.GetResultsAsList(connID)        # ditch the results
+        self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table))
+        self.GetResultsAsList()        # ditch the results
         return self.GetResultColumnNames()   # return the column names
             
     
-    def GetColnamesForClassifier(self, connID='default'):
+    def GetColnamesForClassifier(self):
         '''
         Returns a list of column names for the object_table excluding 
         those specified in Properties.classifier_ignore_substrings
         '''
         if self.classifierColNames is None:
             # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
-            self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), connID, silent=not verbose)
-            self.GetResultsAsList(connID)          # ditch the results
+            self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), silent=not verbose)
+            self.GetResultsAsList()          # ditch the results
             labels = self.GetResultColumnNames()   # get the column names
             self.classifierColNames = [i for i in labels if not any([sub.lower() in i.lower() for sub in p.classifier_ignore_substrings])]
         return self.classifierColNames
     
     
-    def GetResultColumnNames(self, connID='default'):
+    def GetResultColumnNames(self):
         ''' Returns the column names of the last query on this connection. '''
+        connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
 
     
-    def GetCellDataForClassifier(self, obKey, connID='default'):
+    def GetCellDataForClassifier(self, obKey):
         '''
         Returns a list of measurements for the specified object excluding
         those specified in Properties.classifier_ignore_substrings
@@ -402,8 +425,8 @@ class DBConnect(Singleton):
         if (self.classifierColNames == None):
             self.GetColnamesForClassifier()
         query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
-        self.Execute(query, connID, silent=True)
-        data = self.GetResultsAsList(connID)
+        self.Execute(query, silent=True)
+        data = self.GetResultsAsList()
         if len(data) == 0:
             print 'No data for obKey:',obKey
         return numpy.array(data[0])
@@ -462,7 +485,7 @@ class DBConnect(Singleton):
         f.close()
         
         print 'Creating table:', p.image_table
-        self.Execute('DROP TABLE IF EXISTS '+p.image_table)
+        self.Execute('DROP TABLE IF EXISTS %s'%(p.image_table))
         self.Execute(statement)
         
         # CREATE THE OBJECT TABLE
@@ -525,21 +548,57 @@ class DBConnect(Singleton):
 
 
 if __name__ == "__main__":
-    p = Properties.getInstance()
-#    p.LoadFile('../properties/nirht_local.properties')
-    p.LoadFile('../properties/nirht_test.properties')
-    db = DBConnect.getInstance()
-    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+
+    from TrainingSet import TrainingSet
+    import FastGentleBoostingMulticlass
+    import MulticlassSQL
+    from cStringIO import StringIO
+    from DataModel import DataModel
     
+    p = Properties.getInstance()
+    db = DBConnect.getInstance()
+    dm = DataModel.getInstance()
+
+    p.LoadFile('../properties/nirht_local.properties')
+    dm.PopulateModel()
+    #db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+    
+    print db.GetGroupMaps()
+    print db.GetFilteredImages('FirstTen')
+    
+    # Train the classifier
+    imKey = (0,1)
+    nRules = 5
+    trainingSet = TrainingSet(p)
+    # make a training set with objects 1 and 10 in separate classes
+    trainingSet.Create(['pos','neg'], [[(0,1,1)], [(0,1,10)]])
+    output = StringIO()
+    print 'Training classifier with '+str(nRules)+' rules...'
+    weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames, nRules,
+                                                      trainingSet.label_matrix, 
+                                                      trainingSet.values, output)
+
+    stump_query, score_query, find_max_query, class_query, count_query = \
+                    MulticlassSQL.translate(weaklearners, trainingSet.colnames, [imKey])
+    obKeys = dm.GetObjectsFromImage(imKey)
+    hits = []
+    if obKeys:
+        clNum = 0
+        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query)
+        
+        
+#        
+#    p = Properties.getInstance()
+#    p.LoadFile('../properties/nirht_test.properties')
+#    db = DBConnect.getInstance()
+##    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+#
 #    print db.GetColnamesForClassifier()
 #    print db.GetPerImageObjectCounts()
-#    print db.GetGroupMaps()
-#    print db.GetFilteredImages('CDKs')
-#    print db.GetFilteredImages('EMPTY')
-    print db.GetFilteredImages('MAPs')
+#    print db.GetFilteredImages('MAPs')
 #    print db.GetColumnNames('test_per_image')
 #    print db.GetColumnNames('test_per_object')
 #    print db.GetObjectNear((0,1), 30, 30 )
-    
+#    print db.GetColumnNames('test_per_image')
     
     

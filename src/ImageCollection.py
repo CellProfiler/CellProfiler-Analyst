@@ -15,7 +15,7 @@ class ImageCollection(Singleton):
     '''
     def __init__(self, properties):
         self.p = properties
-        db.Connect(self.p.db_host, self.p.db_user, self.p.db_passwd, self.p.db_name, connID='ImageCollectionConn')
+#        db.Connect(self.p.db_host, self.p.db_user, self.p.db_passwd, self.p.db_name, connID='ImageCollectionConn')
 
         self.tileCache  = {}    # (tblNum,imNum,obNum): cropped image channel data
         self.imageCache = {}    # (tblNum,imNum): image channel data
@@ -31,18 +31,27 @@ class ImageCollection(Singleton):
         '''
         Returns image channel data.
         '''
-        if imKey not in self.imageCache.keys():
-            self.UpdateCache(imKey)
-        return self.imageCache[imKey]
+        ir = ImageReader()
+        filenames = db.GetFullChannelPathsForImage(imKey)
+        return ir.ReadImages(filenames)
+    
+#        if imKey not in self.imageCache.keys():
+#            self.UpdateCache(imKey)
+#        return self.imageCache[imKey]
 
     
     def FetchTile(self, obKey):
         '''
         Returns image channel data cropped around the specified object.
         '''
-        if obKey not in self.tileCache.keys():
-            self.UpdateTileCache(obKey)
-        return self.tileCache[obKey]
+        imKey = obKey[:-1]
+        pos = db.GetObjectCoords(obKey)        
+        size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
+        return [ImageTools.Crop(imData,size,pos) for imData in self.FetchImage(imKey)]
+        
+#        if obKey not in self.tileCache.keys():
+#            self.UpdateTileCache(obKey)
+#        return self.tileCache[obKey]
     
     
     def UpdateTileCache(self, obKey):
@@ -57,7 +66,7 @@ class ImageCollection(Singleton):
             self.tileCache.pop(self.tileKeyQueue[-1])
             self.tileKeyQueue = self.tileKeyQueue[:self.maxTiles]
         
-        pos = db.GetObjectCoords(obKey, 'ImageCollectionConn')
+        pos = db.GetObjectCoords(obKey)
         
         size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
         # add this image data to the tileCache
@@ -71,7 +80,7 @@ class ImageCollection(Singleton):
         Each key and image set is added to the cache.
         '''
         # get the image paths
-        filenames = db.GetFullChannelPathsForImage(imKey, 'ImageCollectionConn')
+        filenames = db.GetFullChannelPathsForImage(imKey)
         # get the image data
         ir = ImageReader()
         images = ir.ReadImages(filenames)

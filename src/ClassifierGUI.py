@@ -647,11 +647,13 @@ class ClassifierGUI(wx.Frame):
         self.keysAndCounts = None    # Must erase current keysAndCounts so they will be recalculated from new rules
         
         self.trainingSet = TrainingSet(p)
-        self.trainingSet.Create([cl.label for cl in self.classes], [cl.bin.GetObjectKeys() for cl in self.classes])
-        labelMatrix = self.ComputeLabelMatrix()
+        self.trainingSet.Create(labels = [cl.label for cl in self.classes],
+                                keyLists = [cl.bin.GetObjectKeys() for cl in self.classes])
         output = StringIO()
         self.SetStatusText('Training classifier with '+str(nRules)+' rules...')
-        self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames, nRules, labelMatrix, self.trainingSet.values, output)
+        self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
+                                                               nRules, self.trainingSet.label_matrix, 
+                                                               self.trainingSet.values, output)
         self.SetStatusText('')
         self.rulesTxt.Value = output.getvalue()
         self.scoreAllBtn.Enable()
@@ -694,7 +696,8 @@ class ClassifierGUI(wx.Frame):
             imKey = (imgNum,)
            
         # 2) Get the phenotype to highlight:
-        dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', [cl.label for cl in self.classes], wx.CHOICEDLG_STYLE)
+        dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', 
+                                    [cl.label for cl in self.classes], wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() == wx.ID_OK:            
             cls   = str(dlg.GetStringSelection())  # class name to print in feedback
             clNum = dlg.GetSelection() + 1         # class index to pass to the classifier
@@ -704,8 +707,12 @@ class ClassifierGUI(wx.Frame):
             return
     
         # 3) Find the hits
-        stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, [imKey])
-        obKeys = dm.GetObjectsFromImage(imKey)
+        stump_query, score_query, find_max_query, class_query, count_query = \
+                        MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, [imKey])
+        try:
+            obKeys = dm.GetObjectsFromImage(imKey)
+        except:
+            self.SetStatusText('No such image: %s'%(imKey))
         hits = []
         if obKeys:
             hits = MulticlassSQL.FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query)
@@ -715,7 +722,7 @@ class ClassifierGUI(wx.Frame):
         coordList = []
         for obKey in hits:
             coordList += [db.GetObjectCoords(obKey)]
-        imViewer = ImageTools.ShowImage(imKey, self.chMap, self)
+        imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self)
         imViewer.imagePanel.SelectPoints(coordList)
         
         
@@ -850,42 +857,28 @@ class ClassifierGUI(wx.Frame):
         grid.Show()
         
         self.SetStatusText('')
-        
-        
-    
-    def ComputeLabelMatrix(self):
-        '''
-        label_matrix is an n by k numpy array containing values of either +1 or -1 indicating class membership
-        n = #example objects, k = #classess
-        '''
-        m = []
-        nClasses = len(self.classes)
-        for cl in self.classes:
-            for obKey in cl.bin.GetObjectKeys():
-                m.append( [(int(cls.bin==cl.bin) or -1) for cls in self.classes] )
-        return numpy.array(m)
     
     
     
-    def CalculateZPrimes(self, keysAndCounts):
-        '''
-        Calculates Z' factor as 1-3*(Sp+Sn)/|Mp-Mn|
-        keysAndCounts: A numpy.array([[key, nX, nY, nZ...], where nX, nY, nZ
-        Returns: Z' factor as a float
-        '''
-        firstClassIdx = len(keysAndCounts[0])-nClasses
-        counts = keysAndCounts[:,firstClassIdx:].astype('float')
-        result = []
-        for i in range(nClasses):
-            ingroup = counts[:,i]
-            outgroup = numpy.hstack([counts[:,j] for j in range(nClasses) if j!=i])
-            ssd = ingroup.std() + outgroup.std()
-            r = abs(ingroup.mean() - outgroup.mean())
-            result += [1-3*ssd/r]
-            
-        print "Z' factors =", result
-        
-        return result
+#    def CalculateZPrimes(self, keysAndCounts):
+#        '''
+#        Calculates Z' factor as 1-3*(Sp+Sn)/|Mp-Mn|
+#        keysAndCounts: A numpy.array([[key, nX, nY, nZ...], where nX, nY, nZ
+#        Returns: Z' factor as a float
+#        '''
+#        firstClassIdx = len(keysAndCounts[0])-nClasses
+#        counts = keysAndCounts[:,firstClassIdx:].astype('float')
+#        result = []
+#        for i in range(nClasses):
+#            ingroup = counts[:,i]
+#            outgroup = numpy.hstack([counts[:,j] for j in range(nClasses) if j!=i])
+#            ssd = ingroup.std() + outgroup.std()
+#            r = abs(ingroup.mean() - outgroup.mean())
+#            result += [1-3*ssd/r]
+#            
+#        print "Z' factors =", result
+#        
+#        return result
         
     
     

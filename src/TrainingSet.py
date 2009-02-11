@@ -1,6 +1,5 @@
 from sys import stderr
 from numpy import array
-
 from DBConnect import DBConnect
 
 db = DBConnect.getInstance()
@@ -8,40 +7,50 @@ db = DBConnect.getInstance()
 class TrainingSet:
     "A class representing a set of manually labeled cells."
 
-    def __init__(self, properties, filename='', include_group_info=False):
+    def __init__(self, properties, filename=''):
         self.properties = properties
         self.colnames = db.GetColnamesForClassifier()
         self.filename = filename
         if filename != '':
-            self.Load(filename, include_group_info)
+            self.Load(filename)
 
 
     def Clear(self):
         self.saved = False
-        self.labels = []
-        self.values = []
-        self.groups = []
-        self.entries = []
+        self.labels = []                # set of possible class labels (human readable)
+        self.classifier_labels = []     # set of possible class labels (for classifier)
+                                        #     eg: [[+1,-1,-1], [-1,+1,-1], [-1,-1,+1]]
+        self.label_matrix = []          # array of classifier labels for each sample
+        self.values = []                # array of measurements (data from db) for each sample
+        self.entries = []               # list of (label, obKey) pairs
             
             
     def Create(self, labels, keyLists):
         '''
-        labels   = ['class1', 'class2', ... ]
-        keyLists = [[k1,k2,..], [k1,k2,..], ... ]
+        labels:   list of class labels
+                  Example: ['pos','neg','other']
+        keyLists: list of lists of obKeys in the respective classes
+                  Example: [[k1,k2], [k3], [k4,k5,k6]] 
         '''
         assert len(labels)==len(keyLists), 'Class labels and keyLists must be of equal size.'
         self.Clear()
         self.labels = array(labels)
+        self.classifier_labels = []
+        for i in range(len(labels)):
+            self.classifier_labels += [[-1 for j in labels]]
+            self.classifier_labels[-1][i] = 1
         
-        for label, keyList in zip(labels,keyLists):
+        # Populate the label_matrix, entries, and values
+        for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             for obKey in keyList:
+                self.label_matrix.append(cl_label)
                 self.entries.append((label,obKey))
                 self.values.append(db.GetCellDataForClassifier(obKey))
-        
+        self.label_matrix = array(self.label_matrix)
         self.values = array(self.values)
 
 
-    def Load(self, filename, include_group_info=False):
+    def Load(self, filename):
         self.Clear()
         f = open(filename)
         for l in f:
@@ -58,10 +67,6 @@ class TrainingSet:
 
             self.entries.append((label, obKey))
             self.values.append(db.GetCellDataForClassifier(obKey))
-            if include_group_info:
-                self.groups.append(db.GetCellGroup(obKey[:-1]))
-            else:
-                self.groups.append(obKey[:-1])
 
         self.labels = array(self.labels)
         self.values = array(self.values)
@@ -99,7 +104,7 @@ if __name__ == "__main__":
     from Properties import Properties
     prop = Properties(argv[1])
     tr = TrainingSet(prop)
-    tr.Load(argv[2], False)
+    tr.Load(argv[2])
     for i in range(len(tr.labels)):
         print tr.labels[i],
         print " ".join([str(v) for v in tr.values[i]])

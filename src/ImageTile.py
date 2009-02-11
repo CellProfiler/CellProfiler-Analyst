@@ -74,7 +74,7 @@ class ImageTile(ImagePanel, DropTarget):
             
             
     def OnDClick(self, evt):
-        imViewer = ImageTools.ShowImage(self.obKey[:-1], self.chMap[:], parent=self.classifier,
+        imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, scale=self.scale)
         imViewer.imagePanel.SelectPoints([db.GetObjectCoords(self.obKey)])
         
