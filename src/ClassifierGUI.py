@@ -171,8 +171,8 @@ class ClassifierGUI(wx.Frame):
         self.outerSizer.Add(self.splitter, proportion=1, flag=wx.EXPAND)
         self.SetSizer(self.outerSizer)
         
-        
         self.MapChannels(p.image_channel_colors[:])
+        self.BindMouseOverHelpText()
 
         # do event binding
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, self.imageControlsMenuItem)
@@ -197,10 +197,41 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)    
-        self.Bind(wx.EVT_CHAR, self.OnKey)    
-        
+        self.Bind(wx.EVT_CHAR, self.OnKey)
         EVT_IMAGE_RESULT(self, self.OnImageResult)
         
+        
+    def BindMouseOverHelpText(self):
+        self.nObjectsTxt.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('The number of %s to fetch.'%(p.object_name[1])))
+        self.nObjectsTxt.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.obClassChoice.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('The phenotype of the %s.'%(p.object_name[1])))
+        self.obClassChoice.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.filterChoice.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('Image filters allow you to find %s from a subset of your images. (Defined in the properties file)'%(p.object_name[1])))
+        self.filterChoice.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.fetchBtn.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('Fetches images of %s to be sorted.'%(p.object_name[1])))
+        self.fetchBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.nRulesTxt.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('The maximum number of rules classifier should use to define your phenotypes.'))
+        self.nRulesTxt.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.findRulesBtn.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('Tell Classifier to find a rule set that fits your phenotypes as you have sorted them.'))
+        self.findRulesBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.scoreAllBtn.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('Compute %s counts and per-group enrichments across your experiment. (This may take a while)'%(p.object_name[0])))
+        self.scoreAllBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.scoreImageBtn.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('Highlight %s of a particular phenotype in an image.'%(p.object_name[1])))
+        self.scoreImageBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.addSortClassBtn.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('Add another bin to sort your %s into.'%(p.object_name[1])))
+        self.addSortClassBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.unclassifiedBin.Bind(wx.EVT_ENTER_WINDOW,
+                lambda(evt): self.SetStatusText('%s in this bin should be sorted into the bins below.'%(p.object_name[1].capitalize())))
+        self.unclassifiedBin.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
 
     
     def OnKey(self, evt):
