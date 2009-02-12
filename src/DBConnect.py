@@ -127,6 +127,7 @@ class DBConnect(Singleton):
             self.connections[connID] = sqlite.connect('CPA_DB')
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
+            self.connections[connID].create_function('greatest', -1, max)
             
             # TODO:
             # Check if a SQLite DB has already been populated.
@@ -136,7 +137,11 @@ class DBConnect(Singleton):
             except Exception:
                 pass
             else:
-                return True
+                pass
+                # FOR DEBUG
+#                return True
+            
+            
 #                # Try prompting the user with a wx dialog:
 #                try:
 #                    import wx
@@ -214,6 +219,9 @@ class DBConnect(Singleton):
             print 'Lost connection to database. Attempting to reconnect.'
             self.CloseConnection(connID)
             self.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+        except AttributeError:
+            pass # SQLite doesn't know ping.
+        
         # Finally make the query
         try:
             if verbose and not silent: print '[%s] %s'%(connID, query)
@@ -563,30 +571,32 @@ if __name__ == "__main__":
     dm.PopulateModel()
     #db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     
-    print db.GetGroupMaps()
-    print db.GetFilteredImages('FirstTen')
+#    print db.GetGroupMaps()
+#    print db.GetFilteredImages('FirstTen')
     
     # Train the classifier
     imKey = (0,1)
     nRules = 5
     trainingSet = TrainingSet(p)
-    # make a training set with objects 1 and 10 in separate classes
-    trainingSet.Create(['pos','neg'], [[(0,1,1)], [(0,1,10)]])
+    # make a training set
+    positives = [(0,1,56), (0,1,72), (0,1,92), (0,1,90), (0,1,88), (0,1,49), (0,1,11)]
+    negatives = [(0,1,i) for i in range(1,95) if i not in [56,72,92,90,88,49,11]]
+    trainingSet.Create(['pos','neg'],[positives, negatives])
     output = StringIO()
     print 'Training classifier with '+str(nRules)+' rules...'
     weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames, nRules,
                                                       trainingSet.label_matrix, 
                                                       trainingSet.values, output)
 
-    stump_query, score_query, find_max_query, class_query, count_query = \
-                    MulticlassSQL.translate(weaklearners, trainingSet.colnames, [imKey])
     obKeys = dm.GetObjectsFromImage(imKey)
+#    imKeysInFilter = db.GetFilteredImages('FirstHundred')
+#    obKeys = dm.GetRandomObjects(100,imKeysInFilter)
     hits = []
     if obKeys:
-        clNum = 0
-        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query)
+        clNum = 1
+        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, weaklearners, trainingSet.colnames, [imKey])
         
-        
+    print hits
 #        
 #    p = Properties.getInstance()
 #    p.LoadFile('../properties/nirht_test.properties')

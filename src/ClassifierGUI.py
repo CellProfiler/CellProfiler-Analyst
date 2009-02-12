@@ -488,8 +488,7 @@ class ClassifierGUI(wx.Frame):
                 else:
                     obKeysToTry = dm.GetRandomObjects(100,imKeysInFilter)
                     loopMsg = ' in class "'+obClassName+'" from filter "'+filter+'"...'
-                stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames)
-                obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, obKeysToTry, stump_query, score_query, find_max_query)
+                obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, self.trainingSet.colnames, obKeysToTry)
 
                 attempts += 100
                 if attempts%10000.0==0:
@@ -707,15 +706,13 @@ class ClassifierGUI(wx.Frame):
             return
     
         # 3) Find the hits
-        stump_query, score_query, find_max_query, class_query, count_query = \
-                        MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, [imKey])
         try:
             obKeys = dm.GetObjectsFromImage(imKey)
         except:
             self.SetStatusText('No such image: %s'%(imKey))
         hits = []
         if obKeys:
-            hits = MulticlassSQL.FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query)
+            hits = MulticlassSQL.FilterObjectsFromClassN(clNum, self.weaklearners, self.trainingSet.colnames, [imKey])
         self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(hits), len(obKeys), p.object_name[1], cls, imKey))
         
         # 4) Get object coordinates in image and display
@@ -745,9 +742,8 @@ class ClassifierGUI(wx.Frame):
         # Check if hit counts have already been calculated (since last training)
         # If not: Classify all objects into phenotype classes and count phenotype-hits per-image
         if self.keysAndCounts == None:
-            stump_query, score_query, find_max_query, class_query, count_query = MulticlassSQL.translate(self.weaklearners, self.trainingSet.colnames, p.area_scoring_column)
             self.SetStatusText('Calculating %s counts for each class...' % p.object_name[0])
-            self.keysAndCounts = MulticlassSQL.HitsAndCounts(stump_query, score_query, find_max_query, class_query, count_query)
+            self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners, self.trainingSet.colnames)
 
             # Add in images with zero object count
             for imKey, obCount in dm.GetImageKeysAndObjectCounts():

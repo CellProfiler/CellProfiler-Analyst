@@ -7,7 +7,7 @@ db = DBConnect.getInstance()
 p = Properties.getInstance()
 
 
-def translate(weak_learners, column_names, area_column=None, imKeys=[]):
+def translate(weak_learners, column_names, area_column=None):
     '''
     Translate weak learners into MySQL queries that place the resulting 
       classification in a MySQL temporary table named "temp_class_table"
@@ -18,44 +18,56 @@ def translate(weak_learners, column_names, area_column=None, imKeys=[]):
     num_classes = len(weak_learners[0][2])
 
     if p.table_id:
-        columns_start = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
+        key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
     else:
-        columns_start = p.image_id+" INT, "+p.object_id+" INT, "
-    
+        key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
+        
     select_start = UniqueObjectClause()+', '
     
     # Create stump table (ob x nRules) <0/1>
-    temp_stump_table = "_stump"
-    stump_columns = columns_start + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
-    stump_select_features = ", ".join(["(%s > %f) AS stump%d"%(column_names[wl[0]], wl[1], idx) for wl,idx in zip(weak_learners, range(num_features))])
-    stump_select_statement = select_start + stump_select_features + " FROM " + p.object_table
-    if not imKeys:
-        stump_query = 'CREATE TEMPORARY TABLE %(temp_stump_table)s (%(stump_columns)s) SELECT %(stump_select_statement)s'%(locals())
-    else:
-        stump_query = 'CREATE TEMPORARY TABLE %s (%s) SELECT %s WHERE (%s)'%(temp_stump_table, stump_columns, stump_select_statement, GetWhereClauseForImages(imKeys))
+    temp_stump_table       = "_stump"
+    stump_cols             = select_start + ", ".join(["stump%d"%(i) for i in range(num_features)])
+    stump_col_defs         = key_col_defs + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
+    stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(column_names[wl[0]], wl[1], idx) for idx, wl in enumerate(weak_learners)])
+    stump_select_statement = select_start + stump_select_features + " FROM " + p.object_table    
+    q_stump1 = 'CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs)
+    q_stump2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_stump_table, stump_cols, stump_select_statement)
     
     # Create class scores table (ob x classes) <float>
-    classidxs = range(1, num_classes+1)
-    temp_score_table = "_scores"
+    classidxs          = range(1, num_classes+1)
+    temp_score_table   = "_scores"
     score_vals_columns = ["score%d"%(i) for i in classidxs]
-    score_columns = columns_start + ", ".join(["%s FLOAT"%(s) for s in score_vals_columns]) + ", score_greatest FLOAT"
-    score_select_scores = ", ".join(["+".join(["IF(stump%d, %f, %f)"%(i, weak_learners[i][2][k-1], weak_learners[i][3][k-1]) for i in range(num_features)]) + " AS score%d"%(k) for k in classidxs])
+    score_col_defs     = key_col_defs + ", ".join(["%s FLOAT"%(s) for s in score_vals_columns]) + ", score_greatest FLOAT"
+    score_cols         = select_start + ", ".join(["%s"%(s) for s in score_vals_columns]) + ", score_greatest"
+    # SQLite doesn't support conditional operators, so we use math instead:
+    # Example: if (A>B), C, D ==> D+(C-D)*(A>B)
+    score_select_scores = ", ".join(["+".join(["%f+(%f-(%f))*(stump%d)"
+                                    %(weak_learners[i][3][k-1], weak_learners[i][2][k-1],weak_learners[i][3][k-1], i) 
+                                    for i in range(num_features)]) + " AS score%d"%(k)
+                                    for k in classidxs])
     score_select_statement = select_start + score_select_scores + ", 0.0 FROM " + temp_stump_table
-    score_query = 'CREATE TEMPORARY TABLE %(temp_score_table)s (%(score_columns)s) SELECT %(score_select_statement)s'%(locals())
+    q_score1 = 'CREATE TEMPORARY TABLE %(temp_score_table)s (%(score_col_defs)s)'%(locals())
+    q_score2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_score_table, score_cols, score_select_statement )
     
     # Create maximum column in class scores table
     greatest_expr = "GREATEST(" + ", ".join(score_vals_columns) + ")"
     find_max_query = "UPDATE %(temp_score_table)s SET score_greatest = %(greatest_expr)s"%(locals())
 
     # Convert to class membership table (ob x classes) <T/F>
-    temp_class_table = "_class"
-    class_columns = columns_start + ", ".join(["class%d TINYINT"%(k) for k in classidxs])
+    temp_class_table      = "_class"
+    class_cols            = select_start + ", ".join(["class%d"%(k) for k in classidxs])
+    class_col_defs        = key_col_defs + ", ".join(["class%d TINYINT"%(k) for k in classidxs])
     select_class_greatest = ", ".join(["%s = score_greatest AS class%d"%(sc, k) for sc,k in zip(score_vals_columns, classidxs)])
     class_select_statement = select_start + select_class_greatest + " FROM " + temp_score_table
-    class_query = 'CREATE TEMPORARY TABLE %(temp_class_table)s (%(class_columns)s) SELECT %(class_select_statement)s'%(locals())
+    q_class1 = 'CREATE TEMPORARY TABLE %s (%s)'%(temp_class_table, class_col_defs)
+    q_class2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_class_table, class_cols, class_select_statement)
+
 
     # Get hit counts
-    count_query = 'SELECT %s, %s FROM %s GROUP BY %s'%(UniqueImageClause(), ", ".join(["SUM(class%d)"%(k) for k in classidxs]), temp_class_table, UniqueImageClause())
+    count_query = 'SELECT %s, %s FROM %s GROUP BY %s' % \
+                        (UniqueImageClause(), 
+                         ", ".join(["SUM(class%d)"%(k) for k in classidxs]),
+                         temp_class_table, UniqueImageClause())
 
     # handle area-based scoring if needed, replacing count query
     if area_column:
@@ -68,32 +80,68 @@ def translate(weak_learners, column_names, area_column=None, imKeys=[]):
         object_match = '%s.%s = %s.%s'%(p.object_table, p.object_id,
                                              temp_class_table, p.object_id)
         object_match_clauses = table_match + image_match + object_match
-        count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%(UniqueImageClause(p.object_table), ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, area_column) for k in classidxs]), temp_class_table, p.object_table, object_match_clauses, UniqueImageClause(p.object_table))
+        count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s' % \
+                        (UniqueImageClause(p.object_table), 
+                         ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, area_column) for k in classidxs]),
+                         temp_class_table, p.object_table, object_match_clauses, UniqueImageClause(p.object_table))
     
-    return stump_query, score_query, find_max_query, class_query, count_query
+    return [q_stump1, q_stump2], [q_score1, q_score2], find_max_query, [q_class1, q_class2], count_query
+#    return stump_query, score_query, find_max_query, class_query, count_query
     
 
-def FilterObjectsFromClassN(clNum, obKeys, stump_query, score_query, find_max_query):
-    # Drop existing temporary tables
+def FilterObjectsFromClassN(clNum, weaklearners, colnames, filterKeys=[]):
+    '''
+    clNum: 1-based index of the class to retrieve obKeys from
+    weaklearners: Weak learners from FastGentleBoostingMulticlass.train
+    colnames: Column names to include in classification
+    filterKeys: (optional) A specific list of imKeys OR obKeys (NOT BOTH)
+        to classify.
+        * WARNING: If this list is too long, you may exceed the size limit to
+          MySQL queries. 
+        * Useful when fetching N objects from a particular class. Use the
+          DataModel to get batches of random objects, and sift through them
+          here until N objects of the desired class have been accumulated.
+        * Also useful for classifying a specific image or group of images.
+    RETURNS: A list of object keys that fall in the specified class.
+    '''
+    isImKey = lambda(k): (p.table_id and len(k)==2) or (not p.table_id and len(k)==1)    
+    stump_query, score_query, find_max_query, _, _ = translate(weaklearners, colnames)
+    if filterKeys:
+        if isImKey(filterKeys[0]):
+            stump_query[1] += ' WHERE '+GetWhereClauseForImages(filterKeys)
+        else:
+            stump_query[1] += ' WHERE '+GetWhereClauseForObjects(filterKeys)
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
-    if obKeys:
-        stump_query += ' WHERE '+GetWhereClauseForObjects(obKeys)
-    db.Execute(stump_query)
-    db.Execute(score_query)
+    db.Execute(stump_query[0])
+    db.Execute(stump_query[1])
+    db.Execute(score_query[0])
+    db.Execute(score_query[1])
     db.Execute(find_max_query)
     db.Execute('SELECT '+UniqueObjectClause()+' FROM _scores WHERE score'+str(clNum)+'=score_greatest')
     return db.GetResultsAsList()
     
     
-def HitsAndCounts(stump_query, score_query, find_max_query, class_query, count_query):
+def HitsAndCounts(weaklearners, colnames):
+    '''
+    weaklearners: Weak learners from FastGentleBoostingMulticlass.train
+    colnames: Column names to include in classification
+    RETURNS: A list of lists of imKeys and respective object counts for each class:
+        Note that the imKeys are exploded so each row is of the form:
+        [TableNumber, ImageNumber, Class1_ObjectCount, Class2_ObjectCount,...]
+        where TableNumber is only present if table_id is defined in Properties. 
+    '''
+    stump_query, score_query, find_max_query, class_query, count_query = translate(weaklearners, colnames)
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
     db.Execute('DROP TABLE IF EXISTS _class')
-    db.Execute(stump_query)
-    db.Execute(score_query)
+    db.Execute(stump_query[0])
+    db.Execute(stump_query[1])    
+    db.Execute(score_query[0])
+    db.Execute(score_query[1])
     db.Execute(find_max_query)
-    db.Execute(class_query)
+    db.Execute(class_query[0])
+    db.Execute(class_query[1])
     db.Execute(count_query)
     return db.GetResultsAsList()    
 
