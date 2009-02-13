@@ -719,7 +719,8 @@ class ClassifierGUI(wx.Frame):
         coordList = []
         for obKey in hits:
             coordList += [db.GetObjectCoords(obKey)]
-        imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self)
+        imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
+                                        brightness=self.brightness, scale=self.scale)
         imViewer.imagePanel.SelectPoints(coordList)
         
         
