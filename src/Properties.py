@@ -62,7 +62,8 @@ class Properties(Singleton):
                             'image_url_prepend',
                             'image_tile_size',
                             'image_buffer_size',
-                            'tile_buffer_size']:
+                            'tile_buffer_size',
+                            'area_scoring_column']:
                     self.__dict__[name] = val
                 
                 elif name in ['image_channel_paths',
