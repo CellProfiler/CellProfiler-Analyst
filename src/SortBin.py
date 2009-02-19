@@ -1,23 +1,37 @@
-import wx
-from Properties import Properties
-from ImageCollection import ImageCollection
-from ImageTileSizer import ImageTileSizer
-from ImageTile import ImageTile
-from DragObject import DragObject
-from DropTarget import DropTarget
 from DBConnect import DBConnect
+from TileCollection import TileCollection
+from ImageTile import ImageTile
+from ImageTileSizer import ImageTileSizer
+from Properties import Properties
 import ImageTools
+import cPickle
+import wx
 
 p  = Properties.getInstance()
 db = DBConnect.getInstance()
 
-class SortBin(wx.ScrolledWindow, DropTarget):
+
+class SortBinDropTarget(wx.DropTarget):
+    def __init__(self, bin):
+        self.data = wx.CustomDataObject("ObjectKey")
+        wx.DropTarget.__init__(self, self.data)
+        self.bin = bin
+    
+    def OnDrop(self, x, y):
+        self.GetData()
+        key = self.data.GetData()
+        self.bin.ReceiveDrop(key)
+        return True
+
+
+class SortBin(wx.ScrolledWindow):
     '''
     SortBins contain collections of objects as small image tiles
     that can be dragged to other SortBins for classification.
     '''
     def __init__(self, parent, chMap=None, label='', classifier=None):
         wx.ScrolledWindow.__init__(self, parent)
+        self.SetDropTarget(SortBinDropTarget(self))
         
         self.label = label
         self.tiles = []
@@ -26,7 +40,7 @@ class SortBin(wx.ScrolledWindow, DropTarget):
         else:
             self.chMap = p.image_channel_colors
         self.classifier = classifier
-        self.IC = None
+        self.TC = None
         
         self.SetBackgroundColour('#000000')
         self.sizer = ImageTileSizer()
@@ -68,8 +82,7 @@ class SortBin(wx.ScrolledWindow, DropTarget):
         ''' Keyboard shortcuts '''
         if evt.GetKeyCode() in [wx.WXK_DELETE, wx.WXK_BACK]:        # delete
             self.DestroySelectedTiles()
-            self.Layout()
-            self.Refresh()
+            self.SetVirtualSize(self.sizer.CalcMin())
         elif evt.ControlDown() or evt.CmdDown():
             if evt.GetKeyCode() == ord('A'):
                 self.SelectAll()
@@ -77,8 +90,6 @@ class SortBin(wx.ScrolledWindow, DropTarget):
                 self.DeselectAll()
             elif evt.GetKeyCode() == ord('I'):
                 [t.ToggleSelect() for t in self.tiles]
-#            elif evt.GetKeyCode() == ord('R'):
-#                self.classifier.RenameClass(self.label)
             else:
                 evt.Skip()
         else:
@@ -110,73 +121,49 @@ class SortBin(wx.ScrolledWindow, DropTarget):
             self.classifier.RemoveSortClass(self.label)
     
     
-    def AddObject(self, obKey, chMap, refresh=True):
-        ''' Creates a new tile and adds it. '''
-        if self.IC == None:
-            self.IC = ImageCollection.getInstance(p)
-        imgs = self.IC.FetchTile(obKey)
-        newTile = ImageTile(self, obKey, imgs, chMap, False, scale=self.classifier.scale, brightness=self.classifier.brightness)
+    def AddObject(self, obKey, chMap, priority=1, pos='first'):
+        if self.TC == None:
+            self.TC = TileCollection.getInstance()
+        imgs = self.TC.GetTileData(obKey, self.classifier, priority=priority)
+        newTile = ImageTile(self, obKey, imgs, chMap, False, scale=self.classifier.scale, 
+                            brightness=self.classifier.brightness)
         self.tiles.append(newTile)
-        self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
-        if refresh:
-            self.Refresh()
-            self.Layout()
-        self.SetVirtualSize(self.sizer.CalcMin())
-                
-    
-    def AddTile(self, tile, refresh=True, pos='first'):
-        ''' Adds the given tile. 
-        Set refresh to false for faster performance, and refresh manually.'''
-        tile.bin = self
-        self.tiles.append(tile)
         if pos == 'first':
-            self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1 )
+            self.sizer.Insert(0, newTile, 0, wx.ALL|wx.EXPAND, 1 )
         else:
-            self.sizer.Add(tile, 0, wx.ALL|wx.EXPAND, 1)
-        tile.Reparent(self)
+            self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
         self.SetVirtualSize(self.sizer.CalcMin())
-#        if refresh:
-#            self.Refresh()
-#            self.Layout()
-        
-    
-#    def RemoveTile(self, tile, refresh=True):
-#        ''' Removes the given tile.
-#        Set refresh to false for faster performance, and refresh manually.'''
-#        for t in self.tiles:
-#            if t == tile:
-#                self.tiles.remove(tile)
-#                self.sizer.Remove(tile)
-#                break
-#        if refresh:
-#            self.Refresh()
-#            self.Layout()
+        return newTile
+                 
+                        
+    def AddObjects(self, obKeys, chMap, priority=1, pos='first'):
+        if self.TC == None:
+            self.TC = TileCollection.getInstance()
+        imgSet = self.TC.GetTiles(obKeys, self.classifier, priority=priority)
+        for obKey, imgs in zip(obKeys, imgSet):
+            newTile = ImageTile(self, obKey, imgs, chMap, False, scale=self.classifier.scale, 
+                                brightness=self.classifier.brightness)
+            self.tiles.append(newTile)
+            if pos == 'first':
+                self.sizer.Insert(0, newTile, 0, wx.ALL|wx.EXPAND, 1 )
+            else:
+                self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
+        self.SetVirtualSize(self.sizer.CalcMin())
+        self.classifier.UpdateBinLabels()
 
-                
-#    def RemoveTiles(self, tiles):
-#        for tile in tiles:
-#            self.tiles.remove(tile)
-#            self.sizer.Remove(tile)
-#        self.Refresh()
-#        self.Layout()
-        
     
-    def DestroyTile(self, tile, refresh=True):
-        ''' Destroys the given tile.
-        Set refresh to false for faster performance, and refresh manually.'''
+    def RemoveKey(self, obKey):
+        ''' Removes the specified tile. '''
         for t in self.tiles:
-            if t == tile:
-                self.tiles.remove(tile)
-                self.sizer.Remove(tile)
-                tile.Destroy()
-                break
-        if refresh:
-            self.Refresh()
-            self.Layout()
+            if t.obKey == obKey:
+                self.tiles.remove(t)
+                self.sizer.Remove(t)
+        self.SetVirtualSize(self.sizer.CalcMin())
 
 
     def DestroySelectedTiles(self):
-        for tile in self.Selection():
+        for obKey, tile in zip(self.SelectedKeys(), self.Selection()):
+#            self.classifier.tiles.pop(obKey)
             self.tiles.remove(tile)
             self.sizer.Remove(tile)
             tile.Destroy()
@@ -196,31 +183,14 @@ class SortBin(wx.ScrolledWindow, DropTarget):
             if t.obKey == obkey and t.selected:
                 return t
         
-    def ReceiveDrop(self, drag):
-        drag = DragObject.getInstance()
+    def ReceiveDrop(self, obKeys):
+        obKeys = cPickle.loads(obKeys)
         self.DeselectAll()
-        if type(drag.source) == SortBin:
-            for obkey in drag.data:
-                # we don't want to refetch image data
-                tile = drag.source.find_selected_tile_for_key(obkey)
-                drag.source.sizer.Remove(tile)
-                drag.source.tiles.remove(tile)
-                tile.Reparent(self)
-                tile.bin = self
-                self.sizer.Insert(0, tile, 0, wx.ALL|wx.EXPAND, 1)
-                self.tiles.append(tile)
-            drag.source.SetVirtualSize(drag.source.sizer.CalcMin())
-        else:
-            print self
-            for obkey in drag.data:
-                print "adding", obkey
-                self.AddObject(obkey, self.chMap)
-                
-                
-        self.SetVirtualSize(self.sizer.CalcMin())
-        self.Scroll(-1, 0)
-        self.SetFocusIgnoringChildren()
-
+        for obKey in obKeys:
+            tile = self.AddObject(obKey, self.classifier.chMap)
+            tile.Select()
+        self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
+        
         
     def MapChannels(self, chMap):
         ''' Recalculates the displayed bitmap for all tiles in this bin. '''
@@ -264,15 +234,23 @@ class SortBin(wx.ScrolledWindow, DropTarget):
         ''' Deselects all tiles on this bin. '''
         for tile in self.tiles:
             tile.Deselect()
+            
 
     def OnFocus(self, evt):
         # stop focus events from propagating to the evil
         # wx.ScrollWindow class which otherwise causes scroll jumping.
         pass
 
+
     def OnLeftDown(self, evt):
-        self.SetFocusIgnoringChildren()
+        ''' Deselect all tiles unless shift is held. '''
+        self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
         if not evt.ShiftDown():
             self.DeselectAll()
-#        if evt.AltDown():
-#            self.classifier.RemoveSortClass(self.label)
+
+
+    def UpdateTile(self, obKey):
+        ''' Called when image data is available for a specific tile. '''
+        for t in self.tiles:
+            if t.obKey == obKey:
+                t.UpdateBitmap()

@@ -1,41 +1,56 @@
 '''
 A special image panel meant to be dragged and dropped.
 '''
-
-import wx
-import ImageTools
-from Properties import Properties
-from DropTarget import DropTarget
-from DragObject import DragObject
-from ImagePanel import ImagePanel
 from DBConnect import DBConnect
+from ImagePanel import ImagePanel
+from Properties import Properties
+import ImageTools
+import cPickle
+import wx
+
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
-drag = DragObject.getInstance()
 
 
-class ImageTile(ImagePanel, DropTarget):
+class ImageTileDropTarget(wx.DropTarget):
+    ''' ImageTiles pass drop events to their parent bin. '''
+    def __init__(self, tile):
+        self.data = wx.CustomDataObject("ObjectKey")
+        wx.DropTarget.__init__(self, self.data)
+        self.tile = tile
+    
+    def OnDrop(self, x, y):
+        self.GetData()
+        key = self.data.GetData()
+        self.tile.bin.ReceiveDrop(key)
+        return True
+
+
+class ImageTile(ImagePanel):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
     between SortBins.
     '''
     def __init__(self, bin, obKey, images, chMap, selected=False, scale=1.0, brightness=1.0):
         ImagePanel.__init__(self, images, chMap, bin, scale=scale, brightness=brightness)
-        
+        self.SetDropTarget(ImageTileDropTarget(self))
+
         self.bin        = bin             # the SortBin this object belongs to
         self.classifier = bin.classifier  # ClassifierGUI needs to capture the mouse on tile selection
         self.obKey      = obKey           # (table, image, object)
         self.selected   = selected        # whether or not this tile is selected
+        self.leftPressed = False
         
         self.MapChannels(chMap)
         self.CreatePopupMenu()
-        
+                
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
-        
+        self.Bind(wx.EVT_MOTION, self.OnMotion)
+        self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaving)
 
     def CreatePopupMenu(self):
         popupMenuItems = ['View full images of selected',
@@ -100,13 +115,34 @@ class ImageTile(ImagePanel, DropTarget):
     
     def OnLeftDown(self, evt):
         self.bin.SetFocusIgnoringChildren()
+        self.leftPressed = True
+        self.mouseDownX = evt.GetX()
+        self.mouseDownY = evt.GetY()
+            
+        if not evt.ShiftDown() and not self.selected:
+            self.bin.DeselectAll()
+            self.Select()
+        elif evt.ShiftDown():
+            self.ToggleSelect()
+            
+            
+    def OnLeaving(self, evt):
+        self.leftPressed = False
 
-#            cursorImg = self.bitmap.ConvertToImage()
-#            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.size[0])/2)
-#            cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.size[1])/2)
-#            wx.SetCursor(wx.CursorFromImage(cursorImg))
-#            for tlw in wx.GetTopLevelWindows():
-#                tlw.SetCursor(wx.CursorFromImage(cursorImg))
+            
+    def OnMotion(self, evt):
+        # Give a 6 pixel radius of leeway before dragging a tile
+        # this makes selecting multiple tiles less painful
+        if (not evt.LeftIsDown() or not self.leftPressed or 
+            ((evt.GetX()-self.mouseDownX)**2+(evt.GetY()-self.mouseDownY)**2 <= 36)):
+            return
+        
+        self.bin.SetFocusIgnoringChildren()
+        
+        cursorImg = self.bitmap.ConvertToImage()
+        cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.bitmap.Size[0])/2)
+        cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.bitmap.Size[1])/2)
+        cursor = wx.CursorFromImage(cursorImg)
             
         if not evt.ShiftDown() and not self.selected:
             self.bin.DeselectAll()
@@ -114,19 +150,19 @@ class ImageTile(ImagePanel, DropTarget):
         elif evt.ShiftDown():
             self.ToggleSelect()
 
-        if self.bin.SelectedKeys():
-            self.classifier.CaptureMouse()
-            drag.data = self.bin.SelectedKeys()
-            drag.source = self.bin
-
+        source = wx.DropSource(self, copy=cursor, move=cursor)
+        # wx crashes unless the data object is assigned to a variable.
+        data_object = wx.CustomDataObject("ObjectKey")
+        data_object.SetData(cPickle.dumps(self.bin.SelectedKeys()))
+        source.SetData(data_object)
+        result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
+        if result is 0:
+            self.bin.DestroySelectedTiles()
+    
+    
     def OnSize(self, evt):
         self.SetClientSize(evt.GetSize())
         evt.Skip()
-        
-        
-    def ReceiveDrop(self, data):
-        if self.bin != drag.source:
-            self.bin.ReceiveDrop(data)
-            
+
 
         

@@ -5,6 +5,8 @@ from DBConnect import DBConnect
 from Properties import Properties
 from ImageReader import ImageReader
 
+import threading
+
 db = DBConnect.getInstance()
 
 
@@ -26,32 +28,37 @@ class ImageCollection(Singleton):
         self.tileKeyQueue  = [] # queues determine the order in which cache entries are removed
         self.imageKeyQueue = [] # queues determine the order in which cache entries are removed
         
+        self._event = threading.Event()
+        self.blocked = False
+        
         
     def FetchImage(self, imKey):
         '''
         Returns image channel data.
         '''
-        ir = ImageReader()
-        filenames = db.GetFullChannelPathsForImage(imKey)
-        return ir.ReadImages(filenames)
+        # Preempt all caching
+#        ir = ImageReader()
+#        filenames = db.GetFullChannelPathsForImage(imKey)
+#        return ir.ReadImages(filenames)
     
-#        if imKey not in self.imageCache.keys():
-#            self.UpdateCache(imKey)
-#        return self.imageCache[imKey]
+        if imKey not in self.imageCache.keys():
+            self.UpdateCache(imKey)
+        return self.imageCache[imKey]
 
     
     def FetchTile(self, obKey):
         '''
         Returns image channel data cropped around the specified object.
         '''
-        imKey = obKey[:-1]
-        pos = db.GetObjectCoords(obKey)        
-        size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
-        return [ImageTools.Crop(imData,size,pos) for imData in self.FetchImage(imKey)]
+        # Preempt all caching
+#        imKey = obKey[:-1]
+#        pos = db.GetObjectCoords(obKey)
+#        size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
+#        return [ImageTools.Crop(imData,size,pos) for imData in self.FetchImage(imKey)]
         
-#        if obKey not in self.tileCache.keys():
-#            self.UpdateTileCache(obKey)
-#        return self.tileCache[obKey]
+        if obKey not in self.tileCache.keys():
+            self.UpdateTileCache(obKey)
+        return self.tileCache[obKey]
     
     
     def UpdateTileCache(self, obKey):
@@ -61,10 +68,13 @@ class ImageCollection(Singleton):
         imKey = obKey[:-1]
         
         # Remove the oldest element in the cache if it's full
+        if self.blocked:
+            self._event.wait()
         self.tileKeyQueue.insert(0,obKey)
         if len(self.tileCache) >= self.maxTiles:
             self.tileCache.pop(self.tileKeyQueue[-1])
             self.tileKeyQueue = self.tileKeyQueue[:self.maxTiles]
+        self.unblock()
         
         pos = db.GetObjectCoords(obKey)
         
@@ -94,7 +104,10 @@ class ImageCollection(Singleton):
         # update the cache
         self.imageCache[imKey] = images
 
-
+    def unblock(self):
+        self._event.set()
+        self.blocked = True
+    
 
 
 

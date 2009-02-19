@@ -1,12 +1,11 @@
 import wx
 import ImageTools
 from Properties import Properties
-from DropTarget import DropTarget
 
 p = Properties.getInstance()
 
 
-class ImagePanel(wx.Panel, DropTarget):
+class ImagePanel(wx.Panel):
     '''
     ImagePanels are wxPanels that display a wxBitmap and store multiple
     image channels which can be recombined to mix different bitmaps.
@@ -52,7 +51,7 @@ class ImagePanel(wx.Panel, DropTarget):
             dc.BeginDrawing()
             dc.SetPen(wx.Pen("WHITE",1))
             dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
-            dc.DrawRectangle(1,1,self.bitmap.Width-1,self.bitmap.Height-1)
+            dc.DrawRectangle(0,0,self.bitmap.Width,self.bitmap.Height)
             dc.EndDrawing()
 
 

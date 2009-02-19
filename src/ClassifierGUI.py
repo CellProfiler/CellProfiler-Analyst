@@ -1,33 +1,26 @@
+from DBConnect import DBConnect
+from DataGrid import DataGrid
+from DataModel import DataModel
+from ImageControlPanel import ImageControlPanel
+from ImageTile import ImageTile
+from TileCollection import *
+from Properties import Properties
+from SortBin import SortBin
+from TrainingSet import TrainingSet
+from cStringIO import StringIO
+import DirichletIntegrate
+import FastGentleBoostingMulticlass
 import ImageTools
-
+import MulticlassSQL
+import PolyaFit
+import numpy
 import os
 import wx
 import wx.grid
-import numpy
-from cStringIO import StringIO
 
-from DataModel import DataModel
-from DBConnect import DBConnect
-from Properties import Properties
-
-from SortBin import SortBin
-from ImageTile import ImageTile
-from ImageControlPanel import ImageControlPanel
-from DragObject import DragObject
-from DropTarget import DropTarget
-from LoadTilesWorker import *
-
-from TrainingSet import TrainingSet
-import FastGentleBoostingMulticlass
-import MulticlassSQL
-import PolyaFit
-import DirichletIntegrate
-
-from DataGrid import DataGrid
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
-
 
 
 class SortClass(object):
@@ -36,7 +29,6 @@ class SortClass(object):
         self.bin = bin
         self.sizer = sizer
         self.trained = trained
-
 
 
 class ClassifierGUI(wx.Frame):
@@ -198,7 +190,8 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)    
         self.Bind(wx.EVT_CHAR, self.OnKey)
-        EVT_IMAGE_RESULT(self, self.OnImageResult)
+#        EVT_IMAGE_RESULT(self, self.OnImageResult)
+        EVT_TILE_UPDATED(self, self.OnTileUpdated)
         
         
     def BindMouseOverHelpText(self):
@@ -236,7 +229,7 @@ class ClassifierGUI(wx.Frame):
     
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
-        if evt.ControlDown():
+        if evt.ControlDown() or evt.CmdDown():
             chIdx = evt.GetKeyCode()-49
             if len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
@@ -254,13 +247,9 @@ class ClassifierGUI(wx.Frame):
     def CreateFileMenu(self):
         ''' Create file menu and menu items '''
         self.fileMenu = wx.Menu()
-#        self.loadPropertiesMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='Load properties', help='Clears the current session and imports settings from a new properties file.')
-#        self.savePropertiesMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='Save rules', help='')
         self.loadTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='Load training set', help='Loads objects and classes specified in a training set file.')
         self.saveTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='Save training set', help='Save your training set to file so you can reload these classified cells again.')
         self.exitMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.wx.NewId(), text='Exit', help='Exit classifier')
-#        self.fileMenu.AppendItem(self.loadPropertiesMenuItem)
-#        self.fileMenu.AppendItem(self.savePropertiesMenuItem)
         self.fileMenu.AppendItem(self.loadTSMenuItem)
         self.fileMenu.AppendItem(self.saveTSMenuItem)
         self.fileMenu.AppendSeparator()
@@ -367,28 +356,7 @@ class ClassifierGUI(wx.Frame):
 
 
     def OnLeftUp(self, evt):
-        drag = DragObject.getInstance()
-        if drag.IsEmpty():
-            self.ReleaseMouse()
-            return
-
-        drop_target = None
-        mouse_screen_pos = self.ClientToScreen(evt.GetPosition())
-        for bin in self.all_sort_bins():
-            if bin.GetScreenRect().Contains(mouse_screen_pos):
-                drop_target = bin
-
-        if drop_target and drag.source != drop_target:
-            if isinstance(drop_target, DropTarget):
-                drop_target.ReceiveDrop(drag)
-                if not self.trainingSet:
-                    self.trainingSet = TrainingSet(p)
-                    self.trainingSet.Create([], [])
-            self.UpdateBinLabels()
-
-        drag.Empty()
-        self.ReleaseMouse()
-        #wx.SetCursor(wx.NullCursor)
+        pass
 
 
     def CancelCapture(self, evt):
@@ -421,16 +389,6 @@ class ClassifierGUI(wx.Frame):
 
     
     def OnFetch(self, evt):
-        # If a worker already exists then stop it.
-        if self.worker:
-            # Note: The worker will finish loading it's last tile before it dies
-            #    raises an ImageResult.  Therefore it's critical NOT to set worker=None
-            #    here or it will be possible to start more than one worker at a time
-            #    by clicking fetch repeatedly.
-            self.worker.abort()
-            self.fetchBtn.Disable()  # Disable the button until the operation finishes to prevent antsy users from restarting it.
-            return
-        
         # Parse out the GUI input values        
         nObjects    = int(self.nObjectsTxt.Value)
         obClass     = self.obClassChoice.Selection
@@ -499,26 +457,19 @@ class ClassifierGUI(wx.Frame):
                         break
 
             statusMsg += loopMsg
-                
-        # Create a worker thread to load the tiles!
-        self.worker = LoadTilesWorker(self, obKeys[:nObjects])
+
+#        for obKey in obKeys:
+        self.unclassifiedBin.AddObjects(obKeys, self.chMap, pos='last')
         
         # Toggle the fetch button text and give the user feedback
-        self.fetchBtn.SetLabel('Stop')
-        self.SetStatusText(statusMsg)
+#        self.fetchBtn.SetLabel('Stop')
+#        self.SetStatusText(statusMsg)
     
-    
-    def OnImageResult(self, evt):
-        ''' Results from worker thread. '''
-        if evt.data == None:
-            self.fetchBtn.Enable()
-            self.fetchBtn.SetLabel('Fetch!')
-            self.SetStatusText('')
-            self.worker = None
-        else:
-            tile = ImageTile(self.unclassifiedBin, obKey=evt.data[0], images=evt.data[1], chMap=self.chMap, selected=False, scale=self.scale, brightness=self.brightness)
-            self.unclassifiedBin.AddTile(tile, pos='last')
-            self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBin.tiles))+')' )
+
+    def OnTileUpdated(self, evt):
+        self.unclassifiedBin.UpdateTile(evt.data)
+        for cl in self.classes:
+            cl.bin.UpdateTile(evt.data)
         
         
     def OnLoadTrainingSet(self, evt):
@@ -543,11 +494,8 @@ class ClassifierGUI(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 for cl in self.classes:
                     if cl.label == label:
-                        cl.bin.AddObject(key, self.chMap[:], refresh=False)
+                        cl.bin.AddObject(key, self.chMap, priority=2)
                         break
-            for cl in self.classes:
-                cl.bin.Refresh()
-                cl.bin.Layout()
         self.UpdateBinLabels()
         self.SetStatusText('Training set loaded.')
         
@@ -853,30 +801,7 @@ class ClassifierGUI(wx.Frame):
                         title='Enrichments grouped by '+group)
         grid.Show()
         
-        self.SetStatusText('')
-    
-    
-    
-#    def CalculateZPrimes(self, keysAndCounts):
-#        '''
-#        Calculates Z' factor as 1-3*(Sp+Sn)/|Mp-Mn|
-#        keysAndCounts: A numpy.array([[key, nX, nY, nZ...], where nX, nY, nZ
-#        Returns: Z' factor as a float
-#        '''
-#        firstClassIdx = len(keysAndCounts[0])-nClasses
-#        counts = keysAndCounts[:,firstClassIdx:].astype('float')
-#        result = []
-#        for i in range(nClasses):
-#            ingroup = counts[:,i]
-#            outgroup = numpy.hstack([counts[:,j] for j in range(nClasses) if j!=i])
-#            ssd = ingroup.std() + outgroup.std()
-#            r = abs(ingroup.mean() - outgroup.mean())
-#            result += [1-3*ssd/r]
-#            
-#        print "Z' factors =", result
-#        
-#        return result
-        
+        self.SetStatusText('')        
     
     
     def LoadProperties(self):
@@ -934,6 +859,10 @@ class ClassifierGUI(wx.Frame):
                 self.SaveTrainingSet()
             elif response == wx.ID_CANCEL:
                 return
+        import threading
+        for thread in threading.enumerate():
+            if thread != threading.currentThread():
+                thread.abort()
         self.Destroy()
         
                 

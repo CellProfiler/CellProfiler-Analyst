@@ -1,14 +1,14 @@
-import wx
-import ImageTools
-from Properties import Properties
-from ImagePanel import ImagePanel
-from ImageControlPanel import ImageControlPanel
-from DragObject import DragObject
 from DBConnect import DBConnect
+from ImageControlPanel import ImageControlPanel
+from ImagePanel import ImagePanel
+from Properties import Properties
+import SortBin
+import ImageTools
+import cPickle
+import wx
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
-drag = DragObject.getInstance()
 
 class ImageViewer(wx.Frame):
     '''
@@ -45,7 +45,8 @@ class ImageViewer(wx.Frame):
 
         self.SetMenuBar(wx.MenuBar())
         self.CreateChannelMenus()
-        self.SetClientSize(min(self.maxSize, (w*scale,h*scale+135)))
+        self.SetClientSize( (min(self.maxSize[0], w*scale),
+                             min(self.maxSize[1], h*scale+135)) )
         self.Centre()
         
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -139,10 +140,14 @@ class ImageViewer(wx.Frame):
             if self.selection:
                 self.imagePanel.SelectPoints([db.GetObjectCoords(k) for k in self.selection])
                 # start drag
-                # TODO: fix DnD so it can't drop on bins that aren't visible
-                self.classifier.CaptureMouse()
-                drag.data = self.selection
-                drag.source = self
+                source = wx.DropSource(self)
+                # wxPython crashes unless the data object is assigned to a variable.
+                data_object = wx.CustomDataObject("ObjectKey")
+                data_object.SetData(cPickle.dumps(self.selection))
+                source.SetData(data_object)
+                result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
+                if result is 0:
+                    pass
 
     
             

@@ -137,9 +137,7 @@ class DBConnect(Singleton):
             except Exception:
                 pass
             else:
-                pass
-                # FOR DEBUG
-#                return True
+                return True
             
             
 #                # Try prompting the user with a wx dialog:
