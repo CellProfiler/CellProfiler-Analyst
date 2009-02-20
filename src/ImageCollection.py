@@ -37,13 +37,13 @@ class ImageCollection(Singleton):
         Returns image channel data.
         '''
         # Preempt all caching
-        ir = ImageReader()
-        filenames = db.GetFullChannelPathsForImage(imKey)
-        return ir.ReadImages(filenames)
+#        ir = ImageReader()
+#        filenames = db.GetFullChannelPathsForImage(imKey)
+#        return ir.ReadImages(filenames)
     
-#         if imKey not in self.imageCache.keys():
-#             self.UpdateCache(imKey)
-#         return self.imageCache[imKey]
+        if imKey not in self.imageCache.keys():
+            self.UpdateCache(imKey)
+        return self.imageCache[imKey]
 # 
     
     def FetchTile(self, obKey):

@@ -18,9 +18,10 @@ class TileCollection(Singleton):
     Main access point for loading tiles through the TileLoader.
     '''
     def __init__(self):
-        self.tileData = WeakValueDictionary()
-        self.loadq    = []
-        self.cv       = threading.Condition()
+        self.tileData  = WeakValueDictionary()
+        self.loadq     = []
+        self.cv        = threading.Condition()
+        self.priority2 = 0
         # create a gray placeholder for unloaded images
         self.imagePlaceholder = List([numpy.zeros((int(p.image_tile_size),
                                               int(p.image_tile_size)))+0.1
@@ -32,15 +33,25 @@ class TileCollection(Singleton):
         return self.GetTiles([obKey], notify_window, priority)[0]
     
     def GetTiles(self, obKeys, notify_window, priority=1):
+        '''
+        obKeys: object tiles to fetch
+        notify_window: window that will handle TileUpdatedEvent(s)
+        priority: priority with which to fetch these tiles (tiles with
+            smaller priorities are pushed to the front of the load queue)
+        Returns: a list of lists of tile data (in numpy arrays) in the order
+            of the obKeys that were passed in.
+        '''
         self.loader.notify_window = notify_window
+        self.priority2 -= 1
         tiles = []
         self.cv.acquire()
-        for obKey in obKeys:
+        for pri3, obKey in enumerate(obKeys):
             td = self.tileData.get(obKey, None)
             if td:
                 tiles += [td]
-            else:                
-                heappush(self.loadq, (priority, obKey))
+            else:
+                heappush(self.loadq, ((priority, self.priority2, pri3), obKey))
+                self.priority2 += 1
                 placeholder = List(self.imagePlaceholder)
                 self.tileData[obKey] = placeholder
                 tiles += [placeholder]
@@ -92,7 +103,7 @@ class TileLoader(threading.Thread):
         while 1:
             self.tile_collection.cv.acquire()
             # If there are no objects in the queue then wait
-            if not self.tile_collection.loadq:
+            while not self.tile_collection.loadq:
                 self.tile_collection.cv.wait()
             if self._want_abort:
                 return

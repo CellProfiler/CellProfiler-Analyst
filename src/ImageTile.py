@@ -52,6 +52,7 @@ class ImageTile(ImagePanel):
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaving)
 
+
     def CreatePopupMenu(self):
         popupMenuItems = ['View full images of selected',
                           '[ctrl+a] - Select all',
