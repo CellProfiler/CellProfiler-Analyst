@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from Singleton import *
 
 class Properties(Singleton):
@@ -125,7 +127,11 @@ a MySQL query "<QUERY>". See the README.'''
         
         
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) >= 2:
+        filename = sys.argv[1]
+    else:
+        filename = "../Properties/nirht_test.properties"
     p = Properties.getInstance()
-    p = Properties.getInstance()
-    p.LoadFile('../Properties/nirht_test.properties')
+    p.LoadFile(filename)
     print p
