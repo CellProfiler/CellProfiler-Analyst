@@ -18,6 +18,7 @@ import os
 import wx
 import wx.grid
 
+from ScoreDialog import ScoreDialog
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -647,9 +648,12 @@ class ClassifierGUI(wx.Frame):
         
     def OnScoreAll(self, evt):
         groupChoices = ['Image'] + p.groups_ordered
-        dlg = wx.SingleChoiceDialog(self, 'Please choose a grouping method:', 'Score all', groupChoices, wx.CHOICEDLG_STYLE)
+        filterChoices = [None] + p.filters_ordered
+        dlg = ScoreDialog(self, groupChoices, filterChoices)
         if dlg.ShowModal() == wx.ID_OK:            
-            group = str(dlg.GetStringSelection())
+            group = dlg.group
+            filter = dlg.filter
+            print "Filter:", filter
             dlg.Destroy()
         else:
             dlg.Destroy()
@@ -660,11 +664,12 @@ class ClassifierGUI(wx.Frame):
                 
         nClasses = len(self.classBins)
         
-        # Check if hit counts have already been calculated (since last training)
-        # If not: Classify all objects into phenotype classes and count phenotype-hits per-image
+        # Check if hit counts have already been calculated (since last
+        # training).  If not, classify all objects into phenotype
+        # classes and count phenotype-hits per-image.
         if self.keysAndCounts == None:
             self.SetStatusText('Calculating %s counts for each class...' % p.object_name[0])
-            self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners, self.trainingSet.colnames)
+            self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners, self.trainingSet.colnames, filter=filter)
 
             # Add in images with zero object count
             for imKey, obCount in dm.GetImageKeysAndObjectCounts():
@@ -763,12 +768,15 @@ class ClassifierGUI(wx.Frame):
         else:
             for i in xrange(nClasses):
                 labels += ['Enriched Score\n'+self.classBins[i].label]
-        
+
+        title = "Enrichments grouped by %s"%(group,)
+        if filter:
+            title += " filtered by %s"%(filter,)
         grid = DataGrid(tableData, labels, grouping=group,
                         groupIDIndices=groupIDIndices,
                         chMap=self.chMap[:], parent=self,
                         selectableColumns=set(range(len(groupIDIndices),len(labels))),
-                        title='Enrichments grouped by '+group)
+                        title=title)
         grid.Show()
         
         self.SetStatusText('')        

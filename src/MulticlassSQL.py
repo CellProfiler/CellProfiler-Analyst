@@ -7,7 +7,7 @@ db = DBConnect.getInstance()
 p = Properties.getInstance()
 
 
-def translate(weak_learners, column_names, area_column=None):
+def translate(weak_learners, column_names, area_column=None, filter=None):
     '''
     Translate weak learners into MySQL queries that place the resulting 
       classification in a MySQL temporary table named "temp_class_table"
@@ -23,13 +23,25 @@ def translate(weak_learners, column_names, area_column=None):
         key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
         
     select_start = UniqueObjectClause()+', '
+
+    # If a filter is specified, use it as a subquery; otherwise, just
+    # use the object table.
+    if filter is None:
+        object_table_name = p.object_table
+        object_table_from = p.object_table
+    else:
+        object_table_name = filter
+        object_table_from = ("(%s) as %s JOIN %s using (%s)"%
+                             (p.filters[filter], filter, p.object_table,
+                              ", ".join(image_key_columns())))
     
     # Create stump table (ob x nRules) <0/1>
     temp_stump_table       = "_stump"
     stump_cols             = select_start + ", ".join(["stump%d"%(i) for i in range(num_features)])
     stump_col_defs         = key_col_defs + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
     stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(column_names[wl[0]], wl[1], idx) for idx, wl in enumerate(weak_learners)])
-    stump_select_statement = select_start + stump_select_features + " FROM " + p.object_table    
+    stump_select_statement = select_start + stump_select_features + \
+                             " FROM " + object_table_from
     q_stump1 = 'CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs)
     q_stump2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_stump_table, stump_cols, stump_select_statement)
     
@@ -73,17 +85,19 @@ def translate(weak_learners, column_names, area_column=None):
     if area_column:
         table_match = ''
         if p.table_id:
-            table_match = '%s.%s = %s.%s AND '%(p.object_table, p.table_id,
+            table_match = '%s.%s = %s.%s AND '%(object_table_name, p.table_id,
                                                 temp_class_table, p.table_id)
-        image_match = '%s.%s = %s.%s AND '%(p.object_table, p.image_id,
+        image_match = '%s.%s = %s.%s AND '%(object_table_name, p.image_id,
                                             temp_class_table, p.image_id)
-        object_match = '%s.%s = %s.%s'%(p.object_table, p.object_id,
-                                             temp_class_table, p.object_id)
+        object_match = '%s.%s = %s.%s'%(object_table_name, p.object_id,
+                                        temp_class_table, p.object_id)
         object_match_clauses = table_match + image_match + object_match
         count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s' % \
-                        (UniqueImageClause(p.object_table), 
-                         ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, area_column) for k in classidxs]),
-                         temp_class_table, p.object_table, object_match_clauses, UniqueImageClause(p.object_table))
+                        (UniqueImageClause(object_table_name), 
+                         ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, object_table_name, area_column) for k in classidxs]),
+                         temp_class_table, object_table_from,
+                         object_match_clauses,
+                         UniqueImageClause(object_table_name))
     
     return [q_stump1, q_stump2], [q_score1, q_score2], find_max_query, [q_class1, q_class2], count_query
 #    return stump_query, score_query, find_max_query, class_query, count_query
@@ -122,16 +136,18 @@ def FilterObjectsFromClassN(clNum, weaklearners, colnames, filterKeys=[]):
     return db.GetResultsAsList()
     
     
-def HitsAndCounts(weaklearners, colnames):
+def HitsAndCounts(weaklearners, colnames, filter=None):
     '''
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
     colnames: Column names to include in classification
+    filter: name of filter, or None.
     RETURNS: A list of lists of imKeys and respective object counts for each class:
         Note that the imKeys are exploded so each row is of the form:
         [TableNumber, ImageNumber, Class1_ObjectCount, Class2_ObjectCount,...]
         where TableNumber is only present if table_id is defined in Properties. 
     '''
-    stump_query, score_query, find_max_query, class_query, count_query = translate(weaklearners, colnames)
+    stump_query, score_query, find_max_query, class_query, count_query = \
+                 translate(weaklearners, colnames, filter=filter)
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
     db.Execute('DROP TABLE IF EXISTS _class')
@@ -145,3 +161,17 @@ def HitsAndCounts(weaklearners, colnames):
     db.Execute(count_query)
     return db.GetResultsAsList()    
 
+if __name__ == "__main__":
+    dir = "/Users/ljosa/research/modifier/piyush"
+    p.LoadFile("%s/batch1and2.properties"%(dir,))
+    import cPickle as pickle
+    f = open("%s/batch1and2.boostingclassifier"%(dir,))
+    colnames = pickle.load(f)
+    learners = pickle.load(f)
+    f.close()
+
+    keys_and_counts = HitsAndCounts(learners, colnames, filter='HRG')
+    import numpy
+    keys_and_counts = numpy.array(keys_and_counts, dtype='i4')
+    print keys_and_counts[0,:]
+    print sum(keys_and_counts[:,-2:])

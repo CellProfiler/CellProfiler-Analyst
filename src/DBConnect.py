@@ -20,16 +20,22 @@ class DBException(Exception):
         return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
 
-def image_key_columns():
-    '''Return, as a tuple, the names of the columns that make up the image key.'''
-    if p.table_id:
-        return (p.table_id, p.image_id)
+def image_key_columns(table_name=None):
+    """Return, as a tuple, the names of the columns that make up the
+    image key.  If table_name is not None, use it to qualify each
+    column name."""
+    if table_name is None:
+        qualifier = ""
     else:
-        return (p.image_id,)
-
+        qualifier = table_name + "."
+    if p.table_id:
+        return (qualifier + p.table_id, qualifier + p.image_id)
+    else:
+        return (qualifier + p.image_id,)
 
 def object_key_columns():
-    '''Return, as a tuple, the names of the columns that make up the object key.'''
+    """Return, as a tuple, the names of the columns that make up the
+    object key."""
     if p.table_id:
         return (p.table_id, p.image_id, p.object_id)
     else:
@@ -71,7 +77,7 @@ def UniqueImageClause(table_name=None):
     Returns a clause for specifying a unique image in MySQL.
     Example: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all image keys 
     '''
-    return ','.join(image_key_columns())
+    return ','.join(image_key_columns(table_name))
 
 
 
