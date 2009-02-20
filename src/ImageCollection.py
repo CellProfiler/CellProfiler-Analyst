@@ -37,28 +37,28 @@ class ImageCollection(Singleton):
         Returns image channel data.
         '''
         # Preempt all caching
-#        ir = ImageReader()
-#        filenames = db.GetFullChannelPathsForImage(imKey)
-#        return ir.ReadImages(filenames)
+        ir = ImageReader()
+        filenames = db.GetFullChannelPathsForImage(imKey)
+        return ir.ReadImages(filenames)
     
-        if imKey not in self.imageCache.keys():
-            self.UpdateCache(imKey)
-        return self.imageCache[imKey]
-
+#         if imKey not in self.imageCache.keys():
+#             self.UpdateCache(imKey)
+#         return self.imageCache[imKey]
+# 
     
     def FetchTile(self, obKey):
         '''
         Returns image channel data cropped around the specified object.
         '''
         # Preempt all caching
-#        imKey = obKey[:-1]
-#        pos = db.GetObjectCoords(obKey)
-#        size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
-#        return [ImageTools.Crop(imData,size,pos) for imData in self.FetchImage(imKey)]
+        imKey = obKey[:-1]
+        pos = db.GetObjectCoords(obKey)
+        size = (int(self.p.image_tile_size),int(self.p.image_tile_size))
+        return [ImageTools.Crop(imData,size,pos) for imData in self.FetchImage(imKey)]
         
-        if obKey not in self.tileCache.keys():
-            self.UpdateTileCache(obKey)
-        return self.tileCache[obKey]
+#         if obKey not in self.tileCache.keys():
+#             self.UpdateTileCache(obKey)
+#         return self.tileCache[obKey]
     
     
     def UpdateTileCache(self, obKey):

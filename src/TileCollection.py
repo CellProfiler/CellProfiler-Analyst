@@ -86,6 +86,8 @@ class TileUpdatedEvent(wx.PyEvent):
         self.SetEventType(EVT_TILE_UPDATED_ID)
         self.data = data
     
+
+
 class TileLoader(threading.Thread):
     '''
     This thread is owned by the TileCollection singleton and is kept running
@@ -98,35 +100,40 @@ class TileLoader(threading.Thread):
     def __init__(self, tc, notify_window):
         threading.Thread.__init__(self)
         self.notify_window = notify_window
-        self.tc = tc
+        self.tile_collection = tc
         self._want_abort = False
         self.start()
     
     def run(self):
-        ic = ImageCollection.getInstance(p)
+        image_collection = ImageCollection.getInstance(p)
         while 1:
-            self.tc.cv.acquire()
+            self.tile_collection.cv.acquire()
             # If there are no objects in the queue then wait
-            if not self.tc.loadq:
-                self.tc.cv.wait()
+            if not self.tile_collection.loadq:
+                self.tile_collection.cv.wait()
             if self._want_abort:
                 return
-            obKey = heappop(self.tc.loadq)[1]
-            self.tc.cv.release()
-            newData = ic.FetchTile(obKey)
-            td = self.tc.tileData.get(obKey, None)
+            obKey = heappop(self.tile_collection.loadq)[1]
+            self.tile_collection.cv.release()
+
             # Make sure tile hasn't been deleted outside this thread
-            if td:
+            if not self.tile_collection.tileData.get(obKey, None):
+                continue
+
+            newData = image_collection.FetchTile(obKey)
+            tile_data = self.tile_collection.tileData.get(obKey, None)
+            # Make sure tile hasn't been deleted outside this thread
+            if tile_data:
                 # copy each channel
-                for i in range(len(td)):
-                    td[i] = newData[i]
+                for i in range(len(tile_data)):
+                    tile_data[i] = newData[i]
                 wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
 
     def abort(self):
-        self.tc.cv.acquire()
+        self.tile_collection.cv.acquire()
         self._want_abort = True
-        self.tc.cv.notify()
-        self.tc.cv.release()
+        self.tile_collection.cv.notify()
+        self.tile_collection.cv.release()
         
 
 
