@@ -164,8 +164,7 @@ class SortBin(wx.ScrolledWindow):
             self.tiles.remove(tile)
             self.sizer.Remove(tile)
             tile.Destroy()
-        self.Refresh()
-        self.Layout()
+        self.SetVirtualSize(self.sizer.CalcMin())
         self.UpdateQuantity()
     
     
