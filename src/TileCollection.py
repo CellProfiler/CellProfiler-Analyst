@@ -29,7 +29,7 @@ class TileCollection(Singleton):
         
 
     def GetTileData(self, obKey, notify_window, priority=1):
-        return self.GetTiles(self, [obKey], notify_window, priority=1)[0]
+        return self.GetTiles([obKey], notify_window, priority)[0]
     
     def GetTiles(self, obKeys, notify_window, priority=1):
         self.loader.notify_window = notify_window
