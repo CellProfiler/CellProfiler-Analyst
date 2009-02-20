@@ -99,15 +99,12 @@ class ImageReader(object):
         data = []
         streams = []
         for url in urls:
-            try:
-                if self.protocol.upper() == 'HTTP':
-                    print 'Opening image: '+p.image_url_prepend+url
-                    streams.append(urllib.urlopen(p.image_url_prepend+url))
-                else:  # Default: local file protocol
-                    print 'Opening image:',url
-                    streams.append(open(url))
-            except Exception, e:
-                print "Failed to load image data:",e
+            if self.protocol.upper() == 'HTTP':
+                print 'Opening image: '+p.image_url_prepend+url
+                streams.append(urllib.urlopen(p.image_url_prepend+url))
+            else:  # Default: local file protocol
+                print 'Opening image:',url
+                streams.append(open(url))
                 
         for stream in streams:
             data.append(stream.read())
