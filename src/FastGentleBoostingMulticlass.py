@@ -25,9 +25,9 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
     ncols = shape(values)[1]
     basecols = zeros((nworkers,))
     for i in range(nworkers):
-        worker_path = os.path.join(sys.path[0], __import__('FastGentleBoostingWorkerMulticlass', globals()).__file__)
         if 'Contents/MacOS' in sys.executable:
             worker_path = [sys.executable, "FastGentleBoostingWorkerMulticlass.py"]
+        worker_path = os.path.join(sys.path[0], __import__('FastGentleBoostingWorkerMulticlass', globals()).__file__)
         if worker_path[-3:] == 'pyc':
             worker_path = worker_path[:-1]
         if os.name == 'nt':   # Windows
