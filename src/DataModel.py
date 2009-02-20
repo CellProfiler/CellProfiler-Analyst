@@ -129,9 +129,12 @@ class DataModel(Singleton):
         return self.data[imKey]
     
     
-    def GetImageKeysAndObjectCounts(self):
+    def GetImageKeysAndObjectCounts(self, filter=None):
         ''' Returns pairs of imageKeys and object counts. '''
-        return self.data.items()
+        if not filter:
+            return self.data.items()
+        else:
+            return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter)]
     
     
     def GetGroupColumnNames(self, group):

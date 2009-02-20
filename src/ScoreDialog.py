@@ -37,11 +37,14 @@ class ScoreDialog(wx.Dialog):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(vbox, 1, wx.EXPAND | wx.ALL, 10)
         self.SetSizer(hbox)
+        self.Centre()
+
 
     @property
     def group(self):
         """Return the key of the selected group."""
         return self.groups[self.groups_lb.GetSelections()[0]][0]
+
 
     @property
     def filter(self):

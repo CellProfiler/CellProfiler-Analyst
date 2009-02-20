@@ -49,6 +49,7 @@ class ClassifierGUI(wx.Frame):
         self.brightness = 1.0
         self.scale = 1.0
         self.defaultTSFileName = None
+        self.lastScoringFilter = None
         
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
@@ -158,6 +159,7 @@ class ClassifierGUI(wx.Frame):
         self.outerSizer.Add(self.splitter, proportion=1, flag=wx.EXPAND)
         self.SetSizer(self.outerSizer)
         
+        self.Centre()
         self.MapChannels(p.image_channel_colors[:])
         self.BindMouseOverHelpText()
 
@@ -653,7 +655,7 @@ class ClassifierGUI(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:            
             group = dlg.group
             filter = dlg.filter
-            print "Filter:", filter
+            print type(filter)
             dlg.Destroy()
         else:
             dlg.Destroy()
@@ -664,15 +666,25 @@ class ClassifierGUI(wx.Frame):
                 
         nClasses = len(self.classBins)
         
-        # Check if hit counts have already been calculated (since last
-        # training).  If not, classify all objects into phenotype
-        # classes and count phenotype-hits per-image.
-        if self.keysAndCounts == None:
-            self.SetStatusText('Calculating %s counts for each class...' % p.object_name[0])
-            self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners, self.trainingSet.colnames, filter=filter)
-
-            # Add in images with zero object count
-            for imKey, obCount in dm.GetImageKeysAndObjectCounts():
+        # If hit counts havn't been calculated since last training or if the
+        # user is filtering the data differently then classify all objects
+        # into phenotype classes and count phenotype-hits per-image.
+        if not self.keysAndCounts or filter!=self.lastScoringFilter:
+            self.lastScoringFilter = filter
+            self.SetStatusText('Calculating %s counts for each class...'
+                               %(p.object_name[0]))
+            self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners,
+                                                             self.trainingSet.colnames,
+                                                             filter=filter)
+            # Make sure HitsAndCounts returned something
+            if not self.keysAndCounts:
+                errdlg = wx.MessageDialog(self, 'No images are in filter "%s". Please check the filter definition in your properties file.'%(filter),
+                                          "Empty Filter", wx.OK|wx.ICON_EXCLAMATION)
+                if errdlg.ShowModal() == wx.ID_OK:
+                    return
+                
+            # Add in images with zero object count that HitsAndCounts missed
+            for imKey, obCount in dm.GetImageKeysAndObjectCounts(filter):
                 if obCount == 0:
                     self.keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
                 
@@ -738,10 +750,6 @@ class ClassifierGUI(wx.Frame):
         
         t5 = time()
         print 'time to compute enrichment scores:',t5-t4
-        
-        
-        # TODO: Calculate Z' factors from enrichment scores of positive and negative controls
-#        zprimes = self.CalculateZPrimes(posScores, negScores)
 
                 
         # Create column labels list

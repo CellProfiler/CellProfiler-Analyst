@@ -369,7 +369,9 @@ class DBConnect(Singleton):
 
 
     def GetGroupMaps(self):
-        '''Build dictionary mapping group names and image keys to group keys'''
+        '''
+        Build dictionary mapping group names and image keys to group keys.
+        '''
         groupColNames = {}
         groupMaps = {}
         key_size = p.table_id and 2 or 1
@@ -388,7 +390,7 @@ class DBConnect(Singleton):
         
     
     def GetFilteredImages(self, filter):
-        '''
+        ''' 
         Returns a list of imKeys from the given filter.
         '''
         try:
