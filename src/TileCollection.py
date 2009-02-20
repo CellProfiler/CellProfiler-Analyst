@@ -21,7 +21,7 @@ class TileCollection(Singleton):
         self.tileData  = WeakValueDictionary()
         self.loadq     = []
         self.cv        = threading.Condition()
-        self.priority2 = 0
+        self.group_priority = 0
         # create a gray placeholder for unloaded images
         self.imagePlaceholder = List([numpy.zeros((int(p.image_tile_size),
                                               int(p.image_tile_size)))+0.1
@@ -42,16 +42,16 @@ class TileCollection(Singleton):
             of the obKeys that were passed in.
         '''
         self.loader.notify_window = notify_window
-        self.priority2 -= 1
+        self.group_priority -= 1
         tiles = []
         self.cv.acquire()
-        for pri3, obKey in enumerate(obKeys):
+        for order, obKey in enumerate(obKeys):
             td = self.tileData.get(obKey, None)
             if td:
                 tiles += [td]
             else:
-                heappush(self.loadq, ((priority, self.priority2, pri3), obKey))
-                self.priority2 += 1
+                heappush(self.loadq, ((priority, self.group_priority, order), obKey))
+                self.group_priority += 1
                 placeholder = List(self.imagePlaceholder)
                 self.tileData[obKey] = placeholder
                 tiles += [placeholder]

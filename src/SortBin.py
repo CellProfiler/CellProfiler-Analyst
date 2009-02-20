@@ -39,7 +39,7 @@ class SortBin(wx.ScrolledWindow):
         self.classifier  = classifier
         self.trained     = False
         self.empty       = True
-        self.TC          = None          # tile collection
+        self.tile_collection          = None          # tile collection
         if chMap:
             self.chMap = chMap
         else:
@@ -127,32 +127,22 @@ class SortBin(wx.ScrolledWindow):
     
     
     def AddObject(self, obKey, chMap, priority=1, pos='first'):
-        if self.TC == None:
-            self.TC = TileCollection.getInstance()
-        imgs = self.TC.GetTileData(obKey, self.classifier, priority=priority)
-        newTile = ImageTile(self, obKey, imgs, chMap, False, scale=self.classifier.scale, 
-                            brightness=self.classifier.brightness)
-        self.tiles.append(newTile)
-        if pos == 'first':
-            self.sizer.Insert(0, newTile, 0, wx.ALL|wx.EXPAND, 1 )
-        else:
-            self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
-        self.SetVirtualSize(self.sizer.CalcMin())
-        self.UpdateQuantity()
-        return newTile
+        self.AddObjects([obKey], chMap, priority, pos)
                  
                         
     def AddObjects(self, obKeys, chMap, priority=1, pos='first'):
-        if self.TC == None:
-            self.TC = TileCollection.getInstance()
-        imgSet = self.TC.GetTiles(obKeys, self.classifier, priority=priority)
-        for obKey, imgs in zip(obKeys, imgSet):
-            newTile = ImageTile(self, obKey, imgs, chMap, False, scale=self.classifier.scale, 
+        if self.tile_collection == None:
+            self.tile_collection = TileCollection.getInstance()
+        imgSet = self.tile_collection.GetTiles(obKeys, self.classifier, priority)
+        for i, obKey, imgs in zip(range(len(obKeys)), obKeys, imgSet):
+            newTile = ImageTile(self, obKey, imgs, chMap, False,
+                                scale=self.classifier.scale, 
                                 brightness=self.classifier.brightness)
-            self.tiles.append(newTile)
             if pos == 'first':
-                self.sizer.Insert(0, newTile, 0, wx.ALL|wx.EXPAND, 1 )
+                self.tiles.insert(i, newTile)
+                self.sizer.Insert(i, newTile, 0, wx.ALL|wx.EXPAND, 1 )
             else:
+                self.tiles.append(newTile)
                 self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
         self.SetVirtualSize(self.sizer.CalcMin())
         self.UpdateQuantity()
@@ -195,9 +185,8 @@ class SortBin(wx.ScrolledWindow):
         # TODO: stop drops from happening on the same board they originated on 
         obKeys = cPickle.loads(obKeys)
         self.DeselectAll()
-        for obKey in obKeys:
-            tile = self.AddObject(obKey, self.classifier.chMap)
-            tile.Select()
+        tile = self.AddObjects(obKeys, self.classifier.chMap)
+        [tile.Select() for tile in self.tiles if tile.obKey in obKeys]
         self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
         
         

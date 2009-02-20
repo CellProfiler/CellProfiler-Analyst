@@ -435,9 +435,7 @@ class ClassifierGUI(wx.Frame):
 
         self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
         
-        # Toggle the fetch button text and give the user feedback
-#        self.fetchBtn.SetLabel('Stop')
-#        self.SetStatusText(statusMsg)
+        self.SetStatusText(statusMsg)
     
 
     def OnTileUpdated(self, evt):
