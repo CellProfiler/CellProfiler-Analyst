@@ -29,18 +29,21 @@ class SortBin(wx.ScrolledWindow):
     SortBins contain collections of objects as small image tiles
     that can be dragged to other SortBins for classification.
     '''
-    def __init__(self, parent, chMap=None, label='', classifier=None):
+    def __init__(self, parent, chMap=None, label='', classifier=None, parentSizer=None):
         wx.ScrolledWindow.__init__(self, parent)
         self.SetDropTarget(SortBinDropTarget(self))
         
-        self.label = label
-        self.tiles = []
+        self.label       = label
+        self.parentSizer = parentSizer
+        self.tiles       = []
+        self.classifier  = classifier
+        self.trained     = False
+        self.empty       = True
+        self.TC          = None          # tile collection
         if chMap:
             self.chMap = chMap
         else:
             self.chMap = p.image_channel_colors
-        self.classifier = classifier
-        self.TC = None
         
         self.SetBackgroundColour('#000000')
         self.sizer = ImageTileSizer()
@@ -53,8 +56,10 @@ class SortBin(wx.ScrolledWindow):
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
-        self.Bind(wx.EVT_SET_FOCUS, self.OnFocus)
-        
+        # stop focus events from propagating to the evil
+        # wx.ScrollWindow class which otherwise causes scroll jumping.
+        self.Bind(wx.EVT_SET_FOCUS, (lambda(evt):None))
+    
         self.CreatePopupMenu()
         
     
@@ -66,9 +71,9 @@ class SortBin(wx.ScrolledWindow):
         popupMenuItems = ['View full images of selected',
                           'Select all - [ctrl+a]',
                           'Deselect all - [ctrl+d]',
-                          'Remove selected - [Delete]',
-                          'Rename class',
-                          'Delete bin']
+                          'Remove selected - [Delete]']
+        if self.label != 'unclassified':
+            popupMenuItems += ['Rename class', 'Delete bin']
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
         for i, item in enumerate(popupMenuItems):
@@ -81,7 +86,7 @@ class SortBin(wx.ScrolledWindow):
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
         if evt.GetKeyCode() in [wx.WXK_DELETE, wx.WXK_BACK]:        # delete
-            self.DestroySelectedTiles()
+            self.RemoveSelectedTiles()
             self.SetVirtualSize(self.sizer.CalcMin())
         elif evt.ControlDown() or evt.CmdDown():
             if evt.GetKeyCode() == ord('A'):
@@ -114,7 +119,7 @@ class SortBin(wx.ScrolledWindow):
         elif choice == 2:
             self.DeselectAll()
         elif choice == 3:
-            self.DestroySelectedTiles()
+            self.RemoveSelectedTiles()
         elif choice == 4:
             self.classifier.RenameClass(self.label)
         elif choice == 5:
@@ -133,6 +138,7 @@ class SortBin(wx.ScrolledWindow):
         else:
             self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
         self.SetVirtualSize(self.sizer.CalcMin())
+        self.UpdateQuantity()
         return newTile
                  
                         
@@ -149,7 +155,7 @@ class SortBin(wx.ScrolledWindow):
             else:
                 self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
         self.SetVirtualSize(self.sizer.CalcMin())
-        self.classifier.UpdateBinLabels()
+        self.UpdateQuantity()
 
     
     def RemoveKey(self, obKey):
@@ -158,32 +164,35 @@ class SortBin(wx.ScrolledWindow):
             if t.obKey == obKey:
                 self.tiles.remove(t)
                 self.sizer.Remove(t)
+                t.Destroy()
         self.SetVirtualSize(self.sizer.CalcMin())
+        self.UpdateQuantity()
 
 
-    def DestroySelectedTiles(self):
+    def RemoveSelectedTiles(self):
         for obKey, tile in zip(self.SelectedKeys(), self.Selection()):
-#            self.classifier.tiles.pop(obKey)
             self.tiles.remove(tile)
             self.sizer.Remove(tile)
             tile.Destroy()
         self.Refresh()
         self.Layout()
-        self.classifier.UpdateBinLabels()
+        self.UpdateQuantity()
     
     
     def Clear(self):
         self.SelectAll()
-        self.DestroySelectedTiles()         
-        self.Refresh()
-        self.Layout()
+        self.RemoveSelectedTiles()
+        self.UpdateQuantity()
+        
 
     def find_selected_tile_for_key(self, obkey):
         for t in self.tiles:
             if t.obKey == obkey and t.selected:
                 return t
+            
         
     def ReceiveDrop(self, obKeys):
+        # TODO: stop drops from happening on the same board they originated on 
         obKeys = cPickle.loads(obKeys)
         self.DeselectAll()
         for obKey in obKeys:
@@ -234,12 +243,6 @@ class SortBin(wx.ScrolledWindow):
         ''' Deselects all tiles on this bin. '''
         for tile in self.tiles:
             tile.Deselect()
-            
-
-    def OnFocus(self, evt):
-        # stop focus events from propagating to the evil
-        # wx.ScrollWindow class which otherwise causes scroll jumping.
-        pass
 
 
     def OnLeftDown(self, evt):
@@ -254,3 +257,20 @@ class SortBin(wx.ScrolledWindow):
         for t in self.tiles:
             if t.obKey == obKey:
                 t.UpdateBitmap()
+                
+                
+    def UpdateQuantity(self):
+        '''
+        If a bin contains no objects then it can't be used for training,
+          so we inform ClassifierGUI whenever this state changes.
+        If the bin is in a StaticBoxSizer (all of them are) we update the
+          StaticBox label to contain the current object count.
+        '''
+        empty = len(self.tiles) == 0
+        if (empty and not self.empty) or (not empty and self.empty): 
+            self.empty = empty
+            self.classifier.CheckTrainable()
+        try:
+            self.parentSizer.GetStaticBox().SetLabel('%s (%d)'%(self.label,len(self.tiles)))
+        except:
+            pass

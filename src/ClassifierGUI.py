@@ -23,14 +23,6 @@ p = Properties.getInstance()
 db = DBConnect.getInstance()
 
 
-class SortClass(object):
-    def __init__(self, label, bin, sizer, trained=False):
-        self.label = label
-        self.bin = bin
-        self.sizer = sizer
-        self.trained = trained
-
-
 class ClassifierGUI(wx.Frame):
 
     """GUI Interface and functionality for the Classifier."""
@@ -49,7 +41,7 @@ class ClassifierGUI(wx.Frame):
         self.worker = None
         self.weaklearners = None
         self.trainingSet = None
-        self.classes = []
+        self.classBins = []
         self.binsCreated = 0
         self.chMap = p.image_channel_colors[:]
         self.toggleChMap = p.image_channel_colors[:] # this is used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
@@ -143,9 +135,11 @@ class ClassifierGUI(wx.Frame):
         self.splitter.SetSashGravity(0.5)
         # top half
         self.topSortPanel = wx.Panel(self.splitter)
-        self.topSortSizer = wx.StaticBoxSizer(wx.StaticBox(self.topSortPanel, label='unclassified '+p.object_name[1]))
+        self.topSortSizer = wx.StaticBoxSizer(wx.StaticBox(self.topSortPanel, 
+                                                           label='unclassified '+p.object_name[1]))
         self.topSortPanel.SetSizer(self.topSortSizer)
-        self.unclassifiedBin = SortBin(parent=self.topSortPanel, classifier=self, label='unclassified')
+        self.unclassifiedBin = SortBin(parent=self.topSortPanel, classifier=self, 
+                                       label='unclassified', parentSizer=self.topSortSizer)
         self.topSortSizer.Add( self.unclassifiedBin, proportion=1, flag=wx.EXPAND )
         # bottom half
         self.bottomSortPanel = wx.Panel(self.splitter)
@@ -176,7 +170,6 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnFindRules, self.findRulesBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreAll, self.scoreAllBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
-        self.Bind(wx.EVT_MOUSE_CAPTURE_LOST, self.CancelCapture)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
@@ -185,12 +178,10 @@ class ClassifierGUI(wx.Frame):
             self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
             self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
         self.splitter.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGING, self.OnDragSash)
-        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)    
         self.Bind(wx.EVT_CHAR, self.OnKey)
-#        EVT_IMAGE_RESULT(self, self.OnImageResult)
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
         
         
@@ -281,49 +272,47 @@ class ClassifierGUI(wx.Frame):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
         This sizer is then added to the bottomSortSizer. '''
         sizer = wx.StaticBoxSizer(wx.StaticBox(self.bottomSortPanel, label=label), wx.VERTICAL)
-        bin = SortBin(parent=self.bottomSortPanel, label=label, classifier=self)             # NOTE: bin must be created after sizer or drops events will occur on the sizer
+        # NOTE: bin must be created after sizer or drop events will occur on the sizer
+        bin = SortBin(parent=self.bottomSortPanel, label=label, classifier=self, parentSizer=sizer)
         sizer.Add(bin, proportion=1, flag=wx.EXPAND)
         self.bottomSortSizer.Add(sizer, proportion=1, flag=wx.EXPAND)
-        self.classes.append( SortClass(label,bin,sizer) )
+        self.classBins.append(bin)
         self.bottomSortPanel.Layout()
         self.binsCreated += 1
         
     
     def RemoveSortClass(self, label):
-        for cl in self.classes:
-            if cl.label == label:
-                # Remove the bin
-                self.bottomSortSizer.Remove(cl.sizer)
-                #cl.bin.Clear()
-                cl.bin.Destroy()
-                self.bottomSortPanel.Layout()
+        for bin in self.classBins:
+            if bin.label == label:
                 # Remove the label from the class dropdown menu
-                self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item!=cl.label])
+                self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item!=bin.label])
                 self.obClassChoice.Select(0)
-                # Remove the class from the list of classes
-                self.classes.remove(cl)
+                # Remove the bin
+                self.bottomSortSizer.Remove(bin.parentSizer)
+                bin.Clear()   # necessary?
+                bin.Destroy()
+                self.bottomSortPanel.Layout()
+                self.classBins.remove(bin)
                 break
         self.weaklearners = None
         self.rulesTxt.SetValue('')
-        for cl in self.classes:
-            cl.trained = False
+        for bin in self.classBins:
+            bin.trained = False
         self.UpdateClassChoices()
         
         
     def RemoveAllSortClasses(self):
-        # Note: can't use "for cl in self.classes:"
-        for label in [cl.label for cl in self.classes]:
+        # Note: can't use "for bin in self.classBins:"
+        for label in [bin.label for bin in self.classBins]:
             self.RemoveSortClass(label)
             
     
     def RenameClass(self, label):
         dlg = wx.TextEntryDialog(self, 'New class name:','Rename class')
         dlg.SetValue(label)
-        print 'old',label
         if dlg.ShowModal() == wx.ID_OK:
             newLabel = dlg.GetValue()
-            print 'new',newLabel
-            if newLabel != label and newLabel in [cl.label for cl in self.classes]:
+            if newLabel != label and newLabel in [bin.label for bin in self.classBins]:
                 errdlg = wx.MessageDialog(self, 'There is already a class with that name.', "Can't Name Class", wx.OK|wx.ICON_EXCLAMATION)
                 if errdlg.ShowModal() == wx.ID_OK:
                     self.RenameClass(label)
@@ -333,13 +322,12 @@ class ClassifierGUI(wx.Frame):
                 if errdlg.ShowModal() == wx.ID_OK:
                     self.RenameClass(label)
                     return
-            for cl in self.classes:
-                if cl.label == label:
-                    cl.label = newLabel
-                    cl.bin.label = newLabel
+            for bin in self.classBins:
+                if bin.label == label:
+                    bin.label = newLabel
+                    bin.UpdateQuantity()
                     break
             dlg.Destroy()
-        self.UpdateBinLabels()
         
         updatedList = self.obClassChoice.GetItems()
         sel = self.obClassChoice.GetSelection()
@@ -348,31 +336,10 @@ class ClassifierGUI(wx.Frame):
                 updatedList[i] = newLabel
         self.obClassChoice.SetItems(updatedList)
         self.obClassChoice.SetSelection(sel)
-        
     
 
     def all_sort_bins(self):
-        return [self.unclassifiedBin] + [c.bin for c in self.classes]
-
-
-    def OnLeftUp(self, evt):
-        pass
-
-
-    def CancelCapture(self, evt):
-        DragObject.getInstance().Empty()
-
-        
-    def UpdateBinLabels(self):
-        self.findRulesBtn.Disable()
-        ts = False
-        self.topSortSizer.GetStaticBox().SetLabel( 'unclassified '+p.object_name[1]+' ('+str(len(self.unclassifiedBin.tiles))+')' )
-        for cl in self.classes:
-            cl.sizer.GetStaticBox().SetLabel( cl.label+' ('+str(len(cl.bin.tiles))+')')
-            if len(cl.bin.tiles) > 0:
-                if ts:
-                    self.findRulesBtn.Enable()
-                ts = True
+        return [self.unclassifiedBin] + self.classBins
                 
     
     def UpdateClassChoices(self):
@@ -381,11 +348,19 @@ class ClassifierGUI(wx.Frame):
             self.obClassChoice.SetSelection(0)
             return
         sel = self.obClassChoice.GetSelection()
-        selectableClasses = ['random']+[cl.label for cl in self.classes if cl.trained]
+        selectableClasses = ['random']+[bin.label for bin in self.classBins if bin.trained]
         self.obClassChoice.SetItems(selectableClasses)
         if len(selectableClasses) < sel:
             sel=0
         self.obClassChoice.SetSelection(sel)
+        
+        
+    def CheckTrainable(self):
+        ''' '''
+        self.findRulesBtn.Disable()
+        for bin in self.classBins:
+            if not bin.empty:
+                self.findRulesBtn.Enable()
 
     
     def OnFetch(self, evt):
@@ -458,8 +433,7 @@ class ClassifierGUI(wx.Frame):
 
             statusMsg += loopMsg
 
-#        for obKey in obKeys:
-        self.unclassifiedBin.AddObjects(obKeys, self.chMap, pos='last')
+        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
         
         # Toggle the fetch button text and give the user feedback
 #        self.fetchBtn.SetLabel('Stop')
@@ -468,8 +442,8 @@ class ClassifierGUI(wx.Frame):
 
     def OnTileUpdated(self, evt):
         self.unclassifiedBin.UpdateTile(evt.data)
-        for cl in self.classes:
-            cl.bin.UpdateTile(evt.data)
+        for bin in self.classBins:
+            bin.UpdateTile(evt.data)
         
         
     def OnLoadTrainingSet(self, evt):
@@ -492,11 +466,10 @@ class ClassifierGUI(wx.Frame):
             for label in self.trainingSet.labels:
                 self.AddSortClass(label)
             for (label, key) in self.trainingSet.entries:
-                for cl in self.classes:
-                    if cl.label == label:
-                        cl.bin.AddObject(key, self.chMap, priority=2)
+                for bin in self.classBins:
+                    if bin.label == label:
+                        bin.AddObject(key, self.chMap, priority=2)
                         break
-        self.UpdateBinLabels()
         self.SetStatusText('Training set loaded.')
         
     
@@ -517,7 +490,7 @@ class ClassifierGUI(wx.Frame):
     def SaveTrainingSetAs(self, filename):
         classDict = {}
         self.trainingSet = TrainingSet(p)
-        self.trainingSet.Create([cl.label for cl in self.classes], [cl.bin.GetObjectKeys() for cl in self.classes])
+        self.trainingSet.Create([bin.label for bin in self.classBins], [bin.GetObjectKeys() for bin in self.classBins])
         self.trainingSet.Save(filename)
         
     
@@ -528,6 +501,7 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnMapChannels(self, evt):
+        ''' Responds to selection from the color mapping menus. '''
         # TODO: For some reason, typing Command+Q on an ImageViewer
         #    triggers wx.EVT_MENU here, which throws an exception
         try:
@@ -541,11 +515,11 @@ class ClassifierGUI(wx.Frame):
 
         
     def MapChannels(self, chMap):
+        ''' Tell all bins to apply a new channel-color mapping to their tiles. '''
         # TODO: Need to update color menu selections
         self.chMap = chMap
-        self.unclassifiedBin.MapChannels(chMap)
-        for cl in self.classes:
-            cl.bin.MapChannels(chMap)
+        for bin in self.all_sort_bins():
+            bin.MapChannels(chMap)
 
 
     def ValidateIntegerField(self, evt):
@@ -594,8 +568,8 @@ class ClassifierGUI(wx.Frame):
         self.keysAndCounts = None    # Must erase current keysAndCounts so they will be recalculated from new rules
         
         self.trainingSet = TrainingSet(p)
-        self.trainingSet.Create(labels = [cl.label for cl in self.classes],
-                                keyLists = [cl.bin.GetObjectKeys() for cl in self.classes])
+        self.trainingSet.Create(labels = [bin.label for bin in self.classBins],
+                                keyLists = [bin.GetObjectKeys() for bin in self.classBins])
         output = StringIO()
         self.SetStatusText('Training classifier with '+str(nRules)+' rules...')
         self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
@@ -606,11 +580,11 @@ class ClassifierGUI(wx.Frame):
         self.scoreAllBtn.Enable()
         self.scoreImageBtn.Enable()
 
-        for cl in self.classes:
-            if len(cl.bin.tiles) > 0:
-                cl.trained = True
+        for bin in self.classBins:
+            if not bin.empty:
+                bin.trained = True
             else:
-                cl.trained = False
+                bin.trained = False
         self.UpdateClassChoices()
         
         
@@ -644,7 +618,7 @@ class ClassifierGUI(wx.Frame):
            
         # 2) Get the phenotype to highlight:
         dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', 
-                                    [cl.label for cl in self.classes], wx.CHOICEDLG_STYLE)
+                                    [bin.label for bin in self.classBins], wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() == wx.ID_OK:            
             cls   = str(dlg.GetStringSelection())  # class name to print in feedback
             clNum = dlg.GetSelection() + 1         # class index to pass to the classifier
@@ -686,7 +660,7 @@ class ClassifierGUI(wx.Frame):
         from time import time
         t1 = time()
                 
-        nClasses = len(self.classes)
+        nClasses = len(self.classBins)
         
         # Check if hit counts have already been calculated (since last training)
         # If not: Classify all objects into phenotype classes and count phenotype-hits per-image
@@ -727,9 +701,7 @@ class ClassifierGUI(wx.Frame):
         print 'time to fit beta binomial:',t4-t3
         
         # Flag: positive/negative two-class experiment
-        two_classes = len(self.classes) == 2 and \
-                      self.classes[0].label.lower() == 'positive' and \
-                      self.classes[1].label.lower() == 'negative'
+        two_classes = nClasses == 2
             
         # Construct matrix of table data
         self.SetStatusText('Computing enrichment scores for each group...')
@@ -783,16 +755,16 @@ class ClassifierGUI(wx.Frame):
             
         for i in xrange(nClasses):
             if p.area_scoring_column is None:
-                labels += ['Counts\n'+self.classes[i].label]
+                labels += ['Counts\n'+self.classBins[i].label]
             else:
-                labels += ['Area Sums\n'+self.classes[i].label]
+                labels += ['Area Sums\n'+self.classBins[i].label]
         for i in xrange(nClasses):
-            labels += ['p(Enriched)\n'+self.classes[i].label]
+            labels += ['p(Enriched)\n'+self.classBins[i].label]
         if two_classes:
-            labels += ['Enriched Score\n'+self.classes[0].label]
+            labels += ['Enriched Score\n'+self.classBins[0].label]
         else:
             for i in xrange(nClasses):
-                labels += ['Enriched Score\n'+self.classes[i].label]
+                labels += ['Enriched Score\n'+self.classBins[i].label]
         
         grid = DataGrid(tableData, labels, grouping=group,
                         groupIDIndices=groupIDIndices,
@@ -816,7 +788,6 @@ class ClassifierGUI(wx.Frame):
             exit()
             
             
-            
     def OnSelectFilter(self, evt):
         # Select from a specific image
         if evt.Selection == 1:
@@ -833,22 +804,16 @@ class ClassifierGUI(wx.Frame):
         
         
     def SetBrightness(self, brightness):
+        ''' Updates the global image brightness across all tiles. '''
         self.brightness = brightness
-        [t.SetBrightness(brightness) for t in self.unclassifiedBin.tiles] 
-        [t.SetBrightness(brightness) for cl in self.classes for t in cl.bin.tiles]
+        [t.SetBrightness(brightness) for bin in self.all_sort_bins() for t in bin.tiles]
         
 
     def SetScale(self, scale):
+        ''' Updates the global image scaling across all tiles. '''
         self.scale = scale
-        panels = ([t for t in self.unclassifiedBin.tiles] + 
-                  [t for cl in self.classes for t in cl.bin.tiles])
-        
-        for p in panels:
-            p.SetScale(scale)
-        # Layout the bins
-        self.unclassifiedBin.Layout()
-        for cl in self.classes:
-            cl.bin.Layout()
+        [t.SetScale(scale) for bin in self.all_sort_bins() for t in bin.tiles]
+        [bin.Layout() for bin in self.all_sort_bins()]
         
 
     def OnClose(self, evt):

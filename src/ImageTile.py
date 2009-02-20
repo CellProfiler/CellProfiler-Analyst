@@ -85,7 +85,7 @@ class ImageTile(ImagePanel):
         elif choice == 2:
             self.bin.DeselectAll()
         elif choice == 3:
-            self.bin.DestroySelectedTiles()
+            self.bin.RemoveSelectedTiles()
             
             
     def OnDClick(self, evt):
@@ -131,10 +131,10 @@ class ImageTile(ImagePanel):
 
             
     def OnMotion(self, evt):
-        # Give a 6 pixel radius of leeway before dragging a tile
-        # this makes selecting multiple tiles less painful
+        # Give a 4 pixel radius of leeway before dragging a tile
+        # this makes selecting multiple tiles less tedious
         if (not evt.LeftIsDown() or not self.leftPressed or 
-            ((evt.GetX()-self.mouseDownX)**2+(evt.GetY()-self.mouseDownY)**2 <= 36)):
+            ((evt.GetX()-self.mouseDownX)**2+(evt.GetY()-self.mouseDownY)**2 <= 16)):
             return
         
         self.bin.SetFocusIgnoringChildren()
@@ -157,7 +157,7 @@ class ImageTile(ImagePanel):
         source.SetData(data_object)
         result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
         if result is 0:
-            self.bin.DestroySelectedTiles()
+            self.bin.RemoveSelectedTiles()
     
     
     def OnSize(self, evt):
