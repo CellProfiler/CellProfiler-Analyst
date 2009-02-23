@@ -55,6 +55,8 @@ class TrainingSet:
         f = open(filename)
         for l in f:
             try:
+                if l.startswith('#'):
+                    continue
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
                     self.labels = l.strip().split(' ')[1:]
@@ -77,6 +79,9 @@ class TrainingSet:
     def Save(self, filename):
         f = open(filename, 'w')
         try:
+            from Properties import Properties
+            p = Properties.getInstance()
+            f.write('# Training set created while using properties: %s\n'%(p.filename))
             f.write('label '+' '.join(self.labels)+'\n')
             for label, obKey in self.entries:
                 line = label+' '+' '.join([str(int(k)) for k in obKey])+'\n'

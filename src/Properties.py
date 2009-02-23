@@ -42,6 +42,7 @@ class Properties(Singleton):
     def LoadFile(self, filename):
         ''' Loads variables in from a properties file. '''
         self.Clear()
+        self.filename = filename
         f = open(filename, 'r')
         
         lines = f.read()
@@ -96,6 +97,7 @@ class Properties(Singleton):
     def SaveFile(self, filename):
         # TODO: Save files WITH previous comments and whitespace.
         f = open(filename, 'w')
+        self.filename = filename
         for var, val in self.__dict__.items():
             if type(val)==list:
                 f.write(var+' = '+str(val)[1:-1]+'\n')
