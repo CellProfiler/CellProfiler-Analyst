@@ -17,10 +17,8 @@ class ImageReader(object):
     
     def __init__(self):
         if p.__dict__ != {}:
-            if p.image_url_prepend.startswith('http://'):
+            if p.image_url_prepend and p.image_url_prepend.startswith('http://'):
                 self.protocol = 'http'
-            elif p.image_url_prepend.startswith('smb:'):
-                self.protocol = 'smb'
             else:
                 self.protocol = 'local'
                 

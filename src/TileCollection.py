@@ -41,7 +41,6 @@ class TileCollection(Singleton):
         Returns: a list of lists of tile data (in numpy arrays) in the order
             of the obKeys that were passed in.
         '''
-        print len(self.tileData)
         self.loader.notify_window = notify_window
         self.group_priority -= 1
         tiles = []
