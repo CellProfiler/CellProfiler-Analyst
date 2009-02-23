@@ -33,13 +33,13 @@ class SortBin(wx.ScrolledWindow):
         wx.ScrolledWindow.__init__(self, parent)
         self.SetDropTarget(SortBinDropTarget(self))
         
-        self.label       = label
-        self.parentSizer = parentSizer
-        self.tiles       = []
-        self.classifier  = classifier
-        self.trained     = False
-        self.empty       = True
-        self.tile_collection          = None          # tile collection
+        self.label           = label
+        self.parentSizer     = parentSizer
+        self.tiles           = []
+        self.classifier      = classifier
+        self.trained         = False
+        self.empty           = True
+        self.tile_collection = None          # tile collection
         if chMap:
             self.chMap = chMap
         else:
@@ -150,8 +150,13 @@ class SortBin(wx.ScrolledWindow):
     
     def RemoveKey(self, obKey):
         ''' Removes the specified tile. '''
+        self.RemoveKeys([obKey])
+        
+        
+    def RemoveKeys(self, obKeys):
+        ''' Removes the specified tile. '''
         for t in self.tiles:
-            if t.obKey == obKey:
+            if t.obKey in obKeys:
                 self.tiles.remove(t)
                 self.sizer.Remove(t)
                 t.Destroy()
@@ -169,9 +174,7 @@ class SortBin(wx.ScrolledWindow):
     
     
     def Clear(self):
-        self.SelectAll()
-        self.RemoveSelectedTiles()
-        self.UpdateQuantity()
+        self.RemoveKeys(self.GetObjectKeys())
         
 
     def find_selected_tile_for_key(self, obkey):

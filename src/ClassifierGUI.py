@@ -287,15 +287,14 @@ class ClassifierGUI(wx.Frame):
     def RemoveSortClass(self, label):
         for bin in self.classBins:
             if bin.label == label:
+                self.classBins.remove(bin)
                 # Remove the label from the class dropdown menu
                 self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item!=bin.label])
                 self.obClassChoice.Select(0)
                 # Remove the bin
                 self.bottomSortSizer.Remove(bin.parentSizer)
-                bin.Clear()   # necessary?
                 bin.Destroy()
                 self.bottomSortPanel.Layout()
-                self.classBins.remove(bin)
                 break
         self.weaklearners = None
         self.rulesTxt.SetValue('')
@@ -466,11 +465,16 @@ class ClassifierGUI(wx.Frame):
             self.RemoveAllSortClasses()
             for label in self.trainingSet.labels:
                 self.AddSortClass(label)
+                
+            keysPerBin = {}
             for (label, key) in self.trainingSet.entries:
-                for bin in self.classBins:
-                    if bin.label == label:
-                        bin.AddObject(key, self.chMap, priority=2)
-                        break
+                if label in keysPerBin.keys():
+                    keysPerBin[label] += [key]
+                else:
+                    keysPerBin[label] = [key]
+            for bin in self.classBins:
+                bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                
         self.SetStatusText('Training set loaded.')
         
     
@@ -655,7 +659,6 @@ class ClassifierGUI(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:            
             group = dlg.group
             filter = dlg.filter
-            print type(filter)
             dlg.Destroy()
         else:
             dlg.Destroy()
