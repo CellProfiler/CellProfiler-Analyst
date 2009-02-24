@@ -416,12 +416,25 @@ class DBConnect(Singleton):
         Returns a list of column names for the object_table excluding 
         those specified in Properties.classifier_ignore_substrings
         '''
+        import re
         if self.classifierColNames is None:
             # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
             self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), silent=not verbose)
-            self.GetResultsAsList()          # ditch the results
-            labels = self.GetResultColumnNames()   # get the column names
-            self.classifierColNames = [i for i in labels if not any([sub.lower() in i.lower() for sub in p.classifier_ignore_substrings])]
+            self.GetResultsAsList()                # ditch the results
+            col_names = self.GetResultColumnNames()   # get the column names
+            
+            # parse out any user-defined regular expressions
+            user_exps = []
+            for sub in p.classifier_ignore_substrings:
+                match = re.search('^regexp\((.+)\)$', sub)
+                if match:
+                    user_exps += [match.groups()[0]]
+            
+            # remove cols that match any user-defined regular expressions
+            col_names = [i for i in col_names if not any([re.search(user_exp,i) for user_exp in user_exps])]
+            # remove cols that match any user specified column names
+            self.classifierColNames = [i for i in col_names if not any([sub.lower() in i.lower() for sub in p.classifier_ignore_substrings])]
+            
         return self.classifierColNames
     
     
@@ -575,10 +588,9 @@ if __name__ == "__main__":
 
     p.LoadFile('../properties/nirht_local.properties')
     dm.PopulateModel()
-    #db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     
-#    print db.GetGroupMaps()
-#    print db.GetFilteredImages('FirstTen')
+    print 'group maps:',db.GetGroupMaps()
+    print 'filter "firstten":',db.GetFilteredImages('FirstTen')
     
     # Train the classifier
     imKey = (0,1)
@@ -603,18 +615,4 @@ if __name__ == "__main__":
         hits = MulticlassSQL.FilterObjectsFromClassN(clNum, weaklearners, trainingSet.colnames, [imKey])
         
     print hits
-#        
-#    p = Properties.getInstance()
-#    p.LoadFile('../properties/nirht_test.properties')
-#    db = DBConnect.getInstance()
-##    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
-#
-#    print db.GetColnamesForClassifier()
-#    print db.GetPerImageObjectCounts()
-#    print db.GetFilteredImages('MAPs')
-#    print db.GetColumnNames('test_per_image')
-#    print db.GetColumnNames('test_per_object')
-#    print db.GetObjectNear((0,1), 30, 30 )
-#    print db.GetColumnNames('test_per_image')
-    
-    
+
