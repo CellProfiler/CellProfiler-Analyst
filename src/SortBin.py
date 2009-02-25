@@ -61,8 +61,8 @@ class SortBin(wx.ScrolledWindow):
         self.Bind(wx.EVT_SET_FOCUS, (lambda(evt):None))
     
         self.CreatePopupMenu()
-        
-    
+
+
     def __str__(self):
         return 'Bin %s with %d objects'%(self.label, len(self.sizer.GetChildren()))
     
@@ -87,7 +87,7 @@ class SortBin(wx.ScrolledWindow):
         ''' Keyboard shortcuts '''
         if evt.GetKeyCode() in [wx.WXK_DELETE, wx.WXK_BACK]:        # delete
             self.RemoveSelectedTiles()
-            self.SetVirtualSize(self.sizer.CalcMin())
+            self.UpdateSizer()
         elif evt.ControlDown() or evt.CmdDown():
             if evt.GetKeyCode() == ord('A'):
                 self.SelectAll()
@@ -144,7 +144,7 @@ class SortBin(wx.ScrolledWindow):
             else:
                 self.tiles.append(newTile)
                 self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
-        self.SetVirtualSize(self.sizer.CalcMin())
+        self.UpdateSizer()
         self.UpdateQuantity()
 
     
@@ -160,7 +160,7 @@ class SortBin(wx.ScrolledWindow):
                 self.tiles.remove(t)
                 self.sizer.Remove(t)
                 t.Destroy()
-        self.SetVirtualSize(self.sizer.CalcMin())
+        self.UpdateSizer()
         self.UpdateQuantity()
 
 
@@ -169,7 +169,7 @@ class SortBin(wx.ScrolledWindow):
             self.tiles.remove(tile)
             self.sizer.Remove(tile)
             tile.Destroy()
-        self.SetVirtualSize(self.sizer.CalcMin())
+        self.UpdateSizer()
         self.UpdateQuantity()
     
     
@@ -249,7 +249,10 @@ class SortBin(wx.ScrolledWindow):
             if t.obKey == obKey:
                 t.UpdateBitmap()
                 
-                
+    def UpdateSizer(self):
+        return self.SetVirtualSize(self.sizer.CalcMin())        
+
+
     def UpdateQuantity(self):
         '''
         If a bin contains no objects then it can't be used for training,

@@ -1,14 +1,15 @@
-import exceptions
-import sys
-import traceback
-import threading
-import string
-import numpy
-import MySQLdb
 from MySQLdb.cursors import SSCursor
-from Singleton import Singleton
 from Properties import Properties
+from Singleton import Singleton
 from sys import stderr
+import MySQLdb
+import exceptions
+import numpy
+import string
+import sys
+import threading
+import traceback
+import re
 
 verbose = True
 
@@ -415,7 +416,6 @@ class DBConnect(Singleton):
         Returns a list of column names for the object_table excluding 
         those specified in Properties.classifier_ignore_substrings
         '''
-        import re
         if self.classifierColNames is None:
             # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
             self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), silent=not verbose)

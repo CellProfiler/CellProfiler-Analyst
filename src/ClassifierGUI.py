@@ -829,7 +829,7 @@ class ClassifierGUI(wx.Frame):
         ''' Updates the global image scaling across all tiles. '''
         self.scale = scale
         [t.SetScale(scale) for bin in self.all_sort_bins() for t in bin.tiles]
-        [bin.Layout() for bin in self.all_sort_bins()]
+        [bin.UpdateSizer() for bin in self.all_sort_bins()]
         
 
     def OnClose(self, evt):
