@@ -150,6 +150,7 @@ class TestDBConnect(unittest.TestCase):
     def test_GetFilteredImages_local(self):
         self.setup_local()
         assert self.db.GetFilteredImages('FirstTen') == [(0,1),(0,2),(0,3),(0,4),(0,5),(0,6),(0,7),(0,8),(0,9),(0,10)]
+        assert self.db.GetFilteredImages('IMPOSSIBLE') == []
         
     def test_GetColumnNames_local(self):
         self.setup_local()

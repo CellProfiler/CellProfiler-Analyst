@@ -29,9 +29,9 @@ def image_key_columns(table_name=None):
     else:
         qualifier = table_name + "."
     if p.table_id:
-        return (qualifier + p.table_id, qualifier + p.image_id)
+        return (qualifier+p.table_id, qualifier+p.image_id)
     else:
-        return (qualifier + p.image_id,)
+        return (qualifier+p.image_id,)
 
 def object_key_columns():
     """Return, as a tuple, the names of the columns that make up the
@@ -144,8 +144,7 @@ class DBConnect(Singleton):
                 pass
             else:
                 return True
-            
-            
+
 #                # Try prompting the user with a wx dialog:
 #                try:
 #                    import wx
@@ -401,7 +400,7 @@ class DBConnect(Singleton):
         return self.GetResultsAsList()
     
     
-    def GetColumnNames(self, tableName):
+    def GetColumnNames(self):
         ''' 
         Returns a list of the column names for the specified table.
         '''

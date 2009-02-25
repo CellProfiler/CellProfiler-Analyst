@@ -798,7 +798,6 @@ class ClassifierGUI(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             p.LoadFile(filename)
-            db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
             dm.PopulateModel()
         else:
             print 'Classifier requires a properties file.  Exiting.'
@@ -886,7 +885,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
-        db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
         dm.PopulateModel()
     classifier = ClassifierGUI(None)
     classifier.Show(True)
