@@ -10,6 +10,63 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
+colors = [(255,240,0), (242,38,46), (0,123,194), (32,148,61),
+          (255,198,0), (196,47,148), (0,180,241), (113,161,51),
+          (250,156,25), (155,53,150), (0,118,120), (146,199,67),
+          (245,112,32), (111,57,152), (0,115,61), (200,220,33)]
+
+class ImageViewerPanel(ImagePanel):
+    '''
+    Create a ImagePanel subclass that does selection.
+    '''
+    def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0):
+        super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness)
+        self.selectedPoints = []
+        self.classes        = {}  # {'Positive':[(x,y),..], 'Negative': [(x2,y2),..],..}
+        self.showClasses    = True
+    
+    def OnPaint(self, evt):
+        dc = super(ImageViewerPanel, self).OnPaint(evt)
+
+        if self.showClasses:
+            for cl, color in zip(self.classes.values(), colors[:len(self.classes)]):
+                dc.BeginDrawing()
+                for (x,y) in cl:
+                    x = x * self.scale - 2
+                    y = y * self.scale - 2
+                    w = h = 4
+                    dc.SetPen(wx.Pen(color,1))
+                    dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
+                    dc.DrawRectangle(x,y,w,h)
+                    dc.DrawRectangle(x-1,y-1,6,6)
+                dc.EndDrawing()
+            
+        # Draw small white boxes at each selected point
+        for (x,y) in self.selectedPoints:
+            x = x * self.scale - 3
+            y = y * self.scale - 3
+            w = h = 6
+            dc.BeginDrawing()
+            dc.SetPen(wx.Pen("WHITE",1))
+            dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
+            dc.DrawRectangle(x,y,w,h)
+            dc.EndDrawing()
+                        
+    def SelectPoints(self, coordList):
+        self.selectedPoints = coordList
+        self.Refresh()
+        
+    def SetClassPoints(self, classes):
+        self.classes = classes
+        
+    def ShowClasses(self):
+        self.showClasses = True
+        
+    def HideClasses(self):
+        self.showClasses = False
+
+
+
 class ImageViewer(wx.Frame):
     '''
     A frame that takes a list of numpy arrays representing image channels 
@@ -38,7 +95,7 @@ class ImageViewer(wx.Frame):
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)
-        self.imagePanel  = ImagePanel(imgs, chMap, self.sw, brightness=brightness, scale=scale)
+        self.imagePanel  = ImageViewerPanel(imgs, chMap, self.sw, brightness=brightness, scale=scale)
         self.controls    = ImageControlPanel(self, self.imagePanel, brightness=brightness, scale=scale)
         self.selection   = []
         self.maxSize     = tuple([xy-50 for xy in wx.DisplaySize()])

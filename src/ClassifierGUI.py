@@ -621,34 +621,40 @@ class ClassifierGUI(wx.Frame):
         else:
             imKey = (imgNum,)
            
-        # 2) Get the phenotype to highlight:
-        dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', 
-                                    [bin.label for bin in self.classBins], wx.CHOICEDLG_STYLE)
-        if dlg.ShowModal() == wx.ID_OK:            
-            cls   = str(dlg.GetStringSelection())  # class name to print in feedback
-            clNum = dlg.GetSelection() + 1         # class index to pass to the classifier
-            dlg.Destroy()
-        else:
-            dlg.Destroy()
-            return
+#        # 2) Get the phenotype to highlight:
+#        dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', 
+#                                    [bin.label for bin in self.classBins], wx.CHOICEDLG_STYLE)
+#        if dlg.ShowModal() == wx.ID_OK:            
+#            cls   = str(dlg.GetStringSelection())  # class name to print in feedback
+#            clNum = dlg.GetSelection() + 1         # class index to pass to the classifier
+#            dlg.Destroy()
+#        else:
+#            dlg.Destroy()
+#            return
     
         # 3) Find the hits
         try:
             obKeys = dm.GetObjectsFromImage(imKey)
         except:
             self.SetStatusText('No such image: %s'%(imKey))
-        hits = []
+            return
+        classHits = {}
         if obKeys:
-            hits = MulticlassSQL.FilterObjectsFromClassN(clNum, self.weaklearners, self.trainingSet.colnames, [imKey])
-        self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(hits), len(obKeys), p.object_name[1], cls, imKey))
+            for clNum, bin in enumerate(self.classBins):
+                classHits[clNum] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, self.trainingSet.colnames, [imKey])
+                self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(classHits[clNum]), len(obKeys), p.object_name[1], bin.label, imKey))
+                print '%s of %s %s classified as %s in image %s'%(len(classHits[clNum]), len(obKeys), p.object_name[1], bin.label, imKey)
         
         # 4) Get object coordinates in image and display
-        coordList = []
-        for obKey in hits:
-            coordList += [db.GetObjectCoords(obKey)]
+        classCoords = {}
+        for className, obKeys in classHits.items():
+            coords = []
+            for obKey in obKeys:
+                coords += [db.GetObjectCoords(obKey)]
+            classCoords[className] = coords
         imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale)
-        imViewer.imagePanel.SelectPoints(coordList)
+        imViewer.imagePanel.SetClassPoints(classCoords)
         
         
         

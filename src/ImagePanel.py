@@ -4,7 +4,6 @@ from Properties import Properties
 
 p = Properties.getInstance()
 
-
 class ImagePanel(wx.Panel):
     '''
     ImagePanels are wxPanels that display a wxBitmap and store multiple
@@ -21,10 +20,9 @@ class ImagePanel(wx.Panel):
         
         wx.Panel.__init__(self, parent, wx.NewId(), size=self.bitmap.Size)
         
-        self.scale          = scale
-        self.brightness     = brightness
-        self.selected       = False
-        self.selectedPoints = []
+        self.scale       = scale
+        self.brightness  = brightness
+        self.selected    = False
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         
@@ -34,18 +32,6 @@ class ImagePanel(wx.Panel):
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.DrawBitmap(self.bitmap, 0, 0)
-        
-        # Draw small boxes at each selected point
-        for (x,y) in self.selectedPoints:
-            x = x * self.scale - 2
-            y = y * self.scale - 2
-            w = h = 4
-            dc.BeginDrawing()
-            dc.SetPen(wx.Pen("WHITE",1))
-            dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
-            dc.DrawRectangle(x,y,w,h)
-            dc.EndDrawing()
-        
         # Outline the whole image
         if self.selected:
             dc.BeginDrawing()
@@ -53,6 +39,7 @@ class ImagePanel(wx.Panel):
             dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
             dc.DrawRectangle(0,0,self.bitmap.Width,self.bitmap.Height)
             dc.EndDrawing()
+        return dc
 
 
     def UpdateBitmap(self):
@@ -88,9 +75,8 @@ class ImagePanel(wx.Panel):
             self.GetParent().ReceiveDrop(data)
 
     
-    def SelectPoints(self, coordList):
-        self.selectedPoints = coordList
-        self.Refresh()
+
+        
             
 
 
