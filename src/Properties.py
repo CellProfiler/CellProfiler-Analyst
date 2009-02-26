@@ -127,7 +127,7 @@ class Properties(Singleton):
         # Check that all required variables were loaded
         optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                          'table_id', 'image_url_prepend', 'image_csv_file',
-                         'object_csv_file', 'area_scoring_column', 'trainint_set']
+                         'object_csv_file', 'area_scoring_column', 'training_set']
         for name in string_vars + list_vars:
             if name not in optional_vars:
                 assert name in self.__dict__.keys(), 'PROPERTIES ERROR (%s): Field is missing.'%(name)
