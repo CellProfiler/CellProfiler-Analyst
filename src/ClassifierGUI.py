@@ -187,6 +187,14 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_CHAR, self.OnKey)
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
         
+        if p.training_set:
+            dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s'%(p.training_set),
+                                   'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
+            response = dlg.ShowModal()
+            if response == wx.ID_YES:
+                self.LoadTrainingSet(p.training_set)
+
+        
         
     def BindMouseOverHelpText(self):
         self.nObjectsTxt.Bind(wx.EVT_ENTER_WINDOW,
@@ -447,33 +455,35 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnLoadTrainingSet(self, evt):
-        self.LoadTrainingSet()
-        
-    def LoadTrainingSet(self):
-        ''' Presents the user with a file select dialog. 
-        Loads the selected file, parses out object keys, and fetches the tiles. '''
+        '''
+        Presents the user with a file select dialog, then loads the 
+        selected training set.
+        '''
         dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.", defaultDir=os.getcwd(), style=wx.OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
+        self.LoadTrainingSet(filename)
+        
+    def LoadTrainingSet(self, filename):
+        ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
+        self.SetStatusText('Loading training set from: '+filename)
+        os.chdir(os.path.split(filename)[0])                       # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        self.defaultTSFileName = os.path.split(filename)[1]
+        
+        self.trainingSet = TrainingSet(p, filename)
+        
+        self.RemoveAllSortClasses()
+        for label in self.trainingSet.labels:
+            self.AddSortClass(label)
             
-            self.SetStatusText('Loading training set from: '+filename)
-            os.chdir(os.path.split(filename)[0])                       # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-            self.defaultTSFileName = os.path.split(filename)[1]
-            
-            self.trainingSet = TrainingSet(p, filename)
-            
-            self.RemoveAllSortClasses()
-            for label in self.trainingSet.labels:
-                self.AddSortClass(label)
-                
-            keysPerBin = {}
-            for (label, key) in self.trainingSet.entries:
-                if label in keysPerBin.keys():
-                    keysPerBin[label] += [key]
-                else:
-                    keysPerBin[label] = [key]
-            for bin in self.classBins:
-                bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+        keysPerBin = {}
+        for (label, key) in self.trainingSet.entries:
+            if label in keysPerBin.keys():
+                keysPerBin[label] += [key]
+            else:
+                keysPerBin[label] = [key]
+        for bin in self.classBins:
+            bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
                 
         self.SetStatusText('Training set loaded.')
         

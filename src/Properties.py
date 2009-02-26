@@ -10,7 +10,8 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'image_url_prepend',
                 'image_tile_size', 'image_buffer_size',
                 'tile_buffer_size',
-                'area_scoring_column']
+                'area_scoring_column',
+                'training_set']
 
 list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
             'object_name',
@@ -118,7 +119,7 @@ class Properties(Singleton):
         # Check that all required variables were loaded
         optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                          'table_id', 'image_url_prepend', 'image_csv_file',
-                         'object_csv_file', 'area_scoring_column']
+                         'object_csv_file', 'area_scoring_column', 'trainint_set']
         for name in string_vars + list_vars:
             if name not in optional_vars:
                 assert name in self.__dict__.keys(), 'PROPERTIES ERROR (%s): Field is missing.'%(name)
@@ -243,6 +244,15 @@ class Properties(Singleton):
                 if not val:
                     print 'PROPERTIES WARNING (%s): No values specified. Classifier will use ALL per_object columns when training.'%(name)
 
+            elif name =='training_set':
+                #Optional
+                if val:
+                    try:
+                        f = open(val)
+                        f.close()
+                    except:
+                        print 'PROPERTIES WARNING (%s): Training set at "%s" could not be found.'%(name,val)                        
+                    print 'PROPERTIES: Training set found at "%s"'%(val)
 
 
         
