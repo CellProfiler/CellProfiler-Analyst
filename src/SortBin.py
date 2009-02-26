@@ -13,15 +13,21 @@ db = DBConnect.getInstance()
 
 class SortBinDropTarget(wx.DropTarget):
     def __init__(self, bin):
+        wx.DropTarget.__init__(self)
         self.data = wx.CustomDataObject("ObjectKey")
-        wx.DropTarget.__init__(self, self.data)
+        self.SetDataObject(self.data)
         self.bin = bin
-    
-    def OnDrop(self, x, y):
-        self.GetData()
-        key = self.data.GetData()
-        self.bin.ReceiveDrop(key)
-        return True
+        
+    def OnData(self, x, y, dragres):
+        if not self.GetData():
+            return wx.DragNone
+        draginfo = self.data.GetData()
+        obKeys = cPickle.loads(draginfo)
+        if not obKeys:
+            return wx.DragNone
+        return self.bin.ReceiveDrop(obKeys) 
+
+        
 
 
 class SortBin(wx.ScrolledWindow):
@@ -185,11 +191,11 @@ class SortBin(wx.ScrolledWindow):
         
     def ReceiveDrop(self, obKeys):
         # TODO: stop drops from happening on the same board they originated on 
-        obKeys = cPickle.loads(obKeys)
         self.DeselectAll()
         tile = self.AddObjects(obKeys, self.classifier.chMap)
         [tile.Select() for tile in self.tiles if tile.obKey in obKeys]
         self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
+        return wx.DragMove
         
         
     def MapChannels(self, chMap):

@@ -20,11 +20,15 @@ class ImageTileDropTarget(wx.DropTarget):
         wx.DropTarget.__init__(self, self.data)
         self.tile = tile
     
-    def OnDrop(self, x, y):
-        self.GetData()
-        key = self.data.GetData()
-        self.tile.bin.ReceiveDrop(key)
-        return True
+    def OnData(self, x, y, dragres):
+        if not self.GetData():
+            return wx.DragNone
+        draginfo = self.data.GetData()
+        obKeys = cPickle.loads(draginfo)
+        if not obKeys:
+            return wx.DragNone
+        return self.tile.bin.ReceiveDrop(obKeys) 
+
 
 
 class ImageTile(ImagePanel):
@@ -151,15 +155,15 @@ class ImageTile(ImagePanel):
         elif evt.ShiftDown():
             self.ToggleSelect()
 
-        source = wx.DropSource(self, copy=cursor, move=cursor)
         # wx crashes unless the data object is assigned to a variable.
         data_object = wx.CustomDataObject("ObjectKey")
         data_object.SetData(cPickle.dumps(self.bin.SelectedKeys()))
+        source = wx.DropSource(self, copy=cursor, move=cursor)
         source.SetData(data_object)
-        result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
-        if result is 0:
+        result = source.DoDragDrop(wx.Drag_DefaultMove)
+        if result is wx.DragMove:
             self.bin.RemoveSelectedTiles()
-    
+                
     
     def OnSize(self, evt):
         self.SetClientSize(evt.GetSize())
