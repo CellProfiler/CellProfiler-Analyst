@@ -73,6 +73,10 @@ class Properties(Singleton):
                         raise Exception, 'PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\nExample: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\na MySQL query "<QUERY>". See the README.'%(name)
                     if group_name in self.groups.keys():
                         raise Exception, 'Group "%s" is defined twice in properties file.'%(group_name)
+                    if not val:
+                        print 'PROPERTIES WARNING (%s): Undefined group'%(name)
+                        continue
+                    # TODO: test query
                     self.groups[group_name] = val
                     self.groups_ordered += [group_name]
                     
@@ -82,6 +86,10 @@ class Properties(Singleton):
                         raise Exception, 'PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\nExample: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\na MySQL query "<QUERY>". See the README.'%(name)
                     if filter_name in self.filters.keys():
                         raise Exception, 'Filter "%s" is defined twice in properties file.'%(filter_name)
+                    if not val:
+                        print 'PROPERTIES WARNING (%s): Undefined filter'%(name)
+                        continue
+                    # TODO: test query
                     self.filters[filter_name] = val
                     self.filters_ordered += [filter_name]
                 
