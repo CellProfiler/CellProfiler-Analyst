@@ -1,5 +1,5 @@
 from DBConnect import DBConnect
-from ImageControlPanel import ImageControlPanel
+from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
 import SortBin
@@ -23,13 +23,13 @@ class ImageViewerPanel(ImagePanel):
         super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness)
         self.selectedPoints = []
         self.classes        = {}  # {'Positive':[(x,y),..], 'Negative': [(x2,y2),..],..}
-        self.showClasses    = True
+        self.classVisible   = {}
     
     def OnPaint(self, evt):
         dc = super(ImageViewerPanel, self).OnPaint(evt)
 
-        if self.showClasses:
-            for cl, color in zip(self.classes.values(), colors[:len(self.classes)]):
+        for (name, cl), color in zip(self.classes.items(), colors[:len(self.classes)]):
+            if self.classVisible[name]:
                 dc.BeginDrawing()
                 for (x,y) in cl:
                     x = x * self.scale - 2
@@ -58,12 +58,14 @@ class ImageViewerPanel(ImagePanel):
         
     def SetClassPoints(self, classes):
         self.classes = classes
+        self.classVisible = {}
+        for className in classes.keys():
+            self.classVisible[className] = True 
+        self.Refresh()
         
-    def ShowClasses(self):
-        self.showClasses = True
-        
-    def HideClasses(self):
-        self.showClasses = False
+    def ToggleClass(self, className, show):
+        self.classVisible[className] = show
+        self.Refresh()
 
 
 
@@ -108,7 +110,9 @@ class ImageViewer(wx.Frame):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
-        sizer.Add(self.controls, proportion=0, flag=wx.EXPAND)
+        self.controlSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.controlSizer.Add(self.controls, proportion=0, flag=wx.EXPAND)
+        sizer.Add(self.controlSizer)
         self.SetSizer(sizer)
         
         self.sw.SetScrollbars(1,1,w*scale,h*scale)
@@ -177,6 +181,14 @@ class ImageViewer(wx.Frame):
             self.chMap[chIdx] = 'None'
             self.MapChannels(self.chMap)
     
+    
+    def SetClasses(self, classCoords):
+        self.imagePanel.SetClassPoints(classCoords)
+        self.classControls = ImageViewerControlPanel(self, self.imagePanel, classCoords, colors)
+        self.controlSizer.Add(self.classControls)
+        self.Refresh()
+        self.Layout()
+        
         
     def OnLeftDown(self, evt):
         if self.img_key:
@@ -229,5 +241,9 @@ if __name__ == "__main__":
         imgs = IC.FetchImage(obKey[:-1])
         frame = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]) )
         frame.Show(True)
+    
+    classCoords = {'a':[(10,10),(20,20)],
+                   'b':[(100,10),(200,20)] }
+    frame.SetClasses(classCoords)
            
     app.MainLoop()

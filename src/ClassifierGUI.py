@@ -641,9 +641,9 @@ class ClassifierGUI(wx.Frame):
         classHits = {}
         if obKeys:
             for clNum, bin in enumerate(self.classBins):
-                classHits[clNum] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, self.trainingSet.colnames, [imKey])
-                self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(classHits[clNum]), len(obKeys), p.object_name[1], bin.label, imKey))
-                print '%s of %s %s classified as %s in image %s'%(len(classHits[clNum]), len(obKeys), p.object_name[1], bin.label, imKey)
+                classHits[bin.label] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, self.trainingSet.colnames, [imKey])
+                self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
+                print '%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey)
         
         # 4) Get object coordinates in image and display
         classCoords = {}
@@ -654,7 +654,7 @@ class ClassifierGUI(wx.Frame):
             classCoords[className] = coords
         imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale)
-        imViewer.imagePanel.SetClassPoints(classCoords)
+        imViewer.SetClasses(classCoords)
         
         
         

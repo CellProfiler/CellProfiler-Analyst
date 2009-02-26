@@ -69,3 +69,33 @@ class ImageControlPanel(wx.Panel):
     def ConnectTolistener(self, listener):
         self.listeners += [listener]
         
+        
+
+class ImageViewerControlPanel(wx.Panel):
+    def __init__(self, parent, listeners, classCoords, colorMap):
+        '''
+        This panel provides widgets
+        listeners : list of objects to broadcast to.
+        listeners must implement SetScale, and SetBrightness
+        '''
+        wx.Panel.__init__(self, parent, wx.NewId())
+        if type(listeners) == list:
+            self.listeners = listeners
+        else:
+            self.listeners = [listeners]
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        for (name, keys), color in zip(classCoords.items(), colorMap):
+            checkBox = wx.CheckBox(self, wx.NewId(), name)
+            checkBox.SetForegroundColour(color)   # Doesn't work on Mac... might work on Win
+            checkBox.SetValue(True)
+            self.sizer.Add(checkBox)
+            checkBox.Bind(wx.EVT_CHECKBOX, self.OnCheck)
+        self.SetSizer(self.sizer)
+        
+    def OnCheck(self, evt):
+        className = evt.EventObject.Label
+        checked = evt.Checked()
+        for listener in self.listeners:
+            listener.ToggleClass(className, checked)
+        
