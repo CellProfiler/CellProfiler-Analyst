@@ -187,6 +187,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_CHAR, self.OnKey)
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
         
+        # Finally, if there's a default training set. Ask to load it.
         if p.training_set:
             dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s'%(p.training_set),
                                    'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
@@ -455,14 +456,11 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnLoadTrainingSet(self, evt):
-        '''
-        Presents the user with a file select dialog, then loads the 
-        selected training set.
-        '''
+        ''' Present user with file select dialog, then load selected training set. '''
         dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.", defaultDir=os.getcwd(), style=wx.OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
-        self.LoadTrainingSet(filename)
+            self.LoadTrainingSet(filename)
         
     def LoadTrainingSet(self, filename):
         ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
