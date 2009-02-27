@@ -55,10 +55,20 @@ class ClassifierGUI(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.CreateFileMenu()
         self.CreateChannelMenus()
-        self.DisplayMenu = wx.Menu()
-        self.imageControlsMenuItem = wx.MenuItem(parentMenu=self.DisplayMenu, id=wx.NewId(), text='Image Controls', help='Launches a control panel for adjusting image brightness, size, etc.')
-        self.DisplayMenu.AppendItem(self.imageControlsMenuItem)
-        self.GetMenuBar().Append(self.DisplayMenu, 'Display')
+        # Image Controls Menu
+        displayMenu = wx.Menu()
+        imageControlsMenuItem = wx.MenuItem(parentMenu=displayMenu,
+                                            id=wx.NewId(), text='Image Controls', 
+                                            help='Launches a control panel for adjusting image brightness, size, etc.')
+        displayMenu.AppendItem(imageControlsMenuItem)
+        self.GetMenuBar().Append(displayMenu, 'Display')
+        # Help Menu
+        helpMenu = wx.Menu()
+        helpMenuItem = wx.MenuItem(parentMenu=helpMenu,
+                                   id=wx.NewId(), text='Readme',
+                                   help='Displays the readme file.')
+        helpMenu.AppendItem(helpMenuItem)
+        self.GetMenuBar().Append(helpMenu, 'Help')
 
         self.CreateStatusBar()
         
@@ -164,7 +174,8 @@ class ClassifierGUI(wx.Frame):
         self.BindMouseOverHelpText()
 
         # do event binding
-        self.Bind(wx.EVT_MENU, self.OnShowImageControls, self.imageControlsMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
@@ -831,6 +842,14 @@ class ClassifierGUI(wx.Frame):
         self.imageControlFrame = wx.Frame(self)
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale)
         self.imageControlFrame.Show(True)
+        
+    
+    def OnShowReadme(self, evt):
+        from wx.lib.dialogs import ScrolledMessageDialog
+        f = open(os.getcwd().rpartition('/')[0]+'/README.txt')
+        text = f.read()
+        dlg = ScrolledMessageDialog(self, text, 'Readme', size=(900,600))
+        dlg.ShowModal()
         
         
     def SetBrightness(self, brightness):
