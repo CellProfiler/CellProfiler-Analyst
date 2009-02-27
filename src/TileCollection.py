@@ -100,13 +100,16 @@ class TileLoader(threading.Thread):
     
     def run(self):
         image_collection = ImageCollection.getInstance(p)
-        while 1:
+        while 1:            
             self.tile_collection.cv.acquire()
             # If there are no objects in the queue then wait
             while not self.tile_collection.loadq:
                 self.tile_collection.cv.wait()
+                
             if self._want_abort:
+                print self.getName()+' aborted'
                 return
+
             obKey = heappop(self.tile_collection.loadq)[1]
             self.tile_collection.cv.release()
 
@@ -124,8 +127,9 @@ class TileLoader(threading.Thread):
                 wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
 
     def abort(self):
-        self.tile_collection.cv.acquire()
         self._want_abort = True
+        self.tile_collection.cv.acquire()
+        heappush(self.tile_collection.loadq, ((0, 0, 0), '<ABORT>'))
         self.tile_collection.cv.notify()
         self.tile_collection.cv.release()
         

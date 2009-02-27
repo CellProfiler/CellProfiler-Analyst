@@ -873,11 +873,20 @@ class ClassifierGUI(wx.Frame):
                 self.SaveTrainingSet()
             elif response == wx.ID_CANCEL:
                 return
+        self.Destroy()
+        
+    
+    def Destroy(self):
+        ''' Kill off all threads first. '''
+        super(ClassifierGUI, self).Destroy()
         import threading
         for thread in threading.enumerate():
             if thread != threading.currentThread():
-                thread.abort()
-        self.Destroy()
+                print 'aborting thread', thread.getName()
+                try:
+                    thread.abort()
+                except:
+                    pass
         
                 
         
