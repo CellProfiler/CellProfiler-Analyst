@@ -640,19 +640,8 @@ class ClassifierGUI(wx.Frame):
             imKey = (tblNum,imgNum)
         else:
             imKey = (imgNum,)
-           
-#        # 2) Get the phenotype to highlight:
-#        dlg = wx.SingleChoiceDialog(self, 'Select a class to highlight:', 'Choose Class', 
-#                                    [bin.label for bin in self.classBins], wx.CHOICEDLG_STYLE)
-#        if dlg.ShowModal() == wx.ID_OK:            
-#            cls   = str(dlg.GetStringSelection())  # class name to print in feedback
-#            clNum = dlg.GetSelection() + 1         # class index to pass to the classifier
-#            dlg.Destroy()
-#        else:
-#            dlg.Destroy()
-#            return
     
-        # 3) Find the hits
+        # 2) Find the hits for each phenotype
         try:
             obKeys = dm.GetObjectsFromImage(imKey)
         except:
@@ -665,7 +654,7 @@ class ClassifierGUI(wx.Frame):
                 self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
                 print '%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey)
         
-        # 4) Get object coordinates in image and display
+        # 3) Get object coordinates in image and display
         classCoords = {}
         for className, obKeys in classHits.items():
             coords = []
@@ -679,6 +668,10 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnScoreAll(self, evt):
+        '''
+        Handler for ScoreAll button.  Calculates object counts for each class
+        and enrichment values, then builds a table and displays it in a DataGrid.
+        '''
         groupChoices = ['Image'] + p.groups_ordered
         filterChoices = [None] + p.filters_ordered
         dlg = ScoreDialog(self, groupChoices, filterChoices)
@@ -692,7 +685,7 @@ class ClassifierGUI(wx.Frame):
         
         from time import time
         t1 = time()
-                
+        
         nClasses = len(self.classBins)
         
         # If hit counts havn't been calculated since last training or if the
@@ -750,8 +743,6 @@ class ClassifierGUI(wx.Frame):
         self.SetStatusText('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
-        
-        
         for i, row in enumerate(groupedKeysAndCounts):
             # Update the status text after every 5% is done.
             if float(i)/float(len(groupedKeysAndCounts))-fraction > 0.05:
@@ -778,8 +769,7 @@ class ClassifierGUI(wx.Frame):
         
         t5 = time()
         print 'time to compute enrichment scores:',t5-t4
-
-                
+        
         # Create column labels list
         labels = []
         # if grouping isn't per-image, then get the group key column names.
@@ -830,6 +820,7 @@ class ClassifierGUI(wx.Frame):
             
             
     def OnSelectFilter(self, evt):
+        ''' Handler for fetch filter selection. '''
         # Select from a specific image
         if evt.Selection == 1:
             self.fetchSizer.Show(self.fetchFromImageSizer, True)
@@ -839,12 +830,14 @@ class ClassifierGUI(wx.Frame):
         
 
     def OnShowImageControls(self, evt):
+        ''' Shows the image adjustment control panel in a new frame. '''
         self.imageControlFrame = wx.Frame(self)
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale)
         self.imageControlFrame.Show(True)
         
     
     def OnShowReadme(self, evt):
+        ''' Shows a scrollable message dialog with the readme. '''
         from wx.lib.dialogs import ScrolledMessageDialog
         f = open(os.getcwd().rpartition('/')[0]+'/README.txt')
         text = f.read()
@@ -866,6 +859,7 @@ class ClassifierGUI(wx.Frame):
         
 
     def OnClose(self, evt):
+        ''' Prompt to save training set before closing. '''
         if self.trainingSet and self.trainingSet.saved == False:
             dlg = wx.MessageDialog(self, 'Do you want to save your training set before quitting?', 'Training Set Not Saved', wx.YES_NO|wx.CANCEL|wx.ICON_QUESTION)
             response = dlg.ShowModal()
@@ -877,7 +871,7 @@ class ClassifierGUI(wx.Frame):
         
     
     def Destroy(self):
-        ''' Kill off all threads first. '''
+        ''' Kill off all threads before combusting. '''
         super(ClassifierGUI, self).Destroy()
         import threading
         for thread in threading.enumerate():

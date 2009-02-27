@@ -3,7 +3,6 @@ A collection of tools to modify images used in CPA.
 '''
 
 import numpy
-import operator
 import wx
 from Properties import Properties
 
@@ -38,16 +37,6 @@ def Crop(imgdata, (w,h), (x,y)):
             else:
                 crop[py,px] = 0
     return crop
-
-
-#def GetRectangleMask(w,h):
-#    mask = numpy.zeros((h,w,3),dtype='float')
-#    mask[0:h,0,:]   = 1.0 # left
-#    mask[0,0:w,:]   = 1.0 # top
-#    mask[0:h,-1,:]  = 1.0 # right
-#    mask[-1,0:w,:]  = 1.0 # bottom
-#    return mask 
-    
     
 
 def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[]):
