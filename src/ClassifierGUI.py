@@ -432,7 +432,7 @@ class ClassifierGUI(wx.Frame):
                 else:
                     obKeysToTry = dm.GetRandomObjects(100,imKeysInFilter)
                     loopMsg = ' in class "'+obClassName+'" from filter "'+filter+'"...'
-                obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, self.trainingSet.colnames, obKeysToTry)
+                obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
 
                 attempts += 100
                 if attempts%10000.0==0:
@@ -588,6 +588,7 @@ class ClassifierGUI(wx.Frame):
         self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                nRules, self.trainingSet.label_matrix, 
                                                                self.trainingSet.values, output)
+        print self.weaklearners
         self.SetStatusText('')
         self.rulesTxt.Value = output.getvalue()
         self.scoreAllBtn.Enable()
@@ -649,7 +650,7 @@ class ClassifierGUI(wx.Frame):
         classHits = {}
         if obKeys:
             for clNum, bin in enumerate(self.classBins):
-                classHits[bin.label] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, self.trainingSet.colnames, [imKey])
+                classHits[bin.label] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, [imKey])
                 self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
                 print '%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey)
         
@@ -691,7 +692,6 @@ class ClassifierGUI(wx.Frame):
             self.SetStatusText('Calculating %s counts for each class...'
                                %(p.object_name[0]))
             self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners,
-                                                             self.trainingSet.colnames,
                                                              filter=filter)
             # Make sure HitsAndCounts returned something
             if not self.keysAndCounts:

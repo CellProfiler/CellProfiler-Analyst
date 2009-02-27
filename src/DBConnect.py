@@ -611,7 +611,7 @@ if __name__ == "__main__":
     hits = []
     if obKeys:
         clNum = 1
-        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, weaklearners, trainingSet.colnames, [imKey])
+        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, weaklearners, [imKey])
         
     print hits
 

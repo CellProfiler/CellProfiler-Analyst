@@ -7,7 +7,7 @@ db = DBConnect.getInstance()
 p = Properties.getInstance()
 
 
-def translate(weak_learners, column_names, area_column=None, filter=None):
+def translate(weak_learners, area_column=None, filter=None):
     '''
     Translate weak learners into MySQL queries that place the resulting 
       classification in a MySQL temporary table named "temp_class_table"
@@ -39,7 +39,7 @@ def translate(weak_learners, column_names, area_column=None, filter=None):
     temp_stump_table       = "_stump"
     stump_cols             = select_start + ", ".join(["stump%d"%(i) for i in range(num_features)])
     stump_col_defs         = key_col_defs + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
-    stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(column_names[wl[0]], wl[1], idx) for idx, wl in enumerate(weak_learners)])
+    stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(wl[0], wl[1], idx) for idx, wl in enumerate(weak_learners)])
     stump_select_statement = select_start + stump_select_features + \
                              " FROM " + object_table_from
     q_stump1 = 'CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs)
@@ -103,11 +103,10 @@ def translate(weak_learners, column_names, area_column=None, filter=None):
 #    return stump_query, score_query, find_max_query, class_query, count_query
     
 
-def FilterObjectsFromClassN(clNum, weaklearners, colnames, filterKeys=[]):
+def FilterObjectsFromClassN(clNum, weaklearners, filterKeys=[]):
     '''
     clNum: 1-based index of the class to retrieve obKeys from
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
-    colnames: Column names to include in classification
     filterKeys: (optional) A specific list of imKeys OR obKeys (NOT BOTH)
         to classify.
         * WARNING: If this list is too long, you may exceed the size limit to
@@ -119,7 +118,7 @@ def FilterObjectsFromClassN(clNum, weaklearners, colnames, filterKeys=[]):
     RETURNS: A list of object keys that fall in the specified class.
     '''
     isImKey = lambda(k): (p.table_id and len(k)==2) or (not p.table_id and len(k)==1)    
-    stump_query, score_query, find_max_query, _, _ = translate(weaklearners, colnames)
+    stump_query, score_query, find_max_query, _, _ = translate(weaklearners)
     if filterKeys:
         if isImKey(filterKeys[0]):
             stump_query[1] += ' WHERE '+GetWhereClauseForImages(filterKeys)
@@ -136,10 +135,9 @@ def FilterObjectsFromClassN(clNum, weaklearners, colnames, filterKeys=[]):
     return db.GetResultsAsList()
     
     
-def HitsAndCounts(weaklearners, colnames, filter=None):
+def HitsAndCounts(weaklearners, filter=None):
     '''
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
-    colnames: Column names to include in classification
     filter: name of filter, or None.
     RETURNS: A list of lists of imKeys and respective object counts for each class:
         Note that the imKeys are exploded so each row is of the form:
@@ -147,7 +145,7 @@ def HitsAndCounts(weaklearners, colnames, filter=None):
         where TableNumber is only present if table_id is defined in Properties. 
     '''
     stump_query, score_query, find_max_query, class_query, count_query = \
-                 translate(weaklearners, colnames, filter=filter)
+                 translate(weaklearners, filter=filter)
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
     db.Execute('DROP TABLE IF EXISTS _class')
@@ -166,11 +164,10 @@ if __name__ == "__main__":
     p.LoadFile("%s/batch1and2.properties"%(dir,))
     import cPickle as pickle
     f = open("%s/batch1and2.boostingclassifier"%(dir,))
-    colnames = pickle.load(f)
     learners = pickle.load(f)
     f.close()
 
-    keys_and_counts = HitsAndCounts(learners, colnames, filter='HRG')
+    keys_and_counts = HitsAndCounts(learners, filter='HRG')
     import numpy
     keys_and_counts = numpy.array(keys_and_counts, dtype='i4')
     print keys_and_counts[0,:]

@@ -75,9 +75,8 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
         recomputed_labels = computed_labels + feature_thresh_mask * tile(a, (num_examples, 1)) + (1 - feature_thresh_mask) * tile(b, (num_examples, 1))
         reweights = exp(- recomputed_labels * label_matrix)
         reweights = reweights / sum(reweights)
-
-
-        return (err, int(column), thresh, a, b, reweights, recomputed_labels)
+        
+        return (err, colnames[int(column)], thresh, a, b, reweights, recomputed_labels)
 
     def shutdown():
         for i in range(0, nworkers):
@@ -87,13 +86,13 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
 
     weak_learners = []
     for weak_count in range(num_learners):
-        err, column, thresh, a, b, reweight, recomputed_labels = get_one_weak_learner()
+        err, colname, thresh, a, b, reweight, recomputed_labels = get_one_weak_learner()
         computed_labels = recomputed_labels
-        weak_learners += [(column, thresh, a, b)]
+        weak_learners += [(colname, thresh, a, b)]
         if fout:
-            column, thresh, a, b = weak_learners[-1]
+            colname, thresh, a, b = weak_learners[-1]
             fout.write("IF (%s > %s, %s, %s)\n" %
-                       (colnames[column], repr(thresh), "[" + ", ".join([repr(v) for v in a]) + "]", "[" + ", ".join([repr(v) for v in b]) + "]"))
+                       (colname, repr(thresh), "[" + ", ".join([repr(v) for v in a]) + "]", "[" + ", ".join([repr(v) for v in b]) + "]"))
             fout.flush()
         if err == 0.0:
             break
