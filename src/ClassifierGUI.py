@@ -3,9 +3,10 @@ from DataGrid import DataGrid
 from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
 from ImageTile import ImageTile
-from TileCollection import *
 from Properties import Properties
+from ScoreDialog import ScoreDialog
 from SortBin import SortBin
+from TileCollection import *
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 import DirichletIntegrate
@@ -17,8 +18,6 @@ import numpy
 import os
 import wx
 import wx.grid
-
-from ScoreDialog import ScoreDialog
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -503,10 +502,12 @@ class ClassifierGUI(wx.Frame):
     def SaveTrainingSet(self):
         if not self.defaultTSFileName:
             self.defaultTSFileName = 'MyTrainingSet.txt'
-        saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), defaultFile=self.defaultTSFileName, wildcard='txt', style=wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+        saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), 
+                                   defaultFile=self.defaultTSFileName, wildcard='txt', 
+                                   style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
         if saveDialog.ShowModal()==wx.ID_OK:
             filename = saveDialog.GetPath()
-            os.chdir(os.path.split(filename)[0])                 # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+#            os.chdir(os.path.split(filename)[0])                 # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
             self.defaultTSFileName = os.path.split(filename)[1]
             self.SaveTrainingSetAs(filename)
 

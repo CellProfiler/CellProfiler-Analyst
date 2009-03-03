@@ -2,9 +2,10 @@
 A collection of tools to modify images used in CPA.
 '''
 
+from PIL import Image
+from Properties import Properties
 import numpy
 import wx
-from Properties import Properties
 
 p = Properties.getInstance()
 
@@ -47,7 +48,6 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[]):
     contrast - value around 1.0 to scale contrast by
     scale - value around 1.0 to scale the image by
     '''
-    
     imData = MergeChannels(imgs, chMap, masks=masks)
     h,w = imgs[0].shape
     
@@ -59,8 +59,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[]):
     img = wx.EmptyImage(w,h)
     img.SetData(imData.astype('uint8').flatten())
     
-    # Apply brightness, contrast & scale
-    # TODO: Add contrast adjustment
+    # Apply brightness & scale
     if brightness != 1.0:
         img = img.AdjustChannels(brightness, brightness, brightness)
     if scale != 1.0:
@@ -103,7 +102,28 @@ def MergeChannels(imgs, chMap, masks=[]):
     return imData
 
 
+def SaveBitmap(bitmap, filename, format='PNG'):
+    im = BitmapToPIL(bitmap)
+    im.save(filename, format)
 
 
+def ImageToPIL(image):
+    '''Convert wx.Image to PIL Image.'''
+    pil = Image.new('RGB', (image.GetWidth(), image.GetHeight()))
+    pil.fromstring(image.GetData())
+    return pil
 
+
+def BitmapToPIL(bitmap):
+    '''Convert wx.Bitmap to PIL Image.'''
+    return ImageToPIL(wx.ImageFromBitmap(bitmap))
+
+
+def NumpyToPIL(imData):
+    '''Convert numpy image data to PIL Image.'''
+    buf = numpy.dstack(imgData)
+    buf = (buf * 255.0).astype('uint8')
+    im = Image.fromstring(mode='RGB', size=(imgData[0].shape[1],imgData[0].shape[0]),
+                          data=buf.tostring())
+    return im
 

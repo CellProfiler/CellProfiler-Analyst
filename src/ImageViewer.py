@@ -2,6 +2,7 @@ from DBConnect import DBConnect
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
+import ImageTools
 import cPickle
 import wx
 
@@ -25,7 +26,7 @@ class ImageViewerPanel(ImagePanel):
     
     def OnPaint(self, evt):
         dc = super(ImageViewerPanel, self).OnPaint(evt)
-
+        # Draw colored boxes at each classified point
         for (name, cl), color in zip(self.classes.items(), colors[:len(self.classes)]):
             if self.classVisible[name]:
                 dc.BeginDrawing()
@@ -38,7 +39,6 @@ class ImageViewerPanel(ImagePanel):
                     dc.DrawRectangle(x,y,w,h)
                     dc.DrawRectangle(x-1,y-1,6,6)
                 dc.EndDrawing()
-            
         # Draw small white boxes at each selected point
         for (x,y) in self.selectedPoints:
             x = x * self.scale - 3
@@ -49,6 +49,7 @@ class ImageViewerPanel(ImagePanel):
             dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
             dc.DrawRectangle(x,y,w,h)
             dc.EndDrawing()
+        return dc
                         
     def SelectPoints(self, coordList):
         self.selectedPoints = coordList
@@ -99,9 +100,16 @@ class ImageViewer(wx.Frame):
         self.controls    = ImageControlPanel(self, self.imagePanel, brightness=brightness, scale=scale)
         self.selection   = []
         self.maxSize     = tuple([xy-50 for xy in wx.DisplaySize()])
+        self.defaultFile = ''
+        self.defaultPath = ''
 
         self.SetMenuBar(wx.MenuBar())
+        fileMenu = wx.Menu()
+        saveImageMenuItem = wx.MenuItem(parentMenu=fileMenu,id=wx.NewId(), text='Save Image')
+        fileMenu.AppendItem(saveImageMenuItem)
+        self.GetMenuBar().Append(fileMenu, 'File')
         self.CreateChannelMenus()
+        
         self.SetClientSize( (min(self.maxSize[0], w*scale),
                              min(self.maxSize[1], h*scale+135)) )
         self.Centre()
@@ -115,6 +123,7 @@ class ImageViewer(wx.Frame):
         
         self.sw.SetScrollbars(1,1,w*scale,h*scale)
         
+        self.Bind(wx.EVT_MENU, self.OnSaveImage, saveImageMenuItem)
         self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
@@ -163,6 +172,8 @@ class ImageViewer(wx.Frame):
                 self.Destroy()
             elif keycode == ord('Q'):
                 self.Destroy()
+            elif keycode == ord('S'):
+                self.OnSaveImage(evt)
             elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
         
@@ -184,8 +195,6 @@ class ImageViewer(wx.Frame):
         self.imagePanel.SetClassPoints(classCoords)
         self.classControls = ImageViewerControlPanel(self, self.imagePanel, classCoords, colors)
         self.controlSizer.Add(self.classControls, proportion=1, flag=wx.EXPAND)
-        for child in self.controlSizer.GetChildren():
-            print child
         self.Refresh()
         self.Layout()
         
@@ -218,6 +227,28 @@ class ImageViewer(wx.Frame):
                 if result is 0:
                     pass
 
+
+    def OnSaveImage(self, evt):
+        import os
+        saveDialog = wx.FileDialog(self, message="Save as:",
+                                   defaultDir=self.defaultPath, defaultFile=self.defaultFile,
+                                   wildcard='PNG file (*.png)|*.png|JPG file (*.jpg, *.jpeg)|*.jpg', 
+                                   style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+        if saveDialog.ShowModal()==wx.ID_OK:
+            filename = str(saveDialog.GetPath())
+            self.defaultPath, self.defaultFile = os.path.split(filename)
+            format = os.path.splitext(filename)[-1]
+            saveDialog.Destroy()
+            if not format.upper() in ['.PNG','.JPG','.JPEG']:
+                errdlg = wx.MessageDialog(self, 'Invalid file extension (%s)! File extension must be .PNG or .JPG.'%(format),
+                                          "Invalid file extension", wx.OK|wx.ICON_EXCLAMATION)
+                if errdlg.ShowModal() == wx.ID_OK:
+                    return self.OnSaveImage(evt)
+            if format.upper()=='.JPG':
+                format = '.JPEG'
+            ImageTools.SaveBitmap(self.imagePanel.bitmap, filename, format.upper()[1:])
+            
+
     
             
 
@@ -244,5 +275,7 @@ if __name__ == "__main__":
     classCoords = {'a':[(10,10),(20,20)],
                    'b':[(100,10),(200,20)] }
     frame.SetClasses(classCoords)
+    
+    ImageTools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
            
     app.MainLoop()
