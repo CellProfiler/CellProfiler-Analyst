@@ -24,10 +24,10 @@ class ImageTileDropTarget(wx.DropTarget):
         if not self.GetData():
             return wx.DragNone
         draginfo = self.data.GetData()
-        obKeys = cPickle.loads(draginfo)
+        srcID, obKeys = cPickle.loads(draginfo)
         if not obKeys:
             return wx.DragNone
-        return self.tile.bin.ReceiveDrop(obKeys) 
+        return self.tile.bin.ReceiveDrop(srcID, obKeys) 
 
 
 
@@ -121,9 +121,6 @@ class ImageTile(ImagePanel):
     def OnLeftDown(self, evt):
         self.bin.SetFocusIgnoringChildren()
         self.leftPressed = True
-        self.mouseDownX = evt.GetX()
-        self.mouseDownY = evt.GetY()
-            
         if not evt.ShiftDown() and not self.selected:
             self.bin.DeselectAll()
             self.Select()
@@ -132,14 +129,15 @@ class ImageTile(ImagePanel):
             
             
     def OnLeaving(self, evt):
+        if evt.LeftIsDown():
+            self.Select()
         self.leftPressed = False
 
             
     def OnMotion(self, evt):
         # Give a 4 pixel radius of leeway before dragging a tile
         # this makes selecting multiple tiles less tedious
-        if (not evt.LeftIsDown() or not self.leftPressed or 
-            ((evt.GetX()-self.mouseDownX)**2+(evt.GetY()-self.mouseDownY)**2 <= 16)):
+        if not evt.LeftIsDown() or not self.leftPressed:
             return
         
         self.bin.SetFocusIgnoringChildren()
@@ -157,7 +155,7 @@ class ImageTile(ImagePanel):
 
         # wx crashes unless the data object is assigned to a variable.
         data_object = wx.CustomDataObject("ObjectKey")
-        data_object.SetData(cPickle.dumps(self.bin.SelectedKeys()))
+        data_object.SetData(cPickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
         source = wx.DropSource(self, copy=cursor, move=cursor)
         source.SetData(data_object)
         result = source.DoDragDrop(wx.Drag_DefaultMove)

@@ -87,9 +87,9 @@ class ImageViewerControlPanel(wx.Panel):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         for (name, keys), color in zip(classCoords.items(), colorMap):
             checkBox = wx.CheckBox(self, wx.NewId(), name)
-            checkBox.SetForegroundColour(color)   # Doesn't work on Mac... might work on Win
+            checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
             checkBox.SetValue(True)
-            self.sizer.Add(checkBox)
+            self.sizer.Add(checkBox, flag=wx.EXPAND)
             checkBox.Bind(wx.EVT_CHECKBOX, self.OnCheck)
         self.SetSizer(self.sizer)
         

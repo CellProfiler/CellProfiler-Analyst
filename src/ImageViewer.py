@@ -111,7 +111,7 @@ class ImageViewer(wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
         self.controlSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.controlSizer.Add(self.controls, proportion=0, flag=wx.EXPAND)
+        self.controlSizer.Add(self.controls, proportion=1, flag=wx.EXPAND)
         sizer.Add(self.controlSizer)
         self.SetSizer(sizer)
         
@@ -185,7 +185,9 @@ class ImageViewer(wx.Frame):
     def SetClasses(self, classCoords):
         self.imagePanel.SetClassPoints(classCoords)
         self.classControls = ImageViewerControlPanel(self, self.imagePanel, classCoords, colors)
-        self.controlSizer.Add(self.classControls)
+        self.controlSizer.Add(self.classControls, proportion=1, flag=wx.EXPAND)
+        for child in self.controlSizer.GetChildren():
+            print child
         self.Refresh()
         self.Layout()
         
@@ -212,7 +214,7 @@ class ImageViewer(wx.Frame):
                 source = wx.DropSource(self)
                 # wxPython crashes unless the data object is assigned to a variable.
                 data_object = wx.CustomDataObject("ObjectKey")
-                data_object.SetData(cPickle.dumps(self.selection))
+                data_object.SetData(cPickle.dumps( (self.GetId(), self.selection) ))
                 source.SetData(data_object)
                 result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
                 if result is 0:

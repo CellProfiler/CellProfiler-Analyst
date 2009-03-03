@@ -22,10 +22,10 @@ class SortBinDropTarget(wx.DropTarget):
         if not self.GetData():
             return wx.DragNone
         draginfo = self.data.GetData()
-        obKeys = cPickle.loads(draginfo)
+        srcID, obKeys = cPickle.loads(draginfo)
         if not obKeys:
             return wx.DragNone
-        return self.bin.ReceiveDrop(obKeys) 
+        return self.bin.ReceiveDrop(srcID, obKeys) 
 
         
 
@@ -189,8 +189,10 @@ class SortBin(wx.ScrolledWindow):
                 return t
             
         
-    def ReceiveDrop(self, obKeys):
+    def ReceiveDrop(self, srcID, obKeys):
         # TODO: stop drops from happening on the same board they originated on 
+        if srcID == self.GetId():
+            return
         self.DeselectAll()
         tile = self.AddObjects(obKeys, self.classifier.chMap)
         [tile.Select() for tile in self.tiles if tile.obKey in obKeys]
