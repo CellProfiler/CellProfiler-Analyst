@@ -129,30 +129,17 @@ class ImageTile(ImagePanel):
             
             
     def OnLeaving(self, evt):
-        if evt.LeftIsDown():
-            self.Select()
         self.leftPressed = False
 
             
     def OnMotion(self, evt):
-        # Give a 4 pixel radius of leeway before dragging a tile
-        # this makes selecting multiple tiles less tedious
         if not evt.LeftIsDown() or not self.leftPressed:
             return
-        
         self.bin.SetFocusIgnoringChildren()
-        
         cursorImg = self.bitmap.ConvertToImage()
         cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.bitmap.Size[0])/2)
         cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.bitmap.Size[1])/2)
         cursor = wx.CursorFromImage(cursorImg)
-            
-        if not evt.ShiftDown() and not self.selected:
-            self.bin.DeselectAll()
-            self.Select()
-        elif evt.ShiftDown():
-            self.ToggleSelect()
-
         # wx crashes unless the data object is assigned to a variable.
         data_object = wx.CustomDataObject("ObjectKey")
         data_object.SetData(cPickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
@@ -167,5 +154,3 @@ class ImageTile(ImagePanel):
         self.SetClientSize(evt.GetSize())
         evt.Skip()
 
-
-        
