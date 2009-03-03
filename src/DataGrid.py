@@ -149,7 +149,6 @@ class DataGrid(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.OnSize)
         
     def OnKey(self, evt):
-        keycode = evt.GetKeyCode()
         if evt.ControlDown() or evt.CmdDown():
             if evt.GetKeyCode() == ord('W'):
                 self.Close()

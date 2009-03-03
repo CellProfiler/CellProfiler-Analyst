@@ -171,7 +171,7 @@ class SortBin(wx.ScrolledWindow):
 
 
     def RemoveSelectedTiles(self):
-        for obKey, tile in zip(self.SelectedKeys(), self.Selection()):
+        for tile in self.Selection():
             self.tiles.remove(tile)
             self.sizer.Remove(tile)
             tile.Destroy()
@@ -194,7 +194,7 @@ class SortBin(wx.ScrolledWindow):
         if srcID == self.GetId():
             return
         self.DeselectAll()
-        tile = self.AddObjects(obKeys, self.classifier.chMap)
+        self.AddObjects(obKeys, self.classifier.chMap)
         [tile.Select() for tile in self.tiles if tile.obKey in obKeys]
         self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
         return wx.DragMove

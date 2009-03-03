@@ -2,8 +2,6 @@ from DBConnect import DBConnect
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
-import SortBin
-import ImageTools
 import cPickle
 import wx
 
@@ -229,7 +227,6 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
     from DataModel import DataModel
-    from DBConnect import DBConnect
     from ImageCollection import ImageCollection
     db = DBConnect.getInstance()
     db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
