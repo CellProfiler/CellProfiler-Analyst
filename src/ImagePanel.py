@@ -67,12 +67,6 @@ class ImagePanel(wx.Panel):
         if brightness != self.brightness:
             self.brightness = brightness
             self.UpdateBitmap()
-        
-
-    def ReceiveDrop(self, data):
-        # Pass drop data on to parent if it is a DropTarget
-        if issubclass(self.GetParent().__class__, DropTarget):
-            self.GetParent().ReceiveDrop(data)
 
     
 
