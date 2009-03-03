@@ -1,12 +1,4 @@
 # -*- Encoding: utf-8 -*-
-'''
-CreateMasterTableWizard.py
-authors: afraser
-
-Note: My apologies, the validation mechanisms I use may seem a little bizarre,
-but this is meant as a first pass.  I hope to clean up the code later if necessary.
-'''
-
 import os
 import re
 import wx
