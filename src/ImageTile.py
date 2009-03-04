@@ -84,7 +84,7 @@ class ImageTile(ImagePanel):
                 imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, scale=self.scale)
                 pos = db.GetObjectCoords(obKey)
-                imViewer.imagePanel.SelectPoints([pos])
+                imViewer.imagePanel.SelectPoint(pos)
         elif choice == 1:
             self.bin.SelectAll()
         elif choice == 2:
@@ -96,7 +96,7 @@ class ImageTile(ImagePanel):
     def OnDClick(self, evt):
         imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, scale=self.scale)
-        imViewer.imagePanel.SelectPoints([db.GetObjectCoords(self.obKey)])
+        imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
         
     def Select(self):

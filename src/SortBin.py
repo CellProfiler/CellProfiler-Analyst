@@ -101,10 +101,7 @@ class SortBin(wx.ScrolledWindow):
                 self.DeselectAll()
             elif evt.GetKeyCode() == ord('I'):
                 [t.ToggleSelect() for t in self.tiles]
-            else:
-                evt.Skip()
-        else:
-            evt.Skip()
+        evt.Skip()
             
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''
@@ -119,7 +116,7 @@ class SortBin(wx.ScrolledWindow):
                 imViewer = ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier,
                                         brightness=self.classifier.brightness, scale=self.classifier.scale)
                 pos = db.GetObjectCoords(key)
-                imViewer.imagePanel.SelectPoints([pos])
+                imViewer.imagePanel.SelectPoint(pos)
         elif choice == 1:
             self.SelectAll()
         elif choice == 2:

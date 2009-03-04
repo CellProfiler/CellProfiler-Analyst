@@ -193,7 +193,7 @@ class ClassifierGUI(wx.Frame):
         self.splitter.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGING, self.OnDragSash)
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
-        self.Bind(wx.EVT_KEY_DOWN, self.OnKey)    
+#        self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
         self.Bind(wx.EVT_CHAR, self.OnKey)
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
         
@@ -242,9 +242,17 @@ class ClassifierGUI(wx.Frame):
     
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
+        keycode = evt.GetKeyCode()
+        chIdx = keycode-49
         if evt.ControlDown() or evt.CmdDown():
-            chIdx = evt.GetKeyCode()-49
-            if len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
+            # load training set
+            if keycode == ord('o'):
+                self.OnLoadTrainingSet(evt)
+            # save training set
+            elif keycode == ord('s'):
+                self.OnSaveTrainingSet(evt)
+            # ctrl+N toggles channel #N on/off
+            elif len(self.chMap) > chIdx >= 0:
                 self.ToggleChannel(chIdx)
             
             
