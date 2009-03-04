@@ -1,4 +1,5 @@
 from DBConnect import DBConnect
+from DataModel import DataModel
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
@@ -8,6 +9,7 @@ import wx
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
+dm = DataModel.getInstance()
 
 colors = [(255,240,0), (242,38,46), (0,123,194), (32,148,61),
           (255,198,0), (196,47,148), (0,180,241), (113,161,51),
@@ -50,11 +52,29 @@ class ImageViewerPanel(ImagePanel):
             dc.DrawRectangle(x,y,w,h)
             dc.EndDrawing()
         return dc
+    
+    def SetSelectedPoints(self, posns):
+        self.selectedPoints = posns
+        self.Refresh()
                         
-    def SelectPoints(self, coordList):
-        self.selectedPoints = coordList
+    def SelectPoint(self, pos):
+        self.selectedPoints += [pos]
         self.Refresh()
         
+    def DeselectPoint(self, pos):
+        self.selectedPoints.remove(pos)
+        self.Refresh()
+        
+    def TogglePointSelection(self, pos):
+        if pos in self.selectedPoints:
+            self.DeselectPoint(pos)
+        else:
+            self.SelectPoint(pos)
+        
+    def DeselectAll(self):
+        self.selectedPoints = []
+        self.Refresh()
+
     def SetClassPoints(self, classes):
         self.classes = classes
         self.classVisible = {}
@@ -174,6 +194,10 @@ class ImageViewer(wx.Frame):
                 self.Destroy()
             elif keycode == ord('S'):
                 self.OnSaveImage(evt)
+            elif keycode == ord('A'):
+                self.SelectAll()
+            elif keycode == ord('D'):
+                self.DeselectAll()
             elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
         
@@ -189,7 +213,18 @@ class ImageViewer(wx.Frame):
         else:
             self.chMap[chIdx] = 'None'
             self.MapChannels(self.chMap)
-    
+            
+            
+    def SelectAll(self):
+        coordList = db.GetAllObjectCoordsFromImage(self.img_key)
+        self.selection = dm.GetObjectsFromImage(self.img_key)
+        self.imagePanel.SetSelectedPoints(coordList)
+        
+        
+    def DeselectAll(self):
+        self.selection = []
+        self.imagePanel.DeselectAll()
+
     
     def SetClasses(self, classCoords):
         self.imagePanel.SetClassPoints(classCoords)
@@ -203,20 +238,21 @@ class ImageViewer(wx.Frame):
         if self.img_key:
             x = evt.GetPosition().x / self.imagePanel.scale
             y = evt.GetPosition().y / self.imagePanel.scale
-            obkey = db.GetObjectNear(self.img_key, x, y)
+            obKey = db.GetObjectNear(self.img_key, x, y)
 
             # update selection
             if not evt.ShiftDown():
-                self.selection = set([obkey])
+                self.selection = [obKey]
+                self.imagePanel.DeselectAll()
+                self.imagePanel.TogglePointSelection(db.GetObjectCoords(obKey))
             else:
-                if obkey in self.selection:
-                    self.selection.remove(obkey)
+                if obKey not in self.selection:
+                    self.selection += [obKey]
                 else:
-                    self.selection.add(obkey)
+                    self.selection.remove(obKey)
+                self.imagePanel.TogglePointSelection(db.GetObjectCoords(obKey))
 
-            # update drawing
             if self.selection:
-                self.imagePanel.SelectPoints([db.GetObjectCoords(k) for k in self.selection])
                 # start drag
                 source = wx.DropSource(self)
                 # wxPython crashes unless the data object is assigned to a variable.

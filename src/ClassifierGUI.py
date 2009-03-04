@@ -199,7 +199,7 @@ class ClassifierGUI(wx.Frame):
         
         # Finally, if there's a default training set. Ask to load it.
         if p.training_set:
-            dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s'%(p.training_set),
+            dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.'%(p.training_set),
                                    'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response == wx.ID_YES:

@@ -57,7 +57,7 @@ def GetWhereClauseForObjects(obKeys):
 def GetWhereClauseForImages(imKeys):
     '''
     Return a SQL WHERE clause that matches any of the give image keys.
-    Example: GetWhereClauseForObjects([(3,), (4,)]) => 'WHERE
+    Example: GetWhereClauseForImages([(3,), (4,)]) => 'WHERE
     ImageNumber=3 OR ImageNumber=4'
     '''
     return " OR ".join([" AND ".join([col + '=' + str(value)
@@ -325,6 +325,15 @@ class DBConnect(Singleton):
         res = self.GetResultsAsList()
         assert len(res)==1, "Returned %s objects instead of 1.\n" % len(res)
         return res[0]
+    
+    
+    def GetAllObjectCoordsFromImage(self, imKey):
+        ''' 
+        Returns a list of lists x, y coordinates for all objects in the given image. 
+        '''
+        select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imKey])
+        self.Execute(select)
+        return self.GetResultsAsList()
 
 
     def GetObjectNear(self, imkey, x, y):
