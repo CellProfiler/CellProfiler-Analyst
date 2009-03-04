@@ -53,7 +53,10 @@ class TrainingSet:
     def Load(self, filename):
         self.Clear()
         f = open(filename)
-        for l in f:
+        lines = f.read()
+        lines = lines.replace('\r', '\n')    # replace CRs with LFs
+        lines = lines.split('\n')
+        for l in lines:
             try:
                 if l.strip()=='' or l.startswith('#'):
                     continue
