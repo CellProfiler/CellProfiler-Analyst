@@ -491,7 +491,8 @@ class ClassifierGUI(wx.Frame):
             else:
                 keysPerBin[label] = [key]
         for bin in self.classBins:
-            bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+            if bin.label in keysPerBin.keys():
+                bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
                 
         self.SetStatusText('Training set loaded.')
         

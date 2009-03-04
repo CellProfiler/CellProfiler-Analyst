@@ -55,12 +55,14 @@ class TrainingSet:
         f = open(filename)
         for l in f:
             try:
-                if l.startswith('#'):
+                if l.strip()=='' or l.startswith('#'):
                     continue
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
                     self.labels = l.strip().split(' ')[1:]
                     continue
+                if label not in self.labels:
+                    self.labels += [label]
                 obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:]])
             except:
                 print >>stderr, "error parsing training set %s, line >>>%s<<<"%(filename, l.strip())
