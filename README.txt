@@ -157,6 +157,10 @@ the posterior is computed for each group independently.
   the menubar or using shortcut Ctrl+S. 
 * The brightness and scale of the object tiles may be adjusted by choosing
   Display>ImageControls from the menubar.
+* Regular expressions may now be used in defining columns that the classifier
+  will ignore in classifier_ignore_substrings in properties files.
+* When finding rules, Classifier will now automatically ignore table, image, 
+  and object ID columns as well as any columns that contain non-numeric data.
   
 
 ---------------------------------
