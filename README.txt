@@ -14,7 +14,7 @@
 ---------------------------------
  CONTENTS
  -------------------------------- 
-   I. About Classifier 2.0 Beta
+   I. About Classifier 2.1 Beta
   II. Requirements
  III. Getting Started
   IV. Other Features
@@ -35,7 +35,7 @@ been shown to function on Windows XP as well.
 ---------------------------------
   II. Requirements
 ---------------------------------
-This software requires access to a MySQL database where per-image and per-
+This software requires access to a MySQL database where per_image and per_
 object measurements and metadata are stored. Alternatively, this data may be
 loaded from CSV files into a local SQLite3 database. Classifier also requires
 access to the images used to create the data tables. The images can be stored 
@@ -50,7 +50,7 @@ adaptable, if it stores its data in a similar form.
 IMAGES:
 Individual image files are expected to be monochromatic and represent a single
 channel. However, any number of images may be combined by adding a new channel
-path and filename column to the per-image table of your database and the
+path and filename column to the per_image table of your database and the
 relevant information in the properties file. 
 
 TABLES:
@@ -76,10 +76,10 @@ would have 2 channels and your per_image table would look something like this:
   +------------------------------------------------------------------------+
 
 PER_OBJECT TABLE:
-The per-object table requires 4 columns: a foreign key image ID column, a
+The per_object table requires 4 columns: a foreign key image ID column, a
 _unique_ object ID column, a column for the object x-location, and a column for
 the object y-location. The location columns should contain values in pixel
-coordinates for where each object falls in it's parent image. 
+coordinates for where each object falls in its parent image. 
  
             Example_Per_Object_Table
   +------------------------------------------------+
@@ -112,7 +112,7 @@ Repeating this process iteratively should yield increasingly accurate rules for
 identifying your phenotypes. 
 
 Once you are confident in the classifier rule set, you may score your entire
-experiment on a per-image or per-group basis (if you have defined groups in
+experiment on a per_image or per_group basis (if you have defined groups in
 your properties file). This will present you with a table of object counts and
 enrichment values for each phenotype you defined. You may then sort by these
 columns to find images (or groups) that are enriched or depleted for a
