@@ -18,7 +18,8 @@
   II. Requirements
  III. Getting Started
   IV. Other Features
-   V. Known Issues
+   V. New Features in 2.1
+  VI. Known Issues
 ---------------------------------
 
 
@@ -37,11 +38,11 @@ been shown to function on Windows XP as well.
 ---------------------------------
 This software requires access to a MySQL database where per_image and per_
 object measurements and metadata are stored. Alternatively, this data may be
-loaded from CSV files into a local SQLite3 database. Classifier also requires
-access to the images used to create the data tables. The images can be stored 
-locally or remotely and accessed via HTTP. This information is stored in a
-PROPERTIES FILE which must be loaded at the application start. See the example
-properties files for more information. 
+loaded from CSV files. Classifier also requires access to the images used to 
+create the data tables. The images can be stored locally or remotely and 
+accessed via HTTP. This information is stored in a PROPERTIES FILE which must 
+be loaded at the application start. See the example properties files for more 
+information. 
 
 Classifier was designed to work with data processed by CellProfiler, though any
 experiment that measures object features from images should be easily
@@ -56,7 +57,7 @@ relevant information in the properties file.
 TABLES:
 Two tables are required: "per_image" and "per_object" (these names can be
 changed and set in your properties file). These can either reside in a MySQL
-database or in CSV files which Classifier can load into an SQLite3 database.
+database or in separate CSV (Comma-separated values) files.
 
 PER_IMAGE TABLE:
 The per_image table requires 1 column for a _unique_ image ID and 2 columns for
@@ -139,32 +140,62 @@ the posterior is computed for each group independently.
 * Double click object thumbnails to show the object in context in the image it
   was drawn from.
 * Right click on thumbnails and classifier bins for other features.
-* Ctrl+a: select all tiles in the current bin
-* Ctrl+d: deselect all tiles.
-* Ctrl+i: invert selection.
+* Ctrl+A: select all tiles in the current bin
+* Ctrl+D: deselect all tiles.
+* Ctrl+I: invert selection.
 * Delete: remove selection from bin.
 * Ctrl+1,2,3...: Toggle first,second,third... color channels on and off.
 * Image channels may be re-mapped to different colors by using the channel drop
   down menus (these channels are named in your properties file). 
 * Double click on the first row in enrichment score tables  to show the image
   or images in that row's group. (Right click for a list of the images from
-  that row.) 
+  that row.)
 * Click on enrichment table column-labels to sort by that column. Click again
-  to reverse the sort. 
+  to reverse the sort.
+
+
+---------------------------------
+  V. New Features in 2.1
+---------------------------------
+* Classifier now works on Windows!
+* When fetching thumbnails, you may now select "image" from the filter combo-
+  box to fetch from a particular image.
+* The brightness and scale of the thumbnail images may be adjusted by choosing
+  Display>ImageControls from the menubar. These controls were also added to the
+  Image Viewer.
+* Objects can now be selected in the Image Viewer and dragged into bins for
+  training. Shift+click will add/remove from a selection. And Ctrl+A will
+  select all objects in the displayed image. Ctrl+D to deselect.
+* Full-sized images can be saved from the Image Viewer as PNG or JPG files by 
+  choosing File>Save from the menu bar or by Ctrl+S.
+* The enrichment table now displays statistics on the currently selected column
+  at the bottom of the table.
+* The enrichment table now displays separate column names from your database
+  that were used to group your results.  
 * Objects of each class may be identified in a particular image by clicking the
-  "Score Image" button.
-* Full-sized images can be saved as PNG or JPG files by choosing File>Save from
-  the menubar or using shortcut Ctrl+S. 
-* The brightness and scale of the object tiles may be adjusted by choosing
-  Display>ImageControls from the menubar.
+  "Score Image" button. They may then be shown or hidden by using the 
+  class checkboxes.
 * Regular expressions may now be used in defining columns that the classifier
   will ignore in classifier_ignore_substrings in properties files.
-* When finding rules, Classifier will now automatically ignore table, image, 
-  and object ID columns as well as any columns that contain non-numeric data.
+* Classifier now automatically ignores non-numeric columns in your per_object 
+  table, as well as the table ID (if present), image ID, and object ID columns.
+* When scoring, you may now choose to score a subset of your experiement by 
+  selecting a filter defined in your properties file.
+* Areas can now be summed when scoring instead of object counts by specifying 
+  which column of your per_object table should be used for areas in the 
+  properties file field "area_scoring_column".
+* Thumbnails are now loaded in the background, so you can fetch thumbnails,
+  find rules, load a training set, open images, and score an experiment all at 
+  the same time.
+* CSV files can now be used in place of a MySQL database. See Properties_README
+* Heavier validation of properties files was implemented to help users pinpoint
+  properties-related errors quickly and easily.
+* Images without objects are now handled properly when scoring.
+* Non-consecutive object numbers are now supported. 
   
 
 ---------------------------------
-  V. Known Issues
+  VI. Known Issues
 ---------------------------------
 * Color channel menu bullets may fall out of sync with displayed colors when
   you toggle channels on/off with Ctrl+1,2,3... 
@@ -172,3 +203,5 @@ the posterior is computed for each group independently.
   mechanism.
 * Please report other bugs, issues, or feature requests to the forum at
   cellprofiler.org/forum 
+
+  
