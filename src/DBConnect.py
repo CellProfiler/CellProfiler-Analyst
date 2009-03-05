@@ -428,21 +428,23 @@ class DBConnect(Singleton):
         if self.classifierColNames is None:
             # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
             self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), silent=not verbose)
-            self.GetResultsAsList()                # ditch the results
+            self.GetResultsAsList()                   # ditch the results
             col_names = self.GetResultColumnNames()   # get the column names
+            self.classifierColNames = list(col_names) # copy them
             
-            # parse out any user-defined regular expressions
-            user_exps = []
-            for sub in p.classifier_ignore_substrings:
-                match = re.search('^regexp\((.+)\)$', sub)
-                if match:
-                    user_exps += [match.groups()[0]]
+            # automatically ignore ID columns
+            if p.table_id:
+                self.classifierColNames.remove(p.table_id)
+            self.classifierColNames.remove(p.image_id)
+            self.classifierColNames.remove(p.object_id)
             
-            # remove cols that match any user-defined regular expressions
-            col_names = [i for i in col_names if not any([re.search(user_exp,i) for user_exp in user_exps])]
-            # remove cols that match any user specified column names
-            self.classifierColNames = [i for i in col_names if not any([sub.lower() in i.lower() for sub in p.classifier_ignore_substrings])]
-            
+            # treat each classifier_ignore_substring as a regular expression
+            # for column names to ignore
+            if p.classifier_ignore_substrings:
+                self.classifierColNames = [col for col in self.classifierColNames
+                                                if not any([re.match('^'+user_exp+'$',col)
+                                                       for user_exp in p.classifier_ignore_substrings])]
+        print 'Ignoring columns:',[x for x in col_names if x not in self.classifierColNames]
         return self.classifierColNames
     
     
@@ -594,33 +596,37 @@ if __name__ == "__main__":
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
 
-    p.LoadFile('../properties/nirht_local.properties')
+    p.LoadFile('../properties/nirht_test.properties')
     dm.PopulateModel()
     
-    print 'group maps:',db.GetGroupMaps()
-    print 'filter "firstten":',db.GetFilteredImages('FirstTen')
+    print db.GetColnamesForClassifier()
     
-    # Train the classifier
-    imKey = (0,1)
-    nRules = 5
-    trainingSet = TrainingSet(p)
-    # make a training set
-    positives = [(0,1,56), (0,1,72), (0,1,92), (0,1,90), (0,1,88), (0,1,49), (0,1,11)]
-    negatives = [(0,1,i) for i in range(1,95) if i not in [56,72,92,90,88,49,11]]
-    trainingSet.Create(['pos','neg'],[positives, negatives])
-    output = StringIO()
-    print 'Training classifier with '+str(nRules)+' rules...'
-    weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames, nRules,
-                                                      trainingSet.label_matrix, 
-                                                      trainingSet.values, output)
-
-    obKeys = dm.GetObjectsFromImage(imKey)
-#    imKeysInFilter = db.GetFilteredImages('FirstHundred')
-#    obKeys = dm.GetRandomObjects(100,imKeysInFilter)
-    hits = []
-    if obKeys:
-        clNum = 1
-        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, weaklearners, [imKey])
-        
-    print hits
-
+#    p.LoadFile('../properties/nirht_local.properties')
+#    dm.PopulateModel()
+#    
+#    print 'group maps:',db.GetGroupMaps()
+#    print 'filter "firstten":',db.GetFilteredImages('FirstTen')
+#    
+#    # Train the classifier
+#    imKey = (0,1)
+#    nRules = 5
+#    trainingSet = TrainingSet(p)
+#    # make a training set
+#    positives = [(0,1,56), (0,1,72), (0,1,92), (0,1,90), (0,1,88), (0,1,49), (0,1,11)]
+#    negatives = [(0,1,i) for i in range(1,95) if i not in [56,72,92,90,88,49,11]]
+#    trainingSet.Create(['pos','neg'],[positives, negatives])
+#    output = StringIO()
+#    print 'Training classifier with '+str(nRules)+' rules...'
+#    weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames, nRules,
+#                                                      trainingSet.label_matrix, 
+#                                                      trainingSet.values, output)
+#
+#    obKeys = dm.GetObjectsFromImage(imKey)
+##    imKeysInFilter = db.GetFilteredImages('FirstHundred')
+##    obKeys = dm.GetRandomObjects(100,imKeysInFilter)
+#    hits = []
+#    if obKeys:
+#        clNum = 1
+#        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, weaklearners, [imKey])
+#        
+#    print hits
