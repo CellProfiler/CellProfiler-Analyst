@@ -140,8 +140,8 @@ the posterior is computed for each group independently.
 * Double click object thumbnails to show the object in context in the image it
   was drawn from.
 * Right click on thumbnails and classifier bins for other features.
-* Ctrl+A: select all tiles in the current bin
-* Ctrl+D: deselect all tiles.
+* Ctrl+A: select all thumbnails in the current bin
+* Ctrl+D: deselect all thumbnails.
 * Ctrl+I: invert selection.
 * Delete: remove selection from bin.
 * Ctrl+1,2,3...: Toggle first,second,third... color channels on and off.
