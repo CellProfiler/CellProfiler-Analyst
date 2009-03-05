@@ -262,8 +262,8 @@ class DBConnect(Singleton):
         
         
     def GetResultsAsList(self):
-        connID = threading.currentThread().getName()
         ''' Returns a list of results retrieved from the last execute query. '''
+        connID = threading.currentThread().getName()
         r = self.GetNextResult()
         l = []
         while r:
@@ -299,27 +299,21 @@ class DBConnect(Singleton):
     
     
     def GetPerImageObjectCounts(self):
-        ''' 
-        Returns a list of (imKey, obCount) tuples. 
-        '''
+        ''' Returns a list of (imKey, obCount) tuples. '''
         select = "SELECT "+UniqueImageClause()+", COUNT("+p.object_id+") FROM "+str(p.object_table)+" GROUP BY "+UniqueImageClause()
         self.Execute(select)
         return self.GetResultsAsList()
     
     
     def GetAllImageKeys(self):
-        ''' 
-        Returns a list of all image keys in the image_table. 
-        '''
+        ''' Returns a list of all image keys in the image_table. '''
         select = "SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause()
         self.Execute(select)
         return self.GetResultsAsList()
     
     
     def GetObjectCoords(self, obKey):
-        ''' 
-        Returns the specified object's x, y coordinates in an image. 
-        '''
+        ''' Returns the specified object's x, y coordinates in an image. '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
         self.Execute(select)
         res = self.GetResultsAsList()
@@ -328,18 +322,14 @@ class DBConnect(Singleton):
     
     
     def GetAllObjectCoordsFromImage(self, imKey):
-        ''' 
-        Returns a list of lists x, y coordinates for all objects in the given image. 
-        '''
+        ''' Returns a list of lists x, y coordinates for all objects in the given image. '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imKey])
         self.Execute(select)
         return self.GetResultsAsList()
 
 
     def GetObjectNear(self, imkey, x, y):
-        ''' 
-        Returns obKey of the closest object to x, y in an image.
-        '''
+        ''' Returns obKey of the closest object to x, y in an image. '''
         delta_x = '(%s - %d)'%(p.cell_x_loc, x)
         delta_y = '(%s - %d)'%(p.cell_y_loc, y)
         dist_clause = '%s*%s + %s*%s'%(delta_x, delta_x, delta_y, delta_y)
@@ -378,9 +368,7 @@ class DBConnect(Singleton):
 
 
     def GetGroupMaps(self):
-        '''
-        Build dictionary mapping group names and image keys to group keys.
-        '''
+        ''' Build dictionary mapping group names and image keys to group keys. '''
         groupColNames = {}
         groupMaps = {}
         key_size = p.table_id and 2 or 1
@@ -399,9 +387,7 @@ class DBConnect(Singleton):
         
     
     def GetFilteredImages(self, filter):
-        ''' 
-        Returns a list of imKeys from the given filter.
-        '''
+        ''' Returns a list of imKeys from the given filter. '''
         try:
             self.Execute(p.filters[filter])
         except Exception, e:
@@ -410,34 +396,35 @@ class DBConnect(Singleton):
         return self.GetResultsAsList()
     
     
-    def GetColumnNames(self):
-        ''' 
-        Returns a list of the column names for the specified table.
-        '''
+    def GetColumnNames(self, table):
+        '''  Returns a list of the column names for the specified table. '''
         # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
-        self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table))
+        self.Execute('SELECT * FROM %s LIMIT 1'%(table))
         self.GetResultsAsList()        # ditch the results
         return self.GetResultColumnNames()   # return the column names
             
-    
+
+    def GetColumnTypes(self, table):
+        ''' Returns the column types for the given table. '''
+        self.Execute('SELECT * from %s LIMIT 1'%(table), silent=True)
+        return [type(x) for x in self.GetResultsAsList()[0]]
+
+
     def GetColnamesForClassifier(self):
         '''
         Returns a list of column names for the object_table excluding 
         those specified in Properties.classifier_ignore_substrings
         '''
         if self.classifierColNames is None:
-            # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
-            self.Execute('SELECT * FROM %s LIMIT 1'%(p.object_table), silent=not verbose)
-            self.GetResultsAsList()                   # ditch the results
-            col_names = self.GetResultColumnNames()   # get the column names
-            self.classifierColNames = list(col_names) # copy them
-            
+            col_names = self.GetColumnNames(p.object_table)
+            col_types = self.GetColumnTypes(p.object_table)
+            # automatically ignore all string-type columns
+            self.classifierColNames = [col for col, type in zip(col_names, col_types) if type!=str]
             # automatically ignore ID columns
             if p.table_id:
                 self.classifierColNames.remove(p.table_id)
             self.classifierColNames.remove(p.image_id)
             self.classifierColNames.remove(p.object_id)
-            
             # treat each classifier_ignore_substring as a regular expression
             # for column names to ignore
             if p.classifier_ignore_substrings:
@@ -452,7 +439,7 @@ class DBConnect(Singleton):
         ''' Returns the column names of the last query on this connection. '''
         connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
-
+    
     
     def GetCellDataForClassifier(self, obKey):
         '''

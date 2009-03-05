@@ -77,9 +77,18 @@ class TestDBConnect(unittest.TestCase):
         
     def test_GetColumnNames(self):
         self.setup()
-        cols = self.db.GetColumnNames()
+        cols = self.db.GetColumnNames(self.p.object_table)
         assert cols[:20] == ['TableNumber', 'ImageNumber', 'ObjectNumber', 'Nuclei_Location_CenterX', 'Nuclei_Location_CenterY', 'Nuclei_Children_Cells_Count', 'Nuclei_Correlation_Correlation_DNA_and_pH3', 'Nuclei_Correlation_Correlation_DNA_and_Actin', 'Nuclei_Correlation_Correlation_pH3_and_Actin', 'Nuclei_AreaShape_Area', 'Nuclei_AreaShape_Eccentricity', 'Nuclei_AreaShape_Solidity', 'Nuclei_AreaShape_Extent', 'Nuclei_AreaShape_Euler_number', 'Nuclei_AreaShape_Perimeter', 'Nuclei_AreaShape_Form_factor', 'Nuclei_AreaShape_MajorAxisLength', 'Nuclei_AreaShape_MinorAxisLength', 'Nuclei_AreaShape_Orientation', 'Nuclei_AreaShape_Zernike0_0']
         assert cols[-20:] == ['AreaNormalized_Cytoplasm_AreaShape_Zernike5_3', 'AreaNormalized_Cytoplasm_AreaShape_Zernike5_5', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_0', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_2', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_4', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_6', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_1', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_3', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_5', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_7', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_0', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_2', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_4', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_6', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_8', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_1', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_3', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_5', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_7', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_9']
+        
+    def test_GetColumnTypes(self):
+        self.setup()
+        cols = self.db.GetColumnTypes(self.p.object_table)
+        assert cols[:20] == [long, long, long, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float]
+        assert cols[-20:] == [float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float]
+        cols = self.db.GetColumnTypes(self.p.image_table)
+        assert cols[:20] == [long, long, str, str, str, str, str, str, str, str, str, str, str, str, float, float, float, float, float, float]
+        
         
     def test_GetColnamesForClassifier(self):
         self.setup()
@@ -154,7 +163,7 @@ class TestDBConnect(unittest.TestCase):
         
     def test_GetColumnNames_local(self):
         self.setup_local()
-        cols = self.db.GetColumnNames()
+        cols = self.db.GetColumnNames(self.p.object_table)
         assert cols[:20] == ['TableNumber', 'ImageNumber', 'ObjectNumber', 'Nuclei_Location_CenterX', 'Nuclei_Location_CenterY', 'Nuclei_Children_Cells_Count', 'Nuclei_Correlation_Correlation_DNA_and_pH3', 'Nuclei_Correlation_Correlation_DNA_and_Actin', 'Nuclei_Correlation_Correlation_pH3_and_Actin', 'Nuclei_AreaShape_Area', 'Nuclei_AreaShape_Eccentricity', 'Nuclei_AreaShape_Solidity', 'Nuclei_AreaShape_Extent', 'Nuclei_AreaShape_Euler_number', 'Nuclei_AreaShape_Perimeter', 'Nuclei_AreaShape_Form_factor', 'Nuclei_AreaShape_MajorAxisLength', 'Nuclei_AreaShape_MinorAxisLength', 'Nuclei_AreaShape_Orientation', 'Nuclei_AreaShape_Zernike0_0']
         assert cols[-20:] == ['AreaNormalized_Cytoplasm_AreaShape_Zernike5_3', 'AreaNormalized_Cytoplasm_AreaShape_Zernike5_5', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_0', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_2', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_4', 'AreaNormalized_Cytoplasm_AreaShape_Zernike6_6', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_1', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_3', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_5', 'AreaNormalized_Cytoplasm_AreaShape_Zernike7_7', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_0', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_2', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_4', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_6', 'AreaNormalized_Cytoplasm_AreaShape_Zernike8_8', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_1', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_3', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_5', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_7', 'AreaNormalized_Cytoplasm_AreaShape_Zernike9_9']
         
