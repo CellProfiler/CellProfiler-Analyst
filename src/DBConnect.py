@@ -317,7 +317,8 @@ class DBConnect(Singleton):
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
         self.Execute(select)
         res = self.GetResultsAsList()
-        assert len(res)==1, "Returned %s objects instead of 1.\n" % len(res)
+        assert len(res)>0, "Couldn't find object coordinates for object key %s." %(obKey,) 
+        assert len(res)==1, "Database unexpectedly returned %s sets of object coordinates instead of 1." % len(res)
         return res[0]
     
     
@@ -431,7 +432,7 @@ class DBConnect(Singleton):
                 self.classifierColNames = [col for col in self.classifierColNames
                                                 if not any([re.match('^'+user_exp+'$',col)
                                                        for user_exp in p.classifier_ignore_substrings])]
-        print 'Ignoring columns:',[x for x in col_names if x not in self.classifierColNames]
+            print 'Ignoring columns:',[x for x in col_names if x not in self.classifierColNames]
         return self.classifierColNames
     
     
