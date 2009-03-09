@@ -378,6 +378,7 @@ class DBConnect(Singleton):
                 self.Execute(query)
             except Exception:
                 raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.'%(group)
+                continue
             res = self.GetResultsAsList()
             groupColNames[group] = self.GetResultColumnNames()[key_size:]
             d = {}

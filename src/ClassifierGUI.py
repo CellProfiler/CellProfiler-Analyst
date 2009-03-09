@@ -77,13 +77,9 @@ class ClassifierGUI(wx.Frame):
         self.obClassChoice = wx.Choice(self, id=wx.NewId(), choices=['random'])
         self.obClassChoice.SetSelection(0)
         filters = p.filters_ordered
-        self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters)
+        groups = p.groups_ordered
+        self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters+groups)
         self.filterChoice.SetSelection(0)
-        self.imageTxt = wx.TextCtrl(self, id=wx.NewId(), value='1', size=(30,-1))
-        if p.table_id:
-            self.tableStaticTxt = wx.StaticText(self, wx.NewId(), 'in table #')
-            self.tableTxt = wx.TextCtrl(self, id=wx.NewId(), value='0', size=(30,-1))
-            self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.fetchBtn = wx.Button(self, wx.NewId(), 'Fetch!')
         self.fetchSizer.AddStretchSpacer()
         self.fetchSizer.Add(wx.StaticText(self, wx.NewId(), 'Fetch'))
@@ -98,16 +94,9 @@ class ClassifierGUI(wx.Frame):
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.filterChoice)
         self.fetchSizer.AddSpacer((10,20))
-        self.fetchFromImageSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.fetchFromImageSizer.Add(self.imageTxt)
-        self.fetchFromImageSizer.AddSpacer((10,20))
-        if p.table_id:
-            self.fetchFromImageSizer.Add(self.tableStaticTxt)
-            self.fetchFromImageSizer.AddSpacer((10,20))
-            self.fetchFromImageSizer.Add(self.tableTxt)
-            self.fetchFromImageSizer.AddSpacer((10,20))
-        self.fetchSizer.AddSizer(self.fetchFromImageSizer)
-        self.fetchSizer.Hide(self.fetchFromImageSizer, True)
+        self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.fetchSizer.AddSizer(self.fetchFromGroupSizer)
+        self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
         self.fetchSizer.Add(self.fetchBtn)
         self.fetchSizer.AddStretchSpacer()
         
@@ -185,16 +174,11 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
-        self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
-        self.imageTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
-        if p.table_id:
-            self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
-            self.tableTxt.Bind(wx.EVT_TEXT, self.ValidateImageKey)
         self.splitter.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGING, self.OnDragSash)
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
-#        self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
-        self.Bind(wx.EVT_CHAR, self.OnKey)
+#        self.Bind(wx.EVT_KEY_DOWN, self.OnKey)  # TODO: why doesn't this work!?
+        self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
         
         # Finally, if there's a default training set. Ask to load it.
@@ -215,7 +199,7 @@ class ClassifierGUI(wx.Frame):
                 lambda(evt): self.SetStatusText('The phenotype of the %s.'%(p.object_name[1])))
         self.obClassChoice.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
         self.filterChoice.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('Image filters allow you to find %s from a subset of your images. (Defined in the properties file)'%(p.object_name[1])))
+                lambda(evt): self.SetStatusText('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
         self.filterChoice.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
         self.fetchBtn.Bind(wx.EVT_ENTER_WINDOW,
                 lambda(evt): self.SetStatusText('Fetches images of %s to be sorted.'%(p.object_name[1])))
@@ -242,6 +226,7 @@ class ClassifierGUI(wx.Frame):
     
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
+        print 'classifier'
         keycode = evt.GetKeyCode()
         chIdx = keycode-49
         if evt.ControlDown() or evt.CmdDown():
@@ -397,7 +382,7 @@ class ClassifierGUI(wx.Frame):
         nObjects    = int(self.nObjectsTxt.Value)
         obClass     = self.obClassChoice.Selection
         obClassName = self.obClassChoice.GetStringSelection()
-        filter       = self.filterChoice.GetStringSelection()
+        filter      = self.filterChoice.GetStringSelection()
         
         statusMsg = 'fetching '+str(nObjects)+' '+p.object_name[1]
         
@@ -408,51 +393,66 @@ class ClassifierGUI(wx.Frame):
                 obKeys = dm.GetRandomObjects(nObjects)
                 statusMsg += ' from whole experiment...'
             elif filter == 'image':
-                if p.table_id:
-                    imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
-                else:
-                    imKey = (int(self.imageTxt.Value),)
-                obKeys = dm.GetObjectsFromImage(imKey)
-                statusMsg += ' from image '+str(imKey)
-            else:
-                imKeysInFilter = db.GetFilteredImages(filter)
-                if imKeysInFilter == []:
-                        self.SetStatusText('No images were found in filter "%s".'%(filter))
-                        return
-                obKeys = dm.GetRandomObjects(nObjects, imKeysInFilter)
+                imKey = self.GetGroupKeyFromGroupSizer()
+                obKeys = dm.GetRandomObjects(nObjects, [imKey])
+            elif filter in p.filters_ordered:
+                filteredImKeys = db.GetFilteredImages(filter)
+                if filteredImKeys == []:
+                    self.SetStatusText('No images were found in filter "%s".'%(filter))
+                    return
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
                 statusMsg += ' from filter "'+filter+'"...'
+            elif filter in p.groups_ordered:
+                # if the filter name is a group then it's actually a group
+                groupName = filter
+                groupKey = self.GetGroupKeyFromGroupSizer()
+                filteredImKeys = dm.GetImagesInGroup(groupName, groupKey)
+                if filteredImKeys == []:
+                    self.SetStatusText('No images were found in group.')
+                    return
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                if not obKeys:
+                    self.SetStatusText('Images were found in group, but no objects were found within them.')
+                    return
+                statusMsg += ' from group "%s" = %s'%(groupName, groupKey)
+                    
         # classified
         else:
             hits = 0
             obKeys = []
-            
+            # Get images within any selected filter or group
             if filter != 'experiment':
                 if filter == 'image':
-                    if p.table_id:
-                        imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
-                    else:
-                        imKey = (int(self.imageTxt.Value),)
-                    imKeysInFilter = [imKey]
-                else:
-                    imKeysInFilter = db.GetFilteredImages(filter)
-                    if imKeysInFilter == []:
+                    imKey = self.GetGroupKeyFromGroupSizer()
+                    filteredImKeys = [imKey]
+                elif filter in p.filters_ordered:
+                    filteredImKeys = db.GetFilteredImages(filter)
+                    if filteredImKeys == []:
                         self.SetStatusText('No images were found in filter "%s".'%(filter))
                         return
-            
+                elif filter in p.groups_ordered:
+                    groupKey = self.GetGroupKeyFromGroupSizer()
+                    filteredImKeys = dm.GetImagesInGroup(filter, groupKey)
+                    if filteredImKeys == []:
+                        self.SetStatusText('No images were found in group.')
+                        return
+                    
             attempts = 0
             while len(obKeys) < nObjects:
                 if filter == 'experiment':
                     obKeysToTry = dm.GetRandomObjects(100)
                     loopMsg = ' in class "'+obClassName+'" from whole experiment... '
                 elif filter == 'image':
+                    # All objects are tried in first pass
+                    if attempts>0: break
+                    imKey = self.GetGroupKeyFromGroupSizer()
                     obKeysToTry = dm.GetObjectsFromImage(imKey)
-                    loopMsg = ' in class "'+obClassName+'" from image '+str(imKey)    
                 else:
-                    obKeysToTry = dm.GetRandomObjects(100,imKeysInFilter)
+                    obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
                     loopMsg = ' in class "'+obClassName+'" from filter "'+filter+'"...'
                 obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
 
-                attempts += 100
+                attempts += len(obKeysToTry)
                 if attempts%10000.0==0:
                     dlg = wx.MessageDialog(self, 'Found '+str(len(obKeys))+' '+p.object_name[1]+' after '+str(attempts)+' attempts. Continue searching?',
                                            'Continue searching?', wx.YES_NO|wx.ICON_QUESTION)
@@ -831,14 +831,89 @@ class ClassifierGUI(wx.Frame):
             
     def OnSelectFilter(self, evt):
         ''' Handler for fetch filter selection. '''
+        filter = self.filterChoice.GetStringSelection()
         # Select from a specific image
-        if evt.Selection == 1:
-            self.fetchSizer.Show(self.fetchFromImageSizer, True)
-        else:
-            self.fetchSizer.Hide(self.fetchFromImageSizer, True)
+        if filter == 'experiment' or filter in p.filters_ordered:
+            self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
+        elif filter == 'image' or filter in p.groups_ordered:
+            self.SetupFetchFromGroupSizer(filter)
+            self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         self.Layout()
         
+    
+    def SetupFetchFromGroupSizer(self, group):
+        '''
+        This sizer displays text fields for inputting each element of a
+        particular group's key. A group with 2 columns: Gene, and Well,
+        would be represented by two text boxes.
+        '''
+        if group=='image':
+            self.groupInputs = []
+            fieldNames = ['image']
+            if p.table_id: fieldNames = ['table', 'image']
+            validKeys = dm.GetAllImageKeys()
+        else:            
+            fieldNames = dm.GetGroupColumnNames(group)
+            fieldTypes = dm.GetGroupColumnTypes(group)
+            print fieldTypes
+            self.groupInputs = []
+            validKeys = dm.GetGroupKeysInGroup(group)
+        
+        self.groupFieldValidators = []
+        self.fetchFromGroupSizer.Clear(True)
+        for i, field in enumerate(fieldNames):
+            label = wx.StaticText(self, wx.NewId(), field+':')
+            validCols = list(set([col[i] for col in validKeys]))
+            validCols.sort()
+            validCols = [str(col) for col in validCols]
+            if fieldTypes[i]==int or fieldTypes[i]==long or fieldTypes[i]==float:
+                fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
+                                       choices=validCols)
+                # Create and bind to a text Validator
+                def ValidateGroupField(evt, validCols=validCols):
+                    ctrl = evt.GetEventObject().GetChildren()[0]
+                    if ctrl.GetValue() in validCols:
+                        ctrl.SetForegroundColour('#000001')
+                    else:
+                        ctrl.SetForegroundColour('#FF0000')
+                self.groupFieldValidators += [ValidateGroupField]
+                fieldInp.Bind(wx.EVT_TEXT, self.groupFieldValidators[-1])
+            else:
+                fieldInp = fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
+                                       choices=validCols, style=wx.CB_READONLY)
+            self.groupInputs += [fieldInp]
+            self.fetchFromGroupSizer.Add(label)
+            self.fetchFromGroupSizer.Add(fieldInp)
+            self.fetchFromGroupSizer.AddSpacer((10,20))
 
+    
+    
+    def ValidateIntegerField(self, evt):
+        ''' Validates an integer-only TextCtrl '''
+        txtCtrl = evt.GetEventObject()
+        # NOTE: textCtrl.SetBackgroundColor doesn't appear to work (probably works on win)
+        #   foregroundcolor only works when not setting to black.  LAAAAMMMEEE!
+        try:
+            int(txtCtrl.GetValue())
+            txtCtrl.SetForegroundColour('#000001')
+        except(Exception):
+            txtCtrl.SetForegroundColour('#FF0000')
+            
+            
+    def GetGroupKeyFromGroupSizer(self):
+        ''' Returns the text in the group text inputs as a group key. '''
+        groupKey = []
+        for input in self.groupInputs:
+            groupKey += [input.GetValue()]
+            # Try to convert the type to long or float if possible
+            # TODO: Cludgy: we should match the key type in the DataModel
+            try: groupKey[-1] = float(groupKey[-1])
+            except: pass
+            try: groupKey[-1] = long(groupKey[-1])
+            except: pass
+        return tuple(groupKey)
+    
+    
     def OnShowImageControls(self, evt):
         ''' Shows the image adjustment control panel in a new frame. '''
         self.imageControlFrame = wx.Frame(self)

@@ -101,7 +101,9 @@ class SortBin(wx.ScrolledWindow):
                 self.DeselectAll()
             elif evt.GetKeyCode() == ord('I'):
                 [t.ToggleSelect() for t in self.tiles]
+        print 'bin'
         evt.Skip()
+        
             
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''

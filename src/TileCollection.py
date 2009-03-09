@@ -117,14 +117,17 @@ class TileLoader(threading.Thread):
             if not self.tile_collection.tileData.get(obKey, None):
                 continue
 
-            newData = image_collection.FetchTile(obKey)
-            tile_data = self.tile_collection.tileData.get(obKey, None)
-            # Make sure tile hasn't been deleted outside this thread
-            if tile_data:
-                # copy each channel
-                for i in range(len(tile_data)):
-                    tile_data[i] = newData[i]
-                wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
+            try:
+                newData = image_collection.FetchTile(obKey)
+                tile_data = self.tile_collection.tileData.get(obKey, None)
+                # Make sure tile hasn't been deleted outside this thread
+                if tile_data:
+                    # copy each channel
+                    for i in range(len(tile_data)):
+                        tile_data[i] = newData[i]
+                    wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
+            except Exception, e:
+                print 'ERROR FETCHING TILE!',e
 
     def abort(self):
         self._want_abort = True

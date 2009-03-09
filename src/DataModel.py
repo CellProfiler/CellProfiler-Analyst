@@ -16,8 +16,9 @@ class DataModel(Singleton):
         self.data = {}           # {imKey:obCount, ... }
         self.groupMaps = {}      # { groupName:{imKey:groupKey, }, ... }
                                  # eg: groupMaps['Wells'][(0,4)]  ==>  (3,'A01')
-        self.groupColNames = {}  # {groupName:[group_key_col_names], ...}
-                                 # eg: {'Gene': ['gene']}
+        self.groupColNames = {}  # {groupName:[col_names], ...}
+                                 # eg: {'Gene': ['gene'], ...}
+        self.groupColTypes = {}  # {groupName:[col_types], ...}
         self.cumSums = []        # cumSum[i]: sum of objects in images 1..i (inclusive) 
         self.obCount = 0
         self.keylist = []
@@ -54,6 +55,9 @@ class DataModel(Singleton):
             self.cumSums[i+1] = self.cumSums[i]+self.data[imKey]
 
         self.groupMaps, self.groupColNames = db.GetGroupMaps()
+        for group in self.groupMaps:
+            self.groupColTypes[group] = [type(col) for col in self.groupMaps[group].items()[0][1]] 
+
 
     def DeleteModel(self):
         self.data = {}
@@ -70,7 +74,6 @@ class DataModel(Singleton):
         need not necessarily be in sorted order.
         '''
         obIdx = randint(1, self.obCount)
-#        print 'rand:',obIdx
         imIdx = numpy.searchsorted(self.cumSums, obIdx, 'left')
         # SUBTLETY: images which have zero objects will appear as repeated
         #    sums in the cumulative array, so we must pick the first index
@@ -97,13 +100,16 @@ class DataModel(Singleton):
             return []
         else:
             sums = numpy.cumsum([self.data[imKey] for imKey in imKeys])
+            if sums[-1] < 1:
+                return []
             obs = []
             for i in xrange(N):
                 obNum = randint(1, sums[-1])
                 index = numpy.searchsorted(sums, obNum, 'left')
-                while sums[index] == sums[index-1]:
-                    index -= 1
-                obNum = obNum-sums[index-1]
+                if index != 0:
+                    while sums[index] == sums[index-1]:
+                        index -= 1
+                    obNum = obNum-sums[index-1]
                 obs.append(tuple(list(imKeys[index])+[obNum]))
             return obs
             
@@ -122,6 +128,11 @@ class DataModel(Singleton):
             obKey.append(i+1)
             obKeys.append(tuple(obKey))
         return obKeys
+    
+    
+    def GetAllImageKeys(self):
+        ''' Returns all object keys. '''
+        return list(self.data.keys())
 
 
     def GetObjectCountFromImage(self, imKey):
@@ -141,6 +152,11 @@ class DataModel(Singleton):
         ''' Returns the key column names associated with the specified group. '''
         return list(self.groupColNames[group])   # return a copy of this list so it can't be modified
     
+
+    def GetGroupColumnTypes(self, group):
+        ''' Returns the key column types associated with the specified group. '''
+        return list(self.groupColTypes[group])   # return a copy of this list so it can't be modified
+
     
     def SumToGroup(self, imdata, group):
         '''
@@ -164,6 +180,11 @@ class DataModel(Singleton):
     def GetImagesInGroup(self, group, groupKey):
         ''' Returns all imKeys in a particular group. '''
         return [imKey for imKey,gKey in self.groupMaps[group].items() if gKey==groupKey]
+    
+    
+    def GetGroupKeysInGroup(self, group):
+        ''' Returns all groupKeys in specified group '''
+        return list(set(self.groupMaps[group].values()))
         
     
     def IsEmpty(self):
