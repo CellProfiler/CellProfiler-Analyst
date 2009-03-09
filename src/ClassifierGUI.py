@@ -201,9 +201,9 @@ class ClassifierGUI(wx.Frame):
         self.filterChoice.Bind(wx.EVT_ENTER_WINDOW,
                 lambda(evt): self.SetStatusText('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
         self.filterChoice.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.fetchBtn.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('Fetches images of %s to be sorted.'%(p.object_name[1])))
-        self.fetchBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+#        self.fetchBtn.Bind(wx.EVT_ENTER_WINDOW,
+#                lambda(evt): self.SetStatusText('Fetches images of %s to be sorted.'%(p.object_name[1])))
+#        self.fetchBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
         self.nRulesTxt.Bind(wx.EVT_ENTER_WINDOW,
                 lambda(evt): self.SetStatusText('The maximum number of rules classifier should use to define your phenotypes.'))
         self.nRulesTxt.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
@@ -384,37 +384,42 @@ class ClassifierGUI(wx.Frame):
         obClassName = self.obClassChoice.GetStringSelection()
         filter      = self.filterChoice.GetStringSelection()
         
-        statusMsg = 'fetching '+str(nObjects)+' '+p.object_name[1]
+        statusMsg = 'fetching %d %s %s'%(nObjects, obClassName, p.object_name[1])
         
         # Get object keys
         # unclassified:
         if obClass == 0:
             if filter == 'experiment':
                 obKeys = dm.GetRandomObjects(nObjects)
-                statusMsg += ' from whole experiment...'
+                statusMsg += ' from whole experiment'
             elif filter == 'image':
                 imKey = self.GetGroupKeyFromGroupSizer()
                 obKeys = dm.GetRandomObjects(nObjects, [imKey])
+                statusMsg += ' from image %s'%(imKey,)
             elif filter in p.filters_ordered:
                 filteredImKeys = db.GetFilteredImages(filter)
                 if filteredImKeys == []:
-                    self.SetStatusText('No images were found in filter "%s".'%(filter))
+                    self.PostMessage('No images were found in filter "%s"'%(filter))
                     return
                 obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
-                statusMsg += ' from filter "'+filter+'"...'
+                statusMsg += ' from filter "%s"'%(filter)
             elif filter in p.groups_ordered:
                 # if the filter name is a group then it's actually a group
                 groupName = filter
                 groupKey = self.GetGroupKeyFromGroupSizer()
                 filteredImKeys = dm.GetImagesInGroup(groupName, groupKey)
+                colNames = dm.GetGroupColumnNames(groupName)
                 if filteredImKeys == []:
-                    self.SetStatusText('No images were found in group.')
+                    self.PostMessage('No images were found in group %s: %s'%(groupName, 
+                                        ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)])))
                     return
                 obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
                 if not obKeys:
-                    self.SetStatusText('Images were found in group, but no objects were found within them.')
+                    self.PostMessage('The images in this group are empty. Group %s: %s'%(groupName, 
+                                        ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)])))
                     return
-                statusMsg += ' from group "%s" = %s'%(groupName, groupKey)
+                statusMsg += ' from group %s: %s'%(groupName,
+                                        ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)]))
                     
         # classified
         else:
@@ -428,43 +433,49 @@ class ClassifierGUI(wx.Frame):
                 elif filter in p.filters_ordered:
                     filteredImKeys = db.GetFilteredImages(filter)
                     if filteredImKeys == []:
-                        self.SetStatusText('No images were found in filter "%s".'%(filter))
+                        self.PostMessage('No images were found in filter "%s"'%(filter))
                         return
                 elif filter in p.groups_ordered:
                     groupKey = self.GetGroupKeyFromGroupSizer()
+                    colNames = dm.GetGroupColumnNames(filter)
                     filteredImKeys = dm.GetImagesInGroup(filter, groupKey)
                     if filteredImKeys == []:
-                        self.SetStatusText('No images were found in group.')
+                        self.PostMessage('No images were found in group %s: %s'%(filter,
+                                            ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)])))
                         return
                     
             attempts = 0
             while len(obKeys) < nObjects:
                 if filter == 'experiment':
                     obKeysToTry = dm.GetRandomObjects(100)
-                    loopMsg = ' in class "'+obClassName+'" from whole experiment... '
+                    loopMsg = ' from whole experiment'
                 elif filter == 'image':
                     # All objects are tried in first pass
                     if attempts>0: break
                     imKey = self.GetGroupKeyFromGroupSizer()
                     obKeysToTry = dm.GetObjectsFromImage(imKey)
+                    loopMsg = ' from image %s'%(imKey,)
                 else:
                     obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
-                    loopMsg = ' in class "'+obClassName+'" from filter "'+filter+'"...'
+                    if filter in p.filters_ordered:
+                        loopMsg = ' from filter %s'%(filter)
+                    elif filter in p.groups_ordered:
+                        loopMsg = ' from group %s: %s'%(filter,
+                                            ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)]))
                 obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
-
                 attempts += len(obKeysToTry)
                 if attempts%10000.0==0:
-                    dlg = wx.MessageDialog(self, 'Found '+str(len(obKeys))+' '+p.object_name[1]+' after '+str(attempts)+' attempts. Continue searching?',
+                    dlg = wx.MessageDialog(self, 'Found %d %s after %d attempts. Continue searching?'
+                                           %(len(obKeys), p.object_name[1], attempts), 
                                            'Continue searching?', wx.YES_NO|wx.ICON_QUESTION)
                     response = dlg.ShowModal()
                     if response == wx.ID_NO:
                         break
-
             statusMsg += loopMsg
-
+            
+        self.PostMessage(statusMsg)
         self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
         
-        self.SetStatusText(statusMsg)
     
 
     def OnTileUpdated(self, evt):
@@ -482,7 +493,7 @@ class ClassifierGUI(wx.Frame):
         
     def LoadTrainingSet(self, filename):
         ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
-        self.SetStatusText('Loading training set from: '+filename)
+        self.PostMessage('Loading training set from: '+filename)
         os.chdir(os.path.split(filename)[0])                       # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         self.defaultTSFileName = os.path.split(filename)[1]
         
@@ -502,7 +513,7 @@ class ClassifierGUI(wx.Frame):
             if bin.label in keysPerBin.keys():
                 bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
                 
-        self.SetStatusText('Training set loaded.')
+        self.PostMessage('Training set loaded.')
         
     
     def OnSaveTrainingSet(self, evt):
@@ -605,7 +616,7 @@ class ClassifierGUI(wx.Frame):
         self.trainingSet.Create(labels = [bin.label for bin in self.classBins],
                                 keyLists = [bin.GetObjectKeys() for bin in self.classBins])
         output = StringIO()
-        self.SetStatusText('Training classifier with '+str(nRules)+' rules...')
+        self.PostMessage('Training classifier with '+str(nRules)+' rules...')
         self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                nRules, self.trainingSet.label_matrix, 
                                                                self.trainingSet.values, output)
@@ -655,14 +666,13 @@ class ClassifierGUI(wx.Frame):
         try:
             obKeys = dm.GetObjectsFromImage(imKey)
         except:
-            self.SetStatusText('No such image: %s'%(imKey))
+            self.SetStatusText('No such image: %s'%(imKey,))
             return
         classHits = {}
         if obKeys:
             for clNum, bin in enumerate(self.classBins):
                 classHits[bin.label] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, [imKey])
-                self.SetStatusText('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
-                print '%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey)
+                self.PostMessage('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
         
         # 3) Get object coordinates in image and display
         classCoords = {}
@@ -703,7 +713,7 @@ class ClassifierGUI(wx.Frame):
         # into phenotype classes and count phenotype-hits per-image.
         if not self.keysAndCounts or filter!=self.lastScoringFilter:
             self.lastScoringFilter = filter
-            self.SetStatusText('Calculating %s counts for each class...'
+            self.PostMessage('Calculating %s counts for each class...'
                                %(p.object_name[0]))
             self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners,
                                                              filter=filter)
@@ -724,7 +734,7 @@ class ClassifierGUI(wx.Frame):
         
         # Sum hits-per-group if not grouping by image
         if group != groupChoices[0]:
-            self.SetStatusText('Grouping %s counts by %s...' % (p.object_name[0], group))
+            self.PostMessage('Grouping %s counts by %s...' % (p.object_name[0], group))
             imData = {}
             for row in self.keysAndCounts:
                 key = tuple(row[:-nClasses])
@@ -737,7 +747,7 @@ class ClassifierGUI(wx.Frame):
         print 'time to group per-image counts:',t3-t2
                 
         # Calculate alpha
-        self.SetStatusText('Fitting beta binomial distribution to data...')
+        self.PostMessage('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
         alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
         print '   alpha =', alpha, '   converged =', converged
@@ -750,14 +760,14 @@ class ClassifierGUI(wx.Frame):
         two_classes = nClasses == 2
             
         # Construct matrix of table data
-        self.SetStatusText('Computing enrichment scores for each group...')
+        self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
         for i, row in enumerate(groupedKeysAndCounts):
             # Update the status text after every 5% is done.
             if float(i)/float(len(groupedKeysAndCounts))-fraction > 0.05:
                 fraction = float(i)/float(len(groupedKeysAndCounts))
-                self.SetStatusText('Computing enrichment scores for each group... %d%%' %(100*fraction))
+                self.PostMessage('Computing enrichment scores for each group... %d%%' %(100*fraction))
             
             # Start this row with the group key: 
             tableRow = list(row[:-nClasses])
@@ -775,7 +785,7 @@ class ClassifierGUI(wx.Frame):
                 tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
             tableData.append(tableRow)
         tableData = numpy.array(tableData, dtype=object)
-        self.SetStatusText('Computing enrichment scores for each group... 100%')
+        self.PostMessage('Computing enrichment scores for each group... 100%')
         
         t5 = time()
         print 'time to compute enrichment scores:',t5-t4
@@ -851,11 +861,11 @@ class ClassifierGUI(wx.Frame):
             self.groupInputs = []
             fieldNames = ['image']
             if p.table_id: fieldNames = ['table', 'image']
+            fieldTypes = [int, int]
             validKeys = dm.GetAllImageKeys()
         else:            
             fieldNames = dm.GetGroupColumnNames(group)
             fieldTypes = dm.GetGroupColumnTypes(group)
-            print fieldTypes
             self.groupInputs = []
             validKeys = dm.GetGroupKeysInGroup(group)
         
@@ -880,19 +890,18 @@ class ClassifierGUI(wx.Frame):
                 fieldInp.Bind(wx.EVT_TEXT, self.groupFieldValidators[-1])
             else:
                 fieldInp = fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                       choices=validCols, style=wx.CB_READONLY)
+                                                  choices=validCols, style=wx.CB_READONLY)
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)
             self.fetchFromGroupSizer.AddSpacer((10,20))
-
     
     
     def ValidateIntegerField(self, evt):
         ''' Validates an integer-only TextCtrl '''
         txtCtrl = evt.GetEventObject()
         # NOTE: textCtrl.SetBackgroundColor doesn't appear to work (probably works on win)
-        #   foregroundcolor only works when not setting to black.  LAAAAMMMEEE!
+        #   foreground color only works when not setting to black.  LAAAAMMMEE!
         try:
             int(txtCtrl.GetValue())
             txtCtrl.SetForegroundColour('#000001')
@@ -941,6 +950,12 @@ class ClassifierGUI(wx.Frame):
         self.scale = scale
         [t.SetScale(scale) for bin in self.all_sort_bins() for t in bin.tiles]
         [bin.UpdateSizer() for bin in self.all_sort_bins()]
+        
+        
+    def PostMessage(self, message):
+        ''' Updates the status bar text and prints to stdout. '''
+        self.SetStatusText(message)
+        print message
         
 
     def OnClose(self, evt):
