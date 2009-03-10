@@ -36,7 +36,7 @@ been shown to function on Windows XP as well.
 ---------------------------------
   II. Requirements
 ---------------------------------
-This software requires access to a MySQL database where per_image and per_
+This software requires access to a MySQL database where per-image and per_
 object measurements and metadata are stored. Alternatively, this data may be
 loaded from CSV files. Classifier also requires access to the images used to 
 create the data tables. The images can be stored locally or remotely and 
@@ -51,23 +51,23 @@ adaptable, if it stores its data in a similar form.
 IMAGES:
 Individual image files are expected to be monochromatic and represent a single
 channel. However, any number of images may be combined by adding a new channel
-path and filename column to the per_image table of your database and the
+path and filename column to the per-image table of your database and the
 relevant information in the properties file. 
 
 TABLES:
-Two tables are required: "per_image" and "per_object" (these names can be
+Two tables are required: "per-image" and "per_object" (these names can be
 changed and set in your properties file). These can either reside in a MySQL
 database or in separate CSV (Comma-separated values) files.
 
-PER_IMAGE TABLE:
-The per_image table requires 1 column for a _unique_ image ID and 2 columns for
+per-image TABLE:
+The per-image table requires 1 column for a _unique_ image ID and 2 columns for
 each channel represented in your images:  One column for the image path, and
 one column for the image filename (which may include multiple path elements). 
 
 For example, if you took images of cells stained with GFP and Hoechst, you
-would have 2 channels and your per_image table would look something like this: 
+would have 2 channels and your per-image table would look something like this: 
 
-                          Example_Per_Image_Table
+                          Example_per-image_Table
   +------------------------------------------------------------------------+
   | ImgID | GFP_path | GFP_file | Hoechst_path | Hoechst_file | other cols |
   |-------+----------+-----------------------------------------------------+
@@ -110,10 +110,10 @@ thinks are objects from the specified phenotype. You may then refine the
 classifier by sorting these objects into their appropriate classification bins. 
 
 Repeating this process iteratively should yield increasingly accurate rules for
-identifying your phenotypes. 
+identifying your phenotypes.
 
 Once you are confident in the classifier rule set, you may score your entire
-experiment on a per_image or per_group basis (if you have defined groups in
+experiment on a per-image or per-group basis (if you have defined groups in
 your properties file). This will present you with a table of object counts and
 enrichment values for each phenotype you defined. You may then sort by these
 columns to find images (or groups) that are enriched or depleted for a
@@ -160,6 +160,9 @@ the posterior is computed for each group independently.
 * Classifier now works on Windows!
 * When fetching thumbnails, you may now select "image" from the filter combo-
   box to fetch from a particular image.
+* When fetching thumbnails, groups defined in your properties file are now also
+  shown in the filter combobox. This could help biologists view objects with a
+  certain treatment or in a certain well.
 * The brightness and scale of the thumbnail images may be adjusted by choosing
   Display>ImageControls from the menubar. These controls were also added to the
   Image Viewer.
