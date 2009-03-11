@@ -116,27 +116,47 @@ image_url_prepend  =  <http://yourserver.com>
 
 # ======== Dynamic Groups ========
 # OPTIONAL
-# Here you can define groupings to choose from when classifier scores your experiment.  (eg: per-well)
+# Here you can define ways of grouping your image data, by linking column(s)
+# that identify unique images (the image-key) to a unique group of columns the
+# (group-key). Note that the group-key columns may come from other tables, so 
+# long as the tables have a common key.
+# 
+# Example: With the "Well" group defined below, Classifier will allow you to
+#   fetch cells from images from a particular well by providing you with a well
+#   dropdown in the user interface. It will also allow you to group your data
+#   by each unique well value when scoring.
+#
+# Example 2: Also note the "Plate+Well" group. This group will specify unique
+#   pairs of plate and well values. Since well values such as "A01" are likely
+#   to NOT be unique across multiple plates, this will provide a way to refer
+#   to cells from, plate X, well A01, rather than just any well named "A01".
+#  
 # FORMAT:
-#   group_XXX  =  MySQL select statement that returns image-keys and group-keys, where XXX will be the name of the group.
+#   group_XXX  =  MySQL select statement that returns image-key columns followed by group-key columns. XXX will be the name of the group.
 # EXAMPLE GROUPS:
-#   group_SQL_Well       =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Per_Image_Table.well FROM Per_Image_Table
-#   group_SQL_Gene       =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Well_ID_Table.gene FROM Per_Image_Table, Well_ID_Table WHERE Per_Image_Table.well=Well_ID_Table.well
-#   group_SQL_Well+Gene  =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Well_ID_Table.well, Well_ID_Table.gene FROM Per_Image_Table, Well_ID_Table WHERE Per_Image_Table.well=Well_ID_Table.well
+#   group_SQL_Well        =  SELECT TableNumber, ImageNumber, well FROM Per_Image_Table
+#   group_SQL_Plate+Well  =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Well_ID_Table.Plate, Per_Image_Table.well FROM Per_Image_Table, WELL_ID_Table WHERE Per_Image_Table.well=Well_ID_Table.well
+#   group_SQL_Treatment   =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Well_ID_Table.treatment FROM Per_Image_Table, Well_ID_Table WHERE Per_Image_Table.well=Well_ID_Table.well
 
 group_SQL_YourGroupName  =  
 
 
 # ======== Image Filters ========
 # OPTIONAL
-# Here you can define image filters to let you select objects from a subset of your experiment when training the classifier.
+# Here you can define image filters to let you fetch or score objects from a 
+# subset of the images in your experiment.
+#
+# Example: With the CDKs filter defined below, Classifier will provide an extra
+#   option to fetch cells from CDKs... that is, images who's corresponding gene
+#   entry starts with CDK.
+#
 # FORMAT:
-#   filter_SQL_XXX  =  MySQL select statement that returns image keys you wish to filter out, where XXX is the name of the filter.
+#   filter_SQL_XXX  =  MySQL select statement that returns image-key columns for images you wish to filter out. XXX will be the name of the filter.
 # EXAMPLE FILTERS:
 #   filter_SQL_EMPTY  =  SELECT TableNumber, ImageNumber FROM CPA_per_image, Well_ID_Table WHERE CPA_per_image.well=Well_ID_Table.well AND Well_ID_Table.Gene="EMPTY"
 #   filter_SQL_CDKs   =  SELECT TableNumber, ImageNumber FROM CPA_per_image, Well_ID_Table WHERE CPA_per_image.well=Well_ID_Table.well AND Well_ID_Table.Gene REGEXP 'CDK.*'
 
-group_SQL_YourFilterName  =  
+filter_SQL_YourFilterName  =  
 
 
 # ======== Meta data ======== 
