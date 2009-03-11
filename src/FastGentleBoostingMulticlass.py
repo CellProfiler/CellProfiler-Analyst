@@ -19,6 +19,7 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
         classmask = (label_matrix[:, idx] == 1).reshape((num_examples, 1))
         num_examples_class = sum(classmask)
         weights[tile(classmask, (1, num_classes))] /= num_examples_class
+    balancing = weights.copy()
     
     nworkers = int(os.getenv("NWORKERS") or 2)
     workers = range(nworkers)
@@ -73,7 +74,7 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
         delta = reshape(values[:, column] > thresh, (num_examples, 1))
         feature_thresh_mask = tile(delta, (1, num_classes))
         recomputed_labels = computed_labels + feature_thresh_mask * tile(a, (num_examples, 1)) + (1 - feature_thresh_mask) * tile(b, (num_examples, 1))
-        reweights = exp(- recomputed_labels * label_matrix)
+        reweights = balancing * exp(- recomputed_labels * label_matrix)
         reweights = reweights / sum(reweights)
         
         return (err, colnames[int(column)], thresh, a, b, reweights, recomputed_labels)
