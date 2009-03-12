@@ -9,13 +9,19 @@ class ImagePanel(wx.Panel):
     ImagePanels are wxPanels that display a wxBitmap and store multiple
     image channels which can be recombined to mix different bitmaps.
     '''
-    def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0):
-        self.chMap       = chMap                                               # channel->color mapping to use
-        self.toggleChMap = chMap[:]
-        self.images      = imgs                                                # image channel arrays
-        self.bitmap      = ImageTools.MergeToBitmap(imgs,
-                                                    chMap = chMap,
-                                                    scale = scale,
+    def __init__(self, images, channel_map, parent, scale=1.0, brightness=1.0):
+        """
+        images -- list of numpy arrays
+        channel_map -- list of strings naming the color to map each channel 
+                       onto, e.g., ['red', 'green', 'blue']
+        
+        """
+        self.chMap       = channel_map
+        self.toggleChMap = channel_map[:]
+        self.images      = images
+        self.bitmap      = ImageTools.MergeToBitmap(images,
+                                                    chMap=channel_map,
+                                                    scale=scale,
                                                     brightness = brightness)   # displayed wx.Bitmap
         
         wx.Panel.__init__(self, parent, wx.NewId(), size=self.bitmap.Size)
