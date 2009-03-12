@@ -11,6 +11,12 @@ p  = Properties.getInstance()
 db = DBConnect.getInstance()
 
 
+# The event type is shared, and there is no information in the event
+# about which SortBin it came from.  That's ok because the handler
+# will need to check all the SortBins anyway.
+EVT_QUANTITY_CHANGED = wx.PyEventBinder(wx.NewEventType(), 1)
+
+
 class SortBinDropTarget(wx.DropTarget):
     def __init__(self, bin):
         wx.DropTarget.__init__(self)
@@ -25,9 +31,7 @@ class SortBinDropTarget(wx.DropTarget):
         srcID, obKeys = cPickle.loads(draginfo)
         if not obKeys:
             return wx.DragNone
-        return self.bin.ReceiveDrop(srcID, obKeys) 
-
-        
+        return self.bin.ReceiveDrop(srcID, obKeys)
 
 
 class SortBin(wx.ScrolledWindow):
@@ -67,7 +71,6 @@ class SortBin(wx.ScrolledWindow):
         self.Bind(wx.EVT_SET_FOCUS, (lambda(evt):None))
     
         self.CreatePopupMenu()
-
 
     def __str__(self):
         return 'Bin %s with %d objects'%(self.label, len(self.sizer.GetChildren()))
@@ -269,7 +272,8 @@ class SortBin(wx.ScrolledWindow):
         empty = len(self.tiles) == 0
         if (empty and not self.empty) or (not empty and self.empty): 
             self.empty = empty
-            self.classifier.CheckTrainable()
+            event = wx.PyCommandEvent(EVT_QUANTITY_CHANGED.typeId, self.GetId())
+            self.GetEventHandler().ProcessEvent(event)
         try:
             self.parentSizer.GetStaticBox().SetLabel('%s (%d)'%(self.label,len(self.tiles)))
         except:

@@ -5,7 +5,7 @@ from ImageControlPanel import ImageControlPanel
 from ImageTile import ImageTile
 from Properties import Properties
 from ScoreDialog import ScoreDialog
-from SortBin import SortBin
+import SortBin
 from TileCollection import *
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
@@ -138,9 +138,11 @@ class ClassifierGUI(wx.Frame):
         self.topSortSizer = wx.StaticBoxSizer(wx.StaticBox(self.topSortPanel, 
                                                            label='unclassified '+p.object_name[1]))
         self.topSortPanel.SetSizer(self.topSortSizer)
-        self.unclassifiedBin = SortBin(parent=self.topSortPanel, classifier=self, 
-                                       label='unclassified', parentSizer=self.topSortSizer)
-        self.topSortSizer.Add( self.unclassifiedBin, proportion=1, flag=wx.EXPAND )
+        self.unclassifiedBin = SortBin.SortBin(parent=self.topSortPanel, 
+                                               classifier=self,
+                                               label='unclassified', 
+                                               parentSizer=self.topSortSizer)
+        self.topSortSizer.Add(self.unclassifiedBin, proportion=1, flag=wx.EXPAND)
         # bottom half
         self.bottomSortPanel = wx.Panel(self.splitter)
         self.bottomSortSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -180,6 +182,7 @@ class ClassifierGUI(wx.Frame):
 #        self.Bind(wx.EVT_KEY_DOWN, self.OnKey)  # TODO: why doesn't this work!?
         self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
+        self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.OnQuantityChanged)
         
         # Finally, if there's a default training set. Ask to load it.
         if p.training_set:
@@ -288,7 +291,8 @@ class ClassifierGUI(wx.Frame):
         This sizer is then added to the bottomSortSizer. '''
         sizer = wx.StaticBoxSizer(wx.StaticBox(self.bottomSortPanel, label=label), wx.VERTICAL)
         # NOTE: bin must be created after sizer or drop events will occur on the sizer
-        bin = SortBin(parent=self.bottomSortPanel, label=label, classifier=self, parentSizer=sizer)
+        bin = SortBin.SortBin(parent=self.bottomSortPanel, label=label, 
+                              classifier=self, parentSizer=sizer)
         sizer.Add(bin, proportion=1, flag=wx.EXPAND)
         self.bottomSortSizer.Add(sizer, proportion=1, flag=wx.EXPAND)
         self.classBins.append(bin)
@@ -368,14 +372,14 @@ class ClassifierGUI(wx.Frame):
             sel=0
         self.obClassChoice.SetSelection(sel)
         
-        
-    def CheckTrainable(self):
-        ''' '''
+    def OnQuantityChanged(self, event):
+        """The number of tiles in one of the SortBins has changed.  Go
+        through them all.  Disable the button for finding rules if any
+        SortBin is empty."""
         self.findRulesBtn.Disable()
         for bin in self.classBins:
             if not bin.empty:
                 self.findRulesBtn.Enable()
-
     
     def OnFetch(self, evt):
         # Parse out the GUI input values        
