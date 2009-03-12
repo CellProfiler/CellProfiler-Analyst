@@ -730,7 +730,7 @@ class ClassifierGUI(wx.Frame):
                     self.keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
                 
         t2 = time()
-        print 'time to calculate hits: ',t2-t1
+        print 'time to calculate hits: %.3fs'%(t2-t1)
         
         # Sum hits-per-group if not grouping by image
         if group != groupChoices[0]:
@@ -744,7 +744,7 @@ class ClassifierGUI(wx.Frame):
             groupedKeysAndCounts = numpy.array(self.keysAndCounts, dtype=object)
         
         t3 = time()
-        print 'time to group per-image counts:',t3-t2
+        print 'time to group per-image counts: %.3fs'%(t3-t2)
                 
         # Calculate alpha
         self.PostMessage('Fitting beta binomial distribution to data...')
@@ -754,7 +754,7 @@ class ClassifierGUI(wx.Frame):
         print '   alpha/Sum(alpha) = ', [a/sum(alpha) for a in alpha]
         
         t4 = time()
-        print 'time to fit beta binomial:',t4-t3
+        print 'time to fit beta binomial: %.3fs'%(t4-t3)
         
         # Flag: positive/negative two-class experiment
         two_classes = nClasses == 2
@@ -788,7 +788,7 @@ class ClassifierGUI(wx.Frame):
         self.PostMessage('Computing enrichment scores for each group... 100%')
         
         t5 = time()
-        print 'time to compute enrichment scores:',t5-t4
+        print 'time to compute enrichment scores: %.3fs'%(t5-t4)
         
         # Create column labels list
         labels = []
@@ -878,7 +878,7 @@ class ClassifierGUI(wx.Frame):
             validCols = [str(col) for col in validCols]
             if fieldTypes[i]==int or fieldTypes[i]==long or fieldTypes[i]==float:
                 fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                       choices=validCols)
+                                       choices=['**ANY**']+validCols)
                 # Create and bind to a text Validator
                 def ValidateGroupField(evt, validCols=validCols):
                     ctrl = evt.GetEventObject().GetChildren()[0]
@@ -890,7 +890,7 @@ class ClassifierGUI(wx.Frame):
                 fieldInp.Bind(wx.EVT_TEXT, self.groupFieldValidators[-1])
             else:
                 fieldInp = fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                                  choices=validCols, style=wx.CB_READONLY)
+                                                  choices=['**ANY**']+validCols, style=wx.CB_READONLY)
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)

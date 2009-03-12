@@ -179,7 +179,9 @@ class DataModel(Singleton):
     
     def GetImagesInGroup(self, group, groupKey):
         ''' Returns all imKeys in a particular group. '''
-        return [imKey for imKey,gKey in self.groupMaps[group].items() if gKey==groupKey]
+        def matches(key1, key2):
+            return all([(a==b or b=='**ANY**') for a,b in zip(key1,key2)])
+        return [imKey for imKey,gKey in self.groupMaps[group].items() if matches(gKey,groupKey)]
     
     
     def GetGroupKeysInGroup(self, group):
