@@ -3,6 +3,8 @@ from DataModel import DataModel
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
+from matplotlib.pyplot import cm
+import numpy
 import ImageTools
 import cPickle
 import wx
@@ -10,11 +12,6 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 dm = DataModel.getInstance()
-
-colors = [(255,240,0), (242,38,46), (0,123,194), (32,148,61),
-          (255,198,0), (196,47,148), (0,180,241), (113,161,51),
-          (250,156,25), (155,53,150), (0,118,120), (146,199,67),
-          (245,112,32), (111,57,152), (0,115,61), (200,220,33)]
 
 class ImageViewerPanel(ImagePanel):
     '''
@@ -29,7 +26,7 @@ class ImageViewerPanel(ImagePanel):
     def OnPaint(self, evt):
         dc = super(ImageViewerPanel, self).OnPaint(evt)
         # Draw colored boxes at each classified point
-        for (name, cl), color in zip(self.classes.items(), colors[:len(self.classes)]):
+        for (name, cl), color in zip(self.classes.items(), self.colors):
             if self.classVisible[name]:
                 dc.BeginDrawing()
                 for (x,y) in cl:
@@ -77,6 +74,10 @@ class ImageViewerPanel(ImagePanel):
 
     def SetClassPoints(self, classes):
         self.classes = classes
+        vals = numpy.arange(float(len(self.classes))) / len(self.classes)
+        vals += (1.0 - vals[-1]) / 2
+        self.colors = [numpy.array(cm.jet(val))*255 for val in vals]
+
         self.classVisible = {}
         for className in classes.keys():
             self.classVisible[className] = True 
@@ -229,7 +230,8 @@ class ImageViewer(wx.Frame):
     
     def SetClasses(self, classCoords):
         self.imagePanel.SetClassPoints(classCoords)
-        self.classControls = ImageViewerControlPanel(self, self.imagePanel, classCoords, colors)
+        self.classControls = ImageViewerControlPanel(self, self.imagePanel,
+                                                     classCoords, self.imagePanel.colors)
         self.controlSizer.Add(self.classControls, proportion=1, flag=wx.EXPAND)
         self.Refresh()
         self.Layout()
