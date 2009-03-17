@@ -26,18 +26,19 @@ class ImageViewerPanel(ImagePanel):
     def OnPaint(self, evt):
         dc = super(ImageViewerPanel, self).OnPaint(evt)
         # Draw colored boxes at each classified point
-        for (name, cl), color in zip(self.classes.items(), self.colors):
-            if self.classVisible[name]:
-                dc.BeginDrawing()
-                for (x,y) in cl:
-                    x = x * self.scale - 2
-                    y = y * self.scale - 2
-                    w = h = 4
-                    dc.SetPen(wx.Pen(color,1))
-                    dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
-                    dc.DrawRectangle(x,y,w,h)
-                    dc.DrawRectangle(x-1,y-1,6,6)
-                dc.EndDrawing()
+        if self.classes:
+            for (name, cl), color in zip(self.classes.items(), self.colors):
+                if self.classVisible[name]:
+                    dc.BeginDrawing()
+                    for (x,y) in cl:
+                        x = x * self.scale - 2
+                        y = y * self.scale - 2
+                        w = h = 4
+                        dc.SetPen(wx.Pen(color,1))
+                        dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
+                        dc.DrawRectangle(x,y,w,h)
+                        dc.DrawRectangle(x-1,y-1,6,6)
+                    dc.EndDrawing()
         # Draw small white boxes at each selected point
         for (x,y) in self.selectedPoints:
             x = x * self.scale - 3
