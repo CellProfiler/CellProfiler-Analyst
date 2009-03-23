@@ -1014,8 +1014,8 @@ if __name__ == "__main__":
 
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
-#    if sys.excepthook == sys.__excepthook__:
-#        sys.excepthook = show_exception_as_dialog
+    if sys.excepthook == sys.__excepthook__:
+        sys.excepthook = show_exception_as_dialog
 
     p = Properties.getInstance()
     db = DBConnect.getInstance()
