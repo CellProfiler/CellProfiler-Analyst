@@ -200,6 +200,15 @@ image_tile_size   =  50
 training_set  =  
 
 
+# ======== Area Based Scoring ========
+# OPTIONAL
+# You may specify a column in your per-object table which will be summed and 
+# reported in place of object-counts when scoring.  The typical use for this
+# is to report the areas of objects on a per-image or per-group basis. 
+
+area_scoring_column = 
+
+
 # ======== Internal Cache ========
 # It shouldn't be necessary to cache your images in the application, but the 
 # cache sizes can be set here.
