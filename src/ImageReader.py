@@ -27,8 +27,9 @@ class ImageReader(object):
         
     def ReadImages(self, filenames):
         '''
-        Do not call read images with a large number of filenames or it will likely crash.
-        We allow multiple files so image channels can be loaded more quickly together.
+        Do not call read images with a large number of filenames, or it
+        will likely crash.  We allow multiple files so image channels
+        can be loaded more quickly together.
         '''
         format = filenames[0].split('.')[-1]
         
