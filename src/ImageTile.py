@@ -40,11 +40,12 @@ class ImageTile(ImagePanel):
         ImagePanel.__init__(self, images, chMap, bin, scale=scale, brightness=brightness)
         self.SetDropTarget(ImageTileDropTarget(self))
 
-        self.bin        = bin             # the SortBin this object belongs to
-        self.classifier = bin.classifier  # ClassifierGUI needs to capture the mouse on tile selection
-        self.obKey      = obKey           # (table, image, object)
-        self.selected   = selected        # whether or not this tile is selected
+        self.bin         = bin             # the SortBin this object belongs to
+        self.classifier  = bin.classifier  # ClassifierGUI needs to capture the mouse on tile selection
+        self.obKey       = obKey           # (table, image, object)
+        self.selected    = selected        # whether or not this tile is selected
         self.leftPressed = False
+        self.showCenter  = False
         
         self.MapChannels(chMap)
         self.CreatePopupMenu()
@@ -54,7 +55,21 @@ class ImageTile(ImagePanel):
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
-        self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaving)
+        self.Bind(wx.EVT_ENTER_WINDOW, self.OnMouseOver)
+        self.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseOut)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+
+
+    def OnPaint(self, evt):
+        dc = ImagePanel.OnPaint(self, evt)
+        if self.showCenter:
+            dc.BeginDrawing()
+            dc.SetLogicalFunction(wx.XOR)
+            dc.SetPen(wx.Pen("WHITE",1))
+            dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
+            dc.DrawRectangle(self.bitmap.Width/2.-1, self.bitmap.Height/2.-1, 3, 3)
+            dc.EndDrawing()
+
 
 
     def CreatePopupMenu(self):
@@ -128,8 +143,15 @@ class ImageTile(ImagePanel):
             self.ToggleSelect()
             
             
-    def OnLeaving(self, evt):
+    def OnMouseOver(self, evt):
+        self.showCenter = True
+        self.Refresh()
+        
+        
+    def OnMouseOut(self, evt):
+        self.showCenter = False
         self.leftPressed = False
+        self.Refresh()
 
             
     def OnMotion(self, evt):
