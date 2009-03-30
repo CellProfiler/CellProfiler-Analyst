@@ -157,7 +157,7 @@ def HitsAndCounts(weaklearners, filter=None, cb=None):
     if cb:
         imkeys = dm.GetAllImageKeys()
         imkeys.sort()
-        stepsize = len(imkeys) / min(100, 1 + len(imkeys) / 10)
+        stepsize = max(len(imkeys) / 100, 50)
         key_thresholds  = imkeys[-1:1:-stepsize]
         key_thresholds.reverse()
         if p.table_id:
