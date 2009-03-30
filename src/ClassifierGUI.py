@@ -575,18 +575,6 @@ class ClassifierGUI(wx.Frame):
         self.chMap = chMap
         for bin in self.all_sort_bins():
             bin.MapChannels(chMap)
-
-
-    def ValidateIntegerField(self, evt):
-        ''' Validates an integer-only TextCtrl '''
-        txtCtrl = evt.GetEventObject()
-        # NOTE: textCtrl.SetBackgroundColor doesn't appear to work
-        #   foregroundcolor only works when not setting to black.  LAAAAMMMEEE!
-        try:
-            int(txtCtrl.GetValue())
-            txtCtrl.SetForegroundColour('#000001')
-        except(Exception):
-            txtCtrl.SetForegroundColour('#FF0000')
             
             
     def ValidateImageKey(self, evt):
@@ -778,11 +766,13 @@ class ClassifierGUI(wx.Frame):
         self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
+        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% complete', 
+                                100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
         for i, row in enumerate(groupedKeysAndCounts):
-            # Update the status text after every 5% is done.
-            if float(i)/float(len(groupedKeysAndCounts))-fraction > 0.05:
+            # Update the status text after every 2% is done.
+            if float(i)/float(len(groupedKeysAndCounts))-fraction > 0.02:
                 fraction = float(i)/float(len(groupedKeysAndCounts))
-                self.PostMessage('Computing enrichment scores for each group... %d%%' %(100*fraction))
+                dlg.Update(int(100*fraction), '%d Complete'%(fraction*100))
             
             # Start this row with the group key: 
             tableRow = list(row[:-nClasses])
@@ -799,6 +789,7 @@ class ClassifierGUI(wx.Frame):
             else:
                 tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
             tableData.append(tableRow)
+        dlg.Destroy()
         tableData = numpy.array(tableData, dtype=object)
         self.PostMessage('Computing enrichment scores for each group... 100%')
         
@@ -923,7 +914,7 @@ class ClassifierGUI(wx.Frame):
         except(Exception):
             txtCtrl.SetForegroundColour('#FF0000')
             
-            
+    
     def GetGroupKeyFromGroupSizer(self):
         ''' Returns the text in the group text inputs as a group key. '''
         groupKey = []
