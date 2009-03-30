@@ -1,10 +1,12 @@
 import numpy
 from DBConnect import *
 from Properties import Properties
+from DataModel import DataModel
 
 
 db = DBConnect.getInstance()
 p = Properties.getInstance()
+dm = DataModel.getInstance()
 
 
 def translate(weak_learners, area_column=None, filter=None):
@@ -19,8 +21,10 @@ def translate(weak_learners, area_column=None, filter=None):
 
     if p.table_id:
         key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
+        index_defs = " INDEX (%s, %s)"%(p.table_id, p.image_id)
     else:
         key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
+        index_defs = " INDEX (%s)"%(p.image_id)
         
     select_start = UniqueObjectClause()+', '
 
@@ -42,7 +46,7 @@ def translate(weak_learners, area_column=None, filter=None):
     stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(wl[0], wl[1], idx) for idx, wl in enumerate(weak_learners)])
     stump_select_statement = select_start + stump_select_features + \
                              " FROM " + object_table_from
-    q_stump1 = 'CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs)
+    q_stump1 = 'CREATE TEMPORARY TABLE %s (%s, %s)'%(temp_stump_table, stump_col_defs, index_defs)
     q_stump2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_stump_table, stump_cols, stump_select_statement)
     
     # Create class scores table (ob x classes) <float>
@@ -58,7 +62,7 @@ def translate(weak_learners, area_column=None, filter=None):
                                     for i in range(num_features)]) + " AS score%d"%(k)
                                     for k in classidxs])
     score_select_statement = select_start + score_select_scores + ", 0.0 FROM " + temp_stump_table
-    q_score1 = 'CREATE TEMPORARY TABLE %(temp_score_table)s (%(score_col_defs)s)'%(locals())
+    q_score1 = 'CREATE TEMPORARY TABLE %(temp_score_table)s (%(score_col_defs)s, %(index_defs)s)'%(locals())
     q_score2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_score_table, score_cols, score_select_statement )
     
     # Create maximum column in class scores table
@@ -71,7 +75,7 @@ def translate(weak_learners, area_column=None, filter=None):
     class_col_defs        = key_col_defs + ", ".join(["class%d TINYINT"%(k) for k in classidxs])
     select_class_greatest = ", ".join(["%s = score_greatest AS class%d"%(sc, k) for sc,k in zip(score_vals_columns, classidxs)])
     class_select_statement = select_start + select_class_greatest + " FROM " + temp_score_table
-    q_class1 = 'CREATE TEMPORARY TABLE %s (%s)'%(temp_class_table, class_col_defs)
+    q_class1 = 'CREATE TEMPORARY TABLE %s (%s, %s)'%(temp_class_table, class_col_defs, index_defs)
     q_class2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_class_table, class_cols, class_select_statement)
 
 
@@ -135,7 +139,7 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys=[]):
     return db.GetResultsAsList()
     
     
-def HitsAndCounts(weaklearners, filter=None):
+def HitsAndCounts(weaklearners, filter=None, cb=None):
     '''
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
     filter: name of filter, or None.
@@ -149,14 +153,45 @@ def HitsAndCounts(weaklearners, filter=None):
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
     db.Execute('DROP TABLE IF EXISTS _class')
+
+    if cb:
+        imkeys = dm.GetAllImageKeys()
+        imkeys.sort()
+        stepsize = len(imkeys) / min(100, 1 + len(imkeys) / 10)
+        key_thresholds  = imkeys[-1:1:-stepsize]
+        key_thresholds.reverse()
+        if p.table_id:
+            where_clauses = ([" WHERE (%s <= %d) AND (%s <= %d)"%(p.table_id, key_thresholds[0][0], p.image_id, key_thresholds[0][1])] +
+                             [" WHERE (%s > %d) AND (%s <= %d) AND (%s > %d) AND (%s <= %d)"
+                              %(p.table_id, lo[0], p.table_id, hi[0], p.image_id, lo[1], p.image_id, hi[1]) 
+                              for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
+        else:
+            where_clauses = ([" WHERE (%s <= %d)"%(p.image_id, key_thresholds[0][0])] + 
+                             [" WHERE (%s > %d) AND (%s <= %d)"
+                              %(p.image_id, lo[0], p.image_id, hi[0]) 
+                              for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
+        num_clauses = len(where_clauses)
+        num_steps = 3 * num_clauses
+
+
+    def do_by_steps(query, stepnum):
+        if cb:
+            for idx, wc in enumerate(where_clauses):
+                db.Execute(query +  wc, silent=(idx > 0))
+                cb((idx + stepnum * num_clauses)/ float(num_steps))
+            else:
+                db.Execute(query)
+        
+
     db.Execute(stump_query[0])
-    db.Execute(stump_query[1])    
+    do_by_steps(stump_query[1], 0)
     db.Execute(score_query[0])
-    db.Execute(score_query[1])
+    do_by_steps(score_query[1], 1)
     db.Execute(find_max_query)
     db.Execute(class_query[0])
-    db.Execute(class_query[1])
+    do_by_steps(class_query[1], 2)
     db.Execute(count_query)
+
     return db.GetResultsAsList()    
 
 if __name__ == "__main__":

@@ -185,7 +185,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.OnQuantityChanged)
         
         # Finally, if there's a default training set. Ask to load it.
-        if p.training_set:
+        if p.training_set and os.access(p.training_set, os.R_OK):
             dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.'%(p.training_set),
                                    'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
             response = dlg.ShowModal()
@@ -716,10 +716,15 @@ class ClassifierGUI(wx.Frame):
         # into phenotype classes and count phenotype-hits per-image.
         if not self.keysAndCounts or filter!=self.lastScoringFilter:
             self.lastScoringFilter = filter
-            self.PostMessage('Calculating %s counts for each class...'
-                               %(p.object_name[0]))
+
+            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% complete', 
+                                    100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+            def update(frac):
+                dlg.Update(int(frac * 100), '%d Complete'%(frac * 100))
             self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners,
-                                                             filter=filter)
+                                                             filter=filter, cb=update)
+            dlg.Destroy()
+
             # Make sure HitsAndCounts returned something
             if not self.keysAndCounts:
                 errdlg = wx.MessageDialog(self, 'No images are in filter "%s". Please check the filter definition in your properties file.'%(filter),
@@ -753,6 +758,7 @@ class ClassifierGUI(wx.Frame):
         self.PostMessage('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
         alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
+        assert not numpy.isinf(alpha).any()
         print '   alpha =', alpha, '   converged =', converged
         print '   alpha/Sum(alpha) = ', [a/sum(alpha) for a in alpha]
         
