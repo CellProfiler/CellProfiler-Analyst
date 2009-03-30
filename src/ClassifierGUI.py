@@ -29,10 +29,12 @@ class ClassifierGUI(wx.Frame):
 
     def __init__(self, parent):
         
-        wx.Frame.__init__(self, parent, id=-1, title="pyClassifier", size=(800,600))
+        wx.Frame.__init__(self, parent, id=-1, title="Classifier 2.0", size=(800,600))
         
         if p.IsEmpty():
             self.LoadProperties()
+        
+        self.SetTitle('Classifier 2.0 - %s'%(p.filename))
             
         if DataModel.getInstance().IsEmpty():
             print "ERROR: <ClassifierGUI.__init__>: DataModel is empty. Classifier requires a populated DataModel to function."
