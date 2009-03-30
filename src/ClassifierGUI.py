@@ -229,7 +229,6 @@ class ClassifierGUI(wx.Frame):
     
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
-        print 'classifier'
         keycode = evt.GetKeyCode()
         chIdx = keycode-49
         if evt.ControlDown() or evt.CmdDown():
