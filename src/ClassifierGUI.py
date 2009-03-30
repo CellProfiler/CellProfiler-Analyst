@@ -186,11 +186,17 @@ class ClassifierGUI(wx.Frame):
         
         # Finally, if there's a default training set. Ask to load it.
         if p.training_set and os.access(p.training_set, os.R_OK):
-            dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.'%(p.training_set),
-                                   'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
-            response = dlg.ShowModal()
-            if response == wx.ID_YES:
-                self.LoadTrainingSet(p.training_set)
+            try:
+                # First make sure the ts exists
+                f = open(p.training_set)
+                f.close()
+                dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.'%(p.training_set),
+                                       'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
+                response = dlg.ShowModal()
+                if response == wx.ID_YES:
+                    self.LoadTrainingSet(p.training_set)
+            except:
+                pass
 
         
         
@@ -497,7 +503,8 @@ class ClassifierGUI(wx.Frame):
     def LoadTrainingSet(self, filename):
         ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
         self.PostMessage('Loading training set from: '+filename)
-        os.chdir(os.path.split(filename)[0])                       # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        os.chdir(os.path.split(filename)[0])
         self.defaultTSFileName = os.path.split(filename)[1]
         
         self.trainingSet = TrainingSet(p, filename)
