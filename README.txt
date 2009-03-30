@@ -195,6 +195,12 @@ the posterior is computed for each group independently.
   properties-related errors quickly and easily.
 * Images without objects are now handled properly when scoring.
 * Non-consecutive object numbers are now supported. 
+* The current properties file is now displayed in the Classifier title bar.
+* There is now a progress bar when computing phenotype counts and enrichment
+  scores.
+* A small dot is now displayed in the center of each thumbnail tile when the
+  mouse is hovering over it. This helps to clarify which object in the
+  thumbnail needs to be sorted. 
   
 
 ---------------------------------
