@@ -758,7 +758,6 @@ class ClassifierGUI(wx.Frame):
         self.PostMessage('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
         alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
-        assert not numpy.isinf(alpha).any()
         print '   alpha =', alpha, '   converged =', converged
         print '   alpha/Sum(alpha) = ', [a/sum(alpha) for a in alpha]
         
