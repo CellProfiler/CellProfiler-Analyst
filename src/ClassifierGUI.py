@@ -200,39 +200,19 @@ class ClassifierGUI(wx.Frame):
             except:
                 pass
 
-        
-        
+
     def BindMouseOverHelpText(self):
-        self.nObjectsTxt.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('The number of %s to fetch.'%(p.object_name[1])))
-        self.nObjectsTxt.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.obClassChoice.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('The phenotype of the %s.'%(p.object_name[1])))
-        self.obClassChoice.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.filterChoice.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
-        self.filterChoice.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-#        self.fetchBtn.Bind(wx.EVT_ENTER_WINDOW,
-#                lambda(evt): self.SetStatusText('Fetches images of %s to be sorted.'%(p.object_name[1])))
-#        self.fetchBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.nRulesTxt.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('The maximum number of rules classifier should use to define your phenotypes.'))
-        self.nRulesTxt.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.findRulesBtn.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('Tell Classifier to find a rule set that fits your phenotypes as you have sorted them.'))
-        self.findRulesBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.scoreAllBtn.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('Compute %s counts and per-group enrichments across your experiment. (This may take a while)'%(p.object_name[0])))
-        self.scoreAllBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.scoreImageBtn.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('Highlight %s of a particular phenotype in an image.'%(p.object_name[1])))
-        self.scoreImageBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.addSortClassBtn.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('Add another bin to sort your %s into.'%(p.object_name[1])))
-        self.addSortClassBtn.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
-        self.unclassifiedBin.Bind(wx.EVT_ENTER_WINDOW,
-                lambda(evt): self.SetStatusText('%s in this bin should be sorted into the bins below.'%(p.object_name[1].capitalize())))
-        self.unclassifiedBin.Bind(wx.EVT_LEAVE_WINDOW, lambda(evt): self.SetStatusText(''))
+        self.nObjectsTxt.SetToolTip(wx.ToolTip('The number of %s to fetch.'%(p.object_name[1])))
+        self.obClassChoice.SetToolTip(wx.ToolTip('The phenotype of the %s.'%(p.object_name[1])))
+        self.filterChoice.SetToolTip(wx.ToolTip('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
+        self.fetchBtn.SetToolTip(wx.ToolTip('Fetches images of %s to be sorted.'%(p.object_name[1])))
+        self.rulesTxt.SetToolTip(wx.ToolTip('Rules are displayed in this text box.'))
+        self.nRulesTxt.SetToolTip(wx.ToolTip('The maximum number of rules classifier should use to define your phenotypes.'))
+        self.findRulesBtn.SetToolTip(wx.ToolTip('Tell Classifier to find a rule set that fits your phenotypes as you have sorted them.'))
+        self.scoreAllBtn.SetToolTip(wx.ToolTip('Compute %s counts and per-group enrichments across your experiment. (This may take a while)'%(p.object_name[0])))
+        self.scoreImageBtn.SetToolTip(wx.ToolTip('Highlight %s of a particular phenotype in an image.'%(p.object_name[1])))
+        self.addSortClassBtn.SetToolTip(wx.ToolTip('Add another bin to sort your %s into.'%(p.object_name[1])))
+        self.unclassifiedBin.SetToolTip(wx.ToolTip('%s in this bin should be sorted into the bins below.'%(p.object_name[1].capitalize())))
 
     
     def OnKey(self, evt):
@@ -885,8 +865,10 @@ class ClassifierGUI(wx.Frame):
             validCols.sort()
             validCols = [str(col) for col in validCols]
             if fieldTypes[i]==int or fieldTypes[i]==long or fieldTypes[i]==float:
+                if group!='image':
+                    validCols = ['**ANY**']+validCols
                 fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                       choices=['**ANY**']+validCols)
+                                       choices=validCols)
                 # Create and bind to a text Validator
                 def ValidateGroupField(evt, validCols=validCols):
                     ctrl = evt.GetEventObject().GetChildren()[0]
