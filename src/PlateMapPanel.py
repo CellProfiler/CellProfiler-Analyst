@@ -195,7 +195,6 @@ class PlateMapPanel(wx.Panel):
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     
-    
     # test plate map panel
     data = np.arange(384) 
     data = np.ones(384)
@@ -204,44 +203,6 @@ if __name__ == "__main__":
     p = PlateMapPanel(frame, data, shape=(16,24), wellshape='rect')
     frame.Show()
     
-    
-    # test plate map panel on jen pan data:
-#    import MySQLdb
-#    # MySQL info
-#    host = 'imgdb01'
-#    user = 'cpuser'
-#    passwd = 'cPus3r'
-#    default_db = '2008_04_15_JenPan_2008_08_expts'
-#    
-#    # connect to MySQL DB
-#    db = MySQLdb.connect(host=host, user=user, passwd=passwd, db=default_db)
-#    cursor = db.cursor()
-#    
-#    # Fly tables
-#    cursor.execute('SHOW TABLES')
-#    tables = [v[0] for v in cursor.fetchall() if v[0].find('Per_Image') != -1]
-#    
-#
-#    for t in tables:
-#        objtable = t.replace('Per_Image', 'Per_Object')
-#        platemap = 'plate_map' + t[-1]
-#        print 'SELECT AVG(Axons_Ratio_Axons_Inten_Integ_tau1_Divid_Cells_Inten_Integ_tau1), row_text, col_int from %(objtable)s, %(platemap)s where %(objtable)s.ImageNumber=%(platemap)s.ImageNumber GROUP BY (row_text, col_int)'%(locals())
-#        cursor.execute('SELECT AVG(Axons_Ratio_Axons_Inten_Integ_tau1_Divid_Cells_Inten_Integ_tau1), row_text, col_int from %(objtable)s, %(platemap)s where %(objtable)s.ImageNumber=%(platemap)s.ImageNumber GROUP BY row_text, col_int'%(locals()))
-#        data = cursor.fetchall()
-#    
-#        output = np.zeros((8,12))
-#        
-#        for avg, row, col in data:
-#            rownum = 'ABCDEFGH'.index(row)
-#            output[rownum, col-1] = avg
-#
-#        output = output/output.max()
-#
-#        f = wx.Frame(None)
-#    #    data = np.arange(96)/96.
-#        p2 = PlateMapPanel(f, output, colormap='hot')
-#        f.Show()
-#    
     app.MainLoop()
     
     
