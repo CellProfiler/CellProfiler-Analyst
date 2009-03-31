@@ -143,6 +143,7 @@ def HitsAndCounts(weaklearners, filter=None, cb=None):
     '''
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
     filter: name of filter, or None.
+    cb: callback function to update with the fraction complete
     RETURNS: A list of lists of imKeys and respective object counts for each class:
         Note that the imKeys are exploded so each row is of the form:
         [TableNumber, ImageNumber, Class1_ObjectCount, Class2_ObjectCount,...]
