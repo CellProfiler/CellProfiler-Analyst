@@ -295,7 +295,6 @@ class DBConnect(Singleton):
             obNum = self.GetResultsAsList()
             obNum = obNum[0][0]
         return tuple(list(imKey)+[int(obNum)])
-
     
     
     def GetPerImageObjectCounts(self):
@@ -456,6 +455,14 @@ class DBConnect(Singleton):
         if len(data) == 0:
             print 'No data for obKey:',obKey
         return numpy.array(data[0])
+    
+    
+    def GetPlateNames(self):
+        '''
+        Returns the names of each plate in the per-image table.
+        '''
+        self.Execute('SELECT %s FROM %s GROUP BY %s'%(p.plate_id, p.image_table, p.plate_id))
+        return [str(l[0]) for l in self.GetResultsAsList()]
     
     
     
