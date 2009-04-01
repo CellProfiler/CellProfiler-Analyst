@@ -9,11 +9,21 @@ p = Properties.getInstance()
 dm = DataModel.getInstance()
 
 
-def translate(weak_learners, area_column=None, filter=None):
+def translate(weak_learners, area_column=None, filter=None, filterKeys=[]):
     '''
     Translate weak learners into MySQL queries that place the resulting 
       classification in a MySQL temporary table named "temp_class_table"
-    If imKeys is supplied, then the queries will only include those images.
+    area_column: column to sum when scoring rather than counting hits
+    filter: if supplied, scoring will be limited to only imKeys within this
+            filter
+    filterKeys: (optional) A specific list of imKeys OR obKeys (NOT BOTH)
+        to classify.
+        * WARNING: If this list is too long, you may exceed the size limit to
+          MySQL queries. 
+        * Useful when fetching N objects from a particular class. Use the
+          DataModel to get batches of random objects, and sift through them
+          here until N objects of the desired class have been accumulated.
+        * Also useful for classifying a specific image or group of images.
     '''
     
     num_features = len(weak_learners)
@@ -21,10 +31,10 @@ def translate(weak_learners, area_column=None, filter=None):
 
     if p.table_id:
         key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
-        index_defs = " INDEX (%s, %s)"%(p.table_id, p.image_id)
+        index_cols = "%s, %s"%(p.table_id, p.image_id)
     else:
         key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
-        index_defs = " INDEX (%s)"%(p.image_id)
+        index_cols = "%s"%(p.image_id)
         
     select_start = UniqueObjectClause()+', '
 
@@ -46,9 +56,17 @@ def translate(weak_learners, area_column=None, filter=None):
     stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(wl[0], wl[1], idx) for idx, wl in enumerate(weak_learners)])
     stump_select_statement = select_start + stump_select_features + \
                              " FROM " + object_table_from
-    q_stump1 = 'CREATE TEMPORARY TABLE %s (%s, %s)'%(temp_stump_table, stump_col_defs, index_defs)
-    q_stump2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_stump_table, stump_cols, stump_select_statement)
+    stump_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs),
+                    'CREATE INDEX idx_%s ON %s (%s)'%(temp_stump_table, temp_stump_table, index_cols),
+                    'INSERT INTO %s (%s) SELECT %s'%(temp_stump_table, stump_cols, stump_select_statement)]
     
+    if filterKeys != []:
+        isImKey = lambda(k): (p.table_id and len(k)==2) or (not p.table_id and len(k)==1)
+        if isImKey(filterKeys[0]):
+            stump_stmnts[2] += ' WHERE '+GetWhereClauseForImages(filterKeys)
+        else:
+            stump_stmnts[2] += ' WHERE '+GetWhereClauseForObjects(filterKeys)
+
     # Create class scores table (ob x classes) <float>
     classidxs          = range(1, num_classes+1)
     temp_score_table   = "_scores"
@@ -62,8 +80,9 @@ def translate(weak_learners, area_column=None, filter=None):
                                     for i in range(num_features)]) + " AS score%d"%(k)
                                     for k in classidxs])
     score_select_statement = select_start + score_select_scores + ", 0.0 FROM " + temp_stump_table
-    q_score1 = 'CREATE TEMPORARY TABLE %(temp_score_table)s (%(score_col_defs)s, %(index_defs)s)'%(locals())
-    q_score2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_score_table, score_cols, score_select_statement )
+    score_stmnts = ['CREATE TEMPORARY TABLE %(temp_score_table)s (%(score_col_defs)s)'%(locals()),
+                    'CREATE INDEX idx_%s ON %s (%s)'%(temp_score_table, temp_score_table, index_cols),
+                    'INSERT INTO %s (%s) SELECT %s'%(temp_score_table, score_cols, score_select_statement )]
     
     # Create maximum column in class scores table
     greatest_expr = "GREATEST(" + ", ".join(score_vals_columns) + ")"
@@ -75,8 +94,8 @@ def translate(weak_learners, area_column=None, filter=None):
     class_col_defs        = key_col_defs + ", ".join(["class%d TINYINT"%(k) for k in classidxs])
     select_class_greatest = ", ".join(["%s = score_greatest AS class%d"%(sc, k) for sc,k in zip(score_vals_columns, classidxs)])
     class_select_statement = select_start + select_class_greatest + " FROM " + temp_score_table
-    q_class1 = 'CREATE TEMPORARY TABLE %s (%s, %s)'%(temp_class_table, class_col_defs, index_defs)
-    q_class2 = 'INSERT INTO %s (%s) SELECT %s'%(temp_class_table, class_cols, class_select_statement)
+    class_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_class_table, class_col_defs),
+                    'INSERT INTO %s (%s) SELECT %s'%(temp_class_table, class_cols, class_select_statement)]
 
 
     # Get hit counts
@@ -103,11 +122,10 @@ def translate(weak_learners, area_column=None, filter=None):
                          object_match_clauses,
                          UniqueImageClause(object_table_name))
     
-    return [q_stump1, q_stump2], [q_score1, q_score2], find_max_query, [q_class1, q_class2], count_query
-#    return stump_query, score_query, find_max_query, class_query, count_query
+    return stump_stmnts, score_stmnts, find_max_query, class_stmnts, count_query
     
 
-def FilterObjectsFromClassN(clNum, weaklearners, filterKeys=[]):
+def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     '''
     clNum: 1-based index of the class to retrieve obKeys from
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
@@ -120,20 +138,13 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys=[]):
           here until N objects of the desired class have been accumulated.
         * Also useful for classifying a specific image or group of images.
     RETURNS: A list of object keys that fall in the specified class.
-    '''
-    isImKey = lambda(k): (p.table_id and len(k)==2) or (not p.table_id and len(k)==1)    
-    stump_query, score_query, find_max_query, _, _ = translate(weaklearners)
-    if filterKeys:
-        if isImKey(filterKeys[0]):
-            stump_query[1] += ' WHERE '+GetWhereClauseForImages(filterKeys)
-        else:
-            stump_query[1] += ' WHERE '+GetWhereClauseForObjects(filterKeys)
+    '''    
+    stump_stmnts, score_stmnts, find_max_query, _, _ = translate(weaklearners, filterKeys=filterKeys)
+
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
-    db.Execute(stump_query[0])
-    db.Execute(stump_query[1])
-    db.Execute(score_query[0])
-    db.Execute(score_query[1])
+    [db.Execute(stump_query) for stump_query in stump_stmnts] 
+    [db.Execute(score_query) for score_query in score_stmnts]
     db.Execute(find_max_query)
     db.Execute('SELECT '+UniqueObjectClause()+' FROM _scores WHERE score'+str(clNum)+'=score_greatest')
     return db.GetResultsAsList()
@@ -149,7 +160,7 @@ def HitsAndCounts(weaklearners, filter=None, cb=None):
         [TableNumber, ImageNumber, Class1_ObjectCount, Class2_ObjectCount,...]
         where TableNumber is only present if table_id is defined in Properties. 
     '''
-    stump_query, score_query, find_max_query, class_query, count_query = \
+    stump_stmnts, score_stmnts, find_max_query, class_stmnts, count_query = \
                  translate(weaklearners, filter=filter)
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
@@ -178,22 +189,26 @@ def HitsAndCounts(weaklearners, filter=None, cb=None):
     def do_by_steps(query, stepnum):
         if cb:
             for idx, wc in enumerate(where_clauses):
-                db.Execute(query +  wc, silent=(idx > 0))
+                db.Execute(query +  wc)#, silent=(idx > 0))
                 cb((idx + stepnum * num_clauses)/ float(num_steps))
-            else:
-                db.Execute(query)
-        
+        else:
+            db.Execute(query)
 
-    db.Execute(stump_query[0])
-    do_by_steps(stump_query[1], 0)
-    db.Execute(score_query[0])
-    do_by_steps(score_query[1], 1)
+
+    db.Execute(stump_stmnts[0])
+    db.Execute(stump_stmnts[1])
+    do_by_steps(stump_stmnts[2], 0)
+    db.Execute(score_stmnts[0])
+    db.Execute(score_stmnts[1])
+    do_by_steps(score_stmnts[2], 1)
     db.Execute(find_max_query)
-    db.Execute(class_query[0])
-    do_by_steps(class_query[1], 2)
+    db.Execute(class_stmnts[0])
+    do_by_steps(class_stmnts[1], 2)
     db.Execute(count_query)
 
     return db.GetResultsAsList()    
+
+
 
 if __name__ == "__main__":
     dir = "/Users/ljosa/research/modifier/piyush"
