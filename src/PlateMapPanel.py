@@ -57,7 +57,7 @@ class PlateMapPanel(wx.Panel):
             self.data_normalized = self.data - self.range[0] + 0.5
         else:
             self.data_normalized = (self.data-self.range[0]) / (self.range[1]-self.range[0])
-
+        
         self.Refresh()
         
     
@@ -196,8 +196,8 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     
     # test plate map panel
-    data = np.arange(384) 
-    data = np.ones(384)
+    data = np.arange(384.) 
+#    data = np.ones(384)
     data[100:102] = np.nan
     frame = wx.Frame(None, size=(600.,430.))
     p = PlateMapPanel(frame, data, shape=(16,24), wellshape='rect')

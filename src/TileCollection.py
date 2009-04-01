@@ -11,7 +11,6 @@ from heapq import heappush, heappop
 db = DBConnect.getInstance()
 p = Properties.getInstance()
 
-
 class List(list):
     pass
 
@@ -28,7 +27,7 @@ class TileCollection(Singleton):
         # Gray placeholder for unloaded images
         self.imagePlaceholder = List([numpy.zeros((int(p.image_tile_size),
                                                    int(p.image_tile_size)))+0.1
-                                      for channel in p.image_channel_colors])
+                                      for ch in p.image_channel_files])
         self.loader = TileLoader(self, None)
 
     def GetTileData(self, obKey, notify_window, priority=1):

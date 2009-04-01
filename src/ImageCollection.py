@@ -17,13 +17,17 @@ class ImageCollection(Singleton):
     '''
     def __init__(self, properties):
         self.p = properties
-#        db.Connect(self.p.db_host, self.p.db_user, self.p.db_passwd, self.p.db_name, connID='ImageCollectionConn')
 
         self.tileCache  = {}    # (tblNum,imNum,obNum): cropped image channel data
         self.imageCache = {}    # (tblNum,imNum): image channel data
 
-        self.maxTiles  = int(self.p.tile_buffer_size)    # max number of cropped image-sets to store at a time
-        self.maxImages = int(self.p.image_buffer_size)   # max number of image-sets to store at a time
+        self.maxTiles  = 1      # max number of cropped image-sets to store at a time
+        self.maxImages = 1      # max number of image-sets to store at a time
+
+        if self.p.image_buffer_size:
+            self.maxTiles = int(self.p.tile_buffer_size)
+        if self.p.image_buffer_size:
+            self.maxImages = int(self.p.image_buffer_size)
         
         self.tileKeyQueue  = [] # queues determine the order in which cache entries are removed
         self.imageKeyQueue = [] # queues determine the order in which cache entries are removed

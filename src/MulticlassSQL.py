@@ -9,6 +9,8 @@ p = Properties.getInstance()
 dm = DataModel.getInstance()
 
 
+# filter & filterKeys is kind of redundant here, yet they are implemented
+# very differently.  Should we only use filterKeys?
 def translate(weak_learners, area_column=None, filter=None, filterKeys=[]):
     '''
     Translate weak learners into MySQL queries that place the resulting 
@@ -196,7 +198,7 @@ def HitsAndCounts(weaklearners, filter=None, cb=None):
     def do_by_steps(query, stepnum):
         if cb:
             for idx, wc in enumerate(where_clauses):
-                db.Execute(query +  wc)#, silent=(idx > 0))
+                db.Execute(query +  wc, silent=(idx > 0))
                 cb((idx + stepnum * num_clauses)/ float(num_steps))
         else:
             db.Execute(query)

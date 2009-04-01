@@ -2,11 +2,10 @@ from DBConnect import DBConnect
 from DataGrid import DataGrid
 from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
-from ImageTile import ImageTile
 from Properties import Properties
 from ScoreDialog import ScoreDialog
 import SortBin
-from TileCollection import *
+from TileCollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 import DirichletIntegrate
@@ -17,10 +16,7 @@ import PolyaFit
 import numpy
 import os
 import wx
-import wx.grid
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
 
 
 class ClassifierGUI(wx.Frame):
@@ -29,24 +25,23 @@ class ClassifierGUI(wx.Frame):
 
     def __init__(self, parent):
         
-        wx.Frame.__init__(self, parent, id=-1, title="Classifier 2.0", size=(800,600))
-        
         if p.IsEmpty():
-            self.LoadProperties()
-        
-        self.SetTitle('Classifier 2.0 - %s'%(p.filename))
-            
+            print 'Classifier requires a properties file. Exiting.'
+            exit()
+
         if DataModel.getInstance().IsEmpty():
-            print "ERROR: <ClassifierGUI.__init__>: DataModel is empty. Classifier requires a populated DataModel to function."
-            self.Close()
-        
+            print "DataModel is empty. Classifier requires a populated DataModel to function. Exiting."
+            exit()
+
+        wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(p.filename), size=(800,600))
+                
         self.worker = None
         self.weaklearners = None
         self.trainingSet = None
         self.classBins = []
         self.binsCreated = 0
         self.chMap = p.image_channel_colors[:]
-        self.toggleChMap = p.image_channel_colors[:] # this is used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
+        self.toggleChMap = p.image_channel_colors[:] # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.scale = 1.0
         self.defaultTSFileName = None
@@ -56,6 +51,7 @@ class ClassifierGUI(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.CreateFileMenu()
         self.CreateChannelMenus()
+        
         # Image Controls Menu
         displayMenu = wx.Menu()
         imageControlsMenuItem = wx.MenuItem(parentMenu=displayMenu,
@@ -815,18 +811,7 @@ class ClassifierGUI(wx.Frame):
         grid.Show()
         
         self.SetStatusText('')        
-    
-    
-    def LoadProperties(self):
-        dlg = wx.FileDialog(self, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
-        if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetPath()
-            p.LoadFile(filename)
-            dm.PopulateModel()
-        else:
-            print 'Classifier requires a properties file.  Exiting.'
-            exit()
-            
+                
             
     def OnSelectFilter(self, evt):
         ''' Handler for fetch filter selection. '''
@@ -975,7 +960,7 @@ class ClassifierGUI(wx.Frame):
         
                 
         
-# ----------------- Testing -------------------
+# ----------------- Display Exceptions -------------------
 
 def show_exception_as_dialog(type, value, tb):
     """Exception handler that show a dialog."""
@@ -989,7 +974,21 @@ def show_exception_as_dialog(type, value, tb):
     raise value
 
 
-if __name__ == "__main__":    
+
+# ----------------- Run -------------------
+
+def LoadProperties():
+    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
+    if dlg.ShowModal() == wx.ID_OK:
+        filename = dlg.GetPath()
+        p.LoadFile(filename)
+        dm.PopulateModel()
+    else:
+        print 'Classifier requires a properties file.  Exiting.'
+        exit()
+
+
+if __name__ == "__main__":
     import sys
     # Handles args to MacOS "Apps"
     if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
@@ -1013,6 +1012,9 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
         dm.PopulateModel()
+    else:
+        LoadProperties()
+        
     classifier = ClassifierGUI(None)
     classifier.Show(True)
     app.MainLoop()
