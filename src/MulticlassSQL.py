@@ -173,10 +173,17 @@ def HitsAndCounts(weaklearners, filter=None, cb=None):
         key_thresholds  = imkeys[-1:1:-stepsize]
         key_thresholds.reverse()
         if p.table_id:
-            where_clauses = ([" WHERE (%s <= %d) AND (%s <= %d)"%(p.table_id, key_thresholds[0][0], p.image_id, key_thresholds[0][1])] +
-                             [" WHERE (%s > %d) AND (%s <= %d) AND (%s > %d) AND (%s <= %d)"
-                              %(p.table_id, lo[0], p.table_id, hi[0], p.image_id, lo[1], p.image_id, hi[1]) 
-                              for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
+            # split each table independently
+            def splitter():
+                yield " WHERE (%s = %d) AND (%s <= %d)"%(p.table_id, key_thresholds[0][0], p.image_id, key_thresholds[0][1])
+                for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:]):
+                    if lo[0] == hi[0]:
+                        yield " WHERE (%s = %d) AND (%s > %d) AND (%s <= %d)"%(p.table_id, lo[0], p.image_id, lo[1], p.image_id, hi[1])
+                    else:
+                        yield " WHERE (%s = %d) AND (%s > %d)"%(p.table_id, lo[0], p.image_id, lo[1])
+                        yield " WHERE (%s = %d) AND (%s <= %d)"%(p.table_id, hi[0], p.image_id, hi[1])
+            where_clauses = list(splitter())
+
         else:
             where_clauses = ([" WHERE (%s <= %d)"%(p.image_id, key_thresholds[0][0])] + 
                              [" WHERE (%s > %d) AND (%s <= %d)"
