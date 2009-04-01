@@ -210,6 +210,19 @@ class DataGrid(wx.Frame):
             else:
                 imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
                 self.ShowPopupMenu(imKeys, evt.GetPosition())
+#        elif evt.Col >=0:
+#            if self.grouping == 'Well':
+#                from PlateMapPanel import PlateMapPanel
+#                import matplotlib.pyplot as plt
+#                data = self.data[:,evt.Col].copy()
+#                data = data/float(data.max())
+#                frame = wx.Frame(self, size=(600.,430.))
+#                if len(data) == 96:
+#                    shape = (8,12)
+#                else:
+#                    shape = (16,24)
+#                PlateMapPanel(frame, data, shape=shape, colormap=plt.cm.hot)
+#                frame.Show()
 
     def OnSelectedRange(self, evt):
         cols = set(range(evt.GetLeftCol(), evt.GetRightCol() + 1))
