@@ -698,9 +698,10 @@ class ClassifierGUI(wx.Frame):
                                     100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
             def update(frac):
                 dlg.Update(int(frac * 100), '%d Complete'%(frac * 100))
-            self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners,
-                                                             filter=filter, cb=update)
-            dlg.Destroy()
+            try:
+                self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners, filter=filter, cb=update)
+            finally:
+                dlg.Destroy()
 
             # Make sure HitsAndCounts returned something
             if not self.keysAndCounts:
