@@ -96,6 +96,7 @@ class DBConnect(Singleton):
         self.connections = {}
         self.cursors = {}
         self.connectionInfo = {}
+        self.sqliteDBFile = None
 
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
@@ -128,63 +129,38 @@ class DBConnect(Singleton):
             
         # SQLite database: create database from file
         elif p.db_type.lower() == 'sqlite':
-            
             from pysqlite2 import dbapi2 as sqlite
+            
+            if self.sqliteDBFile is None:
+                # compute a database name unique to this data  
+                from tempfile import gettempdir
+                from md5 import md5
+                f_im = open(p.image_csv_file, 'rb')
+                f_ob = open(p.object_csv_file, 'rb')
+                l = str(f_im.readlines() + f_ob.readlines())
+                f_im.close()
+                f_ob.close()
+                dbname = 'CPA_DB_'+md5(l).hexdigest()+'.db'
+                dbpath = gettempdir()
+                self.sqliteDBFile = dbpath+'/'+dbname
 
-            self.connections[connID] = sqlite.connect('CPA_DB')
+            # Use existing database file
+            self.connections[connID] = sqlite.connect(self.sqliteDBFile)
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
             
-            # TODO:
-            # Check if a SQLite DB has already been populated.
-            # If so prompt user for whether to use it.
             try:
-                nImages = len(self.GetAllImageKeys())
+                # Try the connection
+                self.GetAllImageKeys()
             except Exception:
-                pass
-            else:
-                return True
-
-#                # Try prompting the user with a wx dialog:
-#                try:
-#                    import wx
-#                    dlg = wx.MessageDialog(None, 'Classifier found an existing SQLite database with %d images.\nUse this database?'%(nImages),
-#                                        'Use existing SQLite DB?', 
-#                                       wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
-#                    answer = dlg.ShowModal()
-##                    This acts wanky
-#                    print answer, wx.YES, wx.NO
-#                    if answer == wx.YES:
-#                        return True
-#                # If there is no wx App, then prompt in the console:
-#                except Exception, e:
-#                    print e
-#                    print 'Classifier found an existing SQLite database with %d images.\nUse this database? (y/n)'%(nImages)
-#                    answer = sys.stdin.readline()
-#                    if answer.strip().lower() =='y':
-#                        return True
-            
-            # If this is the first connection, then we need to create the DB from the files
-            if len(self.connections) == 1:
-                print 'No database info specified. Will attempt to load tables from file.'
-                try:
-                    fimg = open(p.image_csv_file)
-                except IOError:
-                    raise Exception, 'Failed to open image_csv_file from file. Check your properties file.' % (p.image_csv_file)
-                    return False
-                try:
-                    fobj = open(p.object_csv_file)
-                except:
-                    raise Exception, 'Failed to open object_csv_file from file. Check your properties file.' % (p.object_csv_file)
-                    return False
-                else:
-                    fimg.close()
-                    fobj.close()
+                # If this is the first connection, then we need to create the DB from the csv files
+                if len(self.connections) == 1:
+                    print 'DBConnect: Creating SQLite database at: %s.'%(self.sqliteDBFile)
                     self.CreateSQLiteDB()
             return True
-        
-        # Unknown database type
+                    
+        # Unknown database type (this should never happen)
         else:
             raise DBException, "Unknown db_type in properties: '%s'\n"%(p.db_type)
 
@@ -592,10 +568,11 @@ if __name__ == "__main__":
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
 
-    p.LoadFile('../properties/nirht_test.properties')
+    p.LoadFile('../properties/nirht_local.properties')
     dm.PopulateModel()
     
     print db.GetColnamesForClassifier()
+    print db.GetColumnTypes(p.object_table)
     
 #    p.LoadFile('../properties/nirht_local.properties')
 #    dm.PopulateModel()

@@ -156,8 +156,13 @@ class Properties(Singleton):
                 if field_defined(field):
                     print 'PROPERTIES WARNING (%s): Field not required with db_type=sqlite.'%(field)
             for field in ['image_csv_file','object_csv_file']:
-                assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=sqlite.'%(field)            
-
+                assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=sqlite.'%(field)
+                try:
+                    f = open(self.__dict__[field], 'rb')
+                    f.close()
+                except:
+                    raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
+            
         if self.db_type.lower()=='mysql':
             for field in ['db_port', 'db_host', 'db_name', 'db_user',]:
                 assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=mysql.'%(field)
