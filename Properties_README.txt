@@ -66,6 +66,8 @@ object_table  =  <your_per_object_table_name>
 table_id    =  <your_table_number_key_column>
 image_id    =  <your_image_number_key_column>
 object_id   =  <your_object_number_key_column>
+plate_id    =  <your_plate_id_column>
+well_id     =  <your_well_id_column>
 
 # Also specify the column names that contain X and Y coordinates for each 
 # object within an image.
@@ -164,6 +166,9 @@ filter_SQL_YourFilterName  =
 # FORMAT:  object_name  =  singular name, plural name
 
 object_name  =  cell, cells,
+
+# What size plates were used?  384 or 96?
+plate_type   =  
 
 
 # ======== Excluded Columns ======== 
