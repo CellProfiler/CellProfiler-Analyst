@@ -2,6 +2,7 @@
 
 from Singleton import *
 
+# TODO: check type of all field values
 string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                 'image_table', 'object_table',
                 'image_csv_file', 'object_csv_file',
@@ -177,6 +178,21 @@ class Properties(Singleton):
 
         if not field_defined('classifier_ignore_substrings'):
             print 'PROPERTIES WARNING (classifier_ignore_substrings): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.'
+        
+        if not field_defined('image_buffer_size'):
+            print 'PROPERTIES: Using default image_buffer_size=1'
+            self.image_buffer_size = 1
+            
+        if not field_defined('tile_buffer_size'):
+            print 'PROPERTIES: Using default tile_buffer_size=1'
+            self.tile_buffer_size = 1
+            
+        if not field_defined('object_name'):
+            print 'PROPERTIES WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"'
+            self.object_name = ['cell', 'cells']
+        else:
+            # if it is defined make sure they do it correctly
+            assert len(self.object_name)==2, 'PROPERTIES ERROR (object_name): Found %d names instead of 2! This field should contain the singular and plural name of the objects you are classifying. (Example: object_name=cell,cells)'%(len(self.object_name))
 
         if field_defined('training_set'):
             try:
@@ -186,6 +202,14 @@ class Properties(Singleton):
                 print 'PROPERTIES WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set)                        
             print 'PROPERTIES: Training set found at "%s"'%(self.training_set)
             
+        if not field_defined('plate_id'):
+            print 'PROPERTIES WARNING (plate_id): Field is required for plate map viewer.'
+                                    
+        if not field_defined('well_id'):
+            print 'PROPERTIES WARNING (well_id): Field is required for plate map viewer.'
+                                    
+        if not field_defined('plate_type'):
+            print 'PROPERTIES WARNING (plate_type): Field is required for plate map viewer.'                        
 
         
 if __name__ == "__main__":
