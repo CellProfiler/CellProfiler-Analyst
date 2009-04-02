@@ -18,7 +18,6 @@ import os
 import wx
 
 
-
 class ClassifierGUI(wx.Frame):
 
     """GUI Interface and functionality for the Classifier."""
@@ -182,19 +181,14 @@ class ClassifierGUI(wx.Frame):
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
         self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.OnQuantityChanged)
         
-        # Finally, if there's a default training set. Ask to load it.
+        # If there's a default training set. Ask to load it.
         if p.training_set and os.access(p.training_set, os.R_OK):
-            try:
-                # First make sure the ts exists
-                f = open(p.training_set)
-                f.close()
-                dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.'%(p.training_set),
-                                       'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
-                response = dlg.ShowModal()
-                if response == wx.ID_YES:
-                    self.LoadTrainingSet(p.training_set)
-            except:
-                pass
+            # file existence is checked in Properties module
+            dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.'%(p.training_set),
+                                   'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
+            response = dlg.ShowModal()
+            if response == wx.ID_YES:
+                self.LoadTrainingSet(p.training_set)
 
 
     def BindMouseOverHelpText(self):
@@ -473,7 +467,8 @@ class ClassifierGUI(wx.Frame):
         
     def OnLoadTrainingSet(self, evt):
         ''' Present user with file select dialog, then load selected training set. '''
-        dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.", defaultDir=os.getcwd(), style=wx.OPEN | wx.FD_CHANGE_DIR)
+        dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.",
+                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             self.LoadTrainingSet(filename)
@@ -512,10 +507,9 @@ class ClassifierGUI(wx.Frame):
             self.defaultTSFileName = 'MyTrainingSet.txt'
         saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), 
                                    defaultFile=self.defaultTSFileName, wildcard='txt', 
-                                   style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+                                   style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)#wx.FD_CHANGE_DIR)
         if saveDialog.ShowModal()==wx.ID_OK:
             filename = saveDialog.GetPath()
-#            os.chdir(os.path.split(filename)[0])                 # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
             self.defaultTSFileName = os.path.split(filename)[1]
             self.SaveTrainingSetAs(filename)
 
@@ -960,8 +954,6 @@ class ClassifierGUI(wx.Frame):
         
                 
         
-# ----------------- Display Exceptions -------------------
-
 def show_exception_as_dialog(type, value, tb):
     """Exception handler that show a dialog."""
     import traceback
@@ -975,12 +967,11 @@ def show_exception_as_dialog(type, value, tb):
 
 
 
-# ----------------- Run -------------------
-
 def LoadProperties():
     dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
     if dlg.ShowModal() == wx.ID_OK:
         filename = dlg.GetPath()
+        os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         p.LoadFile(filename)
         dm.PopulateModel()
     else:
@@ -988,8 +979,14 @@ def LoadProperties():
         exit()
 
 
+# ----------------- Run -------------------
+
 if __name__ == "__main__":
     import sys
+    
+    global defaultDir
+    defaultDir = os.getcwd()
+    
     # Handles args to MacOS "Apps"
     if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
         del sys.argv[1]
@@ -997,7 +994,7 @@ if __name__ == "__main__":
     # Initialize the app early because the fancy exception handler
     # depends on it in order to show a dialog.
     app = wx.PySimpleApp()
-
+    
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
