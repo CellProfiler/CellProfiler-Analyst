@@ -2,10 +2,10 @@ from DataModel import *
 from DBConnect import DBConnect, UniqueImageClause
 from Properties import Properties
 from PlateMapPanel import *
+from ColorBarPanel import ColorBarPanel
 import wx
 import numpy as np
 import pylab
-from PlotPanel import ColorBarPanel
 import ImageTools
 
 p = Properties.getInstance()
@@ -17,7 +17,7 @@ class AwesomePMP(PlateMapPanel):
     PlateMapPanel that does selection and tooltips for data.
     '''
     def __init__(self, parent, data, shape=None, colormap='jet', 
-                 wellshape=ROUNDED_RECT, **kwargs):
+                 wellshape=ROUNDED, **kwargs):
         PlateMapPanel.__init__(self, parent, data, shape, colormap, wellshape, **kwargs)
         
         self.plate = None
@@ -115,10 +115,6 @@ class PlateMapBrowser(wx.Frame):
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
         
-#        viewSizer.AddSpacer((-1,10))
-#        self.colorBar = ColorBarPanel(self, 'gist_heat', size=(130,16))
-#        viewSizer.Add(self.colorBar)
-        
         viewSizer.AddSpacer((-1,10))
         viewSizer.Add(wx.StaticText(self, label='Well Shape:'))
         self.wellShapeChoice = wx.Choice(self, choices=all_well_shapes)
@@ -139,14 +135,15 @@ class PlateMapBrowser(wx.Frame):
         self.plateMapSizer = wx.GridSizer(1,1,5,5)
         self.plateMaps = []
         self.plateMapChoices = []
-
-        self.AddPlateMap()
+        
+        self.rightSizer = wx.BoxSizer(wx.VERTICAL)
+        self.rightSizer.Add(self.plateMapSizer, 1, wx.EXPAND|wx.BOTTOM, 10)
+        self.colorBar = ColorBarPanel(self, 'jet', (0,1), size=(-1,25))
+        self.rightSizer.Add(self.colorBar, 0, wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL)
         
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
         mainSizer.Add(controlSizer, 0, wx.LEFT|wx.TOP|wx.BOTTOM, 10)
-#        self.colorBar = ColorBarPanel(self, 'gist_heat', size=(15,600))
-#        mainSizer.Add(self.colorBar, 0, wx.ALIGN_CENTER_VERTICAL)
-        mainSizer.Add(self.plateMapSizer, 1, wx.EXPAND|wx.ALL, 10)
+        mainSizer.Add(self.rightSizer, 1, wx.EXPAND|wx.ALL, 10)
         
         self.SetSizer(mainSizer)
         self.SetClientSize((self.Size[0],self.Sizer.CalcMin()[1]))
@@ -157,6 +154,8 @@ class PlateMapBrowser(wx.Frame):
         self.colorMapsChoice.Bind(wx.EVT_CHOICE, self.OnSelectColorMap)
         self.numberOfPlatesChoice.Bind(wx.EVT_CHOICE, self.OnSelectNumberOfPlates)
         self.wellShapeChoice.Bind(wx.EVT_CHOICE, lambda(evt): [plateMap.SetWellShape(self.wellShapeChoice.GetStringSelection()) for plateMap in self.plateMaps])
+        
+        self.AddPlateMap()
         
         
     def AddPlateMap(self, plateIndex=0):
@@ -277,6 +276,8 @@ class PlateMapBrowser(wx.Frame):
                 dmin = np.nanmin([val for w,val in wellsAndVals]+[dmin])
                 dmax = np.nanmax([val for w,val in wellsAndVals]+[dmax])
         
+        self.colorBar.SetExtents((dmin,dmax))
+        
         for d, plateMap in zip(data, self.plateMaps):
             plateMap.SetData(d, range=(dmin,dmax))
         
@@ -317,10 +318,13 @@ class PlateMapBrowser(wx.Frame):
         
     def OnSelectColorMap(self, evt):
         ''' Handles the selection of a new color map from a choice box. '''
-        mapName = self.colorMapsChoice.GetStringSelection()
-#        self.colorBar.SetMap(mapName)
+        map = self.colorMapsChoice.GetStringSelection()
+        cm = pylab.cm.get_cmap(map)
+        
+        self.colorBar.SetMap(map)
         for plateMap in self.plateMaps:
-            plateMap.SetColorMap(mapName)
+            plateMap.SetColorMap(map)
+            
             
     def OnSelectNumberOfPlates(self, evt):
         ''' Handles the selection of predefined # of plates to view from a choice box. '''
@@ -355,7 +359,6 @@ class PlateMapBrowser(wx.Frame):
             
         self.plateMapSizer.Layout()
         
-
         
 
 def FormatPlateMapData(wellsAndVals):
