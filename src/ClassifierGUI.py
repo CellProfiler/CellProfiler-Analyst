@@ -687,7 +687,7 @@ class ClassifierGUI(wx.Frame):
             dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% complete', 
                                     100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
             def update(frac):
-                dlg.Update(int(frac * 100), '%d Complete'%(frac * 100))
+                dlg.Update(int(frac * 100), '%d%% Complete'%(frac * 100))
             try:
                 self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners, filter=filter, cb=update)
             finally:
@@ -740,12 +740,13 @@ class ClassifierGUI(wx.Frame):
         tableData = []
         fraction = 0.0
         dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% complete', 
-                                100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+                                len(groupedKeysAndCounts), self,
+                                wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
         for i, row in enumerate(groupedKeysAndCounts):
             # Update the status text after every 2% is done.
-            if float(i)/float(len(groupedKeysAndCounts))-fraction > 0.02:
-                fraction = float(i)/float(len(groupedKeysAndCounts))
-                dlg.Update(int(100*fraction), '%d Complete'%(fraction*100))
+            if float(i)/len(groupedKeysAndCounts)-fraction > 0.02:
+                fraction = float(i)/len(groupedKeysAndCounts)
+                dlg.Update(i, '%d%% Complete'%(fraction*100))
             
             # Start this row with the group key: 
             tableRow = list(row[:-nClasses])
@@ -804,7 +805,21 @@ class ClassifierGUI(wx.Frame):
                         title=title)
         grid.Show()
         
-        self.SetStatusText('')        
+        self.SetStatusText('')      
+        
+    
+#    def WriteEnrichmentsToTempTable(self):
+#        '''
+#        Write per-image enrichments to a temporary table for access in other parts of the app.
+#        '''
+#        tableName = 'enrichments'
+#        cols = [p.image_id, p.well_id, p.plate_id] + [labels[i] for i in self.selectableColumns]
+#        colDefs = ['%s %s'%(c, t) for c in cols]
+#        
+#        'DROP TABLE IF EXISTS %s'%(tableName)
+#        'CREATE TEMPORARY TABLE %s (%s)'%(tableName, colDefs)
+#        'INSERT INTO %s (%s) '%(tableName, cols, row)
+  
                 
             
     def OnSelectFilter(self, evt):
