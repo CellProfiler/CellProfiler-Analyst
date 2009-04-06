@@ -4,12 +4,16 @@ import wx.grid
 import numpy
 import ImageTools
 from DataModel import DataModel
+from DBConnect import DBConnect
+from Properties import Properties
 from sys import stderr
+from tempfile import gettempdir
+from time import ctime
 import os
 import csv
 
 dm = DataModel.getInstance()
-
+p = Properties.getInstance()
 
 IMAGE_GROUPING = 'Image'
 
@@ -114,6 +118,10 @@ class DataGrid(wx.Frame):
         # Index of the current column being sorted by.
         self.sortcol = -1
         
+        # autosave enrichments to temp dir just in case.
+        print 'Auto saving data...'
+        self.SaveCSV(gettempdir()+'/CPA_enrichments_'+ctime().replace(' ','_')+'.csv')
+        
         assert len(labels) == data.shape[1], \
                "DataGrid.__init__: Number of column labels does not match " \
                "the number of columns in data."
@@ -148,11 +156,13 @@ class DataGrid(wx.Frame):
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
         
+        
     def OnKey(self, evt):
         if evt.ControlDown() or evt.CmdDown():
             if evt.GetKeyCode() == ord('W'):
                 self.Close()
         evt.Skip()
+
 
     def OnSize(self, evt):
         # Hack: subtract 4 in order to avoid spurious scrollbar.
@@ -160,6 +170,7 @@ class DataGrid(wx.Frame):
         self.grid.SetDefaultColSize(cw, True)
         self.grid.SetRowLabelSize(cw)
         evt.Skip()
+
 
     def OnSaveCSV(self, evt):
         defaultFileName = 'My_Enrichment_Data.csv'
@@ -180,6 +191,7 @@ class DataGrid(wx.Frame):
             w.writerow(row)
         f.close()
         print 'Table saved to',filename
+                
     
     def OnLabelClick(self, evt):
         if evt.Col >= 0:
