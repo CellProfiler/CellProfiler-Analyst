@@ -220,19 +220,19 @@ class PlateMapBrowser(wx.Frame):
             if table == p.image_table:
                 wellsAndVals = []
                 if aggMethod == 'average':
-                    db.Execute('SELECT %s, AVG(%s) FROM %s WHERE %s=%s GROUP BY %s'%
+                    db.Execute('SELECT %s, AVG(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
                                (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'stdev':
-                    db.Execute('SELECT %s, STDDEV(%s) FROM %s WHERE %s=%s GROUP BY %s'%
+                    db.Execute('SELECT %s, STDDEV(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
                                (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'sum':
-                    db.Execute('SELECT %s, SUM(%s) FROM %s WHERE %s=%s GROUP BY %s'%
+                    db.Execute('SELECT %s, SUM(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
                                (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'median':
-                    db.Execute('SELECT %s, %s FROM %s WHERE %s=%s'%
+                    db.Execute('SELECT %s, %s FROM %s WHERE %s="%s"'%
                                (p.well_id, measurement, p.image_table, p.plate_id, plate))
                     valsPerImage = db.GetResultsAsList()
                     wellsAndVals = computeMedians(valsPerImage)
@@ -248,25 +248,25 @@ class PlateMapBrowser(wx.Frame):
                 #  WHERE per_image.ImageNumber=per_object.ImageNumber AND per_image.plate=plate
                 #  GROUP BY Batch1_Per_Image.Image_Metadata_Well;
                 if aggMethod == 'average':
-                    db.Execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s=%s GROUP BY %s.%s'%
+                    db.Execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s" GROUP BY %s.%s'%
                                (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
                                 p.object_table, p.image_id, p.image_table, p.image_id, 
                                 p.image_table, p.plate_id, plate, p.image_table, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'stdev':
-                    db.Execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s=%s GROUP BY %s.%s'%
+                    db.Execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s" GROUP BY %s.%s'%
                                (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
                                 p.object_table, p.image_id, p.image_table, p.image_id, 
                                 p.image_table, p.plate_id, plate, p.image_table, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'sum':
-                    db.Execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s=%s GROUP BY %s.%s'%
+                    db.Execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s" GROUP BY %s.%s'%
                                (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
                                 p.object_table, p.image_id, p.image_table, p.image_id, 
                                 p.image_table, p.plate_id, plate, p.image_table, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'median':
-                    db.Execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s=%s'%
+                    db.Execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s"'%
                                (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
                                 p.object_table, p.image_id, p.image_table, p.image_id, p.image_table, p.plate_id, plate))
                     valsPerObject = db.GetResultsAsList()
@@ -383,7 +383,14 @@ def FormatPlateMapData(wellsAndVals):
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     
-    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
+    # Load a properties file if passed in args
+    if len(sys.argv) > 1:
+        propsFile = sys.argv[1]
+        p.LoadFile(propsFile)
+    else:
+        p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
+#        p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
+
     dm.PopulateModel()
 
     pmb = PlateMapBrowser(None)

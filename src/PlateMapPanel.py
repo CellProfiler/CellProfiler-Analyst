@@ -9,11 +9,11 @@ abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 alphabet = [c for c in abc] + [c+c for c in abc]
 
 # Well Shapes
-ROUNDED_RECT = 'rounded_rect'
-CIRCLE       = 'circle'
-RECT         = 'rect'
+ROUNDED  = 'rounded'
+CIRCLE   = 'circle'
+SQUARE   = 'square'
 
-all_well_shapes = ['rounded_rect', 'circle', 'rect']
+all_well_shapes = ['rounded', 'circle', 'square']
 
 class PlateMapPanel(wx.Panel):
     '''
@@ -23,7 +23,7 @@ class PlateMapPanel(wx.Panel):
     '''
     
     def __init__(self, parent, data, shape=None, colormap='jet', 
-                 wellshape=ROUNDED_RECT, **kwargs):
+                 wellshape=ROUNDED, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
         self.hideLabels = False
         self.SetColorMap(colormap)
@@ -75,9 +75,9 @@ class PlateMapPanel(wx.Panel):
     
     def SetWellShape(self, wellshape):
         '''
-        wellshape in PlatMapPanel.ROUNDED_RECT,
+        wellshape in PlatMapPanel.ROUNDED,
                      PlatMapPanel.CIRCLE,
-                     PlatMapPanel.RECT
+                     PlatMapPanel.SQUARE
         '''
         self.wellshape = wellshape
         self.Refresh()
@@ -145,24 +145,29 @@ class PlateMapPanel(wx.Panel):
             
         # Set font size to fit
         font = dc.GetFont()
-        if r>6:
+        if r>14:
+            font.SetPixelSize((12,24))
+        elif r>6:
             font.SetPixelSize((r-2,(r-2)*2))
         else:
             font.SetPixelSize((3,6))
+        wtext, htext = font.GetPixelSize()[0]*2, font.GetPixelSize()[1]
         dc.SetFont(font)
             
 
         py = self.yo
         i=0
         for y in range(rows_data+1):
+            texty = py+(2.*r - htext)/2.
             px = self.xo
             for x in range(cols_data+1):
+                textx = px+(2.*r - wtext)/2.
                 # Draw column headers
                 if y==0 and x!=0:
-                    dc.DrawText(self.col_labels[x-1], px+1, py+1)
+                    dc.DrawText(self.col_labels[x-1], textx, texty)
                 # Draw row headers
                 elif y!=0 and x==0:
-                    dc.DrawText(self.row_labels[y-1], px+1, py+1)
+                    dc.DrawText(self.row_labels[y-1], textx, texty)
                 # Draw wells
                 elif y>0 and x>0:
                     if (y-1, x-1) in self.selection:
@@ -174,11 +179,11 @@ class PlateMapPanel(wx.Panel):
                         dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                     else:
                         dc.SetBrush(wx.Brush(color))
-                    if self.wellshape == ROUNDED_RECT:
+                    if self.wellshape == ROUNDED:
                         dc.DrawRoundedRectangle(px+1, py+1, r*2, r*2, r*0.75)
                     elif self.wellshape == CIRCLE:
                         dc.DrawCircle(px+r+1, py+r+1, r)
-                    elif self.wellshape == RECT:
+                    elif self.wellshape == SQUARE:
                         dc.DrawRectangle(px+1, py+1, r*2, r*2)
                     if np.isnan(self.data[y-1][x-1]):
                         dc.SetPen(wx.Pen("GRAY",1))
@@ -200,7 +205,7 @@ if __name__ == "__main__":
 #    data = np.ones(384)
     data[100:102] = np.nan
     frame = wx.Frame(None, size=(600.,430.))
-    p = PlateMapPanel(frame, data, shape=(16,24), wellshape='rect')
+    p = PlateMapPanel(frame, data, shape=(16,24), wellshape='square')
     frame.Show()
     
     app.MainLoop()
