@@ -689,21 +689,16 @@ class ClassifierGUI(wx.Frame):
             def update(frac):
                 dlg.Update(int(frac * 100), '%d%% Complete'%(frac * 100))
             try:
-                self.keysAndCounts = MulticlassSQL.HitsAndCounts(self.weaklearners, filter=filter, cb=update)
+                self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
             finally:
                 dlg.Destroy()
 
-            # Make sure HitsAndCounts returned something
+            # Make sure PerImageCounts returned something
             if not self.keysAndCounts:
                 errdlg = wx.MessageDialog(self, 'No images are in filter "%s". Please check the filter definition in your properties file.'%(filter),
                                           "Empty Filter", wx.OK|wx.ICON_EXCLAMATION)
                 if errdlg.ShowModal() == wx.ID_OK:
                     return
-                
-            # Add in images with zero object count that HitsAndCounts missed
-            for imKey, obCount in dm.GetImageKeysAndObjectCounts(filter):
-                if obCount == 0:
-                    self.keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
                 
         t2 = time()
         print 'time to calculate hits: %.3fs'%(t2-t1)
@@ -808,17 +803,17 @@ class ClassifierGUI(wx.Frame):
         self.SetStatusText('')      
         
     
-#    def WriteEnrichmentsToTempTable(self):
-#        '''
-#        Write per-image enrichments to a temporary table for access in other parts of the app.
-#        '''
-#        tableName = 'enrichments'
-#        cols = [p.image_id, p.well_id, p.plate_id] + [labels[i] for i in self.selectableColumns]
-#        colDefs = ['%s %s'%(c, t) for c in cols]
-#        
-#        'DROP TABLE IF EXISTS %s'%(tableName)
-#        'CREATE TEMPORARY TABLE %s (%s)'%(tableName, colDefs)
-#        'INSERT INTO %s (%s) '%(tableName, cols, row)
+    def WriteEnrichmentsToTempTable(self):
+        '''
+        Write per-image enrichments to a temporary table for access in other parts of the app.
+        '''
+        tableName = 'enrichments'
+        cols = [p.image_id, p.well_id, p.plate_id] + [labels[i] for i in self.selectableColumns]
+        colDefs = ['%s %s'%(c, t) for c in cols]
+        
+        'DROP TABLE IF EXISTS %s'%(tableName)
+        'CREATE TEMPORARY TABLE %s (%s)'%(tableName, colDefs)
+        'INSERT INTO %s (%s) '%(tableName, cols, row)
   
                 
             

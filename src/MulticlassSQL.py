@@ -11,7 +11,7 @@ dm = DataModel.getInstance()
 
 # filter & filterKeys is kind of redundant here, yet they are implemented
 # very differently.  Should we only use filterKeys?
-def translate(weak_learners, area_column=None, filter=None, filterKeys=[]):
+def translate(weaklearners, area_column=None, filter=None, filterKeys=[]):
     '''
     Translate weak learners into MySQL queries that place the resulting 
       classification in a MySQL temporary table named "temp_class_table"
@@ -28,8 +28,8 @@ def translate(weak_learners, area_column=None, filter=None, filterKeys=[]):
         * Also useful for classifying a specific image or group of images.
     '''
     
-    num_features = len(weak_learners)
-    num_classes = len(weak_learners[0][2])
+    num_features = len(weaklearners)
+    num_classes = len(weaklearners[0][2])
 
     if p.table_id:
         key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
@@ -55,7 +55,7 @@ def translate(weak_learners, area_column=None, filter=None, filterKeys=[]):
     temp_stump_table       = "_stump"
     stump_cols             = select_start + ", ".join(["stump%d"%(i) for i in range(num_features)])
     stump_col_defs         = key_col_defs + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
-    stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(wl[0], wl[1], idx) for idx, wl in enumerate(weak_learners)])
+    stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(wl[0], wl[1], idx) for idx, wl in enumerate(weaklearners)])
     stump_select_statement = select_start + stump_select_features + \
                              " FROM " + object_table_from
     stump_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs),
@@ -78,7 +78,7 @@ def translate(weak_learners, area_column=None, filter=None, filterKeys=[]):
     # SQLite doesn't support conditional operators, so we use math instead:
     # Example: if (A>B), C, D ==> D+(C-D)*(A>B)
     score_select_scores = ", ".join(["+".join(["%f+(%f-(%f))*(stump%d)"
-                                    %(weak_learners[i][3][k-1], weak_learners[i][2][k-1],weak_learners[i][3][k-1], i) 
+                                    %(weaklearners[i][3][k-1], weaklearners[i][2][k-1],weaklearners[i][3][k-1], i) 
                                     for i in range(num_features)]) + " AS score%d"%(k)
                                     for k in classidxs])
     score_select_statement = select_start + score_select_scores + ", 0.0 FROM " + temp_stump_table
@@ -152,7 +152,7 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     return db.GetResultsAsList()
     
     
-def HitsAndCounts(weaklearners, filter=None, cb=None):
+def PerImageCounts(weaklearners, filter=None, cb=None):
     '''
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
     filter: name of filter, or None.
@@ -214,8 +214,16 @@ def HitsAndCounts(weaklearners, filter=None, cb=None):
     db.Execute(class_stmnts[0])
     do_by_steps(class_stmnts[1], 2)
     db.Execute(count_query)
+    
+    keysAndCounts = db.GetResultsAsList()
+    
+    nClasses = len(weaklearners[0][2])
+    # Add in images with zero object count that the queries missed
+    for imKey, obCount in dm.GetImageKeysAndObjectCounts(filter):
+        if obCount == 0:
+            keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
 
-    return db.GetResultsAsList()    
+    return keysAndCounts 
 
 
 
@@ -227,7 +235,7 @@ if __name__ == "__main__":
     learners = pickle.load(f)
     f.close()
 
-    keys_and_counts = HitsAndCounts(learners, filter='HRG')
+    keys_and_counts = PerImageCounts(learners, filter='HRG')
     import numpy
     keys_and_counts = numpy.array(keys_and_counts, dtype='i4')
     print keys_and_counts[0,:]
