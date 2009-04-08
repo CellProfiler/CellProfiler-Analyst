@@ -82,6 +82,7 @@ class AwesomePMP(PlateMapPanel):
         ImageTools.ShowImage(imKey, p.image_channel_colors, parent=self)
 
 
+
 class PlateMapBrowser(wx.Frame):
     '''
     '''
@@ -103,7 +104,7 @@ class PlateMapBrowser(wx.Frame):
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data Aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
-        aggregation = ['average', 'sum', 'median', 'stdev']
+        aggregation = ['average', 'sum', 'median', 'stdev', 'cv%']
         self.aggregationMethodsChoice = wx.Choice(self, choices=aggregation)
         groupingSizer.Add(self.aggregationMethodsChoice)
         
@@ -226,6 +227,10 @@ class PlateMapBrowser(wx.Frame):
                 elif aggMethod == 'stdev':
                     db.Execute('SELECT %s, STDDEV(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
                                (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'cv%':
+                    db.Execute('SELECT %s, STDDEV(%s)/AVG(%s)*100 FROM %s WHERE %s="%s" GROUP BY %s'%
+                               (p.well_id, measurement,measurement, table, p.plate_id, plate, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'sum':
                     db.Execute('SELECT %s, SUM(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
@@ -358,8 +363,8 @@ class PlateMapBrowser(wx.Frame):
             self.AddPlateMap(plateIndex)
             
         self.plateMapSizer.Layout()
-        
-        
+
+
 
 def FormatPlateMapData(wellsAndVals):
     '''
