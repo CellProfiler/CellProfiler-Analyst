@@ -194,7 +194,9 @@ class ClassifierGUI(wx.Frame):
     def BindMouseOverHelpText(self):
         self.nObjectsTxt.SetToolTip(wx.ToolTip('The number of %s to fetch.'%(p.object_name[1])))
         self.obClassChoice.SetToolTip(wx.ToolTip('The phenotype of the %s.'%(p.object_name[1])))
+        self.obClassChoice.GetToolTip().SetDelay(4000)
         self.filterChoice.SetToolTip(wx.ToolTip('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
+        self.filterChoice.GetToolTip().SetDelay(4000)
         self.fetchBtn.SetToolTip(wx.ToolTip('Fetches images of %s to be sorted.'%(p.object_name[1])))
         self.rulesTxt.SetToolTip(wx.ToolTip('Rules are displayed in this text box.'))
         self.nRulesTxt.SetToolTip(wx.ToolTip('The maximum number of rules classifier should use to define your phenotypes.'))
@@ -662,8 +664,12 @@ class ClassifierGUI(wx.Frame):
         Handler for ScoreAll button.  Calculates object counts for each class
         and enrichment values, then builds a table and displays it in a DataGrid.
         '''
-        groupChoices = ['Image'] + p.groups_ordered
-        filterChoices = [None] + p.filters_ordered
+        groupChoices   =  ['Image'] + p.groups_ordered
+        filterChoices  =  [None] + p.filters_ordered
+        nClasses       =  len(self.classBins)
+        two_classes    =  nClasses == 2
+
+        
         dlg = ScoreDialog(self, groupChoices, filterChoices)
         if dlg.ShowModal() == wx.ID_OK:            
             group = dlg.group
@@ -676,16 +682,13 @@ class ClassifierGUI(wx.Frame):
         from time import time
         t1 = time()
         
-        nClasses = len(self.classBins)
-        
         # If hit counts havn't been calculated since last training or if the
         # user is filtering the data differently then classify all objects
         # into phenotype classes and count phenotype-hits per-image.
         if not self.keysAndCounts or filter!=self.lastScoringFilter:
             self.lastScoringFilter = filter
 
-            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% complete', 
-                                    100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
             def update(frac):
                 dlg.Update(int(frac * 100), '%d%% Complete'%(frac * 100))
             try:
@@ -695,10 +698,10 @@ class ClassifierGUI(wx.Frame):
 
             # Make sure PerImageCounts returned something
             if not self.keysAndCounts:
-                errdlg = wx.MessageDialog(self, 'No images are in filter "%s". Please check the filter definition in your properties file.'%(filter),
-                                          "Empty Filter", wx.OK|wx.ICON_EXCLAMATION)
-                if errdlg.ShowModal() == wx.ID_OK:
-                    return
+                errdlg = wx.MessageDialog(self, 'No images are in filter "%s". Please check the filter definition in your properties file.'%(filter), "Empty Filter", wx.OK|wx.ICON_EXCLAMATION)
+                errdlg.ShowModal()
+                errdlg.Destroy()
+                return
                 
         t2 = time()
         print 'time to calculate hits: %.3fs'%(t2-t1)
@@ -726,17 +729,12 @@ class ClassifierGUI(wx.Frame):
         
         t4 = time()
         print 'time to fit beta binomial: %.3fs'%(t4-t3)
-        
-        # Flag: positive/negative two-class experiment
-        two_classes = nClasses == 2
-            
+                    
         # Construct matrix of table data
         self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
-        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% complete', 
-                                len(groupedKeysAndCounts), self,
-                                wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% complete', len(groupedKeysAndCounts), self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
         for i, row in enumerate(groupedKeysAndCounts):
             # Update the status text after every 2% is done.
             if float(i)/len(groupedKeysAndCounts)-fraction > 0.02:
@@ -760,7 +758,6 @@ class ClassifierGUI(wx.Frame):
             tableData.append(tableRow)
         dlg.Destroy()
         tableData = numpy.array(tableData, dtype=object)
-        self.PostMessage('Computing enrichment scores for each group... 100%')
         
         t5 = time()
         print 'time to compute enrichment scores: %.3fs'%(t5-t4)
