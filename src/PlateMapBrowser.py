@@ -7,6 +7,7 @@ import wx
 import numpy as np
 import pylab
 import ImageTools
+import re
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -376,9 +377,10 @@ def FormatPlateMapData(wellsAndVals):
     elif p.plate_type == '96': shape = (8,12)
     data = np.ones(shape)*np.nan
     for well, val in wellsAndVals:
-        row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.index(well[0])
-        col = int(well[1:])-1
-        data[row,col] = float(val)
+        if re.match('^[a-zA-Z][0-9]?[0-9]?$', well):
+            row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.index(well[0])
+            col = int(well[1:])-1
+            data[row,col] = float(val)
     return data
     
 
