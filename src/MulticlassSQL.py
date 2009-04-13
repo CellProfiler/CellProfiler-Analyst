@@ -127,7 +127,7 @@ def translate(weaklearners, area_column=None, filter=None, filterKeys=[]):
     return stump_stmnts, score_stmnts, find_max_query, class_stmnts, count_query
     
 
-def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
+def FilterObjectsFromClassN(clNum, weaklearners, filter):
     '''
     clNum: 1-based index of the class to retrieve obKeys from
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
@@ -140,8 +140,12 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
           here until N objects of the desired class have been accumulated.
         * Also useful for classifying a specific image or group of images.
     RETURNS: A list of object keys that fall in the specified class.
-    '''    
-    stump_stmnts, score_stmnts, find_max_query, _, _ = translate(weaklearners, filterKeys=filterKeys)
+    '''
+    if type(filter) == list:
+        filterKeys = filter
+        stump_stmnts, score_stmnts, find_max_query, _, _ = translate(weaklearners, filterKeys=filterKeys)
+    else:
+        stump_stmnts, score_stmnts, find_max_query, _, _ = translate(weaklearners, filter=filter)
 
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
