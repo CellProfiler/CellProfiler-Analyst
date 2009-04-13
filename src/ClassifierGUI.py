@@ -432,23 +432,20 @@ class ClassifierGUI(wx.Frame):
                 if filter == 'experiment':
                     obKeysToTry = dm.GetRandomObjects(100)
                     loopMsg = ' from whole experiment'
-                    obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
                 elif filter == 'image':
                     # All objects are tried in first pass
                     if attempts>0: break
                     imKey = self.GetGroupKeyFromGroupSizer()
                     obKeysToTry = dm.GetObjectsFromImage(imKey)
                     loopMsg = ' from image %s'%(imKey,)
-                    obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
                 else:
                     obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
                     if filter in p.filters_ordered:
                         loopMsg = ' from filter %s'%(filter)
-                        obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, filter)
                     elif filter in p.groups_ordered:
                         loopMsg = ' from group %s: %s'%(filter,
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)]))
-                        obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
+                obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
                 attempts += len(obKeysToTry)
                 if attempts%10000.0==0:
                     dlg = wx.MessageDialog(self, 'Found %d %s after %d attempts. Continue searching?'
@@ -987,6 +984,7 @@ def LoadProperties():
     else:
         print 'Classifier requires a properties file.  Exiting.'
         exit()
+
 
 
 # ----------------- Run -------------------

@@ -127,7 +127,7 @@ def translate(weaklearners, area_column=None, filter=None, filterKeys=[]):
     return stump_stmnts, score_stmnts, find_max_query, class_stmnts, count_query
     
 
-def FilterObjectsFromClassN(clNum, weaklearners, filter):
+def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     '''
     clNum: 1-based index of the class to retrieve obKeys from
     weaklearners: Weak learners from FastGentleBoostingMulticlass.train
@@ -141,11 +141,7 @@ def FilterObjectsFromClassN(clNum, weaklearners, filter):
         * Also useful for classifying a specific image or group of images.
     RETURNS: A list of object keys that fall in the specified class.
     '''
-    if type(filter) == list:
-        filterKeys = filter
-        stump_stmnts, score_stmnts, find_max_query, _, _ = translate(weaklearners, filterKeys=filterKeys)
-    else:
-        stump_stmnts, score_stmnts, find_max_query, _, _ = translate(weaklearners, filter=filter)
+    stump_stmnts, score_stmnts, find_max_query, _, _ = translate(weaklearners, filterKeys=filterKeys)
 
     db.Execute('DROP TABLE IF EXISTS _stump')
     db.Execute('DROP TABLE IF EXISTS _scores')
@@ -228,7 +224,6 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
             keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
 
     return keysAndCounts 
-
 
 
 if __name__ == "__main__":
