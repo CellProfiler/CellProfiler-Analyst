@@ -46,9 +46,9 @@ class ImageTile(ImagePanel):
         self.selected    = selected        # whether or not this tile is selected
         self.leftPressed = False
         self.showCenter  = False
+        self.popupMenu   = None
         
         self.MapChannels(chMap)
-        self.CreatePopupMenu()
                 
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
@@ -73,6 +73,8 @@ class ImageTile(ImagePanel):
 
 
     def CreatePopupMenu(self):
+        if self.popupMenu is not None:
+            return
         popupMenuItems = ['View full images of selected',
                           '[ctrl+a] - Select all',
                           '[ctrl+d] - Deselect all',
@@ -80,6 +82,7 @@ class ImageTile(ImagePanel):
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
         for i, item in enumerate(popupMenuItems):
+            # need to minimize the use of wx.NewId here
             id = wx.NewId()
             self.popupItemIndexById[id] = i
             self.popupMenu.Append(id,item)
@@ -88,6 +91,7 @@ class ImageTile(ImagePanel):
         
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''
+        self.CreatePopupMenu()
         self.PopupMenu(self.popupMenu, evt.GetPosition())
     
     
