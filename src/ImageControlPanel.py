@@ -18,13 +18,13 @@ class ImageControlPanel(wx.Panel):
             self.listeners = [listeners]
         
 
-        self.scale_slider      = wx.Slider(self, -1, scale*100, 1, 200, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
-        self.brightness_slider = wx.Slider(self, -1, brightness*100, 1, 200, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
+        self.scale_slider      = wx.Slider(self, -1, scale*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
+        self.brightness_slider = wx.Slider(self, -1, brightness*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.reset_btn         = wx.Button(self, wx.NewId(), 'Reset')
         
         
-        self.scale_percent      = wx.StaticText(self, wx.NewId(), '%'+str(self.scale_slider.GetValue()))
-        self.brightness_percent = wx.StaticText(self, wx.NewId(), '%'+str(self.brightness_slider.GetValue()))
+        self.scale_percent      = wx.StaticText(self, wx.NewId(), str(self.scale_slider.GetValue())+'%')
+        self.brightness_percent = wx.StaticText(self, wx.NewId(), str(self.brightness_slider.GetValue())+'%')
         
         self.sizer = wx.GridSizer(3,3)
         self.sizer.Add(wx.StaticText(self, wx.NewId(), 'Brightness:'))
