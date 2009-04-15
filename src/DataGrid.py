@@ -120,7 +120,7 @@ class DataGrid(wx.Frame):
         
         # autosave enrichments to temp dir just in case.
         print 'Auto saving data...'
-        self.SaveCSV(gettempdir()+'/CPA_enrichments_'+ctime().replace(' ','_')+'.csv')
+        self.SaveCSV(gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_')+'.csv')
         
         assert len(labels) == data.shape[1], \
                "DataGrid.__init__: Number of column labels does not match " \
