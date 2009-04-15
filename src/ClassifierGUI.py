@@ -194,9 +194,9 @@ class ClassifierGUI(wx.Frame):
     def BindMouseOverHelpText(self):
         self.nObjectsTxt.SetToolTip(wx.ToolTip('The number of %s to fetch.'%(p.object_name[1])))
         self.obClassChoice.SetToolTip(wx.ToolTip('The phenotype of the %s.'%(p.object_name[1])))
-        self.obClassChoice.GetToolTip().SetDelay(4000)
+        self.obClassChoice.GetToolTip().SetDelay(3000)
         self.filterChoice.SetToolTip(wx.ToolTip('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
-        self.filterChoice.GetToolTip().SetDelay(4000)
+        self.filterChoice.GetToolTip().SetDelay(3000)
         self.fetchBtn.SetToolTip(wx.ToolTip('Fetches images of %s to be sorted.'%(p.object_name[1])))
         self.rulesTxt.SetToolTip(wx.ToolTip('Rules are displayed in this text box.'))
         self.nRulesTxt.SetToolTip(wx.ToolTip('The maximum number of rules classifier should use to define your phenotypes.'))
@@ -259,8 +259,9 @@ class ClassifierGUI(wx.Frame):
                 else:
                     item = channel_menu.AppendRadioItem(id,color)
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
-            channel_menu.InsertSeparator(3)
-            channel_menu.InsertSeparator(8)
+            # Separators screw up selection
+            #channel_menu.InsertSeparator(3)
+            #channel_menu.InsertSeparator(8)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
 
@@ -833,17 +834,20 @@ class ClassifierGUI(wx.Frame):
         would be represented by two text boxes.
         '''
         if group=='image':
-            self.groupInputs = []
             fieldNames = ['image']
             if p.table_id: fieldNames = ['table', 'image']
             fieldTypes = [int, int]
             validKeys = dm.GetAllImageKeys()
+        elif group=='well':
+            fieldNames = ['plate', 'well']
+            fieldTypes = [str, str]
+            validKeys = dm.GetAllImageKeys()
         else:            
             fieldNames = dm.GetGroupColumnNames(group)
             fieldTypes = dm.GetGroupColumnTypes(group)
-            self.groupInputs = []
             validKeys = dm.GetGroupKeysInGroup(group)
-        
+            
+        self.groupInputs = []
         self.groupFieldValidators = []
         self.fetchFromGroupSizer.Clear(True)
         for i, field in enumerate(fieldNames):
@@ -852,10 +856,13 @@ class ClassifierGUI(wx.Frame):
             validCols.sort()
             validCols = [str(col) for col in validCols]
             if fieldTypes[i]==int or fieldTypes[i]==long or fieldTypes[i]==float:
-                if group!='image':
+                if group=='image':
+                    fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
+                                           choices=validCols)
+                else:
+                    fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
+                                           choices=['**ANY**']+validCols)
                     validCols = ['**ANY**']+validCols
-                fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                       choices=validCols)
                 # Create and bind to a text Validator
                 def ValidateGroupField(evt, validCols=validCols):
                     ctrl = evt.GetEventObject().GetChildren()[0]
@@ -866,8 +873,8 @@ class ClassifierGUI(wx.Frame):
                 self.groupFieldValidators += [ValidateGroupField]
                 fieldInp.Bind(wx.EVT_TEXT, self.groupFieldValidators[-1])
             else:
-                fieldInp = fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                                  choices=['**ANY**']+validCols, style=wx.CB_READONLY)
+                fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
+                                       choices=['**ANY**']+validCols, style=wx.CB_READONLY)
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)

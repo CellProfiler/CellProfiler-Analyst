@@ -104,13 +104,15 @@ class DataModel(Singleton):
                 return []
             obs = []
             for i in xrange(N):
-                obNum = randint(1, sums[-1])
-                index = numpy.searchsorted(sums, obNum, 'left')
+                obIdx = randint(1, sums[-1])
+                index = numpy.searchsorted(sums, obIdx, 'left')
                 if index != 0:
                     while sums[index] == sums[index-1]:
                         index -= 1
-                    obNum = obNum-sums[index-1]
-                obs.append(tuple(list(imKeys[index])+[obNum]))
+                    obIdx = obIdx-sums[index-1]
+                obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
+                print obKey
+                obs.append(obKey)
             return obs
             
     
@@ -123,10 +125,9 @@ class DataModel(Singleton):
 
     def GetObjectsFromImage(self, imKey):
         obKeys=[]
-        for i in xrange(self.data[imKey]):
-            obKey = list(imKey)
-            obKey.append(i+1)
-            obKeys.append(tuple(obKey))
+        for i in xrange(1,self.GetObjectCountFromImage(imKey)+1):
+            obKey = db.GetObjectIDAtIndex(imKey, i)
+            obKeys.append(obKey)
         return obKeys
     
     

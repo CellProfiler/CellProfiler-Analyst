@@ -135,8 +135,8 @@ class DBConnect(Singleton):
                 # compute a database name unique to this data  
                 from tempfile import gettempdir
                 from md5 import md5
-                f_im = open(p.image_csv_file, 'rb')
-                f_ob = open(p.object_csv_file, 'rb')
+                f_im = open(p.image_csv_file, 'r')
+                f_ob = open(p.object_csv_file, 'r')
                 l = str(f_im.readlines() + f_ob.readlines())
                 f_im.close()
                 f_ob.close()
@@ -257,6 +257,7 @@ class DBConnect(Singleton):
         Note: This must be used when object IDs in the DB aren't
               contiguous starting at 1.
               (eg: if some objects have been removed)
+        index: a POSITIVE integer (1,2,3...)
         '''
         imNum = imKey[-1]
         if p.table_id:
