@@ -385,7 +385,21 @@ def FormatPlateMapData(wellsAndVals):
     
 
 
-            
+
+
+
+def LoadProperties():
+    import os
+    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
+    if dlg.ShowModal() == wx.ID_OK:
+        filename = dlg.GetPath()
+        os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        p.LoadFile(filename)
+        dm.PopulateModel()
+    else:
+        print 'Classifier requires a properties file.  Exiting.'
+        exit()
+
             
 if __name__ == "__main__":
     app = wx.PySimpleApp()
@@ -395,7 +409,8 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
+        LoadProperties()
+#        p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
 #        p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
 
     dm.PopulateModel()
