@@ -184,7 +184,7 @@ class DataGrid(wx.Frame):
             self.SaveCSV(saveDialog.GetPath())
         
     def SaveCSV(self, filename):
-        f = open(filename, 'w')
+        f = open(filename, 'wb')
         w = csv.writer(f)
         w.writerow(self.labels)
         for row in self.data:
