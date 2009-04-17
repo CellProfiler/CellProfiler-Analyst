@@ -162,7 +162,8 @@ filter_SQL_YourFilterName  =
 
 
 # ======== Meta data ======== 
-# What are your objects called?
+# What are your objects called? (e.g. cells, worms, etc.)
+# This is used to provide the correct syntax for the GUI.
 # FORMAT:  object_name  =  singular name, plural name
 
 object_name  =  cell, cells,
