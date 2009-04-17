@@ -8,6 +8,8 @@ import numpy as np
 import pylab
 import ImageTools
 import re
+import csv
+import os
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -20,7 +22,8 @@ class AwesomePMP(PlateMapPanel):
     def __init__(self, parent, data, shape=None, colormap='jet', 
                  wellshape=ROUNDED, **kwargs):
         PlateMapPanel.__init__(self, parent, data, shape, colormap, wellshape, **kwargs)
-        
+                
+        self.chMap = p.image_channel_colors
         self.plate = None
         self.tip = wx.ToolTip('')
         self.tip.Enable(False)
@@ -89,6 +92,15 @@ class PlateMapBrowser(wx.Frame):
     '''
     def __init__(self, parent, size=(800,-1)):
         wx.Frame.__init__(self, parent, -1, size=size)
+
+        self.menuBar = wx.MenuBar()
+        self.SetMenuBar(self.menuBar)
+        self.fileMenu = wx.Menu()
+        self.loadCSVMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='L&oad CSV',
+                                           help='Load a CSV file storing per-image data')
+        self.fileMenu.AppendItem(self.loadCSVMenuItem)
+        self.GetMenuBar().Append(self.fileMenu, '&File')
+        
         
         self.plateNames = db.GetPlateNames()
 
@@ -150,6 +162,7 @@ class PlateMapBrowser(wx.Frame):
         self.SetSizer(mainSizer)
         self.SetClientSize((self.Size[0],self.Sizer.CalcMin()[1]))
         
+        self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
         self.sourceChoice.Bind(wx.EVT_CHOICE, self.OnSelectDataSource)
         self.measurementsChoice.Bind(wx.EVT_CHOICE, self.OnSelectMeasurement)
         self.aggregationMethodsChoice.Bind(wx.EVT_CHOICE, self.OnSelectAggregationMethod)
@@ -159,7 +172,26 @@ class PlateMapBrowser(wx.Frame):
         
         self.AddPlateMap()
         
-        
+
+    def OnLoadCSV(self, evt):
+        dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.",
+                            defaultDir=os.getcwd(), wildcard='csv', style=wx.OPEN|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            filename = dlg.GetPath()
+            self.LoadCSV(filename)
+    
+            
+    def LoadCSV(self, filename):
+        f = open(filename, 'r')
+        try:
+            reader = csv.reader(f)
+            cols = reader.next()
+            for row in reader:
+                print row
+        finally:
+            f.close()
+
+            
     def AddPlateMap(self, plateIndex=0):
         '''
         Adds a new blank plateMap to the PlateMapSizer.
@@ -219,8 +251,8 @@ class PlateMapBrowser(wx.Frame):
         for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
             plate = plateChoice.GetStringSelection()
             plateMap.SetPlate(plate)
+            wellsAndVals = []
             if table == p.image_table:
-                wellsAndVals = []
                 if aggMethod == 'average':
                     db.Execute('SELECT %s, AVG(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
                                (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
@@ -231,7 +263,7 @@ class PlateMapBrowser(wx.Frame):
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'cv%':
                     db.Execute('SELECT %s, STDDEV(%s)/AVG(%s)*100 FROM %s WHERE %s="%s" GROUP BY %s'%
-                               (p.well_id, measurement,measurement, table, p.plate_id, plate, p.well_id))
+                               (p.well_id, measurement, measurement, table, p.plate_id, plate, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'sum':
                     db.Execute('SELECT %s, SUM(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
@@ -247,41 +279,59 @@ class PlateMapBrowser(wx.Frame):
                 dmin = np.nanmin([val for w,val in wellsAndVals]+[dmin])
                 dmax = np.nanmax([val for w,val in wellsAndVals]+[dmax])
             elif table == p.object_table:
-                wellsAndVals = []
                 # For per-object data, we need to link the object table to the per image table
                 # Here's an example query for sums:
                 #  SELECT per_image.well, SUM(per_object.measurement) FROM per_image per_object
                 #  WHERE per_image.ImageNumber=per_object.ImageNumber AND per_image.plate=plate
                 #  GROUP BY Batch1_Per_Image.Image_Metadata_Well;
-                if aggMethod == 'average':
-                    db.Execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s" GROUP BY %s.%s'%
-                               (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
+                if p.table_id:
+                    where = '%s.%s=%s.%s AND %s.%s=%s.%s AND %s.%s="%s"'%(
+                                p.object_table, p.table_id, p.image_table, p.table_id,
                                 p.object_table, p.image_id, p.image_table, p.image_id, 
-                                p.image_table, p.plate_id, plate, p.image_table, p.well_id))
+                                p.image_table, p.plate_id, plate)
+                else:
+                    where = '%s.%s=%s.%s AND %s.%s="%s"'%(
+                                p.object_table, p.image_id, p.image_table, p.image_id, 
+                                p.image_table, p.plate_id, plate)
+                
+                if aggMethod == 'average':
+                    db.Execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, p.object_table, measurement, 
+                                p.image_table, p.object_table,
+                                where, p.image_table, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'stdev':
-                    db.Execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s" GROUP BY %s.%s'%
-                               (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
-                                p.object_table, p.image_id, p.image_table, p.image_id, 
-                                p.image_table, p.plate_id, plate, p.image_table, p.well_id))
+                    db.Execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, p.object_table, measurement, 
+                                p.image_table, p.object_table,
+                                where, p.image_table, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'cv%':
+                    db.Execute('SELECT %s.%s, STDDEV(%s.%s)/AVG(%s.%s)*100 FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, p.object_table, measurement, p.object_table, measurement, 
+                                p.image_table, p.object_table,
+                                where, p.image_table, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'sum':
-                    db.Execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s" GROUP BY %s.%s'%
-                               (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
-                                p.object_table, p.image_id, p.image_table, p.image_id, 
-                                p.image_table, p.plate_id, plate, p.image_table, p.well_id))
+                    db.Execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, p.object_table, measurement, 
+                                p.image_table, p.object_table,
+                                where, p.image_table, p.well_id))
                     wellsAndVals = db.GetResultsAsList()
                 elif aggMethod == 'median':
-                    db.Execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s.%s=%s.%s AND %s.%s="%s"'%
-                               (p.image_table, p.well_id, p.object_table, measurement, p.image_table, p.object_table,
-                                p.object_table, p.image_id, p.image_table, p.image_id, p.image_table, p.plate_id, plate))
+                    db.Execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s'%(
+                                p.image_table, p.well_id, p.object_table, measurement,
+                                p.image_table, p.object_table,
+                                where))
                     valsPerObject = db.GetResultsAsList()
                     wellsAndVals = computeMedians(valsPerObject)
                     
                 data += [FormatPlateMapData(wellsAndVals)]
                 dmin = np.nanmin([val for w,val in wellsAndVals]+[dmin])
                 dmax = np.nanmax([val for w,val in wellsAndVals]+[dmax])
-        
+#            else:
+#                'SELECT well, measurement FROM table WHERE table.imkey=image_table.imkey'
+                
         self.colorBar.SetExtents((dmin,dmax))
         
         for d, plateMap in zip(data, self.plateMaps):
@@ -395,9 +445,8 @@ def LoadProperties():
         filename = dlg.GetPath()
         os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         p.LoadFile(filename)
-        dm.PopulateModel()
     else:
-        print 'Classifier requires a properties file.  Exiting.'
+        print 'PlateMapBrowser requires a properties file.  Exiting.'
         exit()
 
             

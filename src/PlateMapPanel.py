@@ -34,7 +34,6 @@ class PlateMapPanel(wx.Panel):
         self.col_labels = ['%02d'%i for i in range(1,self.data.shape[1]+1)]
         self.Bind(wx.EVT_PAINT, self.OnPaint)
        
-    
     def SetData(self, data, shape=None, range=None):
         '''
         data: An iterable containing numeric values. It's shape will be used
@@ -59,20 +58,17 @@ class PlateMapPanel(wx.Panel):
             self.data_normalized = (self.data-self.range[0]) / (self.range[1]-self.range[0])
         
         self.Refresh()
-        
     
     def SetColLabels(self, labels):
         assert len(labels) >= self.data.shape[1]
         self.col_labels = ['%2s'%c for c in labels]
         self.Refresh()
-        
     
     def SetRowLabels(self, labels):
         assert len(labels) >= self.data.shape[0]
         self.row_labels = ['%2s'%c for c in labels]
         self.Refresh()
         
-    
     def SetWellShape(self, wellshape):
         '''
         wellshape in PlatMapPanel.ROUNDED,
@@ -82,18 +78,15 @@ class PlateMapPanel(wx.Panel):
         self.wellshape = wellshape
         self.Refresh()
         
-        
     def SetColorMap(self, map):
         ''' map: the name of a matplotlib.colors.LinearSegmentedColormap instance '''
         self.colormap = pylab.cm.get_cmap(map)
         self.Refresh()
         
-    
     def SelectWell(self, well):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
         self.selection = set([well])
         self.Refresh()
-        
         
     def ToggleSelected(self, well):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
@@ -103,7 +96,6 @@ class PlateMapPanel(wx.Panel):
             self.selection.add(well)
         self.Refresh()
         
-
     def GetWellAtCoord(self, x, y, format='tuple'):
         '''
         format: 'A01' or 'tuple'
@@ -121,7 +113,6 @@ class PlateMapPanel(wx.Panel):
                 return (j-1,i-1)
         else:
             return -1
-
 
     def OnPaint(self, evt):
         dc = wx.PaintDC(self)
