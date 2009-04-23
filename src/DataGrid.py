@@ -13,6 +13,7 @@ import os
 import csv
 
 dm = DataModel.getInstance()
+db = DBConnect.getInstance()
 p = Properties.getInstance()
 
 IMAGE_GROUPING = 'Image'
@@ -120,7 +121,8 @@ class DataGrid(wx.Frame):
         
         # autosave enrichments to temp dir just in case.
         print 'Auto saving data...'
-        self.SaveCSV(gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_')+'.csv')
+        filename = gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_').replace(':','-')+'.csv'
+        self.SaveCSV(filename, self.data, self.labels)
         
         assert len(labels) == data.shape[1], \
                "DataGrid.__init__: Number of column labels does not match " \
@@ -131,7 +133,12 @@ class DataGrid(wx.Frame):
             wx.MenuItem(parentMenu=self.filemenu, id=wx.NewId(),
                         text='Save data to CSV',
                         help='Saves data as comma separated values.')
+        self.savePerImageCountsToCSVMenuItem = \
+            wx.MenuItem(parentMenu=self.filemenu, id=wx.NewId(),
+                        text='Save per-image counts to CSV',
+                        help='Saves per-image phenotype counts as comma separated values.')
         self.filemenu.AppendItem(self.saveCSVMenuItem)
+        self.filemenu.AppendItem(self.savePerImageCountsToCSVMenuItem)
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.menuBar.Append(self.filemenu, 'File')
@@ -145,6 +152,7 @@ class DataGrid(wx.Frame):
         self.SetSize((self.grid.Size[0], min(self.grid.Size[1], 500)+22))
         
         self.Bind(wx.EVT_MENU, self.OnSaveCSV, self.saveCSVMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSavePerImageCountsToCSV, self.savePerImageCountsToCSVMenuItem)
         self.grid.Bind(wx.EVT_KEY_UP, self.OnKey)
         wx.grid.EVT_GRID_LABEL_LEFT_CLICK(self.grid, self.OnLabelClick)
         wx.grid.EVT_GRID_LABEL_RIGHT_CLICK(self.grid, self.OnLabelRightClick)
@@ -177,21 +185,51 @@ class DataGrid(wx.Frame):
         saveDialog = wx.FileDialog(self, message="Save as:",
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
-                                   wildcard='csv',
+                                   wildcard='csv|*',
                                    style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
-            self.SaveCSV(saveDialog.GetPath())
-        
-    def SaveCSV(self, filename):
+            self.SaveCSV(saveDialog.GetPath(), self.data, self.labels)
+        saveDialog.Destroy()
+    
+    def OnSavePerImageCountsToCSV(self, evt):        
+        defaultFileName = 'Per_Image_Counts.csv'
+        saveDialog = wx.FileDialog(self, message="Save as:",
+                                   defaultDir=os.getcwd(),
+                                   defaultFile=defaultFileName,
+                                   wildcard='csv|*',
+                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                          wx.FD_CHANGE_DIR))
+        if saveDialog.ShowModal()==wx.ID_OK:
+            colHeaders = []
+            pos = 1
+            if p.table_id:
+                colHeaders += [p.table_id]
+                pos = 2
+            colHeaders += [p.image_id, p.well_id, p.plate_id]
+            colHeaders += ['count_'+bin.label for bin in self.GetParent().classBins]
+            data = list(self.GetParent().keysAndCounts)
+            for row in data:
+                if p.table_id:
+                    where = '%s=%s AND %s=%s'%(p.table_id, row[0], p.image_id, row[1])
+                else:
+                    where = '%s=%s'%(p.image_id, row[0])
+                db.Execute('SELECT %s, %s FROM %s WHERE %s'%(p.well_id, p.plate_id, p.image_table, where), silent=True)
+                well, plate = db.GetResultsAsList()[0]
+                row.insert(pos, well)
+                row.insert(pos+1, plate)
+            self.SaveCSV(saveDialog.GetPath(), data, colHeaders)
+        saveDialog.Destroy()
+
+    def SaveCSV(self, filename, data, colLabels):
         f = open(filename, 'wb')
         w = csv.writer(f)
-        w.writerow(self.labels)
-        for row in self.data:
+        w.writerow(colLabels)
+        for row in data:
             w.writerow(row)
         f.close()
         print 'Table saved to',filename
-                
+        
     
     def OnLabelClick(self, evt):
         if evt.Col >= 0:
