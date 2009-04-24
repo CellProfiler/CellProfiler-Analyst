@@ -119,7 +119,7 @@ enrichment values for each phenotype you defined. You may then sort by these
 columns to find images (or groups) that are enriched or depleted for a
 particular phenotype based on object counts or enrichment scores. 
 
-Enrichment scores are computed as the log area under the ROC curve for the
+Enrichment scores are computed as the logit area under the ROC curve for the
 posterior versus the prior distribution. The prior is computed from the full
 experiment using a Dirichlet-Multinomial distribution fit to the groups, and
 the posterior is computed for each group independently.
