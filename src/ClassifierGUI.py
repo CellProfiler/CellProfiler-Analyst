@@ -22,8 +22,12 @@ class ClassifierGUI(wx.Frame):
 
     """GUI Interface and functionality for the Classifier."""
 
-    def __init__(self, parent):
+    def __init__(self, properties=None, parent=None):
         
+        if properties is not None:
+            global p
+            p = properties
+            
         if p.IsEmpty():
             print 'Classifier requires a properties file. Exiting.'
             exit()
@@ -577,6 +581,9 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnFindRules(self, evt):
+        self.FindRules()
+        
+    def FindRules(self):
         try:
             nRules = int(self.nRulesTxt.GetValue())
         except:
@@ -661,15 +668,17 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnScoreAll(self, evt):
+        self.ScoreAll()
+    
+    def ScoreAll(self):
         '''
-        Handler for ScoreAll button.  Calculates object counts for each class
-        and enrichment values, then builds a table and displays it in a DataGrid.
+        Calculates object counts for each class and enrichment values,
+        then builds a table and displays it in a DataGrid.
         '''
         groupChoices   =  ['Image'] + p.groups_ordered
         filterChoices  =  [None] + p.filters_ordered
         nClasses       =  len(self.classBins)
         two_classes    =  nClasses == 2
-
         
         dlg = ScoreDialog(self, groupChoices, filterChoices)
         if dlg.ShowModal() == wx.ID_OK:            
@@ -746,7 +755,8 @@ class ClassifierGUI(wx.Frame):
             tableRow = list(row[:-nClasses])
             # Append the counts:
             countsRow = [int(v) for v in row[-nClasses:]]
-            tableRow += countsRow 
+            tableRow += [sum(countsRow)]
+            tableRow += countsRow
             # Append the scores:
             scores = DirichletIntegrate.score(alpha, numpy.array(countsRow))       # compute enrichment probabilities of each class for this image OR group 
             tableRow += scores
@@ -768,18 +778,23 @@ class ClassifierGUI(wx.Frame):
         # if grouping isn't per-image, then get the group key column names.
         if group != groupChoices[0]:
             labels = dm.GetGroupColumnNames(group)
-        elif p.table_id:
-            labels += [p.table_id, p.image_id]
         else:
+            if p.table_id:
+                labels += [p.table_id]
             labels += [p.image_id]
             
         groupIDIndices = [i for i in range(len(labels))]
             
+        if p.area_scoring_column is None:
+            labels += ['Total %s Count'%(p.object_name[0].capitalize())]
+        else:
+            labels += ['Total %s Area'%(p.object_name[0].capitalize())]
+            
         for i in xrange(nClasses):
             if p.area_scoring_column is None:
-                labels += ['Counts\n'+self.classBins[i].label]
+                labels += ['%s %s Count'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
             else:
-                labels += ['Area Sums\n'+self.classBins[i].label]
+                labels += ['%s $s Area'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         for i in xrange(nClasses):
             labels += ['p(Enriched)\n'+self.classBins[i].label]
         if two_classes:
@@ -917,7 +932,7 @@ class ClassifierGUI(wx.Frame):
     def OnShowReadme(self, evt):
         ''' Shows a scrollable message dialog with the readme. '''
         from wx.lib.dialogs import ScrolledMessageDialog
-        f = open(os.getcwd().rpartition('/')[0]+'/README.txt')
+        f = open(os.getcwd().rpartition('/')[0]+'/README.txt', 'U')
         text = f.read()
         dlg = ScrolledMessageDialog(self, text, 'Readme', size=(900,600))
         dlg.ShowModal()
@@ -987,11 +1002,22 @@ def LoadProperties():
         filename = dlg.GetPath()
         os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         p.LoadFile(filename)
-        dm.PopulateModel()
     else:
         print 'Classifier requires a properties file.  Exiting.'
         exit()
 
+
+
+#def WritePhenotypeCountsToDB(filename, data, colHeaders):
+#    db.Execute('DROP TABLE IF EXISTS _CPA_counts')
+#    colDefs = ','.join([h+' INT' for h in colHeaders])
+#    db.Execute('CREATE TEMPORARY TABLE _CPA_counts (%s)'%(colDefs))
+#    for row in data:
+#        db.Execute('INSERT INTO _CPA_counts (%s) VALUES (%s)'
+#                   %(', '.join(colHeaders),
+#                     ', '.join([str(int(i)) for i in row])))
+#    db.Execute('SELECT * FROM _CPA_counts')
+#    print db.GetResultsAsList()
 
 
 # ----------------- Run -------------------
@@ -1023,10 +1049,11 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
-        dm.PopulateModel()
     else:
         LoadProperties()
         
-    classifier = ClassifierGUI(None)
+    dm.PopulateModel()
+        
+    classifier = ClassifierGUI()
     classifier.Show(True)
     app.MainLoop()
