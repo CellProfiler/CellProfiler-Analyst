@@ -1,7 +1,7 @@
 import wx
 from PIL import Image
 import numpy
-import urllib
+import urllib2
 from array import array
 from cStringIO import StringIO
 from Properties import Properties
@@ -45,6 +45,7 @@ class ImageReader(object):
         ''' Reads Cellomics DIB files and returns a list of numpy arrays '''
         images = []
         bufs = self.GetRawData(filenames)
+
         for buf in bufs:
             assert numpy.fromstring(buf[0:4], dtype='<u4')[0] == 40, 'Unexpected DIB header size.'
             assert numpy.fromstring(buf[14:16], dtype='<u2')[0] == 16, 'DIB Bit depth is not 16!'
@@ -100,7 +101,7 @@ class ImageReader(object):
         for url in urls:
             if self.protocol.upper() == 'HTTP':
                 print 'Opening image: '+p.image_url_prepend+url
-                streams.append(urllib.urlopen(p.image_url_prepend+url))
+                streams.append(urllib2.urlopen(p.image_url_prepend+url))
             else:  # Default: local file protocol
                 print 'Opening image:',url
                 streams.append(open(url))
@@ -117,18 +118,28 @@ class ImageReader(object):
 
 ####################### FOR TESTING ######################### 
 if __name__ == "__main__":
-    p = Properties.getInstance()
-    p.LoadFile('../properties/2008_07_22_HSC_Alison_Stewart_fixed.properties')
+    from DataModel import DataModel
+    from DBConnect import DBConnect
     from ImageViewer import ImageViewer
+    
+    p = Properties.getInstance()
+    dm = DataModel.getInstance()
+    db = DBConnect.getInstance()
+    
+    p.LoadFile('../properties/nirht_test.properties')
+    dm.PopulateModel()
     app = wx.PySimpleApp()
     
     ir = ImageReader()
+    obKey = dm.GetRandomObject()
+    filenames = db.GetFullChannelPathsForImage(obKey[:-1])
+    images = ir.ReadImages(filenames)
 #    images = ir.ReadImages(['bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w1412D5337-1BB6-4965-9E54-C635BCD4B71F.tif',
 #                            'bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w20A6F4EF9-1200-4EA9-990F-49486F4AF7E4.tif',
 #                            'imaging/analysis/2008_07_22_HSC_Alison_Stewart/2008_11_05_1137HSC2454a_output/outlines/StewartA1137HSC2454a_D10_s3_w20A6F4EF9-1200-4EA9-990F-49486F4AF7E4.tif_CellsOutlines.png'])
-    images = ir.ReadImages(['/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d0.DIB',
-                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d1.DIB',
-                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d2.DIB'])
+#    images = ir.ReadImages(['/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d0.DIB',
+#                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d1.DIB',
+#                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d2.DIB'])
     frame = ImageViewer(imgs=images, chMap=p.image_channel_colors)
     frame.Show()
     
