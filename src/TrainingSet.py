@@ -86,7 +86,7 @@ class TrainingSet:
         try:
             from Properties import Properties
             p = Properties.getInstance()
-            f.write('# Training set created while using properties: %s\n'%(p.filename))
+            f.write('# Training set created while using properties: %s\n'%(p._filename))
             f.write('label '+' '.join(self.labels)+'\n')
             for label, obKey in self.entries:
                 line = label+' '+' '.join([str(int(k)) for k in obKey])+'\n'

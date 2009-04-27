@@ -36,7 +36,7 @@ class ClassifierGUI(wx.Frame):
             print "DataModel is empty. Classifier requires a populated DataModel to function. Exiting."
             exit()
 
-        wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(p.filename), size=(800,600))
+        wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(p._filename), size=(800,600))
                 
         self.worker = None
         self.weaklearners = None
@@ -77,8 +77,8 @@ class ClassifierGUI(wx.Frame):
         self.nObjectsTxt = wx.TextCtrl(self, id=wx.NewId(), value='20', size=(30,-1))
         self.obClassChoice = wx.Choice(self, id=wx.NewId(), choices=['random'])
         self.obClassChoice.SetSelection(0)
-        filters = p.filters_ordered
-        groups = p.groups_ordered
+        filters = p._filters_ordered
+        groups = p._groups_ordered
         self.filterChoice = wx.Choice(self, id=wx.NewId(), choices=['experiment', 'image']+filters+groups)
         self.filterChoice.SetSelection(0)
         self.fetchBtn = wx.Button(self, wx.NewId(), 'Fetch!')
@@ -384,14 +384,14 @@ class ClassifierGUI(wx.Frame):
                 imKey = self.GetGroupKeyFromGroupSizer()
                 obKeys = dm.GetRandomObjects(nObjects, [imKey])
                 statusMsg += ' from image %s'%(imKey,)
-            elif filter in p.filters_ordered:
+            elif filter in p._filters_ordered:
                 filteredImKeys = db.GetFilteredImages(filter)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"'%(filter))
                     return
                 obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
                 statusMsg += ' from filter "%s"'%(filter)
-            elif filter in p.groups_ordered:
+            elif filter in p._groups_ordered:
                 # if the filter name is a group then it's actually a group
                 groupName = filter
                 groupKey = self.GetGroupKeyFromGroupSizer()
@@ -418,12 +418,12 @@ class ClassifierGUI(wx.Frame):
                 if filter == 'image':
                     imKey = self.GetGroupKeyFromGroupSizer()
                     filteredImKeys = [imKey]
-                elif filter in p.filters_ordered:
+                elif filter in p._filters_ordered:
                     filteredImKeys = db.GetFilteredImages(filter)
                     if filteredImKeys == []:
                         self.PostMessage('No images were found in filter "%s"'%(filter))
                         return
-                elif filter in p.groups_ordered:
+                elif filter in p._groups_ordered:
                     groupKey = self.GetGroupKeyFromGroupSizer()
                     colNames = dm.GetGroupColumnNames(filter)
                     filteredImKeys = dm.GetImagesInGroup(filter, groupKey)
@@ -445,9 +445,9 @@ class ClassifierGUI(wx.Frame):
                     loopMsg = ' from image %s'%(imKey,)
                 else:
                     obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
-                    if filter in p.filters_ordered:
+                    if filter in p._filters_ordered:
                         loopMsg = ' from filter %s'%(filter)
-                    elif filter in p.groups_ordered:
+                    elif filter in p._groups_ordered:
                         loopMsg = ' from group %s: %s'%(filter,
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)]))
                 obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
@@ -675,8 +675,8 @@ class ClassifierGUI(wx.Frame):
         Calculates object counts for each class and enrichment values,
         then builds a table and displays it in a DataGrid.
         '''
-        groupChoices   =  ['Image'] + p.groups_ordered
-        filterChoices  =  [None] + p.filters_ordered
+        groupChoices   =  ['Image'] + p._groups_ordered
+        filterChoices  =  [None] + p._filters_ordered
         nClasses       =  len(self.classBins)
         two_classes    =  nClasses == 2
         
@@ -834,9 +834,9 @@ class ClassifierGUI(wx.Frame):
         ''' Handler for fetch filter selection. '''
         filter = self.filterChoice.GetStringSelection()
         # Select from a specific image
-        if filter == 'experiment' or filter in p.filters_ordered:
+        if filter == 'experiment' or filter in p._filters_ordered:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-        elif filter == 'image' or filter in p.groups_ordered:
+        elif filter == 'image' or filter in p._groups_ordered:
             self.SetupFetchFromGroupSizer(filter)
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         self.Layout()

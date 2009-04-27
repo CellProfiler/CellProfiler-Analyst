@@ -47,7 +47,7 @@ def translate(weaklearners, filter=None, filterKeys=[]):
     else:
         object_table_name = filter
         object_table_from = ("(%s) as %s JOIN %s using (%s)"%
-                             (p.filters[filter], filter, p.object_table,
+                             (p._filters[filter], filter, p.object_table,
                               ", ".join(image_key_columns())))
     
     # Create stump table (ob x nRules) <0/1>

@@ -356,7 +356,7 @@ class DBConnect(Singleton):
         groupColNames = {}
         groupMaps = {}
         key_size = p.table_id and 2 or 1
-        for group, query in p.groups.items():
+        for group, query in p._groups.items():
             try:
                 self.Execute(query)
             except Exception:
@@ -374,7 +374,7 @@ class DBConnect(Singleton):
     def GetFilteredImages(self, filter):
         ''' Returns a list of imKeys from the given filter. '''
         try:
-            self.Execute(p.filters[filter])
+            self.Execute(p._filters[filter])
         except Exception, e:
             print e
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)

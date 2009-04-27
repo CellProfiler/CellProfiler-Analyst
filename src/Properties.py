@@ -34,35 +34,40 @@ class Properties(Singleton):
         return s
         
     
-    def __getattr__(self, id):
+    def __getattr__(self, field):
         # The name may not be loaded for optional fields.
-        if( not self.__dict__.has_key(id) ):
+        if not self.__dict__.has_key(field):
             return None
         else:
-            return self.__dict__[id]
+            return self.__dict__[field]
+        
+    
+    def __setattr__(self, id, val):
+        self.__dict__[id] = val
     
     
     def LoadFile(self, filename):
         ''' Loads variables in from a properties file. '''
         self.Clear()
-        self.filename = filename
+        self._filename = filename
         f = open(filename, 'U')
         
         lines = f.read()
-#        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
+        self._textfile = lines
+        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
         lines = lines.split('\n')
 
-        self.groups = {}
-        self.groups_ordered = []
-        self.filters = {}
-        self.filters_ordered = []
+        self._groups = {}
+        self._groups_ordered = []
+        self._filters = {}
+        self._filters_ordered = []
 
         for line in lines:
             if not line.strip().startswith('#') and line.strip()!='':          # skip commented and empty lines
                 (name, val) = line.split('=', 1)                               # split each side of the first eq sign
                 name = name.strip()
                 val = val.strip()
-                                
+                
                 if name in string_vars:
                     self.__dict__[name] = val
                 
@@ -73,31 +78,31 @@ class Properties(Singleton):
                     group_name = name[10:]
                     if group_name == '':
                         raise Exception, 'PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\nExample: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\na MySQL query "<QUERY>". See the README.'%(name)
-                    if group_name in self.groups.keys():
+                    if group_name in self._groups.keys():
                         raise Exception, 'Group "%s" is defined twice in properties file.'%(group_name)
-                    if group_name in self.filters.keys():
+                    if group_name in self._filters.keys():
                         raise Exception, 'Name "%s" is already taken for a filter.'%(group_name)
                     if not val:
                         print 'PROPERTIES WARNING (%s): Undefined group'%(name)
                         continue
                     # TODO: test query
-                    self.groups[group_name] = val
-                    self.groups_ordered += [group_name]
+                    self._groups[group_name] = val
+                    self._groups_ordered += [group_name]
                     
                 elif name.startswith('filter_SQL_'):
                     filter_name = name[11:]
                     if filter_name == '':
                         raise Exception, 'PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\nExample: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\na MySQL query "<QUERY>". See the README.'%(name)
-                    if filter_name in self.filters.keys():
+                    if filter_name in self._filters.keys():
                         raise Exception, 'Filter "%s" is defined twice in properties file.'%(filter_name)
-                    if filter_name in self.groups.keys():
+                    if filter_name in self._groups.keys():
                         raise Exception, 'Name "%s" is already taken for a group.'%(filter_name)
                     if not val:
                         print 'PROPERTIES WARNING (%s): Undefined filter'%(name)
                         continue
                     # TODO: test query
-                    self.filters[filter_name] = val
-                    self.filters_ordered += [filter_name]
+                    self._filters[filter_name] = val
+                    self._filters_ordered += [filter_name]
                 
                 elif name in ['groups', 'filters']:
                     print 'PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\nOnly the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name)
@@ -110,14 +115,36 @@ class Properties(Singleton):
         
     
     def SaveFile(self, filename):
-        # TODO: Save files WITH previous comments and whitespace.
+        ''' Saves the file including original comments and whitespace. '''
         f = open(filename, 'w')
-        self.filename = filename
-        for var, val in self.__dict__.items():
-            if type(val)==list:
-                f.write(var+' = '+str(val)[1:-1]+'\n')
+        self._filename = filename
+        
+        fields_to_write = set([f for f in self.__dict__.keys() if not f.startswith('_')])
+        
+        # Write whole file out replacing any changed values
+        for line in self._textfile:
+            if line.strip().startswith('#'):
+                f.write(line)
             else:
-                f.write(var+' = '+val+'\n')
+                (name, oldval) = line.split('=', 1)                               # split each side of the first eq sign
+                name = name.strip()
+                oldval = oldval.strip()
+                val = self.__getattr__(name)
+                if (name in string_vars and val == oldval) or \
+                   (name in list_vars and val == [v.strip() for v in oldval.split(',') if v.strip() is not '']):
+                    f.write(line)
+                else:
+                    f.write('%s  =  %s\n'%(name, val))
+                fields_to_write.remove(name)
+        
+        # Write out fields that weren't present in the file
+        for field in fields_to_write:
+            val = self.__getattr__(field)
+            if type(val)==list:
+                f.write('%s  =  %s\n'%(field, str(val)[1:-1]))
+            else:
+                f.write('%s  =  %s\n'%(field, val))
+        
         f.close()
         
     
@@ -222,7 +249,7 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-        filename = "../Properties/nirht_test.properties"
+        filename = "../Properties/nirht_area_test.properties"
     
     p = Properties.getInstance()
     p.LoadFile(filename)
