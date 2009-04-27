@@ -223,7 +223,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         if obCount == 0:
             keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
 
-    return keysAndCounts 
+    return [list(row) for row in keysAndCounts] 
 
 
 if __name__ == "__main__":
