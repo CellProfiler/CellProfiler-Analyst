@@ -52,9 +52,9 @@ class TrainingSet:
 
     def Load(self, filename):
         self.Clear()
-        f = open(filename)
+        f = open(filename, 'U')
         lines = f.read()
-        lines = lines.replace('\r', '\n')    # replace CRs with LFs
+#        lines = lines.replace('\r', '\n')    # replace CRs with LFs
         lines = lines.split('\n')
         for l in lines:
             try:
