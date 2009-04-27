@@ -11,11 +11,10 @@ dm = DataModel.getInstance()
 
 # filter & filterKeys is kind of redundant here, yet they are implemented
 # very differently.  Should we only use filterKeys?
-def translate(weaklearners, area_column=None, filter=None, filterKeys=[]):
+def translate(weaklearners, filter=None, filterKeys=[]):
     '''
     Translate weak learners into MySQL queries that place the resulting 
       classification in a MySQL temporary table named "temp_class_table"
-    area_column: column to sum when scoring rather than counting hits
     filter: if supplied, scoring will be limited to only imKeys within this
             filter
     filterKeys: (optional) A specific list of imKeys OR obKeys (NOT BOTH)
@@ -107,7 +106,7 @@ def translate(weaklearners, area_column=None, filter=None, filterKeys=[]):
                          temp_class_table, UniqueImageClause())
 
     # handle area-based scoring if needed, replacing count query
-    if area_column:
+    if p.area_scoring_column:
         table_match = ''
         if p.table_id:
             table_match = '%s.%s = %s.%s AND '%(object_table_name, p.table_id,
@@ -119,7 +118,7 @@ def translate(weaklearners, area_column=None, filter=None, filterKeys=[]):
         object_match_clauses = table_match + image_match + object_match
         count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s' % \
                         (UniqueImageClause(object_table_name), 
-                         ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, object_table_name, area_column) for k in classidxs]),
+                         ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, object_table_name, p.area_scoring_column) for k in classidxs]),
                          temp_class_table, object_table_from,
                          object_match_clauses,
                          UniqueImageClause(object_table_name))
