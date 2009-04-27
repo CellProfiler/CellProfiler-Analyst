@@ -84,7 +84,6 @@ class TileUpdatedEvent(wx.PyEvent):
 
 
 class TileLoader(threading.Thread):
-
     '''
     This thread is owned by the TileCollection singleton and is kept
     running for the duration of the app execution.  Whenever
@@ -93,9 +92,7 @@ class TileLoader(threading.Thread):
     them. The tile data is then written back into TileCollection's
     tileData dict over the existing placeholder. Finally an event is
     posted to the ClassifierGUI to tell it to refresh the tiles.
-
     '''
-
     def __init__(self, tc, notify_window):
         threading.Thread.__init__(self)
         self.notify_window = notify_window
@@ -126,7 +123,7 @@ class TileLoader(threading.Thread):
                 newData = image_collection.FetchTile(obKey)
                 tile_data = self.tile_collection.tileData.get(obKey, None)
                 # Make sure tile hasn't been deleted outside this thread
-                if tile_data:
+                if tile_data is not None:
                     # copy each channel
                     for i in range(len(tile_data)):
                         tile_data[i] = newData[i]
