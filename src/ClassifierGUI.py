@@ -794,7 +794,7 @@ class ClassifierGUI(wx.Frame):
             if p.area_scoring_column is None:
                 labels += ['%s %s Count'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
             else:
-                labels += ['%s $s Area'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
+                labels += ['%s %s Area'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         for i in xrange(nClasses):
             labels += ['p(Enriched)\n'+self.classBins[i].label]
         if two_classes:

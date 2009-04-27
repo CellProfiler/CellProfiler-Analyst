@@ -30,7 +30,8 @@ class Properties(Singleton):
     def __str__(self):
         s=''
         for k, v in self.__dict__.items():
-            s += k+" = "+str(v)+"\n"
+            if not str(k).startswith('_'):
+                s += k+" = "+str(v)+"\n"
         return s
         
     
@@ -54,7 +55,7 @@ class Properties(Singleton):
         
         lines = f.read()
         self._textfile = lines
-        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
+#        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
         lines = lines.split('\n')
 
         self._groups = {}
@@ -253,5 +254,5 @@ if __name__ == "__main__":
     
     p = Properties.getInstance()
     p.LoadFile(filename)
-#    print p
+    print p
 
