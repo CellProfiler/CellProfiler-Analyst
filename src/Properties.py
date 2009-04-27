@@ -46,10 +46,10 @@ class Properties(Singleton):
         ''' Loads variables in from a properties file. '''
         self.Clear()
         self.filename = filename
-        f = open(filename, 'r')
+        f = open(filename, 'U')
         
         lines = f.read()
-        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
+#        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
         lines = lines.split('\n')
 
         self.groups = {}
@@ -158,7 +158,7 @@ class Properties(Singleton):
             for field in ['image_csv_file','object_csv_file']:
                 assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=sqlite.'%(field)
                 try:
-                    f = open(self.__dict__[field], 'rb')
+                    f = open(self.__dict__[field], 'r')
                     f.close()
                 except:
                     raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
