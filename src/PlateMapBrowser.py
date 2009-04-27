@@ -8,7 +8,6 @@ import numpy as np
 import pylab
 import ImageTools
 import re
-import csv
 import os
 
 p = Properties.getInstance()
@@ -175,21 +174,18 @@ class PlateMapBrowser(wx.Frame):
 
     def OnLoadCSV(self, evt):
         dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.",
-                            defaultDir=os.getcwd(), wildcard='csv', style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             self.LoadCSV(filename)
     
             
     def LoadCSV(self, filename):
-        f = open(filename, 'r')
-        try:
-            reader = csv.reader(f)
-            cols = reader.next()
-            for row in reader:
-                print row
-        finally:
-            f.close()
+        countsTable = os.path.splitext(os.path.split(filename)[1])[0]
+        if db.CreateTempTableFromCSV(filename, countsTable):
+            sel = self.sourceChoice.GetSelection()
+            self.sourceChoice.SetItems(self.sourceChoice.GetItems()+[countsTable])
+            self.sourceChoice.Select(sel)
 
             
     def AddPlateMap(self, plateIndex=0):
@@ -276,8 +272,8 @@ class PlateMapBrowser(wx.Frame):
                     wellsAndVals = computeMedians(valsPerImage)
                     
                 data += [FormatPlateMapData(wellsAndVals)]
-                dmin = np.nanmin([val for w,val in wellsAndVals]+[dmin])
-                dmax = np.nanmax([val for w,val in wellsAndVals]+[dmax])
+                dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
+                dmax = np.nanmax([float(val) for w,val in wellsAndVals]+[dmax])
             elif table == p.object_table:
                 # For per-object data, we need to link the object table to the per image table
                 # Here's an example query for sums:
@@ -327,11 +323,55 @@ class PlateMapBrowser(wx.Frame):
                     wellsAndVals = computeMedians(valsPerObject)
                     
                 data += [FormatPlateMapData(wellsAndVals)]
-                dmin = np.nanmin([val for w,val in wellsAndVals]+[dmin])
-                dmax = np.nanmax([val for w,val in wellsAndVals]+[dmax])
-#            else:
-#                'SELECT well, measurement FROM table WHERE table.imkey=image_table.imkey'
-                
+                dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
+                dmax = np.nanmax([float(val) for w,val in wellsAndVals]+[dmax])
+            else:
+                if p.table_id:
+                    where = '%s.%s=%s.%s AND %s.%s=%s.%s AND %s.%s="%s"'%(
+                                table, p.table_id, p.image_table, p.table_id,
+                                table, p.image_id, p.image_table, p.image_id, 
+                                p.image_table, p.plate_id, plate)
+                else:
+                    where = '%s.%s=%s.%s AND %s.%s="%s"'%(
+                                table, p.image_id, p.image_table, p.image_id, 
+                                p.image_table, p.plate_id, plate)
+
+                if aggMethod == 'average':
+                    db.Execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, table, measurement, 
+                                p.image_table, table,
+                                where, p.image_table, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'stdev':
+                    db.Execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, table, measurement, 
+                                p.image_table, table,
+                                where, p.image_table, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'cv%':
+                    db.Execute('SELECT %s.%s, STDDEV(%s.%s)/AVG(%s.%s)*100 FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, table, measurement, table, measurement, 
+                                p.image_table, table,
+                                where, p.image_table, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'sum':
+                    db.Execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, table, measurement, 
+                                p.image_table, table,
+                                where, p.image_table, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'median':
+                    db.Execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s'%(
+                                p.image_table, p.well_id, table, measurement,
+                                p.image_table, table,
+                                where))
+                    valsPerImage = db.GetResultsAsList()
+                    wellsAndVals = computeMedians(valsPerImage)
+
+                data += [FormatPlateMapData(wellsAndVals)]
+                dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
+                dmax = np.nanmax([float(val) for w,val in wellsAndVals]+[dmax])
+
         self.colorBar.SetExtents((dmin,dmax))
         
         for d, plateMap in zip(data, self.plateMaps):
@@ -342,7 +382,7 @@ class PlateMapBrowser(wx.Frame):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in[float, int]]
+        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
         
     def OnSelectDataSource(self, evt):
