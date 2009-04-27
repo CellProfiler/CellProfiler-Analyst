@@ -104,16 +104,23 @@ class DBConnect(Singleton):
 
 
     def Connect(self, db_host, db_user, db_passwd, db_name):
+        '''
+        Attempts to create a new connection to the specified database using
+          the current thread name as a connection ID.
+        If properties.db_type is 'sqlite', it will create a sqlite db in a
+          temporary directory from the csv files specified by
+          properties.image_csv_file and properties.object_csv_file
+        '''
         connID = threading.currentThread().getName()
+        
         # If this connection ID already exists print a warning
         if connID in self.connections.keys():
             if self.connectionInfo[connID] == (db_host, db_user, db_passwd, db_name):
-                print 'WARNING <DBConnect.Connect>: Already connected to %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
+                print 'WARNING <DBConnect.Connect>: A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(db_name, db_user, db_host, connID)
             else:
-                print 'WARNING <DBConnect.Connect>: connID "%s" is already in use. Close this connection first.' % (connID)
-            return True
+                raise DBException, 'A connection already exists for this thread (%s). Close this connection first.'%(connID)
 
-        # MySQL database: connect to db normally
+        # MySQL database: connect normally
         if p.db_type.lower() == 'mysql':
             try:
                 conn = MySQLdb.connect(host=db_host, db=db_name, user=db_user, passwd=db_passwd)
@@ -121,11 +128,9 @@ class DBConnect(Singleton):
                 self.cursors[connID] = SSCursor(conn)
                 self.connectionInfo[connID] = (db_host, db_user, db_passwd, db_name)
                 if verbose:
-                    print 'Connected to database: %s as %s@%s (connID = "%s").' % (db_name, db_user, db_host, connID)
-                return True
+                    print 'Connected to database: %s as %s@%s (connID = "%s").'%(db_name, db_user, db_host, connID)
             except MySQLdb.Error, e:
-                raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n' % (db_name, db_user, db_host, connID)
-                return False
+                raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(db_name, db_user, db_host, connID, e)
             
         # SQLite database: create database from file
         elif p.db_type.lower() == 'sqlite':
@@ -135,8 +140,8 @@ class DBConnect(Singleton):
                 # compute a database name unique to this data  
                 from tempfile import gettempdir
                 from md5 import md5
-                f_im = open(p.image_csv_file, 'r')
-                f_ob = open(p.object_csv_file, 'r')
+                f_im = open(p.image_csv_file, 'U')
+                f_ob = open(p.object_csv_file, 'U')
                 l = str(f_im.readlines() + f_ob.readlines())
                 f_im.close()
                 f_ob.close()
@@ -158,7 +163,6 @@ class DBConnect(Singleton):
                 if len(self.connections) == 1:
                     print 'DBConnect: Creating SQLite database at: %s.'%(self.sqliteDBFile)
                     self.CreateSQLiteDB()
-            return True
                     
         # Unknown database type (this should never happen)
         else:
@@ -178,7 +182,9 @@ class DBConnect(Singleton):
         if not connID:
             connID = threading.currentThread().getName()
         if connID in self.connections.keys():
-            self.connections[connID].commit()
+            try:
+                self.connections[connID].commit()
+            except: pass
             self.cursors.pop(connID)
             self.connections.pop(connID).close()
             (db_host, db_user, db_passwd, db_name) = self.connectionInfo.pop(connID)
@@ -192,11 +198,12 @@ class DBConnect(Singleton):
         connID = threading.currentThread().getName()
         if not connID in self.connections.keys():
             self.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+        
         # Test for lost connection
         try:
             self.connections[connID].ping()
-        except MySQLdb.OperationalError, message:
-            print 'Lost connection to database. Attempting to reconnect.'
+        except MySQLdb.OperationalError, e:
+            print 'Lost connection to database. Attempting to reconnect...'
             self.CloseConnection(connID)
             self.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
         except AttributeError:
@@ -442,7 +449,44 @@ class DBConnect(Singleton):
         return [str(l[0]) for l in self.GetResultsAsList()]
     
     
-    
+    def InferColTypesFromData(self, reader, nCols):
+        '''
+        For converting csv data to DB data.
+        Returns a list of column types (INT, FLOAT, or VARCHAR(#)) that each column can safely be converted to
+        reader: csv reader
+        nCols: # of columns  
+        '''
+        colTypes = []
+        maxLen   = []   # Maximum string length for each column (if VARCHAR)
+        for i in xrange(nCols):
+            colTypes += ['']
+            maxLen += [0]
+        row = reader.next()
+        while row:
+            for i, e in enumerate(row):
+                if colTypes[i]!='FLOAT' and not colTypes[i].startswith('VARCHAR'):
+                    try:
+                        x = int(e)
+                        colTypes[i] = 'INT'
+                        continue
+                    except ValueError: pass
+                if not colTypes[i].startswith('VARCHAR'):
+                    try:
+                        x = float(e)
+                        colTypes[i] = 'FLOAT'
+                        continue
+                    except ValueError: pass
+                try:
+                    x = str(e)
+                    maxLen[i] = max(len(x), maxLen[i])
+                    colTypes[i] = 'VARCHAR(%d)'%(maxLen[i])
+                except ValueError: 
+                    raise Exception, '<ERROR>: Value in table could not be converted to string!'
+            try:
+                row = reader.next()
+            except StopIteration: break
+        return colTypes
+            
     
     def CreateSQLiteDB(self):
         '''
@@ -453,43 +497,15 @@ class DBConnect(Singleton):
         # CREATE THE IMAGE TABLE
         # All the ugly code is to establish the type of each column in the table
         # so we can form a proper CREATE TABLE statement.
-        f = open(p.image_csv_file, 'r')
+        f = open(p.image_csv_file, 'U')
         r = csv.reader(f)
         columnLabels = r.next()
         columnLabels = [lbl.strip() for lbl in columnLabels]
-        row = r.next()
-        rowTypes = {}
-        maxLen   = {}   # Maximum string length for each column (if VARCHAR)
-        for i in xrange(len(columnLabels)):
-            rowTypes[i] = ''
-            maxLen[i] = 0 
-        while row:
-            for i, e in enumerate(row):
-                if rowTypes[i]!='FLOAT' and not rowTypes[i].startswith('VARCHAR'):
-                    try:
-                        x = int(e)
-                        rowTypes[i] = 'INT'
-                        continue
-                    except ValueError: pass
-                if not rowTypes[i].startswith('VARCHAR'):
-                    try:
-                        x = float(e)
-                        rowTypes[i] = 'FLOAT'
-                        continue
-                    except ValueError: pass
-                try:
-                    x = str(e)
-                    maxLen[i] = max(len(x), maxLen[i])
-                    rowTypes[i] = 'VARCHAR(%d)'%(maxLen[i])
-                except ValueError: 
-                    raise Exception, '<ERROR>: Value in table could not be converted to string!'
-            try:
-                row = r.next()
-            except StopIteration: break
+        colTypes = self.InferColTypesFromData(r, len(columnLabels))
         
         # Build the CREATE TABLE statement
         statement = 'CREATE TABLE '+p.image_table+' ('
-        statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
+        statement += ',\n'.join([lbl+' '+colTypes[i] for i, lbl in enumerate(columnLabels)])
         keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
         statement += ',\nPRIMARY KEY (' + keys + ') )'
         f.close()
@@ -501,19 +517,13 @@ class DBConnect(Singleton):
         # CREATE THE OBJECT TABLE
         # For the object table we assume that all values are type FLOAT
         # except for the primary keys
-        f = open(p.object_csv_file, 'r')
+        f = open(p.object_csv_file, 'U')
         r = csv.reader(f)
         columnLabels = r.next()
         columnLabels = [lbl.strip() for lbl in columnLabels]
-        row = r.next()
-        rowTypes = {}
-        for i, lbl in enumerate(columnLabels):
-            if lbl in [p.table_id, p.image_id, p.object_id]:
-                rowTypes[i] = 'INT'
-            else:
-                rowTypes[i]='FLOAT'
+        colTypes = self.InferColTypesFromData(r, len(columnLabels))
         statement = 'CREATE TABLE '+p.object_table+' ('
-        statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
+        statement += ',\n'.join([lbl+' '+colTypes[i] for i, lbl in enumerate(columnLabels)])
         keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
         statement += ',\nPRIMARY KEY (' + keys + ') )'
         f.close()
@@ -523,7 +533,7 @@ class DBConnect(Singleton):
         self.Execute(statement)
         
         # POPULATE THE IMAGE TABLE
-        f = open(p.image_csv_file, 'r')
+        f = open(p.image_csv_file, 'U')
         r = csv.reader(f)
         row = r.next() # skip the headers
         row = r.next()
@@ -537,7 +547,7 @@ class DBConnect(Singleton):
         f.close()
         
         # POPULATE THE OBJECT TABLE
-        f = open(p.object_csv_file, 'r')
+        f = open(p.object_csv_file, 'U')
         r = csv.reader(f)
         row = r.next() # skip the headers
         row = r.next()
@@ -546,13 +556,45 @@ class DBConnect(Singleton):
                          silent=True)
             try:
                 row = r.next()
-            except StopIteration:
-                break
+            except StopIteration: break
         f.close()
         
         self.Commit()
 
-        
+
+    def CreateTempTableFromCSV(self, filename, tablename):
+        '''
+        Reads a csv file into a temporary table in the database.
+        Column names are taken from the first row.
+        Column types are inferred from the data.
+        '''
+        import csv
+        f = open(filename, 'U')
+        reader = csv.reader(f)#, quoting=csv.QUOTE_NONE)
+        self.Execute('DROP TABLE IF EXISTS %s'%(tablename))
+        colnames = reader.next()
+        colTypes = self.InferColTypesFromData(reader, len(colnames))
+        coldefs = ', '.join([lbl+' '+colTypes[i] for i, lbl in enumerate(colnames)])
+        self.Execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
+        f = open(filename, 'U')
+        reader = csv.reader(f)#, quoting=csv.QUOTE_NONE)
+        print 'Populating table %s...'%(tablename)
+        row = reader.next() # skip col headers
+        row = reader.next()
+        while row:
+            vals = ', '.join(['"'+val+'"' for val in row])
+            self.Execute('INSERT INTO %s (%s) VALUES (%s)'%(
+                          tablename, ', '.join(colnames), vals), silent=True)
+            try:
+                row = reader.next()
+            except StopIteration: break
+        print 'Done.'
+        self.Commit()
+        f.close()
+        return True
+#        except:
+#            raise Exception, 'Failed to create temporary table %s from %s'%(tablename, filename)
+#            f.close()
         
 
 
@@ -569,11 +611,35 @@ if __name__ == "__main__":
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
 
-    p.LoadFile('../properties/nirht_local.properties')
+    p.LoadFile('../properties/nirht_test.properties')
     dm.PopulateModel()
     
-    print db.GetColnamesForClassifier()
-    print db.GetColumnTypes(p.object_table)
+    # TEST CreateTempTableFromCSV
+#    table = '_blah'
+#    db.CreateTempTableFromCSV('../properties/Per_Image_Counts.csv', table)
+#    db.Execute('SELECT * from %s LIMIT 10'%(table))
+#    print db.GetResultsAsList()
+#
+#    measurements = db.GetColumnNames(table)
+#    types = db.GetColumnTypes(table)
+#    print [m for m,t in zip(measurements, types) if t in[float, int, long]]
+#
+#    print db.GetColumnNames(table)
+#    print db.GetColumnTypes(table)
+
+
+    # TEST reconnect
+#    import time
+#    print db.GetColnamesForClassifier()
+#    while(1):
+#        print '#'
+#        if sys.stdin.readline().strip() == 'q':
+#            break
+#        try:
+#            print db.GetColumnTypes(p.object_table)
+#        except:
+#            print 'ERROR: query failed.  Try again'
+        
     
 #    p.LoadFile('../properties/nirht_local.properties')
 #    dm.PopulateModel()
