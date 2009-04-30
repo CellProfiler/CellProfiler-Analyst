@@ -20,6 +20,7 @@ def makePageTitle(wizPg, title):
 class Page1(wiz.WizardPageSimple):
     def __init__(self, parent):
         wiz.WizardPageSimple.__init__(self, parent)
+        
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         title = wx.StaticText(self, -1, 'Connect (step 1 of 5)')
         title.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD))
@@ -74,24 +75,25 @@ class Page1(wiz.WizardPageSimple):
     def OnTest(self, evt):
         p = Properties.getInstance()
         db = DBConnect.getInstance()
-        if db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd):
+        try:
+            db.Disconnect()
+            db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd)
             self.btnTest.SetLabel('Connection OK')
             wx.FindWindowById(wx.ID_FORWARD).Enable()
-        else:
+        except:
             self.btnTest.SetLabel('Connection Failed')
         self.btnTest.Disable()
             
     def OnPageChanging(self,evt):
         p = Properties.getInstance()
         db = DBConnect.getInstance()
-        if db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd):
+        try:
+            db.Disconnect()
+            db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd)
             self.btnTest.SetLabel('Connection OK')
             wx.FindWindowById(wx.ID_FORWARD).Enable()
             self.Parent.inDB = self.Parent.outDB = p.db_name
-        else:
-            # FOR DEBUG
-#            db.Connect(db_host="imgdb01", db_name="af", db_user="cpadmin", db_passwd="cPus3r")
-#            self.Parent.inDB = self.Parent.outDB = "af"
+        except:
             self.btnTest.SetLabel('Connection Failed')
             evt.Veto()
         self.btnTest.Disable()
@@ -124,7 +126,7 @@ class Page2(wiz.WizardPageSimple):
         self.listTables.Bind(wx.EVT_LISTBOX, self.OnSelectItem)
         
     def OnPageLoaded(self, evt):
-        self.Unbind(wiz.EVT_WIZARD_PAGE_CHANGED)
+        self.listTables.Clear()
         db = DBConnect.getInstance()
         db.Execute("SHOW TABLES")
         r = db.GetResultsAsList()
@@ -145,7 +147,6 @@ class Page2(wiz.WizardPageSimple):
         if self.listTables.GetSelections() == () and evt.GetDirection() == True:
             evt.Veto()
             self.directions.SetForegroundColour('#FF0000')
-      
         
         
         
