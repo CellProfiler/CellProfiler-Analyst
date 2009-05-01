@@ -32,6 +32,116 @@ def posterior_modes(mu, var, n, fracs, muhats, tol=1e-10, maxiter=10, noisy=Fals
         muhats = newmuhats
     return newmuhats, vhats
 
+
+def posterior_modes_subdiv(mu, var, n, fracs, muhats, tol=1e-10, maxiter=50, noisy=False):
+    '''
+    find the conditional posterior modes of samples drawn from N(mu,
+    var), given observations in n (total cells) and fracs (fraction
+    positive), and initial estimates of the mode in muhats.
+    '''
+    # Posterior log-likelihood: see Huang & Malisiewicz.
+    def LL(mh):
+        return n * (fracs * mh - log(1 + exp(mh))) - (mh - mu)**2 / (2 * var)
+    def LLy(mh):
+        return LL(log(mh)-log(1-mh))
+    # gradient:
+    def g(mh):
+        return n * (fracs - logistic(mh)) - (mh - mu) / var
+    # hessian:
+    def h(mh):
+        p = logistic(mh)
+        return - n * (p - p**2) - 1 / var 
+
+    def LLapprox1(vals, x0, f0, df0, ddf0):
+        # quadratic
+        b = ddf0
+        a = x0 - df0 / ddf0
+        k = f0 - df0**2 / (2 * ddf0)
+        return k + (b / 2) * (vals - a)**2
+
+    def LLapprox2(vals, x0, f0, df0, ddf0):
+        # cauchy
+        b = x0 - df0 / (ddf0 - df0**2)
+        a = (ddf0 - df0**2)**2 / (df0**2 - 2 * ddf0)
+        k = f0 + log(1 + a * (x0 - b)**2)
+        return k - log(1 + a * (vals - b)**2)
+    
+    def mid(lo, hi):
+        return (lo + hi) / 2
+
+    lo = (fracs - 1) * n * var  + mu
+    hi = fracs * n * var  + mu
+
+
+    if noisy:
+        print "	L,H", lo, hi
+        L = lo[0]
+        H = hi[0]
+        M = (L + H) / 2
+        vals = linspace(L, H, 10000)
+        figure()
+        plot(vals, LL(vals).flatten(), 'b')
+        show()
+
+    # try to reuse previous result
+    good = (g(muhats-0.5)>0) & (g(muhats+0.5)<0)
+    lo[good] = muhats[good]-0.5
+    hi[good] = muhats[good]+0.5
+    
+
+    
+    # use subdivision until step size is small enough
+    for i in range(maxiter):
+        m = mid(lo, hi)
+        gm = g(m)
+        hm = h(m)
+        hmask = gm < 0
+        hi[hmask] = m[hmask]
+        lo[~ hmask] = m[~ hmask]
+        if all((hi - lo) < 1):
+            if noisy:
+                print "FIRST", i, lo, hi
+            break
+
+    if noisy:
+        print "	L,H", lo, hi
+        L = lo[0]
+        H = hi[0]
+        M = (L + H) / 2
+        vals = linspace(L, H, 10000)
+        figure()
+        plot(vals, LL(vals).flatten(), 'b')
+        plot(vals, LLapprox2(vals, L, LL(L), g(L), h(L)).flatten(), 'r')
+        plot(vals, LLapprox2(vals, H, LL(H), g(H), h(H)).flatten(), 'g')
+        plot(vals, LLapprox2(vals, M, LL(M), g(M), h(M)).flatten(), 'k')
+        figure()
+        
+        L = exp(L) / (1 + exp(L))
+        H = exp(H) / (1 + exp(H))
+        vals = linspace(L, H, 10000)
+        plot(vals, LLy(vals).flatten(), 'b')
+        show()
+
+
+    for i in range(i, maxiter):
+        # use robust iteration
+        change = gm / (hm - gm**2)
+        m -= change
+        if max(abs(change)) < tol:
+            if noisy:
+                print "SECOND", i, change
+            break
+        gm = g(m)
+        hm = h(m)
+
+    muhats = m
+    p = logistic(muhats)
+    hes = p - p**2
+    vhats = 1 / (1 / var + n * hes)
+    return muhats, vhats
+
+
+
 def score_prob_increase(mu_control, variance_control, mu_treatment, variance_treatment):
     return erf((mu_treatment - mu_control) / sqrt(variance_treatment + variance_control))
 
@@ -79,7 +189,7 @@ def score_single_phenotype(treatments, counts, control, control_weight=1, tol=1e
 
     # find mean & variance for controls
     for i in range(maxiter):
-        muhats, vhats = posterior_modes(mu, variance, n, fracs0, muhats)
+        muhats, vhats = posterior_modes_subdiv(mu, variance, n, fracs0, muhats)
         # update mu, variance from posteriors
         mu, oldmu = mean(muhats), mu
         dvariance = (mu - muhats)**2
@@ -120,10 +230,10 @@ def score_single_phenotype(treatments, counts, control, control_weight=1, tol=1e
 
         # find mean & variance for treatment
         for i in range(maxiter):
-            muhats, vhats = posterior_modes(mu_t, variance_t, n_t, fracs0_t, muhats)
+            muhats, vhats = posterior_modes_subdiv(mu_t, variance_t, n_t, fracs0_t, muhats)
             mu_t, oldmu_t = normalizer * (muhats.sum() + control_weight * mu), mu_t
             if isnan(mu_t):
-                adsf
+                raise ValueError, "nan in mean calculation"
             muvariance = (mu_t - muhats)**2
             cvariance = (mu_t - mu)**2
             oldvariance_t = variance_t
