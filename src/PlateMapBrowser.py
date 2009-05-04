@@ -117,7 +117,7 @@ class PlateMapBrowser(wx.Frame):
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data Aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
-        aggregation = ['average', 'sum', 'median', 'stdev', 'cv%']
+        aggregation = ['average', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
         self.aggregationMethodsChoice = wx.Choice(self, choices=aggregation)
         groupingSizer.Add(self.aggregationMethodsChoice)
         
@@ -278,6 +278,14 @@ class PlateMapBrowser(wx.Frame):
                                (p.well_id, measurement, p.image_table, p.plate_id, plate))
                     valsPerImage = db.GetResultsAsList()
                     wellsAndVals = computeMedians(valsPerImage)
+                elif aggMethod == 'min':
+                    db.Execute('SELECT %s, MIN(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
+                               (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'max':
+                    db.Execute('SELECT %s, MAX(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
+                               (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
                     
                 data += [FormatPlateMapData(wellsAndVals)]
                 dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
@@ -329,10 +337,23 @@ class PlateMapBrowser(wx.Frame):
                                 where))
                     valsPerObject = db.GetResultsAsList()
                     wellsAndVals = computeMedians(valsPerObject)
+                elif aggMethod == 'min':
+                    db.Execute('SELECT %s.%s, MIN(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, p.object_table, measurement, 
+                                p.image_table, p.object_table,
+                                where, p.image_table, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
+                elif aggMethod == 'max':
+                    db.Execute('SELECT %s.%s, MAX(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
+                                p.image_table, p.well_id, p.object_table, measurement, 
+                                p.image_table, p.object_table,
+                                where, p.image_table, p.well_id))
+                    wellsAndVals = db.GetResultsAsList()
                     
                 data += [FormatPlateMapData(wellsAndVals)]
                 dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
                 dmax = np.nanmax([float(val) for w,val in wellsAndVals]+[dmax])
+                
             else:
                 if p.table_id:
                     where = '%s.%s=%s.%s AND %s.%s=%s.%s AND %s.%s="%s"'%(
