@@ -486,17 +486,12 @@ def FormatPlateMapData(wellsAndVals):
                 row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'.index(well[0])
                 col = int(well[1:])-1
                 data[row,col] = float(val)
-#        elif format=='012':
-#            row = int(well)/shape[1]
-#            col = int(well)%shape[1]
         elif format=='123':
             row = (int(well)-1)/shape[1]
             col = (int(well)-1)%shape[1]
             data[row,col] = float(val)
     return data
     
-
-
 
 
 
@@ -513,20 +508,6 @@ def LoadProperties():
 
             
 if __name__ == "__main__":
-#    app = wx.PySimpleApp()
-#    
-#    # test plate map panel
-#    data = np.arange(5600.)
-#    labels = [str(i) for i in xrange(1,5601)]
-##    data = np.ones(384)
-#    data[100:102] = np.nan
-#    frame = wx.Frame(None, size=(900.,800.))
-#    p = AwesomePMP(frame, data, shape=(70,80), well_labels=None, wellshape='square')
-#    frame.Show()
-#    
-#    app.MainLoop()
-
-
     app = wx.PySimpleApp()
     
     # Load a properties file if passed in args
