@@ -18,9 +18,10 @@ class AwesomePMP(PlateMapPanel):
     '''
     PlateMapPanel that does selection and tooltips for data.
     '''
-    def __init__(self, parent, data, shape=None, colormap='jet', 
-                 wellshape=ROUNDED, **kwargs):
-        PlateMapPanel.__init__(self, parent, data, shape, colormap, wellshape, **kwargs)
+    def __init__(self, parent, data, shape=None, well_labels=None,
+                 colormap='jet', wellshape=ROUNDED, row_label_format=None, **kwargs):
+        PlateMapPanel.__init__(self, parent, data, shape, well_labels, 
+                               colormap, wellshape, row_label_format,  **kwargs)
                 
         self.chMap = p.image_channel_colors
         self.plate = None
@@ -38,8 +39,8 @@ class AwesomePMP(PlateMapPanel):
 
     def OnMotion(self, evt):
         well = self.GetWellAtCoord(evt.X, evt.Y)
-        wellLabel = self.GetWellAtCoord(evt.X, evt.Y, format='A01')
-        if well != -1:
+        wellLabel = self.GetWellLabelAtCoord(evt.X, evt.Y)
+        if well is not None:
             self.tip.SetTip('%s: %s'%(wellLabel,self.data[well]))
             self.tip.Enable(True)
         else:
@@ -52,8 +53,8 @@ class AwesomePMP(PlateMapPanel):
             self.SelectWell(self.GetWellAtCoord(evt.X, evt.Y))
             
     def OnDClick(self, evt):
-        if self.plate != None:
-            well = self.GetWellAtCoord(evt.X, evt.Y, format='A01')
+        if self.plate is not None:
+            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
             db.Execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
                        (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
             imKeys = db.GetResultsAsList()
@@ -61,8 +62,8 @@ class AwesomePMP(PlateMapPanel):
                 ImageTools.ShowImage(imKey, p.image_channel_colors, parent=self)
 
     def OnRClick(self, evt):
-        if self.plate != None:
-            well = self.GetWellAtCoord(evt.X, evt.Y, format='A01')
+        if self.plate is not None:
+            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
             db.Execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
                        (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
             imKeys = db.GetResultsAsList()
@@ -195,9 +196,16 @@ class PlateMapBrowser(wx.Frame):
         data = np.ones(int(p.plate_type))
         if p.plate_type == '384': shape = (16,24)
         elif p.plate_type == '96': shape = (8,12)
-
-        self.plateMaps += [AwesomePMP(self, data, shape, wellshape=self.wellShapeChoice.GetStringSelection(),
-                                      colormap=self.colorMapsChoice.GetStringSelection())]
+        elif p.plate_type == '5600': shape = (40,140)
+        elif p.plate_type == '1536': shape = (32,48)
+        
+        db.Execute('SELECT %s FROM %s WHERE %s!="" GROUP BY %s'%
+                   (p.well_id, p.image_table, p.well_id, p.well_id))
+        well_labels = [x[0] for x in db.GetResultsAsList()]
+                 
+        self.plateMaps += [AwesomePMP(self, data, shape, well_labels=well_labels,
+                                      colormap=self.colorMapsChoice.GetStringSelection(),
+                                      wellshape=self.wellShapeChoice.GetStringSelection())]
         self.plateMapChoices += [wx.Choice(self, choices=self.plateNames)]
         self.plateMapChoices[-1].Select(plateIndex)
         self.plateMapChoices[-1].Bind(wx.EVT_CHOICE, self.OnSelectPlate)
@@ -463,13 +471,27 @@ def FormatPlateMapData(wellsAndVals):
     returns a properly shaped numpy array of the given values with NaNs
             filling empty slots.  
     '''
+    #TODO: well naming format may have to go in props file
+    format = 'A01'
     if p.plate_type == '384': shape = (16,24)
     elif p.plate_type == '96': shape = (8,12)
+    elif p.plate_type == '5600':
+        shape = (40,140)
+        format = '123'
+    elif p.plate_type == '1536': shape = (32,48)
     data = np.ones(shape)*np.nan
     for well, val in wellsAndVals:
-        if re.match('^[a-zA-Z][0-9]?[0-9]?$', well):
-            row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.index(well[0])
-            col = int(well[1:])-1
+        if format=='A01':
+            if re.match('^[a-zA-Z][0-9]?[0-9]?$', well):
+                row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'.index(well[0])
+                col = int(well[1:])-1
+                data[row,col] = float(val)
+#        elif format=='012':
+#            row = int(well)/shape[1]
+#            col = int(well)%shape[1]
+        elif format=='123':
+            row = (int(well)-1)/shape[1]
+            col = (int(well)-1)%shape[1]
             data[row,col] = float(val)
     return data
     
@@ -491,6 +513,20 @@ def LoadProperties():
 
             
 if __name__ == "__main__":
+#    app = wx.PySimpleApp()
+#    
+#    # test plate map panel
+#    data = np.arange(5600.)
+#    labels = [str(i) for i in xrange(1,5601)]
+##    data = np.ones(384)
+#    data[100:102] = np.nan
+#    frame = wx.Frame(None, size=(900.,800.))
+#    p = AwesomePMP(frame, data, shape=(70,80), well_labels=None, wellshape='square')
+#    frame.Show()
+#    
+#    app.MainLoop()
+
+
     app = wx.PySimpleApp()
     
     # Load a properties file if passed in args

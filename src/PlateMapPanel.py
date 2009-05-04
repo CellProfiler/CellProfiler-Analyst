@@ -5,8 +5,7 @@ import wx
 import numpy as np
 import pylab
 
-abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-alphabet = [c for c in abc] + [c+c for c in abc]
+abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 # Well Shapes
 ROUNDED  = 'rounded'
@@ -22,16 +21,43 @@ class PlateMapPanel(wx.Panel):
     color mapping, setting row & column labels, and reshaping the layout.
     '''
     
-    def __init__(self, parent, data, shape=None, colormap='jet', 
-                 wellshape=ROUNDED, **kwargs):
+    def __init__(self, parent, data, shape=None, well_labels=None,
+                 colormap='jet', wellshape=ROUNDED, row_label_format=None, 
+                 **kwargs):
+        '''
+        ARGUMENTS:
+        parent -- wx parent window
+        data -- a numpy array of numeric values
+        
+        KEYWORD ARGUMENTS:
+        shape -- a 2-tuple to reshape the data to (must fit the data)
+        well_labels -- list of labels for each well (must be same length as data)
+        colormap -- a colormap name from pylab.cm
+        wellshape -- ROUNDED, CIRCLE, or SQUARE
+        row_label_format -- 'ABC' or '123'
+        '''
+        
         wx.Panel.__init__(self, parent, **kwargs)
         self.hideLabels = False
+        self.selection = set([])
         self.SetColorMap(colormap)
         self.wellshape = wellshape
         self.SetData(data, shape)
-        self.selection = set([])
-        self.row_labels = ['%2s'%c for c in alphabet[:self.data.shape[0]]]
+        if row_label_format is None:
+            if self.data.shape[0] <= len(abc):
+                self.row_label_format = 'ABC'
+            else:
+                self.row_label_format = '123'
+        else:
+            self.row_label_format = row_label_format
+        self.SetWellLabels(well_labels)
+        
+        if self.row_label_format == 'ABC':
+            self.row_labels = ['%2s'%c for c in abc[:self.data.shape[0]]]
+        elif self.row_label_format == '123':
+            self.row_labels = ['%02d'%(i+1) for i in range(self.data.shape[0])]
         self.col_labels = ['%02d'%i for i in range(1,self.data.shape[1]+1)]
+        
         self.Bind(wx.EVT_PAINT, self.OnPaint)
        
     def SetData(self, data, shape=None, range=None):
@@ -69,6 +95,32 @@ class PlateMapPanel(wx.Panel):
         self.row_labels = ['%2s'%c for c in labels]
         self.Refresh()
         
+    def SetWellLabels(self, labels):
+        if labels is None:
+            if self.row_label_format=='ABC':
+                self.well_labels = np.array(['%s%02d'%(abc[i],j+1)
+                                    for i in xrange(self.data.shape[0])
+                                    for j in xrange(self.data.shape[1])])
+            elif self.row_label_format=='123':
+                self.well_labels = np.array(['(row:%d col:%d)'%(i+1,j+1)
+                                    for i in xrange(self.data.shape[0])
+                                    for j in xrange(self.data.shape[1])])
+        else:
+            assert len(labels) == self.data.shape[0]*self.data.shape[1]
+            self.well_labels = np.array(labels)
+        self.well_labels = self.well_labels.reshape(self.data.shape)
+        
+    def GetWellLabelAtCoord(self, x, y):
+        '''
+        returns the well label at the given x,y position 
+        '''
+        loc = self.GetWellAtCoord(x,y) 
+        if self.well_labels is not None and loc is not None:
+            row, col = loc
+            return self.well_labels[row,col]
+        else:
+            return None
+        
     def SetWellShape(self, wellshape):
         '''
         wellshape in PlatMapPanel.ROUNDED,
@@ -95,25 +147,21 @@ class PlateMapPanel(wx.Panel):
         else:
             self.selection.add(well)
         self.Refresh()
-        
-    def GetWellAtCoord(self, x, y, format='tuple'):
+    
+    def GetWellAtCoord(self, x, y):
         '''
-        format: 'A01' or 'tuple'
         returns a 2 tuple of integers indexing a well position 
-                or -1 if there is no well at the given position.
+                or None if there is no well at the given position.
         '''
         r = min(self.Size[0]/(self.data.shape[1]+1.)/2.,
                 self.Size[1]/(self.data.shape[0]+1.)/2.) - 0.5
         i = int((x-2-self.xo)/(r*2+1))
         j = int((y-2-self.yo)/(r*2+1))
         if 0<i<=self.data.shape[1] and 0<j<=self.data.shape[0]:
-            if format=='A01':
-                return '%s%02d'%(abc[j-1],i)
-            elif format=='tuple':
-                return (j-1,i-1)
+            return (j-1,i-1)
         else:
-            return -1
-
+            return None
+        
     def OnPaint(self, evt):
         dc = wx.PaintDC(self)
         dc.Clear()
@@ -192,11 +240,12 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     
     # test plate map panel
-    data = np.arange(384.) 
+    data = np.arange(5600.)
+    labels = [str(i) for i in xrange(1,5601)]
 #    data = np.ones(384)
     data[100:102] = np.nan
-    frame = wx.Frame(None, size=(600.,430.))
-    p = PlateMapPanel(frame, data, shape=(16,24), wellshape='square')
+    frame = wx.Frame(None, size=(900.,800.))
+    p = PlateMapPanel(frame, data, shape=(40,140), well_labels=labels, wellshape='square')
     frame.Show()
     
     app.MainLoop()
