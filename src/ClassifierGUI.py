@@ -709,13 +709,15 @@ class ClassifierGUI(wx.Frame):
             # into phenotype classes and count phenotype-hits per-image.
             self.lastScoringFilter = filter
 
-            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
-            def update(frac):
-                dlg.Update(int(frac * 100), '%d%% Complete'%(frac * 100))
+#            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+#            def update(frac):
+#                dlg.Update(int(frac * 100), '%d%% Complete'%(frac * 100))
             try:
-                self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
-            finally:
-                dlg.Destroy()
+                self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter)#, cb=update)
+            except:
+                pass
+#            finally:
+#                dlg.Destroy()
 
             # Make sure PerImageCounts returned something
             if not self.keysAndCounts:
@@ -756,12 +758,12 @@ class ClassifierGUI(wx.Frame):
         self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
-        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% Complete', len(groupedKeysAndCounts), self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+#        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% Complete', len(groupedKeysAndCounts), self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
         for i, row in enumerate(groupedKeysAndCounts):
             # Update the status text after every 2% is done.
-            if float(i)/len(groupedKeysAndCounts)-fraction > 0.02:
-                fraction = float(i)/len(groupedKeysAndCounts)
-                dlg.Update(i, '%d%% Complete'%(fraction*100))
+#            if float(i)/len(groupedKeysAndCounts)-fraction > 0.02:
+#                fraction = float(i)/len(groupedKeysAndCounts)
+#                dlg.Update(i, '%d%% Complete'%(fraction*100))
             
             # Start this row with the group key: 
             tableRow = list(row[:nKeyCols])
@@ -785,7 +787,7 @@ class ClassifierGUI(wx.Frame):
             else:
                 tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
             tableData.append(tableRow)
-        dlg.Destroy()
+#        dlg.Destroy()
         tableData = numpy.array(tableData, dtype=object)
         
         t5 = time()
