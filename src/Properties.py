@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from Singleton import *
+from StringIO import StringIO
 
 # TODO: check type of all field values
 string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
@@ -54,7 +55,7 @@ class Properties(Singleton):
         f = open(filename, 'U')
         
         lines = f.read()
-        self._textfile = lines
+        self._textfile = StringIO(lines)
 #        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
         lines = lines.split('\n')
 
@@ -120,19 +121,20 @@ class Properties(Singleton):
         f = open(filename, 'w')
         self._filename = filename
         
-        fields_to_write = set([f for f in self.__dict__.keys() if not f.startswith('_')])
+        fields_to_write = set([k for k in self.__dict__.keys() if not k.startswith('_')])
         
         # Write whole file out replacing any changed values
         for line in self._textfile:
-            if line.strip().startswith('#'):
+            if line.strip().startswith('#') or line.strip()=='':
                 f.write(line)
             else:
-                (name, oldval) = line.split('=', 1)                               # split each side of the first eq sign
+                (name, oldval) = line.split('=', 1)    # split each side of the first eq sign
                 name = name.strip()
                 oldval = oldval.strip()
                 val = self.__getattr__(name)
                 if (name in string_vars and val == oldval) or \
-                   (name in list_vars and val == [v.strip() for v in oldval.split(',') if v.strip() is not '']):
+                   (name in list_vars and val == [v.strip() for v in oldval.split(',') if v.strip() is not '']) or \
+                   name.startswith('group') or name.startswith('filter'):
                     f.write(line)
                 else:
                     f.write('%s  =  %s\n'%(name, val))
@@ -255,4 +257,5 @@ if __name__ == "__main__":
     p = Properties.getInstance()
     p.LoadFile(filename)
     print p
+    p.SaveFile('/Users/afraser/Desktop/output.txt')
 

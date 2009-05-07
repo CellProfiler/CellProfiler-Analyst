@@ -16,7 +16,8 @@ import PolyaFit
 import numpy
 import os
 import wx
-
+from time import time
+        
 
 class ClassifierGUI(wx.Frame):
 
@@ -27,6 +28,11 @@ class ClassifierGUI(wx.Frame):
         if properties is not None:
             global p
             p = properties
+            global dm
+            dm = DataModel.getInstance()
+            dm.PopulateModel()
+            global db
+            db = DBConnect.getInstance()
             
         if p.IsEmpty():
             print 'Classifier requires a properties file. Exiting.'
@@ -259,7 +265,8 @@ class ClassifierGUI(wx.Frame):
                 id = wx.NewId()
                 self.chMapById[id] = (chIndex,color)
                 if color.lower() == setColor.lower():
-                    item = channel_menu.AppendRadioItem(id,color).Check()
+                    item = channel_menu.AppendRadioItem(id,color)
+                    item.Check()
                 else:
                     item = channel_menu.AppendRadioItem(id,color)
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
@@ -664,8 +671,7 @@ class ClassifierGUI(wx.Frame):
         imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale)
         imViewer.SetClasses(classCoords)
-        
-        
+         
         
     def OnScoreAll(self, evt):
         self.ScoreAll()
@@ -679,7 +685,12 @@ class ClassifierGUI(wx.Frame):
         filterChoices  =  [None] + p._filters_ordered
         nClasses       =  len(self.classBins)
         two_classes    =  nClasses == 2
+        if p.table_id:
+            nKeyCols = 2
+        else:
+            nKeyCols = 1
         
+        # GET GROUPING METHOD AND FILTER FROM USER
         dlg = ScoreDialog(self, groupChoices, filterChoices)
         if dlg.ShowModal() == wx.ID_OK:            
             group = dlg.group
@@ -689,13 +700,13 @@ class ClassifierGUI(wx.Frame):
             dlg.Destroy()
             return
         
-        from time import time
         t1 = time()
         
-        # If hit counts havn't been calculated since last training or if the
-        # user is filtering the data differently then classify all objects
-        # into phenotype classes and count phenotype-hits per-image.
+        # FETCH PER_IMAGE COUNTS FROM DB
         if not self.keysAndCounts or filter!=self.lastScoringFilter:
+            # If hit counts havn't been calculated since last training or if the
+            # user is filtering the data differently then classify all objects
+            # into phenotype classes and count phenotype-hits per-image.
             self.lastScoringFilter = filter
 
             dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
@@ -716,21 +727,22 @@ class ClassifierGUI(wx.Frame):
         t2 = time()
         print 'time to calculate hits: %.3fs'%(t2-t1)
         
-        # Sum hits-per-group if not grouping by image
+        # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
         if group != groupChoices[0]:
             self.PostMessage('Grouping %s counts by %s...' % (p.object_name[0], group))
             imData = {}
             for row in self.keysAndCounts:
-                key = tuple(row[:-nClasses])
-                imData[key] = numpy.array([float(v) for v in row[-nClasses:]])
+                key = tuple(row[:nKeyCols])
+                imData[key] = numpy.array([float(v) for v in row[nKeyCols:]])
             groupedKeysAndCounts = numpy.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
+            nKeyCols = len(dm.GetGroupColumnNames(group))
         else:
             groupedKeysAndCounts = numpy.array(self.keysAndCounts, dtype=object)
         
         t3 = time()
         print 'time to group per-image counts: %.3fs'%(t3-t2)
                 
-        # Calculate alpha
+        # FIT THE BETA BINOMIAL
         self.PostMessage('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
         alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
@@ -740,11 +752,11 @@ class ClassifierGUI(wx.Frame):
         t4 = time()
         print 'time to fit beta binomial: %.3fs'%(t4-t3)
                     
-        # Construct matrix of table data
+        # CONSTRUCT ARRAY OF TABLE DATA
         self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
-        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% complete', len(groupedKeysAndCounts), self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% Complete', len(groupedKeysAndCounts), self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
         for i, row in enumerate(groupedKeysAndCounts):
             # Update the status text after every 2% is done.
             if float(i)/len(groupedKeysAndCounts)-fraction > 0.02:
@@ -752,11 +764,17 @@ class ClassifierGUI(wx.Frame):
                 dlg.Update(i, '%d%% Complete'%(fraction*100))
             
             # Start this row with the group key: 
-            tableRow = list(row[:-nClasses])
+            tableRow = list(row[:nKeyCols])
             # Append the counts:
-            countsRow = [int(v) for v in row[-nClasses:]]
+            countsRow = [int(v) for v in row[nKeyCols:nKeyCols+nClasses]]
             tableRow += [sum(countsRow)]
             tableRow += countsRow
+            if p.area_scoring_column is not None:
+                # Append the areas
+                countsRow = [int(v) for v in row[-nClasses:]]
+                tableRow += [sum(countsRow)]
+                tableRow += countsRow
+                
             # Append the scores:
             scores = DirichletIntegrate.score(alpha, numpy.array(countsRow))       # compute enrichment probabilities of each class for this image OR group 
             tableRow += scores
@@ -773,7 +791,7 @@ class ClassifierGUI(wx.Frame):
         t5 = time()
         print 'time to compute enrichment scores: %.3fs'%(t5-t4)
         
-        # Create column labels list
+        # CREATE COLUMN LABELS LIST
         labels = []
         # if grouping isn't per-image, then get the group key column names.
         if group != groupChoices[0]:
@@ -782,18 +800,15 @@ class ClassifierGUI(wx.Frame):
             if p.table_id:
                 labels += [p.table_id]
             labels += [p.image_id]
-            
-        groupIDIndices = [i for i in range(len(labels))]
-            
-        if p.area_scoring_column is None:
-            labels += ['Total %s Count'%(p.object_name[0].capitalize())]
-        else:
-            labels += ['Total %s Area'%(p.object_name[0].capitalize())]
-            
+        # record the column indices for the keys
+        key_col_indices = [i for i in range(len(labels))]
+        
+        labels += ['Total %s Count'%(p.object_name[0].capitalize())]
         for i in xrange(nClasses):
-            if p.area_scoring_column is None:
-                labels += ['%s %s Count'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
-            else:
+            labels += ['%s %s Count'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
+        if p.area_scoring_column is not None:
+            labels += ['Total %s Area'%(p.object_name[0].capitalize())]
+            for i in xrange(nClasses):
                 labels += ['%s %s Area'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         for i in xrange(nClasses):
             labels += ['p(Enriched)\n'+self.classBins[i].label]
@@ -806,30 +821,16 @@ class ClassifierGUI(wx.Frame):
         title = "Enrichments grouped by %s"%(group,)
         if filter:
             title += " filtered by %s"%(filter,)
+        
         grid = DataGrid(tableData, labels, grouping=group,
-                        groupIDIndices=groupIDIndices,
+                        key_col_indices=key_col_indices,
                         chMap=self.chMap[:], parent=self,
-                        selectableColumns=set(range(len(groupIDIndices),len(labels))),
                         title=title)
         grid.Show()
         
         self.SetStatusText('')      
         
     
-    def WriteEnrichmentsToTempTable(self):
-        '''
-        Write per-image enrichments to a temporary table for access in other parts of the app.
-        '''
-        tableName = 'enrichments'
-        cols = [p.image_id, p.well_id, p.plate_id] + [labels[i] for i in self.selectableColumns]
-        colDefs = ['%s %s'%(c, t) for c in cols]
-        
-        'DROP TABLE IF EXISTS %s'%(tableName)
-        'CREATE TEMPORARY TABLE %s (%s)'%(tableName, colDefs)
-        'INSERT INTO %s (%s) '%(tableName, cols, row)
-  
-                
-            
     def OnSelectFilter(self, evt):
         ''' Handler for fetch filter selection. '''
         filter = self.filterChoice.GetStringSelection()

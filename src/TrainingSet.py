@@ -56,27 +56,24 @@ class TrainingSet:
         lines = f.read()
 #        lines = lines.replace('\r', '\n')    # replace CRs with LFs
         lines = lines.split('\n')
+        labelDict = {}
         for l in lines:
             try:
-                if l.strip()=='' or l.startswith('#'):
-                    continue
+                if l.strip()=='' or l.startswith('#'): continue
                 label = l.strip().split(' ')[0]
-                if (label == "label"):
-                    self.labels = l.strip().split(' ')[1:]
-                    continue
-                if label not in self.labels:
-                    self.labels += [label]
+                if (label == "label"): continue
+                
                 obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:]])
+                if label not in labelDict.keys():
+                    labelDict[label] = [obKey]
+                else:
+                    labelDict[label] += [obKey]
             except:
                 print >>stderr, "error parsing training set %s, line >>>%s<<<"%(filename, l.strip())
                 f.close()
                 raise
-
-            self.entries.append((label, obKey))
-            self.values.append(db.GetCellDataForClassifier(obKey))
-
-        self.labels = array(self.labels)
-        self.values = array(self.values)
+            
+        self.Create(labelDict.keys(), labelDict.values())
         
         f.close()
         
@@ -112,8 +109,9 @@ class TrainingSet:
 if __name__ == "__main__":
     from sys import argv
     from Properties import Properties
-    prop = Properties(argv[1])
-    tr = TrainingSet(prop)
+    p = Properties.getInstance()
+    p.LoadFile(argv[1])
+    tr = TrainingSet(p)
     tr.Load(argv[2])
     for i in range(len(tr.labels)):
         print tr.labels[i],

@@ -143,7 +143,7 @@ class DataModel(Singleton):
     
     def GetImageKeysAndObjectCounts(self, filter=None):
         ''' Returns pairs of imageKeys and object counts. '''
-        if not filter:
+        if filter is None:
             return self.data.items()
         else:
             return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter)]
