@@ -758,15 +758,12 @@ class ClassifierGUI(wx.Frame):
         self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
-#        dlg = wx.ProgressDialog('Computing enrichment scores for each group...', '0% Complete', len(groupedKeysAndCounts), self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
         for i, row in enumerate(groupedKeysAndCounts):
-            # Update the status text after every 2% is done.
-#            if float(i)/len(groupedKeysAndCounts)-fraction > 0.02:
-#                fraction = float(i)/len(groupedKeysAndCounts)
-#                dlg.Update(i, '%d%% Complete'%(fraction*100))
-            
             # Start this row with the group key: 
             tableRow = list(row[:nKeyCols])
+            if group != 'Image':
+                # Append the # of images in this group 
+                tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols])))]
             # Append the counts:
             countsRow = [int(v) for v in row[nKeyCols:nKeyCols+nClasses]]
             tableRow += [sum(countsRow)]
@@ -776,7 +773,6 @@ class ClassifierGUI(wx.Frame):
                 countsRow = [int(v) for v in row[-nClasses:]]
                 tableRow += [sum(countsRow)]
                 tableRow += countsRow
-                
             # Append the scores:
             scores = DirichletIntegrate.score(alpha, numpy.array(countsRow))       # compute enrichment probabilities of each class for this image OR group 
             tableRow += scores
@@ -804,7 +800,8 @@ class ClassifierGUI(wx.Frame):
             labels += [p.image_id]
         # record the column indices for the keys
         key_col_indices = [i for i in range(len(labels))]
-        
+        if group != 'Image':
+            labels += ['# Images']
         labels += ['Total %s Count'%(p.object_name[0].capitalize())]
         for i in xrange(nClasses):
             labels += ['%s %s Count'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
