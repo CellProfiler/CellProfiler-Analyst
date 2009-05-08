@@ -823,6 +823,7 @@ class ClassifierGUI(wx.Frame):
         title = "Enrichments grouped by %s"%(group,)
         if filter:
             title += " filtered by %s"%(filter,)
+        title += ' (%s)'%(os.path.split(p._filename)[1])
         
         grid = DataGrid(tableData, labels, grouping=group,
                         key_col_indices=key_col_indices,
