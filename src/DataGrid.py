@@ -57,9 +57,11 @@ class HugeTable(wx.grid.PyGridTableBase):
         return self.col_labels[self.col_order][col]
 
     def GetRowLabelValue(self, row):
-        # TODO: Make this FAST
-        return " : ".join([str(v) for v in self.ordered_data[row,self.key_col_indices]])
-
+        return ", ".join([str(v) for v in self.GetKeyForRow(row)])
+    
+    def GetKeyForRow(self, row):
+        return tuple([v for v in self.data[self.row_order[row],self.key_col_indices]])
+        
     def IsEmptyCell(self, row, col):
         return False
 
@@ -74,14 +76,7 @@ class HugeTable(wx.grid.PyGridTableBase):
         return self.ordered_data[:,col]
     
     def GetRowValues(self, row):
-        return self.ordered_data[row,:] 
-
-#    def AppendCols(self, numCols=1):
-#        newcol = np.ones((self.data.shape[0],numCols))*np.nan
-#        self.data = np.hstack((self.data, newcol))
-#        self.col_labels += ['new col']
-#        self.ResetView()
-#        return True
+        return self.ordered_data[row,:]
     
     def HideCol(self, index):
         ''' index -- the raw data index of the column to show '''
@@ -94,7 +89,8 @@ class HugeTable(wx.grid.PyGridTableBase):
     def ShowCol(self, index):
         ''' index -- the raw data index of the column to show '''
         cols = self.col_order.tolist()
-        cols.insert(index, index)
+        cols += [index]
+        cols.sort()
         self.col_order = np.array(cols)
         self.ordered_data = self.data[self.row_order,:][:,self.col_order]
         self.ResetView()
@@ -116,12 +112,12 @@ class HugeTable(wx.grid.PyGridTableBase):
         for current, new, delmsg, addmsg in [
                 (self.grid.GetNumberRows(), self.GetNumberRows(), wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, wx.grid.GRIDTABLE_NOTIFY_ROWS_APPENDED),
                 (self.grid.GetNumberCols(), self.GetNumberCols(), wx.grid.GRIDTABLE_NOTIFY_COLS_DELETED, wx.grid.GRIDTABLE_NOTIFY_COLS_APPENDED),]:
-                if new < current:
-                        msg = wx.grid.GridTableMessage(self, delmsg, new, current-new)
-                        self.grid.ProcessTableMessage(msg)
-                elif new > current:
-                        msg = wx.grid.GridTableMessage(self, addmsg, new-current)
-                        self.grid.ProcessTableMessage(msg)
+            if new < current:
+                msg = wx.grid.GridTableMessage(self, delmsg, new, current-new)
+                self.grid.ProcessTableMessage(msg)
+            elif new > current:
+                msg = wx.grid.GridTableMessage(self, addmsg, new-current)
+                self.grid.ProcessTableMessage(msg)
         self.UpdateValues()
         self.grid.EndBatch()
 
@@ -206,8 +202,7 @@ class HugeTableGrid(wx.grid.Grid):
     
     def OnLabelDClick(self, evt):
         if evt.Row >= 0:
-            key = tuple([self.GetTable().GetValue(evt.Row,idx) 
-                             for idx in self.GetTable().key_col_indices])
+            key = self.GetTable().GetKeyForRow(evt.Row)
             if self.grouping=='Image':
                 ImageTools.ShowImage(key, self.chMap, parent=self)
             else:
@@ -219,8 +214,7 @@ class HugeTableGrid(wx.grid.Grid):
             
     def OnLabelRightClick(self, evt):
         if evt.Row >= 0:
-            key = tuple([self.GetTable().GetValue(evt.Row,idx) 
-                         for idx in self.GetTable().key_col_indices])
+            key = self.GetTable().GetKeyForRow(evt.Row)
             if self.grouping=='Image':
                 self.ShowPopupMenu([key], evt.GetPosition())
             else:
@@ -287,9 +281,9 @@ class DataGrid(wx.Frame):
         self.grid = HugeTableGrid(self, data, labels, key_col_indices, grouping, chMap)
         
         # Autosave enrichments to temp dir just in case.
-#        print 'Auto saving data...'
-#        filename = gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_').replace(':','-')+'.csv'
-#        self.SaveCSV(filename, self.grid.GetTable().data, self.grid.GetTable().col_labels)
+        print 'Auto saving data...'
+        filename = gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_').replace(':','-')+'.csv'
+        self.SaveCSV(filename, self.grid.GetTable().data, self.grid.GetTable().col_labels)
                 
         self.filemenu = wx.Menu()
         self.saveCSVMenuItem = \
