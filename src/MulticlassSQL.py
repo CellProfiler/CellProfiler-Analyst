@@ -10,8 +10,8 @@ dm = DataModel.getInstance()
 temp_stump_table = "_stump"
 temp_score_table = "_scores"
 temp_class_table = "_class"
-    
-    
+
+
 def FilterSourceTable(filter):
     # If a filter is specified, use it as a subquery;
     # otherwise, just use the object table.
@@ -103,7 +103,6 @@ def translate(weaklearners, filter=None, filterKeys=[]):
     class_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_class_table, class_col_defs),
                     'INSERT INTO %s (%s) SELECT %s'%(temp_class_table, class_cols, class_select_statement)]
 
-    
     return stump_stmnts, score_stmnts, find_max_query, class_stmnts
 
 
@@ -216,7 +215,6 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         num_clauses = len(where_clauses)
         num_steps = 3 * num_clauses
 
-
     def do_by_steps(query, stepnum):
         if cb:
             for idx, wc in enumerate(where_clauses):
@@ -246,7 +244,6 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         # append areas
         for i in xrange(len(keysAndCounts)):
             keysAndCounts[i] += keysAndAreas[i][-nClasses:]
-    
     
     # Add in images with zero object count that the queries missed
     for imKey, obCount in dm.GetImageKeysAndObjectCounts(filter):
@@ -304,14 +301,6 @@ if __name__ == "__main__":
                                                       trainingSet.values, output)
     table = PerImageCounts(weaklearners, filter=filter)
     table.sort()
-#    for row in table:
-#        print [int(v) for v in row]
-    
-#    db.Execute(GetAreaSumsQuery(len(weaklearners[0][2])), 'EMPTY')
-#    t2 = db.GetResultsAsList()
-#    t2.sort()
-#    for row in t2:
-#        print [int(v) for v in row]
 
     labels = ['table', 'image'] + list(trainingSet.labels) + list(trainingSet.labels)
     print labels
@@ -319,8 +308,6 @@ if __name__ == "__main__":
 
     app = wx.PySimpleApp()
     grid = DataGrid(numpy.array(table), labels, key_col_indices=[0,1])
-    
-#    assert grid.
     grid.Show()
 
     app.MainLoop()
