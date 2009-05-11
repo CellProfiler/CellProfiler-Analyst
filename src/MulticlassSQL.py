@@ -185,50 +185,58 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
     db.Execute('DROP TABLE IF EXISTS _scores')
     db.Execute('DROP TABLE IF EXISTS _class')
 
-    if cb:
-        imkeys = dm.GetAllImageKeys()
-        imkeys.sort()
-        stepsize = max(len(imkeys) / 100, 50)
-        key_thresholds  = imkeys[-1:1:-stepsize]
-        key_thresholds.reverse()
-        if p.table_id:
-            # split each table independently
-            def splitter():
-                yield " WHERE (%s = %d) AND (%s <= %d)"%(p.table_id, key_thresholds[0][0], p.image_id, key_thresholds[0][1])
-                for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:]):
-                    if lo[0] == hi[0]:
-                        yield " WHERE (%s = %d) AND (%s > %d) AND (%s <= %d)"%(p.table_id, lo[0], p.image_id, lo[1], p.image_id, hi[1])
-                    else:
-                        yield " WHERE (%s = %d) AND (%s > %d)"%(p.table_id, lo[0], p.image_id, lo[1])
-                        yield " WHERE (%s = %d) AND (%s <= %d)"%(p.table_id, hi[0], p.image_id, hi[1])
-            where_clauses = list(splitter())
+    if filter is None:
+        where = ' WHERE '
+    else:
+        where = ' AND '
 
-        else:
-            where_clauses = ([" WHERE (%s <= %d)"%(p.image_id, key_thresholds[0][0])] + 
-                             [" WHERE (%s > %d) AND (%s <= %d)"
-                              %(p.image_id, lo[0], p.image_id, hi[0]) 
-                              for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
-        num_clauses = len(where_clauses)
-        num_steps = 3 * num_clauses
-
-    def do_by_steps(query, stepnum):
-        if cb:
-            for idx, wc in enumerate(where_clauses):
-                db.Execute(query +  wc, silent=(idx > 0))
-                cb(min(1, (idx + stepnum * num_clauses)/float(num_steps)))
-        else:
-            db.Execute(query)
+#    if cb:
+#        imkeys = dm.GetAllImageKeys()
+#        imkeys.sort()
+#        stepsize = max(len(imkeys) / 100, 50)
+#        key_thresholds  = imkeys[-1:1:-stepsize]
+#        key_thresholds.reverse()
+#        if p.table_id:
+#            # split each table independently
+#            def splitter():
+#                yield where+"(%s = %d) AND (%s <= %d)"%(p.table_id, key_thresholds[0][0], p.image_id, key_thresholds[0][1])
+#                for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:]):
+#                    if lo[0] == hi[0]:
+#                        yield where+"(%s = %d) AND (%s > %d) AND (%s <= %d)"%(p.table_id, lo[0], p.image_id, lo[1], p.image_id, hi[1])
+#                    else:
+#                        yield where+"(%s = %d) AND (%s > %d)"%(p.table_id, lo[0], p.image_id, lo[1])
+#                        yield where+"(%s = %d) AND (%s <= %d)"%(p.table_id, hi[0], p.image_id, hi[1])
+#            where_clauses = list(splitter())
+#
+#        else:
+#            where_clauses = ([where+"(%s <= %d)"%(p.image_id, key_thresholds[0][0])] + 
+#                             [where+"(%s > %d) AND (%s <= %d)"
+#                              %(p.image_id, lo[0], p.image_id, hi[0]) 
+#                              for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
+#        num_clauses = len(where_clauses)
+#        num_steps = 3 * num_clauses
+#
+#    def do_by_steps(query, stepnum):
+#        if cb:
+#            for idx, wc in enumerate(where_clauses):
+#                db.Execute(query +  wc, silent=(idx > 0))
+#                cb(min(1, (idx + stepnum * num_clauses)/float(num_steps)))
+#        else:
+#            db.Execute(query)
 
     db.Execute(stump_stmnts[0])
     db.Execute(stump_stmnts[1])
-    do_by_steps(stump_stmnts[2], 0)
+    db.Execute(stump_stmnts[2])
+#    do_by_steps(stump_stmnts[2], 0)
     db.Execute(score_stmnts[0])
     db.Execute(score_stmnts[1])
-    do_by_steps(score_stmnts[2], 1)
+    db.Execute(score_stmnts[2])
+#    do_by_steps(score_stmnts[2], 1)
     db.Execute(find_max_query)
     db.Execute(class_stmnts[0])
     db.Execute(class_stmnts[1])
-    do_by_steps(class_stmnts[2], 2)
+    db.Execute(class_stmnts[2])
+#    do_by_steps(class_stmnts[2], 2)
     db.Execute(count_query)
     keysAndCounts = db.GetResultsAsList()
     
