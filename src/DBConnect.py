@@ -65,12 +65,15 @@ def GetWhereClauseForImages(imKeys):
                         for imKey in imKeys])
 
 
-def UniqueObjectClause():
+def UniqueObjectClause(table=None):
     '''
     Returns a clause for specifying a unique object in MySQL.
     Example: "SELECT "+UniqueObjectClause()+" FROM <mydb>;" would return all object keys
     '''
-    return ','.join(object_key_columns())
+    if table is not None:
+        return ','.join([table+'.'+col for col in object_key_columns()]) 
+    else:
+        return ','.join(object_key_columns())
 
 
 def UniqueImageClause(table_name=None):
