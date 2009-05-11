@@ -10,22 +10,7 @@ dm = DataModel.getInstance()
 temp_stump_table = "_stump"
 temp_score_table = "_scores"
 temp_class_table = "_class"
-
-
-def FilterSourceTable(filter):
-    # If a filter is specified, use it as a subquery;
-    # otherwise, just use the object table.
-    if filter is None:
-        object_table_name = p.object_table
-        object_table_from = p.object_table
-    else:
-        object_table_name = filter
-        filter_query = p._filters[filter]
-        object_table_from = ("(%s) AS %s JOIN %s USING (%s)"%
-                             (filter_query, filter, p.object_table,
-                              ", ".join(image_key_columns())))
-    return (object_table_name, object_table_from)
-
+filter_table_prefix = '_filter_'
 
 # filter & filterKeys is kind of redundant here, yet they are implemented
 # very differently.  Should we only use filterKeys?
@@ -56,14 +41,17 @@ def translate(weaklearners, filter=None, filterKeys=[]):
         index_cols = "%s, %s"%(p.image_id, p.object_id)
         
     select_start = UniqueObjectClause()+', '
-    
-    object_table_from = FilterSourceTable(filter)[1]
+    filter_clause = ''
+    if filter is not None:
+        filter_clause = ', `%s` WHERE %s.%s=`%s`.%s '%(filter_table_prefix+filter, p.object_table, p.image_id, filter_table_prefix+filter, p.image_id)
+        if p.table_id:
+            filter_clause += 'AND %s.%s=`%s`.%s '%(p.object_table, p.table_id, filter_table_prefix+filter, p.table_id)
     
     # Create stump table (ob x nRules) <0/1>
     stump_cols             = select_start + ", ".join(["stump%d"%(i) for i in range(num_features)])
     stump_col_defs         = key_col_defs + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
     stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(wl[0], wl[1], idx) for idx, wl in enumerate(weaklearners)])
-    stump_select_statement = select_start + stump_select_features + " FROM " + object_table_from
+    stump_select_statement = UniqueObjectClause(p.object_table)+', ' + stump_select_features + " FROM " + p.object_table + filter_clause
     stump_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs),
                     'CREATE INDEX idx_%s ON %s (%s)'%(temp_stump_table, temp_stump_table, index_cols),
                     'INSERT INTO %s (%s) SELECT %s'%(temp_stump_table, stump_cols, stump_select_statement)]
@@ -117,6 +105,22 @@ def GetCountQuery(nClasses):
     return count_query
 
 
+def CreateFilterTables():
+    ''' Creates a temporary with image keys for each filter. '''
+    if p.table_id:
+        key_col_defs = p.table_id+" INT, "+p.image_id+" INT"
+        index_cols = "%s, %s"%(p.table_id, p.image_id)
+    else:
+        key_col_defs = p.image_id+" INT"
+        index_cols = "%s"%(p.image_id)
+        
+    for name, query in p._filters.items():
+        db.Execute('DROP TABLE IF EXISTS `%s`'%(filter_table_prefix+name))
+        db.Execute('CREATE TEMPORARY TABLE `%s` (%s)'%(filter_table_prefix+name, key_col_defs))
+        db.Execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(filter_table_prefix+name, filter_table_prefix+name, index_cols))
+        db.Execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+name, index_cols, query))
+        
+
 def GetAreaSumsQuery(nClasses, filter=None):
     classidxs = range(1, nClasses+1)
     # handle area-based scoring if needed, replacing count query
@@ -127,22 +131,13 @@ def GetAreaSumsQuery(nClasses, filter=None):
         image_match = '%s.%s = %s.%s AND '%(p.object_table, p.image_id, temp_class_table, p.image_id)
         object_match = '%s.%s = %s.%s'%(p.object_table, p.object_id, temp_class_table, p.object_id)
         object_match_clauses = table_match + image_match + object_match
-        if filter is not None:
-            object_table_name, object_table_from = FilterSourceTable(filter)
-            count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s' % \
-                            (UniqueImageClause(object_table_name), 
-                             ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, p.area_scoring_column) for k in classidxs]),
-                             temp_class_table, object_table_from,
-                             object_match_clauses,
-                             UniqueImageClause(object_table_name))
-        else:
-            count_query = 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s' % \
-                            (UniqueImageClause(p.object_table), 
-                             ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, p.area_scoring_column) for k in classidxs]),
-                             temp_class_table, p.object_table,
-                             object_match_clauses,
-                             UniqueImageClause(p.object_table))
-        return count_query
+        
+        return 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s' % \
+                (UniqueImageClause(p.object_table), 
+                 ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, p.area_scoring_column) for k in classidxs]),
+                 temp_class_table, p.object_table,
+                 object_match_clauses,
+                 UniqueImageClause(p.object_table))
     
 
 def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
@@ -220,7 +215,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         if cb:
             for idx, wc in enumerate(where_clauses):
                 db.Execute(query +  wc, silent=(idx > 0))
-                cb((idx + stepnum * num_clauses)/ float(num_steps))
+                cb(min(1, (idx + stepnum * num_clauses)/float(num_steps)))
         else:
             db.Execute(query)
 

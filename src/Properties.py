@@ -2,6 +2,7 @@
 
 from Singleton import *
 from StringIO import StringIO
+import re
 
 # TODO: check type of all field values
 string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
@@ -99,6 +100,8 @@ class Properties(Singleton):
                         raise Exception, 'Filter "%s" is defined twice in properties file.'%(filter_name)
                     if filter_name in self._groups.keys():
                         raise Exception, 'Name "%s" is already taken for a group.'%(filter_name)
+                    if re.search('\.|\\\|/| |`', filter_name):
+                        raise Exception, 'PROPERTIES ERROR (%s): Filter names cannot contain the following characters `.\/ and space'%(filter_name)
                     if not val:
                         print 'PROPERTIES WARNING (%s): Undefined filter'%(name)
                         continue
