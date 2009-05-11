@@ -709,15 +709,15 @@ class ClassifierGUI(wx.Frame):
             # into phenotype classes and count phenotype-hits per-image.
             self.lastScoringFilter = filter
 
-#            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
-#            def update(frac):
-#                dlg.Update(int(frac * 100), '%d%% Complete'%(frac * 100))
+            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+            def update(frac):
+                dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
             try:
-                self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter)#, cb=update)
+                self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
             except:
                 pass
-#            finally:
-#                dlg.Destroy()
+            finally:
+                dlg.Destroy()
 
             # Make sure PerImageCounts returned something
             if not self.keysAndCounts:
@@ -783,7 +783,6 @@ class ClassifierGUI(wx.Frame):
             else:
                 tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
             tableData.append(tableRow)
-#        dlg.Destroy()
         tableData = numpy.array(tableData, dtype=object)
         
         t5 = time()
@@ -1054,6 +1053,7 @@ if __name__ == "__main__":
         LoadProperties()
         
     dm.PopulateModel()
+    MulticlassSQL.CreateFilterTables()
         
     classifier = ClassifierGUI()
     classifier.Show(True)
