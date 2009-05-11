@@ -50,10 +50,10 @@ def translate(weaklearners, filter=None, filterKeys=[]):
 
     if p.table_id:
         key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
-        index_cols = "%s, %s"%(p.table_id, p.image_id)
+        index_cols = "%s, %s, %s"%(p.table_id, p.image_id, p.object_id)
     else:
         key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
-        index_cols = "%s"%(p.image_id)
+        index_cols = "%s, %s"%(p.image_id, p.object_id)
         
     select_start = UniqueObjectClause()+', '
     
@@ -101,6 +101,7 @@ def translate(weaklearners, filter=None, filterKeys=[]):
     select_class_greatest = ", ".join(["%s = score_greatest AS class%d"%(sc, k) for sc,k in zip(score_vals_columns, classidxs)])
     class_select_statement = select_start + select_class_greatest + " FROM " + temp_score_table
     class_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_class_table, class_col_defs),
+                    'CREATE INDEX idx_%s ON %s (%s)'%(temp_class_table, temp_class_table, index_cols),
                     'INSERT INTO %s (%s) SELECT %s'%(temp_class_table, class_cols, class_select_statement)]
 
     return stump_stmnts, score_stmnts, find_max_query, class_stmnts
@@ -231,7 +232,8 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
     do_by_steps(score_stmnts[2], 1)
     db.Execute(find_max_query)
     db.Execute(class_stmnts[0])
-    do_by_steps(class_stmnts[1], 2)
+    db.Execute(class_stmnts[1])
+    do_by_steps(class_stmnts[2], 2)
     db.Execute(count_query)
     keysAndCounts = db.GetResultsAsList()
     
