@@ -131,9 +131,13 @@ class DataModel(Singleton):
         return obKeys
     
     
-    def GetAllImageKeys(self):
-        ''' Returns all object keys. '''
-        return list(self.data.keys())
+    def GetAllImageKeys(self, filter=None):
+        ''' Returns all object keys. If a filter is passed in, only the image
+        keys that fall within the filter will be returned.'''
+        if filter is None:
+            return list(self.data.keys())
+        else:
+            return [imKey for imKey in db.GetFilteredImages(filter)]
 
 
     def GetObjectCountFromImage(self, imKey):

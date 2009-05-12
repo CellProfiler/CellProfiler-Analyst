@@ -709,13 +709,12 @@ class ClassifierGUI(wx.Frame):
             # into phenotype classes and count phenotype-hits per-image.
             self.lastScoringFilter = filter
 
-#            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
-#            def update(frac):
+            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+            def update(frac):
 #                print '%d%% Complete'%(frac * 100.)
-#                dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
-            self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter)#, cb=update)
-#            finally:
-#                dlg.Destroy()
+                dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
+            self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
+            dlg.Destroy()
 
             # Make sure PerImageCounts returned something
             if not self.keysAndCounts:
