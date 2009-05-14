@@ -196,7 +196,7 @@ class DBConnect(Singleton):
             print 'WARNING <DBConnect.CloseConnection>: No connection ID "%s" found.' %(connID)
 
 
-    def Execute(self, query, silent=False):
+    def Execute(self, query, args=None, silent=False):
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
         if not connID in self.connections.keys():
@@ -215,7 +215,7 @@ class DBConnect(Singleton):
         # Finally make the query
         try:
             if verbose and not silent: print '[%s] %s'%(connID, query)
-            self.cursors[connID].execute(query)
+            self.cursors[connID].execute(query, args=args)
         except MySQLdb.Error, e:
             raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
         except KeyError, e:

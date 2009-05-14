@@ -165,6 +165,22 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     db.Execute(find_max_query)
     db.Execute('SELECT '+UniqueObjectClause()+' FROM _scores WHERE score'+str(clNum)+'=score_greatest')
     return db.GetResultsAsList()
+
+
+def object_scores(weaklearners, filter=None, filterKeys=[]):
+    stump_stmnts, score_stmnts, find_max_query, _, _ = \
+                  translate(weaklearners, filter=filter, filterKeys=filterKeys)
+    db.Execute('DROP TABLE IF EXISTS _stump')
+    db.Execute('DROP TABLE IF EXISTS _scores')
+    [db.Execute(stump_query) for stump_query in stump_stmnts] 
+    [db.Execute(score_query) for score_query in score_stmnts]
+    col_names = db.GetColumnNames('_scores')
+    col_types = db.GetColumnTypes('_scores')
+    type_mapping = { long: 'i4', float: 'f8' }
+    dtype = numpy.dtype([(name, type_mapping[type])
+                         for name, type in zip(col_names, col_types)])
+    db.Execute('SELECT * from _scores')
+    return numpy.array(map(tuple, db.GetResultsAsList()), dtype)
     
     
 def PerImageCounts(weaklearners, filter=None, cb=None):
