@@ -203,6 +203,8 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
 
     def where_clauses(qualifier=''):
         imkeys = dm.GetAllImageKeys(filter)
+        if imkeys == []:
+            return []
         imkeys.sort()
         stepsize = max(len(imkeys) / 100, 50)
         key_thresholds = imkeys[-1:1:-stepsize]
@@ -241,21 +243,21 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
             for idx, wc in enumerate(wheres):
                 db.Execute(query + conj + wc, silent=(idx > 0))
                 cb(min(1, (idx + stepnum * num_clauses)/float(num_steps)))
+            else:
+                # wheres() returned nothing because there are no objects in the filter
+                db.Execute(query)
         else:
             db.Execute(query)
 
     db.Execute(stump_stmnts[0])
     db.Execute(stump_stmnts[1])
-#    db.Execute(stump_stmnts[2])
     do_by_steps(stump_stmnts[2], 0, p.object_table+'.')
     db.Execute(score_stmnts[0])
     db.Execute(score_stmnts[1])
-#    db.Execute(score_stmnts[2])
     do_by_steps(score_stmnts[2], 1)
     db.Execute(find_max_query)
     db.Execute(class_stmnts[0])
     db.Execute(class_stmnts[1])
-#    db.Execute(class_stmnts[2])
     do_by_steps(class_stmnts[2], 2)
     db.Execute(count_query)
     keysAndCounts = db.GetResultsAsList()
@@ -278,7 +280,31 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
             else:
                 keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
 
-    return [list(row) for row in keysAndCounts] 
+    return [list(row) for row in keysAndCounts]
+
+
+def CreatePerObjectClassTable(classnames):
+    ''' Saves object keys and classes to a text file '''
+    nClasses = len(classnames)
+    if p.table_id:
+        key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
+        index_cols = "%s, %s, %s"%(p.table_id, p.image_id, p.object_id)
+    else:
+        key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
+        index_cols = "%s, %s"%(p.image_id, p.object_id)
+        
+    class_cols = index_cols+', class'
+    class_col_defs = key_col_defs+'class VARCHAR (100)'
+    
+    # Drop must be explicitly asked for Classifier.ScoreAll
+    #db.Execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
+    db.Execute('CREATE TABLE `%s` (%s)'%(p.class_table, class_col_defs))
+    db.Execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(p.class_table, p.class_table, index_cols))
+        
+    for i in xrange(nClasses):
+        select = 'SELECT %s, "%s" FROM %s WHERE class%d = 1'%(index_cols, classnames[i], temp_class_table, i+1)
+        db.Execute('INSERT INTO `%s` (%s) %s'%(p.class_table, class_cols, select))
+        
 
 
 if __name__ == "__main__":

@@ -708,10 +708,25 @@ class ClassifierGUI(wx.Frame):
             # user is filtering the data differently then classify all objects
             # into phenotype classes and count phenotype-hits per-image.
             self.lastScoringFilter = filter
+            
+            if p.class_table:
+                overwrite_class_table = True
+                # If p.class_table is already in the db, we need to confirm whether or not to overwrite it.
+                try:
+                    db.Execute('SELECT COUNT(*) FROM %s'%(p.class_table), silent=True)
+                    db.GetResultsAsList()
+                    # If it exists, ask to keep
+                    dlg = wx.MessageDialog(self, 'The database table "%s" already exists. Overwrite this table with object class data?'%(p.class_table),
+                                   'Overwrite %s?'%(p.class_table), wx.YES_NO|wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    if response == wx.ID_YES:
+                        db.Execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
+                    else:
+                        overwrite_class_table = False
+                except: pass
 
             dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
             def update(frac):
-#                print '%d%% Complete'%(frac * 100.)
                 dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
             self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
             dlg.Destroy()
@@ -722,7 +737,12 @@ class ClassifierGUI(wx.Frame):
                 errdlg.ShowModal()
                 errdlg.Destroy()
                 return
-                
+            
+            if p.class_table and overwrite_class_table:
+                self.PostMessage('Saving %s classes to database...'%(p.object_name[0]))
+                MulticlassSQL.CreatePerObjectClassTable(self.trainingSet.labels)
+                self.PostMessage('%s classes saved to table "%s"'%(p.object_name[0].capitalize(), p.class_table))
+            
         t2 = time()
         print 'time to calculate hits: %.3fs'%(t2-t1)
         

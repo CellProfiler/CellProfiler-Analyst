@@ -15,6 +15,7 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'tile_buffer_size',
                 'area_scoring_column',
                 'training_set',
+                'class_table',
                 'plate_type']
 
 list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
@@ -173,6 +174,7 @@ class Properties(Singleton):
                          'table_id', 'image_url_prepend', 'image_csv_file',
                          'image_channel_names', 'image_channel_colors',
                          'object_csv_file', 'area_scoring_column', 'training_set',
+                         'class_table',
                          'image_buffer_size', 'tile_buffer_size',
                          'plate_id', 'well_id', 'plate_type']
         
@@ -237,8 +239,13 @@ class Properties(Singleton):
                 f = open(self.training_set)
                 f.close()
             except:
-                print 'PROPERTIES WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set)                        
+                print 'PROPERTIES WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set)
             print 'PROPERTIES: Training set found at "%s"'%(self.training_set)
+        
+        if field_defined('class_table'):
+            assert self.class_table != self.image_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as image_table!'
+            assert self.class_table != self.object_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as object_table!'
+            print 'PROPERTIES: Per-Object classes will be written to table "%s"'%(self.class_table)
             
         if not field_defined('plate_id'):
             print 'PROPERTIES WARNING (plate_id): Field is required for plate map viewer.'
@@ -255,10 +262,10 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-        filename = "../Properties/nirht_area_test.properties"
+        filename = "../Properties/nirht_test.properties"
     
     p = Properties.getInstance()
     p.LoadFile(filename)
-    print p
-    p.SaveFile('/Users/afraser/Desktop/output.txt')
+#    print p
+#    p.SaveFile('/Users/afraser/Desktop/output.txt')
 
