@@ -199,10 +199,15 @@ class PlateMapBrowser(wx.Frame):
         elif p.plate_type == '5600': shape = (40,140)
         elif p.plate_type == '1536': shape = (32,48)
         
+        # Try to get explicit labels for all wells, otherwise the PMP
+        # will generate labels automatically which MAY NOT MATCH labels
+        # in the database, and therefore, showing images will not work. 
         db.Execute('SELECT %s FROM %s WHERE %s!="" GROUP BY %s'%
                    (p.well_id, p.image_table, p.well_id, p.well_id))
         well_labels = [x[0] for x in db.GetResultsAsList()]
-                 
+        if len(well_labels) != len(data):
+            well_labels = None
+            
         self.plateMaps += [AwesomePMP(self, data, shape, well_labels=well_labels,
                                       colormap=self.colorMapsChoice.GetStringSelection(),
                                       wellshape=self.wellShapeChoice.GetStringSelection())]
