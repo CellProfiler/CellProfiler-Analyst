@@ -121,7 +121,10 @@ class Properties(Singleton):
         
     
     def SaveFile(self, filename):
-        ''' Saves the file including original comments and whitespace. '''
+        '''
+        Saves the file including original comments and whitespace. 
+        This function skips vars that start with _ (underscore)
+        '''
         f = open(filename, 'w')
         self._filename = filename
         
