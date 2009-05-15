@@ -287,10 +287,6 @@ class ImageViewer(wx.Frame):
             if format.upper()=='.JPG':
                 format = '.JPEG'
             ImageTools.SaveBitmap(self.imagePanel.bitmap, filename, format.upper()[1:])
-            
-
-    
-            
 
 
 if __name__ == "__main__":
@@ -298,17 +294,17 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
     from DataModel import DataModel
-    from ImageCollection import ImageCollection
+    import ImageTools
+    
     db = DBConnect.getInstance()
     db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     dm = DataModel.getInstance()
     dm.PopulateModel()
-    IC = ImageCollection.getInstance(p)
     
     for i in xrange(1):
         obKey = dm.GetRandomObject()
         print obKey
-        imgs = IC.FetchImage(obKey[:-1])
+        imgs = ImageTools.FetchImage(obKey[:-1])
         frame = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]) )
         frame.Show(True)
     

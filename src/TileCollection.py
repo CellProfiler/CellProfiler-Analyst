@@ -1,7 +1,7 @@
 from DBConnect import DBConnect
-from ImageCollection import ImageCollection
 from Properties import Properties
 from Singleton import Singleton
+import ImageTools
 from weakref import WeakValueDictionary
 import threading
 import wx
@@ -101,7 +101,6 @@ class TileLoader(threading.Thread):
         self.start()
     
     def run(self):
-        image_collection = ImageCollection.getInstance(p)
         while 1:            
             self.tile_collection.cv.acquire()
             # If there are no objects in the queue then wait
@@ -120,7 +119,7 @@ class TileLoader(threading.Thread):
                 continue
 
             try:
-                newData = image_collection.FetchTile(obKey)
+                newData = ImageTools.FetchTile(obKey)
                 tile_data = self.tile_collection.tileData.get(obKey, None)
                 # Make sure tile hasn't been deleted outside this thread
                 if tile_data is not None:

@@ -4,23 +4,35 @@ A collection of tools to modify images used in CPA.
 
 from PIL import Image
 from Properties import Properties
+from DBConnect import DBConnect
+from ImageReader import ImageReader
 import numpy
 import wx
 
 p = Properties.getInstance()
+db = DBConnect.getInstance()
 
+
+def FetchTile(obKey):
+    imKey = obKey[:-1]
+    pos = db.GetObjectCoords(obKey)
+    size = (int(p.image_tile_size),int(p.image_tile_size))
+    return [Crop(imData,size,pos) for imData in FetchImage(imKey)]
+
+def FetchImage(imKey):
+    ir = ImageReader()
+    filenames = db.GetFullChannelPathsForImage(imKey)
+    return ir.ReadImages(filenames)
 
 def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0):
     from ImageViewer import ImageViewer
-    from ImageCollection import ImageCollection
-    IC = ImageCollection.getInstance(p)
-    imgs = IC.FetchImage(imKey)
-    frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, parent=parent, title=str(imKey),
+    imgs = FetchImage(imKey)
+    frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
+                        parent=parent, title=str(imKey),
                         brightness=brightness, scale=scale )
     frame.Show(True)
     return frame
     
-
 def Crop(imgdata, (w,h), (x,y)):
     '''
     Crops an image to the width (w,h) around the point (x,y).
@@ -39,7 +51,6 @@ def Crop(imgdata, (w,h), (x,y)):
                 crop[py,px] = 0
     return crop
     
-
 def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[]):
     '''
     imgs  - list of numpy arrays containing pixel data for each channel of an image
@@ -69,7 +80,6 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[]):
             img.Rescale(10,10)
     
     return img.ConvertToBitmap()
-
 
 def MergeChannels(imgs, chMap, masks=[]):
     '''
@@ -101,11 +111,9 @@ def MergeChannels(imgs, chMap, masks=[]):
         
     return imData
 
-
 def SaveBitmap(bitmap, filename, format='PNG'):
     im = BitmapToPIL(bitmap)
     im.save(filename, format)
-
 
 def ImageToPIL(image):
     '''Convert wx.Image to PIL Image.'''
@@ -113,11 +121,9 @@ def ImageToPIL(image):
     pil.fromstring(image.GetData())
     return pil
 
-
 def BitmapToPIL(bitmap):
     '''Convert wx.Bitmap to PIL Image.'''
     return ImageToPIL(wx.ImageFromBitmap(bitmap))
-
 
 def NumpyToPIL(imData):
     '''Convert numpy image data to PIL Image.'''
