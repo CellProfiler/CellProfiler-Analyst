@@ -38,7 +38,9 @@ class HugeTable(wx.grid.PyGridTableBase):
         wx.grid.PyGridTableBase.__init__(self)
         
         assert len(col_labels) == data.shape[1], "DataGrid.__init__: Number of column labels does not match the number of columns in data."
+        self.sortdir      =  1    # sort direction (1=descending, -1=descending)
         self.sortcol      =  -1   # column index being sorted
+        self.sortcols     = []    # column indices being sorted (in order)
         self.grid         =  grid
         self.data         =  data
         self.ordered_data = self.data
@@ -54,7 +56,16 @@ class HugeTable(wx.grid.PyGridTableBase):
         return self.ordered_data.shape[1]
 
     def GetColLabelValue(self, col):
-        return self.col_labels[self.col_order][col]
+        col_label = self.col_labels[self.col_order][col]
+        if len(self.sortcols) > 1:
+            try:
+                col_label += ' ['+str(self.sortcols.index(col)+1)
+                if self.sortdir > 0:
+                    col_label += 'v]'
+                else:
+                    col_label += '^]'
+            except: pass
+        return col_label
 
     def GetRowLabelValue(self, row):
         return ", ".join([str(v) for v in self.GetKeyForRow(row)])
@@ -96,16 +107,31 @@ class HugeTable(wx.grid.PyGridTableBase):
         self.ResetView()
     
     def SortByCol(self, colIndex):
-        if self.sortcol == colIndex:
+        if len(self.sortcols)>0 and colIndex in self.sortcols:
             # If this column is already sorted, flip it
             self.row_order = self.row_order[::-1]
+            self.sortdir = -self.sortdir
         else:
+            self.sortdir = 1
+            self.sortcols = [colIndex]
             # If this column hasn't been sorted yet, then sort descending
-            self.row_order = self.data[:,self.col_order][:,colIndex].argsort()
+            self.row_order = np.lexsort(self.data[:,self.sortcols[::-1]].T.tolist())
         self.ordered_data = self.data[self.row_order,:][:,self.col_order]
-        self.sortcol = colIndex
         self.grid.Refresh()
-    
+        
+    def AddSortCol(self, colIndex):
+        if len(self.sortcols)>0 and colIndex in self.sortcols:
+            self.sortcols.remove(colIndex)
+        else:
+            self.sortcols += [colIndex]
+        if self.sortcols==[]:
+            # if all sort columns have been toggled off, reset row_order
+            self.row_order = np.arange(self.data.shape[0])
+        else:
+            self.row_order = np.lexsort(self.data[:,self.sortcols[::-1]].T.tolist())
+        self.ordered_data = self.data[self.row_order,:][:,self.col_order]
+        self.grid.Refresh()
+         
     def ResetView(self):
         """ Trim/extend the control's rows and update all values """
         self.grid.BeginBatch()
@@ -136,6 +162,14 @@ class HugeTable(wx.grid.PyGridTableBase):
 
 
 class HugeTableGrid(wx.grid.Grid):
+    '''
+    Grid is specifically designed to hold per-image or grouped
+    per-image data in each row.  Double-clicking a row label will
+    launch an image viewer for that image or images.  Right-clicking a
+    row label will display a popup menu of images to select for
+    viewing.  Clicking on a column label will sort that column in
+    ascending then descending order.
+    '''
     
     def __init__(self, parent, data, col_labels, key_col_indices, grouping="Image", chMap=None):
         wx.grid.Grid.__init__(self, parent, -1)
@@ -171,11 +205,11 @@ class HugeTableGrid(wx.grid.Grid):
         evt.Skip()
     
     def SetTable( self, object, *attributes ):
-            self.tableRef = weakref.ref( object )
-            return wx.grid.Grid.SetTable( self, object, *attributes )
+        self.tableRef = weakref.ref( object )
+        return wx.grid.Grid.SetTable( self, object, *attributes )
     
     def GetTable(self):
-            return self.tableRef()
+        return self.tableRef()
 
     def OnSelectedRange(self, evt):
         cols = set(range(evt.GetLeftCol(), evt.GetRightCol() + 1))
@@ -197,7 +231,10 @@ class HugeTableGrid(wx.grid.Grid):
             
     def OnLabelClick(self, evt):
         if evt.Col >= 0:
-            self.GetTable().SortByCol(evt.Col)
+            if evt.ShiftDown() or evt.ControlDown() or evt.CmdDown():
+                self.GetTable().AddSortCol(evt.Col)
+            else:
+                self.GetTable().SortByCol(evt.Col)
         evt.Skip()
     
     def OnLabelDClick(self, evt):
@@ -244,22 +281,14 @@ class HugeTableGrid(wx.grid.Grid):
 
 
 class DataGrid(wx.Frame):
-
-    """
-    A frame with a grid inside of it.
-    
-    This grid is specifically designed to hold per-image or grouped
-    per-image data in each row.  Double-clicking a row label will
-    launch an image viewer for that image or images.  Right-clicking a
-    row label will display a popup menu of images to select for
-    viewing.  Clicking on a column label will sort that column in
-    ascending then descending order.
-    """
+    '''
+    A frame with a grid inside of it for displaying grouped .
+    '''
     
     def __init__(self, data, labels, grouping='Image',
                  key_col_indices=[0], chMap=None, parent=None,
                  title='Data Grid'):
-        """
+        '''
         Initialize the datagrid.
 
         Arguments:
@@ -274,8 +303,8 @@ class DataGrid(wx.Frame):
         title -- 
         
         # is launched.  If None, no images will be displayed.
-
-        """
+        '''
+        
         wx.Frame.__init__(self, parent, id=-1, title=title)
         
         self.grid = HugeTableGrid(self, data, labels, key_col_indices, grouping, chMap)
@@ -389,7 +418,16 @@ class DataGrid(wx.Frame):
 
 if __name__ == "__main__":
     classes = ['a', 'b']
-    hits = np.array([['key 0',10,20,-30,40.123456789],['key 1',11,21,31,41.1],['key 2',0,-22,32,42.2],['key 3',13,-3,33,43.3],['key 4',14,24,4,44.4],['key 5',5,5,5,5.12345]]*10, dtype=object)
+    hits = np.array([['key 0',10,20,-30,40.123456789],
+                     ['key 1',11,21,31,41.1],
+                     ['key 1',10,21,31,41.1],
+                     ['key 1',13,21,31,41.1],
+                     ['key 1',31,21,31,41.1],
+                     ['key 1',-1,21,31,41.1],
+                     ['key 2',0,-22,32,42.2],
+                     ['key 3',13,-3,33,43.3],
+                     ['key 4',14,24,4,44.4],
+                     ['key 5',5,5,5,5.12345]], dtype=object)
     labels = ['key', 'count-A' , 'count McLongtitle #1\n B' , 'P(a)' , 'P(b)' ]
     
     app = wx.PySimpleApp()
