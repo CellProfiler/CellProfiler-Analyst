@@ -141,14 +141,18 @@ class Properties(Singleton):
                    name.startswith('group') or name.startswith('filter'):
                     f.write(line)
                 else:
-                    f.write('%s  =  %s\n'%(name, val))
-                fields_to_write.remove(name)
+                    if type(val)==list:
+                        f.write('%s  =  %s\n'%(name, ', '.join([str(v) for v in val if v])))
+                    else:
+                        f.write('%s  =  %s\n'%(name, val))
+                if not '_SQL_' in name:
+                    fields_to_write.remove(name)
         
         # Write out fields that weren't present in the file
         for field in fields_to_write:
             val = self.__getattr__(field)
             if type(val)==list:
-                f.write('%s  =  %s\n'%(field, str(val)[1:-1]))
+                f.write('%s  =  %s\n'%(field, ', '.join([str(v) for v in val if v])))
             else:
                 f.write('%s  =  %s\n'%(field, val))
         
@@ -266,6 +270,31 @@ if __name__ == "__main__":
     
     p = Properties.getInstance()
     p.LoadFile(filename)
-#    print p
-#    p.SaveFile('/Users/afraser/Desktop/output.txt')
+    p.newfield = 'chickenpox' # will be appended
+    p.newlistfield = ['','asdf','',1243,None]
+    p._hiddenfield = 'asdf'   # won't be written
+    p.training_set = ''
+    p.db_type   = ''
+    p.db_port   = ''
+    p.db_host   = ''
+    p.db_name   = ''
+    p.db_user   = ''
+    p.db_passwd = ''
+    p.image_table  = ''
+    p.object_table = ''
+    p.table_id   = ''
+    p.image_id   = ''
+    p.object_id  = ''
+    p.plate_id   = ''
+    p.well_id    = ''
+    p.cell_x_loc = ''
+    p.cell_y_loc = ''
+    p.image_url_prepend = ''
+    p.image_channel_paths = ['../...','qierubvalerb']
+    p.image_channel_files = ['']
+    p.image_channel_names = ['','']
+    p.image_channel_colors = ['yellow', 'magenta']
+
+    print p
+    p.SaveFile('/Users/afraser/Desktop/output.txt')
 
