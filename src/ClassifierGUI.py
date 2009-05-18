@@ -897,7 +897,7 @@ class ClassifierGUI(wx.Frame):
                     validCols = ['**ANY**']+validCols
                 # Create and bind to a text Validator
                 def ValidateGroupField(evt, validCols=validCols):
-                    ctrl = evt.GetEventObject().GetChildren()[0]
+                    ctrl = evt.GetEventObject()
                     if ctrl.GetValue() in validCols:
                         ctrl.SetForegroundColour('#000001')
                     else:
@@ -930,12 +930,6 @@ class ClassifierGUI(wx.Frame):
         groupKey = []
         for input in self.groupInputs:
             groupKey += [input.GetValue()]
-            # Try to convert the type to long or float if possible
-            # TODO: Cludgy: we should match the key type in the DataModel
-            try: groupKey[-1] = float(groupKey[-1])
-            except: pass
-            try: groupKey[-1] = long(groupKey[-1])
-            except: pass
         return tuple(groupKey)
     
     
