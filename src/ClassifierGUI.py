@@ -31,6 +31,7 @@ class ClassifierGUI(wx.Frame):
             global dm
             dm = DataModel.getInstance()
             dm.PopulateModel()
+            MulticlassSQL.CreateFilterTables()
             global db
             db = DBConnect.getInstance()
             
@@ -857,7 +858,7 @@ class ClassifierGUI(wx.Frame):
             self.SetupFetchFromGroupSizer(filter)
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         self.Layout()
-        
+    
     
     def SetupFetchFromGroupSizer(self, group):
         '''
@@ -884,29 +885,28 @@ class ClassifierGUI(wx.Frame):
         self.fetchFromGroupSizer.Clear(True)
         for i, field in enumerate(fieldNames):
             label = wx.StaticText(self, wx.NewId(), field+':')
-            validCols = list(set([col[i] for col in validKeys]))
-            validCols.sort()
-            validCols = [str(col) for col in validCols]
+            validVals = [str(col[i]) for col in validKeys]
+            validVals.sort()
             if fieldTypes[i]==int or fieldTypes[i]==long or fieldTypes[i]==float:
                 if group=='image':
-                    fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                           choices=validCols)
+                    fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
+                                           choices=validVals)
                 else:
-                    fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                           choices=['**ANY**']+validCols)
-                    validCols = ['**ANY**']+validCols
+                    fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
+                                           choices=['**ANY**']+validVals)
+                    validVals = ['**ANY**']+validVals
                 # Create and bind to a text Validator
-                def ValidateGroupField(evt, validCols=validCols):
+                def ValidateGroupField(evt, validVals=validVals):
                     ctrl = evt.GetEventObject()
-                    if ctrl.GetValue() in validCols:
+                    if ctrl.GetValue() in validVals:
                         ctrl.SetForegroundColour('#000001')
                     else:
                         ctrl.SetForegroundColour('#FF0000')
                 self.groupFieldValidators += [ValidateGroupField]
                 fieldInp.Bind(wx.EVT_TEXT, self.groupFieldValidators[-1])
             else:
-                fieldInp = wx.ComboBox(self, -1, value=validCols[0], size=(80,-1),
-                                       choices=['**ANY**']+validCols, style=wx.CB_READONLY)
+                fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
+                                       choices=['**ANY**']+validVals, style=wx.CB_READONLY)
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)
