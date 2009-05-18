@@ -637,7 +637,7 @@ class ClassifierGUI(wx.Frame):
                 return
         # Then get the image_id
         dlg = wx.TextEntryDialog(self, p.image_id+':','Enter '+p.image_id)
-        dlg.SetValue('1')
+        dlg.SetValue('')
         if dlg.ShowModal() == wx.ID_OK:
             imgNum = int(dlg.GetValue())
             dlg.Destroy()

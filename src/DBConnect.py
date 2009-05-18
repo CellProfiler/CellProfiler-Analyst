@@ -157,6 +157,22 @@ class DBConnect(Singleton):
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
+
+            def classifier(num_stumps, *args):
+                args = numpy.array(args)
+                stumps = args[:num_stumps]  > args[num_stumps:2*num_stumps]
+                num_classes = (len(args) / num_stumps) - 2
+                best = -numpy.inf
+                data = args[2*num_stumps:]
+                for cl in range(num_classes):
+                    score = (data[:num_stumps] * stumps).sum()
+                    if score > best:
+                        bestcl = cl
+                        best = score
+                    data = data[num_stumps:]
+                return bestcl
+
+            self.connections[connID].create_function('classifier', -1, classifier)
             
             try:
                 # Try the connection
@@ -387,10 +403,10 @@ class DBConnect(Singleton):
         ''' Returns a list of imKeys from the given filter. '''
         try:
             self.Execute(p._filters[filter])
+            return self.GetResultsAsList()
         except Exception, e:
             print e
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
-        return self.GetResultsAsList()
     
     
     def GetColumnNames(self, table):

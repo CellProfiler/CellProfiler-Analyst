@@ -12,97 +12,31 @@ temp_score_table = "_scores"
 temp_class_table = "_class"
 filter_table_prefix = '_filter_'
 
-# filter & filterKeys is kind of redundant here, yet they are implemented
-# very differently.  Should we only use filterKeys?
-def translate(weaklearners, filter=None, filterKeys=[]):
+def translate(weaklearners):
     '''
-    Translate weak learners into MySQL queries that place the resulting 
-      classification in a MySQL temporary table named "temp_class_table"
-    filter: if supplied, scoring will be limited to only imKeys within this
-            filter
-    filterKeys: (optional) A specific list of imKeys OR obKeys (NOT BOTH)
-        to classify.
-        * WARNING: If this list is too long, you may exceed the size limit to
-          MySQL queries. 
-        * Useful when fetching N objects from a particular class. Use the
-          DataModel to get batches of random objects, and sift through them
-          here until N objects of the desired class have been accumulated.
-        * Also useful for classifying a specific image or group of images.
+    Translate weak leaners into a classifier() expression
+    (or something more complicated in the future).
     '''
-    
     num_features = len(weaklearners)
     nClasses = len(weaklearners[0][2])
 
-    if p.table_id:
-        key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
-        index_cols = "%s, %s, %s"%(p.table_id, p.image_id, p.object_id)
+    has_classifier_function = False
+    if p.db_type.lower() == 'sqlite':
+        has_classifier_function = True
+    elif p.db_type.lower() == 'mysql':
+        db.Execute("SELECT * from mysql.func where name='classifier'")
+        has_classifier_function = len(db.GetResultsAsList()) > 0
+    
+    if has_classifier_function:
+        num_stumps = len(weaklearners)
+        featurenames = "1," + ",".join([wl[0] for wl in weaklearners])
+        thresholds = "0,"+",".join([str(wl[1]) for wl in weaklearners])
+        base = [sum([wl[3][k] for wl in weaklearners]) for k in range(nClasses)]
+        weights = ",".join([",".join([str(base[k])] + [str(wl[2][k]-wl[3][k]) for wl in weaklearners]) for k in range(nClasses)])
+        return "(classifier(%d, %s, %s, %s)+1)"%(num_stumps + 1, featurenames, thresholds, weights)
     else:
-        key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
-        index_cols = "%s, %s"%(p.image_id, p.object_id)
-        
-    select_start = UniqueObjectClause()+', '
-    filter_clause = ''
-    if filter is not None:
-        filter_clause = ', `%s` WHERE %s.%s=`%s`.%s '%(filter_table_prefix+filter, p.object_table, p.image_id, filter_table_prefix+filter, p.image_id)
-        if p.table_id:
-            filter_clause += 'AND %s.%s=`%s`.%s '%(p.object_table, p.table_id, filter_table_prefix+filter, p.table_id)
-    
-    # Create stump table (ob x nRules) <0/1>
-    stump_cols             = select_start + ", ".join(["stump%d"%(i) for i in range(num_features)])
-    stump_col_defs         = key_col_defs + ", ".join(["stump%d TINYINT"%(i) for i in range(num_features)])
-    stump_select_features  = ", ".join(["(%s > %f) AS stump%d"%(wl[0], wl[1], idx) for idx, wl in enumerate(weaklearners)])
-    stump_select_statement = UniqueObjectClause(p.object_table)+', ' + stump_select_features + " FROM " + p.object_table + filter_clause
-    stump_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_stump_table, stump_col_defs),
-                    'CREATE INDEX idx_%s ON %s (%s)'%(temp_stump_table, temp_stump_table, index_cols),
-                    'INSERT INTO %s (%s) SELECT %s'%(temp_stump_table, stump_cols, stump_select_statement)]
-    
-    if filterKeys != []:
-        isImKey = lambda(k): (p.table_id and len(k)==2) or (not p.table_id and len(k)==1)
-        if isImKey(filterKeys[0]):
-            stump_stmnts[2] += ' WHERE '+GetWhereClauseForImages(filterKeys)
-        else:
-            stump_stmnts[2] += ' WHERE '+GetWhereClauseForObjects(filterKeys)
-
-    # Create class scores table (ob x classes) <float>
-    classidxs          = range(1, nClasses+1)
-    score_vals_columns = ["score%d"%(i) for i in classidxs]
-    score_col_defs     = key_col_defs + ", ".join(["%s FLOAT"%(s) for s in score_vals_columns]) + ", score_greatest FLOAT"
-    score_cols         = select_start + ", ".join(["%s"%(s) for s in score_vals_columns]) + ", score_greatest"
-    # SQLite doesn't support conditional operators, so we use math instead:
-    # Example: if (A>B), C, D ==> D+(C-D)*(A>B)
-    score_select_scores = ", ".join(["+".join(["%f+(%f-(%f))*(stump%d)"
-                                    %(weaklearners[i][3][k-1], weaklearners[i][2][k-1],weaklearners[i][3][k-1], i) 
-                                    for i in range(num_features)]) + " AS score%d"%(k)
-                                    for k in classidxs])
-    score_select_statement = select_start + score_select_scores + ", 0.0 FROM " + temp_stump_table
-    score_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_score_table, score_col_defs),
-                    'CREATE INDEX idx_%s ON %s (%s)'%(temp_score_table, temp_score_table, index_cols),
-                    'INSERT INTO %s (%s) SELECT %s'%(temp_score_table, score_cols, score_select_statement )]
-    
-    # Create maximum column in class scores table
-    greatest_expr = "GREATEST(" + ", ".join(score_vals_columns) + ")"
-    find_max_query = "UPDATE %s SET score_greatest = %s"%(temp_score_table, greatest_expr)
-
-    # Convert to class membership table (ob x classes) <T/F>
-    class_cols            = select_start + ", ".join(["class%d"%(k) for k in classidxs])
-    class_col_defs        = key_col_defs + ", ".join(["class%d TINYINT"%(k) for k in classidxs])
-    select_class_greatest = ", ".join(["%s = score_greatest AS class%d"%(sc, k) for sc,k in zip(score_vals_columns, classidxs)])
-    class_select_statement = select_start + select_class_greatest + " FROM " + temp_score_table
-    class_stmnts = ['CREATE TEMPORARY TABLE %s (%s)'%(temp_class_table, class_col_defs),
-                    'CREATE INDEX idx_%s ON %s (%s)'%(temp_class_table, temp_class_table, index_cols),
-                    'INSERT INTO %s (%s) SELECT %s'%(temp_class_table, class_cols, class_select_statement)]
-
-    return stump_stmnts, score_stmnts, find_max_query, class_stmnts
-
-
-def GetCountQuery(nClasses):
-    classidxs = range(1, nClasses+1)
-    # Get hit counts
-    count_query = 'SELECT %s, %s FROM %s GROUP BY %s' % \
-                    (UniqueImageClause(), 
-                    ", ".join(["SUM(class%d)"%(k) for k in classidxs]),
-                    temp_class_table, UniqueImageClause())
-    return count_query
+        # we should create a stored function here, perhaps
+        raise RuntimeError("No classifier() function available in database.")
 
 
 def CreateFilterTables():
@@ -121,25 +55,6 @@ def CreateFilterTables():
         db.Execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+name, index_cols, query))
         
 
-def GetAreaSumsQuery(nClasses, filter=None):
-    classidxs = range(1, nClasses+1)
-    # handle area-based scoring if needed, replacing count query
-    if p.area_scoring_column:
-        table_match = ''
-        if p.table_id:
-            table_match = '%s.%s = %s.%s AND '%(p.object_table, p.table_id, temp_class_table, p.table_id)
-        image_match = '%s.%s = %s.%s AND '%(p.object_table, p.image_id, temp_class_table, p.image_id)
-        object_match = '%s.%s = %s.%s'%(p.object_table, p.object_id, temp_class_table, p.object_id)
-        object_match_clauses = table_match + image_match + object_match
-        
-        return 'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s' % \
-                (UniqueImageClause(p.object_table), 
-                 ", ".join(["SUM(%s.class%d * %s.%s)"%(temp_class_table, k, p.object_table, p.area_scoring_column) for k in classidxs]),
-                 temp_class_table, p.object_table,
-                 object_match_clauses,
-                 UniqueImageClause(p.object_table))
-    
-
 def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     '''
     clNum: 1-based index of the class to retrieve obKeys from
@@ -156,14 +71,19 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
         if Properties.area_scoring_column is specified, area sums are also
         reported for each class
     '''
-    stump_stmnts, score_stmnts, find_max_query, _ = translate(weaklearners, filterKeys=filterKeys)
 
-    db.Execute('DROP TABLE IF EXISTS _stump')
-    db.Execute('DROP TABLE IF EXISTS _scores')
-    [db.Execute(stump_query) for stump_query in stump_stmnts] 
-    [db.Execute(score_query) for score_query in score_stmnts]
-    db.Execute(find_max_query)
-    db.Execute('SELECT '+UniqueObjectClause()+' FROM _scores WHERE score'+str(clNum)+'=score_greatest')
+    class_query = translate(weaklearners)
+
+    if filterKeys != []:
+        isImKey = len(filterKeys[0]) == (2 if p.table_id else 1)
+        if isImKey:
+            whereclause = "AND " + GetWhereClauseForImages(filterKeys)
+        else:
+            whereclause = "AND " + GetWhereClauseForObjects(filterKeys)
+    else:
+        whereclause = ""
+
+    db.Execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s=%d %s'%(p.object_table, class_query, clNum, whereclause))
     return db.GetResultsAsList()
 
 
@@ -192,16 +112,14 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         Note that the imKeys are exploded so each row is of the form:
         [TableNumber, ImageNumber, Class1_ObjectCount, Class2_ObjectCount,...]
         where TableNumber is only present if table_id is defined in Properties. 
+        If p.area_scoring_column is set, then area scores will be appended to
+        the object scores.
     '''
-    nClasses = len(weaklearners[0][2])
-    stump_stmnts, score_stmnts, find_max_query, class_stmnts = translate(weaklearners, filter=filter)
-    count_query = GetCountQuery(nClasses)
-    
-    db.Execute('DROP TABLE IF EXISTS _stump')
-    db.Execute('DROP TABLE IF EXISTS _scores')
-    db.Execute('DROP TABLE IF EXISTS _class')
 
-    def where_clauses(qualifier=''):
+    def objectify(field):
+        return "%s.%s"%(p.object_table, field)
+
+    def where_clauses():
         imkeys = dm.GetAllImageKeys(filter)
         imkeys.sort()
         stepsize = max(len(imkeys) / 100, 50)
@@ -210,72 +128,102 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         if p.table_id:
             # split each table independently
             def splitter():
-                yield "(%s%s = %d) AND (%s%s <= %d)"%(qualifier, p.table_id, key_thresholds[0][0], 
-                                                      qualifier, p.image_id, key_thresholds[0][1])
+                yield "(%s = %d) AND (%s <= %d)"%(objectify(p.table_id), key_thresholds[0][0], 
+                                                  objectify(p.image_id), key_thresholds[0][1])
                 for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:]):
                     if lo[0] == hi[0]:
-                        yield "(%s%s = %d) AND (%s%s > %d) AND (%s%s <= %d)"%(qualifier, p.table_id, lo[0], 
-                                                                        qualifier, p.image_id, lo[1], 
-                                                                        qualifier, p.image_id, hi[1])
+                        # block within one table
+                        yield "(%s = %d) AND (%s > %d) AND (%s <= %d)"%(objectify(p.table_id), lo[0], 
+                                                                        objectify(p.image_id), lo[1], 
+                                                                        objectify(p.image_id), hi[1])
                     else:
-                        yield "(%s%s = %d) AND (%s%s > %d)"%(qualifier, p.table_id, lo[0], 
-                                                             qualifier, p.image_id, lo[1])
-                        yield "(%s%s = %d) AND (%s%s <= %d)"%(qualifier, p.table_id, hi[0], 
-                                                              qualifier, p.image_id, hi[1])
+                        # query spans a table boundary
+                        yield "(%s = %d) AND (%s > %d)"%(objectify(p.table_id), lo[0], 
+                                                         objectify(p.image_id), lo[1])
+                        yield "(%s = %d) AND (%s <= %d)"%(objectify(p.table_id), hi[0], 
+                                                          objectify(p.image_id), hi[1])
             return list(splitter())
         else:
-            return (["(%s%s <= %d)"%(qualifier, p.image_id, key_thresholds[0][0])] + 
-                    ["(%s%s > %d) AND (%s%s <= %d)"
-                     %(qualifier, p.image_id, lo[0], qualifier, p.image_id, hi[0]) 
+            return (["(%s <= %d)"%(objectify(p.image_id), key_thresholds[0][0])] + 
+                    ["(%s > %d) AND (%s <= %d)"
+                     %(objectify(p.image_id), lo[0], objectify(p.image_id), hi[0])
                      for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
-
-    def do_by_steps(query, stepnum, qualifier=''):
+                                                            
+    # I'm pretty sure this would be even faster if we were to run two
+    # or more parallel threads and split the work between them.
+    def do_by_steps(imkeys, class_query, tables, filter_clause, result_clauses):
         if cb:
-            if ' where ' in query.lower():
-                conj = ' AND '
-            else:
-                conj = ' WHERE '
-            wheres = where_clauses(qualifier)
+            result =  []
+            wheres = where_clauses()
             num_clauses = len(wheres)
-            num_steps = 3 * num_clauses
             for idx, wc in enumerate(wheres):
-                db.Execute(query + conj + wc, silent=(idx > 0))
-                cb(min(1, (idx + stepnum * num_clauses)/float(num_steps)))
+                if filter_clause is '':
+                    where_clause = wc
+                else:
+                    where_clause = '%s AND %s'%(wc, filter_clause)
+                db.Execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
+                           (imkeys, class_query, result_clauses, tables, where_clause, imkeys),
+                           silent=(idx > 10))
+                result += [db.GetResultsAsList()]
+                cb(min(1, idx/float(num_clauses)))
+            return sum(result, [])
         else:
-            db.Execute(query)
-
-    db.Execute(stump_stmnts[0])
-    db.Execute(stump_stmnts[1])
-    do_by_steps(stump_stmnts[2], 0, p.object_table+'.')
-    db.Execute(score_stmnts[0])
-    db.Execute(score_stmnts[1])
-    do_by_steps(score_stmnts[2], 1)
-    db.Execute(find_max_query)
-    db.Execute(class_stmnts[0])
-    db.Execute(class_stmnts[1])
-    do_by_steps(class_stmnts[2], 2)
-    db.Execute(count_query)
-    keysAndCounts = db.GetResultsAsList()
-    
-    if p.area_scoring_column is not None:
-        area_sums_query = GetAreaSumsQuery(nClasses, filter)
-        db.Execute(area_sums_query)
-        keysAndAreas = db.GetResultsAsList()
-        keysAndAreas.sort()
-        keysAndCounts.sort()
-        # append areas
-        for i in xrange(len(keysAndCounts)):
-            keysAndCounts[i] += keysAndAreas[i][-nClasses:]
-    
-    # Add in images with zero object count that the queries missed
-    for imKey, obCount in dm.GetImageKeysAndObjectCounts(filter):
-        if obCount == 0:
-            if p.area_scoring_column is not None:
-                keysAndCounts += [list(imKey) + [0 for c in range(nClasses*2)]]
+            if filter_clause is '':
+                db.Execute('SELECT %s, %s as class, %s FROM %s GROUP BY %s, class'%
+                           (imkeys, class_query, result_clauses, tables, imkeys))
             else:
-                keysAndCounts += [list(imKey) + [0 for c in range(nClasses)]]
+                db.Execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
+                           (imkeys, class_query, result_clauses, tables, filter_clause, imkeys))
+            return db.GetResultsAsList()
+                                                                                  
+    if p.table_id:
+        imkeys = "%s, %s"%(objectify(p.table_id), objectify(p.image_id))
+    else:
+        imkeys = objectify(p.image_id)
 
-    return [list(row) for row in keysAndCounts] 
+    if p.area_scoring_column is None:
+        result_clauses = 'COUNT(*)'
+    else:
+        result_clauses = 'COUNT(*), SUM(%s)'%(objectify(p.area_scoring_column))
+
+    filter_clause = ''
+    tables = p.object_table
+    if filter is not None:
+        tables += ', ' + filter_table_prefix+filter
+        filter_clause = '%s=`%s`.%s '%(objectify(p.image_id), filter_table_prefix+filter, p.image_id)
+        if p.table_id:
+            filter_clause += 'AND %s=`%s`.%s '%(objectify(p.table_id), filter_table_prefix+filter, p.table_id)
+
+    class_query = translate(weaklearners)
+
+
+    results = do_by_steps(imkeys, class_query, tables, filter_clause, result_clauses)
+
+    # convert to dictionary
+    counts = {}
+    if p.table_id:
+        keylen = 3 # includes class
+    else:
+        keylen = 2 # includes class
+    for r in results:
+        counts[r[:keylen]] = r[keylen:]
+
+    num_classes = len(weaklearners[0][2])
+    # this is clearer than the one-line version
+    def get_count(im_key, classnum):
+        return counts.get(tuple(list(im_key) + [classnum]), [0])[0]
+
+    def get_area(im_key, classnum):
+        return counts.get(tuple(list(im_key) + [classnum]), [0, 0])[1]
+
+    def get_results():
+        for imkey in dm.GetImageKeysAndObjectCounts(filter):
+            if p.area_scoring_column is None:
+                yield list(imkey[0]) + [get_count(imkey[0], cl) for cl in range(1, num_classes+1)]
+            else:
+                yield list(imkey[0]) + [get_count(imkey[0], cl) for cl in range(1, num_classes+1)] + [get_area(imkey[0], cl) for cl in range(1, num_classes+1)]
+
+    return list(get_results())
 
 
 if __name__ == "__main__":

@@ -137,7 +137,7 @@ class DataModel(Singleton):
         if filter is None:
             return list(self.data.keys())
         else:
-            return [imKey for imKey in db.GetFilteredImages(filter)]
+            return list(db.GetFilteredImages(filter))
 
 
     def GetObjectCountFromImage(self, imKey):
