@@ -285,8 +285,17 @@ class DBConnect(Singleton):
     
     
     def GetPerImageObjectCounts(self):
-        ''' Returns a list of (imKey, obCount) tuples. '''
-        select = "SELECT "+UniqueImageClause()+", COUNT("+p.object_id+") FROM "+str(p.object_table)+" GROUP BY "+UniqueImageClause()
+        '''
+        Returns a list of (imKey, obCount) tuples. 
+        The counts returned correspond to images that are present in BOTH the 
+        per_image and per_object table.
+        '''
+        select = 'SELECT '+UniqueImageClause(p.object_table)+', COUNT('+p.object_table+'.'+p.object_id
+        select += ') FROM '+p.object_table+', '+p.image_table
+        select += ' WHERE '+p.object_table+'.'+p.image_id+' = '+p.image_table+'.'+p.image_id
+        if p.table_id:
+            select += ' AND '+p.object_table+'.'+p.table_id+' = '+p.image_table+'.'+p.table_id
+        select += ' GROUP BY '+UniqueImageClause(p.object_table)
         self.Execute(select)
         return self.GetResultsAsList()
     
