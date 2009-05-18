@@ -107,18 +107,21 @@ class PlateMapBrowser(wx.Frame):
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
         self.sourceChoice = wx.Choice(self, choices=[p.image_table, p.object_table])
+        self.sourceChoice.Select(0)
         dataSourceSizer.Add(self.sourceChoice)
                 
         dataSourceSizer.AddSpacer((-1,10))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurements:'))
         measurements = self.GetNumericColumnsFromTable(p.image_table)
         self.measurementsChoice = wx.Choice(self, choices=measurements, size=(132,-1))
+        self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data Aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
         aggregation = ['average', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
         self.aggregationMethodsChoice = wx.Choice(self, choices=aggregation)
+        self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
         
         viewSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='View Options:'), wx.VERTICAL)
@@ -132,11 +135,13 @@ class PlateMapBrowser(wx.Frame):
         viewSizer.AddSpacer((-1,10))
         viewSizer.Add(wx.StaticText(self, label='Well Shape:'))
         self.wellShapeChoice = wx.Choice(self, choices=all_well_shapes)
+        self.wellShapeChoice.Select(0)
         viewSizer.Add(self.wellShapeChoice)
         
         viewSizer.AddSpacer((-1,10))
         viewSizer.Add(wx.StaticText(self, label='Number of Plates:'))
         self.numberOfPlatesChoice = wx.Choice(self, choices=['1','2','4','9','16'])
+        self.numberOfPlatesChoice.Select(0)
         viewSizer.Add(self.numberOfPlatesChoice)
         
         controlSizer = wx.BoxSizer(wx.VERTICAL)
