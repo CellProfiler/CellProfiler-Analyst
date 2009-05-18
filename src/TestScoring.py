@@ -81,15 +81,16 @@ if __name__ == "__main__":
         def update(frac):
             print '%d%% Complete'%(frac * 100.)
         table = MulticlassSQL.PerImageCounts(weaklearners, filter=filter, cb=update)
+#        MulticlassSQL.CreatePerObjectClassTable(trainingSet.labels)
         table.sort()
     
         labels = ['table', 'image'] + list(trainingSet.labels)
         if p.area_scoring_column:
             labels += list(trainingSet.labels)
-    
+
         grid = DataGrid(numpy.array(table), labels, key_col_indices=[0,1])
         grid.Show()
-        
+        print grid.grid.GetTable().data.tolist()
         assert grid.grid.GetTable().data.tolist()==vals, "Test failed."
 
     app.MainLoop()
