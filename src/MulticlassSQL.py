@@ -86,7 +86,6 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     db.Execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s=%d %s'%(p.object_table, class_query, clNum, whereclause))
     return db.GetResultsAsList()
 
-
 def object_scores(weaklearners, filter=None, filterKeys=[]):
     stump_stmnts, score_stmnts, find_max_query, _, _ = \
                   translate(weaklearners, filter=filter, filterKeys=filterKeys)
@@ -101,31 +100,26 @@ def object_scores(weaklearners, filter=None, filterKeys=[]):
                          for name, type in zip(col_names, col_types)])
     db.Execute('SELECT * from _scores')
     return numpy.array(map(tuple, db.GetResultsAsList()), dtype)
-    
-    
-# TODO: FIX ME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-def CreatePerObjectClassTable(classnames):
+
+
+def create_perobject_class_table(classnames, rules):
     ''' Saves object keys and classes to a text file '''
     nClasses = len(classnames)
-    if p.table_id:
-        key_col_defs = p.table_id+" INT, "+p.image_id+" INT, "+p.object_id+" INT, "
-        index_cols = "%s, %s, %s"%(p.table_id, p.image_id, p.object_id)
-    else:
-        key_col_defs = p.image_id+" INT, "+p.object_id+" INT, "
-        index_cols = "%s, %s"%(p.image_id, p.object_id)
-        
-    class_cols = index_cols+', class'
-    class_col_defs = key_col_defs+'class VARCHAR (100)'
+
+    if p.class_table is None:
+        raise ValueError('"class_table" in properties file is not set.')
+
+    index_cols = p.object_key()
+    class_cols = p.object_key() + ', class'
+    class_col_defs = p.object_key_defs() + ', class VARCHAR (%d)'%(max([len(c) for c in classnames])+1)
     
     # Drop must be explicitly asked for Classifier.ScoreAll
-    #db.Execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
+    db.Execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
     db.Execute('CREATE TABLE `%s` (%s)'%(p.class_table, class_col_defs))
     db.Execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(p.class_table, p.class_table, index_cols))
         
-    for i in xrange(nClasses):
-        select = 'SELECT %s, "%s" FROM %s WHERE class%d = 1'%(index_cols, classnames[i], temp_class_table, i+1)
-        db.Execute('INSERT INTO `%s` (%s) %s'%(p.class_table, class_cols, select))
-        
+    case_expr = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n + 1, classnames[n]) for n in range(nClasses)]) + " END"
+    db.Execute('INSERT INTO `%s` (%s) SELECT %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, p.object_table))
     
 def PerImageCounts(weaklearners, filter=None, cb=None):
     '''

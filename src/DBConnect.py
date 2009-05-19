@@ -589,6 +589,13 @@ class DBConnect(Singleton):
         
         self.Commit()
 
+    def table_exists(self, name):
+        if p.db_type.lower() == 'mysql':
+            self.Execute("SELECT table_name FROM information_schema.tables WHERE table_name='%s' AND table_schema='%s'"%(name, p.db_name))
+        else:
+            self.Execute("SELECT name FROM sqlite_master WHERE type='table' and name='%s'"%(name))
+        return len(self.GetResultsAsList()) > 0
+
 
     def CreateTempTableFromCSV(self, filename, tablename):
         '''
