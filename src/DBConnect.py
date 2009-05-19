@@ -231,7 +231,12 @@ class DBConnect(Singleton):
         # Finally make the query
         try:
             if verbose and not silent: print '[%s] %s'%(connID, query)
-            self.cursors[connID].execute(query, args=args)
+            if p.db_type=='sqlite':
+                if args:
+                    raise 'Can\'t pass args to sqlite execute!'
+                self.cursors[connID].execute(query)
+            else:
+                self.cursors[connID].execute(query, args=args)
         except MySQLdb.Error, e:
             raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
         except KeyError, e:
