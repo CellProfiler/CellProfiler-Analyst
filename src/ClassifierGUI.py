@@ -722,10 +722,21 @@ class ClassifierGUI(wx.Frame):
                     else:
                         overwrite_class_table = False
 
-            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME)
+            class StopCalculating(Exception):
+                pass
+
+            dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
             def update(frac):
-                dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
-            self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
+                cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
+                if not cont: # cancel was pressed
+                    raise StopCalculating
+            try:
+                self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
+            except StopCalculating:
+                dlg.Destroy()
+                self.SetStatusText('Scoring cancelled.')      
+                return
+                
             dlg.Destroy()
 
             # Make sure PerImageCounts returned something
