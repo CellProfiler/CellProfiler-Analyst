@@ -76,7 +76,8 @@ class ImageViewerPanel(ImagePanel):
     def SetClassPoints(self, classes):
         self.classes = classes
         vals = numpy.arange(float(len(self.classes))) / len(self.classes)
-        vals += (1.0 - vals[-1]) / 2
+        if len(vals) > 0:
+            vals += (1.0 - vals[-1]) / 2
         self.colors = [numpy.array(cm.jet(val))*255 for val in vals]
 
         self.classVisible = {}
@@ -244,6 +245,8 @@ class ImageViewer(wx.Frame):
             y = evt.GetPosition().y / self.imagePanel.scale
             obKey = db.GetObjectNear(self.img_key, x, y)
 
+            if not obKey: return
+            
             # update selection
             if not evt.ShiftDown():
                 self.selection = [obKey]
