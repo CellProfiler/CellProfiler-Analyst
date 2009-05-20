@@ -635,8 +635,45 @@ class DBConnect(Singleton):
 #        except:
 #            raise Exception, 'Failed to create temporary table %s from %s'%(tablename, filename)
 #            f.close()
-        
 
+    def histogram(self, column, table_or_query, nbins, range=None):
+        """
+        Compute a 1-D histogram entirely in the database.
+        column          -- a single column name, as a string
+        table_or_query  -- either a table name or a subquery, as a string
+        nbins           -- the number of desired bins in the histogram
+        range           -- the lower and upper range of the bins
+
+        Returns (hist, bin_edges), where hist is a numpy array of size
+        nbins and bin_edges is a numpy array of size nbins + 1.
+        """
+        if ' ' in table_or_query:
+            table_clause = "(%s) as foo"%(query,)
+        else:
+            table_clause = table_or_query
+
+        if range is None:
+            self.Execute("select min(%s), max(%s) from %s" %
+                         (column, column, table_clause))
+
+            data = self.GetResultsAsList()
+            min = data[0][0]
+            max = data[0][1]
+        else:
+            min, max = range
+            
+        clause = ("round(%d * (%s - (%f)) / (%f - (%f)))" % 
+                  (nbins, column, min, max, min))
+        h = numpy.zeros(nbins)
+        self.Execute("select %s as bin, count(*) from %s "
+                     "where %s <= %d "
+                     "group by %s order by bin" % (clause, table_clause,
+                                                   clause, nbins, clause))
+        for bin, count in self.GetResultsAsList():
+            if bin == nbins:
+                bin -= 1
+            h[bin] = count
+        return h, numpy.linspace(min, max, nbins + 1)
 
 
 if __name__ == "__main__":
