@@ -433,7 +433,6 @@ def FormatPlateMapData(wellsAndVals):
         format = '123'
     elif p.plate_type == '1536': shape = (32,48)
     data = np.ones(shape)*np.nan
-    print wellsAndVals
     for well, val in wellsAndVals:
         if format=='A01':
             if re.match('^[a-zA-Z][0-9]?[0-9]?$', well):
