@@ -402,7 +402,7 @@ class ClassifierGUI(wx.Frame):
             elif filter in p._groups_ordered:
                 # if the filter name is a group then it's actually a group
                 groupName = filter
-                groupKey = self.GetGroupKeyFromGroupSizer()
+                groupKey = self.GetGroupKeyFromGroupSizer(groupName)
                 filteredImKeys = dm.GetImagesInGroup(groupName, groupKey)
                 colNames = dm.GetGroupColumnNames(groupName)
                 if filteredImKeys == []:
@@ -432,11 +432,12 @@ class ClassifierGUI(wx.Frame):
                         self.PostMessage('No images were found in filter "%s"'%(filter))
                         return
                 elif filter in p._groups_ordered:
-                    groupKey = self.GetGroupKeyFromGroupSizer()
-                    colNames = dm.GetGroupColumnNames(filter)
-                    filteredImKeys = dm.GetImagesInGroup(filter, groupKey)
+                    group_name = filter
+                    groupKey = self.GetGroupKeyFromGroupSizer(group_name)
+                    colNames = dm.GetGroupColumnNames(group_name)
+                    filteredImKeys = dm.GetImagesInGroup(group_name, groupKey)
                     if filteredImKeys == []:
-                        self.PostMessage('No images were found in group %s: %s'%(filter,
+                        self.PostMessage('No images were found in group %s: %s'%(group_name,
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)])))
                         return
                     
@@ -922,17 +923,15 @@ class ClassifierGUI(wx.Frame):
             txtCtrl.SetForegroundColour('#FF0000')
             
     
-    def GetGroupKeyFromGroupSizer(self):
+    def GetGroupKeyFromGroupSizer(self, group=None):
         ''' Returns the text in the group text inputs as a group key. '''
+        if group is not None:
+            fieldTypes = dm.GetGroupColumnTypes(group)
+        else:
+            fieldTypes = [int for input in self.groupInputs]
         groupKey = []
-        for input in self.groupInputs:
-            groupKey += [input.GetValue()]
-            # Try to convert the type to long or float if possible
-            # TODO: Cludgy: we should match the key type in the DataModel
-            try: groupKey[-1] = float(groupKey[-1])
-            except: pass
-            try: groupKey[-1] = long(groupKey[-1])
-            except: pass
+        for input, ftype in zip(self.groupInputs, fieldTypes):
+            groupKey += [ftype(input.GetValue())]
         return tuple(groupKey)
     
     
