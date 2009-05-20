@@ -1,4 +1,4 @@
-from DBConnect import DBConnect
+import DBConnect
 from DataGrid import DataGrid
 from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
@@ -33,7 +33,7 @@ class ClassifierGUI(wx.Frame):
             dm.PopulateModel()
             MulticlassSQL.CreateFilterTables()
             global db
-            db = DBConnect.getInstance()
+            db = DBConnect.DBConnect.getInstance()
             
         if p.IsEmpty():
             print 'Classifier requires a properties file. Exiting.'
@@ -686,10 +686,7 @@ class ClassifierGUI(wx.Frame):
         filterChoices  =  [None] + p._filters_ordered
         nClasses       =  len(self.classBins)
         two_classes    =  nClasses == 2
-        if p.table_id:
-            nKeyCols = 2
-        else:
-            nKeyCols = 1
+        nKeyCols = len(DBConnect.image_key_columns())
         
         # GET GROUPING METHOD AND FILTER FROM USER
         dlg = ScoreDialog(self, groupChoices, filterChoices)
@@ -814,14 +811,11 @@ class ClassifierGUI(wx.Frame):
         print 'time to compute enrichment scores: %.3fs'%(t5-t4)
         
         # CREATE COLUMN LABELS LIST
-        labels = []
         # if grouping isn't per-image, then get the group key column names.
         if group != groupChoices[0]:
             labels = dm.GetGroupColumnNames(group)
         else:
-            if p.table_id:
-                labels += [p.table_id]
-            labels += [p.image_id]
+            labels = list(DBConnect.image_key_columns())
         # record the column indices for the keys
         key_col_indices = [i for i in range(len(labels))]
         if group != 'Image':
@@ -874,8 +868,7 @@ class ClassifierGUI(wx.Frame):
         would be represented by two combo boxes.
         '''
         if group=='image':
-            fieldNames = ['image']
-            if p.table_id: fieldNames = ['table', 'image']
+            fieldNames = ['table', 'image'] if p.table_id else ['image']
             fieldTypes = [int, int]
             validKeys = dm.GetAllImageKeys()
         elif group=='well':

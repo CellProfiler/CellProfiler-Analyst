@@ -21,18 +21,16 @@ class DBException(Exception):
         return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
 
-def image_key_columns(table_name=None):
+def image_key_columns(table_name=""):
     """Return, as a tuple, the names of the columns that make up the
     image key.  If table_name is not None, use it to qualify each
     column name."""
-    if table_name is None:
-        qualifier = ""
-    else:
-        qualifier = table_name + "."
+    if table_name != "":
+        table_name += "."
     if p.table_id:
-        return (qualifier+p.table_id, qualifier+p.image_id)
+        return (table_name+p.table_id, table_name+p.image_id)
     else:
-        return (qualifier+p.image_id,)
+        return (table_name+p.image_id,)
 
 def object_key_columns():
     """Return, as a tuple, the names of the columns that make up the
@@ -298,17 +296,11 @@ class DBConnect(Singleton):
               (eg: if some objects have been removed)
         index: a POSITIVE integer (1,2,3...)
         '''
-        imNum = imKey[-1]
-        if p.table_id:
-            tblNum = imKey[0]
-            obNum = self.execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s LIMIT %s,1'
-                                 %(p.object_id, p.object_table, p.table_id, tblNum, p.image_id, imNum, index-1))
-            obNum = obNum[0][0]
-        else:
-            obNum = self.execute('SELECT %s FROM %s WHERE %s=%s LIMIT %s,1'
-                                 %(p.object_id, p.object_table, p.image_id, imNum, index-1))
-            obNum = obNum[0][0]
-        return tuple(list(imKey)+[int(obNum)])
+        where_clause = " AND ".join(['%s=%s'%(col, val) for col, val in zip(image_key_columns(), imKey)])
+        self.Execute('SELECT %s FROM %s LIMIT %s,1'
+                     %(p.object_id, p.object_table, where_clause, index - 1))
+        object_number = self.GetResultsAsList()[0][0]
+        return tuple(list(imKey)+[int(object_number)])
     
     
     def GetPerImageObjectCounts(self):

@@ -4,7 +4,7 @@ import wx.grid
 import numpy as np
 import ImageTools
 from DataModel import DataModel
-from DBConnect import DBConnect
+import DBConnect
 from Properties import Properties
 from sys import stderr
 from tempfile import gettempdir
@@ -14,7 +14,7 @@ import csv
 import weakref
 
 dm = DataModel.getInstance()
-db = DBConnect.getInstance()
+db = DBConnect.DBConnect.getInstance()
 p = Properties.getInstance()
 
 class HugeTable(wx.grid.PyGridTableBase):
@@ -385,12 +385,9 @@ class DataGrid(wx.Frame):
                                    style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
-            colHeaders = []
-            pos = 1
-            if p.table_id:
-                colHeaders += [p.table_id]
-                pos = 2
-            colHeaders += [p.image_id, p.well_id, p.plate_id]
+            colHeaders = list(DBConnect.image_key_columns())
+            pos = len(colHeaders)
+            colHeaders += [p.well_id, p.plate_id]
             colHeaders += ['count_'+bin.label for bin in self.GetParent().classBins]
             data = list(self.GetParent().keysAndCounts)
             for row in data:
@@ -401,7 +398,7 @@ class DataGrid(wx.Frame):
                 res = db.execute('SELECT %s, %s FROM %s WHERE %s'%(p.well_id, p.plate_id, p.image_table, where), silent=True)
                 well, plate = res[0]
                 row.insert(pos, well)
-                row.insert(pos+1, plate)
+                row.insert(pos + 1, plate)
             self.SaveCSV(saveDialog.GetPath(), data, colHeaders)
         saveDialog.Destroy()
 

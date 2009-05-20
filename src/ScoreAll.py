@@ -57,10 +57,7 @@ if __name__ == "__main__":
     if group=='':
         group = 'Image'
     
-    if p.table_id:
-        nKeyCols = 2
-    else:
-        nKeyCols = 1
+    nKeyCols = len(image_key_columns())
     
     print ''
     print 'properties:  ', props
@@ -135,14 +132,12 @@ if __name__ == "__main__":
     print 'done.'
     
     # CREATE COLUMN LABELS LIST
-    labels = []
     # if grouping isn't per-image, then get the group key column names.
     if group != 'Image':
         labels = dm.GetGroupColumnNames(group)
     else:
-        if p.table_id:
-            labels += [p.table_id]
-        labels += [p.image_id]
+        labels = list(image_key_columns())
+
     # record the column indices for the keys
     key_col_indices = [i for i in range(len(labels))]
     
