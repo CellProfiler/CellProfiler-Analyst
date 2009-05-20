@@ -25,6 +25,8 @@ def image_key_columns(table_name=""):
     """Return, as a tuple, the names of the columns that make up the
     image key.  If table_name is not None, use it to qualify each
     column name."""
+    if table_name is None:
+        table_name = ""
     if table_name != "":
         table_name += "."
     if p.table_id:
@@ -297,9 +299,9 @@ class DBConnect(Singleton):
         index: a POSITIVE integer (1,2,3...)
         '''
         where_clause = " AND ".join(['%s=%s'%(col, val) for col, val in zip(image_key_columns(), imKey)])
-        self.Execute('SELECT %s FROM %s LIMIT %s,1'
-                     %(p.object_id, p.object_table, where_clause, index - 1))
-        object_number = self.GetResultsAsList()[0][0]
+        object_number = self.execute('SELECT %s FROM %s WHERE %s LIMIT %s,1'
+                                     %(p.object_id, p.object_table, where_clause, index - 1))
+        object_number = object_number[0][0]
         return tuple(list(imKey)+[int(object_number)])
     
     

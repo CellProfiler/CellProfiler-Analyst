@@ -282,7 +282,7 @@ class PlateMapBrowser(wx.Frame):
                     expression = measurement
                     group = False
 
-                wellsAndVals = db.Execute('SELECT %s, %s FROM %s WHERE %s="%s" %s'%
+                wellsAndVals = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" %s'%
                                           (p.well_id, expression, table, 
                                            p.plate_id, plate,
                                            "GROUP BY %s"%(p.well_id) if group else ""))                   
@@ -320,7 +320,7 @@ class PlateMapBrowser(wx.Frame):
                     expression = "%s.%s"%(table, measurement)
                     group = False
 
-                wellsAndVals = db.Execute('SELECT %s FROM %s, %s WHERE %s %s'%
+                wellsAndVals = db.execute('SELECT %s FROM %s, %s WHERE %s %s'%
                                           (expression, 
                                            p.image_table, table, 
                                            where,

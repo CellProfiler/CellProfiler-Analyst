@@ -1055,7 +1055,7 @@ if __name__ == "__main__":
         sys.excepthook = show_exception_as_dialog
 
     p = Properties.getInstance()
-    db = DBConnect.getInstance()
+    db = DBConnect.DBConnect.getInstance()
     dm = DataModel.getInstance()
 
     # Load a properties file if passed in args
