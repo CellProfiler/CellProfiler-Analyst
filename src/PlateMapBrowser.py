@@ -320,8 +320,8 @@ class PlateMapBrowser(wx.Frame):
                     expression = "%s.%s"%(table, measurement)
                     group = False
 
-                wellsAndVals = db.execute('SELECT %s FROM %s, %s WHERE %s %s'%
-                                          (expression, 
+                wellsAndVals = db.execute('SELECT %s.%s, %s FROM %s, %s WHERE %s %s'%
+                                          (p.image_table, p.well_id, expression, 
                                            p.image_table, table, 
                                            where,
                                            'GROUP BY %s.%s'%(p.image_table, p.well_id) if group else ''))
@@ -433,6 +433,7 @@ def FormatPlateMapData(wellsAndVals):
         format = '123'
     elif p.plate_type == '1536': shape = (32,48)
     data = np.ones(shape)*np.nan
+    print wellsAndVals
     for well, val in wellsAndVals:
         if format=='A01':
             if re.match('^[a-zA-Z][0-9]?[0-9]?$', well):
