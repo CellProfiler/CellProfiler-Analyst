@@ -398,8 +398,8 @@ class DataGrid(wx.Frame):
                     where = '%s=%s AND %s=%s'%(p.table_id, row[0], p.image_id, row[1])
                 else:
                     where = '%s=%s'%(p.image_id, row[0])
-                db.Execute('SELECT %s, %s FROM %s WHERE %s'%(p.well_id, p.plate_id, p.image_table, where), silent=True)
-                well, plate = db.GetResultsAsList()[0]
+                res = db.execute('SELECT %s, %s FROM %s WHERE %s'%(p.well_id, p.plate_id, p.image_table, where), silent=True)
+                well, plate = res[0]
                 row.insert(pos, well)
                 row.insert(pos+1, plate)
             self.SaveCSV(saveDialog.GetPath(), data, colHeaders)

@@ -75,16 +75,14 @@ class DataModel(Singleton):
         from time import time
         t = time()
         # Check for index on image_table
-        db.Execute('SHOW INDEX FROM %s'%(p.object_table))
-        db.GetResultsAsList()
-        # Check for index on object_table
+        db.execute('SHOW INDEX FROM %s'%(p.object_table))
+                # Check for index on object_table
 
         # Check for orphaned objects
-        db.Execute('SELECT %s FROM %s LEFT JOIN %s USING (%s) WHERE %s.%s IS NULL'%
+        print db.execute('SELECT %s FROM %s LEFT JOIN %s USING (%s) WHERE %s.%s IS NULL'%
                    (UniqueImageClause(p.object_table),
                     p.object_table, p.image_table, p.image_id,
                     p.image_table, p.image_id))
-        print db.GetResultsAsList()
             
     # =================================================================================
         

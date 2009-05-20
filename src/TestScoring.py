@@ -81,7 +81,7 @@ if __name__ == "__main__":
         def update(frac):
             print '%d%% Complete'%(frac * 100.)
         table = MulticlassSQL.PerImageCounts(weaklearners, filter=filter, cb=update)
-        MulticlassSQL.create_perobject_class_table(trainingSet.labels, weaklearners)
+#        MulticlassSQL.create_perobject_class_table(trainingSet.labels, weaklearners)
         table.sort()
     
         labels = ['table', 'image'] + list(trainingSet.labels)

@@ -24,8 +24,8 @@ def translate(weaklearners):
     if p.db_type.lower() == 'sqlite':
         has_classifier_function = True
     elif p.db_type.lower() == 'mysql':
-        db.Execute("SELECT * from mysql.func where name='classifier'")
-        has_classifier_function = len(db.GetResultsAsList()) > 0
+        res = db.execute("SELECT * from mysql.func where name='classifier'")
+        has_classifier_function = len(res) > 0
     
     if has_classifier_function:
         num_stumps = len(weaklearners)
@@ -49,10 +49,10 @@ def CreateFilterTables():
         index_cols = "%s"%(p.image_id)
         
     for name, query in p._filters.items():
-        db.Execute('DROP TABLE IF EXISTS `%s`'%(filter_table_prefix+name))
-        db.Execute('CREATE TEMPORARY TABLE `%s` (%s)'%(filter_table_prefix+name, key_col_defs))
-        db.Execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(filter_table_prefix+name, filter_table_prefix+name, index_cols))
-        db.Execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+name, index_cols, query))
+        db.execute('DROP TABLE IF EXISTS `%s`'%(filter_table_prefix+name))
+        db.execute('CREATE TEMPORARY TABLE `%s` (%s)'%(filter_table_prefix+name, key_col_defs))
+        db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(filter_table_prefix+name, filter_table_prefix+name, index_cols))
+        db.execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+name, index_cols, query))
         
 
 def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
@@ -83,23 +83,23 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     else:
         whereclause = ""
 
-    db.Execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s=%d %s'%(p.object_table, class_query, clNum, whereclause))
-    return db.GetResultsAsList()
+    return db.execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s=%d %s'%(p.object_table, class_query, clNum, whereclause))
+
 
 def object_scores(weaklearners, filter=None, filterKeys=[]):
     stump_stmnts, score_stmnts, find_max_query, _, _ = \
                   translate(weaklearners, filter=filter, filterKeys=filterKeys)
-    db.Execute('DROP TABLE IF EXISTS _stump')
-    db.Execute('DROP TABLE IF EXISTS _scores')
-    [db.Execute(stump_query) for stump_query in stump_stmnts] 
-    [db.Execute(score_query) for score_query in score_stmnts]
+    db.execute('DROP TABLE IF EXISTS _stump')
+    db.execute('DROP TABLE IF EXISTS _scores')
+    [db.execute(stump_query) for stump_query in stump_stmnts] 
+    [db.execute(score_query) for score_query in score_stmnts]
     col_names = db.GetColumnNames('_scores')
     col_types = db.GetColumnTypes('_scores')
     type_mapping = { long: 'i4', float: 'f8' }
     dtype = numpy.dtype([(name, type_mapping[type])
                          for name, type in zip(col_names, col_types)])
-    db.Execute('SELECT * from _scores')
-    return numpy.array(map(tuple, db.GetResultsAsList()), dtype)
+    res = db.execute('SELECT * from _scores')
+    return numpy.array(map(tuple, res), dtype)
 
 
 def create_perobject_class_table(classnames, rules):
@@ -114,12 +114,12 @@ def create_perobject_class_table(classnames, rules):
     class_col_defs = p.object_key_defs() + ', class VARCHAR (%d)'%(max([len(c) for c in classnames])+1)
     
     # Drop must be explicitly asked for Classifier.ScoreAll
-    db.Execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
-    db.Execute('CREATE TABLE `%s` (%s)'%(p.class_table, class_col_defs))
-    db.Execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(p.class_table, p.class_table, index_cols))
+    db.execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
+    db.execute('CREATE TABLE `%s` (%s)'%(p.class_table, class_col_defs))
+    db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(p.class_table, p.class_table, index_cols))
         
     case_expr = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n + 1, classnames[n]) for n in range(nClasses)]) + " END"
-    db.Execute('INSERT INTO `%s` (%s) SELECT %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, p.object_table))
+    db.execute('INSERT INTO `%s` (%s) SELECT %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, p.object_table))
     
 def PerImageCounts(weaklearners, filter=None, cb=None):
     '''
@@ -179,20 +179,18 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
                     where_clause = wc
                 else:
                     where_clause = '%s AND %s'%(wc, filter_clause)
-                db.Execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
-                           (imkeys, class_query, result_clauses, tables, where_clause, imkeys),
-                           silent=(idx > 10))
-                result += [db.GetResultsAsList()]
+                result += [db.execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
+                                      (imkeys, class_query, result_clauses, tables, where_clause, imkeys),
+                                      silent=(idx > 10))]
                 cb(min(1, idx/float(num_clauses)))
             return sum(result, [])
         else:
             if filter_clause is '':
-                db.Execute('SELECT %s, %s as class, %s FROM %s GROUP BY %s, class'%
-                           (imkeys, class_query, result_clauses, tables, imkeys))
+                return db.execute('SELECT %s, %s as class, %s FROM %s GROUP BY %s, class'%
+                                  (imkeys, class_query, result_clauses, tables, imkeys))
             else:
-                db.Execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
-                           (imkeys, class_query, result_clauses, tables, filter_clause, imkeys))
-            return db.GetResultsAsList()
+                return db.execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
+                                  (imkeys, class_query, result_clauses, tables, filter_clause, imkeys))
                                                                                   
     if p.table_id:
         imkeys = "%s, %s"%(objectify(p.table_id), objectify(p.image_id))

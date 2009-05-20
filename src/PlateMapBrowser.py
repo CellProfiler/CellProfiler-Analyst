@@ -55,18 +55,16 @@ class AwesomePMP(PlateMapPanel):
     def OnDClick(self, evt):
         if self.plate is not None:
             well = self.GetWellLabelAtCoord(evt.X, evt.Y)
-            db.Execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
-                       (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
-            imKeys = db.GetResultsAsList()
+            imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
+                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
             for imKey in imKeys:
                 ImageTools.ShowImage(imKey, p.image_channel_colors, parent=self)
 
     def OnRClick(self, evt):
         if self.plate is not None:
             well = self.GetWellLabelAtCoord(evt.X, evt.Y)
-            db.Execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
-                       (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
-            imKeys = db.GetResultsAsList()
+            imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
+                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
             self.ShowPopupMenu(imKeys, (evt.X,evt.Y))
                 
     def ShowPopupMenu(self, items, pos):
@@ -207,9 +205,9 @@ class PlateMapBrowser(wx.Frame):
         # Try to get explicit labels for all wells, otherwise the PMP
         # will generate labels automatically which MAY NOT MATCH labels
         # in the database, and therefore, showing images will not work. 
-        db.Execute('SELECT %s FROM %s WHERE %s!="" GROUP BY %s'%
-                   (p.well_id, p.image_table, p.well_id, p.well_id))
-        well_labels = [x[0] for x in db.GetResultsAsList()]
+        res = db.execute('SELECT %s FROM %s WHERE %s!="" GROUP BY %s'%
+                         (p.well_id, p.image_table, p.well_id, p.well_id))
+        well_labels = [x[0] for x in res]
         if len(well_labels) != len(data):
             well_labels = None
             
@@ -268,34 +266,27 @@ class PlateMapBrowser(wx.Frame):
             wellsAndVals = []
             if table == p.image_table:
                 if aggMethod == 'average':
-                    db.Execute('SELECT %s, AVG(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
-                               (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s, AVG(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
+                                              (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                 elif aggMethod == 'stdev':
-                    db.Execute('SELECT %s, STDDEV(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
-                               (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s, STDDEV(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
+                                              (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                 elif aggMethod == 'cv%':
-                    db.Execute('SELECT %s, STDDEV(%s)/AVG(%s)*100 FROM %s WHERE %s="%s" GROUP BY %s'%
-                               (p.well_id, measurement, measurement, table, p.plate_id, plate, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s, STDDEV(%s)/AVG(%s)*100 FROM %s WHERE %s="%s" GROUP BY %s'%
+                                              (p.well_id, measurement, measurement, table, p.plate_id, plate, p.well_id))
                 elif aggMethod == 'sum':
-                    db.Execute('SELECT %s, SUM(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
-                               (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s, SUM(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
+                                              (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                 elif aggMethod == 'median':
-                    db.Execute('SELECT %s, %s FROM %s WHERE %s="%s"'%
-                               (p.well_id, measurement, p.image_table, p.plate_id, plate))
-                    valsPerImage = db.GetResultsAsList()
+                    valsPerImage = db.execute('SELECT %s, %s FROM %s WHERE %s="%s"'%
+                                              (p.well_id, measurement, p.image_table, p.plate_id, plate))
                     wellsAndVals = computeMedians(valsPerImage)
                 elif aggMethod == 'min':
-                    db.Execute('SELECT %s, MIN(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
-                               (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s, MIN(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
+                                              (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                 elif aggMethod == 'max':
-                    db.Execute('SELECT %s, MAX(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
-                               (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s, MAX(%s) FROM %s WHERE %s="%s" GROUP BY %s'%
+                                              (p.well_id, measurement, table, p.plate_id, plate, p.well_id))
                     
                 data += [FormatPlateMapData(wellsAndVals)]
                 dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
@@ -317,48 +308,41 @@ class PlateMapBrowser(wx.Frame):
                                 p.image_table, p.plate_id, plate)
                 
                 if aggMethod == 'average':
-                    db.Execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, p.object_table, measurement, 
-                                p.image_table, p.object_table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, p.object_table, measurement, 
+                                               p.image_table, p.object_table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'stdev':
-                    db.Execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, p.object_table, measurement, 
-                                p.image_table, p.object_table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, p.object_table, measurement, 
+                                               p.image_table, p.object_table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'cv%':
-                    db.Execute('SELECT %s.%s, STDDEV(%s.%s)/AVG(%s.%s)*100 FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, p.object_table, measurement, p.object_table, measurement, 
-                                p.image_table, p.object_table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, STDDEV(%s.%s)/AVG(%s.%s)*100 FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, p.object_table, measurement, p.object_table, measurement, 
+                                               p.image_table, p.object_table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'sum':
-                    db.Execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, p.object_table, measurement, 
-                                p.image_table, p.object_table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, p.object_table, measurement, 
+                                               p.image_table, p.object_table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'median':
-                    db.Execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s'%(
-                                p.image_table, p.well_id, p.object_table, measurement,
-                                p.image_table, p.object_table,
-                                where))
-                    valsPerObject = db.GetResultsAsList()
+                    valsPerObject = db.execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s'%
+                                               (p.image_table, p.well_id, p.object_table, measurement,
+                                                p.image_table, p.object_table,
+                                                where))
                     wellsAndVals = computeMedians(valsPerObject)
                 elif aggMethod == 'min':
-                    db.Execute('SELECT %s.%s, MIN(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, p.object_table, measurement, 
-                                p.image_table, p.object_table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, MIN(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, p.object_table, measurement, 
+                                               p.image_table, p.object_table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'max':
-                    db.Execute('SELECT %s.%s, MAX(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, p.object_table, measurement, 
-                                p.image_table, p.object_table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, MAX(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, p.object_table, measurement, 
+                                               p.image_table, p.object_table,
+                                               where, p.image_table, p.well_id))
                     
                 data += [FormatPlateMapData(wellsAndVals)]
                 dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
@@ -376,35 +360,30 @@ class PlateMapBrowser(wx.Frame):
                                 p.image_table, p.plate_id, plate)
 
                 if aggMethod == 'average':
-                    db.Execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, table, measurement, 
-                                p.image_table, table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, AVG(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                            (p.image_table, p.well_id, table, measurement, 
+                                             p.image_table, table,
+                                             where, p.image_table, p.well_id))
                 elif aggMethod == 'stdev':
-                    db.Execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, table, measurement, 
-                                p.image_table, table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, STDDEV(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, table, measurement, 
+                                               p.image_table, table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'cv%':
-                    db.Execute('SELECT %s.%s, STDDEV(%s.%s)/AVG(%s.%s)*100 FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, table, measurement, table, measurement, 
-                                p.image_table, table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, STDDEV(%s.%s)/AVG(%s.%s)*100 FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, table, measurement, table, measurement, 
+                                               p.image_table, table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'sum':
-                    db.Execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%(
-                                p.image_table, p.well_id, table, measurement, 
-                                p.image_table, table,
-                                where, p.image_table, p.well_id))
-                    wellsAndVals = db.GetResultsAsList()
+                    wellsAndVals = db.execute('SELECT %s.%s, SUM(%s.%s) FROM %s, %s WHERE %s GROUP BY %s.%s'%
+                                              (p.image_table, p.well_id, table, measurement, 
+                                               p.image_table, table,
+                                               where, p.image_table, p.well_id))
                 elif aggMethod == 'median':
-                    db.Execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s'%(
-                                p.image_table, p.well_id, table, measurement,
-                                p.image_table, table,
-                                where))
-                    valsPerImage = db.GetResultsAsList()
+                    valsPerImage = db.execute('SELECT %s.%s, %s.%s FROM %s, %s WHERE %s'%
+                                              (p.image_table, p.well_id, table, measurement,
+                                               p.image_table, table,
+                                               where))
                     wellsAndVals = computeMedians(valsPerImage)
 
                 data += [FormatPlateMapData(wellsAndVals)]

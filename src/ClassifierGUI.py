@@ -1030,15 +1030,14 @@ def LoadProperties():
 
 
 #def WritePhenotypeCountsToDB(filename, data, colHeaders):
-#    db.Execute('DROP TABLE IF EXISTS _CPA_counts')
+#    db.execute('DROP TABLE IF EXISTS _CPA_counts')
 #    colDefs = ','.join([h+' INT' for h in colHeaders])
-#    db.Execute('CREATE TEMPORARY TABLE _CPA_counts (%s)'%(colDefs))
+#    db.execute('CREATE TEMPORARY TABLE _CPA_counts (%s)'%(colDefs))
 #    for row in data:
-#        db.Execute('INSERT INTO _CPA_counts (%s) VALUES (%s)'
+#        db.execute('INSERT INTO _CPA_counts (%s) VALUES (%s)'
 #                   %(', '.join(colHeaders),
 #                     ', '.join([str(int(i)) for i in row])))
-#    db.Execute('SELECT * FROM _CPA_counts')
-#    print db.GetResultsAsList()
+#    db.execute('SELECT * FROM _CPA_counts')
 
 
 # ----------------- Run -------------------

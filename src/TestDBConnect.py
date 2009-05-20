@@ -31,10 +31,9 @@ class TestDBConnect(unittest.TestCase):
         assert len(self.db.cursors)==1
         assert len(self.db.connectionInfo)==1
     
-    def test_Execute(self):
+    def test_execute(self):
         self.setup()
-        self.db.Execute('SELECT %s FROM %s'%(self.p.image_id,self.p.image_table))
-        self.db.GetResultsAsList()
+        self.db.execute('SELECT %s FROM %s'%(self.p.image_id,self.p.image_table))
         
     def test_GetObjectIDAtIndex(self):
         self.setup()
@@ -119,10 +118,9 @@ class TestDBConnect(unittest.TestCase):
         assert len(self.db.cursors)==1
         assert len(self.db.connectionInfo)==1
 
-    def test_Execute_local(self):
+    def test_execute_local(self):
         self.setup_local()
-        self.db.Execute('SELECT %s FROM %s'%(self.p.image_id,self.p.image_table))
-        self.db.GetResultsAsList()
+        self.db.execute('SELECT %s FROM %s'%(self.p.image_id,self.p.image_table))
         
     def test_GetObjectIDAtIndex_local(self):
         self.setup_local()

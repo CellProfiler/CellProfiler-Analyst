@@ -128,8 +128,7 @@ class Page2(wiz.WizardPageSimple):
     def OnPageLoaded(self, evt):
         self.listTables.Clear()
         db = DBConnect.getInstance()
-        db.Execute("SHOW TABLES")
-        r = db.GetResultsAsList()
+        r = db.execute("SHOW TABLES")
         perObTables = [t[0] for t in r if t[0][-10:].lower() == 'per_object']
         perImTables = [t[0] for t in r if t[0][-9:].lower() == 'per_image']
         for im in perImTables[::-1]:
@@ -302,42 +301,42 @@ class Page5(wiz.WizardPageSimple):
             db = DBConnect.getInstance()
             
             # Create the DB if it doesn't exist already
-            db.Execute('CREATE DATABASE IF NOT EXISTS '+self.Parent.outDB)
-            db.Execute('USE '+self.Parent.outDB)
+            db.execute('CREATE DATABASE IF NOT EXISTS '+self.Parent.outDB)
+            db.execute('USE '+self.Parent.outDB)
             
             # Create a table_index table which will be used to link the "TableNumber" fields to the original table names
-            db.Execute('CREATE TABLE IF NOT EXISTS '+prefix+'_table_index (TableNumber INT, PerImageTable varchar(60), PerObjectTable varchar(60), PRIMARY KEY (TableNumber))')
+            db.execute('CREATE TABLE IF NOT EXISTS '+prefix+'_table_index (TableNumber INT, PerImageTable varchar(60), PerObjectTable varchar(60), PRIMARY KEY (TableNumber))')
             for i in xrange(nTables):
-                db.Execute('INSERT INTO '+prefix+'_table_index (TableNumber, PerImageTable, PerObjectTable) VALUES('+str(i)+', "'+self.Parent.perImageTables[i]+'", "'+self.Parent.perObjectTables[i]+'")')
+                db.execute('INSERT INTO '+prefix+'_table_index (TableNumber, PerImageTable, PerObjectTable) VALUES('+str(i)+', "'+self.Parent.perImageTables[i]+'", "'+self.Parent.perObjectTables[i]+'")')
             
             # Create the per_image tables
-            db.Execute('CREATE TABLE IF NOT EXISTS '+self.Parent.outPerImage+' LIKE '+self.Parent.inDB+'.'+self.Parent.perImageTables[0])
-            db.Execute('ALTER TABLE '+self.Parent.outPerImage+' DROP PRIMARY KEY')
-            db.Execute('ALTER TABLE '+self.Parent.outPerImage+' ADD COLUMN TableNumber INT')
-            db.Execute('ALTER TABLE '+self.Parent.outPerImage+' ADD PRIMARY KEY (TableNumber, ImageNumber)')
+            db.execute('CREATE TABLE IF NOT EXISTS '+self.Parent.outPerImage+' LIKE '+self.Parent.inDB+'.'+self.Parent.perImageTables[0])
+            db.execute('ALTER TABLE '+self.Parent.outPerImage+' DROP PRIMARY KEY')
+            db.execute('ALTER TABLE '+self.Parent.outPerImage+' ADD COLUMN TableNumber INT')
+            db.execute('ALTER TABLE '+self.Parent.outPerImage+' ADD PRIMARY KEY (TableNumber, ImageNumber)')
             
             dlg.Update(0, 'Creating "'+self.Parent.outPerImage+'": 0%')
             for i in xrange(nTables):
-                db.Execute('INSERT INTO '+self.Parent.outPerImage+' SELECT *,'+str(i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perImageTables[i])
+                db.execute('INSERT INTO '+self.Parent.outPerImage+' SELECT *,'+str(i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perImageTables[i])
                 percent = 100*i/nTables
                 dlg.Update(percent, '"Creating "'+self.Parent.outPerImage+'": '+str(percent)+'%')
-            db.Execute('ALTER TABLE '+self.Parent.outPerImage+' MODIFY COLUMN TableNumber INT FIRST')
+            db.execute('ALTER TABLE '+self.Parent.outPerImage+' MODIFY COLUMN TableNumber INT FIRST')
             
             # Create the per_object tables
-            db.Execute('CREATE TABLE IF NOT EXISTS '+self.Parent.outPerObject+' LIKE '+self.Parent.inDB+'.'+self.Parent.perObjectTables[0])
-            db.Execute('ALTER TABLE '+self.Parent.outPerObject+' DROP PRIMARY KEY')
-            db.Execute('ALTER TABLE '+self.Parent.outPerObject+' ADD COLUMN TableNumber INT')
-            db.Execute('ALTER TABLE '+self.Parent.outPerObject+' ADD PRIMARY KEY (TableNumber, ImageNumber, ObjectNumber)')
+            db.execute('CREATE TABLE IF NOT EXISTS '+self.Parent.outPerObject+' LIKE '+self.Parent.inDB+'.'+self.Parent.perObjectTables[0])
+            db.execute('ALTER TABLE '+self.Parent.outPerObject+' DROP PRIMARY KEY')
+            db.execute('ALTER TABLE '+self.Parent.outPerObject+' ADD COLUMN TableNumber INT')
+            db.execute('ALTER TABLE '+self.Parent.outPerObject+' ADD PRIMARY KEY (TableNumber, ImageNumber, ObjectNumber)')
             
             dlg.Update(0, 'Creating "'+self.Parent.outPerObject+'": 0%')
             for i in xrange(nTables):
-                db.Execute('INSERT INTO '+self.Parent.outPerObject+' SELECT *,'+str(i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perObjectTables[i])
+                db.execute('INSERT INTO '+self.Parent.outPerObject+' SELECT *,'+str(i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perObjectTables[i])
                 percent = 100*i/nTables
                 dlg.Update(percent, 'Creating table "'+self.Parent.outPerObject+'": '+str(percent)+'%')
-            db.Execute('ALTER TABLE '+self.Parent.outPerObject+' MODIFY COLUMN TableNumber INT FIRST')
+            db.execute('ALTER TABLE '+self.Parent.outPerObject+' MODIFY COLUMN TableNumber INT FIRST')
             
             # Log the newly created table names in CPA_Merged_Tables.merged
-            db.Execute('INSERT INTO CPA_Merged_Tables.merged (per_image, per_object, table_index) VALUES("'+self.Parent.outDB+'.'+self.Parent.outPerImage+'", "'+self.Parent.outDB+'.'+self.Parent.outPerObject+'", "'+self.Parent.outDB+'.'+prefix+'_table_index")' )
+            db.execute('INSERT INTO CPA_Merged_Tables.merged (per_image, per_object, table_index) VALUES("'+self.Parent.outDB+'.'+self.Parent.outPerImage+'", "'+self.Parent.outDB+'.'+self.Parent.outPerObject+'", "'+self.Parent.outDB+'.'+prefix+'_table_index")' )
             
             dlg.Destroy()
             

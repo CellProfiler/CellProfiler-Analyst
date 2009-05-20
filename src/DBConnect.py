@@ -212,7 +212,11 @@ class DBConnect(Singleton):
             print 'WARNING <DBConnect.CloseConnection>: No connection ID "%s" found.' %(connID)
 
 
-    def Execute(self, query, args=None, silent=False):
+    def execute(self, query, args=None, silent=False):
+        '''
+        Executes the given query using the connection associated with the 
+        current thread, then returns the results as a list of rows.
+        '''
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
         if not connID in self.connections.keys():
@@ -237,6 +241,7 @@ class DBConnect(Singleton):
                 self.cursors[connID].execute(query)
             else:
                 self.cursors[connID].execute(query, args=args)
+            return self._get_results_as_list()
         except MySQLdb.Error, e:
             raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
         except KeyError, e:
@@ -268,8 +273,11 @@ class DBConnect(Singleton):
             raise DBException, 'No such connection: "%s".\n' %(connID)
         
         
-    def GetResultsAsList(self):
-        ''' Returns a list of results retrieved from the last execute query. '''
+    def _get_results_as_list(self):
+        '''
+        Returns a list of results retrieved from the last execute query.
+        NOTE: this function automatically called by execute.
+        '''
         connID = threading.currentThread().getName()
         r = self.GetNextResult()
         l = []
@@ -293,14 +301,12 @@ class DBConnect(Singleton):
         imNum = imKey[-1]
         if p.table_id:
             tblNum = imKey[0]
-            self.Execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s LIMIT %s,1'
-                       %(p.object_id, p.object_table, p.table_id, tblNum, p.image_id, imNum, index-1))
-            obNum = self.GetResultsAsList()
+            obNum = self.execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s LIMIT %s,1'
+                                 %(p.object_id, p.object_table, p.table_id, tblNum, p.image_id, imNum, index-1))
             obNum = obNum[0][0]
         else:
-            self.Execute('SELECT %s FROM %s WHERE %s=%s LIMIT %s,1'
-                       %(p.object_id, p.object_table, p.image_id, imNum, index-1))
-            obNum = self.GetResultsAsList()
+            obNum = self.execute('SELECT %s FROM %s WHERE %s=%s LIMIT %s,1'
+                                 %(p.object_id, p.object_table, p.image_id, imNum, index-1))
             obNum = obNum[0][0]
         return tuple(list(imKey)+[int(obNum)])
     
@@ -317,22 +323,19 @@ class DBConnect(Singleton):
         if p.table_id:
             select += ' AND '+p.object_table+'.'+p.table_id+' = '+p.image_table+'.'+p.table_id
         select += ' GROUP BY '+UniqueImageClause(p.object_table)
-        self.Execute(select)
-        return self.GetResultsAsList()
+        return self.execute(select)
     
     
     def GetAllImageKeys(self):
         ''' Returns a list of all image keys in the image_table. '''
         select = "SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause()
-        self.Execute(select)
-        return self.GetResultsAsList()
+        return self.execute(select)
     
     
     def GetObjectCoords(self, obKey):
         ''' Returns the specified object's x, y coordinates in an image. '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
-        self.Execute(select)
-        res = self.GetResultsAsList()
+        res = self.execute(select)
         assert len(res)>0, "Couldn't find object coordinates for object key %s." %(obKey,) 
         assert len(res)==1, "Database unexpectedly returned %s sets of object coordinates instead of 1." % len(res)
         return res[0]
@@ -341,8 +344,7 @@ class DBConnect(Singleton):
     def GetAllObjectCoordsFromImage(self, imKey):
         ''' Returns a list of lists x, y coordinates for all objects in the given image. '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imKey])
-        self.Execute(select)
-        return self.GetResultsAsList()
+        return self.execute(select)
 
 
     def GetObjectNear(self, imkey, x, y):
@@ -351,8 +353,7 @@ class DBConnect(Singleton):
         delta_y = '(%s - %d)'%(p.cell_y_loc, y)
         dist_clause = '%s*%s + %s*%s'%(delta_x, delta_x, delta_y, delta_y)
         select = 'SELECT '+UniqueObjectClause()+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imkey])+' ORDER BY ' +dist_clause+' LIMIT 1'
-        self.Execute(select)
-        res = self.GetResultsAsList()
+        res = self.execute(select)
         if len(res) == 0:
             return None
         else:
@@ -372,11 +373,7 @@ class DBConnect(Singleton):
             select += p.image_channel_paths[i]+', '+p.image_channel_files[i]+', '
         select = select[:-2] # chop off the last ', '
         select += ' FROM '+p.image_table+' WHERE '+GetWhereClauseForImages([imKey])
-        
-        self.Execute(select)
-        imPaths = self.GetNextResult()
-        assert self.GetNextResult() == None, "Query unexpectedly returned more than one result!\n\t"+select
-        
+        imPaths = self.execute(select)[0]
         # parse filenames out of results
         filenames = []
         for i in xrange(0,len(p.image_channel_paths*2),2):
@@ -390,12 +387,12 @@ class DBConnect(Singleton):
         groupMaps = {}
         key_size = p.table_id and 2 or 1
         for group, query in p._groups.items():
+            res = []
             try:
-                self.Execute(query)
+                res = self.execute(query)
             except Exception:
                 raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.'%(group)
                 continue
-            res = self.GetResultsAsList()
             groupColNames[group] = self.GetResultColumnNames()[key_size:]
             d = {}
             for row in res:
@@ -407,8 +404,7 @@ class DBConnect(Singleton):
     def GetFilteredImages(self, filter):
         ''' Returns a list of imKeys from the given filter. '''
         try:
-            self.Execute(p._filters[filter])
-            return self.GetResultsAsList()
+            return self.execute(p._filters[filter])
         except Exception, e:
             print e
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
@@ -417,15 +413,14 @@ class DBConnect(Singleton):
     def GetColumnNames(self, table):
         '''  Returns a list of the column names for the specified table. '''
         # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
-        self.Execute('SELECT * FROM %s LIMIT 1'%(table))
-        self.GetResultsAsList()        # ditch the results
+        self.execute('SELECT * FROM %s LIMIT 1'%(table))
         return self.GetResultColumnNames()   # return the column names
             
 
     def GetColumnTypes(self, table):
         ''' Returns the column types for the given table. '''
-        self.Execute('SELECT * from %s LIMIT 1'%(table), silent=True)
-        return [type(x) for x in self.GetResultsAsList()[0]]
+        res = self.execute('SELECT * from %s LIMIT 1'%(table), silent=True)
+        return [type(x) for x in res[0]]
 
 
     def GetColnamesForClassifier(self):
@@ -467,8 +462,7 @@ class DBConnect(Singleton):
         if (self.classifierColNames == None):
             self.GetColnamesForClassifier()
         query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
-        self.Execute(query, silent=True)
-        data = self.GetResultsAsList()
+        data = self.execute(query, silent=True)
         if len(data) == 0:
             print 'No data for obKey:',obKey
         return numpy.array(data[0])
@@ -478,8 +472,8 @@ class DBConnect(Singleton):
         '''
         Returns the names of each plate in the per-image table.
         '''
-        self.Execute('SELECT %s FROM %s GROUP BY %s'%(p.plate_id, p.image_table, p.plate_id))
-        return [str(l[0]) for l in self.GetResultsAsList()]
+        res = self.execute('SELECT %s FROM %s GROUP BY %s'%(p.plate_id, p.image_table, p.plate_id))
+        return [str(l[0]) for l in res]
     
     
     def InferColTypesFromData(self, reader, nCols):
@@ -544,8 +538,8 @@ class DBConnect(Singleton):
         f.close()
         
         print 'Creating table:', p.image_table
-        self.Execute('DROP TABLE IF EXISTS %s'%(p.image_table))
-        self.Execute(statement)
+        self.execute('DROP TABLE IF EXISTS %s'%(p.image_table))
+        self.execute(statement)
         
         # CREATE THE OBJECT TABLE
         # For the object table we assume that all values are type FLOAT
@@ -562,8 +556,8 @@ class DBConnect(Singleton):
         f.close()
     
         print 'Creating table:', p.object_table
-        self.Execute('DROP TABLE IF EXISTS '+p.object_table)
-        self.Execute(statement)
+        self.execute('DROP TABLE IF EXISTS '+p.object_table)
+        self.execute(statement)
         
         # POPULATE THE IMAGE TABLE
         f = open(p.image_csv_file, 'U')
@@ -571,7 +565,7 @@ class DBConnect(Singleton):
         row = r.next() # skip the headers
         row = r.next()
         while row: 
-            self.Execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
+            self.execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                          silent=True)
             try:
                 row = r.next()
@@ -585,7 +579,7 @@ class DBConnect(Singleton):
         row = r.next() # skip the headers
         row = r.next()
         while row: 
-            self.Execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
+            self.execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                          silent=True)
             try:
                 row = r.next()
@@ -595,11 +589,12 @@ class DBConnect(Singleton):
         self.Commit()
 
     def table_exists(self, name):
+        res = []
         if p.db_type.lower() == 'mysql':
-            self.Execute("SELECT table_name FROM information_schema.tables WHERE table_name='%s' AND table_schema='%s'"%(name, p.db_name))
+            res = self.execute("SELECT table_name FROM information_schema.tables WHERE table_name='%s' AND table_schema='%s'"%(name, p.db_name))
         else:
-            self.Execute("SELECT name FROM sqlite_master WHERE type='table' and name='%s'"%(name))
-        return len(self.GetResultsAsList()) > 0
+            res = self.execute("SELECT name FROM sqlite_master WHERE type='table' and name='%s'"%(name))
+        return len(res) > 0
 
 
     def CreateTempTableFromCSV(self, filename, tablename):
@@ -611,11 +606,11 @@ class DBConnect(Singleton):
         import csv
         f = open(filename, 'U')
         reader = csv.reader(f)#, quoting=csv.QUOTE_NONE)
-        self.Execute('DROP TABLE IF EXISTS %s'%(tablename))
+        self.execute('DROP TABLE IF EXISTS %s'%(tablename))
         colnames = reader.next()
         colTypes = self.InferColTypesFromData(reader, len(colnames))
         coldefs = ', '.join([lbl+' '+colTypes[i] for i, lbl in enumerate(colnames)])
-        self.Execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
+        self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
         f = open(filename, 'U')
         reader = csv.reader(f)#, quoting=csv.QUOTE_NONE)
         print 'Populating table %s...'%(tablename)
@@ -623,7 +618,7 @@ class DBConnect(Singleton):
         row = reader.next()
         while row:
             vals = ', '.join(['"'+val+'"' for val in row])
-            self.Execute('INSERT INTO %s (%s) VALUES (%s)'%(
+            self.execute('INSERT INTO %s (%s) VALUES (%s)'%(
                           tablename, ', '.join(colnames), vals), silent=True)
             try:
                 row = reader.next()
@@ -653,10 +648,8 @@ class DBConnect(Singleton):
             table_clause = table_or_query
 
         if range is None:
-            self.Execute("select min(%s), max(%s) from %s" %
-                         (column, column, table_clause))
-
-            data = self.GetResultsAsList()
+            data = self.execute("select min(%s), max(%s) from %s" %
+                                (column, column, table_clause))
             min = data[0][0]
             max = data[0][1]
         else:
@@ -665,11 +658,11 @@ class DBConnect(Singleton):
         clause = ("round(%d * (%s - (%f)) / (%f - (%f)))" % 
                   (nbins, column, min, max, min))
         h = numpy.zeros(nbins)
-        self.Execute("select %s as bin, count(*) from %s "
-                     "where %s <= %d "
-                     "group by %s order by bin" % (clause, table_clause,
-                                                   clause, nbins, clause))
-        for bin, count in self.GetResultsAsList():
+        res = self.execute("select %s as bin, count(*) from %s "
+                           "where %s <= %d "
+                           "group by %s order by bin" % (clause, table_clause,
+                                                         clause, nbins, clause))
+        for bin, count in res:
             if bin == nbins:
                 bin -= 1
             h[bin] = count
@@ -692,17 +685,16 @@ if __name__ == "__main__":
     dm.PopulateModel()
     
     # TEST CreateTempTableFromCSV
-#    table = '_blah'
-#    db.CreateTempTableFromCSV('../properties/Per_Image_Counts.csv', table)
-#    db.Execute('SELECT * from %s LIMIT 10'%(table))
-#    print db.GetResultsAsList()
-#
-#    measurements = db.GetColumnNames(table)
-#    types = db.GetColumnTypes(table)
-#    print [m for m,t in zip(measurements, types) if t in[float, int, long]]
-#
-#    print db.GetColumnNames(table)
-#    print db.GetColumnTypes(table)
+    table = '_blah'
+    db.CreateTempTableFromCSV('../test_data/test_per_image.txt', table)
+    print db.execute('SELECT * from %s LIMIT 10'%(table))
+
+    measurements = db.GetColumnNames(table)
+    types = db.GetColumnTypes(table)
+    print [m for m,t in zip(measurements, types) if t in[float, int, long]]
+
+    print db.GetColumnNames(table)
+    print db.GetColumnTypes(table)
 
 
     # TEST reconnect
