@@ -1,5 +1,5 @@
 from random import randint
-import numpy
+import numpy as np
 from DBConnect import *
 from Singleton import *
 from Properties import Properties
@@ -50,7 +50,7 @@ class DataModel(Singleton):
         self.keylist = list(self.data.keys())
 
         # Build a cumulative sum array to use for generating random objects quickly
-        self.cumSums = numpy.zeros(len(self.data)+1, dtype='int')
+        self.cumSums = np.zeros(len(self.data)+1, dtype='int')
         for i, imKey in enumerate(self.keylist):
             self.cumSums[i+1] = self.cumSums[i]+self.data[imKey]
 
@@ -65,6 +65,29 @@ class DataModel(Singleton):
         self.cumSums = []
         self.obCount = 0
         
+        
+    # =================================================================================
+    def CheckTables(self):
+        '''
+        Queries the DB to check that the per_image and per_object
+        tables agree on image numbers.
+        '''
+        from time import time
+        t = time()
+        # Check for index on image_table
+        db.Execute('SHOW INDEX FROM %s'%(p.object_table))
+        db.GetResultsAsList()
+        # Check for index on object_table
+
+        # Check for orphaned objects
+        db.Execute('SELECT %s FROM %s LEFT JOIN %s USING (%s) WHERE %s.%s IS NULL'%
+                   (UniqueImageClause(p.object_table),
+                    p.object_table, p.image_table, p.image_id,
+                    p.image_table, p.image_id))
+        print db.GetResultsAsList()
+            
+    # =================================================================================
+        
     
     def GetRandomObject(self):
         '''
@@ -74,7 +97,7 @@ class DataModel(Singleton):
         need not necessarily be in sorted order.
         '''
         obIdx = randint(1, self.obCount)
-        imIdx = numpy.searchsorted(self.cumSums, obIdx, 'left')
+        imIdx = np.searchsorted(self.cumSums, obIdx, 'left')
         # SUBTLETY: images which have zero objects will appear as repeated
         #    sums in the cumulative array, so we must pick the first index
         #    of any repeated sum, otherwise we are picking an image with no
@@ -99,13 +122,13 @@ class DataModel(Singleton):
         elif imKeys == []:
             return []
         else:
-            sums = numpy.cumsum([self.data[imKey] for imKey in imKeys])
+            sums = np.cumsum([self.data[imKey] for imKey in imKeys])
             if sums[-1] < 1:
                 return []
             obs = []
             for i in xrange(N):
                 obIdx = randint(1, sums[-1])
-                index = numpy.searchsorted(sums, obIdx, 'left')
+                index = np.searchsorted(sums, obIdx, 'left')
                 if index != 0:
                     while sums[index] == sums[index-1]:
                         index -= 1
@@ -166,9 +189,9 @@ class DataModel(Singleton):
     def SumToGroup(self, imdata, group):
         '''
         Takes image data of the form:
-           imdata = { imKey : numpy.array(values), ... }
+           imdata = { imKey : np.array(values), ... }
         and sums the data into the specified group to return:
-           groupdata = { groupKey : numpy.array(values), ... }
+           groupdata = { groupKey : np.array(values), ... }
         '''
         groupData = {}
         for imKey, vals in imdata.items():
@@ -183,9 +206,12 @@ class DataModel(Singleton):
     
     
     def GetImagesInGroup(self, group, groupKey):
-        ''' Returns all imKeys in a particular group. '''
+        '''
+        Returns all imKeys in a particular group. 
+        Blank values in the groupKey match anything.
+        '''
         def matches(key1, key2):
-            return all([(a==b or b=='**ANY**') for a,b in zip(key1,key2)])
+            return all([(a==b or b=='') for a,b in zip(key1,key2)])
         return [imKey for imKey,gKey in self.groupMaps[group].items() if matches(gKey,groupKey)]
     
     
@@ -201,15 +227,19 @@ class DataModel(Singleton):
 
 if __name__ == "__main__":
     p = Properties.getInstance()
-    p.LoadFile('../properties/nirht_test.properties')
+#    p.LoadFile('../properties/nirht.properties')
+    p.LoadFile('../properties/nirht_testdups.properties')
 #    p.LoadFile('../properties/2007_10_19_Gilliland_LeukemiaScreens02_12_Jan_09_Combo.properties')
+#    p.LoadFile('../properties/2007_11_07_Hepatotoxicity_1_2008_10_23_GHAIII_Day9_8Fb_repeat_LoG_Classifier2.0.properties')
     db = DBConnect.getInstance()
     db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     d = DataModel.getInstance()
     d.PopulateModel()
     
-    for i in range(100):
-        print d.GetRandomObject()
+    d.CheckTables()
+    
+#    for i in range(100):
+#        print d.GetRandomObject()
 #    imKeys = d.GetImagesInGroup('Gene', d.groupMaps['Gene'][(1,)])
 #    print len(imKeys)
 #    for im in imKeys:

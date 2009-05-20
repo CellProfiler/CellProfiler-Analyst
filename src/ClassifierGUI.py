@@ -734,7 +734,7 @@ class ClassifierGUI(wx.Frame):
                 self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
             except StopCalculating:
                 dlg.Destroy()
-                self.SetStatusText('Scoring cancelled.')      
+                self.SetStatusText('Scoring canceled.')      
                 return
                 
             dlg.Destroy()
@@ -869,9 +869,9 @@ class ClassifierGUI(wx.Frame):
     
     def SetupFetchFromGroupSizer(self, group):
         '''
-        This sizer displays text fields for inputting each element of a
+        This sizer displays input fields for inputting each element of a
         particular group's key. A group with 2 columns: Gene, and Well,
-        would be represented by two text boxes.
+        would be represented by two combo boxes.
         '''
         if group=='image':
             fieldNames = ['image']
@@ -892,28 +892,25 @@ class ClassifierGUI(wx.Frame):
         self.fetchFromGroupSizer.Clear(True)
         for i, field in enumerate(fieldNames):
             label = wx.StaticText(self, wx.NewId(), field+':')
-            validVals = [str(col[i]) for col in validKeys]
+            # Values to be sorted BEFORE being converted to str
+            validVals = list(set([col[i] for col in validKeys]))
             validVals.sort()
-            if fieldTypes[i]==int or fieldTypes[i]==long or fieldTypes[i]==float:
-                if group=='image':
-                    fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
-                                           choices=validVals)
-                else:
-                    fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
-                                           choices=['**ANY**']+validVals)
-                    validVals = ['**ANY**']+validVals
-                # Create and bind to a text Validator
-                def ValidateGroupField(evt, validVals=validVals):
-                    ctrl = evt.GetEventObject()
-                    if ctrl.GetValue() in validVals:
-                        ctrl.SetForegroundColour('#000001')
-                    else:
-                        ctrl.SetForegroundColour('#FF0000')
-                self.groupFieldValidators += [ValidateGroupField]
-                fieldInp.Bind(wx.EVT_TEXT, self.groupFieldValidators[-1])
+            validVals = [str(col) for col in validVals]
+            if group=='image' or fieldTypes[i]==int or fieldTypes[i]==long:
+                fieldInp = wx.TextCtrl(self, -1, value=validVals[0], size=(80,-1))
             else:
                 fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
-                                       choices=['**ANY**']+validVals, style=wx.CB_READONLY)
+                                       choices=['']+validVals)
+                validVals = ['']+validVals
+            # Create and bind to a text Validator
+            def ValidateGroupField(evt, validVals=validVals):
+                ctrl = evt.GetEventObject()
+                if ctrl.GetValue() in validVals:
+                    ctrl.SetForegroundColour('#000001')
+                else:
+                    ctrl.SetForegroundColour('#FF0000')
+            self.groupFieldValidators += [ValidateGroupField]
+            fieldInp.Bind(wx.EVT_TEXT, self.groupFieldValidators[-1])
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)
@@ -937,6 +934,12 @@ class ClassifierGUI(wx.Frame):
         groupKey = []
         for input in self.groupInputs:
             groupKey += [input.GetValue()]
+            # Try to convert the type to long or float if possible
+            # TODO: Cludgy: we should match the key type in the DataModel
+            try: groupKey[-1] = float(groupKey[-1])
+            except: pass
+            try: groupKey[-1] = long(groupKey[-1])
+            except: pass
         return tuple(groupKey)
     
     
