@@ -86,13 +86,13 @@ def UniqueImageClause(table_name=None):
 
 
 
-#
-# TODO: Rename _Execute, _Connect, _GetNextResult, etc
-#       If users can use non-DB tables then all DB specific functions should be
-#       completely abstracted.
+
 class DBConnect(Singleton):
     '''
-    DBConnect abstracts calls to MySQLdb.
+    DBConnect abstracts calls to MySQLdb. It is a singleton that maintains 
+    unique connections for each thread that uses it.  These connections are 
+    automatically created on "execute", and results are automatically returned
+    as a list.
     '''
     def __init__(self):
         self.classifierColNames = None
