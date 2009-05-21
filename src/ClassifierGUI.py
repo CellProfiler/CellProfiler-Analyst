@@ -931,7 +931,11 @@ class ClassifierGUI(wx.Frame):
             fieldTypes = [int for input in self.groupInputs]
         groupKey = []
         for input, ftype in zip(self.groupInputs, fieldTypes):
-            groupKey += [ftype(input.GetValue())]
+            val = input.GetValue()
+            # if the value is blank, don't bother typing it, it is a wildcard
+            if val != '':
+                val = ftype(val)
+            groupKey += [val]
         return tuple(groupKey)
     
     
