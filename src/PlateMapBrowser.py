@@ -424,7 +424,7 @@ def FormatPlateMapData(wellsAndVals):
     returns a properly shaped numpy array of the given values with NaNs
             filling empty slots.  
     '''
-    #TODO: well naming format may have to go in props file
+    #TODO: well naming format (A##/123..) may have to go in props file
     format = 'A01'
     if p.plate_type == '384': shape = (16,24)
     elif p.plate_type == '96': shape = (8,12)
