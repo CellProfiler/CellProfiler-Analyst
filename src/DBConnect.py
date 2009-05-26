@@ -49,9 +49,9 @@ def GetWhereClauseForObjects(obKeys):
     Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => 'WHERE 
     ImageNumber=1 AND ObjectNumber=3 OR ImageNumber=2 AND ObjectNumber=4'
     '''
-    return " OR ".join([" AND ".join([col + '=' + str(value)
+    return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
                                       for col, value in zip(object_key_columns(), obKey)])
-                        for obKey in obKeys])
+                        for obKey in obKeys]) + ')'
 
 
 def GetWhereClauseForImages(imKeys):
@@ -60,9 +60,9 @@ def GetWhereClauseForImages(imKeys):
     Example: GetWhereClauseForImages([(3,), (4,)]) => 'WHERE
     ImageNumber=3 OR ImageNumber=4'
     '''
-    return " OR ".join([" AND ".join([col + '=' + str(value)
+    return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
                                       for col, value in zip(image_key_columns(), imKey)])
-                        for imKey in imKeys])
+                        for imKey in imKeys]) + ')'
 
 
 def UniqueObjectClause(table=None):
