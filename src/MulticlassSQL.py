@@ -1,9 +1,9 @@
 import numpy
-import DBConnect
+from DBConnect import *
 from Properties import Properties
 from DataModel import DataModel
 
-db = DBConnect.DBConnect.getInstance()
+db = DBConnect.getInstance()
 p = Properties.getInstance()
 dm = DataModel.getInstance()
 
@@ -42,8 +42,8 @@ def translate(weaklearners):
 def CreateFilterTables():
     ''' Creates a temporary with image keys for each filter. '''
     
-    key_col_defs = ",".join([col + " INT" for col in DBConnect.image_key_columns()])
-    index_cols = ",".join(DBConnect.image_key_columns())
+    key_col_defs = ",".join([col + " INT" for col in image_key_columns()])
+    index_cols = ",".join(image_key_columns())
 
     for name, query in p._filters.items():
         db.execute('DROP TABLE IF EXISTS `%s`'%(filter_table_prefix+name))
@@ -72,7 +72,7 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     class_query = translate(weaklearners)
 
     if filterKeys != []:
-        isImKey = len(filterKeys[0]) == len(DBConnect.image_key_columns())
+        isImKey = len(filterKeys[0]) == len(image_key_columns())
         if isImKey:
             whereclause = "AND " + GetWhereClauseForImages(filterKeys)
         else:
@@ -189,7 +189,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
                 return db.execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
                                   (imkeys, class_query, result_clauses, tables, filter_clause, imkeys))
     
-    imkeys = ",".join(objectify(id) for id in DBConnect.image_key_columns())
+    imkeys = ",".join(objectify(id) for id in image_key_columns())
 
     if p.area_scoring_column is None:
         result_clauses = 'COUNT(*)'
@@ -200,7 +200,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
     tables = p.object_table
     if filter is not None:
         tables += ', ' + filter_table_prefix+filter
-        filter_clause = " AND ".join(["%s=`%s`.%s "%(objectify(id), filter_table_prefix+filter, id) for id in DBConnect.image_key_columns()])
+        filter_clause = " AND ".join(["%s=`%s`.%s "%(objectify(id), filter_table_prefix+filter, id) for id in image_key_columns()])
 
     class_query = translate(weaklearners)
 
@@ -209,7 +209,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
 
     # convert to dictionary
     counts = {}
-    keylen = 1 + len(DBConnect.image_key_columns()) # includes class
+    keylen = 1 + len(image_key_columns()) # includes class
 
     for r in results:
         counts[r[:keylen]] = r[keylen:]
