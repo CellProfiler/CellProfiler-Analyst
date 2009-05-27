@@ -34,6 +34,8 @@ class DataModel(Singleton):
             print "Error: No database connection!"
             return
         
+        db.CheckTables()
+        
         # Initialize per-image object counts to zero
         imKeys = db.GetAllImageKeys()
         for key in imKeys:
@@ -66,48 +68,6 @@ class DataModel(Singleton):
         self.obCount = 0
         
         
-    # =================================================================================
-    def CheckTables(self):
-        '''
-        Queries the DB to check that the per_image and per_object
-        tables agree on image numbers.
-        '''
-        # Check for index on image_table
-        res = db.execute('SHOW INDEX FROM %s'%(p.image_table))
-        idx_cols = [r[4] for r in res]
-        for col in image_key_columns():
-            if col not in idx_cols:
-                print 'Column "%s" is not indexed in table "%s"'%(col, p.image_table)
-                
-        # Check for index on object_table
-        res = db.execute('SHOW INDEX FROM %s'%(p.object_table))
-        idx_cols = [r[4] for r in res]
-        for col in object_key_columns():
-            if col not in idx_cols:
-                print 'Column "%s" is not indexed in table "%s"'%(col, p.object_table)
-        
-        # Check for orphaned objects
-        res = db.execute('SELECT %s FROM %s LEFT JOIN %s USING (%s) WHERE %s.%s IS NULL'%
-                         (UniqueImageClause(p.object_table), p.object_table, p.image_table, p.image_id, p.image_table, p.image_id))
-        if any(res):
-            print 'Objects were found in "%s" that had no corresponding image key in "%s"'%(p.object_table, p.image_table)
-            
-        # Check for unlabeled wells
-        if p.well_id:
-            res = db.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
-                             (UniqueImageClause(), p.image_table, p.well_id, p.well_id))        
-            if any(res):
-                print 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id)
-        
-        # Check for unlabeld plates
-        if p.plate_id:
-            res = db.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
-                             (UniqueImageClause(), p.image_table, p.plate_id, p.plate_id))        
-            if any(res):
-                print 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id)
-    # =================================================================================
-        
-    
     def GetRandomObject(self):
         '''
         Returns a random object key

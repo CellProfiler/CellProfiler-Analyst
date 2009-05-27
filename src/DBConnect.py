@@ -621,9 +621,46 @@ class DBConnect(Singleton):
         self.Commit()
         f.close()
         return True
-#        except:
-#            raise Exception, 'Failed to create temporary table %s from %s'%(tablename, filename)
-#            f.close()
+    
+    
+    def CheckTables(self):
+        '''
+        Queries the DB to check that the per_image and per_object
+        tables agree on image numbers.
+        '''
+        # Check for index on image_table
+        res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
+        idx_cols = [r[4] for r in res]
+        for col in image_key_columns():
+            assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.image_table)
+                
+        # Check for index on object_table
+        res = self.execute('SHOW INDEX FROM %s'%(p.object_table))
+        idx_cols = [r[4] for r in res]
+        for col in object_key_columns():
+            assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.object_table)
+                
+        # Explicitly check for TableNumber in case it was not specified in props file
+        if ('TableNumber' not in object_key_columns()) and ('TableNumber' in idx_cols):
+            raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
+        
+        # Check for orphaned objects
+        res = self.execute('SELECT %s FROM %s LEFT JOIN %s USING (%s) WHERE %s.%s IS NULL'%
+                           (UniqueImageClause(p.object_table), p.object_table, p.image_table, p.image_id, p.image_table, p.image_id))
+        assert not any(res), 'Objects were found in "%s" that had no corresponding image key in "%s"'%(p.object_table, p.image_table)
+            
+        # Check for unlabeled wells
+        if p.well_id:
+            res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
+                               (UniqueImageClause(), p.image_table, p.well_id, p.well_id))        
+            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id)
+        
+        # Check for unlabeled plates
+        if p.plate_id:
+            res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
+                               (UniqueImageClause(), p.image_table, p.plate_id, p.plate_id))        
+            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id)
+    
 
     def histogram(self, column, table_or_query, nbins, range=None):
         """
