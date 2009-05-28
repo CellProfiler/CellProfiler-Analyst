@@ -54,6 +54,7 @@ class ImageTile(ImagePanel):
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_ENTER_WINDOW, self.OnMouseOver)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseOut)
@@ -145,6 +146,10 @@ class ImageTile(ImagePanel):
             self.Select()
         elif evt.ShiftDown():
             self.ToggleSelect()
+
+
+    def OnLeftUp(self, evt):
+        inMotion = False
             
             
     def OnMouseOver(self, evt):
@@ -162,14 +167,16 @@ class ImageTile(ImagePanel):
         if not evt.LeftIsDown() or not self.leftPressed:
             return
         self.bin.SetFocusIgnoringChildren()
-        cursorImg = self.bitmap.ConvertToImage()
-        cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.bitmap.Size[0])/2)
-        cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.bitmap.Size[1])/2)
-        cursor = wx.CursorFromImage(cursorImg)
+        # Removed for Linux compatibility
+        #cursorImg = self.bitmap.ConvertToImage()
+        #cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.bitmap.Size[0])/2)
+        #cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.bitmap.Size[1])/2)
+        #cursor = wx.CursorFromImage(cursorImg)
+        
         # wx crashes unless the data object is assigned to a variable.
         data_object = wx.CustomDataObject("ObjectKey")
         data_object.SetData(cPickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
-        source = wx.DropSource(self, copy=cursor, move=cursor)
+        source = wx.DropSource(self)#, copy=cursor, move=cursor)
         source.SetData(data_object)
         result = source.DoDragDrop(wx.Drag_DefaultMove)
         if result is wx.DragMove:
