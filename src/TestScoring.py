@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
         grid = DataGrid(numpy.array(table), labels, key_col_indices=[0,1])
         grid.Show()
-        print grid.grid.GetTable().data.tolist()
+#        print grid.grid.GetTable().data.tolist()
         assert grid.grid.GetTable().data.tolist()==vals, "Test failed."
 
     app.MainLoop()
