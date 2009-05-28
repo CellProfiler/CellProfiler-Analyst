@@ -287,7 +287,7 @@ class DataGrid(wx.Frame):
     
     def __init__(self, data, labels, grouping='Image',
                  key_col_indices=[0], chMap=None, parent=None,
-                 title='Data Grid'):
+                 title='Data Grid', autosave=True):
         '''
         Initialize the datagrid.
 
@@ -309,10 +309,11 @@ class DataGrid(wx.Frame):
         
         self.grid = HugeTableGrid(self, data, labels, key_col_indices, grouping, chMap)
         
-        # Autosave enrichments to temp dir just in case.
-        print 'Auto saving data...'
-        filename = gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_').replace(':','-')+'.csv'
-        self.SaveCSV(filename, self.grid.GetTable().data, self.grid.GetTable().col_labels)
+        if autosave:
+            # Autosave enrichments to temp dir
+            print 'Auto saving data...'
+            filename = gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_').replace(':','-')+'.csv'
+            self.SaveCSV(filename, self.grid.GetTable().data, self.grid.GetTable().col_labels)
                 
         self.filemenu = wx.Menu()
         self.saveCSVMenuItem = \
@@ -413,23 +414,82 @@ class DataGrid(wx.Frame):
 
 
 
-if __name__ == "__main__":
-    classes = ['a', 'b']
-    hits = np.array([['key 0',10,20,-30,40.123456789],
-                     ['key 1',11,21,31,41.1],
-                     ['key 1',10,21,31,41.1],
-                     ['key 1',13,21,31,41.1],
-                     ['key 1',31,21,31,41.1],
-                     ['key 1',-1,21,31,41.1],
-                     ['key 2',0,-22,32,42.2],
-                     ['key 3',13,-3,33,43.3],
-                     ['key 4',14,24,4,44.4],
-                     ['key 5',5,5,5,5.12345]], dtype=object)
-    labels = ['key', 'count-A' , 'count McLongtitle #1\n B' , 'P(a)' , 'P(b)' ]
-    
-    app = wx.PySimpleApp()
-    grid = DataGrid(hits, labels, key_col_indices=[0,1])
-    grid.Show()
 
+usage = '''
+Usage:
+  python DataGrid.py csvfile propsfile grouping
+
+Parameters:
+  csvfile -- The csv file you wish to display. It's first row must contain column labels
+  propsfile -- The corresponding properties file
+  grouping -- Specify what group (in the properties file) was used to aggregate the rows.
+              Omit this parameter if rows are per-image. 
+'''
+
+
+if __name__ == "__main__":
+    import sys
+    app = wx.PySimpleApp()
+
+    if len(sys.argv) == 1:
+        # ---- testing ----
+        print 'TESTING DATA GRID' 
+        classes = ['a', 'b']
+        data = np.array([['key 0',10,20,-30,40.123456789],
+                         ['key 1',11,21,31,41.1],
+                         ['key 1',10,21,31,41.1],
+                         ['key 1',13,21,31,41.1],
+                         ['key 1',31,21,31,41.1],
+                         ['key 1',-1,21,31,41.1],
+                         ['key 2',0,-22,32,42.2],
+                         ['key 3',13,-3,33,43.3],
+                         ['key 4',14,24,4,44.4],
+                         ['key 5',5,5,5,5.12345]], dtype=object)
+        labels = ['key', 'count-A' , 'count McLongtitle #1\n B' , 'P(a)' , 'P(b)' ]
+        grid = DataGrid(data, labels, key_col_indices=[0,1], title='TEST', autosave=False)
+        grid.Show()
+        app.MainLoop()
+        # -------------------
+      
+    if not (3 <= len(sys.argv) <= 4):
+        print usage
+        exit()
+    csvfile = sys.argv[1]
+    propsfile = sys.argv[2]
+    
+    p = Properties.getInstance()
+    db = DBConnect.DBConnect.getInstance()
+    dm = DataModel.getInstance()
+
+    p.LoadFile(propsfile)    
+    dm.PopulateModel()
+    r = csv.reader(open(csvfile))
+    labels = r.next()
+    coltypes = db.InferColTypesFromData(r, len(labels))
+    for i in range(len(coltypes)):
+        if coltypes[i] == 'INT': coltypes[i] = int
+        elif coltypes[i] == 'FLOAT': coltypes[i] = float
+        else: coltypes[i] = str
+    r = csv.reader(open(csvfile))
+    r.next() # skip col-headers
+    data = []
+    for row in r:
+        data += [[coltypes[i](v) for i,v in enumerate(row)]]
+    data = np.array(data, dtype=object)
+    
+    group = 'Image'
+    if len(sys.argv)==4:
+        group = sys.argv[3]
+    
+    if group == 'Image':
+        keycols = range(len(DBConnect.image_key_columns()))
+    else:
+        keycols = range(len(dm.GetGroupColumnNames(group)))
+    
+    grid = DataGrid(data, labels, grouping=group, 
+                    key_col_indices=keycols,
+                    chMap=p.image_channel_colors, 
+                    title=csvfile, autosave=False)
+    grid.Show()
     app.MainLoop()
 

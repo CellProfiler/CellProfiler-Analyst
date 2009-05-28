@@ -58,7 +58,7 @@ class DataModel(Singleton):
 
         self.groupMaps, self.groupColNames = db.GetGroupMaps()
         for group in self.groupMaps:
-            self.groupColTypes[group] = [type(col) for col in self.groupMaps[group].items()[0][1]] 
+            self.groupColTypes[group] = [type(col) for col in self.groupMaps[group].items()[0][1]]
 
 
     def DeleteModel(self):
@@ -206,9 +206,9 @@ class DataModel(Singleton):
 
 if __name__ == "__main__":
     p = Properties.getInstance()
-#    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
+    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
 #    p.LoadFile('../properties/nirht.properties')
-    p.LoadFile('../properties/nirht_testdups.properties')
+#    p.LoadFile('../properties/nirht_testdups.properties')
 #    p.LoadFile('../properties/2007_10_19_Gilliland_LeukemiaScreens02_12_Jan_09_Combo.properties')
 #    p.LoadFile('../properties/2007_11_07_Hepatotoxicity_1_2008_10_23_GHAIII_Day9_8Fb_repeat_LoG_Classifier2.0.properties')
     db = DBConnect.getInstance()
@@ -216,7 +216,6 @@ if __name__ == "__main__":
     d = DataModel.getInstance()
     d.PopulateModel()
     
-    d.CheckTables()
     
 #    for i in range(100):
 #        print d.GetRandomObject()
