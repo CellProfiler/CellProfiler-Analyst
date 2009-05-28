@@ -21,22 +21,26 @@ class DBException(Exception):
         return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
 
-def image_key_columns(table_name=""):
-    """Return, as a tuple, the names of the columns that make up the
+def image_key_columns(table_name=''):
+    '''Return, as a tuple, the names of the columns that make up the
     image key.  If table_name is not None, use it to qualify each
-    column name."""
+    column name.'''
     if table_name is None:
-        table_name = ""
-    if table_name != "":
-        table_name += "."
+        table_name = ''
+    if table_name != '':
+        table_name += '.'
     if p.table_id:
         return (table_name+p.table_id, table_name+p.image_id)
     else:
         return (table_name+p.image_id,)
 
-def object_key_columns():
-    """Return, as a tuple, the names of the columns that make up the
-    object key."""
+def object_key_columns(table_name=''):
+    '''Return, as a tuple, the names of the columns that make up the
+    object key.'''
+    if table_name is None:
+        table_name = ''
+    if table_name != '':
+        table_name += '.'
     if p.table_id:
         return (p.table_id, p.image_id, p.object_id)
     else:
@@ -65,15 +69,12 @@ def GetWhereClauseForImages(imKeys):
                         for imKey in imKeys]) + ')'
 
 
-def UniqueObjectClause(table=None):
+def UniqueObjectClause(table_name=None):
     '''
     Returns a clause for specifying a unique object in MySQL.
     Example: "SELECT "+UniqueObjectClause()+" FROM <mydb>;" would return all object keys
     '''
-    if table is not None:
-        return ','.join([table+'.'+col for col in object_key_columns()]) 
-    else:
-        return ','.join(object_key_columns())
+    return ','.join(object_key_columns(table_name))
 
 
 def UniqueImageClause(table_name=None):
