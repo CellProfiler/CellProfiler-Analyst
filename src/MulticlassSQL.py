@@ -199,7 +199,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
     filter_clause = ''
     tables = p.object_table
     if filter is not None:
-        tables += ', ' + filter_table_prefix+filter
+        tables += ', `' + filter_table_prefix+filter + '`' 
         filter_clause = " AND ".join(["%s=`%s`.%s "%(objectify(id), filter_table_prefix+filter, id) for id in image_key_columns()])
 
     class_query = translate(weaklearners)
