@@ -158,6 +158,7 @@ class DBConnect(Singleton):
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
+            self.connections[connID].create_function('median', -1, numpy.median)
 
             def classifier(num_stumps, *args):
                 args = numpy.array(args)

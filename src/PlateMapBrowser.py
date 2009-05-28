@@ -279,16 +279,12 @@ class PlateMapBrowser(wx.Frame):
                 elif aggMethod == 'max':
                     expression = "MAX(%s)"%(measurement)
                 elif aggMethod == 'median':
-                    expression = measurement
-                    group = False
+                    expression = "MEDIAN(%s)"%(measurement)
 
                 wellsAndVals = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" %s'%
                                           (p.well_id, expression, table, 
                                            p.plate_id, plate,
                                            "GROUP BY %s"%(p.well_id) if group else ""))                   
-
-                if aggMethod == 'median':
-                    wellsAndVals = computeMedians(wellsAndVals)
 
                 data += [FormatPlateMapData(wellsAndVals)]
                 dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
@@ -317,17 +313,13 @@ class PlateMapBrowser(wx.Frame):
                 elif aggMethod == 'max':
                     expression = "MAX(%s.%s)"%(table, measurement)
                 elif aggMethod == 'median':
-                    expression = "%s.%s"%(table, measurement)
-                    group = False
+                    expression = "MEDIAN(%s.%s)"%(table, measurement)
 
                 wellsAndVals = db.execute('SELECT %s.%s, %s FROM %s, %s WHERE %s %s'%
                                           (p.image_table, p.well_id, expression, 
                                            p.image_table, table, 
                                            where,
                                            'GROUP BY %s.%s'%(p.image_table, p.well_id) if group else ''))
-
-                if aggMethod == 'median':
-                    wellsAndVals = computeMedians(wellsAndVals)
 
                 data += [FormatPlateMapData(wellsAndVals)]
                 dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
