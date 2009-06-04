@@ -100,7 +100,7 @@ class ImageReader(object):
         streams = []
         for url in urls:
             if self.protocol.upper() == 'HTTP':
-                fullurl = (p.image_url_prepend+url).replace(' ', '%20')
+                fullurl = p.image_url_prepend+urllib2.quote(url)
                 print 'Opening image: '+fullurl
                 try:
                     streams.append(urllib2.urlopen(fullurl))
@@ -130,7 +130,8 @@ if __name__ == "__main__":
     dm = DataModel.getInstance()
     db = DBConnect.getInstance()
     
-    p.LoadFile('../properties/nirht_test.properties')
+    #p.LoadFile('../properties/nirht_test.properties')
+    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
     dm.PopulateModel()
     app = wx.PySimpleApp()
     
