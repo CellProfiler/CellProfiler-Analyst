@@ -15,7 +15,7 @@ APP = ['ClassifierGUI.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': False,
            #'iconfile': "wormprofiler_icons/%s.icns" % APPNAME,
-           'packages': ['numpy', 'MySQLdb'],
+           'packages': ['numpy'],
            'excludes': ['pylab', 'nose', 'wx.tools'],
            'resources': ['FastGentleBoostingWorkerMulticlass.py']
 #           'resources':['wormprofiler_icons/WormProfiler_icon_32.png', 'change_malloc_zone.dylib']
