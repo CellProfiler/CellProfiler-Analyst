@@ -17,8 +17,11 @@ p = Properties.getInstance()
 
 class DBException(Exception):
     def __str__(self):
-        filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
-        return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
+        return 'ERROR: ' + self.args[0] + '\n'
+# XXX: sys.traceback is only set when an exception is not handled
+#      To test, enter an invalid image_channel_path column name in props file
+#        filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
+#        return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
 
 def image_key_columns(table_name=''):
