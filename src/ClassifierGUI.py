@@ -54,6 +54,7 @@ class ClassifierGUI(wx.Frame):
         self.toggleChMap = p.image_channel_colors[:] # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.scale = 1.0
+        self.contrast = None
         self.defaultTSFileName = None
         self.lastScoringFilter = None
         
@@ -671,7 +672,8 @@ class ClassifierGUI(wx.Frame):
                 coords += [db.GetObjectCoords(obKey)]
             classCoords[className] = coords
         imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
-                                        brightness=self.brightness, scale=self.scale)
+                                        brightness=self.brightness, scale=self.scale,
+                                        contrast=self.contrast)
         imViewer.SetClasses(classCoords)
          
         
@@ -966,6 +968,11 @@ class ClassifierGUI(wx.Frame):
         self.scale = scale
         [t.SetScale(scale) for bin in self.all_sort_bins() for t in bin.tiles]
         [bin.UpdateSizer() for bin in self.all_sort_bins()]
+        
+        
+    def SetContrastMode(self, mode):
+        self.contrast = mode
+        [t.SetContrastMode(mode) for bin in self.all_sort_bins() for t in bin.tiles]
         
         
     def PostMessage(self, message):

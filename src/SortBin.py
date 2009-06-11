@@ -118,7 +118,8 @@ class SortBin(wx.ScrolledWindow):
         if choice == 0:
             for key in self.SelectedKeys():
                 imViewer = ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier,
-                                        brightness=self.classifier.brightness, scale=self.classifier.scale)
+                                        brightness=self.classifier.brightness, scale=self.classifier.scale,
+                                        contrast=self.classifier.contrast)
                 pos = db.GetObjectCoords(key)
                 imViewer.imagePanel.SelectPoint(pos)
         elif choice == 1:
@@ -144,7 +145,8 @@ class SortBin(wx.ScrolledWindow):
         for i, obKey, imgs in zip(range(len(obKeys)), obKeys, imgSet):
             newTile = ImageTile(self, obKey, imgs, chMap, False,
                                 scale=self.classifier.scale, 
-                                brightness=self.classifier.brightness)
+                                brightness=self.classifier.brightness,
+                                contrast=self.classifier.contrast)
             if pos == 'first':
                 self.tiles.insert(i, newTile)
                 self.sizer.Insert(i, newTile, 0, wx.ALL|wx.EXPAND, 1 )

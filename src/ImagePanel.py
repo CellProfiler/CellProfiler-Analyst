@@ -9,26 +9,32 @@ class ImagePanel(wx.Panel):
     ImagePanels are wxPanels that display a wxBitmap and store multiple
     image channels which can be recombined to mix different bitmaps.
     '''
-    def __init__(self, images, channel_map, parent, scale=1.0, brightness=1.0):
+    def __init__(self, images, channel_map, parent, 
+                 scale=1.0, brightness=1.0, contrast=None):
         """
         images -- list of numpy arrays
         channel_map -- list of strings naming the color to map each channel 
                        onto, e.g., ['red', 'green', 'blue']
+        parent -- parent window to the wx.Panel
+        scale -- factor to scale image by
+        brightness -- factor to scale image pixel intensities by
         
         """
         self.chMap       = channel_map
         self.toggleChMap = channel_map[:]
         self.images      = images
         self.bitmap      = ImageTools.MergeToBitmap(images,
-                                                    chMap=channel_map,
-                                                    scale=scale,
-                                                    brightness = brightness)   # displayed wx.Bitmap
+                                                    chMap = channel_map,
+                                                    scale = scale,
+                                                    brightness = brightness,
+                                                    contrast = contrast)   # displayed wx.Bitmap
         
         wx.Panel.__init__(self, parent, wx.NewId(), size=self.bitmap.Size)
         
-        self.scale       = scale
-        self.brightness  = brightness
-        self.selected    = False
+        self.scale         = scale
+        self.brightness    = brightness
+        self.contrast      = contrast
+        self.selected      = False
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         
@@ -52,7 +58,8 @@ class ImagePanel(wx.Panel):
         self.bitmap = ImageTools.MergeToBitmap(self.images,
                                                chMap = self.chMap,
                                                brightness = self.brightness,
-                                               scale = self.scale)
+                                               scale = self.scale,
+                                               contrast = self.contrast)
         self.Refresh()
             
     
@@ -73,7 +80,11 @@ class ImagePanel(wx.Panel):
         if brightness != self.brightness:
             self.brightness = brightness
             self.UpdateBitmap()
-
+            
+    
+    def SetContrastMode(self, mode):
+        self.contrast = mode
+        self.UpdateBitmap()
     
 
         

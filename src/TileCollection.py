@@ -49,8 +49,10 @@ class TileCollection(Singleton):
         for order, obKey in enumerate(obKeys):
             td = self.tileData.get(obKey, None)
             if td:
+                # If tile data has been loaded, attach it 
                 tiles += [td]
             else:
+                # Otherwise attach a place holder and add to the load queue
                 heappush(self.loadq, ((priority, self.group_priority, order), obKey))
                 self.group_priority += 1
                 placeholder = List(self.imagePlaceholder)
@@ -129,7 +131,7 @@ class TileLoader(threading.Thread):
                     wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
             except Exception, e:
                 import sys
-                sys.stderr.write('ERROR FETCHING TILE!\n%s'%(e))
+                sys.stderr.write('ERROR FETCHING TILE!\n%s\n'%(e))
 
     def abort(self):
         self._want_abort = True
@@ -157,7 +159,7 @@ if __name__ == "__main__":
     test = TileCollection.getInstance()
     
     f =  wx.Frame(None)
-    for i in xrange(100):
+    for i in xrange(10):
         obKey = dm.GetRandomObject()
         test.GetTileData((0,1,1), f)
         

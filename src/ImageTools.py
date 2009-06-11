@@ -6,7 +6,7 @@ from PIL import Image
 from Properties import Properties
 from DBConnect import DBConnect
 from ImageReader import ImageReader
-import numpy
+import numpy as np
 import wx
 
 p = Properties.getInstance()
@@ -16,10 +16,14 @@ last_imkey = None
 last_image = None
 
 def FetchTile(obKey):
+    '''
+    returns a list of cropped image data 
+        and a list of intensity intervals of the original uncropped images
+    '''
     imKey = obKey[:-1]
     pos = db.GetObjectCoords(obKey)
     size = (int(p.image_tile_size),int(p.image_tile_size))
-    return [Crop(imData,size,pos) for imData in FetchImage(imKey)]
+    return [Crop(im,size,pos) for im in FetchImage(imKey)]
 
 def FetchImage(imKey):
     global last_image
@@ -27,22 +31,23 @@ def FetchImage(imKey):
     if imKey == last_imkey:
         return last_image
     else:
-        last_imkey = imKey    
+        last_imkey = imKey
     
     ir = ImageReader()
     filenames = db.GetFullChannelPathsForImage(imKey)
     last_image = ir.ReadImages(filenames)
     return last_image
 
-def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0):
+def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
     from ImageViewer import ImageViewer
     imgs = FetchImage(imKey)
     frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
                         parent=parent, title=str(imKey),
-                        brightness=brightness, scale=scale )
+                        brightness=brightness, scale=scale,
+                        contrast=contrast)
     frame.Show(True)
     return frame
-    
+
 def Crop(imgdata, (w,h), (x,y)):
     '''
     Crops an image to the width (w,h) around the point (x,y).
@@ -50,7 +55,7 @@ def Crop(imgdata, (w,h), (x,y)):
     '''
     imWidth = imgdata.shape[1]
     imHeight = imgdata.shape[0]
-    crop = numpy.zeros((h,w), dtype='float32')
+    crop = np.zeros((h,w), dtype='float32')
     for px in xrange(w):
         for py in xrange(h):
             xx = px+x-w/2
@@ -60,16 +65,25 @@ def Crop(imgdata, (w,h), (x,y)):
             else:
                 crop[py,px] = 0
     return crop
-    
-def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[]):
+
+def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None):
     '''
-    imgs  - list of numpy arrays containing pixel data for each channel of an image
+    imgs  - list of np arrays containing pixel data for each channel of an image
     chMap - list of colors to map each corresponding channel onto.  eg: ['red', 'green', 'blue']
     brightness - value around 1.0 to multiply color values by
     contrast - value around 1.0 to scale contrast by
     scale - value around 1.0 to scale the image by
+    contrast - contrast mode to use
     '''
-    imData = MergeChannels(imgs, chMap, masks=masks)
+    if contrast=='Log':
+        logims = [log_transform(im) for im in imgs]
+        imData = MergeChannels(logims, chMap, masks=masks)
+    elif contrast=='Auto':
+        newims = [auto_contrast(im) for im in imgs]
+        imData = MergeChannels(newims, chMap, masks=masks)
+    else:
+        imData = MergeChannels(imgs, chMap, masks=masks)
+
     h,w = imgs[0].shape
     
     # Convert from float [0-1] to 8bit
@@ -98,7 +112,7 @@ def MergeChannels(imgs, chMap, masks=[]):
     '''
     nChannels = len(p.image_channel_paths)
     h,w = imgs[0].shape
-    imData = numpy.zeros((h,w,3),dtype='float')
+    imData = np.zeros((h,w,3),dtype='float')
     
     colormap = {'red'      : [1,0,0], 
                 'green'    : [0,1,0], 
@@ -121,6 +135,33 @@ def MergeChannels(imgs, chMap, masks=[]):
         
     return imData
 
+def log_transform(im, interval=None):
+    '''Takes a single image in the form of a np array and returns it
+    log-transformed and scaled to the interval [0,1] '''
+    # Check that the image isn't binary 
+    # (used to check if it was not all 0's, but this covers both cases)
+    # if (im!=0).any()
+    (min, max) = interval or (im.min(), im.max())
+    if np.any((im>min)&(im<max)):
+        im = im.clip(im[im>0].min(), im.max())
+        im = np.log(im)
+        im -= im.min()
+        if im.max() > 0:
+            im /= im.max()
+    return im
+
+def auto_contrast(im, interval=None):
+    '''Takes a single image in the form of a np array and returns it
+    scaled to the interval [0,1] '''
+    im = im.copy()
+    (min, max) = interval or (im.min(), im.max())
+    # Check that the image isn't binary 
+    if np.any((im>min)&(im<max)):
+        im -= im.min()
+        if im.max() > 0:
+            im /= im.max()
+    return im
+
 def SaveBitmap(bitmap, filename, format='PNG'):
     im = BitmapToPIL(bitmap)
     im.save(filename, format)
@@ -135,9 +176,9 @@ def BitmapToPIL(bitmap):
     '''Convert wx.Bitmap to PIL Image.'''
     return ImageToPIL(wx.ImageFromBitmap(bitmap))
 
-def NumpyToPIL(imData):
-    '''Convert numpy image data to PIL Image.'''
-    buf = numpy.dstack(imgData)
+def npToPIL(imData):
+    '''Convert np image data to PIL Image.'''
+    buf = np.dstack(imgData)
     buf = (buf * 255.0).astype('uint8')
     im = Image.fromstring(mode='RGB', size=(imgData[0].shape[1],imgData[0].shape[0]),
                           data=buf.tostring())

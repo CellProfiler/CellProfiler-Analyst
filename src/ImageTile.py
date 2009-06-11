@@ -36,8 +36,10 @@ class ImageTile(ImagePanel):
     ImageTiles are thumbnail images that can be dragged and dropped
     between SortBins.
     '''
-    def __init__(self, bin, obKey, images, chMap, selected=False, scale=1.0, brightness=1.0):
-        ImagePanel.__init__(self, images, chMap, bin, scale=scale, brightness=brightness)
+    def __init__(self, bin, obKey, images, chMap, selected=False, 
+                 scale=1.0, brightness=1.0, contrast=None):
+        ImagePanel.__init__(self, images, chMap, bin, scale=scale, 
+                            brightness=brightness, contrast=contrast)
         self.SetDropTarget(ImageTileDropTarget(self))
 
         self.bin         = bin             # the SortBin this object belongs to
@@ -49,7 +51,7 @@ class ImageTile(ImagePanel):
         self.popupMenu   = None
         
         self.MapChannels(chMap)
-                
+        
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
@@ -102,7 +104,8 @@ class ImageTile(ImagePanel):
         if choice == 0:
             for obKey in self.bin.SelectedKeys():
                 imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
-                                        brightness=self.brightness, scale=self.scale)
+                                        brightness=self.brightness, scale=self.scale,
+                                        contrast=self.contrast)
                 pos = db.GetObjectCoords(obKey)
                 imViewer.imagePanel.SelectPoint(pos)
         elif choice == 1:
@@ -115,7 +118,8 @@ class ImageTile(ImagePanel):
             
     def OnDClick(self, evt):
         imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
-                                        brightness=self.brightness, scale=self.scale)
+                                        brightness=self.brightness, scale=self.scale, 
+                                        contrast=self.contrast)
         imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
         

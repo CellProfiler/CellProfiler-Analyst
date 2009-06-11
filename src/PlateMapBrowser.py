@@ -24,6 +24,8 @@ class AwesomePMP(PlateMapPanel):
                                colormap, wellshape, row_label_format,  **kwargs)
                 
         self.chMap = p.image_channel_colors
+        self.brightness = 1.0
+        self.scale = 1.0
         self.plate = None
         self.tip = wx.ToolTip('')
         self.tip.Enable(False)
@@ -58,7 +60,7 @@ class AwesomePMP(PlateMapPanel):
             imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
                                 (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
             for imKey in imKeys:
-                ImageTools.ShowImage(imKey, p.image_channel_colors, parent=self)
+                ImageTools.ShowImage(imKey, self.chMap, parent=self)
 
     def OnRClick(self, evt):
         if self.plate is not None:
@@ -81,7 +83,7 @@ class AwesomePMP(PlateMapPanel):
     def OnSelectFromPopupMenu(self, evt):
         """Handles selections from the popup menu."""
         imKey = self.popupItemById[evt.GetId()]
-        ImageTools.ShowImage(imKey, p.image_channel_colors, parent=self)
+        ImageTools.ShowImage(imKey, self.chMap, parent=self)
 
 
 

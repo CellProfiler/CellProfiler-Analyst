@@ -4,7 +4,7 @@ from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
 from matplotlib.pyplot import cm
-import numpy
+import numpy as np
 import ImageTools
 import cPickle
 import wx
@@ -15,10 +15,10 @@ dm = DataModel.getInstance()
 
 class ImageViewerPanel(ImagePanel):
     '''
-    Create a ImagePanel subclass that does selection.
+    ImagePanel subclass that does selection.
     '''
-    def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0):
-        super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness)
+    def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0, contrast=None):
+        super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast)
         self.selectedPoints = []
         self.classes        = {}  # {'Positive':[(x,y),..], 'Negative': [(x2,y2),..],..}
         self.classVisible   = {}
@@ -39,7 +39,8 @@ class ImageViewerPanel(ImagePanel):
                         dc.DrawRectangle(x,y,w,h)
                         dc.DrawRectangle(x-1,y-1,6,6)
                     dc.EndDrawing()
-        # Draw small white boxes at each selected point
+        # Draw small white (XOR) boxes at each selected point
+        dc.SetLogicalFunction(wx.XOR)
         for (x,y) in self.selectedPoints:
             x = x * self.scale - 3
             y = y * self.scale - 3
@@ -75,10 +76,10 @@ class ImageViewerPanel(ImagePanel):
 
     def SetClassPoints(self, classes):
         self.classes = classes
-        vals = numpy.arange(float(len(self.classes))) / len(self.classes)
+        vals = np.arange(float(len(self.classes))) / len(self.classes)
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
-        self.colors = [numpy.array(cm.jet(val))*255 for val in vals]
+        self.colors = [np.array(cm.jet(val))*255 for val in vals]
 
         self.classVisible = {}
         for className in classes.keys():
@@ -93,16 +94,18 @@ class ImageViewerPanel(ImagePanel):
 
 class ImageViewer(wx.Frame):
     '''
-    A frame that takes a list of numpy arrays representing image channels 
+    A frame that takes a list of np arrays representing image channels 
     and merges and displays them as a single image.
     Menus are provided to change the RGB mapping of each channel passed in.
     Note: chMap is passed by reference by default, this means that the caller
        of ImageViewer can have it's own chMap (if any) updated by changes
-       made in the viewer.  Otherwise pass in chMap[:] for a copy.
+       made in the viewer.  Otherwise pass in a copy.
     '''
-    def __init__(self, imgs, chMap, img_key=None, parent=None, title='Image Viewer', classifier=None, brightness=1.0, scale=1.0):
+    def __init__(self, imgs, chMap, img_key=None, parent=None, title='Image Viewer', 
+                 classifier=None, brightness=1.0, scale=1.0, contrast=None, 
+                 classCoords=None):
         '''
-        imgs  : [numpy.array(dtype=float32), ... ]
+        imgs  : [np.array(dtype=float32), ... ]
         chMap : ['color', ...]
             defines the colors that will be mapped to the corresponding
             image channels in imgs
@@ -119,8 +122,9 @@ class ImageViewer(wx.Frame):
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)
-        self.imagePanel  = ImageViewerPanel(imgs, chMap, self.sw, brightness=brightness, scale=scale)
-        self.controls    = ImageControlPanel(self, self.imagePanel, brightness=brightness, scale=scale)
+        self.imagePanel  = ImageViewerPanel(imgs, chMap, self.sw, brightness=brightness, scale=scale, contrast=contrast)
+        self.cp = cp     = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
+        self.controls    = ImageControlPanel(cp.GetPane(), self.imagePanel, brightness=brightness, scale=scale, contrast=contrast)
         self.selection   = []
         self.maxSize     = tuple([xy-50 for xy in wx.DisplaySize()])
         self.defaultFile = ''
@@ -134,23 +138,33 @@ class ImageViewer(wx.Frame):
         self.CreateChannelMenus()
         
         self.SetClientSize( (min(self.maxSize[0], w*scale),
-                             min(self.maxSize[1], h*scale+135)) )
+                             min(self.maxSize[1], h*scale+55)) )
         self.Centre()
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
-        self.controlSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.controlSizer.Add(self.controls, proportion=1, flag=wx.EXPAND)
-        sizer.Add(self.controlSizer)
+        sizer.Add(cp, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
         self.SetSizer(sizer)
         
         self.sw.SetScrollbars(1,1,w*scale,h*scale)
         
+        if classCoords is not None:
+            self.SetClasses(classCoords)
+        
+        self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, cp)
         self.Bind(wx.EVT_MENU, self.OnSaveImage, saveImageMenuItem)
         self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
 
+
+    def OnPaneChanged(self, evt=None):
+        self.Layout()
+        if self.cp.IsExpanded():
+            self.cp.SetLabel('Hide controls')
+        else:
+            self.cp.SetLabel('Show controls')
+            
 
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
@@ -232,9 +246,7 @@ class ImageViewer(wx.Frame):
     
     def SetClasses(self, classCoords):
         self.imagePanel.SetClassPoints(classCoords)
-        self.classControls = ImageViewerControlPanel(self, self.imagePanel,
-                                                     classCoords, self.imagePanel.colors)
-        self.controlSizer.Add(self.classControls, proportion=1, flag=wx.EXPAND)
+        self.controls.SetClassPoints(classCoords)
         self.Refresh()
         self.Layout()
         
@@ -300,21 +312,24 @@ if __name__ == "__main__":
     import ImageTools
     
     db = DBConnect.getInstance()
-    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
     dm = DataModel.getInstance()
     dm.PopulateModel()
     
     for i in xrange(1):
         obKey = dm.GetRandomObject()
-        print obKey
         imgs = ImageTools.FetchImage(obKey[:-1])
-        frame = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]) )
-        frame.Show(True)
+                    
+        #imgs = [ImageTools.log_transform(im) for im in imgs]
+#        imgs = [ImageTools.auto_contrast(im) for im in imgs]
+        
+#        f1 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]) )
+#        f1.Show(True)
+        f2 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]))
+        f2.Show(True)
     
-    classCoords = {'a':[(10,10),(20,20)],
-                   'b':[(100,10),(200,20)] }
-    frame.SetClasses(classCoords)
+    classCoords = {'a':[(10,10),(20,20)],'b':[(100,10),(200,20)] }
+    f2.SetClasses(classCoords)
     
-    ImageTools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
+    #ImageTools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
            
     app.MainLoop()
