@@ -633,6 +633,10 @@ class DBConnect(Singleton):
         Queries the DB to check that the per_image and per_object
         tables agree on image numbers.
         '''
+        if p.db_type=='sqlite':
+            print 'Skipping table verification step for sqlite'
+            return
+        
         # Check for index on image_table
         res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
         idx_cols = [r[4] for r in res]
@@ -650,6 +654,7 @@ class DBConnect(Singleton):
             raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
         
         # Check for orphaned objects
+        # TODO: Very slow for HUGE datasets.  Alternative?
         res = self.execute('SELECT %s FROM %s LEFT JOIN %s USING (%s) WHERE %s.%s IS NULL'%
                            (UniqueImageClause(p.object_table), p.object_table, p.image_table, p.image_id, p.image_table, p.image_id))
         assert not any(res), 'Objects were found in "%s" that had no corresponding image key in "%s"'%(p.object_table, p.image_table)
