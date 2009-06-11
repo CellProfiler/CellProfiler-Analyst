@@ -217,10 +217,11 @@ class DBConnect(Singleton):
             print 'WARNING <DBConnect.CloseConnection>: No connection ID "%s" found.' %(connID)
 
 
-    def execute(self, query, args=None, silent=False):
+    def execute(self, query, args=None, silent=False, return_result=True):
         '''
-        Executes the given query using the connection associated with the 
-        current thread, then returns the results as a list of rows.
+        Executes the given query using the connection associated with
+        the current thread.  Returns the results as a list of rows
+        unless return_result is false.
         '''
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
@@ -246,7 +247,8 @@ class DBConnect(Singleton):
                 self.cursors[connID].execute(query)
             else:
                 self.cursors[connID].execute(query, args=args)
-            return self._get_results_as_list()
+            if return_result:
+                return self._get_results_as_list()
         except MySQLdb.Error, e:
             raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
         except KeyError, e:
@@ -270,7 +272,8 @@ class DBConnect(Singleton):
         try:
             return self.cursors[connID].next()
         except MySQLdb.Error, e:
-            raise DBException, 'Error retrieving next result from database.\n'
+            raise DBException, \
+                'Error retrieving next result from database: %s'%(e,)
             return None
         except StopIteration, e:
             return None
