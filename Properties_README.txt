@@ -58,7 +58,7 @@ object_table  =  <your_per_object_table_name>
 #
 # table_id (OPTIONAL): This field lets Classifier handle multiple tables if 
 #          you merge them into one and add a table_number column as a foreign
-#          key to your per-image and per-object tables. 
+#          key to your per-image and per-object tables.
 # image_id: must be a foreign key column between your per-image and per-object
 #           tables
 # object_id: the object key column from your per-object table
@@ -195,7 +195,7 @@ classifier_ignore_substrings  =  <your_object_x_location_column>, <your_object_y
 # original images. Specify the thumbnail size here. The approximate maximum 
 # diameter of your objects (in pixels) is a good start.
 
-image_tile_size   =  50
+image_tile_size  =  50
 
 
 # ======== Auto Load Training Set ========
@@ -212,19 +212,24 @@ training_set  =
 # reported in place of object-counts when scoring.  The typical use for this
 # is to report the areas of objects on a per-image or per-group basis. 
 
-area_scoring_column = 
+area_scoring_column  =  
 
 
-# ======== Internal Cache ========
-# It shouldn't be necessary to cache your images in the application, but the 
-# cache sizes can be set here.
-#
-# Example: image_buffer_size = 100
-#   This will tell Classifier to keep up to 100 images stored in the program 
-#   for fast access.
+# ======== Output Per-Object Classes ========
+# OPTIONAL
+# Here you can specify a MySQL table in your Database where you would like 
+# Classifier to write out class information for each object in the 
+# object_table 
 
-image_buffer_size  =  1
-tile_buffer_size   =  1
+class_table  =  
+
+
+# ======== Check Tables ========
+# OPTIONAL
+# [yes/no]  You can ask classifier to check your tables for anomalies such
+# as orphaned objects or missing column indices.  Default is off.
+
+check_tables = yes
 
 
 

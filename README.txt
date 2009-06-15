@@ -184,7 +184,7 @@ the posterior is computed for each group independently.
   table, as well as the table ID (if present), image ID, and object ID columns.
 * When scoring, you may now choose to score a subset of your experiement by 
   selecting a filter defined in your properties file.
-* Areas can now be summed when scoring instead of object counts by specifying 
+* Areas can now be summed when scoring along with object counts by specifying 
   which column of your per_object table should be used for areas in the 
   properties file field "area_scoring_column".
 * Thumbnails are now loaded in the background, so you can fetch thumbnails,
@@ -201,15 +201,20 @@ the posterior is computed for each group independently.
 * A small dot is now displayed in the center of each thumbnail tile when the
   mouse is hovering over it. This helps to clarify which object in the
   thumbnail needs to be sorted. 
-  
+* Linux is now supported although not thoroughly tested.
+* Contrast adjustments available from the image control panel.
+* Enrichment table now outputs # of images per aggregate-row.
+* Improved feedback of scoring progress.
+* New properties field check_tables will tell Classifier to check your db
+  tables for anomalies such as orphaned objects or missing column indices when
+  set to yes.
+
 
 ---------------------------------
   VI. Known Issues
 ---------------------------------
 * Color channel menu bullets may fall out of sync with displayed colors when
   you toggle channels on/off with Ctrl+1,2,3... 
-* Linux is not yet supported due to an unresolved error in the drag and drop
-  mechanism.
 * Please report other bugs, issues, or feature requests to the forum at
   cellprofiler.org/forum 
 
