@@ -53,8 +53,8 @@ def object_key_columns(table_name=''):
 def GetWhereClauseForObjects(obKeys):
     '''
     Return a SQL WHERE clause that matches any of the given object keys.
-    Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => 'WHERE 
-    ImageNumber=1 AND ObjectNumber=3 OR ImageNumber=2 AND ObjectNumber=4'
+    Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => "ImageNumber=1 
+             AND ObjectNumber=3 OR ImageNumber=2 AND ObjectNumber=4"
     '''
     return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
                                       for col, value in zip(object_key_columns(), obKey)])
@@ -64,8 +64,8 @@ def GetWhereClauseForObjects(obKeys):
 def GetWhereClauseForImages(imKeys):
     '''
     Return a SQL WHERE clause that matches any of the give image keys.
-    Example: GetWhereClauseForImages([(3,), (4,)]) => 'WHERE
-    ImageNumber=3 OR ImageNumber=4'
+    Example: GetWhereClauseForImages([(3,), (4,)]) => 
+             "ImageNumber=3 OR ImageNumber=4"
     '''
     return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
                                       for col, value in zip(image_key_columns(), imKey)])
@@ -332,6 +332,10 @@ class DBConnect(Singleton):
         ''' Returns a list of all image keys in the image_table. '''
         select = "SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause()
         return self.execute(select)
+    
+    
+    def GetObjectsFromImage(self, imKey):
+        return self.execute('SELECT %s FROM %s WHERE %s'%(UniqueObjectClause(), p.object_table, GetWhereClauseForImages([imKey])))
     
     
     def GetObjectCoords(self, obKey):
@@ -657,10 +661,10 @@ class DBConnect(Singleton):
             raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
         
         # Check for orphaned objects
-        # TODO: Very slow for HUGE datasets.  Alternative?
-        res = self.execute('SELECT %s FROM %s LEFT JOIN %s USING (%s) WHERE %s.%s IS NULL'%
-                           (UniqueImageClause(p.object_table), p.object_table, p.image_table, p.image_id, p.image_table, p.image_id))
-        assert not any(res), 'Objects were found in "%s" that had no corresponding image key in "%s"'%(p.object_table, p.image_table)
+        obims = self.execute('SELECT DISTINCT(%s) FROM %s'%(p.image_id, p.object_table))
+        imims = self.execute('SELECT %s FROM %s'%(p.image_id, p.image_table))
+        orphans = set(obims) - set(imims)
+        assert not orphans, 'Objects were found in "%s" that had no corresponding image key in "%s"'%(p.object_table, p.image_table)
             
         # Check for unlabeled wells
         if p.well_id:
@@ -725,20 +729,23 @@ if __name__ == "__main__":
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
 
+#    p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
     p.LoadFile('../properties/nirht_test.properties')
     dm.PopulateModel()
     
+    print db.GetObjectsFromImage((0,1))
+    
     # TEST CreateTempTableFromCSV
-    table = '_blah'
-    db.CreateTempTableFromCSV('../test_data/test_per_image.txt', table)
-    print db.execute('SELECT * from %s LIMIT 10'%(table))
-
-    measurements = db.GetColumnNames(table)
-    types = db.GetColumnTypes(table)
-    print [m for m,t in zip(measurements, types) if t in[float, int, long]]
-
-    print db.GetColumnNames(table)
-    print db.GetColumnTypes(table)
+#    table = '_blah'
+#    db.CreateTempTableFromCSV('../test_data/test_per_image.txt', table)
+#    print db.execute('SELECT * from %s LIMIT 10'%(table))
+#
+#    measurements = db.GetColumnNames(table)
+#    types = db.GetColumnTypes(table)
+#    print [m for m,t in zip(measurements, types) if t in[float, int, long]]
+#
+#    print db.GetColumnNames(table)
+#    print db.GetColumnTypes(table)
 
 
     # TEST reconnect

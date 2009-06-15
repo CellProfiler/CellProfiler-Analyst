@@ -34,7 +34,8 @@ class DataModel(Singleton):
             print "Error: No database connection!"
             return
         
-        db.CheckTables()
+        if p.check_tables == 'yes':
+            db.CheckTables()
         
         # Initialize per-image object counts to zero
         imKeys = db.GetAllImageKeys()

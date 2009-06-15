@@ -16,12 +16,21 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'area_scoring_column',
                 'training_set',
                 'class_table',
-                'plate_type']
+                'plate_type',
+                'check_tables']
 
 list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
             'object_name',
             'classifier_ignore_substrings']
 
+optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
+                 'table_id', 'image_url_prepend', 'image_csv_file',
+                 'image_channel_names', 'image_channel_colors',
+                 'object_csv_file', 'area_scoring_column', 'training_set',
+                 'class_table',
+                 'image_buffer_size', 'tile_buffer_size',
+                 'plate_id', 'well_id', 'plate_type',
+                 'check_tables']
 
 class Properties(Singleton):
     '''
@@ -175,15 +184,6 @@ class Properties(Singleton):
         def field_defined(name):
             # field name exists and has a non-empty value.
             return name in self.__dict__.keys() and self.__dict__[name]!=''
-
-        # Check that all required variables were loaded
-        optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
-                         'table_id', 'image_url_prepend', 'image_csv_file',
-                         'image_channel_names', 'image_channel_colors',
-                         'object_csv_file', 'area_scoring_column', 'training_set',
-                         'class_table',
-                         'image_buffer_size', 'tile_buffer_size',
-                         'plate_id', 'well_id', 'plate_type']
         
         # check that all required fields are defined
         for name in string_vars + list_vars:
@@ -261,7 +261,13 @@ class Properties(Singleton):
             print 'PROPERTIES WARNING (well_id): Field is required for plate map viewer.'
                                     
         if not field_defined('plate_type'):
-            print 'PROPERTIES WARNING (plate_type): Field is required for plate map viewer.'                        
+            print 'PROPERTIES WARNING (plate_type): Field is required for plate map viewer.'   
+            
+        if field_defined('check_tables') and self.check_tables.lower() in ['true', 'yes', 't', 'y']:
+            self.check_tables = 'yes'
+        else:
+            self.check_tables = 'no'
+                                     
 
     def object_key(self):
         if self.table_id:

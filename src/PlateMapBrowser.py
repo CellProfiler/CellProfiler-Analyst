@@ -1,18 +1,18 @@
-from DataModel import *
-from DBConnect import DBConnect, UniqueImageClause, image_key_columns
-from Properties import Properties
-from PlateMapPanel import *
 from ColorBarPanel import ColorBarPanel
-import wx
-import numpy as np
-import pylab
+from DBConnect import DBConnect, UniqueImageClause, image_key_columns
+from PlateMapPanel import *
 import ImageTools
-import re
+import Properties
+import numpy as np
 import os
+import pylab
+import re
+import wx
 
-p = Properties.getInstance()
+p = Properties.Properties.getInstance()
+# Hack the properties module so it doesn't require the object table.
+Properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
-dm = DataModel.getInstance()
 
 class AwesomePMP(PlateMapPanel):
     '''
@@ -106,7 +106,10 @@ class PlateMapBrowser(wx.Frame):
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
-        self.sourceChoice = wx.Choice(self, choices=[p.image_table, p.object_table])
+        src_choices = [p.image_table]
+        if p.object_table:
+            src_choices += [p.object_table]
+        self.sourceChoice = wx.Choice(self, choices=src_choices)
         self.sourceChoice.Select(0)
         dataSourceSizer.Add(self.sourceChoice)
                 
@@ -456,7 +459,7 @@ def LoadProperties():
             
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-    
+        
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
@@ -465,8 +468,6 @@ if __name__ == "__main__":
         LoadProperties()
 #        p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
 #        p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
-
-    dm.PopulateModel()
 
     pmb = PlateMapBrowser(None)
     pmb.Show()

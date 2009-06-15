@@ -11,7 +11,6 @@ import wx
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
-dm = DataModel.getInstance()
 
 class ImageViewerPanel(ImagePanel):
     '''
@@ -235,7 +234,7 @@ class ImageViewer(wx.Frame):
             
     def SelectAll(self):
         coordList = db.GetAllObjectCoordsFromImage(self.img_key)
-        self.selection = dm.GetObjectsFromImage(self.img_key)
+        self.selection = db.GetObjectsFromImage(self.img_key)
         self.imagePanel.SetSelectedPoints(coordList)
         
         
