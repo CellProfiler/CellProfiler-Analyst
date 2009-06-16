@@ -227,7 +227,9 @@ class_table  =
 # ======== Check Tables ========
 # OPTIONAL
 # [yes/no]  You can ask classifier to check your tables for anomalies such
-# as orphaned objects or missing column indices.  Default is off.
+# as orphaned objects or missing column indices.  Default is on.
+# This check is run when Classifier starts and may take up to a minute if
+# your object_table is extremely large.
 
 check_tables = yes
 

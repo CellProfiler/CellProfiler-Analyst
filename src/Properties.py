@@ -263,10 +263,13 @@ class Properties(Singleton):
         if not field_defined('plate_type'):
             print 'PROPERTIES WARNING (plate_type): Field is required for plate map viewer.'   
             
-        if field_defined('check_tables') and self.check_tables.lower() in ['true', 'yes', 't', 'y']:
+        if field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.check_tables = 'no'
+        elif not field_defined('check_tables') or self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.check_tables = 'yes'
         else:
-            self.check_tables = 'no'
+            print 'PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables)
+            self.check_tables = 'yes'
                                      
 
     def object_key(self):

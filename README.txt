@@ -208,6 +208,9 @@ the posterior is computed for each group independently.
 * New properties field check_tables will tell Classifier to check your db
   tables for anomalies such as orphaned objects or missing column indices when
   set to yes.
+* PlateMapBrowser tool allows browsing of data in a plate/well view. Images 
+  can be opened from any well, and cells from these images can be dragged into 
+  Classifier.
 
 
 ---------------------------------
