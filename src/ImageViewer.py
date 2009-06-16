@@ -233,9 +233,10 @@ class ImageViewer(wx.Frame):
             
             
     def SelectAll(self):
-        coordList = db.GetAllObjectCoordsFromImage(self.img_key)
-        self.selection = db.GetObjectsFromImage(self.img_key)
-        self.imagePanel.SetSelectedPoints(coordList)
+        if p.object_table:
+            coordList = db.GetAllObjectCoordsFromImage(self.img_key)
+            self.selection = db.GetObjectsFromImage(self.img_key)
+            self.imagePanel.SetSelectedPoints(coordList)
         
         
     def DeselectAll(self):
@@ -251,7 +252,7 @@ class ImageViewer(wx.Frame):
         
         
     def OnLeftDown(self, evt):
-        if self.img_key:
+        if self.img_key and p.object_table:
             x = evt.GetPosition().x / self.imagePanel.scale
             y = evt.GetPosition().y / self.imagePanel.scale
             obKey = db.GetObjectNear(self.img_key, x, y)
