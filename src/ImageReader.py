@@ -1,5 +1,5 @@
 import wx
-from PIL import Image
+import Image
 import numpy
 import urllib2
 from array import array

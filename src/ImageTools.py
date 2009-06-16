@@ -2,7 +2,7 @@
 A collection of tools to modify images used in CPA.
 '''
 
-from PIL import Image
+import Image
 from Properties import Properties
 from DBConnect import DBConnect
 from ImageReader import ImageReader

@@ -1,3 +1,7 @@
+# necessary for py2app        
+import matplotlib
+matplotlib.use('WXAgg')
+
 import DBConnect
 from DataGrid import DataGrid
 from DataModel import DataModel
@@ -17,7 +21,6 @@ import numpy
 import os
 import wx
 from time import time
-        
 
 class ClassifierGUI(wx.Frame):
 
