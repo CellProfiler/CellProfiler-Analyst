@@ -30,6 +30,7 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'class_table',
                  'image_buffer_size', 'tile_buffer_size',
                  'plate_id', 'well_id', 'plate_type',
+                 'classifier_ignore_substrings',
                  'check_tables']
 
 class Properties(Singleton):
