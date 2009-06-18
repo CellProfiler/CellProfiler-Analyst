@@ -388,24 +388,30 @@ class DBConnect(Singleton):
 
 
     def GetGroupMaps(self):
-        ''' Build dictionary mapping group names and image keys to group keys. '''
+        '''Return a tuple of two dictionaries: one that maps group
+        names to group maps and one that maps group names to lists of
+        column names.'''
         groupColNames = {}
         groupMaps = {}
-        key_size = p.table_id and 2 or 1
-        for group, query in p._groups.items():
-            res = []
-            try:
-                res = self.execute(query)
-            except Exception:
-                raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.'%(group)
-                continue
-            groupColNames[group] = self.GetResultColumnNames()[key_size:]
-            d = {}
-            for row in res:
-                d[row[:key_size]] = row[key_size:]
-            groupMaps[group] = d
+        for group in p._groups:
+            groupMaps[group], groupColNames[group] = self.group_map(group)
         return groupMaps, groupColNames
-        
+
+    def group_map(self, group):
+        """Return a tuple of (1) a dictionary mapping image keys to
+        group keys and (2) a list of column names for the group
+        keys."""
+        key_size = p.table_id and 2 or 1
+        query = p._groups[group]
+        try:
+            res = self.execute(query)
+        except Exception:
+            raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.'%(group)
+        col_names = self.GetResultColumnNames()[key_size:]
+        d = {}
+        for row in res:
+            d[row[:key_size]] = row[key_size:]
+        return d, col_names
     
     def GetFilteredImages(self, filter):
         ''' Returns a list of imKeys from the given filter. '''
