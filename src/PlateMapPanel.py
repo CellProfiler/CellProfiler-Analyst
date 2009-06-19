@@ -87,20 +87,16 @@ class PlateMapPanel(wx.Panel):
         
         self.Refresh()
         
-    def SetClipInterval(self, data_range, clip_mode='rescale'):
+    def SetClipInterval(self, clip_interval, data_range, clip_mode='rescale'):
         ''' Rescales/clips the color data to fit a new range. '''
         self.data_range = data_range
-        if data_range[0] == data_range[1]:
-            self.data_scaled = self.data - data_range[0] + 0.5
-        else:
-            if clip_mode == 'rescale':
-                self.data_scaled = (self.data-data_range[0]) / (data_range[1]-data_range[0])
-            elif clip_mode == 'clip':
-                fullrange = (np.nanmin(self.data), np.nanmax(self.data))
-                self.data_scaled = (self.data-fullrange[0]) / (fullrange[1]-fullrange[0])
-                scaled_range = (data_range-fullrange[0]) / (fullrange[1]-fullrange[0])
-                self.data_scaled[self.data_scaled < scaled_range[0]] = 0.
-                self.data_scaled[self.data_scaled > scaled_range[1]] = 1.
+        if clip_mode == 'rescale':
+            self.data_scaled = (self.data - clip_interval[0]) / (clip_interval[1] - clip_interval[0])
+        elif clip_mode == 'clip':
+            self.data_scaled = (self.data - data_range[0]) / (data_range[1] - data_range[0])
+            scaled_interval = (clip_interval - data_range[0]) / (data_range[1] - data_range[0])
+            self.data_scaled[self.data_scaled < scaled_interval[0]] = 0.
+            self.data_scaled[self.data_scaled > scaled_interval[1]] = 1.
         self.Refresh()
     
     def SetColLabels(self, labels):

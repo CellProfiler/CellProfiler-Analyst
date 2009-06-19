@@ -100,6 +100,7 @@ class PlateMapBrowser(wx.Frame):
         self.loadCSVMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='L&oad CSV',
                                            help='Load a CSV file storing per-image data')
         self.fileMenu.AppendItem(self.loadCSVMenuItem)
+        
         self.GetMenuBar().Append(self.fileMenu, '&File')
         
         

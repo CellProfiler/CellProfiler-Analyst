@@ -54,15 +54,15 @@ class ColorBarPanel(wx.Panel):
         self.xo = 0
         self.UpdateInterval()
     
-    def OnClipSliderLeftDown(self, evt):
-        self.cur_slider = evt.EventObject
-        self.xo = evt.X
-
     def OnMotion(self, evt):
         if not evt.Dragging() or not evt.LeftIsDown():
             return
         self.cur_slider.SetPosition((evt.X - s_off, -1))
         self.UpdateInterval()
+
+    def OnClipSliderLeftDown(self, evt):
+        self.cur_slider = evt.EventObject
+        self.xo = evt.X
 
     def OnClipSliderMotion(self, evt):
         slider = evt.EventObject
@@ -99,8 +99,20 @@ class ColorBarPanel(wx.Panel):
         self.low_slider.SetToolTipString(str(self.interval[0]))
         self.high_slider.SetToolTipString(str(self.interval[1]))
         for win in self.notify_windows:
-            win.SetClipInterval(self.GetInterval(), self.clipmode)
+            win.SetClipInterval(self.GetInterval(), self.extents, self.clipmode)
         self.Refresh()
+        
+# TODO: To be added.  Not sure how to treat intervals that are outside 
+#       the current extents, do we resize the extents?  This could get
+#       ugly and confusing.
+
+#    def SetInterval(self, interval):
+#        self.interval = interval
+#        self.low_slider.SetPosition((0-s_off,-1))
+#        self.high_slider.SetPosition((self.Size[0]-s_off,-1))
+#        for win in self.notify_windows:
+#            win.SetClipInterval(self.GetInterval(), self.clipmode)
+#        self.Refresh()
         
     def GetInterval(self):
         ''' Returns the interval clipped on the value axis. '''
@@ -135,7 +147,7 @@ class ColorBarPanel(wx.Panel):
         else:
             self.clipmode = 'clip'
         for win in self.notify_windows:
-            win.SetClipInterval(self.GetInterval(), self.clipmode)
+            win.SetClipInterval(self.GetInterval(), self.extents, self.clipmode)
         self.Refresh()
         
     def OnRightDown(self, evt):
