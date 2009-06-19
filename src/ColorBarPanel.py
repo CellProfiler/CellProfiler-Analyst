@@ -84,7 +84,7 @@ class ColorBarPanel(wx.Panel):
         self.low_slider.SetPosition((0-s_off,-1))
         self.high_slider.SetPosition((self.Size[0]-s_off,-1))
         for win in self.notify_windows:
-            win.SetClipInterval(self.GetInterval(), self.clipmode)
+            win.SetClipInterval(self.GetInterval(), self.extents, self.clipmode)
         self.Refresh()
         
     def UpdateInterval(self):
