@@ -95,7 +95,6 @@ class ImageControlPanel(wx.Panel):
         radiobox.Bind(wx.EVT_RADIOBOX, self.OnSetContrastMode)
         
 
-
     def SetClassPoints(self, classCoords):
         vals = np.arange(float(len(classCoords))) / len(classCoords)
         if len(vals) > 0:
