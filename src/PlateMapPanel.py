@@ -22,8 +22,8 @@ class PlateMapPanel(wx.Panel):
     '''
     
     def __init__(self, parent, data, shape=None, well_labels=None,
-                 colormap='jet', wellshape=ROUNDED, row_label_format=None, 
-                 **kwargs):
+                 colormap='jet', wellshape=ROUNDED, row_label_format=None,
+                 data_range=None, **kwargs):
         '''
         ARGUMENTS:
         parent -- wx parent window
@@ -31,10 +31,13 @@ class PlateMapPanel(wx.Panel):
         
         KEYWORD ARGUMENTS:
         shape -- a 2-tuple to reshape the data to (must fit the data)
-        well_labels -- list of labels for each well (must be same length as data)
+        well_labels -- list of labels for each well (must be same len as data)
         colormap -- a colormap name from pylab.cm
         wellshape -- ROUNDED, CIRCLE, or SQUARE
         row_label_format -- 'ABC' or '123'
+        data_range -- 2-tuple containing the min and max values that the data 
+           should be normalized to. Otherwise the min and max will be taken 
+           from the data (ignoring NaNs).
         '''
         
         wx.Panel.__init__(self, parent, **kwargs)
@@ -42,7 +45,7 @@ class PlateMapPanel(wx.Panel):
         self.selection = set([])
         self.SetColorMap(colormap)
         self.wellshape = wellshape
-        self.SetData(data, shape)
+        self.SetData(data, shape, data_range=data_range)
         if row_label_format is None:
             if self.data.shape[0] <= len(abc):
                 self.row_label_format = 'ABC'
@@ -60,29 +63,44 @@ class PlateMapPanel(wx.Panel):
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
        
-    def SetData(self, data, shape=None, range=None):
+    def SetData(self, data, shape=None, data_range=None):
         '''
-        data: An iterable containing numeric values. It's shape will be used
-              to layout the plate unless overridden by the shape parameter
-        shape: If passed, this will be used to reshape the data. (rows,cols)
-        range: 2-tuple containing the min and max values that the data should
-               be normalized to. Otherwise the min and max will be taken from
-               the data (ignoring NaNs). 
+        data -- An iterable containing numeric values. It's shape will be used
+           to layout the plate unless overridden by the shape parameter
+        shape -- If passed, this will be used to reshape the data. (rows,cols)
+        data_range -- 2-tuple containing the min and max values that the data 
+           should be normalized to. Otherwise the min and max will be taken 
+           from the data (ignoring NaNs).
         '''
         self.data = np.array(data).astype('float')
         
         if shape is not None:
             self.data = self.data.reshape(shape)
 
-        self.range = range
-        if self.range is None:
-            self.range = (np.nanmin(self.data), np.nanmax(self.data))
+        if data_range is None:
+            data_range = (np.nanmin(self.data), np.nanmax(self.data))
         
-        if self.range[0] == self.range[1]:
-            self.data_normalized = self.data - self.range[0] + 0.5
+        if data_range[0] == data_range[1]:
+            self.data_scaled = self.data - data_range[0] + 0.5
         else:
-            self.data_normalized = (self.data-self.range[0]) / (self.range[1]-self.range[0])
+            self.data_scaled = (self.data-data_range[0]) / (data_range[1]-data_range[0])
         
+        self.Refresh()
+        
+    def SetClipInterval(self, data_range, clip_mode='rescale'):
+        ''' Rescales/clips the color data to fit a new range. '''
+        self.data_range = data_range
+        if data_range[0] == data_range[1]:
+            self.data_scaled = self.data - data_range[0] + 0.5
+        else:
+            if clip_mode == 'rescale':
+                self.data_scaled = (self.data-data_range[0]) / (data_range[1]-data_range[0])
+            elif clip_mode == 'clip':
+                fullrange = (np.nanmin(self.data), np.nanmax(self.data))
+                self.data_scaled = (self.data-fullrange[0]) / (fullrange[1]-fullrange[0])
+                scaled_range = (data_range-fullrange[0]) / (fullrange[1]-fullrange[0])
+                self.data_scaled[self.data_scaled < scaled_range[0]] = 0.
+                self.data_scaled[self.data_scaled > scaled_range[1]] = 1.
         self.Refresh()
     
     def SetColLabels(self, labels):
@@ -213,7 +231,7 @@ class PlateMapPanel(wx.Panel):
                         dc.SetPen(wx.Pen("BLACK",5))
                     else:
                         dc.SetPen(wx.Pen("BLACK",0.5))
-                    color = np.array(self.colormap(self.data_normalized[y-1][x-1])[:3]) * 255
+                    color = np.array(self.colormap(self.data_scaled[y-1][x-1])[:3]) * 255
                     if np.isnan(self.data[y-1][x-1]):
                         dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                     else:
@@ -245,7 +263,7 @@ if __name__ == "__main__":
 #    data = np.ones(384)
     data[100:102] = np.nan
     frame = wx.Frame(None, size=(900.,800.))
-    p = PlateMapPanel(frame, data, shape=(40,140), well_labels=labels, wellshape='square')
+    p = PlateMapPanel(frame, data, shape=(40,140), well_labels=labels, wellshape='square', data_range=(400,500))
     frame.Show()
     
     app.MainLoop()

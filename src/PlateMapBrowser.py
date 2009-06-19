@@ -14,6 +14,7 @@ p = Properties.Properties.getInstance()
 Properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
 
+
 class AwesomePMP(PlateMapPanel):
     '''
     PlateMapPanel that does selection and tooltips for data.
@@ -239,6 +240,7 @@ class PlateMapBrowser(wx.Frame):
         measurement = self.measurementsChoice.GetStringSelection()
         table       = self.sourceChoice.GetStringSelection()
         aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
+        self.colorBar.ClearNotifyWindows()
         
         def computeMedians(wellsAndVals):
             ''' 
@@ -268,6 +270,7 @@ class PlateMapBrowser(wx.Frame):
         for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
             plate = plateChoice.GetStringSelection()
             plateMap.SetPlate(plate)
+            self.colorBar.AddNotifyWindow(plateMap)
             wellsAndVals = []
             if table == p.image_table:
                 group = True
@@ -333,7 +336,7 @@ class PlateMapBrowser(wx.Frame):
         self.colorBar.SetExtents((dmin,dmax))
         
         for d, plateMap in zip(data, self.plateMaps):
-            plateMap.SetData(d, range=(dmin,dmax))
+            plateMap.SetData(d, data_range=self.colorBar.GetInterval())
         
         
     def GetNumericColumnsFromTable(self, table):
@@ -352,21 +355,25 @@ class PlateMapBrowser(wx.Frame):
         table = self.sourceChoice.GetStringSelection()
         self.measurementsChoice.SetItems(self.GetNumericColumnsFromTable(table))
         self.measurementsChoice.Select(0)
+        self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
         
     def OnSelectPlate(self, evt):
         ''' Handles the selection of a plate from the plate choice box. '''
+        self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
         
     def OnSelectMeasurement(self, evt):
         ''' Handles the selection of a new measurement to plot from a choice box. '''
+        self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
         
     def OnSelectAggregationMethod(self, evt):
         ''' Handles the selection of an aggregation method from the choice box. '''
+        self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
         
@@ -382,6 +389,7 @@ class PlateMapBrowser(wx.Frame):
             
     def OnSelectNumberOfPlates(self, evt):
         ''' Handles the selection of predefined # of plates to view from a choice box. '''
+        self.colorBar.ResetInterval()
         nPlates = int(self.numberOfPlatesChoice.GetStringSelection())
         # Record the indices of the plates currently selected.
         # Pad the list with 0's then crop to the new number of plates.
