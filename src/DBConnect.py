@@ -666,12 +666,14 @@ class DBConnect(Singleton):
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in idx_cols):
             raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
         
-        # Check for orphaned objects
-        obims = self.execute('SELECT DISTINCT(%s) FROM %s'%(p.image_id, p.object_table))
-        imims = self.execute('SELECT %s FROM %s'%(p.image_id, p.image_table))
-        orphans = set(obims) - set(imims)
-        assert not orphans, 'Objects were found in "%s" that had no corresponding image key in "%s"'%(p.object_table, p.image_table)
-            
+        # Removed because it doesn't work (ignores TableNumber), and is slow.
+        #
+        # # Check for orphaned objects
+        # obims = [(c[0]) for c in self.execute('SELECT %s, COUNT(*)  FROM %s GROUP BY %s'%(p.image_id, p.object_table, p.image_id))]
+        # imims = self.execute('SELECT %s FROM %s'%(p.image_id, p.image_table))
+        # orphans = set(obims) - set(imims)
+        # assert not orphans, 'Objects were found in "%s" that had no corresponding image key in "%s"'%(p.object_table, p.image_table)
+        
         # Check for unlabeled wells
         if p.well_id:
             res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
