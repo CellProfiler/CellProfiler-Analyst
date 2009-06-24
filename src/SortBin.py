@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from DBConnect import DBConnect
 from TileCollection import TileCollection
 from ImageTile import ImageTile
@@ -142,17 +143,18 @@ class SortBin(wx.ScrolledWindow):
         if self.tile_collection == None:
             self.tile_collection = TileCollection.getInstance()
         imgSet = self.tile_collection.GetTiles(obKeys, self.classifier, priority)
-        for i, obKey, imgs in zip(range(len(obKeys)), obKeys, imgSet):
-            newTile = ImageTile(self, obKey, imgs, chMap, False,
-                                scale=self.classifier.scale, 
-                                brightness=self.classifier.brightness,
-                                contrast=self.classifier.contrast)
-            if pos == 'first':
-                self.tiles.insert(i, newTile)
-                self.sizer.Insert(i, newTile, 0, wx.ALL|wx.EXPAND, 1 )
-            else:
-                self.tiles.append(newTile)
-                self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
+        with self.tile_collection.load_lock:
+            for i, obKey, imgs in zip(range(len(obKeys)), obKeys, imgSet):
+                newTile = ImageTile(self, obKey, imgs, chMap, False,
+                                    scale=self.classifier.scale, 
+                                    brightness=self.classifier.brightness,
+                                    contrast=self.classifier.contrast)
+                if pos == 'first':
+                    self.tiles.insert(i, newTile)
+                    self.sizer.Insert(i, newTile, 0, wx.ALL|wx.EXPAND, 1 )
+                else:
+                    self.tiles.append(newTile)
+                    self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
         self.UpdateSizer()
         self.UpdateQuantity()
 

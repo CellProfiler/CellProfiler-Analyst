@@ -18,7 +18,7 @@ import ImageTools
 import MulticlassSQL
 import PolyaFit
 import numpy
-import os
+import os, os.path
 import wx
 from time import time
 
@@ -46,7 +46,7 @@ class ClassifierGUI(wx.Frame):
             print "DataModel is empty. Classifier requires a populated DataModel to function. Exiting."
             exit()
 
-        wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(p._filename), size=(800,600))
+        wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600))
                 
         self.worker = None
         self.weaklearners = None
@@ -500,7 +500,7 @@ class ClassifierGUI(wx.Frame):
         os.chdir(os.path.split(filename)[0])
         self.defaultTSFileName = os.path.split(filename)[1]
         
-        self.trainingSet = TrainingSet(p, filename)
+        self.trainingSet = TrainingSet(p, filename, labels_only=True)
         
         self.RemoveAllSortClasses()
         for label in self.trainingSet.labels:
@@ -508,10 +508,8 @@ class ClassifierGUI(wx.Frame):
             
         keysPerBin = {}
         for (label, key) in self.trainingSet.entries:
-            if label in keysPerBin.keys():
-                keysPerBin[label] += [key]
-            else:
-                keysPerBin[label] = [key]
+            keysPerBin[label] = keysPerBin.get(label, []) + [key]
+
         for bin in self.classBins:
             if bin.label in keysPerBin.keys():
                 bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)

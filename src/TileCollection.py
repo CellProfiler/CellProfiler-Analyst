@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from DBConnect import DBConnect
 from Properties import Properties
 from Singleton import Singleton
@@ -23,6 +24,7 @@ class TileCollection(Singleton):
         self.tileData  = WeakValueDictionary()
         self.loadq     = []
         self.cv        = threading.Condition()
+        self.load_lock = threading.Lock()
         self.group_priority = 0
         # Gray placeholder for unloaded images
         self.imagePlaceholder = List([numpy.zeros((int(p.image_tile_size),
@@ -45,21 +47,14 @@ class TileCollection(Singleton):
         self.loader.notify_window = notify_window
         self.group_priority -= 1
         tiles = []
-        self.cv.acquire()
-        for order, obKey in enumerate(obKeys):
-            td = self.tileData.get(obKey, None)
-            if td:
-                # If tile data has been loaded, attach it 
-                tiles += [td]
-            else:
-                # Otherwise attach a place holder and add to the load queue
-                heappush(self.loadq, ((priority, self.group_priority, order), obKey))
-                self.group_priority += 1
-                placeholder = List(self.imagePlaceholder)
-                self.tileData[obKey] = placeholder
-                tiles += [placeholder]
-        self.cv.notify()
-        self.cv.release()
+        with self.cv:
+            tiles = [self.tileData.get(obKey, List(self.imagePlaceholder)) for obKey in obKeys]
+            for order, obKey in enumerate(obKeys):
+                if not obKey in self.tileData:
+                    heappush(self.loadq, ((priority, self.group_priority, order), obKey))
+                    self.group_priority += 1
+                    self.tileData[obKey] = tiles[order]
+            self.cv.notify()
         return tiles    
 
     
@@ -116,22 +111,25 @@ class TileLoader(threading.Thread):
             obKey = heappop(self.tile_collection.loadq)[1]
             self.tile_collection.cv.release()
 
-            # Make sure tile hasn't been deleted outside this thread
-            if not self.tile_collection.tileData.get(obKey, None):
-                continue
+            # wait until loading has completed before continuing
+            with self.tile_collection.load_lock:
 
-            try:
-                newData = ImageTools.FetchTile(obKey)
-                tile_data = self.tile_collection.tileData.get(obKey, None)
                 # Make sure tile hasn't been deleted outside this thread
-                if tile_data is not None:
-                    # copy each channel
-                    for i in range(len(tile_data)):
-                        tile_data[i] = newData[i]
-                    wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
-            except Exception, e:
-                import sys
-                sys.stderr.write('ERROR FETCHING TILE!\n%s\n'%(e))
+                if not self.tile_collection.tileData.get(obKey, None):
+                    continue
+
+                try:
+                    newData = ImageTools.FetchTile(obKey)
+                    tile_data = self.tile_collection.tileData.get(obKey, None)
+                    # Make sure tile hasn't been deleted outside this thread
+                    if tile_data is not None:
+                        # copy each channel
+                        for i in range(len(tile_data)):
+                            tile_data[i] = newData[i]
+                        wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
+                except Exception, e:
+                    import sys
+                    sys.stderr.write('ERROR FETCHING TILE!\n%s\n'%(e))
 
     def abort(self):
         self._want_abort = True

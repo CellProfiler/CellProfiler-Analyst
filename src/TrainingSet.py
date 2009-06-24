@@ -7,12 +7,12 @@ db = DBConnect.getInstance()
 class TrainingSet:
     "A class representing a set of manually labeled cells."
 
-    def __init__(self, properties, filename=''):
+    def __init__(self, properties, filename='', labels_only=False):
         self.properties = properties
         self.colnames = db.GetColnamesForClassifier()
         self.filename = filename
         if filename != '':
-            self.Load(filename)
+            self.Load(filename, labels_only=labels_only)
 
 
     def Clear(self):
@@ -25,7 +25,7 @@ class TrainingSet:
         self.entries = []               # list of (label, obKey) pairs
             
             
-    def Create(self, labels, keyLists):
+    def Create(self, labels, keyLists, labels_only=False):
         '''
         labels:   list of class labels
                   Example: ['pos','neg','other']
@@ -45,12 +45,12 @@ class TrainingSet:
             for obKey in keyList:
                 self.label_matrix.append(cl_label)
                 self.entries.append((label,obKey))
-                self.values.append(db.GetCellDataForClassifier(obKey))
+                self.values.append([] if labels_only else db.GetCellDataForClassifier(obKey))
         self.label_matrix = array(self.label_matrix)
         self.values = array(self.values)
 
 
-    def Load(self, filename):
+    def Load(self, filename, labels_only=False):
         self.Clear()
         f = open(filename, 'U')
         lines = f.read()
@@ -73,7 +73,7 @@ class TrainingSet:
                 f.close()
                 raise
             
-        self.Create(labelDict.keys(), labelDict.values())
+        self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
         
         f.close()
         
