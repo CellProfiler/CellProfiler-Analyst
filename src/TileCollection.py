@@ -47,13 +47,15 @@ class TileCollection(Singleton):
         self.loader.notify_window = notify_window
         self.group_priority -= 1
         tiles = []
+        temp = {} # for weakrefs
         with self.cv:
-            tiles = [self.tileData.get(obKey, List(self.imagePlaceholder)) for obKey in obKeys]
             for order, obKey in enumerate(obKeys):
                 if not obKey in self.tileData:
                     heappush(self.loadq, ((priority, self.group_priority, order), obKey))
                     self.group_priority += 1
-                    self.tileData[obKey] = tiles[order]
+                    temp[order] = List(self.imagePlaceholder)
+                    self.tileData[obKey] = temp[order]
+            tiles = [self.tileData[obKey] for obKey in obKeys]
             self.cv.notify()
         return tiles    
 
