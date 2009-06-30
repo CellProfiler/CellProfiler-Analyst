@@ -1,6 +1,10 @@
 from sys import stderr
-from numpy import array
+import numpy
+import cPickle
+import base64
+import zlib
 from DBConnect import DBConnect
+from Singleton import Singleton
 
 db = DBConnect.getInstance()
 
@@ -11,6 +15,7 @@ class TrainingSet:
         self.properties = properties
         self.colnames = db.GetColnamesForClassifier()
         self.filename = filename
+        self.cache = CellCache.getInstance()
         if filename != '':
             self.Load(filename, labels_only=labels_only)
 
@@ -23,6 +28,9 @@ class TrainingSet:
         self.label_matrix = []          # array of classifier labels for each sample
         self.values = []                # array of measurements (data from db) for each sample
         self.entries = []               # list of (label, obKey) pairs
+
+        # check cache freshness
+        self.cache.clear_if_objects_modified()
             
             
     def Create(self, labels, keyLists, labels_only=False):
@@ -34,20 +42,18 @@ class TrainingSet:
         '''
         assert len(labels)==len(keyLists), 'Class labels and keyLists must be of equal size.'
         self.Clear()
-        self.labels = array(labels)
-        self.classifier_labels = []
-        for i in range(len(labels)):
-            self.classifier_labels += [[-1 for j in labels]]
-            self.classifier_labels[-1][i] = 1
+        self.labels = numpy.array(labels)
+        self.classifier_labels = 2 * numpy.eye(len(labels), dtype=numpy.int) - 1
         
+
         # Populate the label_matrix, entries, and values
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
-            for obKey in keyList:
-                self.label_matrix.append(cl_label)
-                self.entries.append((label,obKey))
-                self.values.append([] if labels_only else db.GetCellDataForClassifier(obKey))
-        self.label_matrix = array(self.label_matrix)
-        self.values = array(self.values)
+            self.label_matrix += ([cl_label] * len(keyList))
+            self.entries += zip([label] * len(keyList), keyList)
+            self.values += ([] if labels_only else [self.cache.get_object_data(k) for k in keyList])
+
+        self.label_matrix = numpy.array(self.label_matrix)
+        self.values = numpy.array(self.values)
 
 
     def Load(self, filename, labels_only=False):
@@ -59,7 +65,11 @@ class TrainingSet:
         labelDict = {}
         for l in lines:
             try:
-                if l.strip()=='' or l.startswith('#'): continue
+                if l.strip()=='': continue
+                if l.startswith('#'):
+                    self.cache.load_from_string(l[2:])
+                    continue
+
                 label = l.strip().split(' ')[0]
                 if (label == "label"): continue
                 
@@ -79,6 +89,9 @@ class TrainingSet:
         
         
     def Save(self, filename):
+        # check cache freshness
+        self.cache.clear_if_objects_modified()
+
         f = open(filename, 'w')
         try:
             from Properties import Properties
@@ -88,6 +101,7 @@ class TrainingSet:
             for label, obKey in self.entries:
                 line = label+' '+' '.join([str(int(k)) for k in obKey])+'\n'
                 f.write(line)
+            f.write('# ' + self.cache.save_to_string([k[1] for k in self.entries]) + '\n')
         except:
             print >>stderr, "error saving training set %s" % (filename)
             f.close()
@@ -105,6 +119,43 @@ class TrainingSet:
         sub.groups = [self.groups[i] for i in range(len(self.groups)) if mask[i]]
         return sub
 
+class CellCache(Singleton):
+    "caching frontend for holding cell data"
+    
+    def __init__(self):
+        self.data = {}
+        self.last_update = db.get_objects_modify_date()
+
+    def load_from_string(self, str):
+        'load data from a string, verifying that the table has not changed since it was created (encoded in string)'
+        try:
+            date, oldcache = cPickle.loads(zlib.decompress(base64.b64decode(str)))
+        except:
+            # silent failure
+            return
+        # verify the database hasn't been changed
+        if db.verify_objects_modify_date_earlier(date):
+            self.data.update(oldcache)
+
+    def save_to_string(self, keys):
+        'convert the cache data to a string, but only for certain keys'
+        temp = {}
+        for k in keys:
+            if k in self.data:
+                temp[k] = self.data[k]
+        output = (db.get_objects_modify_date(), temp)
+        return base64.b64encode(zlib.compress(cPickle.dumps(output)))
+
+    def get_object_data(self, key):
+        if key not in self.data:
+            self.data[key] = db.GetCellDataForClassifier(key)
+        return self.data[key]
+
+    def clear_if_objects_modified(self):
+        if not db.verify_objects_modify_date_earlier(self.last_update):
+            self.data = {}
+            self.last_update = db.get_objects_modify_date()
+        
 
 if __name__ == "__main__":
     from sys import argv

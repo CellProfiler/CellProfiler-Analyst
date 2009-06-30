@@ -10,6 +10,7 @@ import sys
 import threading
 import traceback
 import re
+import os.path
 
 verbose = True
 
@@ -723,6 +724,18 @@ class DBConnect(Singleton):
                 bin -= 1
             h[bin] = count
         return h, numpy.linspace(min, max, nbins + 1)
+
+    def get_objects_modify_date(self):
+        if p.db_type.lower() == 'mysql':
+            return self.execute("select UPDATE_TIME from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='%s' and TABLE_SCHEMA='%s'"%(p.object_table, p.db_name))[0][0]
+        else:
+            return os.path.getmtime(self.sqliteDBFile)
+
+    def verify_objects_modify_date_earlier(self, later):
+        cur = self.get_objects_modify_date()
+        print cur, later, cur <= later
+        return self.get_objects_modify_date() <= later
+
 
 
 if __name__ == "__main__":
