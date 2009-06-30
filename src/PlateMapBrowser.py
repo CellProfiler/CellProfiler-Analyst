@@ -100,7 +100,6 @@ class PlateMapBrowser(wx.Frame):
         self.loadCSVMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='L&oad CSV',
                                            help='Load a CSV file storing per-image data')
         self.fileMenu.AppendItem(self.loadCSVMenuItem)
-        
         self.GetMenuBar().Append(self.fileMenu, '&File')
         
         
@@ -145,7 +144,7 @@ class PlateMapBrowser(wx.Frame):
         
         viewSizer.AddSpacer((-1,10))
         viewSizer.Add(wx.StaticText(self, label='Number of Plates:'))
-        self.numberOfPlatesChoice = wx.Choice(self, choices=['1','2','4','9','16'])
+        self.numberOfPlatesChoice = wx.Choice(self, choices=['1','2','4','6','9','12','16'])
         self.numberOfPlatesChoice.Select(0)
         viewSizer.Add(self.numberOfPlatesChoice)
         
@@ -162,7 +161,7 @@ class PlateMapBrowser(wx.Frame):
         
         self.rightSizer = wx.BoxSizer(wx.VERTICAL)
         self.rightSizer.Add(self.plateMapSizer, 1, wx.EXPAND|wx.BOTTOM, 10)
-        self.colorBar = ColorBarPanel(self, 'jet', (0,1), size=(-1,25))
+        self.colorBar = ColorBarPanel(self, 'jet', size=(-1,25))
         self.rightSizer.Add(self.colorBar, 0, wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL)
         
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -180,7 +179,12 @@ class PlateMapBrowser(wx.Frame):
         self.numberOfPlatesChoice.Bind(wx.EVT_CHOICE, self.OnSelectNumberOfPlates)
         self.wellShapeChoice.Bind(wx.EVT_CHOICE, lambda(evt): [plateMap.SetWellShape(self.wellShapeChoice.GetStringSelection()) for plateMap in self.plateMaps])
         
+        global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(self.measurementsChoice.GetStringSelection(), 
+                                                                       self.measurementsChoice.GetStringSelection(), 
+                                                                       self.sourceChoice.GetStringSelection()))[0]
+        self.colorBar.SetGlobalExtents(global_extents)
         self.AddPlateMap()
+        self.UpdatePlateMaps()
         
 
     def OnLoadCSV(self, evt):
@@ -234,7 +238,6 @@ class PlateMapBrowser(wx.Frame):
         singlePlateMapSizer.Add(self.plateMaps[-1], 1, wx.EXPAND, wx.ALIGN_CENTER)
         
         self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND, wx.ALIGN_CENTER)
-        self.UpdatePlateMaps()
             
     
     def UpdatePlateMaps(self):
@@ -264,7 +267,43 @@ class PlateMapBrowser(wx.Frame):
                 else:
                     wellsAndMedians += [(well, (sortedVals[(N/2)]+sortedVals[(N/2+1)])/2)]
             return wellsAndMedians
+
+        if aggMethod == 'average':
+            expression = "AVG(%s.%s)"%(table, measurement)
+        elif aggMethod == 'stdev':
+            expression = "STDDEV(%s.%s)"%(table, measurement)
+        elif aggMethod == 'cv%':
+            expression = "STDDEV(%s.%s)/AVG(%s.%s)*100"%(table, measurement, table, measurement)
+        elif aggMethod == 'sum':
+            expression = "SUM(%s.%s)"%(table, measurement)
+        elif aggMethod == 'min':
+            expression = "MIN(%s.%s)"%(table, measurement)
+        elif aggMethod == 'max':
+            expression = "MAX(%s.%s)"%(table, measurement)
+        elif aggMethod == 'median':
+            expression = "MEDIAN(%s.%s)"%(table, measurement)
         
+        if table == p.image_table:
+            group = True
+            platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
+                                      (p.plate_id, p.well_id, expression, table,
+                                       "GROUP BY %s, %s"%(p.plate_id, p.well_id) if group else ""))
+        else:
+            # For data from other tables, we need to link the table to the per image table
+            # Here's an example query for sums from the per_object table:
+            #  SELECT per_image.well, SUM(per_object.measurement) FROM per_image per_object
+            #  WHERE per_image.ImageNumber=per_object.ImageNumber AND per_image.plate=plate
+            #  GROUP BY Batch1_Per_Image.Image_Metadata_Well;
+            group = True
+            platesWellsAndVals = db.execute('SELECT %s.%s, %s.%s, %s FROM %s, %s WHERE %s %s'%
+                                      (p.image_table, p.plate_id, p.image_table, p.well_id, expression, 
+                                       p.image_table, table, 
+                                       " AND ".join(["%s.%s=%s.%s"%(table, id, p.image_table, id) for id in image_key_columns()]),
+                                       'GROUP BY %s.%s, %s.%s'%(p.image_table, p.plate_id, p.image_table, p.well_id) if group else ''))
+            
+        gmin = np.nanmin([float(val) for _,_,val in platesWellsAndVals])
+        gmax = np.nanmax([float(val) for _,_,val in platesWellsAndVals])
+
         data = []
         dmax = -np.inf
         dmin = np.inf
@@ -272,72 +311,20 @@ class PlateMapBrowser(wx.Frame):
             plate = plateChoice.GetStringSelection()
             plateMap.SetPlate(plate)
             self.colorBar.AddNotifyWindow(plateMap)
-            wellsAndVals = []
-            if table == p.image_table:
-                group = True
-                if aggMethod == 'average':
-                    expression = "AVG(%s)"%(measurement)
-                elif aggMethod == 'stdev':
-                    expression = "STDDEV(%s)"%(measurement)
-                elif aggMethod == 'cv%':
-                    expression = "STDDEV(%s)/AVG(%s)*100"%(measurement, measurement)
-                elif aggMethod == 'sum':
-                    expression = "SUM(%s)"%(measurement)
-                elif aggMethod == 'min':
-                    expression = "MIN(%s)"%(measurement)
-                elif aggMethod == 'max':
-                    expression = "MAX(%s)"%(measurement)
-                elif aggMethod == 'median':
-                    expression = "MEDIAN(%s)"%(measurement)
-
-                wellsAndVals = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" %s'%
-                                          (p.well_id, expression, table, 
-                                           p.plate_id, plate,
-                                           "GROUP BY %s"%(p.well_id) if group else ""))                   
-
-                data += [FormatPlateMapData(wellsAndVals)]
-                dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
-                dmax = np.nanmax([float(val) for w,val in wellsAndVals]+[dmax])
-            else:
-                # For per-object data, we need to link the object table to the per image table
-                # Here's an example query for sums:
-                #  SELECT per_image.well, SUM(per_object.measurement) FROM per_image per_object
-                #  WHERE per_image.ImageNumber=per_object.ImageNumber AND per_image.plate=plate
-                #  GROUP BY Batch1_Per_Image.Image_Metadata_Well;
                 
-                join_clause = " AND ".join(["%s.%s=%s.%s"%(table, id, p.image_table, id) for id in image_key_columns()])
-                where = join_clause + ' AND %s.%s="%s"'%(p.image_table, p.plate_id, plate)
-
-                group = True
-                if aggMethod == 'average':
-                    expression = "AVG(%s.%s)"%(table, measurement)
-                elif aggMethod == 'stdev':
-                    expression = "STDDEV(%s.%s)"%(table, measurement)
-                elif aggMethod == 'cv%':
-                    expression = "STDDEV(%s.%s)/AVG(%s.%s)*100"%(table, measurement, table, measurement)
-                elif aggMethod == 'sum':
-                    expression = "SUM(%s.%s)"%(table, measurement)
-                elif aggMethod == 'min':
-                    expression = "MIN(%s.%s)"%(table, measurement)
-                elif aggMethod == 'max':
-                    expression = "MAX(%s.%s)"%(table, measurement)
-                elif aggMethod == 'median':
-                    expression = "MEDIAN(%s.%s)"%(table, measurement)
-
-                wellsAndVals = db.execute('SELECT %s.%s, %s FROM %s, %s WHERE %s %s'%
-                                          (p.image_table, p.well_id, expression, 
-                                           p.image_table, table, 
-                                           where,
-                                           'GROUP BY %s.%s'%(p.image_table, p.well_id) if group else ''))
-
-                data += [FormatPlateMapData(wellsAndVals)]
-                dmin = np.nanmin([float(val) for w,val in wellsAndVals]+[dmin])
-                dmax = np.nanmax([float(val) for w,val in wellsAndVals]+[dmax])
-                
-        self.colorBar.SetExtents((dmin,dmax))
+            wellsAndVals = [v[1:] for v in platesWellsAndVals if v[0]==plate]
+            data += [FormatPlateMapData(wellsAndVals)]
+            
+            dmin = np.nanmin([float(val) for _,val in wellsAndVals]+[dmin])
+            dmax = np.nanmax([float(val) for _,val in wellsAndVals]+[dmax])
+        
+        self.colorBar.SetLocalExtents([dmin,dmax])
+        self.colorBar.SetGlobalExtents([gmin,gmax])
         
         for d, plateMap in zip(data, self.plateMaps):
-            plateMap.SetData(d, data_range=self.colorBar.GetInterval())
+            plateMap.SetData(d, data_range=self.colorBar.GetLocalExtents(), 
+                             clip_interval=self.colorBar.GetLocalInterval(), 
+                             clip_mode=self.colorBar.GetClipMode())
         
         
     def GetNumericColumnsFromTable(self, table):
@@ -362,12 +349,14 @@ class PlateMapBrowser(wx.Frame):
         
     def OnSelectPlate(self, evt):
         ''' Handles the selection of a plate from the plate choice box. '''
-        self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
         
     def OnSelectMeasurement(self, evt):
         ''' Handles the selection of a new measurement to plot from a choice box. '''
+#        aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
+        measurement = self.measurementsChoice.GetStringSelection()
+        table       = self.sourceChoice.GetStringSelection()
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
@@ -390,12 +379,11 @@ class PlateMapBrowser(wx.Frame):
             
     def OnSelectNumberOfPlates(self, evt):
         ''' Handles the selection of predefined # of plates to view from a choice box. '''
-        self.colorBar.ResetInterval()
         nPlates = int(self.numberOfPlatesChoice.GetStringSelection())
         # Record the indices of the plates currently selected.
-        # Pad the list with 0's then crop to the new number of plates.
+        # Pad the list with sequential plate indices then crop to the new number of plates.
         currentPlates = [plateChoice.GetSelection() for plateChoice in self.plateMapChoices]
-        currentPlates = (currentPlates+[0 for p in range(nPlates)])[:nPlates]
+        currentPlates = (currentPlates+[(currentPlates[-1]+1+p)%nPlates for p in range(nPlates)])[:nPlates]
         # Remove all plateMaps
         self.plateMapSizer.Clear(deleteWindows=True)
         self.plateMaps = []
@@ -410,8 +398,14 @@ class PlateMapBrowser(wx.Frame):
         elif nPlates == 4:
             self.plateMapSizer.SetRows(2)
             self.plateMapSizer.SetCols(2)
+        elif nPlates == 6:
+            self.plateMapSizer.SetRows(3)
+            self.plateMapSizer.SetCols(2)
         elif nPlates == 9:
             self.plateMapSizer.SetRows(3)
+            self.plateMapSizer.SetCols(3)
+        elif nPlates == 12:
+            self.plateMapSizer.SetRows(4)
             self.plateMapSizer.SetCols(3)
         elif nPlates == 16:
             self.plateMapSizer.SetRows(4)
@@ -419,6 +413,7 @@ class PlateMapBrowser(wx.Frame):
         
         for plateIndex in currentPlates:
             self.AddPlateMap(plateIndex)
+        self.UpdatePlateMaps()
             
         self.plateMapSizer.Layout()
 

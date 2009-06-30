@@ -63,33 +63,33 @@ class PlateMapPanel(wx.Panel):
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
        
-    def SetData(self, data, shape=None, data_range=None):
+    def SetData(self, data, shape=None, data_range=None, clip_interval=None, clip_mode='rescale'):
         '''
         data -- An iterable containing numeric values. It's shape will be used
            to layout the plate unless overridden by the shape parameter
         shape -- If passed, this will be used to reshape the data. (rows,cols)
-        data_range -- 2-tuple containing the min and max values that the data 
-           should be normalized to. Otherwise the min and max will be taken 
-           from the data (ignoring NaNs).
         '''
         self.data = np.array(data).astype('float')
-        
         if shape is not None:
             self.data = self.data.reshape(shape)
-
+            
+        self.SetClipInterval(clip_interval, data_range, clip_mode)
+        
+    def SetClipInterval(self, clip_interval, data_range=None, clip_mode='rescale'):
+        '''
+        Rescales/clips the colormap to fit a new range.
+        clip_interval -- iterable pair of values to clip/rescale colors to
+        data_range -- 2-tuple containing the extents that the data should be
+            normalized to. Otherwise the extents will be taken from the data.
+        clip_mode -- whether to rescale the colormap to fit the interval,
+            or to simply clip the values.
+        '''
         if data_range is None:
             data_range = (np.nanmin(self.data), np.nanmax(self.data))
-        
-        if data_range[0] == data_range[1]:
-            self.data_scaled = self.data - data_range[0] + 0.5
-        else:
-            self.data_scaled = (self.data-data_range[0]) / (data_range[1]-data_range[0])
-        
-        self.Refresh()
-        
-    def SetClipInterval(self, clip_interval, data_range, clip_mode='rescale'):
-        ''' Rescales/clips the color data to fit a new range. '''
         self.data_range = data_range
+        if clip_interval is None:
+            clip_interval = data_range
+                    
         if clip_interval[0] == clip_interval[1] or data_range[0] == data_range[1]:
             self.data_scaled = self.data - data_range[0] + 0.5
         else:

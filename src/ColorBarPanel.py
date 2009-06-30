@@ -9,11 +9,12 @@ class ColorBarPanel(wx.Panel):
     '''
     A HORIZONTAL color bar and value axis drawn on a panel.
     '''
-    def __init__(self, parent, map, extents=[0.,1.], ticks=5, labelformat='%.3f',
-                 **kwargs):
+    def __init__(self, parent, map, local_extents=[0.,1.], global_extents=None, 
+                 ticks=5, labelformat='%.3f', **kwargs):
         '''
-        map -- a colormap name from pyla~b.cm
-        extents -- min and max values to display on the bar
+        map -- a colormap name from pylab.cm
+        local_extents -- local min and max values of the measurement
+        global_extents -- min and max values of the measurement
         ticks -- # of ticks to display values for on the bar
                  1 or 0 will draw no ticks
         labelformat -- a valid format string for the values displayed
@@ -26,8 +27,9 @@ class ColorBarPanel(wx.Panel):
         self.high_slider = wx.Button(self, -1, ']', pos=(self.Size[0],-1), size=(slider_width,-1))
         self.ClearNotifyWindows()
         self.SetMap(map)
-        self.interval = list(extents)
-        self.extents = extents
+        self.interval = list(local_extents)
+        self.local_extents = local_extents
+        self.global_extents = list(local_extents)
         self.clipmode = 'rescale'
         
         self.low_slider.SetToolTipString('')
@@ -43,7 +45,7 @@ class ColorBarPanel(wx.Panel):
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.Bind(wx.EVT_SIZE, self.OnResize)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        
+    
     def OnLeftDown(self, evt):
         # Get the slider closest to the click point.
         if abs(self.low_slider.GetPositionTuple()[0] - evt.X) < abs(self.high_slider.GetPositionTuple()[0] - evt.X):
@@ -59,11 +61,11 @@ class ColorBarPanel(wx.Panel):
             return
         self.cur_slider.SetPosition((evt.X - s_off, -1))
         self.UpdateInterval()
-
+    
     def OnClipSliderLeftDown(self, evt):
         self.cur_slider = evt.EventObject
         self.xo = evt.X
-
+    
     def OnClipSliderMotion(self, evt):
         slider = evt.EventObject
         if not evt.Dragging() or not evt.LeftIsDown():
@@ -71,35 +73,38 @@ class ColorBarPanel(wx.Panel):
         slider.SetPosition((slider.GetPositionTuple()[0] + evt.X - self.xo - s_off, -1))
         self.xo = 0
         self.UpdateInterval()
-            
+        
     def ClearNotifyWindows(self):
         self.notify_windows = []
     
     def AddNotifyWindow(self, win):
         self.notify_windows += [win]
-        
+    
     def ResetInterval(self):
         ''' Sets clip interval to the extents of the colorbar. '''
-        self.interval = list(self.extents)
+        self.interval = list(self.global_extents)
         self.low_slider.SetPosition((0-s_off,-1))
         self.high_slider.SetPosition((self.Size[0]-s_off,-1))
         for win in self.notify_windows:
-            win.SetClipInterval(self.GetInterval(), self.extents, self.clipmode)
+            win.SetClipInterval(self.GetLocalInterval(), self.local_extents, self.clipmode)
         self.Refresh()
-        
+    
     def UpdateInterval(self):
         ''' Calculates the interval values w.r.t. the current extents
         and clipping slider positions. '''
-        range = self.extents[1]-self.extents[0]
-        if range>0 and self.Size[0]>0:
-            self.interval[0] = self.extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / float(self.Size[0]) * range)
-            self.interval[1] = self.extents[0] + ((self.high_slider.GetPositionTuple()[0] + s_off) / float(self.Size[0]) * range)
+        range = self.global_extents[1]-self.global_extents[0]
+        w = float(self.Size[0])
+        if range>0 and w>0:
+            self.interval[0] = self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)
+            self.interval[1] = self.global_extents[0] + ((self.high_slider.GetPositionTuple()[0] + s_off) / w * range)
+        
+            self.low_slider.SetToolTipString(str(self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)))
+            self.high_slider.SetToolTipString(str(self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)))
         else:
-            self.interval = list(self.extents)
-        self.low_slider.SetToolTipString(str(self.interval[0]))
-        self.high_slider.SetToolTipString(str(self.interval[1]))
+            self.interval = list(self.local_extents)
+        
         for win in self.notify_windows:
-            win.SetClipInterval(self.GetInterval(), self.extents, self.clipmode)
+            win.SetClipInterval(self.GetLocalInterval(), self.local_extents, self.clipmode)
         self.Refresh()
         
 # TODO: To be added.  Not sure how to treat intervals that are outside 
@@ -108,15 +113,35 @@ class ColorBarPanel(wx.Panel):
 
 #    def SetInterval(self, interval):
 #        self.interval = interval
-#        self.low_slider.SetPosition((0-s_off,-1))
+#        self.low_slider.SetPosition((0-s_off,-1))                
 #        self.high_slider.SetPosition((self.Size[0]-s_off,-1))
 #        for win in self.notify_windows:
 #            win.SetClipInterval(self.GetInterval(), self.clipmode)
 #        self.Refresh()
         
-    def GetInterval(self):
+    def GetGlobalInterval(self):
         ''' Returns the interval clipped on the value axis. '''
         return self.interval
+    
+    def GetLocalInterval(self):
+        ''' Returns the interval clipped on the local color bar. 
+        If either part is outside the local_extents, the extent is returned.
+        '''
+        i = list(self.interval)
+        if self.interval[0] < self.local_extents[0]:
+            i[0] = self.local_extents[0]
+        if self.interval[1] > self.local_extents[1]:
+            i[1] = self.local_extents[1]
+        return i
+    
+    def GetGlobalExtents(self):
+        return self.global_extents
+        
+    def GetLocalExtents(self):
+        return self.local_extents
+    
+    def GetClipMode(self):
+        return self.clipmode
         
     def SetMap(self, map):
         ''' Sets the colormap that is displayed.
@@ -124,9 +149,17 @@ class ColorBarPanel(wx.Panel):
         self.cm = pylab.cm.get_cmap(map)
         self.Refresh()
         
-    def SetExtents(self, extents):
-        ''' Sets the value axis min and max. Accepts a 2-tuple.'''
-        self.extents = extents
+    def SetLocalExtents(self, local_extents):
+        #''' Sets the value axis min and max. Accepts a 2-tuple.'''
+        self.local_extents = local_extents
+        if self.local_extents[0] < self.global_extents[0]:
+            self.global_extents[0] = self.local_extents[0]
+        if self.local_extents[1] > self.global_extents[1]:
+            self.global_extents[1] = self.local_extents[1]
+        self.UpdateInterval()
+        
+    def SetGlobalExtents(self, global_extents):
+        self.global_extents = global_extents
         self.UpdateInterval()
         
     def SetTicks(self, ticks):
@@ -147,7 +180,7 @@ class ColorBarPanel(wx.Panel):
         else:
             self.clipmode = 'clip'
         for win in self.notify_windows:
-            win.SetClipInterval(self.GetInterval(), self.extents, self.clipmode)
+            win.SetClipInterval(self.GetLocalInterval(), self.local_extents, self.clipmode)
         self.Refresh()
         
     def OnRightDown(self, evt):
@@ -163,36 +196,52 @@ class ColorBarPanel(wx.Panel):
         self.PopupMenu(popupMenu, (evt.X, evt.Y))
         
     def OnResize(self, evt):
-        range = self.extents[1] - self.extents[0]
-        self.low_slider.SetPosition((self.Size[0] * (self.interval[0] - self.extents[0]) / range - s_off, -1))
-        self.high_slider.SetPosition((self.Size[0] * (self.interval[1] - self.extents[0]) / range - s_off, -1))
+        range = self.global_extents[1] - self.global_extents[0]
+        self.low_slider.SetPosition((self.Size[0] * (self.interval[0] - self.global_extents[0]) / range - s_off, -1))
+        self.high_slider.SetPosition((self.Size[0] * (self.interval[1] - self.global_extents[0]) / range - s_off, -1))
             
     def OnPaint(self, evt):
-        w,h = self.Size
+        w_global, h = self.Size
         if 0 in self.Size:
             return
-        low_slider_pos = self.low_slider.GetPositionTuple()[0] + s_off
+        low_slider_pos  = self.low_slider.GetPositionTuple()[0] + s_off
         high_slider_pos = self.high_slider.GetPositionTuple()[0] + s_off
+        
+        global_scale = self.global_extents[1] - self.global_extents[0]  # value scale of the global data
+        local_x0 = (self.local_extents[0] - self.global_extents[0]) / global_scale * w_global     # x pos (pixels) to start drawing the local color bar
+        local_x1 = (self.local_extents[1] - self.global_extents[0]) / global_scale * w_global     # x pos (pixels) to stop drawing the local color bar
+        w_local = local_x1 - local_x0                                   # pixel width of the local color bar
+        
+        w0 = max(low_slider_pos, local_x0) - local_x0
+        w1 = local_x1 - min(high_slider_pos, local_x1)
         
         # create array of values to be used for the color bar
         if self.clipmode=='rescale':
-            a1 = np.zeros(low_slider_pos)
-            a2 = np.arange(abs(high_slider_pos-low_slider_pos), dtype=float) / (high_slider_pos-low_slider_pos)
-            a3 = np.ones(w-high_slider_pos)
+            a1 = np.zeros(w0)
+            a2 = np.arange(abs(min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)), dtype=float) / (min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0))
+            a3 = np.ones(w1)
             a = np.hstack([a1,a2,a3])
         elif self.clipmode=='clip':
-            a = (np.arange(w, dtype=float) / w)
-            a[:low_slider_pos] = 0.
-            a[high_slider_pos:] = 1.
+            a = np.arange(w_local, dtype=float) / w_local
+            a[:w0] = 0.
+            if w1>=1:
+                a[-w1:] = 1.
         
         # draw the color bar
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
+        
+        dc.SetPen(wx.Pen((0,0,0)))
+        dc.DrawLine(0, (h-14)/2, local_x0, (h-14)/2)
+        
         for x, v in enumerate(a):
             color = np.array(self.cm(v)) * 255
             dc.SetPen(wx.Pen(color))
-            dc.DrawLine(x,0,x,h-14)
+            dc.DrawLine(x+local_x0, 0, x+local_x0, h-14)
+        
+        dc.SetPen(wx.Pen((0,0,0)))
+        dc.DrawLine(local_x1, (h-14)/2, w_global, (h-14)/2)
         
         # draw value axis
         if self.ticks <= 1:
@@ -201,10 +250,10 @@ class ColorBarPanel(wx.Panel):
         font.SetPixelSize((6,12))
         dc.SetFont(font)
         for t in xrange(self.ticks):
-            xpos = t * w/(self.ticks-1.)
-            val = t * (self.extents[1]-self.extents[0]) / (self.ticks-1)  + self.extents[0]
+            xpos = t * w_global/(self.ticks-1.)
+            val = t * (self.global_extents[1]-self.global_extents[0]) / (self.ticks-1)  + self.global_extents[0]
             dc.DrawLine(xpos,6,xpos,h-14)
-            textpos = xpos - xpos/w * dc.GetFullTextExtent(self.labelformat%(val), font)[0]
+            textpos = xpos - xpos/w_global * dc.GetFullTextExtent(self.labelformat%(val), font)[0]
             dc.DrawText(self.labelformat%(val), textpos, h-13)
             
         dc.EndDrawing()        
