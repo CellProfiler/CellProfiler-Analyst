@@ -85,14 +85,14 @@ class ImageControlPanel(wx.Panel):
 
 
     def AddContrastControls(self, mode):
-        radiobox = wx.RadioBox(self.GetParent(), -1, 'Contrast Adjust:', choices=contrast_modes)
+        self.contrast_radiobox = wx.RadioBox(self.GetParent(), -1, 'Contrast Adjust:', choices=contrast_modes)
         try:
-            radiobox.SetSelection(contrast_modes.index(mode))
+            self.contrast_radiobox.SetSelection(contrast_modes.index(mode))
         except:
-            radiobox.SetSelection(0)
-        self.sizer3.Add(radiobox, flag=wx.EXPAND)
+            self.contrast_radiobox.SetSelection(0)
+        self.sizer3.Add(self.contrast_radiobox, flag=wx.EXPAND)
         self.sizer3.AddSpacer((-1,10))
-        radiobox.Bind(wx.EVT_RADIOBOX, self.OnSetContrastMode)
+        self.contrast_radiobox.Bind(wx.EVT_RADIOBOX, self.OnSetContrastMode)
         
 
     def SetClassPoints(self, classCoords):
@@ -143,8 +143,16 @@ class ImageControlPanel(wx.Panel):
         className = evt.EventObject.Label
         for listener in self.listeners:
             listener.ToggleClass(className, evt.Checked())
+        
             
-    
+    def SetContrastMode(self, mode):
+        if mode.lower() == 'none':
+            self.contrast_radiobox.SetSelection(0)
+        elif mode.lower() == 'auto':
+            self.contrast_radiobox.SetSelection(1)
+        elif mode.lower() == 'log':
+            self.contrast_radiobox.SetSelection(2)
+        
     def OnSetContrastMode(self, evt):
         for listener in self.listeners:
             listener.SetContrastMode(contrast_modes[evt.GetEventObject().GetSelection()])

@@ -214,6 +214,15 @@ class ImageViewer(wx.Frame):
                 self.SelectAll()
             elif keycode == ord('D'):
                 self.DeselectAll()
+            elif keycode == ord('J'):
+                self.imagePanel.SetContrastMode('None')
+                self.controls.SetContrastMode('None')
+            elif keycode == ord('K'):
+                self.imagePanel.SetContrastMode('Auto')
+                self.controls.SetContrastMode('Auto')
+            elif keycode == ord('L'):
+                self.imagePanel.SetContrastMode('Log')
+                self.controls.SetContrastMode('Log')
             elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
         evt.Skip()
