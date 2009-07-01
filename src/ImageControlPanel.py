@@ -99,7 +99,7 @@ class ImageControlPanel(wx.Panel):
         vals = np.arange(float(len(classCoords))) / len(classCoords)
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
-            colors = [np.array(cm.jet(val))*255 for val in vals]
+            colors = [np.array(cm.jet(val)) * 255 for val in vals]
             
         self.sizer3.Add(wx.StaticText(self.GetParent(), -1, 'Phenotypes:'))
         for (name, keys), color in zip(classCoords.items(), colors):
@@ -111,14 +111,14 @@ class ImageControlPanel(wx.Panel):
 
 
     def OnBrightnessSlider(self, evt):
-        pos = self.brightness_slider.GetValue()/100.0
+        pos = self.brightness_slider.GetValue() / 100.0
         for listener in self.listeners:
             listener.SetBrightness(pos)
         self.brightness_percent.SetLabel(str(self.brightness_slider.GetValue())+'%')
 
 
     def OnScaleSlider(self, evt):
-        pos = self.scale_slider.GetValue()/100.0      
+        pos = self.scale_slider.GetValue() / 100.0      
         for listener in self.listeners:
             listener.SetScale(pos)
         self.scale_percent.SetLabel(str(self.scale_slider.GetValue())+'%')

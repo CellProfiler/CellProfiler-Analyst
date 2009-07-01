@@ -67,7 +67,7 @@ class Properties(Singleton):
         f = open(filename, 'U')
         
         lines = f.read()
-        self._textfile = StringIO(lines)
+        self._textfile = lines
 #        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
         lines = lines.split('\n')
 
@@ -141,7 +141,7 @@ class Properties(Singleton):
         fields_to_write = set([k for k in self.__dict__.keys() if not k.startswith('_')])
         
         # Write whole file out replacing any changed values
-        for line in self._textfile:
+        for line in StringIO(self._textfile):
             if line.strip().startswith('#') or line.strip()=='':
                 f.write(line)
             else:
@@ -161,6 +161,7 @@ class Properties(Singleton):
                 if not '_SQL_' in name:
                     fields_to_write.remove(name)
         
+        f.write('\n')
         # Write out fields that weren't present in the file
         for field in fields_to_write:
             val = self.__getattr__(field)
@@ -291,7 +292,8 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-        filename = "../Properties/nirht_test.properties"
+#        filename = "../Properties/nirht_test.properties"
+        filename = '/Users/afraser//Desktop/test.properties'
     
     p = Properties.getInstance()
     p.LoadFile(filename)
@@ -320,6 +322,11 @@ if __name__ == "__main__":
 #    p.image_channel_names = ['','']
 #    p.image_channel_colors = ['yellow', 'magenta']
 
-    print p
+#    p.filter_SQL_AFRASER = 'TESTESTESTESTESTEST' 
+#    print p
+#    p.SaveFile('/Users/afraser/Desktop/output.txt')
+#    p.filter_SQL_AFRASER2 = 'TESTESTEST' 
+#    p.SaveFile('/Users/afraser/Desktop/output.txt')
+#    p.filter_SQL_AFRASER3 = 'TEST' 
 #    p.SaveFile('/Users/afraser/Desktop/output.txt')
 

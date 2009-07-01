@@ -1,6 +1,9 @@
 import wx
 import pylab
 import numpy as np
+import Properties
+
+p = Properties.Properties.getInstance()
 
 slider_width = 30
 s_off = slider_width/2
@@ -193,7 +196,45 @@ class ColorBarPanel(wx.Panel):
         else:
             bracket_mode = popupMenu.AppendItem(wx.MenuItem(popupMenu, -1, 'Value bracketing: CLIP'))
         self.Bind(wx.EVT_MENU, self.OnToggleClipMode, bracket_mode)
+        
+        aggmethod = self.Parent.aggregationMethodsChoice.GetStringSelection().lower()
+        if aggmethod in ['average', 'median', 'min', 'max'] and self.interval != self.global_extents:
+            popupMenu.AppendSeparator()
+            saveitem = popupMenu.AppendItem(wx.MenuItem(popupMenu, -1, 'Save interval to properties as a filter'))
+            self.Bind(wx.EVT_MENU, self.OnSaveIntervalAsFilter, saveitem)
         self.PopupMenu(popupMenu, (evt.X, evt.Y))
+        
+    def OnSaveIntervalAsFilter(self, evt):
+        import DBConnect
+        import os.path
+        colname = self.Parent.measurementsChoice.GetStringSelection()
+        
+        lb = ub = ''
+        if self.interval[0] != self.global_extents[0]:
+            lb = ('%.3f<'%self.interval[0]).replace('.',',')
+        if self.interval[1] != self.global_extents[1]:
+            ub = ('<%.3f'%self.interval[1]).replace('.',',')
+        filtername = 'filter_SQL_%s%s%s'%(lb, colname, ub)
+        
+        if lb and ub:
+            where = '%s>%s AND %s<%s'%(colname, self.interval[0], colname, self.interval[1])
+        elif lb:
+            where = '%s>%s'%(colname, self.interval[0])
+        elif ub: 
+            where = '%s<%s'%(colname, self.interval[1])
+            
+        p.__dict__[filtername] = 'SELECT %s FROM %s WHERE %s'%(DBConnect.UniqueImageClause(), p.image_table, where)
+
+        defaultPath, defaultFileName = os.path.split(p._filename)
+        saveDialog = wx.FileDialog(self, message="Save as:",
+                                   defaultDir=defaultPath, defaultFile=defaultFileName,
+                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |wx.FD_CHANGE_DIR))
+        if saveDialog.ShowModal()==wx.ID_OK:
+            print 'Saving filter to %s'%(saveDialog.GetPath())
+            print '   '+filtername, '=', p.__dict__[filtername]
+            p.SaveFile(saveDialog.GetPath())
+        saveDialog.Destroy()
+
         
     def OnResize(self, evt):
         range = self.global_extents[1] - self.global_extents[0]
