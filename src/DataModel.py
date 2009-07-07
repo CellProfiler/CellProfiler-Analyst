@@ -22,6 +22,7 @@ class DataModel(Singleton):
         self.cumSums = []        # cumSum[i]: sum of objects in images 1..i (inclusive) 
         self.obCount = 0
         self.keylist = []
+        self.filterkeys = {}     # sets of image keys keyed by filter name
         
     def __str__(self):
         return str(self.obCount)+" objects in "+ \
@@ -185,14 +186,19 @@ class DataModel(Singleton):
         return groupData
     
     
-    def GetImagesInGroup(self, group, groupKey):
+    def GetImagesInGroup(self, group, groupKey, filter=None):
         '''
         Returns all imKeys in a particular group. 
         Blank values in the groupKey match anything.
         '''
         def matches(key1, key2):
             return all([(a==b or b=='') for a,b in zip(key1,key2)])
-        return [imKey for imKey,gKey in self.groupMaps[group].items() if matches(gKey,groupKey)]
+        imkeys = [imKey for imKey,gKey in self.groupMaps[group].items() if matches(gKey,groupKey)]
+        if filter is not None:
+            if filter not in self.filterkeys.keys():
+                self.filterkeys[filter] = set(db.execute(p._filters[filter]))
+            imkeys = set(imkeys).intersection(self.filterkeys[filter])    
+        return imkeys
     
     
     def GetGroupKeysInGroup(self, group):
