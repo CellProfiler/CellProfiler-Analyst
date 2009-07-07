@@ -789,7 +789,7 @@ class ClassifierGUI(wx.Frame):
             tableRow = list(row[:nKeyCols])
             if group != 'Image':
                 # Append the # of images in this group 
-                tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols])))]
+                tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols]), filter))]
             # Append the counts:
             countsRow = [int(v) for v in row[nKeyCols:nKeyCols+nClasses]]
             tableRow += [sum(countsRow)]
