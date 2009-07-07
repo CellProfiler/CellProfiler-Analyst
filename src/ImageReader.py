@@ -72,15 +72,23 @@ class ImageReader(object):
             
             # Handle 16 and 12 bit images
             if im.mode == 'I;16':
-                imdata = numpy.fromstring(im.tostring(), numpy.uint16)
-                imdata.shape = im.size[1], im.size[0]
-                imdata = imdata.astype(numpy.float32)
-                
-                sixteenBit = (imdata > 4095).any()
-                if sixteenBit:
-                    imdata /= 65535.0
-                else: # twelve bit
-                    imdata /= 4095.0
+                # deal with the endianness explicitly... I'm not sure
+                # why PIL doesn't get this right.
+                imdata = numpy.fromstring(im.tostring(),numpy.uint8)
+                imdata.shape=(int(imdata.shape[0]/2),2)
+                imdata = imdata.astype(numpy.uint16)
+                hi,lo = (0,1) if im.tag.prefix == 'MM' else (1,0)
+                imdata = imdata[:,hi]*256 + imdata[:,lo]
+                imsize = list(im.size)
+                imsize.reverse()
+                new_img = imdata.reshape(imsize)
+                # The magic # for maximum sample value is 281
+                if im.tag.has_key(281):
+                    imdata = new_img.astype(float) / im.tag[281][0]
+                elif numpy.max(new_img) < 4096:
+                    imdata = new_img.astype(float) / 4095.
+                else:
+                    imdata = new_img.astype(float) / 65535.
             else:
                 imdata = numpy.asarray(im.convert('L')) / 255.0
                 
@@ -132,19 +140,23 @@ if __name__ == "__main__":
     
     #p.LoadFile('../properties/nirht_test.properties')
     p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
+    
     dm.PopulateModel()
     app = wx.PySimpleApp()
-    
+
     ir = ImageReader()
     obKey = dm.GetRandomObject()
     filenames = db.GetFullChannelPathsForImage(obKey[:-1])
     images = ir.ReadImages(filenames)
+    
 #    images = ir.ReadImages(['bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w1412D5337-1BB6-4965-9E54-C635BCD4B71F.tif',
 #                            'bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w20A6F4EF9-1200-4EA9-990F-49486F4AF7E4.tif',
 #                            'imaging/analysis/2008_07_22_HSC_Alison_Stewart/2008_11_05_1137HSC2454a_output/outlines/StewartA1137HSC2454a_D10_s3_w20A6F4EF9-1200-4EA9-990F-49486F4AF7E4.tif_CellsOutlines.png'])
 #    images = ir.ReadImages(['/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d0.DIB',
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d1.DIB',
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d2.DIB'])
+    
+    
     frame = ImageViewer(imgs=images, chMap=p.image_channel_colors)
     frame.Show()
     
