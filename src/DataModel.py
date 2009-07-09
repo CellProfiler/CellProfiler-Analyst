@@ -175,14 +175,15 @@ class DataModel(Singleton):
            groupdata = { groupKey : np.array(values), ... }
         '''
         groupData = {}
+        nvals = len(imdata.values()[0])
+        for imKey in imdata.keys():
+            # initialize each entry to [0,0,...]
+            groupData[self.groupMaps[group][imKey]] = np.zeros(nvals)
+            
         for imKey, vals in imdata.items():
-            # get the group of this image
-            groupKey = self.groupMaps[group][imKey]            
             # add values to running sum of this group
-            if groupKey in groupData.keys():
-                groupData[groupKey] += vals
-            else:
-                groupData[groupKey] = vals
+            groupData[self.groupMaps[group][imKey]] += vals
+        
         return groupData
     
     
