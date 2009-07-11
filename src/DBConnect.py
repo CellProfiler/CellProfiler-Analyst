@@ -388,20 +388,22 @@ class DBConnect(Singleton):
         return filenames
 
 
-    def GetGroupMaps(self):
+    def GetGroupMaps(self, reverse=False):
         '''Return a tuple of two dictionaries: one that maps group
         names to group maps and one that maps group names to lists of
-        column names.'''
+        column names. If reverse is set to true, the group maps will
+        map group keys to image keys instead of vice-versa.'''
         groupColNames = {}
         groupMaps = {}
         for group in p._groups:
-            groupMaps[group], groupColNames[group] = self.group_map(group)
+            groupMaps[group], groupColNames[group] = self.group_map(group, reverse=reverse)
         return groupMaps, groupColNames
 
-    def group_map(self, group):
+    def group_map(self, group, reverse=False):
         """Return a tuple of (1) a dictionary mapping image keys to
         group keys and (2) a list of column names for the group
-        keys."""
+        keys. If reverse is set to true, the dictionary will map
+        group keys to image keys instead."""
         key_size = p.table_id and 2 or 1
         query = p._groups[group]
         try:
@@ -411,8 +413,15 @@ class DBConnect(Singleton):
         col_names = self.GetResultColumnNames()[key_size:]
         d = {}
         for row in res:
-            d[row[:key_size]] = row[key_size:]
+            if reverse:
+                d[row[key_size:]] = []
+        for row in res:
+            if reverse:
+                d[row[key_size:]] += [row[:key_size]]
+            else:
+                d[row[:key_size]] = row[key_size:]
         return d, col_names
+    
     
     def GetFilteredImages(self, filter):
         ''' Returns a list of imKeys from the given filter. '''

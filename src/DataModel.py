@@ -16,6 +16,8 @@ class DataModel(Singleton):
         self.data = {}           # {imKey:obCount, ... }
         self.groupMaps = {}      # { groupName:{imKey:groupKey, }, ... }
                                  # eg: groupMaps['Wells'][(0,4)]  ==>  (3,'A01')
+        self.revGroupMaps = {}   # { groupName:{groupKey:imKey, }, ... }
+                                 # eg: groupMaps['Wells'][(3,'A01')]  ==>  [(0,1),(0,2),(0,3),(0,4)]
         self.groupColNames = {}  # {groupName:[col_names], ...}
                                  # eg: {'Gene': ['gene'], ...}
         self.groupColTypes = {}  # {groupName:[col_types], ...}
@@ -59,6 +61,7 @@ class DataModel(Singleton):
             self.cumSums[i+1] = self.cumSums[i]+self.data[imKey]
 
         self.groupMaps, self.groupColNames = db.GetGroupMaps()
+        self.revGroupMaps, _ = db.GetGroupMaps(reverse=True)
         for group in self.groupMaps:
             self.groupColTypes[group] = [type(col) for col in self.groupMaps[group].items()[0][1]]
 
@@ -193,12 +196,28 @@ class DataModel(Singleton):
         Blank values in the groupKey match anything.
         '''
         def matches(key1, key2):
-            return all([(a==b or b=='') for a,b in zip(key1,key2)])
-        imkeys = [imKey for imKey,gKey in self.groupMaps[group].items() if matches(gKey,groupKey)]
+            return all([(a==b or b=='__ANY__') for a,b in zip(key1,key2)])
+        
+        if '__ANY__' in groupKey:
+            # if there are wildcards in the groupKey then accumulate
+            #   imkeys from all matching groupKeys
+            imkeys = []
+            for gkey, ikeys in self.revGroupMaps[group].items():
+                if matches(gkey,groupKey):
+                    imkeys += ikeys
+        else:
+            # if there are no wildcards simply lookup the imkeys
+            try:
+                imkeys = self.revGroupMaps[group][groupKey]
+            except KeyError:
+                return []
+            
+        # apply filter if supplied
         if filter is not None:
             if filter not in self.filterkeys.keys():
                 self.filterkeys[filter] = set(db.execute(p._filters[filter]))
             imkeys = set(imkeys).intersection(self.filterkeys[filter])    
+        
         return imkeys
     
     

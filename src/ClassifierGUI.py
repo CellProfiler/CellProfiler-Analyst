@@ -611,7 +611,6 @@ class ClassifierGUI(wx.Frame):
         self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                nRules, self.trainingSet.label_matrix, 
                                                                self.trainingSet.values, output)
-        print self.weaklearners
         self.SetStatusText('')
         self.rulesTxt.Value = output.getvalue()
         self.scoreAllBtn.Enable()
@@ -897,8 +896,8 @@ class ClassifierGUI(wx.Frame):
                 fieldInp = wx.TextCtrl(self, -1, value=validVals[0], size=(80,-1))
             else:
                 fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
-                                       choices=['']+validVals)
-                validVals = ['']+validVals
+                                       choices=['__ANY__']+validVals)
+            validVals = ['__ANY__']+validVals
             # Create and bind to a text Validator
             def ValidateGroupField(evt, validVals=validVals):
                 ctrl = evt.GetEventObject()
@@ -936,7 +935,7 @@ class ClassifierGUI(wx.Frame):
         for input, ftype in zip(self.groupInputs, fieldTypes):
             val = input.GetValue()
             # if the value is blank, don't bother typing it, it is a wildcard
-            if val != '':
+            if val != '__ANY__':
                 val = ftype(val)
             groupKey += [val]
         return tuple(groupKey)
