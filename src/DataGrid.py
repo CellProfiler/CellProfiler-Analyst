@@ -411,7 +411,12 @@ class DataGrid(wx.Frame):
             w.writerow(row)
         f.close()
         print 'Table saved to',filename
+        
+    def GetData(self):
+        return self.grid.GetTable().data
 
+    def GetOrderedData(self):
+        return self.grid.GetTable().ordered_data
 
 
 
@@ -448,6 +453,7 @@ if __name__ == "__main__":
         labels = ['key', 'count-A' , 'count McLongtitle #1\n B' , 'P(a)' , 'P(b)' ]
         grid = DataGrid(data, labels, key_col_indices=[0,1], title='TEST', autosave=False)
         grid.Show()
+        print grid.GetData()
         app.MainLoop()
         # -------------------
       
@@ -490,6 +496,8 @@ if __name__ == "__main__":
                     key_col_indices=keycols,
                     chMap=p.image_channel_colors, 
                     title=csvfile, autosave=False)
+       
     grid.Show()
+    
     app.MainLoop()
 

@@ -13,6 +13,7 @@ import FastGentleBoostingMulticlass
 from DataGrid import DataGrid
 import PolyaFit
 import DirichletIntegrate
+from time import time
 
 USAGE = '''
 ABOUT:
@@ -22,22 +23,34 @@ USAGE:
 python ScoreAll.py <propertiesfile> <trainingset>
 '''
 
-if __name__ == "__main__":
-    import sys
 
-    if len(sys.argv) < 3:
-        print USAGE
-        exit()
+def score(props, ts, nRules, filter=None, group='Image'):
+    '''
+    Trains a Classifier on a training set and scores the experiment
+    returns the loaded training set and a DataGrid of scores 
+        
+    props -- properties file
+    ts -- training set
+    nRules -- number of rules 
+    filter -- name of a filter to use from the properties file
+    group -- name of a group to use from the properties file 
+    '''
+    
+    if group == None:
+        group = 'Image'
 
-    props  = sys.argv[1]
-    ts     = sys.argv[2]
-    
-    app = wx.PySimpleApp()
-    
+    print ''
+    print 'properties:  ', props
+    print 'training set:', ts
+    print '# rules:     ', nRules
+    print 'filter:      ', filter
+    print 'grouping by: ', group
+    print ''
+        
     p = Properties.getInstance()
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
-    
+
     print 'Loading properties file...'
     p.LoadFile(props)
     dm.PopulateModel()
@@ -47,52 +60,51 @@ if __name__ == "__main__":
     trainingSet.Load(ts)
     
     nClasses = len(trainingSet.labels)
-
-    nRules = int(raw_input('# of rules: '))
-    assert 200 > nRules > 0, '# of rules must be between 1 and 200.  Value was %s'%(nRules,)
-    filter = raw_input('Filter name (return for none): ')
-    assert filter in p._filters.keys()+[''], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter, p._filters.keys(),)
-    group  = raw_input('Group name (return for none): ')
-    assert group in p._groups.keys()+[''], 'Group %s not found in properties file.  Valid groups are: %s'%(group, p._groups.keys(),)
-    if group=='':
-        group = 'Image'
-    
     nKeyCols = len(image_key_columns())
     
-    print ''
-    print 'properties:  ', props
-    print 'training set:', ts
-    print '# rules:     ', nRules
-    print 'filter:      ', filter
-    print 'grouping by: ', group
-    print ''
+    
+    assert 200 > nRules > 0, '# of rules must be between 1 and 200.  Value was %s'%(nRules,)
+    assert filter in p._filters.keys()+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter, p._filters.keys(),)
+    assert group in p._groups.keys()+['Image'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, p._groups.keys(),)
+    
+    print 'Creating tables for filters...'
+    MulticlassSQL.CreateFilterTables()
     
     output = StringIO()
     print 'Training classifier with '+str(nRules)+' rules...'
+    t0 = time()
     weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames,
                                                       nRules, trainingSet.label_matrix, 
                                                       trainingSet.values, output)
-    def update(frac): print '%d%% complete'%(frac*100.,)
+    print 'Training done in %f seconds'%(time()-t0)
+    
+    print 'Computing per-image class counts...'
+    t0 = time()
+    def update(frac): 
+        print'%d%% '%(frac*100.,)
     keysAndCounts = MulticlassSQL.PerImageCounts(weaklearners, filter=(filter or None), cb=update)
     keysAndCounts.sort()
-    print 'done.'
+    print 'Counts found in %f seconds'%(time()-t0)
         
     if not keysAndCounts:
         print 'No images are in filter "%s". Please check the filter definition in your properties file.'%(filter)
         exit()
-    
+        
     # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
     if group != 'Image':
         print 'Grouping %s counts by %s...' % (p.object_name[0], group)
+        t0 = time()
         imData = {}
         for row in keysAndCounts:
             key = tuple(row[:nKeyCols])
             imData[key] = numpy.array([float(v) for v in row[nKeyCols:]])
+        
         groupedKeysAndCounts = numpy.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
         nKeyCols = len(dm.GetGroupColumnNames(group))
+        print 'Grouping done in %f seconds'%(time()-t0)
     else:
         groupedKeysAndCounts = numpy.array(keysAndCounts, dtype=object)
-            
+    
     # FIT THE BETA BINOMIAL
     print 'Fitting beta binomial distribution to data...'
     counts = groupedKeysAndCounts[:,-nClasses:]
@@ -102,10 +114,12 @@ if __name__ == "__main__":
                 
     # CONSTRUCT ARRAY OF TABLE DATA
     print 'Computing enrichment scores for each group...'
+    t0 = time()
     tableData = []
     for i, row in enumerate(groupedKeysAndCounts):
         # Start this row with the group key: 
         tableRow = list(row[:nKeyCols])
+        
         if group != 'Image':
             tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols])))]
         # Append the counts:
@@ -129,7 +143,7 @@ if __name__ == "__main__":
             tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
         tableData.append(tableRow)
     tableData = numpy.array(tableData, dtype=object)
-    print 'done.'
+    print 'Enrichments computed in %f seconds'%(time()-t0)
     
     # CREATE COLUMN LABELS LIST
     # if grouping isn't per-image, then get the group key column names.
@@ -163,10 +177,41 @@ if __name__ == "__main__":
         title += " filtered by %s"%(filter,)
     title += ' (%s)'%(os.path.split(p._filename)[1])
     
-    grid = DataGrid(tableData, labels, grouping=group,
-                    key_col_indices=key_col_indices, title=title)
+    return (
+            trainingSet,
+            DataGrid(tableData, labels, grouping=group, key_col_indices=key_col_indices, title=title)
+            )
+
+
+
+#
+# run
+#
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) < 3:
+        print USAGE
+        exit()
+
+    props  = sys.argv[1]
+    ts     = sys.argv[2]
+    
+    app = wx.PySimpleApp()
+    
+    nRules = int(raw_input('# of rules: '))
+    
+    filter = raw_input('Filter name (return for none): ')
+    if filter == '':
+        filter = None
+    
+    group  = raw_input('Group name (return for none): ')
+    if group=='':
+        group = 'Image'
+    
+    grid = score(props, ts, nRules, filter, group)
     grid.Show()
     
-        
     app.MainLoop()
     
+
