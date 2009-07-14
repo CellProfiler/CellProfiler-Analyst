@@ -2,7 +2,7 @@
 import wx
 import os
 import MulticlassSQL
-import numpy
+import numpy as np
 from DBConnect import *
 from Properties import Properties
 from DataModel import DataModel
@@ -97,13 +97,13 @@ def score(props, ts, nRules, filter=None, group='Image'):
         imData = {}
         for row in keysAndCounts:
             key = tuple(row[:nKeyCols])
-            imData[key] = numpy.array([float(v) for v in row[nKeyCols:]])
+            imData[key] = np.array([float(v) for v in row[nKeyCols:]])
         
-        groupedKeysAndCounts = numpy.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
+        groupedKeysAndCounts = np.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
         nKeyCols = len(dm.GetGroupColumnNames(group))
         print 'Grouping done in %f seconds'%(time()-t0)
     else:
-        groupedKeysAndCounts = numpy.array(keysAndCounts, dtype=object)
+        groupedKeysAndCounts = np.array(keysAndCounts, dtype=object)
     
     # FIT THE BETA BINOMIAL
     print 'Fitting beta binomial distribution to data...'
@@ -133,16 +133,20 @@ def score(props, ts, nRules, filter=None, group='Image'):
             tableRow += countsRow
             
         # Append the scores:
-        scores = DirichletIntegrate.score(alpha, numpy.array(countsRow))       # compute enrichment probabilities of each class for this image OR group 
-        tableRow += scores
+        #   compute enrichment probabilities of each class for this image OR group
+        scores = np.array( DirichletIntegrate.score(alpha, np.array(countsRow)) )
+        #   clamp to [0,1] to 
+        scores[scores>1.] = 1.
+        scores[scores<0.] = 0.
+        tableRow += scores.tolist()
         # Append the logit scores:
-        # Special case: only calculate logit of "positives" for 2-classes
+        #   Special case: only calculate logit of "positives" for 2-classes
         if nClasses==2:
-            tableRow += [numpy.log10(scores[0])-(numpy.log10(1-scores[0]))]   # compute logit of each probability
+            tableRow += [np.log10(scores[0])-(np.log10(1-scores[0]))]   # compute logit of each probability
         else:
-            tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
+            tableRow += [np.log10(score)-(np.log10(1-score)) for score in scores]   # compute logit of each probability
         tableData.append(tableRow)
-    tableData = numpy.array(tableData, dtype=object)
+    tableData = np.array(tableData, dtype=object)
     print 'Enrichments computed in %f seconds'%(time()-t0)
     
     # CREATE COLUMN LABELS LIST
@@ -209,7 +213,7 @@ if __name__ == "__main__":
     if group=='':
         group = 'Image'
     
-    grid = score(props, ts, nRules, filter, group)
+    grid = score(props, ts, nRules, filter, group)[1]
     grid.Show()
     
     app.MainLoop()
