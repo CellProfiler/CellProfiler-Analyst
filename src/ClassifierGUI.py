@@ -17,7 +17,7 @@ import FastGentleBoostingMulticlass
 import ImageTools
 import MulticlassSQL
 import PolyaFit
-import numpy
+import numpy as np
 import os, os.path
 import wx
 from time import time
@@ -407,7 +407,7 @@ class ClassifierGUI(wx.Frame):
                 # if the filter name is a group then it's actually a group
                 groupName = filter
                 groupKey = self.GetGroupKeyFromGroupSizer(groupName)
-                filteredImKeys = dm.GetImagesInGroup(groupName, groupKey)
+                filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
                 colNames = dm.GetGroupColumnNames(groupName)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in group %s: %s'%(groupName, 
@@ -439,7 +439,7 @@ class ClassifierGUI(wx.Frame):
                     group_name = filter
                     groupKey = self.GetGroupKeyFromGroupSizer(group_name)
                     colNames = dm.GetGroupColumnNames(group_name)
-                    filteredImKeys = dm.GetImagesInGroup(group_name, groupKey)
+                    filteredImKeys = dm.GetImagesInGroupWithWildcards(group_name, groupKey)
                     if filteredImKeys == []:
                         self.PostMessage('No images were found in group %s: %s'%(group_name,
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)])))
@@ -760,11 +760,11 @@ class ClassifierGUI(wx.Frame):
             imData = {}
             for row in self.keysAndCounts:
                 key = tuple(row[:nKeyCols])
-                imData[key] = numpy.array([float(v) for v in row[nKeyCols:]])
-            groupedKeysAndCounts = numpy.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
+                imData[key] = np.array([float(v) for v in row[nKeyCols:]])
+            groupedKeysAndCounts = np.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
             nKeyCols = len(dm.GetGroupColumnNames(group))
         else:
-            groupedKeysAndCounts = numpy.array(self.keysAndCounts, dtype=object)
+            groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
         
         t3 = time()
         print 'time to group per-image counts: %.3fs'%(t3-t2)
@@ -799,16 +799,20 @@ class ClassifierGUI(wx.Frame):
                 tableRow += [sum(countsRow)]
                 tableRow += countsRow
             # Append the scores:
-            scores = DirichletIntegrate.score(alpha, numpy.array(countsRow))       # compute enrichment probabilities of each class for this image OR group 
-            tableRow += scores
+            #   compute enrichment probabilities of each class for this image OR group
+            scores = np.array( DirichletIntegrate.score(alpha, np.array(countsRow)) )
+            #   clamp to [0,1] to 
+            scores[scores>1.] = 1.
+            scores[scores<0.] = 0.
+            tableRow += scores.tolist()
             # Append the logit scores:
             # Special case: only calculate logit of "positives" for 2-classes
             if two_classes:
-                tableRow += [numpy.log10(scores[0])-(numpy.log10(1-scores[0]))]   # compute logit of each probability
+                tableRow += [np.log10(scores[0])-(np.log10(1-scores[0]))]   # compute logit of each probability
             else:
-                tableRow += [numpy.log10(score)-(numpy.log10(1-score)) for score in scores]   # compute logit of each probability
+                tableRow += [np.log10(score)-(np.log10(1-score)) for score in scores]   # compute logit of each probability
             tableData.append(tableRow)
-        tableData = numpy.array(tableData, dtype=object)
+        tableData = np.array(tableData, dtype=object)
         
         t5 = time()
         print 'time to compute enrichment scores: %.3fs'%(t5-t4)
