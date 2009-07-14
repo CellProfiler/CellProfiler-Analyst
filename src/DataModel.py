@@ -190,27 +190,31 @@ class DataModel(Singleton):
         return groupData
     
     
-    def GetImagesInGroup(self, group, groupKey, filter=None):
+    def GetImagesInGroupWithWildcards(self, group, groupKey, filter=None):
         '''
         Returns all imKeys in a particular group. 
-        Blank values in the groupKey match anything.
+        '__ANY__' in the groupKey matches anything.
         '''
-        def matches(key1, key2):
-            return all([(a==b or b=='__ANY__') for a,b in zip(key1,key2)])
-        
         if '__ANY__' in groupKey:
             # if there are wildcards in the groupKey then accumulate
             #   imkeys from all matching groupKeys
+            def matches(key1, key2):
+                return all([(a==b or b=='__ANY__') for a,b in zip(key1,key2)])
             imkeys = []
             for gkey, ikeys in self.revGroupMaps[group].items():
                 if matches(gkey,groupKey):
                     imkeys += ikeys
         else:
             # if there are no wildcards simply lookup the imkeys
-            try:
-                imkeys = self.revGroupMaps[group][groupKey]
-            except KeyError:
-                return []
+            return GetImagesInGroup(group, groupKey, filter)
+    
+    
+    def GetImagesInGroup(self, group, groupKey, filter=None):
+        ''' Returns all imKeys in a particular group. '''
+        try:
+            imkeys = self.revGroupMaps[group][groupKey]
+        except KeyError:
+            return []
             
         # apply filter if supplied
         if filter is not None:
