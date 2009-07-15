@@ -124,9 +124,17 @@ def beta_enriched(prior, posterior):
     c = posterior[0]
     d = posterior[1]
     # See Integration.mathetmatica
+    # This would be better if we computed the log of the
+    # hypergeometric function, but I don't think that's generally
+    # possible.
     hyper = hyper3F2aZ1(a, 1-b, a+c, a+c+d)
     scale = exp(gammaln(a) + gammaln(a+c) + gammaln(d) - gammaln(1+a) - gammaln(a+c+d) - betaln(a,b) - betaln(c,d))
-    return hyper * scale
+    if isnan(hyper * scale):
+        # This can happen if hyper and scale are 0 and inf (or vice versa).
+        if prior[0] / sum(prior) > posterior[0] / sum(posterior):
+            return 0.0
+        return 1.0
+    return clip(hyper * scale, 0, 1)
 
 def score(prior, counts):
     ''' score a well based on the prior fit to the data and the observed counts '''
