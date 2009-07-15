@@ -1,5 +1,12 @@
 /* classify.c - */
 
+// To add this function to mysql, compile it to classify.so, put it in a
+// directory on the LD_LIBRARY_PATH for mysql, and execute this statement
+// within mysql:
+// mysql> CREATE FUNCTION classifier RETURNS INTEGER SONAME 'classify.so';
+
+
+
 #ifdef STANDARD
 #include <stdio.h>
 #include <string.h>
