@@ -148,11 +148,9 @@ class DBConnect(Singleton):
                 # compute a database name unique to this data  
                 from tempfile import gettempdir
                 from md5 import md5
-                f_im = open(p.image_csv_file, 'U')
-                f_ob = open(p.object_csv_file, 'U')
-                l = str(f_im.readlines() + f_ob.readlines())
-                f_im.close()
-                f_ob.close()
+                imtime = os.stat(p.image_csv_file).st_mtime
+                obtime = os.stat(p.object_csv_file).st_mtime
+                l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
                 dbname = 'CPA_DB_'+md5(l).hexdigest()+'.db'
                 dbpath = gettempdir()
                 self.sqliteDBFile = dbpath+'/'+dbname
@@ -408,8 +406,8 @@ class DBConnect(Singleton):
         query = p._groups[group]
         try:
             res = self.execute(query)
-        except Exception:
-            raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.'%(group)
+        except Exception, e:
+            raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.\nError was: "%s"'%(group, e)
         col_names = self.GetResultColumnNames()[key_size:]
         d = {}
         for row in res:
