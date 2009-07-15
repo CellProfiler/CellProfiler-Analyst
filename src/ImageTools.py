@@ -53,17 +53,26 @@ def Crop(imgdata, (w,h), (x,y)):
     Crops an image to the width (w,h) around the point (x,y).
     Area outside of the image is filled with the color specified.
     '''
-    imWidth = imgdata.shape[1]
-    imHeight = imgdata.shape[0]
+    im_width = imgdata.shape[1]
+    im_height = imgdata.shape[0]
+
+    x = int(x + 0.5)
+    y = int(y + 0.5)
+
+    # find valid cropping region in imgdata
+    lox = max(x - w/2, 0)
+    loy = max(y - h/2, 0)
+    hix = min(x - w/2 + w, im_width)
+    hiy = min(y - h/2 + h, im_height)
+    
+    # find destination
+    dest_lox = lox - (x - w/2)
+    dest_loy = loy - (y - h/2)
+    dest_hix = dest_lox + hix - lox
+    dest_hiy = dest_loy + hiy - loy
+
     crop = np.zeros((h,w), dtype='float32')
-    for px in xrange(w):
-        for py in xrange(h):
-            xx = px+x-w/2
-            yy = py+y-h/2
-            if 0<=xx<imWidth and 0<=yy<imHeight:
-                crop[py,px] = imgdata[yy,xx]
-            else:
-                crop[py,px] = 0
+    crop[dest_loy:dest_hiy, dest_lox:dest_hix] = imgdata[loy:hiy, lox:hix]
     return crop
 
 def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None):
