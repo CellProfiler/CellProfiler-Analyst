@@ -415,7 +415,7 @@ class ClassifierGUI(wx.Frame):
                     return
                 obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
                 if not obKeys:
-                    self.PostMessage('The images in this group are empty. Group %s: %s'%(groupName, 
+                    self.PostMessage('No cells were found in this group. Group %s: %s'%(groupName, 
                                         ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)])))
                     return
                 statusMsg += ' from group %s: %s'%(groupName,
