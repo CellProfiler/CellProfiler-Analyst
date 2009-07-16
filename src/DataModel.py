@@ -206,7 +206,7 @@ class DataModel(Singleton):
                     imkeys += ikeys
         else:
             # if there are no wildcards simply lookup the imkeys
-            return GetImagesInGroup(group, groupKey, filter)
+            return self.GetImagesInGroup(group, groupKey, filter)
     
     
     def GetImagesInGroup(self, group, groupKey, filter=None):
