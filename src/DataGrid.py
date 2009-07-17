@@ -66,6 +66,9 @@ class HugeTable(wx.grid.PyGridTableBase):
                     col_label += '^]'
             except: pass
         return col_label
+    
+    def GetOrderedColLabels(self):
+        return self.col_labels[self.col_order]
 
     def GetRowLabelValue(self, row):
         return ", ".join([str(v) for v in self.GetKeyForRow(row)])
@@ -115,7 +118,7 @@ class HugeTable(wx.grid.PyGridTableBase):
             self.sortdir = 1
             self.sortcols = [colIndex]
             # If this column hasn't been sorted yet, then sort descending
-            self.row_order = np.lexsort(self.data[:,self.sortcols[::-1]].T.tolist())
+            self.row_order = np.lexsort(self.data[:,self.col_order][:,self.sortcols[::-1]].T.tolist())
         self.ordered_data = self.data[self.row_order,:][:,self.col_order]
         self.grid.Refresh()
         
@@ -374,7 +377,7 @@ class DataGrid(wx.Frame):
                                    style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
-            self.SaveCSV(saveDialog.GetPath(), self.grid.GetTable().ordered_data, self.grid.GetTable().col_labels)
+            self.SaveCSV(saveDialog.GetPath(), self.grid.GetTable().ordered_data, self.grid.GetTable().GetOrderedColLabels())
         saveDialog.Destroy()
     
     def OnSavePerImageCountsToCSV(self, evt):        
@@ -449,7 +452,7 @@ if __name__ == "__main__":
                          ['key 2',0,-22,32,42.2],
                          ['key 3',13,-3,33,43.3],
                          ['key 4',14,24,4,44.4],
-                         ['key 5',5,5,5,5.12345]], dtype=object)
+                         ['key 5',5,5,-np.inf,np.inf]], dtype=object)
         labels = ['key', 'count-A' , 'count McLongtitle #1\n B' , 'P(a)' , 'P(b)' ]
         grid = DataGrid(data, labels, key_col_indices=[0,1], title='TEST', autosave=False)
         grid.Show()
