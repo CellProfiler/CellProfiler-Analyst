@@ -2,12 +2,12 @@ import unittest
 from DBConnect import DBConnect
 from DataModel import DataModel
 from Properties import Properties
-
+import numpy as np
 
 class TestDBConnect(unittest.TestCase):
     def setup(self):
         self.p  = Properties.getInstance()
-        self.db = DBConnect.getInstance()
+        self.db = DBConnect.getInstance( )
         self.db.Disconnect()
         self.p.LoadFile('../properties/nirht_test.properties')
 
@@ -16,7 +16,12 @@ class TestDBConnect(unittest.TestCase):
         self.db = DBConnect.getInstance()
         self.db.Disconnect()
         self.p.LoadFile('../properties/nirht_local.properties')
-
+        
+    def setup_local2(self):
+        self.p  = Properties.getInstance()
+        self.db = DBConnect.getInstance()
+        self.db.Disconnect()
+        self.p.LoadFile('../test_data/export_to_db_test.properties')
 
     def test_Connect(self):
         self.setup()
@@ -71,7 +76,9 @@ class TestDBConnect(unittest.TestCase):
         
     def test_GetFilteredImages(self):
         self.setup()
-        assert self.db.GetFilteredImages('MAPs') == [(0,77),(0,78),(0,79),(0,80),(0,69),(0,70),(0,71),(0,72),(0,61),(0,62),(0,63),(0,64),(0,53),(0,54),(0,55),(0,56),(0,45),(0,46),(0,47),(0,48),(0,37),(0,38),(0,39),(0,40),(0,29),(0,30),(0,31),(0,32),(0,21),(0,22),(0,23),(0,24),(0,13),(0,14),(0,15),(0,16),(0,5),(0,6),(0,7),(0,8),(0,253),(0,254),(0,255),(0,256),(0,245),(0,246),(0,247),(0,248),(0,237),(0,238),(0,239),(0,240),(0,229),(0,230),(0,231),(0,232),(0,221),(0,222),(0,223),(0,224),(0,213),(0,214),(0,215),(0,216),(0,205),(0,206),(0,207),(0,208),(0,197),(0,198),(0,199),(0,200),(0,93),(0,94),(0,95),(0,96),(0,85),(0,86),(0,87),(0,88L)]
+        test = set(self.db.GetFilteredImages('MAPs'))
+        vals = set([(0,77),(0,78),(0,79),(0,80),(0,69),(0,70),(0,71),(0,72),(0,61),(0,62),(0,63),(0,64),(0,53),(0,54),(0,55),(0,56),(0,45),(0,46),(0,47),(0,48),(0,37),(0,38),(0,39),(0,40),(0,29),(0,30),(0,31),(0,32),(0,21),(0,22),(0,23),(0,24),(0,13),(0,14),(0,15),(0,16),(0,5),(0,6),(0,7),(0,8),(0,253),(0,254),(0,255),(0,256),(0,245),(0,246),(0,247),(0,248),(0,237),(0,238),(0,239),(0,240),(0,229),(0,230),(0,231),(0,232),(0,221),(0,222),(0,223),(0,224),(0,213),(0,214),(0,215),(0,216),(0,205),(0,206),(0,207),(0,208),(0,197),(0,198),(0,199),(0,200),(0,93),(0,94),(0,95),(0,96),(0,85),(0,86),(0,87),(0,88L)])
+        assert test == vals
         assert self.db.GetFilteredImages('IMPOSSIBLE') == []
         
     def test_GetColumnNames(self):
@@ -107,13 +114,14 @@ class TestDBConnect(unittest.TestCase):
     def test_Connect_local(self):
         # this one takes a while
         self.setup_local()
-        self.db.Connect(db_host=self.p.db_host, db_user=self.p.db_user,
-                        db_passwd=self.p.db_passwd, db_name=self.p.db_name)
+        assert len(self.db.connections)==0
+        assert len(self.db.cursors)==0
+        assert len(self.db.connectionInfo)==0
+        self.db.GetAllImageKeys()
         assert len(self.db.connections)==1
         assert len(self.db.cursors)==1
         assert len(self.db.connectionInfo)==1
-        self.db.Connect(db_host=self.p.db_host, db_user=self.p.db_user,
-                        db_passwd=self.p.db_passwd, db_name=self.p.db_name)
+        self.db.GetAllImageKeys()
         assert len(self.db.connections)==1
         assert len(self.db.cursors)==1
         assert len(self.db.connectionInfo)==1
@@ -176,8 +184,14 @@ class TestDBConnect(unittest.TestCase):
         cellData = self.db.GetCellDataForClassifier((0,1,1))
         assert len(cellData) == 615
         
-        
-        
+    def test_ReadExportToDB(self):
+        '''Test reading data from Export to Database.'''
+        self.setup_local2()
+        vals = [(1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,), (16,), (17,), (18,), (19,), (20,)]
+        groups = {'Plate+Well': {(u'Week1_22123', u'B05'): [(13,), (14,), (15,), (16,)], (u'Week1_22123', u'B02'): [(1,), (2,), (3,), (4,)], (u'Week1_22123', u'B04'): [(9,), (10,), (11,), (12,)], (u'Week1_22123', u'B06'): [(17,), (18,), (19,), (20,)], (u'Week1_22123', u'B03'): [(5,), (6,), (7,), (8,)]}}, {'Plate+Well': ['Image_Metadata_Plate_DAPI', 'Image_Metadata_Well_DAPI']}
+        assert len(self.db.GetAllImageKeys())==20
+        assert self.db.GetAllImageKeys() == vals
+        assert self.db.GetGroupMaps(True) == groups
         
         
         
