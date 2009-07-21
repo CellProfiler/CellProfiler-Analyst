@@ -176,7 +176,7 @@ class Properties(Singleton):
         
     
     def Clear(self):
-        self.__dict__ = {}
+        del self.__dict__
         
         
     def IsEmpty(self):
