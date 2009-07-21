@@ -685,14 +685,18 @@ class DBConnect(Singleton):
         # Check for unlabeled wells
         if p.well_id:
             res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
-                               (UniqueImageClause(), p.image_table, p.well_id, p.well_id))        
-            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id)
+                               (UniqueImageClause(), p.image_table, p.well_id, p.well_id))
+            if any(res):
+                print 'WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id)
+#            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id)
         
         # Check for unlabeled plates
         if p.plate_id:
             res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
-                               (UniqueImageClause(), p.image_table, p.plate_id, p.plate_id))        
-            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id)
+                               (UniqueImageClause(), p.image_table, p.plate_id, p.plate_id))
+            if any(res):
+                print 'WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id)
+#            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id)
     
 
     def histogram(self, column, table_or_query, nbins, range=None):
