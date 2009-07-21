@@ -140,22 +140,35 @@ class DBConnect(Singleton):
             except MySQLdb.Error, e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(db_name, db_user, db_host, connID, e)
             
-        # SQLite database: create database from file
+        # SQLite database: create database from CSVs
         elif p.db_type.lower() == 'sqlite':
             from pysqlite2 import dbapi2 as sqlite
             
             if self.sqliteDBFile is None:
-                # compute a database name unique to this data  
+                # Compute a UNIQUE database name for these files  
                 from tempfile import gettempdir
-                from md5 import md5
-                imtime = os.stat(p.image_csv_file).st_mtime
-                obtime = os.stat(p.object_csv_file).st_mtime
-                l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
-                dbname = 'CPA_DB_'+md5(l).hexdigest()+'.db'
-                dbpath = gettempdir()
+                import md5
+                dbpath = gettempdir()+'/CPA'
+                try:
+                    os.listdir(dbpath)
+                except OSError:
+                    os.mkdir(dbpath)
+                if p.db_sql_file:
+                    csv_dir = os.path.split(p.db_sql_file)[0]
+                    files = [file for file in os.listdir(csv_dir) if file.lower().endswith('_image.csv') or file.lower().endswith('_object.csv')]
+                    files += [os.path.split(p.db_sql_file)[1]]
+                    hash = md5.new()
+                    for fname in files:
+                        t = os.stat(csv_dir+'/'+fname).st_mtime
+                        hash.update('%s%s'%(fname,t))
+                    dbname = 'CPA_DB_%s.db'%(hash.hexdigest())
+                else:
+                    imtime = os.stat(p.image_csv_file).st_mtime
+                    obtime = os.stat(p.object_csv_file).st_mtime
+                    l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
+                    dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
                 self.sqliteDBFile = dbpath+'/'+dbname
-
-            # Use existing database file
+                   
             self.connections[connID] = sqlite.connect(self.sqliteDBFile)
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
@@ -185,7 +198,10 @@ class DBConnect(Singleton):
                 # If this is the first connection, then we need to create the DB from the csv files
                 if len(self.connections) == 1:
                     print 'DBConnect: Creating SQLite database at: %s.'%(self.sqliteDBFile)
-                    self.CreateSQLiteDB()
+                    if p.db_sql_file:
+                        self.CreateSQLiteDBFromCSVs()
+                    else:
+                        self.CreateSQLiteDB()
                     
         # Unknown database type (this should never happen)
         else:
@@ -239,7 +255,8 @@ class DBConnect(Singleton):
         
         # Finally make the query
         try:
-            if verbose and not silent: print '[%s] %s'%(connID, query)
+            if verbose and not silent: 
+                print '[%s] %s'%(connID, query)
             if p.db_type=='sqlite':
                 if args:
                     raise 'Can\'t pass args to sqlite execute!'
@@ -607,6 +624,64 @@ class DBConnect(Singleton):
         f.close()
         
         self.Commit()
+        
+        
+    def CreateSQLiteDBFromCSVs(self):
+        import csv
+        csv_dir = os.path.split(p.db_sql_file)[0]
+        files = os.listdir(csv_dir)
+        imcsvs = [] 
+        obcsvs = []
+        for file in files:
+            if file.lower().endswith('_image.csv'):
+                imcsvs += [file]
+            elif file.lower().endswith('_object.csv'):
+                obcsvs += [file]
+                
+        assert len(imcsvs)>0, 'No image CSVs were found when trying to create SQLite database from CSV files. These CSVs are expected to be in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
+        assert len(imcsvs)>0, 'No object CSVs were found when trying to create SQLite database from CSV files. These CSVs are expected to be in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
+        
+        # parse out create table statements and execute them
+        f = open(p.db_sql_file)
+        lines = f.readlines()
+        create_stmts = []
+        i=0
+        in_create_stmt = False
+        for l in lines:
+            if l.upper().startswith('CREATE TABLE') or in_create_stmt:
+                if in_create_stmt:
+                    create_stmts[i] += l
+                else:
+                    create_stmts.append(l)
+                if l.strip().endswith(';'):
+                    in_create_stmt = False
+                    i+=1
+                else:
+                    in_create_stmt = True
+        f.close()
+        
+        for q in create_stmts:
+            self.execute(q)
+            
+        # populate tables with contents of csv files
+        for file in imcsvs:
+            print 'Populating image table with data from %s'%file
+            f = open(csv_dir+'/'+file, 'U')
+            r = csv.reader(f)
+            for row in r:
+                self.execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')', silent=True)
+            f.close()
+    
+        for file in obcsvs:
+            print 'Populating object table with data from %s'%file
+            f = open(csv_dir+'/'+file, 'U')
+            r = csv.reader(f)
+            for row in r:
+                self.execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')', silent=True)
+            f.close()
+            
+        self.Commit()
+
 
     def table_exists(self, name):
         res = []
@@ -762,10 +837,12 @@ if __name__ == "__main__":
     dm = DataModel.getInstance()
 
 #    p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
-    p.LoadFile('../properties/nirht_test.properties')
+#    p.LoadFile('../properties/nirht_test.properties')
+    p.LoadFile('/Users/afraser/Desktop/kate/AstraZenecaTry4_SQLite.properties')
+#    p.LoadFile('../test_data/nirht_local.properties')
     dm.PopulateModel()
     
-    print db.GetObjectsFromImage((0,1))
+    print '%s images'%len(db.GetAllImageKeys())
     
     # TEST CreateTempTableFromCSV
 #    table = '_blah'

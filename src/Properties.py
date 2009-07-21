@@ -17,7 +17,8 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'training_set',
                 'class_table',
                 'plate_type',
-                'check_tables']
+                'check_tables',
+                'db_sql_file',]
 
 list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
             'object_name',
@@ -30,8 +31,9 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'class_table',
                  'image_buffer_size', 'tile_buffer_size',
                  'plate_id', 'well_id', 'plate_type',
-                 'classifier_ignore_substrings',
-                 'check_tables']
+                 'classifier_ignore_substrings', 'object_name',
+                 'check_tables',
+                 'db_sql_file',]
 
 class Properties(Singleton):
     '''
@@ -199,13 +201,25 @@ class Properties(Singleton):
             for field in ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',]:
                 if field_defined(field):
                     print 'PROPERTIES WARNING (%s): Field not required with db_type=sqlite.'%(field)
-            for field in ['image_csv_file','object_csv_file']:
-                assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=sqlite.'%(field)
+            
+            assert any([field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file']]), 'PROPERTIES ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR the field "db_sql_file".'
+                
+            if field_defined('db_sql_file'):
                 try:
                     f = open(self.__dict__[field], 'r')
                     f.close()
                 except:
-                    raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
+                    raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.__dict__['db_sql_file'])
+                
+                for field in ['image_csv_file','object_csv_file']:
+                    assert not field_defined(field), 'PROPERTIES ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
+            else:        
+                for field in ['image_csv_file','object_csv_file']:
+                    try:
+                        f = open(self.__dict__[field], 'r')
+                        f.close()
+                    except:
+                        raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
             
         if self.db_type.lower()=='mysql':
             for field in ['db_port', 'db_host', 'db_name', 'db_user',]:
