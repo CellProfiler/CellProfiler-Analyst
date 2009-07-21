@@ -838,7 +838,7 @@ if __name__ == "__main__":
 
 #    p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
 #    p.LoadFile('../properties/nirht_test.properties')
-    p.LoadFile('/Users/afraser/Desktop/kate/AstraZenecaTry4_SQLite.properties')
+    p.LoadFile('../test_data/export_to_db_test.properties')
 #    p.LoadFile('../test_data/nirht_local.properties')
     dm.PopulateModel()
     
