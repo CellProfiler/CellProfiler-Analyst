@@ -59,6 +59,7 @@ class SortBin(wx.ScrolledWindow):
         self.SetBackgroundColour('#000000')
         self.sizer = ImageTileSizer()
         self.SetSizer(self.sizer)
+        self.SetMinSize((int(p.image_tile_size), int(p.image_tile_size)))
 
         (w,h) = self.sizer.GetSize()
         self.SetScrollbars(20,20,w/20,h/20,0,0)

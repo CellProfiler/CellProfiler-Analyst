@@ -83,114 +83,235 @@ class ClassifierGUI(wx.Frame):
 
         self.CreateStatusBar()
         
-        # Create the Fetch panel
-        self.fetchPanel = wx.Panel(self)
+        #### Create GUI elements
+        # Top level - three split windows
+        self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER)
+        self.fetch_and_rules_panel = wx.Panel(self.splitter)
+        self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER)
+        
+        # fetch & rules
+        self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
+        self.rules_text = wx.TextCtrl(self.fetch_and_rules_panel, wx.NewId(), size=(-1,-1), style=wx.TE_MULTILINE)
+        self.rules_text.SetMinSize((-1, int(p.image_tile_size)))
+        self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
+        
+        # sorting bins
+        self.unclassified_panel = wx.Panel(self.bins_splitter)
+        self.unclassified_box = wx.StaticBox(self.unclassified_panel, label='unclassified '+p.object_name[1])
+        self.unclassified_sizer = wx.StaticBoxSizer(self.unclassified_box, wx.VERTICAL)
+        self.unclassifiedBin = SortBin.SortBin(parent=self.unclassified_panel,
+                                               classifier=self,
+                                               label='unclassified',
+                                               parentSizer=self.unclassified_sizer)
+        self.unclassified_sizer.Add(self.unclassifiedBin, proportion=1, flag=wx.EXPAND)
+        self.unclassified_panel.SetSizer(self.unclassified_sizer)
+        self.classified_bins_panel = wx.Panel(self.bins_splitter)
+
+        # fetch objects interface
+        self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=wx.NewId(), value='20', size=(30,-1))
+        self.obClassChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), choices=['random'])
+        self.filterChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), choices=['experiment', 'image']+p._filters_ordered+p._groups_ordered)
+        self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.fetchBtn = wx.Button(self.fetch_panel, wx.NewId(), 'Fetch!')
+
+        # find rules interface
+        self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, wx.NewId(), value='5', size=(30,-1))
+        self.findRulesBtn = wx.Button(self.find_rules_panel, wx.NewId(), 'Find Rules')
+        self.scoreAllBtn = wx.Button(self.find_rules_panel, wx.NewId(), 'Score All')
+        self.scoreImageBtn = wx.Button(self.find_rules_panel, wx.NewId(), 'Score Image')
+        self.addSortClassBtn = wx.Button(self.find_rules_panel, wx.NewId(), "+", size=(30,30))
+
+
+        #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.nObjectsTxt = wx.TextCtrl(self.fetchPanel, id=wx.NewId(), value='20', size=(30,-1))
-        self.obClassChoice = wx.Choice(self.fetchPanel, id=wx.NewId(), choices=['random'])
-        self.obClassChoice.SetSelection(0)
-        filters = p._filters_ordered
-        groups = p._groups_ordered
-        self.filterChoice = wx.Choice(self.fetchPanel, id=wx.NewId(), choices=['experiment', 'image']+filters+groups)
-        self.filterChoice.SetSelection(0)
-        self.fetchBtn = wx.Button(self.fetchPanel, wx.NewId(), 'Fetch!')
+        self.find_rules_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.fetch_and_rules_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.classified_bins_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+
+        #### Add elements to sizers and splitters
+        # fetch panel
         self.fetchSizer.AddStretchSpacer()
-        self.fetchSizer.Add(wx.StaticText(self.fetchPanel, wx.NewId(), 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, wx.NewId(), 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.nObjectsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
-        self.fetchSizer.Add(wx.StaticText(self.fetchPanel, wx.NewId(), p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, wx.NewId(), p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
-        self.fetchSizer.Add(wx.StaticText(self.fetchPanel, wx.NewId(), 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, wx.NewId(), 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((10,20))
-        self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.fetchSizer.AddSizer(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
+        self.fetchSizer.Add(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddStretchSpacer()
-        self.fetchPanel.SetSizer(self.fetchSizer)
+        self.fetch_panel.SetSizerAndFit(self.fetchSizer)
 
-        # Create a splitter for rules and classes
-        self.bigsplitter = wx.SplitterWindow(self, style=wx.NO_BORDER)
-        self.bigsplitter.SetMinimumPaneSize(30)
-        self.bigsplitter.SetSashGravity(0.0)
-        
-        # Create the Rules panel
-        self.train_panel = wx.Panel(self.bigsplitter)
-        self.trainSizer = wx.BoxSizer(wx.VERTICAL)
+        # find rules panel
+        self.find_rules_sizer.AddStretchSpacer()
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, wx.NewId(), 'Max number of rules:'))
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_sizer.Add(self.nRulesTxt)
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_sizer.Add(self.findRulesBtn)
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_sizer.Add(self.scoreAllBtn)
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_sizer.Add(self.scoreImageBtn)
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_sizer.Add(self.addSortClassBtn)
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_panel.SetSizerAndFit(self.find_rules_sizer)
 
-        self.rulesTxt = wx.TextCtrl(self.train_panel, wx.NewId(), size=(-1,-1), style=wx.TE_MULTILINE)
-        self.rulesTxt.SetEditable(False)
-        self.rulesTxt.SetMinSize((50,50))
-        
+        # fetch and rules panel
+        self.fetch_and_rules_sizer.Add((5,5))
+        self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
+        self.fetch_and_rules_sizer.Add((5,5))
+        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=5)
+        self.fetch_and_rules_sizer.Add((5,5))
+        self.fetch_and_rules_sizer.Add(self.find_rules_panel, flag=wx.EXPAND)
+        self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
-        self.train_panel_2 = wx.Panel(self.train_panel)
+        # classified bins panel
+        self.classified_bins_panel.SetSizer(self.classified_bins_sizer)
 
-        self.nRulesTxt = wx.TextCtrl(self.train_panel_2, wx.NewId(), value='5', size=(30,-1))
-        self.findRulesBtn = wx.Button(self.train_panel_2, wx.NewId(), 'Find Rules')
+        # splitter windows
+        self.splitter.SplitHorizontally(self.fetch_and_rules_panel, self.bins_splitter, self.fetch_and_rules_panel.GetMinSize()[1])
+        self.bins_splitter.SplitHorizontally(self.unclassified_panel, self.classified_bins_panel)
+
+        self.splitter.SetSashGravity(0.0)
+        self.bins_splitter.SetSashGravity(0.5)
+
+        self.splitter.SetMinimumPaneSize(max(int(p.image_tile_size), self.fetch_and_rules_panel.GetMinHeight()))
+        self.bins_splitter.SetMinimumPaneSize(int(p.image_tile_size))
+        self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * int(p.image_tile_size) + self.fetch_and_rules_panel.GetMinHeight()))
+
+        # Set initial state
+        self.obClassChoice.SetSelection(0)
+        self.filterChoice.SetSelection(0)
         self.findRulesBtn.Disable()
-        self.scoreAllBtn = wx.Button(self.train_panel_2, wx.NewId(), 'Score All')
         self.scoreAllBtn.Disable()
-        self.scoreImageBtn = wx.Button(self.train_panel_2, wx.NewId(), 'Score Image')
         self.scoreImageBtn.Disable()
-        self.addSortClassBtn = wx.Button(self.train_panel_2, wx.NewId(), "+", size=(30,30))
-
-        self.trainSizer2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.trainSizer2.AddStretchSpacer()
-        self.trainSizer2.Add(wx.StaticText(self.train_panel_2, wx.NewId(), 'Max number of rules:'))
-        self.trainSizer2.Add((5,20))
-        self.trainSizer2.Add(self.nRulesTxt)
-        self.trainSizer2.Add((5,20))
-        self.trainSizer2.Add(self.findRulesBtn)
-        self.trainSizer2.Add((5,20))
-        self.trainSizer2.Add(self.scoreAllBtn)
-        self.trainSizer2.Add((5,20))
-        self.trainSizer2.Add(self.scoreImageBtn)
-        self.trainSizer2.Add((5,20))
-        self.trainSizer2.Add(self.addSortClassBtn)
-        self.train_panel_2.SetSizerAndFit(self.trainSizer2)
-
-        self.trainSizer.Add(self.rulesTxt, proportion=1, flag=wx.EXPAND)
-        self.trainSizer.AddSpacer((1,5))
-        self.trainSizer.Add(self.train_panel_2, proportion=0, flag=wx.EXPAND)
-
-        self.train_panel.SetSizerAndFit(self.trainSizer)
-
-        # Create the sorting panel (splitter window)
-        self.splitter = wx.SplitterWindow(self.bigsplitter, style=wx.NO_BORDER)
-        self.splitter.SetMinimumPaneSize(30)
-        self.splitter.SetSashGravity(0.5)
-        # top half
-        self.topSortPanel = wx.Panel(self.splitter)
-        self.topSortSizer = wx.StaticBoxSizer(wx.StaticBox(self.topSortPanel, 
-                                                           label='unclassified '+p.object_name[1]))
-        self.topSortPanel.SetSizer(self.topSortSizer)
-
-        self.unclassifiedBin = SortBin.SortBin(parent=self.topSortPanel, 
-                                               classifier=self,
-                                               label='unclassified', 
-                                               parentSizer=self.topSortSizer)
-        self.topSortSizer.Add(self.unclassifiedBin, proportion=2, flag=wx.EXPAND)
-        # bottom half
-        self.bottomSortPanel = wx.Panel(self.splitter)
-        self.bottomSortSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.bottomSortPanel.SetSizer(self.bottomSortSizer)
+        self.fetchSizer.Hide(self.fetchFromGroupSizer)
         # add the default classes
         self.AddSortClass('positive')
         self.AddSortClass('negative')
-        
-        self.bigsplitter.SplitHorizontally(self.train_panel, self.splitter, sashPosition=self.train_panel.GetMinSize()[1])
-        self.splitter.SplitHorizontally(self.topSortPanel, self.bottomSortPanel)
-        
-        self.outerSizer = wx.BoxSizer(wx.VERTICAL)
-        self.outerSizer.Add(self.fetchPanel, proportion=0, flag=wx.EXPAND)
-        self.outerSizer.Add(self.bigsplitter, proportion=1, flag=wx.EXPAND)
-        self.SetSizer(self.outerSizer)
-        
+        self.Layout()
+####
+####
+####
+####        # Create the Fetch panel
+####        self.fetchPanel = wx.Panel(self)
+####        self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
+####        self.nObjectsTxt = wx.TextCtrl(self.fetchPanel, id=wx.NewId(), value='20', size=(30,-1))
+####        self.obClassChoice = wx.Choice(self.fetchPanel, id=wx.NewId(), choices=['random'])
+####        self.obClassChoice.SetSelection(0)
+####        filters = p._filters_ordered
+####        groups = p._groups_ordered
+####        self.filterChoice = wx.Choice(self.fetchPanel, id=wx.NewId(), choices=['experiment', 'image']+filters+groups)
+####        self.filterChoice.SetSelection(0)
+####        self.fetchBtn = wx.Button(self.fetchPanel, wx.NewId(), 'Fetch!')
+####        self.fetchSizer.AddStretchSpacer()
+####        self.fetchSizer.Add(wx.StaticText(self.fetchPanel, wx.NewId(), 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.AddSpacer((5,20))
+####        self.fetchSizer.Add(self.nObjectsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.AddSpacer((5,20))
+####        self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.AddSpacer((5,20))
+####        self.fetchSizer.Add(wx.StaticText(self.fetchPanel, wx.NewId(), p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.AddSpacer((5,20))
+####        self.fetchSizer.Add(wx.StaticText(self.fetchPanel, wx.NewId(), 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.AddSpacer((5,20))
+####        self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.AddSpacer((10,20))
+####        self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
+####        self.fetchSizer.AddSizer(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
+####        self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+####        self.fetchSizer.AddStretchSpacer()
+####        self.fetchPanel.SetSizer(self.fetchSizer)
+####
+####        # Create a splitter for rules and classes
+####        self.bigsplitter = wx.SplitterWindow(self, style=wx.NO_BORDER)
+####        self.bigsplitter.SetMinimumPaneSize(30)
+####        self.bigsplitter.SetSashGravity(0.0)
+####        
+####        # Create the Rules panel
+####        self.train_panel = wx.Panel(self.bigsplitter)
+####        self.trainSizer = wx.BoxSizer(wx.VERTICAL)
+####
+####        self.rulesTxt = wx.TextCtrl(self.train_panel, wx.NewId(), size=(-1,-1), style=wx.TE_MULTILINE)w
+####        self.rulesTxt.SetEditable(False)
+####        self.rulesTxt.SetMinSize((50,50))
+####        
+####
+####        self.train_panel_2 = wx.Panel(self.train_panel)
+####
+####        self.nRulesTxt = wx.TextCtrl(self.train_panel_2, wx.NewId(), value='5', size=(30,-1))
+####        self.findRulesBtn = wx.Button(self.train_panel_2, wx.NewId(), 'Find Rules')
+####        self.findRulesBtn.Disable()
+####        self.scoreAllBtn = wx.Button(self.train_panel_2, wx.NewId(), 'Score All')
+####        self.scoreAllBtn.Disable()
+####        self.scoreImageBtn = wx.Button(self.train_panel_2, wx.NewId(), 'Score Image')
+####        self.scoreImageBtn.Disable()
+####        self.addSortClassBtn = wx.Button(self.train_panel_2, wx.NewId(), "+", size=(30,30))
+####
+####        self.trainSizer2 = wx.BoxSizer(wx.HORIZONTAL)
+####        self.trainSizer2.AddStretchSpacer()
+####        self.trainSizer2.Add(wx.StaticText(self.train_panel_2, wx.NewId(), 'Max number of rules:'))
+####        self.trainSizer2.Add((5,20))
+####        self.trainSizer2.Add(self.nRulesTxt)
+####        self.trainSizer2.Add((5,20))
+####        self.trainSizer2.Add(self.findRulesBtn)
+####        self.trainSizer2.Add((5,20))
+####        self.trainSizer2.Add(self.scoreAllBtn)
+####        self.trainSizer2.Add((5,20))
+####        self.trainSizer2.Add(self.scoreImageBtn)
+####        self.trainSizer2.Add((5,20))
+####        self.trainSizer2.Add(self.addSortClassBtn)
+####        self.train_panel_2.SetSizerAndFit(self.trainSizer2)
+####
+####        self.trainSizer.Add(self.rulesTxt, proportion=1, flag=wx.EXPAND)
+####        self.trainSizer.AddSpacer((1,5))
+####        self.trainSizer.Add(self.train_panel_2, proportion=0, flag=wx.EXPAND)
+####
+####        self.train_panel.SetSizerAndFit(self.trainSizer)
+####
+####        # Create the sorting panel (splitter window)
+####        self.splitter = wx.SplitterWindow(self.bigsplitter, style=wx.NO_BORDER)
+####        self.splitter.SetMinimumPaneSize(30)
+####        self.splitter.SetSashGravity(0.5)
+####        # top half
+####        self.topSortPanel = wx.Panel(self.splitter)
+####        self.topSortSizer = wx.StaticBoxSizer(wx.StaticBox(self.topSortPanel, 
+####                                                           label='unclassified '+p.object_name[1]))
+####        self.topSortPanel.SetSizer(self.topSortSizer)
+####
+####        self.unclassifiedBin = SortBin.SortBin(parent=self.topSortPanel, 
+####                                               classifier=self,
+####                                               label='unclassified', 
+####                                               parentSizer=self.topSortSizer)
+####        self.topSortSizer.Add(self.unclassifiedBin, proportion=2, flag=wx.EXPAND)
+####        # bottom half
+####        self.bottomSortPanel = wx.Panel(self.splitter)
+####        self.bottomSortSizer = wx.BoxSizer(wx.HORIZONTAL)
+####        self.bottomSortPanel.SetSizer(self.bottomSortSizer)
+####        # add the default classes
+####        self.AddSortClass('positive')
+####        self.AddSortClass('negative')
+####        
+####        self.bigsplitter.SplitHorizontally(self.train_panel, self.splitter, sashPosition=self.train_panel.GetMinSize()[1])
+####        self.splitter.SplitHorizontally(self.topSortPanel, self.bottomSortPanel)
+####        
+####        self.outerSizer = wx.BoxSizer(wx.VERTICAL)
+####        self.outerSizer.Add(self.fetchPanel, proportion=0, flag=wx.EXPAND)
+####        self.outerSizer.Add(self.bigsplitter, proportion=1, flag=wx.EXPAND)
+####        self.SetSizer(self.outerSizer)
+####        
         self.Centre()
         self.MapChannels(p.image_channel_colors[:])
         self.BindMouseOverHelpText()
@@ -233,7 +354,7 @@ class ClassifierGUI(wx.Frame):
         self.filterChoice.SetToolTip(wx.ToolTip('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
         self.filterChoice.GetToolTip().SetDelay(3000)
         self.fetchBtn.SetToolTip(wx.ToolTip('Fetches images of %s to be sorted.'%(p.object_name[1])))
-        self.rulesTxt.SetToolTip(wx.ToolTip('Rules are displayed in this text box.'))
+        self.rules_text.SetToolTip(wx.ToolTip('Rules are displayed in this text box.'))
         self.nRulesTxt.SetToolTip(wx.ToolTip('The maximum number of rules classifier should use to define your phenotypes.'))
         self.findRulesBtn.SetToolTip(wx.ToolTip('Tell Classifier to find a rule set that fits your phenotypes as you have sorted them.'))
         self.scoreAllBtn.SetToolTip(wx.ToolTip('Compute %s counts and per-group enrichments across your experiment. (This may take a while)'%(p.object_name[0])))
@@ -304,15 +425,15 @@ class ClassifierGUI(wx.Frame):
         
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
-        This sizer is then added to the bottomSortSizer. '''
-        sizer = wx.StaticBoxSizer(wx.StaticBox(self.bottomSortPanel, label=label), wx.VERTICAL)
+        This sizer is then added to the classified_bins_sizer. '''
+        sizer = wx.StaticBoxSizer(wx.StaticBox(self.classified_bins_panel, label=label), wx.VERTICAL)
         # NOTE: bin must be created after sizer or drop events will occur on the sizer
-        bin = SortBin.SortBin(parent=self.bottomSortPanel, label=label, 
+        bin = SortBin.SortBin(parent=self.classified_bins_panel, label=label, 
                               classifier=self, parentSizer=sizer)
         sizer.Add(bin, proportion=1, flag=wx.EXPAND)
-        self.bottomSortSizer.Add(sizer, proportion=1, flag=wx.EXPAND)
+        self.classified_bins_sizer.Add(sizer, proportion=1, flag=wx.EXPAND)
         self.classBins.append(bin)
-        self.bottomSortPanel.Layout()
+        self.classified_bins_panel.Layout()
         self.binsCreated += 1
         
     
@@ -324,12 +445,12 @@ class ClassifierGUI(wx.Frame):
                 self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item!=bin.label])
                 self.obClassChoice.Select(0)
                 # Remove the bin
-                self.bottomSortSizer.Remove(bin.parentSizer)
+                self.classified_bins_sizer.Remove(bin.parentSizer)
                 bin.Destroy()
-                self.bottomSortPanel.Layout()
+                self.classified_bins_panel.Layout()
                 break
         self.weaklearners = None
-        self.rulesTxt.SetValue('')
+        self.rules_text.SetValue('')
         for bin in self.classBins:
             bin.trained = False
         self.UpdateClassChoices()
@@ -631,7 +752,7 @@ class ClassifierGUI(wx.Frame):
                                                                nRules, self.trainingSet.label_matrix, 
                                                                self.trainingSet.values, output)
         self.SetStatusText('')
-        self.rulesTxt.Value = output.getvalue()
+        self.rules_text.Value = output.getvalue()
         self.scoreAllBtn.Enable()
         self.scoreImageBtn.Enable()
 
@@ -884,7 +1005,8 @@ class ClassifierGUI(wx.Frame):
         elif filter == 'image' or filter in p._groups_ordered:
             self.SetupFetchFromGroupSizer(filter)
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
-        self.Layout()
+        self.fetch_panel.Layout()
+        self.fetch_panel.Refresh()
     
     
     def SetupFetchFromGroupSizer(self, group):
@@ -910,15 +1032,15 @@ class ClassifierGUI(wx.Frame):
         self.groupFieldValidators = []
         self.fetchFromGroupSizer.Clear(True)
         for i, field in enumerate(fieldNames):
-            label = wx.StaticText(self, wx.NewId(), field+':')
+            label = wx.StaticText(self.fetch_panel, wx.NewId(), field+':')
             # Values to be sorted BEFORE being converted to str
             validVals = list(set([col[i] for col in validKeys]))
             validVals.sort()
             validVals = [str(col) for col in validVals]
             if group=='image' or fieldTypes[i]==int or fieldTypes[i]==long:
-                fieldInp = wx.TextCtrl(self, -1, value=validVals[0], size=(80,-1))
+                fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80,-1))
             else:
-                fieldInp = wx.ComboBox(self, -1, value=validVals[0], size=(80,-1),
+                fieldInp = wx.ComboBox(self.fetch_panel, -1, value=validVals[0], size=(80,-1),
                                        choices=['__ANY__']+validVals)
             validVals = ['__ANY__']+validVals
             # Create and bind to a text Validator
