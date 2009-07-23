@@ -192,6 +192,7 @@ class DBConnect(Singleton):
             try:
                 import _classifier
                 _classifier.create_classifier_function(self.connections[connID])
+                print "[%s] Created fast classifier function in sqlite"%(connID)
             except:
                 self.connections[connID].create_function('classifier', -1, classifier)
             
