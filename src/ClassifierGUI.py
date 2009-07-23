@@ -500,6 +500,7 @@ class ClassifierGUI(wx.Frame):
                     loopMsg = ' from image %s'%(imKey,)
                 else:
                     obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
+                    obKeysToTry.sort()
                     if filter in p._filters_ordered:
                         loopMsg = ' from filter %s'%(filter)
                     elif filter in p._groups_ordered:
