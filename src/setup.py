@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, Extension
 import sys, os
 
 # fix from
@@ -28,6 +28,10 @@ setup(
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
-    name = "Classifier"
+    name = "Classifier",
+    ext_modules = [Extension('_classifier',
+                             sources = ['_classifier.c'],
+                             libraries = ['sqlite3'])]
+                             
 )
 

@@ -189,7 +189,11 @@ class DBConnect(Singleton):
                     data = data[num_stumps:]
                 return bestcl
 
-            self.connections[connID].create_function('classifier', -1, classifier)
+            try:
+                import _classifier
+                _classifier.create_classifier_function(self.connections[connID])
+            except:
+                self.connections[connID].create_function('classifier', -1, classifier)
             
             try:
                 # Try the connection
