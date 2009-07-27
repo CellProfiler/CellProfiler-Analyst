@@ -72,15 +72,18 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     class_query = translate(weaklearners)
 
     if filterKeys != []:
-        isImKey = len(filterKeys[0]) == len(image_key_columns())
-        if isImKey:
-            whereclause = "AND " + GetWhereClauseForImages(filterKeys)
+        if isinstance(filterKeys, str):
+            whereclause = filterKeys + " AND"
         else:
-            whereclause = "AND " + GetWhereClauseForObjects(filterKeys)
+            isImKey = len(filterKeys[0]) == len(image_key_columns())
+            if isImKey:
+                whereclause = GetWhereClauseForImages(filterKeys) + " AND"
+            else:
+                whereclause = GetWhereClauseForObjects(filterKeys) + " AND"
     else:
         whereclause = ""
 
-    return db.execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s=%d %s'%(p.object_table, class_query, clNum, whereclause))
+    return db.execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s %s=%d '%(p.object_table, whereclause, class_query, clNum))
 
 
 def object_scores(weaklearners, filter=None, filterKeys=[]):

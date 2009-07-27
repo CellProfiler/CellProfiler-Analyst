@@ -668,21 +668,26 @@ class DBConnect(Singleton):
         for q in create_stmts:
             self.execute(q)
             
+        connID = threading.currentThread().getName()
         # populate tables with contents of csv files
         for file in imcsvs:
             print 'Populating image table with data from %s'%file
             f = open(csv_dir+'/'+file, 'U')
             r = csv.reader(f)
-            for row in r:
-                self.execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')', silent=True)
+            row1 = r.next()
+            command = 'INSERT INTO '+p.image_table+' VALUES ('+','.join(['?' for i in row1])+')'
+            self.cursors[connID].execute(command, row1)
+            self.cursors[connID].executemany(command, r)
             f.close()
     
         for file in obcsvs:
             print 'Populating object table with data from %s'%file
             f = open(csv_dir+'/'+file, 'U')
             r = csv.reader(f)
-            for row in r:
-                self.execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')', silent=True)
+            row1 = r.next()
+            command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
+            self.cursors[connID].execute(command, row1)
+            self.cursors[connID].executemany(command, r)
             f.close()
             
         self.Commit()

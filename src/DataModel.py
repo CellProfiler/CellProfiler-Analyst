@@ -73,6 +73,11 @@ class DataModel(Singleton):
         self.obCount = 0
         
         
+
+    def GetRandomFraction(self, num):
+        print "RAND", num, self.obCount, int(-2**63 + 2**64 * float(num) / self.obCount)
+        return int(2**64 * float(num) / self.obCount - 2**63)
+
     def GetRandomObject(self):
         '''
         Returns a random object key

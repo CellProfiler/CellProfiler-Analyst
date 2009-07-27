@@ -490,7 +490,10 @@ class ClassifierGUI(wx.Frame):
             attempts = 0
             while len(obKeys) < nObjects:
                 if filter == 'experiment':
-                    obKeysToTry = dm.GetRandomObjects(100)
+                    if db.sqliteDBFile is not None:
+                        obKeysToTry = 'RANDOM() < %d'%(dm.GetRandomFraction(100))
+                    else:
+                        obKeysToTry = dm.GetRandomObjects(100)
                     loopMsg = ' from whole experiment'
                 elif filter == 'image':
                     # All objects are tried in first pass
