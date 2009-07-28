@@ -8,7 +8,8 @@ setup(console=['ClassifierGUI.py'],
             'packages' : ['matplotlib', 'pytz'],
             "excludes": ['_gtkagg', '_tkagg'],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
-                             'libgobject-2.0-0.dll']
+                             'libgobject-2.0-0.dll', 
+                             'libgdk_pixbuf-2.0-0.dll',]
             }
         },
       data_files=matplotlib.get_py2exe_datafiles(),
