@@ -2,10 +2,10 @@ from distutils.core import setup
 import py2exe
 import matplotlib
 
-setup(console=['ClassifierGUI.pyw'],
+setup(console=['ClassifierGUI.py'],
       options={
         'py2exe': {
-            'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'sqlite3'],
+            'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'pysqlite2'],
             "excludes": ['_gtkagg', '_tkagg', 
                          "Tkconstants","Tkinter","tcl"],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
