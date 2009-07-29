@@ -6,6 +6,7 @@ setup(console=['ClassifierGUI.py'],
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'pysqlite2'],
+            'includes' : ['PILfix'],
             "excludes": ['_gtkagg', '_tkagg', 
                          "Tkconstants","Tkinter","tcl"],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
