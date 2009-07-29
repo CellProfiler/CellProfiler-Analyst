@@ -3,6 +3,7 @@ A collection of tools to modify images used in CPA.
 '''
 
 import Image
+import PILfix
 from Properties import Properties
 from DBConnect import DBConnect
 from ImageReader import ImageReader
