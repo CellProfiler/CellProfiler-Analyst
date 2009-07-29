@@ -740,7 +740,7 @@ class DBConnect(Singleton):
         tables agree on image numbers.
         '''
         if p.db_type=='sqlite':
-            print 'Skipping table verification step for sqlite'
+            print 'Skipping table verification step for sqlite (file %s)'%(self.sqliteDBFile)
             return
         
         # Check for index on image_table
