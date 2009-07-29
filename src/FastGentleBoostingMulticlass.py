@@ -1,5 +1,6 @@
 from numpy import *
-import subprocess, os, sys
+import sys
+from FastGentleBoostingWorkerMulticlass import train_weak_learner
 
 
 def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False):
@@ -21,54 +22,13 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
         weights[tile(classmask, (1, num_classes))] /= num_examples_class
     balancing = weights.copy()
     
-    nworkers = int(os.getenv("NWORKERS") or 2)
-    workers = range(nworkers)
-    ncols = shape(values)[1]
-    basecols = zeros((nworkers,))
-    for i in range(nworkers):
-        worker_path = os.path.join(sys.path[0], __import__('FastGentleBoostingWorkerMulticlass', globals()).__file__)
-        
-        if worker_path[-3:] == 'pyc':
-            worker_path = worker_path[:-1]
-        if os.name == 'nt':   # Windows
-            worker_path = "python \""+worker_path+"\""
-        else:
-            worker_path = [sys.executable, worker_path]
-
-        if (i == 0) and do_prof:
-            workers[i] = subprocess.Popen([worker_path,"doprof"],
-                                          stdin=subprocess.PIPE,
-                                          stdout=subprocess.PIPE)
-        else:
-            workers[i] = subprocess.Popen(worker_path,
-                                          stdin=subprocess.PIPE,
-                                          stdout=subprocess.PIPE)
-        if os.name == 'nt':   # Windows
-            import msvcrt
-            msvcrt.setmode(workers[i].stdin.fileno(), os.O_BINARY)
-            msvcrt.setmode(workers[i].stdout.fileno(), os.O_BINARY)  
-        slice_start = int(floor(i * ncols / float(nworkers)))
-        slice_end = int(floor((i+1) * ncols / float(nworkers)))
-        basecols[i] = slice_start
-        array([shape(values)[0], slice_end - slice_start], int32).tofile(workers[i].stdin)
-        array([label_matrix.shape[1]], int32).tofile(workers[i].stdin)
-        values[:, slice_start:slice_end].astype(float32).tofile(workers[i].stdin)
-        label_matrix.astype(int32).tofile(workers[i].stdin)
-
     def get_one_weak_learner():
-        best = float(Infinity)
-        for i in range(nworkers):
-            workers[i].stdin.write("not done yet\n")
-            weights.astype(float32).tofile(workers[i].stdin)
-            workers[i].stdin.flush()
-        for i in range(nworkers):
-            err, column, thresh = fromfile(workers[i].stdout, float32, 3)
-            a = fromfile(workers[i].stdout, float32, num_classes)
-            b = fromfile(workers[i].stdout, float32, num_classes)
-            column = int(column) + basecols[i]
-            if err < best:
-                best = err
-                bestvals = (err, column, thresh, a, b)
+        best_error = float(Infinity)
+        for feature_idx in range(values.shape[1]):
+            thresh, err, a, b = train_weak_learner(label_matrix, weights, values[:, feature_idx])
+            if err < best_error:
+                best_error = err
+                bestvals = (err, feature_idx, thresh, a, b)
         err, column, thresh, a, b = bestvals
         # recompute weights
         delta = reshape(values[:, column] > thresh, (num_examples, 1))
@@ -79,12 +39,6 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
         
         return (err, colnames[int(column)], thresh, a, b, reweights, recomputed_labels)
 
-    def shutdown():
-        for i in range(0, nworkers):
-            workers[i].stdin.write("done\n")
-            workers[i].stdin.close()
-        
-
     weak_learners = []
     for weak_count in range(num_learners):
         err, colname, thresh, a, b, reweight, recomputed_labels = get_one_weak_learner()
@@ -94,12 +48,10 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
             colname, thresh, a, b = weak_learners[-1]
             fout.write("IF (%s > %s, %s, %s)\n" %
                        (colname, repr(thresh), "[" + ", ".join([repr(v) for v in a]) + "]", "[" + ", ".join([repr(v) for v in b]) + "]"))
-            fout.flush()
         if err == 0.0:
             break
         weights = reweight
 
-    shutdown()
     return weak_learners
 
 
