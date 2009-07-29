@@ -168,7 +168,7 @@ class DBConnect(Singleton):
                     l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
                     dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
                 self.sqliteDBFile = dbpath+'/'+dbname
-                   
+            print '[%s] SQLite file: %s'%(connID, self.sqliteDBFile)
             self.connections[connID] = sqlite.connect(self.sqliteDBFile)
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
@@ -740,7 +740,7 @@ class DBConnect(Singleton):
         tables agree on image numbers.
         '''
         if p.db_type=='sqlite':
-            print 'Skipping table verification step for sqlite (file %s)'%(self.sqliteDBFile)
+            print 'Skipping table verification step for sqlite'
             return
         
         # Check for index on image_table
