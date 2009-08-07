@@ -102,12 +102,20 @@ class ImageControlPanel(wx.Panel):
             colors = [np.array(cm.jet(val)) * 255 for val in vals]
             
         self.sizer3.Add(wx.StaticText(self.GetParent(), -1, 'Phenotypes:'))
+        i=1
         for (name, keys), color in zip(classCoords.items(), colors):
-            checkBox = wx.CheckBox(self.GetParent(), wx.NewId(), name)
+            checkBox = wx.CheckBox(self.GetParent(), wx.NewId(), '%d) %s'%(i,name))
             checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
             checkBox.SetValue(True)
             self.sizer3.Add(checkBox, flag=wx.EXPAND)
-            checkBox.Bind(wx.EVT_CHECKBOX, self.OnTogglePhenotype)
+            
+            def OnTogglePhenotype(evt):
+                className = evt.EventObject.Label
+                for listener in self.listeners:
+                    listener.ToggleClass(className[3:], evt.Checked())
+            
+            checkBox.Bind(wx.EVT_CHECKBOX, OnTogglePhenotype)
+            i+=1
 
 
     def OnBrightnessSlider(self, evt):
@@ -137,12 +145,6 @@ class ImageControlPanel(wx.Panel):
             
     def ConnectTolistener(self, listener):
         self.listeners += [listener]
-        
-                
-    def OnTogglePhenotype(self, evt):
-        className = evt.EventObject.Label
-        for listener in self.listeners:
-            listener.ToggleClass(className, evt.Checked())
         
             
     def SetContrastMode(self, mode):

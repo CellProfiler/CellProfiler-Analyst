@@ -3,7 +3,6 @@ from DataModel import DataModel
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
-from matplotlib.pyplot import cm
 import numpy as np
 import ImageTools
 import cPickle
@@ -11,6 +10,9 @@ import wx
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
+
+CL_NUMBERED = 'numbered'
+CL_COLORED = 'colored'
 
 class ImageViewerPanel(ImagePanel):
     '''
@@ -21,32 +23,44 @@ class ImageViewerPanel(ImagePanel):
         self.selectedPoints = []
         self.classes        = {}  # {'Positive':[(x,y),..], 'Negative': [(x2,y2),..],..}
         self.classVisible   = {}
+        self.class_rep    = CL_COLORED
     
     def OnPaint(self, evt):
         dc = super(ImageViewerPanel, self).OnPaint(evt)
-        # Draw colored boxes at each classified point
+        font = self.GetFont()
+        font.SetPixelSize((6,12))
+        dc.SetFont(font)
+        dc.SetTextForeground('WHITE')
+
+        # Draw class numbers over each object
         if self.classes:
-            for (name, cl), color in zip(self.classes.items(), self.colors):
+            for (name, cl), clnum, color in zip(self.classes.items(), self.class_nums, self.colors):
                 if self.classVisible[name]:
                     dc.BeginDrawing()
                     for (x,y) in cl:
-                        x = x * self.scale - 2
-                        y = y * self.scale - 2
-                        w = h = 4
-                        dc.SetPen(wx.Pen(color,1))
-                        dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
-                        dc.DrawRectangle(x,y,w,h)
-                        dc.DrawRectangle(x-1,y-1,6,6)
+                        if self.class_rep==CL_NUMBERED:
+                            x = x * self.scale - 3
+                            y = y * self.scale - 6
+                            dc.DrawText(clnum, x, y)
+                        else:
+                            x = x * self.scale - 2
+                            y = y * self.scale - 2
+                            w = h = 4
+                            dc.SetPen(wx.Pen(color,1))
+                            dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
+                            dc.DrawRectangle(x,y,w,h)
+                            dc.DrawRectangle(x-1,y-1,6,6)
                     dc.EndDrawing()
+                    
         # Draw small white (XOR) boxes at each selected point
         dc.SetLogicalFunction(wx.XOR)
+        dc.SetPen(wx.Pen("WHITE",1))
+        dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
         for (x,y) in self.selectedPoints:
             x = x * self.scale - 3
             y = y * self.scale - 3
             w = h = 6
             dc.BeginDrawing()
-            dc.SetPen(wx.Pen("WHITE",1))
-            dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
             dc.DrawRectangle(x,y,w,h)
             dc.EndDrawing()
         return dc
@@ -74,16 +88,24 @@ class ImageViewerPanel(ImagePanel):
         self.Refresh()
 
     def SetClassPoints(self, classes):
+        from matplotlib.pyplot import cm
         self.classes = classes
         vals = np.arange(float(len(self.classes))) / len(self.classes)
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
         self.colors = [np.array(cm.jet(val))*255 for val in vals]
+        self.class_nums = [str(i+1) for i,_ in enumerate(classes)]
 
         self.classVisible = {}
         for className in classes.keys():
             self.classVisible[className] = True 
         self.Refresh()
+        
+    def ToggleClassRepresentation(self):
+        if self.class_rep==CL_NUMBERED:
+            self.class_rep = CL_COLORED
+        else:
+            self.class_rep = CL_NUMBERED
         
     def ToggleClass(self, className, show):
         self.classVisible[className] = show
@@ -134,6 +156,10 @@ class ImageViewer(wx.Frame):
         saveImageMenuItem = wx.MenuItem(parentMenu=fileMenu,id=wx.NewId(), text='Save Image')
         fileMenu.AppendItem(saveImageMenuItem)
         self.GetMenuBar().Append(fileMenu, 'File')
+        viewMenu = wx.Menu()
+        self.classViewMenuItem = wx.MenuItem(parentMenu=viewMenu,id=wx.NewId(), text='View phenotypes as numbers')
+        viewMenu.AppendItem(self.classViewMenuItem)
+        self.GetMenuBar().Append(viewMenu, 'View')
         self.CreateChannelMenus()
         
         self.SetClientSize( (min(self.maxSize[0], w*scale),
@@ -152,6 +178,7 @@ class ImageViewer(wx.Frame):
         
         self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, cp)
         self.Bind(wx.EVT_MENU, self.OnSaveImage, saveImageMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnChangeClassRepresentation, self.classViewMenuItem)
         self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
@@ -313,6 +340,10 @@ class ImageViewer(wx.Frame):
             ImageTools.SaveBitmap(self.imagePanel.bitmap, filename, format.upper()[1:])
 
 
+    def OnChangeClassRepresentation(self, evt):
+        self.classViewMenuItem.Text = 'View phenotypes as colors'
+        self.imagePanel.ToggleClassRepresentation()
+
 if __name__ == "__main__":
     p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
@@ -336,7 +367,7 @@ if __name__ == "__main__":
         f2 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]))
         f2.Show(True)
     
-    classCoords = {'a':[(10,10),(20,20)],'b':[(100,10),(200,20)] }
+    classCoords = {'a':[(100,100),(200,200)],'b':[(200,100),(200,300)] }
     f2.SetClasses(classCoords)
     
     #ImageTools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
