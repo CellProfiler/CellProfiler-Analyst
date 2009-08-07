@@ -133,7 +133,7 @@ class Page2(wiz.WizardPageSimple):
         perImTables = [t[0] for t in r if t[0][-9:].lower() == 'per_image']
         for im in perImTables[::-1]:
             for ob in perObTables:
-                if ob.startswith(im[:-9]):         # if prefixes match, add these two tables
+                if ob[:-10] == im[:-9]:         # if prefixes match, add these two tables
                     prefix = ob[:-10].rstrip('_')
                     self.listTables.Insert(prefix+' ('+im+' / '+ob+')', 0, (im,ob))
 
