@@ -177,7 +177,8 @@ the posterior is computed for each group independently.
   that were used to group your results.  
 * Objects of each class may be identified in a particular image by clicking the
   "Score Image" button. They may then be shown or hidden by using the 
-  class checkboxes.
+  class checkboxes. Object classes may also be represented by colored squares
+  or by numbers. This setting can be found in the "View" menu.
 * Regular expressions may now be used in defining columns that the classifier
   will ignore in classifier_ignore_substrings in properties files.
 * Classifier now automatically ignores non-numeric columns in your per_object 
