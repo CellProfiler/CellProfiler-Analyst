@@ -104,7 +104,6 @@ class DBConnect(Singleton):
         self.connections = {}
         self.cursors = {}
         self.connectionInfo = {}
-        self.sqliteDBFile = None
 
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
@@ -144,7 +143,7 @@ class DBConnect(Singleton):
         elif p.db_type.lower() == 'sqlite':
             from pysqlite2 import dbapi2 as sqlite
             
-            if self.sqliteDBFile is None:
+            if not p.db_sqlite_file:
                 # Compute a UNIQUE database name for these files  
                 from tempfile import gettempdir
                 import md5
@@ -167,9 +166,10 @@ class DBConnect(Singleton):
                     obtime = os.stat(p.object_csv_file).st_mtime
                     l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
                     dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
-                self.sqliteDBFile = dbpath+'/'+dbname
-            print '[%s] SQLite file: %s'%(connID, self.sqliteDBFile)
-            self.connections[connID] = sqlite.connect(self.sqliteDBFile)
+                    
+                p.db_sqlite_file = dbpath+'/'+dbname
+            print '[%s] SQLite file: %s'%(connID, p.db_sqlite_file)
+            self.connections[connID] = sqlite.connect(p.db_sqlite_file)
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
@@ -202,11 +202,16 @@ class DBConnect(Singleton):
             except Exception:
                 # If this is the first connection, then we need to create the DB from the csv files
                 if len(self.connections) == 1:
-                    print 'DBConnect: Creating SQLite database at: %s.'%(self.sqliteDBFile)
                     if p.db_sql_file:
+                        # TODO: prompt user "create db, y/n"
+                        print 'DBConnect: Creating SQLite database at: %s.'%(p.db_sqlite_file)
                         self.CreateSQLiteDBFromCSVs()
-                    else:
+                    elif p.image_csv_file and p.object_csv_file:
+                        # TODO: prompt user "create db, y/n"
+                        print 'DBConnect: Creating SQLite database at: %s.'%(p.db_sqlite_file)
                         self.CreateSQLiteDB()
+                    else:
+                        raise DBException, 'Database at %s appears to be empty.'%(p.db_sqlite_file)
                     
         # Unknown database type (this should never happen)
         else:
@@ -825,7 +830,7 @@ class DBConnect(Singleton):
         if p.db_type.lower() == 'mysql':
             return self.execute("select UPDATE_TIME from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='%s' and TABLE_SCHEMA='%s'"%(p.object_table, p.db_name))[0][0]
         else:
-            return os.path.getmtime(self.sqliteDBFile)
+            return os.path.getmtime(p.db_sqlite_file)
 
     def verify_objects_modify_date_earlier(self, later):
         cur = self.get_objects_modify_date()

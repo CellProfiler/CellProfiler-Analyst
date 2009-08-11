@@ -18,7 +18,8 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'class_table',
                 'plate_type',
                 'check_tables',
-                'db_sql_file',]
+                'db_sql_file',
+                'db_sqlite_file',]
 
 list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
             'object_name',
@@ -33,7 +34,8 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'plate_id', 'well_id', 'plate_type',
                  'classifier_ignore_substrings', 'object_name',
                  'check_tables',
-                 'db_sql_file',]
+                 'db_sql_file',
+                 'db_sqlite_file',]
 
 class Properties(Singleton):
     '''
@@ -202,24 +204,33 @@ class Properties(Singleton):
                 if field_defined(field):
                     print 'PROPERTIES WARNING (%s): Field not required with db_type=sqlite.'%(field)
             
-            assert any([field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file']]), 'PROPERTIES ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR the field "db_sql_file".'
-                
-            if field_defined('db_sql_file'):
+            assert any([field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file','db_sqlite_file']]), \
+                    'PROPERTIES ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR "db_sql_file" OR "db_sqlite_file". See the README.'
+            
+            if field_defined('db_sqlite_file'):
                 try:
-                    f = open(self.__dict__[field], 'r')
+                    f = open(self.db_sqlite_file, 'r')
                     f.close()
                 except:
-                    raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.__dict__['db_sql_file'])
+                    raise Exception, 'PROPERTIES ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file)
+            
+            if field_defined('db_sql_file'):
+                try:
+                    f = open(self.db_sql_file, 'r')
+                    f.close()
+                except:
+                    raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.db_sql_file)
                 
                 for field in ['image_csv_file','object_csv_file']:
                     assert not field_defined(field), 'PROPERTIES ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
             else:        
                 for field in ['image_csv_file','object_csv_file']:
-                    try:
-                        f = open(self.__dict__[field], 'r')
-                        f.close()
-                    except:
-                        raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
+                    if field_defined(field):
+                        try:
+                            f = open(self.__dict__[field], 'r')
+                            f.close()
+                        except:
+                            raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
             
         if self.db_type.lower()=='mysql':
             for field in ['db_port', 'db_host', 'db_name', 'db_user',]:
