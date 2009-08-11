@@ -191,6 +191,9 @@ the posterior is computed for each group independently.
   find rules, load a training set, open images, and score an experiment all at 
   the same time.
 * CSV files can now be used in place of a MySQL database. See Properties_README
+* Data from CellProfiler's ExportToDatabase module can now be loaded directly.
+  See Properties_README
+* SQLite databases are now also supported. See Properties_README
 * Heavier validation of properties files was implemented to help users pinpoint
   properties-related errors quickly and easily.
 * Images without objects are now handled properly when scoring.
