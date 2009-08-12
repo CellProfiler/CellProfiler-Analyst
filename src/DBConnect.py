@@ -144,10 +144,10 @@ class DBConnect(Singleton):
             from pysqlite2 import dbapi2 as sqlite
             
             if not p.db_sqlite_file:
-                # Compute a UNIQUE database name for these files  
-                from tempfile import gettempdir
+                # Compute a UNIQUE database name for these files
                 import md5
-                dbpath = gettempdir()+'/CPA'
+                dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or os.path.expanduser('~')
+                dbpath += '/CPA'
                 try:
                     os.listdir(dbpath)
                 except OSError:
