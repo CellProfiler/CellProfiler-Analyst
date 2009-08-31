@@ -147,7 +147,7 @@ class DBConnect(Singleton):
                 # Compute a UNIQUE database name for these files
                 import md5
                 dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or os.path.expanduser('~')
-                dbpath += '/CPA'
+                dbpath += os.path.sep+'CPA'
                 try:
                     os.listdir(dbpath)
                 except OSError:
@@ -158,7 +158,7 @@ class DBConnect(Singleton):
                     files += [os.path.split(p.db_sql_file)[1]]
                     hash = md5.new()
                     for fname in files:
-                        t = os.stat(csv_dir+'/'+fname).st_mtime
+                        t = os.stat(csv_dir+os.path.sep+fname).st_mtime
                         hash.update('%s%s'%(fname,t))
                     dbname = 'CPA_DB_%s.db'%(hash.hexdigest())
                 else:
@@ -167,7 +167,7 @@ class DBConnect(Singleton):
                     l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
                     dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
                     
-                p.db_sqlite_file = dbpath+'/'+dbname
+                p.db_sqlite_file = dbpath+os.path.sep+dbname
             print '[%s] SQLite file: %s'%(connID, p.db_sqlite_file)
             self.connections[connID] = sqlite.connect(p.db_sqlite_file)
             self.cursors[connID] = self.connections[connID].cursor()
@@ -409,7 +409,7 @@ class DBConnect(Singleton):
         # parse filenames out of results
         filenames = []
         for i in xrange(0,len(p.image_channel_paths*2),2):
-            filenames.append( imPaths[i]+'/'+imPaths[i+1] )
+            filenames.append( imPaths[i]+os.path.sep+imPaths[i+1] )
         return filenames
 
 
@@ -677,7 +677,7 @@ class DBConnect(Singleton):
         # populate tables with contents of csv files
         for file in imcsvs:
             print 'Populating image table with data from %s'%file
-            f = open(csv_dir+'/'+file, 'U')
+            f = open(csv_dir+os.path.sep+file, 'U')
             r = csv.reader(f)
             row1 = r.next()
             command = 'INSERT INTO '+p.image_table+' VALUES ('+','.join(['?' for i in row1])+')'
@@ -687,7 +687,7 @@ class DBConnect(Singleton):
     
         for file in obcsvs:
             print 'Populating object table with data from %s'%file
-            f = open(csv_dir+'/'+file, 'U')
+            f = open(csv_dir+os.path.sep+file, 'U')
             r = csv.reader(f)
             row1 = r.next()
             command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
