@@ -648,8 +648,8 @@ class DBConnect(Singleton):
             elif file.lower().endswith('_object.csv'):
                 obcsvs += [file]
                 
-        assert len(imcsvs)>0, 'No image CSVs were found when trying to create SQLite database from CSV files. These CSVs are expected to be in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
-        assert len(imcsvs)>0, 'No object CSVs were found when trying to create SQLite database from CSV files. These CSVs are expected to be in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
+        assert len(imcsvs)>0, 'No image CSVs were found when trying to create SQLite database from CSV files. The file names are expected to end in "_image.csv" and must reside in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
+        assert len(obcsvs)>0, 'No object CSVs were found when trying to create SQLite database from CSV files. The file names are expected to end in "_object.csv" and must reside in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
         
         # parse out create table statements and execute them
         f = open(p.db_sql_file)
