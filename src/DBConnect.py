@@ -409,7 +409,10 @@ class DBConnect(Singleton):
         # parse filenames out of results
         filenames = []
         for i in xrange(0,len(p.image_channel_paths*2),2):
-            filenames.append( imPaths[i]+os.path.sep+imPaths[i+1] )
+            if p.image_url_prepend:
+                filenames.append( imPaths[i]+'/'+imPaths[i+1] )
+            else:
+                filenames.append( imPaths[i]+os.path.sep+imPaths[i+1] )
         return filenames
 
 
