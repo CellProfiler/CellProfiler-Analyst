@@ -427,6 +427,24 @@ def FormatPlateMapData(wellsAndVals):
     '''
     #TODO: well naming format (A##/123..) may have to go in props file
     format = 'A01'
+    
+    # Make an educated guess at the well naming format
+    res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
+    a = b = c = 0
+    for r in res:
+        if re.match('^[A-Za-z]\d\d$', r[0]):
+            a += 1
+        elif re.match('^\d+$', r[0]):
+            b += 1
+        else:
+            c += 1
+    if a > b and a > c:
+        format = 'A01'
+    elif b > a and b > c:
+        format = '123'
+    else:
+        print 'Could not determine well naming format from the database. Trying default...'
+    
     if p.plate_type == '384': shape = (16,24)
     elif p.plate_type == '96': shape = (8,12)
     elif p.plate_type == '5600':
