@@ -391,18 +391,31 @@ class DataGrid(wx.Frame):
         if saveDialog.ShowModal()==wx.ID_OK:
             colHeaders = list(DBConnect.image_key_columns())
             pos = len(colHeaders)
-            colHeaders += [p.well_id, p.plate_id]
+            if p.plate_id:
+                colHeaders += [p.plate_id]
+            if p.well_id:
+                colHeaders += [p.well_id]
+            colHeaders += ['total_count']
             colHeaders += ['count_'+bin.label for bin in self.GetParent().classBins]
             data = list(self.GetParent().keysAndCounts)
             for row in data:
                 if p.table_id:
                     where = '%s=%s AND %s=%s'%(p.table_id, row[0], p.image_id, row[1])
+                    total = sum(row[2:])
                 else:
                     where = '%s=%s'%(p.image_id, row[0])
-                res = db.execute('SELECT %s, %s FROM %s WHERE %s'%(p.well_id, p.plate_id, p.image_table, where), silent=True)
-                well, plate = res[0]
-                row.insert(pos, well)
-                row.insert(pos + 1, plate)
+                    total = sum(row[1:])
+                row.insert(pos, total)
+                # Plate and Well are written separately IF they are found in the props file
+                # TODO: ANY column could be reported by this mechanism
+                if p.well_id:
+                    res = db.execute('SELECT %s FROM %s WHERE %s'%(p.well_id, p.image_table, where), silent=True)
+                    well = res[0][0]
+                    row.insert(pos, well)
+                if p.plate_id:
+                    res = db.execute('SELECT %s FROM %s WHERE %s'%(p.plate_id, p.image_table, where), silent=True)
+                    plate = res[0][0]
+                    row.insert(pos, plate)
             self.SaveCSV(saveDialog.GetPath(), data, colHeaders)
         saveDialog.Destroy()
 
