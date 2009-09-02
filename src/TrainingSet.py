@@ -3,6 +3,8 @@ import numpy
 import cPickle
 import base64
 import zlib
+import wx
+
 from DBConnect import DBConnect
 from Singleton import Singleton
 
@@ -74,20 +76,68 @@ class TrainingSet:
                 if (label == "label"): continue
                 
                 obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:]])
-                if label not in labelDict.keys():
-                    labelDict[label] = [obKey]
-                else:
-                    labelDict[label] += [obKey]
+                labelDict[label] = labelDict.get(label, []) + [obKey]
+
             except:
                 print >>stderr, "error parsing training set %s, line >>>%s<<<"%(filename, l.strip())
                 f.close()
                 raise
             
+        # validate positions and renumber if necessary
+        self.Renumber(labelDict)
         self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
         
         f.close()
         
+    def Renumber(self, label_dict):
+        from Properties import Properties
+        obkey_length = 3 if Properties.getInstance().table_id else 2
         
+        have_asked = False
+        progress = None
+        for label in label_dict.keys():
+            for idx, key in enumerate(label_dict[label]):
+                if len(key) > obkey_length:
+                    obkey = key[:obkey_length]
+                    x, y = key[obkey_length:obkey_length+2]
+                    coord = db.GetObjectCoords(obkey, none_ok=True, silent=True) 
+                    if coord == None or (int(coord[0]), int(coord[1])) != (x, y):
+                        if not have_asked:
+                            dlg = wx.MessageDialog(None, 'Cells in the training set and database have different image positions.  This could be caused by running CellProfiler with different image analysis parameters.  Should CPA attempt to remap cells in the training set to their nearest match in the database?',
+                                                   'Attempt remapping of cells by position?', wx.CANCEL|wx.YES_NO|wx.ICON_QUESTION)
+                            response = dlg.ShowModal()
+                            have_asked = True
+                            if response == wx.ID_NO:
+                                return
+                            elif response == wx.ID_CANCEL:
+                                label_dict.clear()
+                                return
+                        if progress is None:
+                            total = sum([len(v) for v in label_dict.values()])
+                            done = 0
+                            progress = wx.ProgressDialog("Remapping", "0%", maximum=total, style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                        label_dict[label][idx] = db.GetObjectNear(obkey[:-1], x, y, silent=True)
+                        done = done + 1
+                        cont, skip = progress.Update(done, '%d%%'%((100 * done) / total))
+                        if not cont:
+                            label_dict.clear()
+                            return
+                        
+        have_asked = False
+        for label in label_dict.keys():
+            if None in label_dict[label]:
+                if not have_asked:
+                    dlg = wx.MessageDialog(None, 'Some cells from the training set could not be remapped to cells in the database, indicating that the corresponding images are empty.  Continue anyway?',
+                                           'Some cells could not be remapped!', wx.YES_NO|wx.ICON_ERROR)
+                    response = dlg.ShowModal()
+                    have_asked = True
+                    if response == wx.ID_NO:
+                        label_dict.clear()
+                        return
+                label_dict[label] = [k for k in label_dict[label] if k is not None]
+                
+            
+
     def Save(self, filename):
         # check cache freshness
         self.cache.clear_if_objects_modified()
@@ -99,7 +149,7 @@ class TrainingSet:
             f.write('# Training set created while using properties: %s\n'%(p._filename))
             f.write('label '+' '.join(self.labels)+'\n')
             for label, obKey in self.entries:
-                line = label+' '+' '.join([str(int(k)) for k in obKey])+'\n'
+                line = '%s %s %s\n'%(label, ' '.join([str(int(k)) for k in obKey]), ' '.join([str(int(k)) for k in db.GetObjectCoords(obKey)]))
                 f.write(line)
             f.write('# ' + self.cache.save_to_string([k[1] for k in self.entries]) + '\n')
         except:

@@ -345,13 +345,15 @@ class DBConnect(Singleton):
         The counts returned correspond to images that are present in BOTH the 
         per_image and per_object table.
         '''
-        select = 'SELECT '+UniqueImageClause(p.object_table)+', COUNT('+p.object_table+'.'+p.object_id
-        select += ') FROM '+p.object_table+', '+p.image_table
-        select += ' WHERE '+p.object_table+'.'+p.image_id+' = '+p.image_table+'.'+p.image_id
-        if p.table_id:
-            select += ' AND '+p.object_table+'.'+p.table_id+' = '+p.image_table+'.'+p.table_id
-        select += ' GROUP BY '+UniqueImageClause(p.object_table)
-        return self.execute(select)
+        select = 'SELECT '+UniqueImageClause(p.object_table)+', COUNT('+p.object_table+'.'+p.object_id + ') FROM '+p.object_table + ' GROUP BY '+UniqueImageClause(p.object_table)
+        result1 = self.execute(select)
+        select = 'SELECT '+UniqueImageClause(p.image_table)+' FROM '+p.image_table
+        result2 = self.execute(select)
+
+        counts = {}
+        for r in result1:
+            counts[r[:-1]] = r[-1]
+        return [r+(counts[r],) for r in result2 if r in counts]
     
     
     def GetAllImageKeys(self):
@@ -364,10 +366,12 @@ class DBConnect(Singleton):
         return self.execute('SELECT %s FROM %s WHERE %s'%(UniqueObjectClause(), p.object_table, GetWhereClauseForImages([imKey])))
     
     
-    def GetObjectCoords(self, obKey):
+    def GetObjectCoords(self, obKey, none_ok=False, silent=False):
         ''' Returns the specified object's x, y coordinates in an image. '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
-        res = self.execute(select)
+        res = self.execute(select, silent=silent)
+        if none_ok and len(res) == 0:
+            return None
         assert len(res)>0, "Couldn't find object coordinates for object key %s." %(obKey,) 
         assert len(res)==1, "Database unexpectedly returned %s sets of object coordinates instead of 1." % len(res)
         return res[0]
@@ -379,13 +383,13 @@ class DBConnect(Singleton):
         return self.execute(select)
 
 
-    def GetObjectNear(self, imkey, x, y):
+    def GetObjectNear(self, imkey, x, y, silent=False):
         ''' Returns obKey of the closest object to x, y in an image. '''
         delta_x = '(%s - %d)'%(p.cell_x_loc, x)
         delta_y = '(%s - %d)'%(p.cell_y_loc, y)
         dist_clause = '%s*%s + %s*%s'%(delta_x, delta_x, delta_y, delta_y)
         select = 'SELECT '+UniqueObjectClause()+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imkey])+' ORDER BY ' +dist_clause+' LIMIT 1'
-        res = self.execute(select)
+        res = self.execute(select, silent=silent)
         if len(res) == 0:
             return None
         else:
