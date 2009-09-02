@@ -8,6 +8,7 @@ from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
 from Properties import Properties
 from ScoreDialog import ScoreDialog
+from PlateMapBrowser import PlateMapBrowser 
 import SortBin
 from TileCollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
@@ -73,6 +74,15 @@ class ClassifierGUI(wx.Frame):
                                             help='Launches a control panel for adjusting image brightness, size, etc.')
         displayMenu.AppendItem(imageControlsMenuItem)
         self.GetMenuBar().Append(displayMenu, 'Display')
+        
+        # Tools Menu
+        toolsMenu = wx.Menu()
+        plateMapMenuItem = wx.MenuItem(parentMenu=toolsMenu,
+                                       id=-1, text='Plate Map Browser',
+                                       help='Launches the Plate Map Browser tool.')
+        toolsMenu.AppendItem(plateMapMenuItem)
+        self.GetMenuBar().Append(toolsMenu, 'Tools')
+        
         # Help Menu
         helpMenu = wx.Menu()
         helpMenuItem = wx.MenuItem(parentMenu=helpMenu,
@@ -490,7 +500,7 @@ class ClassifierGUI(wx.Frame):
             attempts = 0
             while len(obKeys) < nObjects:
                 if filter == 'experiment':
-                    if db.sqliteDBFile is not None:
+                    if p.db_sqlite_file:
                         obKeysToTry = 'RANDOM() < %d'%(dm.GetRandomFraction(100))
                     else:
                         obKeysToTry = dm.GetRandomObjects(100)
