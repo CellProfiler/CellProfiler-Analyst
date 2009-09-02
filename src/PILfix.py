@@ -39,3 +39,4 @@ import XbmImagePlugin
 import DcxImagePlugin 
 import IcnsImagePlugin 
 import FliImagePlugin
+print "ID", Image.ID
