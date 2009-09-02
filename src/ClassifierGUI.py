@@ -218,6 +218,7 @@ class ClassifierGUI(wx.Frame):
 
         # do event binding
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnLaunchPlateMapBrowser, plateMapMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
@@ -332,6 +333,11 @@ class ClassifierGUI(wx.Frame):
             #channel_menu.InsertSeparator(8)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
+            
+            
+    def OnLaunchPlateMapBrowser(self, evt):
+        pmb = PlateMapBrowser(None)
+        pmb.Show()
 
         
     def AddSortClass(self, label):
