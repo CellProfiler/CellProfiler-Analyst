@@ -214,7 +214,8 @@ the posterior is computed for each group independently.
   set to yes.
 * PlateMapBrowser tool allows browsing of data in a plate/well view. Images 
   can be opened from any well, and cells from these images can be dragged into 
-  Classifier.
+  Classifier. This can be launched from Tools > Plate Map Browser
+* Total object counts are now reported along with per-class object counts
 
 
 ---------------------------------

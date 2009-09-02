@@ -216,11 +216,13 @@ plate_type   =
 #
 # You may also use regular expressions here to match more general column names.
 #
-# Example: classifier_ignore_substrings = WellID, Meta_.*, .*_Position
+# WARNING: These strings currently cannot contain commas (,)
+#
+# Example: classifier_ignore_columns = WellID, Meta_.*, .*_Position
 #   This will ignore any column named "WellID", any columns that start with
 #   "Meta_", and any columns that end in "_Position".
 
-classifier_ignore_substrings  =  <your_object_x_location_column>, <your_object_y_location_column>, <meta_.*>, 
+classifier_ignore_columns  =  <your_object_x_location_column>, <your_object_y_location_column>, <meta_.*>, 
 
 
 # ======== Other ======== 
