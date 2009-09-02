@@ -23,7 +23,7 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
 
 list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
             'object_name',
-            'classifier_ignore_substrings']
+            'classifier_ignore_substrings', 'classifier_ignore_columns']
 
 optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'table_id', 'image_url_prepend', 'image_csv_file',
@@ -32,7 +32,8 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'class_table',
                  'image_buffer_size', 'tile_buffer_size',
                  'plate_id', 'well_id', 'plate_type',
-                 'classifier_ignore_substrings', 'object_name',
+                 'classifier_ignore_substrings', 'classifier_ignore_columns',
+                 'object_name',
                  'check_tables',
                  'db_sql_file',
                  'db_sqlite_file',]
@@ -250,8 +251,15 @@ class Properties(Singleton):
             print 'PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.'
             self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(100)] [:len(self.image_channel_files)]
 
-        if not field_defined('classifier_ignore_substrings'):
-            print 'PROPERTIES WARNING (classifier_ignore_substrings): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.'
+        if field_defined('classifier_ignore_substrings'):
+            print 'PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.' 
+            if not field_defined('classifier_ignore_columns'):
+                self.__dict__['classifier_ignore_columns'] = self.__dict__['classifier_ignore_substrings']
+            else:
+                raise Exception, 'PROPERTIES ERROR: Both classifier_ignore_substrings and classifier_ignore_columns were found in your properties file. The field classifier_ignore_substrings is deprecated and has been renamed to classifier_ignore_columns. Please remove the former from your properties file.'
+            del self.__dict__['classifier_ignore_substrings']
+        if not field_defined('classifier_ignore_columns'):
+            print 'PROPERTIES WARNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.'
         
         if not field_defined('image_buffer_size'):
             print 'PROPERTIES: Using default image_buffer_size=1'

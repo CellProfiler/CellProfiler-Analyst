@@ -480,7 +480,7 @@ class DBConnect(Singleton):
     def GetColnamesForClassifier(self):
         '''
         Returns a list of column names for the object_table excluding 
-        those specified in Properties.classifier_ignore_substrings
+        those specified in Properties.classifier_ignore_columns
         '''
         if self.classifierColNames is None:
             col_names = self.GetColumnNames(p.object_table)
@@ -494,10 +494,10 @@ class DBConnect(Singleton):
             self.classifierColNames.remove(p.object_id)
             # treat each classifier_ignore_substring as a regular expression
             # for column names to ignore
-            if p.classifier_ignore_substrings:
+            if p.classifier_ignore_columns:
                 self.classifierColNames = [col for col in self.classifierColNames
                                                 if not any([re.match('^'+user_exp+'$',col)
-                                                       for user_exp in p.classifier_ignore_substrings])]
+                                                       for user_exp in p.classifier_ignore_columns])]
             print 'Ignoring columns:',[x for x in col_names if x not in self.classifierColNames]
         return self.classifierColNames
     
@@ -511,7 +511,7 @@ class DBConnect(Singleton):
     def GetCellDataForClassifier(self, obKey):
         '''
         Returns a list of measurements for the specified object excluding
-        those specified in Properties.classifier_ignore_substrings
+        those specified in Properties.classifier_ignore_columns
         '''
         if (self.classifierColNames == None):
             self.GetColnamesForClassifier()
