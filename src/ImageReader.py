@@ -116,7 +116,7 @@ class ImageReader(object):
                     raise 'Image not found: "'+fullurl+'"'
             else:  # Default: local file protocol
                 print 'Opening image:',url
-                streams.append(open(url))
+                streams.append(open(url, "rb"))
                 
         for stream in streams:
             data.append(stream.read())
