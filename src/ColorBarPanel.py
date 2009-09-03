@@ -1,5 +1,5 @@
 import wx
-import pylab
+import matplotlib.cm
 import numpy as np
 import Properties
 
@@ -15,7 +15,7 @@ class ColorBarPanel(wx.Panel):
     def __init__(self, parent, map, local_extents=[0.,1.], global_extents=None, 
                  ticks=5, labelformat='%.3f', **kwargs):
         '''
-        map -- a colormap name from pylab.cm
+        map -- a colormap name from matplotlib.cm
         local_extents -- local min and max values of the measurement
         global_extents -- min and max values of the measurement
         ticks -- # of ticks to display values for on the bar
@@ -148,8 +148,8 @@ class ColorBarPanel(wx.Panel):
         
     def SetMap(self, map):
         ''' Sets the colormap that is displayed.
-        map should be the string name of a colormap from pylab.cm'''
-        self.cm = pylab.cm.get_cmap(map)
+        map should be the string name of a colormap from matplotlib.cm'''
+        self.cm = matplotlib.cm.get_cmap(map)
         self.Refresh()
         
     def SetLocalExtents(self, local_extents):

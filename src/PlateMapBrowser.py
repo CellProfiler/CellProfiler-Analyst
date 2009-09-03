@@ -5,7 +5,7 @@ import ImageTools
 import Properties
 import numpy as np
 import os
-import pylab
+import matplotlib.cm
 import re
 import wx
 
@@ -130,7 +130,7 @@ class PlateMapBrowser(wx.Frame):
         
         viewSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='View Options:'), wx.VERTICAL)
         viewSizer.Add(wx.StaticText(self, label='Color Map:'))
-        maps = [m for m in pylab.cm.datad.keys() if not m.endswith("_r")]
+        maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
         maps.sort()
         self.colorMapsChoice = wx.Choice(self, choices=maps)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
@@ -370,7 +370,7 @@ class PlateMapBrowser(wx.Frame):
     def OnSelectColorMap(self, evt):
         ''' Handles the selection of a new color map from a choice box. '''
         map = self.colorMapsChoice.GetStringSelection()
-        cm = pylab.cm.get_cmap(map)
+        cm = matplotlib.cm.get_cmap(map)
         
         self.colorBar.SetMap(map)
         for plateMap in self.plateMaps:

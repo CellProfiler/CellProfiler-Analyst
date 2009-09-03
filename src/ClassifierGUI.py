@@ -1,7 +1,8 @@
-# necessary for py2app        
+# Necessary for py2app 
+import wxversion       
 import matplotlib
 matplotlib.use('WXAgg')
-
+# ---
 import DBConnect
 from DataGrid import DataGrid
 from DataModel import DataModel

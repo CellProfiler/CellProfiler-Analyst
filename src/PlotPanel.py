@@ -1,6 +1,6 @@
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.figure import Figure
-import pylab
+import matplotlib.cm
 import wx
 import numpy as np
 
@@ -21,11 +21,11 @@ class PlotPanel(wx.Panel):
         self.canvas = FigureCanvasWxAgg( self, -1, self.figure )
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-            self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         
         
     def SetMap(self, map):
-        self.map = pylab.cm.get_cmap(map)
+        self.map = matplotlib.cm.get_cmap(map)
         if self.im is not None:
             self.im.set_cmap(self.map)
             self.Refresh()

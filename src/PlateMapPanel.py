@@ -3,7 +3,7 @@ from DBConnect import DBConnect
 from Properties import Properties
 import wx
 import numpy as np
-import pylab
+import matplotlib.cm
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -32,7 +32,7 @@ class PlateMapPanel(wx.Panel):
         KEYWORD ARGUMENTS:
         shape -- a 2-tuple to reshape the data to (must fit the data)
         well_labels -- list of labels for each well (must be same len as data)
-        colormap -- a colormap name from pylab.cm
+        colormap -- a colormap name from matplotlib.cm
         wellshape -- ROUNDED, CIRCLE, or SQUARE
         row_label_format -- 'ABC' or '123'
         data_range -- 2-tuple containing the min and max values that the data 
@@ -150,7 +150,7 @@ class PlateMapPanel(wx.Panel):
         
     def SetColorMap(self, map):
         ''' map: the name of a matplotlib.colors.LinearSegmentedColormap instance '''
-        self.colormap = pylab.cm.get_cmap(map)
+        self.colormap = matplotlib.cm.get_cmap(map)
         self.Refresh()
         
     def SelectWell(self, well):
