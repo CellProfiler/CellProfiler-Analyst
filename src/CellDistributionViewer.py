@@ -8,9 +8,8 @@ from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from PlateMapPanel import *
 import ImageTools
 from Properties import Properties
-import numpy as num
+import numpy as np
 import os
-import pylab
 import re
 import wx
 from PlotPanelTS import *
@@ -142,8 +141,10 @@ class DataSourcePanel(wx.Panel):
         
     
     def addtochart(self,event):        
-        addition =  self.field1dropdown.GetStringSelection() +  '  -  ' + self.field2dropdown.GetStringSelection()
-        pointstuple = (self.tabledropdown.GetStringSelection(),self.field1dropdown.GetStringSelection(),self.field2dropdown.GetStringSelection())
+        addition = self.field1dropdown.GetStringSelection() + '  -  ' + self.field2dropdown.GetStringSelection()
+        pointstuple = (self.tabledropdown.GetStringSelection(),
+                       self.field1dropdown.GetStringSelection(),
+                       self.field2dropdown.GetStringSelection())
         self.plotfieldslistbox.Append(addition,clientData = pointstuple)
         
         points = self.loadpoints(pointstuple[0],pointstuple[1],pointstuple[2])
@@ -173,21 +174,25 @@ class DataSourcePanel(wx.Panel):
 
 if __name__ == "__main__":
 
-    theta = num.arange( 0, 45*2*num.pi, 0.02 )
+    theta = np.arange( 0, 45*2*np.pi, 0.02 )
 
-    rad0 = (0.8*theta/(2*num.pi) + 1)
-    r0 = rad0*(8 + num.sin( theta*7 + rad0/1.8 ))
-    x0 = r0*num.cos( theta )
-    y0 = r0*num.sin( theta )
+    rad0 = (0.8*theta/(2*np.pi) + 1)
+    r0 = rad0*(8 + np.sin( theta*7 + rad0/1.8 ))
+    x0 = r0*np.cos( theta )
+    y0 = r0*np.sin( theta )
 
-    rad1 = (0.8*theta/(2*num.pi) + 1)
-    r1 = rad1*(6 + num.sin( theta*7 + rad1/1.9 ))
-    x1 = r1*num.cos( theta )
-    y1 = r1*num.sin( theta )
+    rad1 = (0.8*theta/(2*np.pi) + 1)
+    r1 = rad1*(6 + np.sin( theta*7 + rad1/1.9 ))
+    x1 = r1*np.cos( theta )
+    y1 = r1*np.sin( theta )
 
     points = [[(1,1)],
-              [(2,2)]]
-    clrs = [[225,200,160], [219,112,147]]
+              [(2,2)],
+              [(3,3)],
+              [(4,4)],
+              [(5,5)]
+              ]
+    clrs = [[225,200,160], [219,112,147], [219,112,147], [219,112,147], [219,112,147]]
 
     app = wx.PySimpleApp()
     frame = wx.Frame(None,-1," Demo with Notebook")

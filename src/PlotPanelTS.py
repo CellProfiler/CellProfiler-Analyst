@@ -71,13 +71,11 @@ class FigurePanel(PlotPanel):
         PlotPanel.__init__( self, parent, **kwargs )
         self.SetColor( (255,255,255) )
     
-    
     def setpointslists(self,points):
         self.point_lists = points
     
     def getpointslists(self):
         return self.point_lists
-    
     
     def draw( self ):
         #Draw data.
