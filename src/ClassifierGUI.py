@@ -22,7 +22,16 @@ import PolyaFit
 import numpy as np
 import os, os.path
 import wx
+from version import VERSION as __version__
 from time import time
+
+ID_LOAD_TS = wx.NewId()
+ID_SAVE_TS = wx.NewId()
+ID_EXIT = wx.NewId()
+ID_IMAGE_CONTROLS = wx.NewId()
+ID_PLATE_MAP_BROWSER = wx.NewId()
+ID_DATA_TABLE = wx.NewId()
+ID_HELP = wx.NewId()
 
 class ClassifierGUI(wx.Frame):
 
@@ -65,32 +74,8 @@ class ClassifierGUI(wx.Frame):
         
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
-        self.CreateFileMenu()
-        self.CreateChannelMenus()
+        self.CreateMenus()
         
-        # Image Controls Menu
-        displayMenu = wx.Menu()
-        imageControlsMenuItem = wx.MenuItem(parentMenu=displayMenu,
-                                            id=wx.NewId(), text='Image Controls', 
-                                            help='Launches a control panel for adjusting image brightness, size, etc.')
-        displayMenu.AppendItem(imageControlsMenuItem)
-        self.GetMenuBar().Append(displayMenu, 'Display')
-        
-        # Tools Menu
-        toolsMenu = wx.Menu()
-        plateMapMenuItem = wx.MenuItem(parentMenu=toolsMenu,
-                                       id=-1, text='Plate Map Browser',
-                                       help='Launches the Plate Map Browser tool.')
-        toolsMenu.AppendItem(plateMapMenuItem)
-        self.GetMenuBar().Append(toolsMenu, 'Tools')
-        
-        # Help Menu
-        helpMenu = wx.Menu()
-        helpMenuItem = wx.MenuItem(parentMenu=helpMenu,
-                                   id=wx.NewId(), text='Readme',
-                                   help='Displays the readme file.')
-        helpMenu.AppendItem(helpMenuItem)
-        self.GetMenuBar().Append(helpMenu, 'Help')
 
         self.CreateStatusBar()
         
@@ -218,12 +203,7 @@ class ClassifierGUI(wx.Frame):
         self.BindMouseOverHelpText()
 
         # do event binding
-        self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnLaunchPlateMapBrowser, plateMapMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
-        self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
         self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
         self.Bind(wx.EVT_BUTTON, self.OnFindRules, self.findRulesBtn)
@@ -238,7 +218,6 @@ class ClassifierGUI(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
-#        self.Bind(wx.EVT_KEY_DOWN, self.OnKey)  # TODO: why doesn't this work!?
         self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows
         EVT_TILE_UPDATED(self, self.OnTileUpdated)
         self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.OnQuantityChanged)
@@ -281,15 +260,13 @@ class ClassifierGUI(wx.Frame):
         keycode = evt.GetKeyCode()
         chIdx = keycode-49
         if evt.ControlDown() or evt.CmdDown():
-            # load training set
-            if keycode == ord('o'):
-                self.OnLoadTrainingSet(evt)
-            # save training set
-            elif keycode == ord('s'):
-                self.OnSaveTrainingSet(evt)
             # ctrl+N toggles channel #N on/off
-            elif len(self.chMap) > chIdx >= 0:
+            if len(self.chMap) > chIdx >= 0:
                 self.ToggleChannel(chIdx)
+            else:
+                evt.Skip()
+        else:
+            evt.Skip()
             
             
     def ToggleChannel(self, chIdx):
@@ -301,17 +278,75 @@ class ClassifierGUI(wx.Frame):
             self.MapChannels(self.chMap)
                     
 
-    def CreateFileMenu(self):
+    def CreateMenus(self):
         ''' Create file menu and menu items '''
         self.fileMenu = wx.Menu()
-        self.loadTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='Load training set', help='Loads objects and classes specified in a training set file.')
-        self.saveTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='Save training set', help='Save your training set to file so you can reload these classified cells again.')
-        self.exitMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.wx.NewId(), text='Exit', help='Exit classifier')
+        self.loadTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
+                                          id=ID_LOAD_TS, text='Load training set\tCtrl+O', 
+                                          help='Loads objects and classes specified in a training set file.')
+        self.saveTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
+                                          id=ID_SAVE_TS, text='Save training set\tCtrl+S', 
+                                          help='Save your training set to file so you can reload these classified cells again.')
+        self.exitMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
+                                        id=ID_EXIT, text='Exit\tCtrl+Q', 
+                                        help='Exit classifier')
         self.fileMenu.AppendItem(self.loadTSMenuItem)
         self.fileMenu.AppendItem(self.saveTSMenuItem)
         self.fileMenu.AppendSeparator()
         self.fileMenu.AppendItem(self.exitMenuItem)
         self.GetMenuBar().Append(self.fileMenu, 'File')
+
+        # Image Controls Menu
+        displayMenu = wx.Menu()
+        imageControlsMenuItem = wx.MenuItem(parentMenu=displayMenu,
+                                            id=ID_IMAGE_CONTROLS, text='Image Controls\tCtrl+I',
+                                            help='Launches a control panel for adjusting image brightness, size, etc.')
+        displayMenu.AppendItem(imageControlsMenuItem)
+        self.GetMenuBar().Append(displayMenu, 'Display')
+        
+        # Tools Menu
+        toolsMenu = wx.Menu()
+        plateMapMenuItem = wx.MenuItem(parentMenu=toolsMenu,
+                                       id=ID_PLATE_MAP_BROWSER, text='Plate Map Browser\tCtrl+P',
+                                       help='Launches the Plate Map Browser tool.')
+        dataTableMenuItem = wx.MenuItem(parentMenu=toolsMenu,
+                                       id=ID_DATA_TABLE, text='Data Table\tCtrl+T',
+                                       help='Launches the Data Grid tool.')
+        toolsMenu.AppendItem(dataTableMenuItem)
+        toolsMenu.AppendItem(plateMapMenuItem)
+        self.GetMenuBar().Append(toolsMenu, 'Tools')
+
+        # Channel Menus
+        self.CreateChannelMenus()
+        
+        # Help Menu
+        helpMenu = wx.Menu()
+        helpMenuItem = wx.MenuItem(parentMenu=helpMenu,
+                                   id=ID_HELP, text='Readme\tCtrl+H',
+                                   help='Displays the readme file.')
+        aboutMenuItem = wx.MenuItem(parentMenu=helpMenu,
+                                   id=wx.NewId(), text='About',
+                                   help='About Classifier 2.0')
+        helpMenu.AppendItem(helpMenuItem)
+        helpMenu.AppendItem(aboutMenuItem)
+        self.GetMenuBar().Append(helpMenu, 'Help')
+        
+        self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnLaunchPlateMapBrowser, plateMapMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnLaunchDataTable, dataTableMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnShowAbout, aboutMenuItem)
+        
+        accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CTRL,ord('O'),ID_LOAD_TS),
+                                                 (wx.ACCEL_CTRL,ord('S'),ID_SAVE_TS),
+                                                 (wx.ACCEL_CTRL,ord('Q'),ID_EXIT),
+                                                 (wx.ACCEL_CTRL,ord('I'),ID_IMAGE_CONTROLS),
+                                                 (wx.ACCEL_CTRL,ord('P'),ID_PLATE_MAP_BROWSER),
+                                                 (wx.ACCEL_CTRL,ord('G'),ID_DATA_TABLE),
+                                                 (wx.ACCEL_CTRL,ord('H'),ID_HELP),])
+        self.SetAcceleratorTable(accelerator_table)
         
         
     def CreateChannelMenus(self):
@@ -329,16 +364,18 @@ class ClassifierGUI(wx.Frame):
                 else:
                     item = channel_menu.AppendRadioItem(id,color)
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
-            # Separators screw up selection
-            #channel_menu.InsertSeparator(3)
-            #channel_menu.InsertSeparator(8)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
             
             
     def OnLaunchPlateMapBrowser(self, evt):
-        pmb = PlateMapBrowser(None)
+        pmb = PlateMapBrowser(parent=self)
         pmb.Show()
+        
+    
+    def OnLaunchDataTable(self, evt):
+        table = DataGrid(parent=self)
+        table.Show()
 
         
     def AddSortClass(self, label):
@@ -1015,6 +1052,13 @@ class ClassifierGUI(wx.Frame):
         self.imageControlFrame.Show(True)
         
     
+    def OnShowAbout(self, evt):
+        ''' Shows a message box with the version number etc.'''
+        message = '''Classifier was developed at The Broad Institute Imaging Platform and is distributed under the GNU General Public License version 2.'''
+        dlg = wx.MessageDialog(self, message, 'Classifier 2.0 %s'%(__version__))
+        dlg.ShowModal()
+         
+        
     def OnShowReadme(self, evt):
         ''' Shows a scrollable message dialog with the readme. '''
         from wx.lib.dialogs import ScrolledMessageDialog

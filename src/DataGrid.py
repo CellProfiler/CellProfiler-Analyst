@@ -17,6 +17,10 @@ dm = DataModel.getInstance()
 db = DBConnect.DBConnect.getInstance()
 p = Properties.getInstance()
 
+ID_LOAD_CSV = wx.NewId()
+ID_SAVE_CSV = wx.NewId()
+ID_EXIT = wx.NewId()
+
 class HugeTable(wx.grid.PyGridTableBase):
     '''
     This class abstracts the underlying data and labels used in the DataGrid.
@@ -288,9 +292,9 @@ class DataGrid(wx.Frame):
     A frame with a grid inside of it for displaying grouped .
     '''
     
-    def __init__(self, data, labels, grouping='Image',
+    def __init__(self, data=None, labels=None, grouping='Image',
                  key_col_indices=[0], chMap=None, parent=None,
-                 title='Data Grid', autosave=True):
+                 title='Data Table', autosave=True):
         '''
         Initialize the datagrid.
 
@@ -310,37 +314,60 @@ class DataGrid(wx.Frame):
         
         wx.Frame.__init__(self, parent, id=-1, title=title)
         
-        self.grid = HugeTableGrid(self, data, labels, key_col_indices, grouping, chMap)
+        self.grid = None
+        self.file = None
+        if not (data is None or labels is None):
+            self.grid = HugeTableGrid(self, data, labels, key_col_indices, grouping, chMap)
         
-        if autosave:
+        if autosave and self.grid:
             # Autosave enrichments to temp dir
             print 'Auto saving data...'
             filename = gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_').replace(':','-')+'.csv'
             self.SaveCSV(filename, self.grid.GetTable().data, self.grid.GetTable().col_labels)
                 
         self.filemenu = wx.Menu()
+        self.loadCSVMenuItem = \
+            wx.MenuItem(parentMenu=self.filemenu, id=ID_LOAD_CSV,
+                        text='Load data from CSV\tCtrl+O',
+                        help='Load data from CSV.')
         self.saveCSVMenuItem = \
-            wx.MenuItem(parentMenu=self.filemenu, id=wx.NewId(),
-                        text='Save data to CSV',
+            wx.MenuItem(parentMenu=self.filemenu, id=ID_SAVE_CSV,
+                        text='Save data to CSV\tCtrl+S',
                         help='Saves data as comma separated values.')
         self.savePerImageCountsToCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=wx.NewId(),
                         text='Save per-image counts to CSV',
                         help='Saves per-image phenotype counts as comma separated values.')
+        self.exitMenuItem = \
+            wx.MenuItem(parentMenu=self.filemenu, id=ID_EXIT,
+                        text='Exit\tCtrl+Q',
+                        help='Close the Data Table')
+        self.filemenu.AppendItem(self.loadCSVMenuItem)
         self.filemenu.AppendItem(self.saveCSVMenuItem)
         self.filemenu.AppendItem(self.savePerImageCountsToCSVMenuItem)
+        self.filemenu.AppendSeparator()
+        self.filemenu.AppendItem(self.exitMenuItem)
         menuBar = wx.MenuBar()
         self.SetMenuBar(menuBar)
         self.GetMenuBar().Append(self.filemenu, 'File')
-        self.CreateColumnMenu()
+        if self.grid:
+            self.CreateColumnMenu()
         self.CreateStatusBar()
 
         self.SetSize((800,500))
-        self.SetSize((self.grid.Size[0], min(self.grid.Size[1], 500)+22))
+        if self.grid:
+            self.SetSize((self.grid.Size[0], min(self.grid.Size[1], 500)+22))
         
         self.Bind(wx.EVT_MENU, self.OnSaveCSV, self.saveCSVMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSavePerImageCountsToCSV, self.savePerImageCountsToCSVMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnExit, self.exitMenuItem)
         wx.EVT_SIZE(self, self.OnSize)
+        
+        accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CTRL,ord('O'),ID_LOAD_CSV),
+                                                 (wx.ACCEL_CTRL,ord('S'),ID_SAVE_CSV),
+                                                 (wx.ACCEL_CTRL,ord('Q'),ID_EXIT),])
+        self.SetAcceleratorTable(accelerator_table)
 
     def CreateColumnMenu(self):
         ''' Create color-selection menus for each channel. '''
@@ -352,14 +379,32 @@ class DataGrid(wx.Frame):
             item = self.colmenu.AppendCheckItem(id, column)
             item.Check()
             self.Bind(wx.EVT_MENU, self.OnToggleCol, item)
-        self.GetMenuBar().Append(self.colmenu, "Columns") 
+        self.GetMenuBar().Append(self.colmenu, "Columns")
+        
+    def OnExit(self, evt):
+        if self.file is None:
+            dlg = wx.MessageDialog(self, 'Do you want to save this table before quitting?', 'Data Not Saved', wx.YES_NO|wx.CANCEL|wx.ICON_QUESTION)
+            response = dlg.ShowModal()
+            if response == wx.ID_YES:
+                if self.PromptToSaveCSV()==wx.ID_CANCEL:
+                    return
+            elif response == wx.ID_CANCEL:
+                return
+        self.Destroy()
 
     def OnSize(self, evt):
         # Hack: subtract 25 in order to avoid spurious scrollbar.
+        if not self.grid:
+            return
         cw = (evt.GetSize()[0]-25) / (self.grid.GetTable().GetNumberCols()+1)
         self.grid.SetDefaultColSize(cw, True)
         self.grid.SetRowLabelSize(cw)
         evt.Skip()
+        
+    def RescaleGrid(self):
+        # Hack: resize window so the grid resizes to fit
+        self.Size = self.Size+(1,1)
+        self.Size = self.Size-(1,1)
     
     def OnToggleCol(self, evt):
         colIdx = self.cols_by_id[evt.GetId()]
@@ -367,8 +412,59 @@ class DataGrid(wx.Frame):
             self.grid.GetTable().ShowCol(colIdx)
         else:
             self.grid.GetTable().HideCol(colIdx)
+        self.RescaleGrid()
 
+    def OnLoadCSV(self, evt):
+        dlg = wx.FileDialog(self, message='Choose a CSV file to load',
+                            defaultDir=os.getcwd(),
+                            style=wx.OPEN|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() != wx.ID_OK:
+            return
+        filename = dlg.GetPath()
+        dlg = wx.SingleChoiceDialog(self, 'How was the data in this file grouped?', 'Specify Grouping', ['Image']+p._groups_ordered)
+        if dlg.ShowModal()!=wx.ID_OK:
+            return
+        group = dlg.GetStringSelection()  
+        self.LoadCSV(filename, group)
+            
+    def LoadCSV(self, csvfile, group='Image'):
+        try:
+            self.grid.Destroy()
+        except: pass
+        try:
+            # Remove the previous column show/hide menu (should be the second menu)
+            self.GetMenuBar().Remove(1)
+            self.colmenu.Destroy()
+        except: pass
+        r = csv.reader(open(csvfile))
+        labels = r.next()
+        coltypes = db.InferColTypesFromData(r, len(labels))
+        for i in range(len(coltypes)):
+            if coltypes[i] == 'INT': coltypes[i] = int
+            elif coltypes[i] == 'FLOAT': coltypes[i] = float
+            else: coltypes[i] = str
+        r = csv.reader(open(csvfile))
+        r.next() # skip col-headers
+        data = []
+        for row in r:
+            data += [[coltypes[i](v) for i,v in enumerate(row)]]
+        data = np.array(data, dtype=object)
+        
+        if group == 'Image':
+            keycols = range(len(DBConnect.image_key_columns()))
+        else:
+            keycols = range(len(dm.GetGroupColumnNames(group)))
+        
+        self.grid = HugeTableGrid(self, data, labels, key_col_indices=keycols, grouping=group, chMap=p.image_channel_colors)
+        self.Title = csvfile
+        self.file = csvfile
+        self.CreateColumnMenu()
+        self.RescaleGrid()
+        
     def OnSaveCSV(self, evt):
+        self.PromptToSaveCSV()
+    
+    def PromptToSaveCSV(self):
         defaultFileName = 'My_Enrichment_Data.csv'
         saveDialog = wx.FileDialog(self, message="Save as:",
                                    defaultDir=os.getcwd(),
@@ -376,9 +472,11 @@ class DataGrid(wx.Frame):
                                    wildcard='csv|*',
                                    style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
-        if saveDialog.ShowModal()==wx.ID_OK:
+        res = saveDialog.ShowModal()
+        if res==wx.ID_OK:
             self.SaveCSV(saveDialog.GetPath(), self.grid.GetTable().ordered_data, self.grid.GetTable().GetOrderedColLabels())
         saveDialog.Destroy()
+        return res
     
     def OnSavePerImageCountsToCSV(self, evt):        
         defaultFileName = 'Per_Image_Counts.csv'
@@ -427,12 +525,20 @@ class DataGrid(wx.Frame):
             w.writerow(row)
         f.close()
         print 'Table saved to',filename
+        self.Title = filename
+        self.file = filename
         
     def GetData(self):
-        return self.grid.GetTable().data
+        if self.grid:
+            return self.grid.GetTable().data
+        else:
+            return []
 
     def GetOrderedData(self):
-        return self.grid.GetTable().ordered_data
+        if self.grid:
+            return self.grid.GetTable().ordered_data
+        else:
+            return []
 
 
 
@@ -454,6 +560,10 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 1:
         # ---- testing ----
+        
+        p.LoadFile('/Users/afraser/CPA/properties/nirht_test.properties')
+        dm.PopulateModel()
+        
         print 'TESTING DATA GRID' 
         classes = ['a', 'b']
         data = np.array([['key 0',10,20,-30,40.123456789],
@@ -467,6 +577,7 @@ if __name__ == "__main__":
                          ['key 4',14,24,4,44.4],
                          ['key 5',5,5,-np.inf,np.inf]], dtype=object)
         labels = ['key', 'count-A' , 'count McLongtitle #1\n B' , 'P(a)' , 'P(b)' ]
+#        grid = DataGrid()
         grid = DataGrid(data, labels, key_col_indices=[0,1], title='TEST', autosave=False)
         grid.Show()
         print grid.GetData()

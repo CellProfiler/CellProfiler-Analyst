@@ -88,6 +88,9 @@ class AwesomePMP(PlateMapPanel):
 
 
 
+ID_LOAD_CSV = wx.NewId()
+ID_EXIT = wx.NewId()
+
 class PlateMapBrowser(wx.Frame):
     '''
     '''
@@ -97,11 +100,22 @@ class PlateMapBrowser(wx.Frame):
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
-        self.loadCSVMenuItem = wx.MenuItem(parentMenu=self.fileMenu, id=wx.NewId(), text='L&oad CSV',
+        self.loadCSVMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
+                                           id=ID_LOAD_CSV, text='Load CSV\tCtrl+O',
                                            help='Load a CSV file storing per-image data')
+        self.exitMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
+                                        id=ID_EXIT, text='Exit\tCtrl+Q',
+                                        help='Close PlateMapBrowser')
         self.fileMenu.AppendItem(self.loadCSVMenuItem)
-        self.GetMenuBar().Append(self.fileMenu, '&File')
+        self.fileMenu.AppendSeparator()
+        self.fileMenu.AppendItem(self.exitMenuItem)
+        self.GetMenuBar().Append(self.fileMenu, 'File')
+        self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
+        wx.EVT_MENU(self, ID_EXIT, lambda evt:self.Close())
         
+        accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CTRL,ord('O'),ID_LOAD_CSV),
+                                                 (wx.ACCEL_CTRL,ord('Q'),ID_EXIT),])
+        self.SetAcceleratorTable(accelerator_table)
         
         self.plateNames = db.GetPlateNames()
 
@@ -171,7 +185,6 @@ class PlateMapBrowser(wx.Frame):
         self.SetSizer(mainSizer)
         self.SetClientSize((self.Size[0],self.Sizer.CalcMin()[1]))
         
-        self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
         self.sourceChoice.Bind(wx.EVT_CHOICE, self.OnSelectDataSource)
         self.measurementsChoice.Bind(wx.EVT_CHOICE, self.OnSelectMeasurement)
         self.aggregationMethodsChoice.Bind(wx.EVT_CHOICE, self.OnSelectAggregationMethod)

@@ -14,6 +14,9 @@ db = DBConnect.getInstance()
 CL_NUMBERED = 'numbered'
 CL_COLORED = 'colored'
 
+ID_SAVE_IMAGE = wx.NewId()
+ID_EXIT = wx.NewId()
+
 class ImageViewerPanel(ImagePanel):
     '''
     ImagePanel subclass that does selection.
@@ -152,12 +155,17 @@ class ImageViewer(wx.Frame):
         self.defaultPath = ''
 
         self.SetMenuBar(wx.MenuBar())
+        # File Menu
         fileMenu = wx.Menu()
-        saveImageMenuItem = wx.MenuItem(parentMenu=fileMenu,id=wx.NewId(), text='Save Image')
+        saveImageMenuItem = wx.MenuItem(parentMenu=fileMenu, id=ID_SAVE_IMAGE, text='Save Image\tCtrl+S')
+        exitMenuItem = wx.MenuItem(parentMenu=fileMenu, id=ID_EXIT, text='Exit\tCtrl+Q')
         fileMenu.AppendItem(saveImageMenuItem)
+        fileMenu.AppendSeparator()
+        fileMenu.AppendItem(exitMenuItem)
         self.GetMenuBar().Append(fileMenu, 'File')
+        # View Menu
         viewMenu = wx.Menu()
-        self.classViewMenuItem = wx.MenuItem(parentMenu=viewMenu,id=wx.NewId(), text='View phenotypes as numbers')
+        self.classViewMenuItem = wx.MenuItem(parentMenu=viewMenu, id=wx.NewId(), text='View phenotypes as numbers')
         viewMenu.AppendItem(self.classViewMenuItem)
         self.GetMenuBar().Append(viewMenu, 'View')
         self.CreateChannelMenus()
@@ -179,6 +187,7 @@ class ImageViewer(wx.Frame):
         self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, cp)
         self.Bind(wx.EVT_MENU, self.OnSaveImage, saveImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnChangeClassRepresentation, self.classViewMenuItem)
+        wx.EVT_MENU(self, ID_EXIT, lambda evt:self.Close())
         self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
@@ -231,13 +240,7 @@ class ImageViewer(wx.Frame):
         keycode = evt.GetKeyCode()
         chIdx = keycode-49
         if evt.CmdDown() or evt.ControlDown():
-            if keycode == ord('W'):
-                self.Destroy()
-            elif keycode == ord('Q'):
-                self.Destroy()
-            elif keycode == ord('S'):
-                self.OnSaveImage(evt)
-            elif keycode == ord('A'):
+            if keycode == ord('A'):
                 self.SelectAll()
             elif keycode == ord('D'):
                 self.DeselectAll()
@@ -252,7 +255,10 @@ class ImageViewer(wx.Frame):
                 self.controls.SetContrastMode('Log')
             elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
-        evt.Skip()
+            else:
+                evt.Skip()
+        else:
+            evt.Skip()
         
             
     def OnResizeImagePanel(self, evt):
