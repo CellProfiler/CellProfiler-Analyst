@@ -22,9 +22,12 @@ import PolyaFit
 import numpy as np
 import os, os.path
 import wx
-from version import VERSION as __version__
 from time import time
-
+try:
+    from version import VERSION as __version__
+except:
+    __version__ = 'unknown revision'
+    
 ID_LOAD_TS = wx.NewId()
 ID_SAVE_TS = wx.NewId()
 ID_EXIT = wx.NewId()
@@ -76,7 +79,6 @@ class ClassifierGUI(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.CreateMenus()
         
-
         self.CreateStatusBar()
         
         #### Create GUI elements
