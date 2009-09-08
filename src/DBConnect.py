@@ -147,7 +147,7 @@ class DBConnect(Singleton):
                 # Compute a UNIQUE database name for these files
                 import md5
                 dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or os.path.expanduser('~')
-                dbpath += os.path.sep+'CPA'
+                dbpath = os.path.join(dbpath,'CPA')
                 try:
                     os.listdir(dbpath)
                 except OSError:
@@ -173,8 +173,34 @@ class DBConnect(Singleton):
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
-            self.connections[connID].create_function('median', -1, numpy.median)
-
+            class median:
+                def __init__(self):
+                    self.reset()
+                def reset(self):
+                    self.values = []
+                def step(self, val):
+                    self.values.append(float(val))
+                def finalize(self):
+                    self.values.sort()
+                    n = len(self.values)
+                    if n%2 == 1:
+                        return self.values[n//2]
+                    else:
+                        return (self.values[n//2-1] + self.values[n//2])/2
+            self.connections[connID].create_aggregate('median', 1, median)
+            class stddev:
+                def __init__(self):
+                    self.reset()
+                def reset(self):
+                    self.values = []
+                def step(self, val):
+                    self.values.append(float(val))
+                def finalize(self):
+                    avg = numpy.mean(self.values)
+                    b = numpy.sum([(x-avg)**2 for x in self.values])
+                    std = numpy.sqrt(b/len(self.values))
+                    return std
+            self.connections[connID].create_aggregate('stddev', 1, stddev)
             def classifier(num_stumps, *args):
                 args = numpy.array(args)
                 stumps = args[:num_stumps]  > args[num_stumps:2*num_stumps]
