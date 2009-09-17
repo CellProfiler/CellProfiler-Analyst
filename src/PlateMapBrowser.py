@@ -25,8 +25,6 @@ class AwesomePMP(PlateMapPanel):
                                colormap, wellshape, row_label_format,  **kwargs)
                 
         self.chMap = p.image_channel_colors
-        self.brightness = 1.0
-        self.scale = 1.0
         self.plate = None
         self.tip = wx.ToolTip('')
         self.tip.Enable(False)
@@ -97,6 +95,8 @@ class PlateMapBrowser(wx.Frame):
     def __init__(self, parent, size=(800,-1)):
         wx.Frame.__init__(self, parent, -1, size=size)
 
+        self.link_cols = {} # link_cols[table] = columns that link this table to the per-image table
+
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
@@ -124,6 +124,11 @@ class PlateMapBrowser(wx.Frame):
         src_choices = [p.image_table]
         if p.object_table:
             src_choices += [p.object_table]
+        try:
+            db.execute('SELECT * FROM __Classifier_output LIMIT 1')
+            src_choices += ['__Classifier_output']
+        except:
+            pass
         self.sourceChoice = wx.Choice(self, choices=src_choices)
         self.sourceChoice.Select(0)
         dataSourceSizer.Add(self.sourceChoice)
@@ -201,7 +206,7 @@ class PlateMapBrowser(wx.Frame):
         
 
     def OnLoadCSV(self, evt):
-        dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.",
+        dlg = wx.FileDialog(self, "Select a comma-separated-values file to load...",
                             defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
@@ -211,10 +216,14 @@ class PlateMapBrowser(wx.Frame):
     def LoadCSV(self, filename):
         countsTable = os.path.splitext(os.path.split(filename)[1])[0]
         if db.CreateTempTableFromCSV(filename, countsTable):
-            sel = self.sourceChoice.GetSelection()
-            self.sourceChoice.SetItems(self.sourceChoice.GetItems()+[countsTable])
-            self.sourceChoice.Select(sel)
-
+            self.AddTableChoice(countsTable)
+            
+            
+    def AddTableChoice(self, table):
+        sel = self.sourceChoice.GetSelection()
+        self.sourceChoice.SetItems(self.sourceChoice.GetItems()+[table])
+        self.sourceChoice.Select(sel)
+    
             
     def AddPlateMap(self, plateIndex=0):
         '''
@@ -258,28 +267,6 @@ class PlateMapBrowser(wx.Frame):
         table       = self.sourceChoice.GetStringSelection()
         aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
         self.colorBar.ClearNotifyWindows()
-        
-        def computeMedians(wellsAndVals):
-            ''' 
-            Median is calculated from sorted values in X as:
-            |X| ODD :  X[(n+1)/2]
-            |X| EVEN : (X[n/2] + X[n/2+1]) / 2
-            '''
-            d = {}
-            for well, val in wellsAndVals:
-                if well not in d.keys():
-                    d[well] = [val]
-                else:
-                    d[well] += [val]
-            wellsAndMedians = []
-            for well, vals in d.items():
-                N = len(d[well])
-                sortedVals = sorted(d[well])
-                if N%2 != 0:
-                    wellsAndMedians += [(well, sortedVals[(N+1)/2])]
-                else:
-                    wellsAndMedians += [(well, (sortedVals[(N/2)]+sortedVals[(N/2+1)])/2)]
-            return wellsAndMedians
 
         if aggMethod == 'average':
             expression = "AVG(%s.%s)"%(table, measurement)
@@ -300,20 +287,31 @@ class PlateMapBrowser(wx.Frame):
             group = True
             platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
                                       (p.plate_id, p.well_id, expression, table,
-                                       "GROUP BY %s, %s"%(p.plate_id, p.well_id) if group else ""))
+                                       'GROUP BY %s, %s'%(p.plate_id, p.well_id) if group else ''))
+        elif set([p.well_id, p.plate_id]) == set(self.GetLinkingColumnsForTable(table)):
+            # For data from tables with well and plate columns, we simply
+            # fetch and aggregate
+            # XXX: SHOULD we allow aggregation of per-well data since there 
+            #      should logically only be one row per well???? 
+            group = True
+            platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
+                                      (p.plate_id, p.well_id, expression, table,
+                                       'GROUP BY %s, %s'%(p.plate_id, p.well_id) if group else ''))
         else:
-            # For data from other tables, we need to link the table to the per image table
-            # Here's an example query for sums from the per_object table:
-            #  SELECT per_image.well, SUM(per_object.measurement) FROM per_image per_object
-            #  WHERE per_image.ImageNumber=per_object.ImageNumber AND per_image.plate=plate
-            #  GROUP BY Batch1_Per_Image.Image_Metadata_Well;
+            # For data from other tables without well and plate columns, we 
+            # need to link the table to the per image table via the 
+            # ImageNumber column
             group = True
             platesWellsAndVals = db.execute('SELECT %s.%s, %s.%s, %s FROM %s, %s WHERE %s %s'%
                                       (p.image_table, p.plate_id, p.image_table, p.well_id, expression, 
                                        p.image_table, table, 
-                                       " AND ".join(["%s.%s=%s.%s"%(table, id, p.image_table, id) for id in image_key_columns()]),
+                                       ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in self.GetLinkingColumnsForTable(table)]),
                                        'GROUP BY %s.%s, %s.%s'%(p.image_table, p.plate_id, p.image_table, p.well_id) if group else ''))
-            
+        platesWellsAndVals = np.array(platesWellsAndVals, dtype=object)
+        # Replace None's with nan
+        for row in platesWellsAndVals:
+            if row[2] is None:
+                row[2] = np.nan
         gmin = np.nanmin([float(val) for _,_,val in platesWellsAndVals])
         gmax = np.nanmax([float(val) for _,_,val in platesWellsAndVals])
 
@@ -324,12 +322,15 @@ class PlateMapBrowser(wx.Frame):
             plate = plateChoice.GetStringSelection()
             plateMap.SetPlate(plate)
             self.colorBar.AddNotifyWindow(plateMap)
-                
-            wellsAndVals = [v[1:] for v in platesWellsAndVals if v[0]==plate]
+            wellsAndVals = [v[1:] for v in platesWellsAndVals if str(v[0])==plate]
             data += [FormatPlateMapData(wellsAndVals)]
-            
             dmin = np.nanmin([float(val) for _,val in wellsAndVals]+[dmin])
             dmax = np.nanmax([float(val) for _,val in wellsAndVals]+[dmax])
+        
+        if np.isinf(dmin) or np.isinf(dmax):
+            dlg = wx.MessageDialog(self, 'No numeric data was found in this column ("%s.%s") for the selected plate ("%s").'%(table,measurement,plate), 'No data!', style=wx.OK)
+            dlg.ShowModal()
+            gmin = gmax = dmin = dmax = 1.
         
         self.colorBar.SetLocalExtents([dmin,dmax])
         self.colorBar.SetGlobalExtents([gmin,gmax])
@@ -429,7 +430,19 @@ class PlateMapBrowser(wx.Frame):
         self.UpdatePlateMaps()
             
         self.plateMapSizer.Layout()
-
+        
+    def GetLinkingColumnsForTable(self, table):
+        ''' Returns the column(s) that link this table to the per_image table. '''
+        if table not in self.link_cols.keys():
+            cols = db.GetColumnNames(table)
+            imkey = image_key_columns()
+            if all([kcol in cols for kcol in imkey]):
+                self.link_cols[table] = imkey
+            elif p.well_id in cols and p.plate_id in cols:
+                self.link_cols[table] = (p.well_id, p.plate_id)
+            else:
+                raise Exception('Table %s could not be linked to %s'%(table, p.image_table))
+        return self.link_cols[table]
 
 
 def FormatPlateMapData(wellsAndVals):
@@ -445,9 +458,9 @@ def FormatPlateMapData(wellsAndVals):
     res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
     a = b = c = 0
     for r in res:
-        if re.match('^[A-Za-z]\d\d$', r[0]):
+        if re.match('^[A-Za-z]\d\d$', str(r[0])):
             a += 1
-        elif re.match('^\d+$', r[0]):
+        elif re.match('^\d+$', str(r[0])):
             b += 1
         else:
             c += 1

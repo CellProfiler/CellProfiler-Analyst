@@ -4,7 +4,7 @@ from Singleton import Singleton
 from sys import stderr
 import MySQLdb
 import exceptions
-import numpy
+import numpy as np
 import string
 import sys
 import threading
@@ -24,6 +24,44 @@ class DBException(Exception):
 #        filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
 #        return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
+
+#TODO: this doesn't belong in this module
+def get_data_table_from_csv_reader(reader):
+    '''reads a csv table into a 2d list'''
+    dtable = []
+    try:
+        row = reader.next()
+    except:
+        return []
+    while row:
+        dtable += [row]
+        try:
+            row = reader.next()
+        except StopIteration: break
+    return dtable
+
+
+def clean_up_colnames(colnames):
+    '''takes a list of column names and makes them so they
+    don't have to be quoted in sql syntax'''
+    colnames = [col.replace(' ','_') for col in colnames]
+    colnames = [col.replace('\n','_') for col in colnames]
+    colnames = [filter(lambda c: re.match('[A-Za-z0-9_]',c), col) for col in colnames]
+    return colnames        
+
+
+def well_key_columns(table_name=''):
+    '''Return, as a tuple, the names of the columns that make up the
+    well key.  If table_name is not None, use it to qualify each
+    column name.'''
+    if table_name is None:
+        table_name = ''
+    if table_name != '':
+        table_name += '.'
+    if p.plate_id and p.well_id:
+        return (table_name+p.plate_id, table_name+p.well_id)
+    else:
+        return tuple()
 
 def image_key_columns(table_name=''):
     '''Return, as a tuple, the names of the columns that make up the
@@ -173,13 +211,15 @@ class DBConnect(Singleton):
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
+            # Create MEDIAN function
             class median:
                 def __init__(self):
                     self.reset()
                 def reset(self):
                     self.values = []
                 def step(self, val):
-                    self.values.append(float(val))
+                    if not np.isnan(float(val)):
+                        self.values.append(float(val))
                 def finalize(self):
                     self.values.sort()
                     n = len(self.values)
@@ -188,24 +228,27 @@ class DBConnect(Singleton):
                     else:
                         return (self.values[n//2-1] + self.values[n//2])/2
             self.connections[connID].create_aggregate('median', 1, median)
+            # Create STDDEV function
             class stddev:
                 def __init__(self):
                     self.reset()
                 def reset(self):
                     self.values = []
                 def step(self, val):
-                    self.values.append(float(val))
+                    if not np.isnan(float(val)):
+                        self.values.append(float(val))
                 def finalize(self):
-                    avg = numpy.mean(self.values)
-                    b = numpy.sum([(x-avg)**2 for x in self.values])
-                    std = numpy.sqrt(b/len(self.values))
+                    avg = np.mean(self.values)
+                    b = np.sum([(x-avg)**2 for x in self.values])
+                    std = np.sqrt(b/len(self.values))
                     return std
             self.connections[connID].create_aggregate('stddev', 1, stddev)
+            # Create CLASSIFIER function
             def classifier(num_stumps, *args):
-                args = numpy.array(args)
+                args = np.array(args)
                 stumps = args[:num_stumps]  > args[num_stumps:2*num_stumps]
                 num_classes = (len(args) / num_stumps) - 2
-                best = -numpy.inf
+                best = -np.inf
                 data = args[2*num_stumps:]
                 for cl in range(num_classes):
                     score = (data[:num_stumps] * stumps).sum()
@@ -214,7 +257,6 @@ class DBConnect(Singleton):
                         best = score
                     data = data[num_stumps:]
                 return bestcl
-
             try:
                 import _classifier
                 _classifier.create_classifier_function(self.connections[connID])
@@ -545,7 +587,7 @@ class DBConnect(Singleton):
         data = self.execute(query, silent=True)
         if len(data) == 0:
             print 'No data for obKey:',obKey
-        return numpy.array(data[0])
+        return np.array(data[0])
     
     
     def GetPlateNames(self):
@@ -556,30 +598,31 @@ class DBConnect(Singleton):
         return [str(l[0]) for l in res]
     
     
-    def InferColTypesFromData(self, reader, nCols):
+    def InferColTypesFromData(self, tabledata, nCols):
         '''
         For converting csv data to DB data.
         Returns a list of column types (INT, FLOAT, or VARCHAR(#)) that each column can safely be converted to
-        reader: csv reader
+        tabledata: 2d iterable of strings
         nCols: # of columns  
         '''
-        colTypes = []
-        maxLen   = []   # Maximum string length for each column (if VARCHAR)
-        for i in xrange(nCols):
-            colTypes += ['']
-            maxLen += [0]
-        row = reader.next()
-        while row:
+        colTypes = ['' for i in xrange(nCols)]
+        # Maximum string length for each column (if VARCHAR)
+        maxLen   = [0 for i in xrange(nCols)] 
+        try:
+            tabledata[0][0]
+        except: 
+            raise Exception('asdf ERROR: Cannot infer column types from an empty table.')
+        for row in tabledata:
             for i, e in enumerate(row):
                 if colTypes[i]!='FLOAT' and not colTypes[i].startswith('VARCHAR'):
                     try:
-                        x = int(e)
+                        x = int(str(e))
                         colTypes[i] = 'INT'
                         continue
                     except ValueError: pass
                 if not colTypes[i].startswith('VARCHAR'):
                     try:
-                        x = float(e)
+                        x = float(str(e))
                         colTypes[i] = 'FLOAT'
                         continue
                     except ValueError: pass
@@ -589,9 +632,6 @@ class DBConnect(Singleton):
                     colTypes[i] = 'VARCHAR(%d)'%(maxLen[i])
                 except ValueError: 
                     raise Exception, '<ERROR>: Value in table could not be converted to string!'
-            try:
-                row = reader.next()
-            except StopIteration: break
         return colTypes
             
     
@@ -608,7 +648,8 @@ class DBConnect(Singleton):
         r = csv.reader(f)
         columnLabels = r.next()
         columnLabels = [lbl.strip() for lbl in columnLabels]
-        colTypes = self.InferColTypesFromData(r, len(columnLabels))
+        dtable = get_data_table_from_csv_reader(r)
+        colTypes = self.InferColTypesFromData(dtable, len(columnLabels))
         
         # Build the CREATE TABLE statement
         statement = 'CREATE TABLE '+p.image_table+' ('
@@ -628,7 +669,8 @@ class DBConnect(Singleton):
         r = csv.reader(f)
         columnLabels = r.next()
         columnLabels = [lbl.strip() for lbl in columnLabels]
-        colTypes = self.InferColTypesFromData(r, len(columnLabels))
+        dtable = get_data_table_from_csv_reader(r)
+        colTypes = self.InferColTypesFromData(dtable, len(columnLabels))
         statement = 'CREATE TABLE '+p.object_table+' ('
         statement += ',\n'.join([lbl+' '+colTypes[i] for i, lbl in enumerate(columnLabels)])
         keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
@@ -748,27 +790,51 @@ class DBConnect(Singleton):
         '''
         import csv
         f = open(filename, 'U')
-        reader = csv.reader(f)#, quoting=csv.QUOTE_NONE)
+        r = csv.reader(f)
         self.execute('DROP TABLE IF EXISTS %s'%(tablename))
-        colnames = reader.next()
-        colTypes = self.InferColTypesFromData(reader, len(colnames))
-        coldefs = ', '.join([lbl+' '+colTypes[i] for i, lbl in enumerate(colnames)])
+        colnames = r.next()
+        dtable = np.array(get_data_table_from_csv_reader(r))
+        typed_table = []
+        for i in xrange(dtable.shape[1]):
+            try:
+                col = np.array(dtable[:,i], dtype=str)
+                col = np.array(dtable[:,i], dtype=float)
+                col = np.array(dtable[:,i], dtype=int) 
+            except:
+                pass
+            typed_table += [col]
+        typed_table = np.array(typed_table, dtype=object).T
+        return self.CreateTempTableFromData(typed_table, colnames, tablename)
+    
+    
+    def CreateTempTableFromData(self, dtable, colnames, tablename):
+        '''
+        Creates and populates a temporary table in the database.
+        Column names are taken from the first row.
+        Column types are inferred from the data.
+        '''
+        self.execute('DROP TABLE IF EXISTS %s'%(tablename))
+        # Clean up column names
+        colnames = clean_up_colnames(colnames)
+        # Infer column types
+        coltypes = self.InferColTypesFromData(dtable, len(colnames))
+        coldefs = ', '.join([lbl+' '+coltypes[i] for i, lbl in enumerate(colnames)])
         self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
-        f = open(filename, 'U')
-        reader = csv.reader(f)#, quoting=csv.QUOTE_NONE)
-        print 'Populating table %s...'%(tablename)
-        row = reader.next() # skip col headers
-        row = reader.next()
-        while row:
-            vals = ', '.join(['"'+val+'"' for val in row])
+        for key in list(well_key_columns()) + list(image_key_columns()):
+            if key in colnames:
+                self.execute('CREATE INDEX %s ON %s (%s)'%(key, tablename, key))
+        print 'Populating temporary table %s...'%(tablename)
+        for row in dtable:
+            vals = []
+            for i, val in enumerate(row):
+                if coltypes[i]=='FLOAT' and (np.isinf(val) or np.isnan(val)):
+                    vals += ['NULL']
+                else:
+                    vals += ['"%s"'%val]
+            vals = ', '.join(vals)
             self.execute('INSERT INTO %s (%s) VALUES (%s)'%(
                           tablename, ', '.join(colnames), vals), silent=True)
-            try:
-                row = reader.next()
-            except StopIteration: break
-        print 'Done.'
         self.Commit()
-        f.close()
         return True
     
     
@@ -848,7 +914,7 @@ class DBConnect(Singleton):
             
         clause = ("round(%d * (%s - (%f)) / (%f - (%f)))" % 
                   (nbins, column, min, max, min))
-        h = numpy.zeros(nbins)
+        h = np.zeros(nbins)
         res = self.execute("select %s as bin, count(*) from %s "
                            "where %s <= %d "
                            "group by %s order by bin" % (clause, table_clause,
@@ -857,7 +923,7 @@ class DBConnect(Singleton):
             if bin == nbins:
                 bin -= 1
             h[bin] = count
-        return h, numpy.linspace(min, max, nbins + 1)
+        return h, np.linspace(min, max, nbins + 1)
 
     def get_objects_modify_date(self):
         if p.db_type.lower() == 'mysql':

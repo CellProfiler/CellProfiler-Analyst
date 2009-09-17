@@ -25,7 +25,7 @@ import wx
 from time import time
 try:
     from version import VERSION as __version__
-except:
+except ImportError:
     __version__ = 'unknown revision'
     
 ID_LOAD_TS = wx.NewId()
@@ -61,7 +61,8 @@ class ClassifierGUI(wx.Frame):
             exit()
 
         wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600))
-                
+        
+        self.pmb = None
         self.worker = None
         self.weaklearners = None
         self.trainingSet = None
@@ -371,8 +372,8 @@ class ClassifierGUI(wx.Frame):
             
             
     def OnLaunchPlateMapBrowser(self, evt):
-        pmb = PlateMapBrowser(parent=self)
-        pmb.Show()
+        self.pmb = PlateMapBrowser(parent=self)
+        self.pmb.Show()
         
     
     def OnLaunchDataTable(self, evt):
@@ -927,7 +928,7 @@ class ClassifierGUI(wx.Frame):
         # record the column indices for the keys
         key_col_indices = [i for i in range(len(labels))]
         if group != 'Image':
-            labels += ['# Images']
+            labels += ['Images']
         labels += ['Total %s Count'%(p.object_name[0].capitalize())]
         for i in xrange(nClasses):
             labels += ['%s %s Count'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
@@ -954,7 +955,7 @@ class ClassifierGUI(wx.Frame):
                         title=title)
         grid.Show()
         
-        self.SetStatusText('')      
+        self.SetStatusText('')
         
     
     def OnSelectFilter(self, evt):

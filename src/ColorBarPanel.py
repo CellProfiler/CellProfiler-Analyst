@@ -252,9 +252,14 @@ class ColorBarPanel(wx.Panel):
         high_slider_pos = self.high_slider.GetPositionTuple()[0] + s_off
         
         global_scale = self.global_extents[1] - self.global_extents[0]  # value scale of the global data
-        local_x0 = (self.local_extents[0] - self.global_extents[0]) / global_scale * w_global     # x pos (pixels) to start drawing the local color bar
-        local_x1 = (self.local_extents[1] - self.global_extents[0]) / global_scale * w_global     # x pos (pixels) to stop drawing the local color bar
-        w_local = local_x1 - local_x0                                   # pixel width of the local color bar
+        if global_scale == 0:
+            local_x0 = 0
+            local_x1 = w_global
+            w_local = w_global
+        else:
+            local_x0 = (self.local_extents[0] - self.global_extents[0]) / global_scale * w_global     # x pos (pixels) to start drawing the local color bar
+            local_x1 = (self.local_extents[1] - self.global_extents[0]) / global_scale * w_global     # x pos (pixels) to stop drawing the local color bar
+            w_local = local_x1 - local_x0                                   # pixel width of the local color bar
         
         w0 = max(low_slider_pos, local_x0) - local_x0
         w1 = local_x1 - min(high_slider_pos, local_x1)

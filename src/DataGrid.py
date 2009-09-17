@@ -335,7 +335,7 @@ class DataGrid(wx.Frame):
                         text='Save data to CSV\tCtrl+S',
                         help='Saves data as comma separated values.')
         self.savePerImageCountsToCSVMenuItem = \
-            wx.MenuItem(parentMenu=self.filemenu, id=wx.NewId(),
+            wx.MenuItem(parentMenu=self.filemenu, id=-1,
                         text='Save per-image counts to CSV',
                         help='Saves per-image phenotype counts as comma separated values.')
         self.exitMenuItem = \
@@ -350,6 +350,13 @@ class DataGrid(wx.Frame):
         menuBar = wx.MenuBar()
         self.SetMenuBar(menuBar)
         self.GetMenuBar().Append(self.filemenu, 'File')
+        self.dbmenu = wx.Menu()
+        self.writeToTempTableMenuItem = \
+            wx.MenuItem(parentMenu=self.dbmenu, id=-1,
+                        text='Write to Temporary Table in Database',
+                        help='Writes this table to a temporary table in your database.')
+        self.dbmenu.AppendItem(self.writeToTempTableMenuItem)
+        self.GetMenuBar().Append(self.dbmenu, 'Database')
         if self.grid:
             self.CreateColumnMenu()
         self.CreateStatusBar()
@@ -361,6 +368,7 @@ class DataGrid(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSaveCSV, self.saveCSVMenuItem)
         self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSavePerImageCountsToCSV, self.savePerImageCountsToCSVMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnWriteTempTableToDB, self.writeToTempTableMenuItem)
         self.Bind(wx.EVT_MENU, self.OnExit, self.exitMenuItem)
         wx.EVT_SIZE(self, self.OnSize)
         
@@ -424,7 +432,7 @@ class DataGrid(wx.Frame):
         dlg = wx.SingleChoiceDialog(self, 'How was the data in this file grouped?', 'Specify Grouping', ['Image']+p._groups_ordered)
         if dlg.ShowModal()!=wx.ID_OK:
             return
-        group = dlg.GetStringSelection()  
+        group = dlg.GetStringSelection()
         self.LoadCSV(filename, group)
             
     def LoadCSV(self, csvfile, group='Image'):
@@ -432,13 +440,14 @@ class DataGrid(wx.Frame):
             self.grid.Destroy()
         except: pass
         try:
-            # Remove the previous column show/hide menu (should be the second menu)
-            self.GetMenuBar().Remove(1)
+            # Remove the previous column show/hide menu (should be the third menu)
+            self.GetMenuBar().Remove(2)
             self.colmenu.Destroy()
         except: pass
         r = csv.reader(open(csvfile))
         labels = r.next()
-        coltypes = db.InferColTypesFromData(r, len(labels))
+        dtable = DBConnect.get_data_table_from_csv_reader(r)
+        coltypes = db.InferColTypesFromData(dtable, len(labels))
         for i in range(len(coltypes)):
             if coltypes[i] == 'INT': coltypes[i] = int
             elif coltypes[i] == 'FLOAT': coltypes[i] = float
@@ -528,6 +537,18 @@ class DataGrid(wx.Frame):
         self.Title = filename
         self.file = filename
         
+    def OnWriteTempTableToDB(self, evt):
+        from ClassifierGUI import ClassifierGUI
+        db.CreateTempTableFromData(self.grid.GetTable().data, 
+                           DBConnect.clean_up_colnames(self.grid.GetTable().col_labels), 
+                           '__Classifier_output')
+        try:
+            if self.GetParent().pmb:
+                self.GetParent().pmb.AddTableChoice('__Classifier_output')
+        except:
+            pass
+
+        
     def GetData(self):
         if self.grid:
             return self.grid.GetTable().data
@@ -598,7 +619,8 @@ if __name__ == "__main__":
     dm.PopulateModel()
     r = csv.reader(open(csvfile))
     labels = r.next()
-    coltypes = db.InferColTypesFromData(r, len(labels))
+    dtable = DBConnect.get_data_table_from_csv_reader(r)
+    coltypes = db.InferColTypesFromData(dtable, len(labels))
     for i in range(len(coltypes)):
         if coltypes[i] == 'INT': coltypes[i] = int
         elif coltypes[i] == 'FLOAT': coltypes[i] = float
