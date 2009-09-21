@@ -9,13 +9,13 @@ class TestDBConnect(unittest.TestCase):
         self.p  = Properties.getInstance()
         self.db = DBConnect.getInstance( )
         self.db.Disconnect()
-        self.p.LoadFile('../properties/nirht_test.properties')
+        self.p.LoadFile('../test_data/nirht_test.properties')
 
     def setup_local(self):
         self.p  = Properties.getInstance()
         self.db = DBConnect.getInstance()
         self.db.Disconnect()
-        self.p.LoadFile('../properties/nirht_local.properties')
+        self.p.LoadFile('../test_data/nirht_local.properties')
         
     def setup_local2(self):
         self.p  = Properties.getInstance()
@@ -193,5 +193,35 @@ class TestDBConnect(unittest.TestCase):
         assert self.db.GetAllImageKeys() == vals
         assert self.db.GetGroupMaps(True) == groups
         
+    def test_CreateMySQLTempTableFromData(self):
+        self.setup()
+        data = [['A01', 1, 1.],
+                ['A02', 1, 2.],
+                ['A03', 1, -np.inf],
+                ['A04', 1, np.inf],
+                ['A04', 1, np.nan],
+                ['A04', 1, 100],
+                ['A04', 1, 200],
+                ]
+        colnames = ['well', 'plate', 'vals']
+        self.db.CreateTempTableFromData(data, colnames, '__test_table')
+        res =  self.db.execute('select * from __test_table')
+        assert res==[('A01', 1, 1.0), ('A02', 1, 2.0), ('A03', 1, None), ('A04', 1, None), ('A04', 1, None), ('A04', 1, 100.0), ('A04', 1, 200.0)]
+        
+    def test_CreateSQLiteTempTableFromData(self):
+        self.setup_local()
+        data = [['A01', 1, 1.],
+                ['A02', 1, 2.],
+                ['A03', 1, -np.inf],
+                ['A04', 1, np.inf],
+                ['A04', 1, np.nan],
+                ['A04', 1, 100],
+                ['A04', 1, 200],
+                ]
+        colnames = ['well', 'plate', 'vals']
+        self.db.CreateTempTableFromData(data, colnames, '__test_table')
+        res =  self.db.execute('select * from __test_table')
+        assert res==[('A01', 1, 1.0), ('A02', 1, 2.0), ('A03', 1, None), ('A04', 1, None), ('A04', 1, None), ('A04', 1, 100.0), ('A04', 1, 200.0)]
+    
         
         
