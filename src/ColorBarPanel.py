@@ -13,7 +13,7 @@ class ColorBarPanel(wx.Panel):
     A HORIZONTAL color bar and value axis drawn on a panel.
     '''
     def __init__(self, parent, map, local_extents=[0.,1.], global_extents=None, 
-                 ticks=5, labelformat='%.3f', **kwargs):
+                 ticks=5, **kwargs):
         '''
         map -- a colormap name from matplotlib.cm
         local_extents -- local min and max values of the measurement
@@ -25,7 +25,7 @@ class ColorBarPanel(wx.Panel):
         '''
         wx.Panel.__init__(self, parent, **kwargs)
         self.ticks = ticks
-        self.labelformat = labelformat
+        self.labelformat = '%.3f'
         self.low_slider = wx.Button(self, -1, '[', pos=(0,-1), size=(slider_width,-1))
         self.high_slider = wx.Button(self, -1, ']', pos=(self.Size[0],-1), size=(slider_width,-1))
         self.ClearNotifyWindows()
@@ -106,6 +106,8 @@ class ColorBarPanel(wx.Panel):
         else:
             self.interval = list(self.local_extents)
         
+        self.UpdateLabelFormat()
+        
         for win in self.notify_windows:
             win.SetClipInterval(self.GetLocalInterval(), self.local_extents, self.clipmode)
         self.Refresh()
@@ -171,11 +173,14 @@ class ColorBarPanel(wx.Panel):
         self.ticks = ticks
         self.Refresh()
     
-    def SetLabelFormat(self, format):
-        ''' Sets the value formatting of the value axis
-        format should be in the form "%0.3f" '''
-        self.labelformat = format
-        self.Refresh()
+    def UpdateLabelFormat(self):
+        ''' Selects a number format based on the step value between ticks ''' 
+        range = self.global_extents[1] - self.global_extents[0]
+        step = range / self.ticks
+        if 0 < step < 0.001:
+            self.labelformat = '%.3e'
+        else:
+            self.labelformat = '%.3f'
         
     def OnToggleClipMode(self, evt):
         if self.clipmode == 'clip':
@@ -243,6 +248,8 @@ class ColorBarPanel(wx.Panel):
         range = self.global_extents[1] - self.global_extents[0]
         self.low_slider.SetPosition((self.Size[0] * (self.interval[0] - self.global_extents[0]) / range - s_off, -1))
         self.high_slider.SetPosition((self.Size[0] * (self.interval[1] - self.global_extents[0]) / range - s_off, -1))
+        self.UpdateLabelFormat()
+            
             
     def OnPaint(self, evt):
         w_global, h = self.Size
