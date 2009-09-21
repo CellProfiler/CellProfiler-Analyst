@@ -72,7 +72,6 @@ class DataModel(Singleton):
         self.cumSums = []
         self.obCount = 0
         
-        
 
     def GetRandomFraction(self, num):
         print "RAND", num, self.obCount, int(-2**63 + 2**64 * float(num) / self.obCount)
