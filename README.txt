@@ -36,7 +36,7 @@ been shown to function on Windows XP as well.
 ---------------------------------
   II. Requirements
 ---------------------------------
-This software requires access to a MySQL database where per-image and per_
+This software requires access to a MySQL database where per-image and per-
 object measurements and metadata are stored. Alternatively, this data may be
 loaded from CSV files. Classifier also requires access to the images used to 
 create the data tables. The images can be stored locally or remotely and 
@@ -46,7 +46,7 @@ information.
 
 Classifier was designed to work with data processed by CellProfiler, though any
 experiment that measures object features from images should be easily
-adaptable, if it stores its data in a similar form. 
+adaptable if it stores its data in a similar form. 
 
 IMAGES:
 Individual image files are expected to be monochromatic and represent a single
@@ -55,11 +55,11 @@ path and filename column to the per-image table of your database and the
 relevant information in the properties file. 
 
 TABLES:
-Two tables are required: "per-image" and "per_object" (these names can be
+Two tables are required: "per-image" and "per-object" (these names can be
 changed and set in your properties file). These can either reside in a MySQL
 database or in separate CSV (Comma-separated values) files.
 
-per-image TABLE:
+PER-IMAGE TABLE:
 The per-image table requires 1 column for a _unique_ image ID and 2 columns for
 each channel represented in your images:  One column for the image path, and
 one column for the image filename (which may include multiple path elements). 
@@ -67,7 +67,7 @@ one column for the image filename (which may include multiple path elements).
 For example, if you took images of cells stained with GFP and Hoechst, you
 would have 2 channels and your per-image table would look something like this: 
 
-                          Example_per-image_Table
+                          Example_Per_Image_Table
   +------------------------------------------------------------------------+
   | ImgID | GFP_path | GFP_file | Hoechst_path | Hoechst_file | other cols |
   |-------+----------+-----------------------------------------------------+
@@ -76,8 +76,8 @@ would have 2 channels and your per-image table would look something like this:
   |                                    ...                                 |
   +------------------------------------------------------------------------+
 
-PER_OBJECT TABLE:
-The per_object table requires 4 columns: a foreign key image ID column, a
+PER-OBJECT TABLE:
+The per-object table requires 4 columns: a foreign key image ID column, a
 _unique_ object ID column, a column for the object x-location, and a column for
 the object y-location. The location columns should contain values in pixel
 coordinates for where each object falls in its parent image. 
@@ -181,12 +181,12 @@ the posterior is computed for each group independently.
   or by numbers. This setting can be found in the "View" menu.
 * Regular expressions may now be used in defining columns that the classifier
   will ignore in classifier_ignore_substrings in properties files.
-* Classifier now automatically ignores non-numeric columns in your per_object 
+* Classifier now automatically ignores non-numeric columns in your per-object 
   table, as well as the table ID (if present), image ID, and object ID columns.
 * When scoring, you may now choose to score a subset of your experiement by 
   selecting a filter defined in your properties file.
 * Areas can now be summed when scoring along with object counts by specifying 
-  which column of your per_object table should be used for areas in the 
+  which column of your per-object table should be used for areas in the 
   properties file field "area_scoring_column".
 * Thumbnails are now loaded in the background, so you can fetch thumbnails,
   find rules, load a training set, open images, and score an experiment all at 
@@ -225,5 +225,10 @@ the posterior is computed for each group independently.
   you toggle channels on/off with Ctrl+1,2,3... 
 * Please report other bugs, issues, or feature requests to the forum at
   cellprofiler.org/forum 
-
-  
+* Per-well csv data can't be loaded into PlateMapBrowser if the plate and well 
+  columns don't match the corresponding columns in the image table. This may 
+  happen when a group is defined in the properties file that selects columns 
+  using the sql 'SELECT x AS y' construct. When grouping scores in such a way, 
+  the column x will appear as y, and can not be matched back to the database.
+* If multiple PlateMapBrowsers are open, only the most recent one will be 
+  updated with an enrichment table if one is generated.
