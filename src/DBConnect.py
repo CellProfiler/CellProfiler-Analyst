@@ -11,6 +11,7 @@ import threading
 import traceback
 import re
 import os.path
+import logging
 
 verbose = True
 
@@ -173,7 +174,7 @@ class DBConnect(Singleton):
                 self.cursors[connID] = SSCursor(conn)
                 self.connectionInfo[connID] = (db_host, db_user, db_passwd, db_name)
                 if verbose:
-                    print 'Connected to database: %s as %s@%s (connID = "%s").'%(db_name, db_user, db_host, connID)
+                    logging.debug('Connected to database: %s as %s@%s (connID = "%s").'%(db_name, db_user, db_host, connID))
             except MySQLdb.Error, e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(db_name, db_user, db_host, connID, e)
             

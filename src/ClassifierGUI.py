@@ -1161,6 +1161,9 @@ def LoadProperties():
 
 if __name__ == "__main__":
     import sys
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG,)
     
     global defaultDir
     defaultDir = os.getcwd()
