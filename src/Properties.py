@@ -190,7 +190,7 @@ class Properties(Singleton):
         
         def field_defined(name):
             # field name exists and has a non-empty value.
-            return name in self.__dict__.keys() and self.__dict__[name]!=''
+            return name in self.__dict__.keys() and self.__dict__[name] not in ['', None]
         
         # check that all required fields are defined
         for name in string_vars + list_vars:
@@ -263,11 +263,11 @@ class Properties(Singleton):
         
         if not field_defined('image_buffer_size'):
             print 'PROPERTIES: Using default image_buffer_size=1'
-            self.image_buffer_size = 1
+            self.image_buffer_size = '1'
             
         if not field_defined('tile_buffer_size'):
             print 'PROPERTIES: Using default tile_buffer_size=1'
-            self.tile_buffer_size = 1
+            self.tile_buffer_size = '1'
             
         if not field_defined('object_name'):
             print 'PROPERTIES WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"'
