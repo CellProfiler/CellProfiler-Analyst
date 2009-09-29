@@ -13,8 +13,10 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
-last_imkey = None
-last_image = None
+#last_imkey = None
+#last_image = None
+cache = {}
+cachedkeys = []
 
 def FetchTile(obKey):
     '''
@@ -27,17 +29,23 @@ def FetchTile(obKey):
     return [Crop(im,size,pos) for im in FetchImage(imKey)]
 
 def FetchImage(imKey):
-    global last_image
-    global last_imkey
-    if imKey == last_imkey:
-        return last_image
+#    global last_image
+#    global last_imkey
+#    if imKey == last_imkey:
+#        return last_image
+#    else:
+#        last_imkey = imKey
+    global cachedkeys
+    if imKey in cache.keys():
+        return cache[imKey]
     else:
-        last_imkey = imKey
-    
-    ir = ImageReader()
-    filenames = db.GetFullChannelPathsForImage(imKey)
-    last_image = ir.ReadImages(filenames)
-    return last_image
+        ir = ImageReader()
+        filenames = db.GetFullChannelPathsForImage(imKey)
+        cache[imKey] = ir.ReadImages(filenames)
+        cachedkeys += [imKey]
+        while len(cachedkeys) > int(p.image_buffer_size):
+            del cache[cachedkeys.pop(0)]
+        return cache[imKey]
 
 def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
     from ImageViewer import ImageViewer
