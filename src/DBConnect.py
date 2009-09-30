@@ -12,6 +12,7 @@ import traceback
 import re
 import os.path
 import logging
+import copy
 
 verbose = True
 
@@ -936,6 +937,165 @@ class DBConnect(Singleton):
         cur = self.get_objects_modify_date()
         print cur, later, cur <= later
         return self.get_objects_modify_date() <= later
+
+
+class Entity(object):
+    """Abstract class containing code that is common to Images and
+    Objects.  Do not instantiate directly."""
+
+    class dbiter(object):
+
+        def __init__(self, objects, db):
+            self.length = objects.count()
+            self.db = db
+            self.db.execute(objects.all_query(), return_result=False)
+            self.columns = self.db.GetResultColumnNames()
+
+        def __iter__(self):
+            return self
+
+        def __len__(self):
+            return self.length
+
+        def next(self):
+            r = self.db.GetNextResult()
+            if r:
+                return r
+            else:
+                raise StopIteration
+
+    def __init__(self):
+        self._where = []
+        self.filters = []
+        self._offset = None
+        self._limit = None
+
+    def offset(self, offset):
+        new = copy.deepcopy(self)
+        new._offset = (0 if new._offset is None else new._offset) + offset
+        return new
+
+    def limit(self, limit):
+        new = copy.deepcopy(self)
+        new._limit = limit
+        return new
+
+    def filter(self, name):
+        """Add a filter (as defined in the properties file) by name."""
+        new = copy.deepcopy(self)
+        new.filters.append(name)
+        return new
+
+    def where(self, predicate):
+        new = copy.deepcopy(self)
+        new._where.append(predicate)
+        return new
+
+    def _get_where_clause(self):
+        return "" if self._where == [] else "where " + \
+            " and ".join(self._where)
+    where_clause = property(_get_where_clause)
+
+    def count(self):
+        c = DBConnect.getInstance().execute(
+            "select count(*) from %s %s"%
+            (self.from_clause, self.where_clause))[0][0]
+        c = max(0, c - (self._offset or 0))
+        c = max(c, self._limit or 0)
+        return c
+
+
+class Images(Entity):
+
+    def __init__(self):
+        super(Images, self).__init__()
+
+    def _get_from_clause(self):
+        from_clause = [Properties.getInstance().image_table]
+        for filter in self.filters:
+            from_clause.append("join (%s) as %s using (%s)" %
+                               (Properties.getInstance()._filters[filter],
+                                'filter_SQL_' + filter,
+                                ", ".join(image_key_columns())))
+        return " ".join(from_clause)
+    from_clause = property(_get_from_clause)
+
+    def objects(self):
+        if self._offset is not None or self._limit is not None:
+            raise ValueError, "Cannot join with objects after applying "\
+                "offset/limit."
+        return Objects(images=self)
+
+
+class Objects(Entity):
+
+    def __init__(self, images=None):
+        super(Objects, self).__init__()
+        self._columns = None
+        self._ordering = None
+        if images is not None:
+            self._images = images
+            self._where = images._where
+            self.filters = images.filters
+
+    def ordering(self, ordering):
+        new = copy.deepcopy(self)
+        new._ordering = ordering
+        return new
+
+    def project(self, columns):
+        new = copy.deepcopy(self)
+        new._columns = columns
+        return new
+
+    def _get_from_clause(self):
+        from_clause = [Properties.getInstance().object_table]
+        if self._images is not None:
+            from_clause.append("join %s using (%s)"%
+                               (Properties.getInstance().image_table,
+                                ", ".join(image_key_columns())))
+        for filter in self.filters:
+            from_clause.append("join (%s) as %s using (%s)" %
+                               (Properties.getInstance()._filters[filter],
+                                'filter_SQL_' + filter,
+                                ", ".join(image_key_columns())))
+        return " ".join(from_clause)
+    from_clause = property(_get_from_clause)
+
+    def _get_offset_limit_clause(self):
+        return " ".join((self._limit and ["limit %d" % self._limit] or []) +
+                        (self._offset and ["offset %d" % self._offset] or []))
+    offset_limit_clause = property(_get_offset_limit_clause)
+
+    def _get_ordering_clause(self):
+        if self._ordering is None:
+            return ""
+        else:
+            return "order by " + ", ".join(self._ordering)
+    ordering_clause = property(_get_ordering_clause)
+
+    def columns(self):
+        return self._columns or list(object_key_columns()) + \
+            DBConnect.getInstance().GetColnamesForClassifier()
+
+    def standard_deviations(self):
+        """Returns a list of the standard deviations of the non-key columns.
+        Offsets and limits are ignored here, not sure if they should be."""
+        db = DBConnect.getInstance()
+        return db.execute("select %s from %s %s"%(
+                ",".join(["std(%s)" % c 
+                          for c in db.GetColnamesForClassifier()]),
+                self.from_clause, self.where_clause))[0]
+
+    def all(self):
+        return self.dbiter(self, DBConnect.getInstance())
+
+    def all_query(self):
+        return "select %s from %s %s %s %s" % (",".join(self.columns()),
+                                               self.from_clause,
+                                               self.where_clause,
+                                               self.ordering_clause,
+                                               self.offset_limit_clause)
 
 
 
