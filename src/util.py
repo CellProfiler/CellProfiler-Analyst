@@ -7,6 +7,7 @@ it is not used by the CPA application itself.
 """
 
 import numpy as np
+import cPickle
 
 def bin_centers(x):
     """
@@ -48,3 +49,43 @@ def heatmap(datax, datay, resolutionx=200, resolutiony=200, logscale=False,
         out=out.astype(float)
         out[out>0] = np.log(out[out>0]+1) / np.log(10.0)
     return (out , [minx, maxx, miny, maxy])
+
+def unpickle(filename, nobjects=None):
+    """Unpickle that can handle numpy arrays.  NOBJECTS is the number
+    of objects to unpickle.  If None, all objects in the file will be
+    unpickled."""
+    f = open(filename)
+    def unpickle1():
+        o = cPickle.load(f)
+        if isinstance(o, np.dtype):
+            return np.fromfile(f, dtype=o)
+        else:
+            return o
+    results = []
+    while True:
+        try:
+            results.append(unpickle1())
+        except EOFError:
+            if nobjects is None:
+                break
+            elif len(results) < nobjects:
+                raise
+        if nobjects is not None and len(results) == nobjects:
+            break
+    f.close()
+    return tuple(results)
+
+def unpickle1(filename):
+    """Convenience function, returns the first unpickled object directly."""
+    return unpickle(filename, 1)[0]
+
+def pickle(filename, *objects):
+    """Pickle that can handle numpy arrays."""
+    f = open(filename, 'wb')
+    for o in objects:
+        if isinstance(o, np.ndarray):
+            cPickle.dump(o.dtype, f)
+            o.tofile(f)
+        else:
+            cPickle.dump(o, f)
+    f.close()
