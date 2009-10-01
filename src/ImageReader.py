@@ -119,7 +119,8 @@ class ImageReader(object):
                 if p.image_url_prepend:
                     fullurl = os.path.join(p.image_url_prepend, url)
                 else:
-                    fullurl = url
+                    # if no prepend is provided, compute the path relative to the properties file.
+                    fullurl = os.path.join(os.path.dirname(p._filename), url)
                 print 'Opening image:',fullurl
                 streams.append(open(fullurl, "rb"))
                 
