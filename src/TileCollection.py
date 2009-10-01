@@ -131,7 +131,7 @@ class TileLoader(threading.Thread):
                         wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
                 except Exception, e:
                     import sys
-                    sys.stderr.write('ERROR FETCHING TILE!\n%s, %s\n'%(e, ImageTools.Image.ID))
+                    sys.stderr.write('ERROR FETCHING TILE!\n%s\n'%(e))
 
     def abort(self):
         self._want_abort = True

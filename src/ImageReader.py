@@ -2,6 +2,7 @@ import wx
 import Image
 import numpy
 import urllib2
+import os.path
 from array import array
 from cStringIO import StringIO
 from Properties import Properties
@@ -115,8 +116,12 @@ class ImageReader(object):
                 except:
                     raise 'Image not found: "'+fullurl+'"'
             else:  # Default: local file protocol
-                print 'Opening image:',url
-                streams.append(open(url, "rb"))
+                if p.image_url_prepend:
+                    fullurl = os.path.join(p.image_url_prepend, url)
+                else:
+                    fullurl = url
+                print 'Opening image:',fullurl
+                streams.append(open(fullurl, "rb"))
                 
         for stream in streams:
             data.append(stream.read())

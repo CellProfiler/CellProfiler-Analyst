@@ -109,7 +109,8 @@ class ClassifierGUI(wx.Frame):
         # fetch objects interface
         self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=wx.NewId(), value='20', size=(30,-1))
         self.obClassChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), choices=['random'])
-        self.filterChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), choices=['experiment', 'image']+p._filters_ordered+p._groups_ordered)
+        self.filterChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), 
+                                      choices=['experiment', 'image']+p._filters_ordered+p._groups_ordered)#+['*create new filter*'])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, wx.NewId(), 'Fetch!')
 
@@ -652,12 +653,7 @@ class ClassifierGUI(wx.Frame):
         
     def OnMapChannels(self, evt):
         ''' Responds to selection from the color mapping menus. '''
-        # TODO: For some reason, typing Command+Q on an ImageViewer
-        #    triggers wx.EVT_MENU here, which throws an exception
-        try:
-            (chIdx,color) = self.chMapById[evt.GetId()]
-        except Exception:
-            return
+        (chIdx,color) = self.chMapById[evt.GetId()]
         self.chMap[chIdx] = color
         if color.lower() != 'none':
             self.toggleChMap[chIdx] = color
@@ -967,6 +963,18 @@ class ClassifierGUI(wx.Frame):
         elif filter == 'image' or filter in p._groups_ordered:
             self.SetupFetchFromGroupSizer(filter)
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
+        elif filter == '*create new filter*':
+            self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
+            from ColumnFilter import ColumnFilterDialog
+            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(550,80))
+            if cff.ShowModal()==wx.OK:
+                p._filters_ordered += [str(cff.GetFilter())]
+                p._filters[str(cff.GetFilter())] = cff.GetFilter().to_sql()
+                items = self.filterChoice.GetItems()
+                self.filterChoice.SetItems(items[:-1]+[str(cff.GetFilter())]+items[-1:])
+                self.filterChoice.SetSelection(len(items)-1)
+            cff.Destroy()
+
         self.fetch_panel.Layout()
         self.fetch_panel.Refresh()
     
