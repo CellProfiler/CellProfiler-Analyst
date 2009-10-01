@@ -3,6 +3,7 @@
 from Singleton import *
 from StringIO import StringIO
 import re
+import os
 
 # TODO: check type of all field values
 string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
@@ -209,6 +210,10 @@ class Properties(Singleton):
                     'PROPERTIES ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR "db_sql_file" OR "db_sqlite_file". See the README.'
             
             if field_defined('db_sqlite_file'):
+                if not os.path.isabs(self.db_sqlite_file):
+                    # Make relative paths relative to the props file location
+                    # TODO: This sholdn't be permanent
+                    self.db_sqlite_file = os.path.join(os.path.dirname(self._filename), self.db_sqlite_file)                
                 try:
                     f = open(self.db_sqlite_file, 'r')
                     f.close()
@@ -216,6 +221,10 @@ class Properties(Singleton):
                     raise Exception, 'PROPERTIES ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file)
             
             if field_defined('db_sql_file'):
+                if not os.path.isabs(self.db_sql_file):
+                    # Make relative paths relative to the props file location
+                    # TODO: This sholdn't be permanent
+                    self.db_sql_file = os.path.join(os.path.dirname(self._filename), self.db_sql_file)
                 try:
                     f = open(self.db_sql_file, 'r')
                     f.close()
@@ -227,6 +236,11 @@ class Properties(Singleton):
             else:        
                 for field in ['image_csv_file','object_csv_file']:
                     if field_defined(field):
+                        if not os.path.isabs(self.__dict__[field]):
+                            # Make relative paths relative to the props file location
+                            # TODO: This sholdn't be permanent
+                            self.__dict__[field] = os.path.join(os.path.dirname(self._filename), self.__dict__[field])
+
                         try:
                             f = open(self.__dict__[field], 'r')
                             f.close()
@@ -277,6 +291,10 @@ class Properties(Singleton):
             assert len(self.object_name)==2, 'PROPERTIES ERROR (object_name): Found %d names instead of 2! This field should contain the singular and plural name of the objects you are classifying. (Example: object_name=cell,cells)'%(len(self.object_name))
 
         if field_defined('training_set'):
+            if not os.path.isabs(self.training_set):
+                # Make relative paths relative to the props file location
+                # TODO: This sholdn't be permanent
+                self.training_set = os.path.join(os.path.dirname(self._filename), self.training_set)
             try:
                 f = open(self.training_set)
                 f.close()
@@ -326,10 +344,11 @@ if __name__ == "__main__":
         filename = sys.argv[1]
     else:
 #        filename = "../Properties/nirht_test.properties"
-        filename = '/Users/afraser//Desktop/test.properties'
+        filename = '/Users/afraser/Desktop/example.properties'
     
     p = Properties.getInstance()
     p.LoadFile(filename)
+    print p
 #    p.newfield = 'chickenpox' # will be appended
 #    p.newlistfield = ['','asdf','',1243,None]
 #    p._hiddenfield = 'asdf'   # won't be written
