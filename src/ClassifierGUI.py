@@ -19,14 +19,17 @@ import FastGentleBoostingMulticlass
 import ImageTools
 import MulticlassSQL
 import PolyaFit
+from util import get_icon
+
 import numpy as np
-import os, os.path
+import os
 import wx
 from time import time
 try:
     from version import VERSION as __version__
 except ImportError:
     __version__ = 'unknown revision'
+    
     
 ID_LOAD_TS = wx.NewId()
 ID_SAVE_TS = wx.NewId()
@@ -37,9 +40,9 @@ ID_DATA_TABLE = wx.NewId()
 ID_HELP = wx.NewId()
 
 class ClassifierGUI(wx.Frame):
-
-    """GUI Interface and functionality for the Classifier."""
-
+    """
+    GUI Interface and functionality for the Classifier.
+    """
     def __init__(self, properties=None, parent=None):
         
         if properties is not None:
@@ -61,6 +64,8 @@ class ClassifierGUI(wx.Frame):
             exit()
 
         wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600))
+        self.tbicon = wx.TaskBarIcon()
+        self.tbicon.SetIcon(get_icon())
         
         self.pmb = None
         self.worker = None
