@@ -6,8 +6,9 @@ it is not used by the CPA application itself.
 
 """
 
-import numpy as np
+import operator
 import cPickle
+import numpy as np
 
 def bin_centers(x):
     """
@@ -50,15 +51,38 @@ def heatmap(datax, datay, resolutionx=200, resolutiony=200, logscale=False,
         out[out>0] = np.log(out[out>0]+1) / np.log(10.0)
     return (out , [minx, maxx, miny, maxy])
 
-def unpickle(filename, nobjects=None):
-    """Unpickle that can handle numpy arrays.  NOBJECTS is the number
-    of objects to unpickle.  If None, all objects in the file will be
-    unpickled."""
-    f = open(filename)
+def unpickle(file_or_filename, nobjects=None, new=True):
+    """
+    Unpickle that can handle numpy arrays.  
+    
+    NOBJECTS is the number of objects to unpickle.  If None, all
+    objects in the file will be unpickled.
+
+    new=False => If an object read is a numpy dtype object, a (raw)
+    numpy array of that type is assumed to immediately follow the
+    dtype objects.
+
+    new=True => If an object read is a numpy dtype object, a (pickled)
+    shape tuple and then a (raw) numpy array of that type are assumed to
+    immediately follow the dtype objects.
+    """
+    if isinstance(file_or_filename, file):
+        f = file_or_filename
+    elif file_or_filename[-3:] == ".gz":
+        import gzip
+        f = gzip.open(file_or_filename)
+    else:
+        f = open(file_or_filename)
     def unpickle1():
         o = cPickle.load(f)
         if isinstance(o, np.dtype):
-            return np.fromfile(f, dtype=o)
+            if new:
+                shape = cPickle.load(f)
+            a = np.fromfile(f, dtype=o, count=reduce(operator.mul, shape))
+            if new:
+                return a.reshape(shape)
+            else:
+                return a
         else:
             return o
     results = []
@@ -72,20 +96,34 @@ def unpickle(filename, nobjects=None):
                 raise
         if nobjects is not None and len(results) == nobjects:
             break
-    f.close()
+    if not isinstance(file_or_filename, file):
+        f.close()
     return tuple(results)
 
 def unpickle1(filename):
     """Convenience function, returns the first unpickled object directly."""
     return unpickle(filename, 1)[0]
 
-def pickle(filename, *objects):
-    """Pickle that can handle numpy arrays."""
-    f = open(filename, 'wb')
+def pickle(file_or_filename, *objects):
+    """
+    Pickle that can handle numpy arrays.
+
+    When encountering a numpy.ndarray in OBJECTS, first pickle the
+    dtype, then the shape, then write the raw array data.
+    """
+    if isinstance(file_or_filename, file):
+        f = file_or_filename
+    elif file_or_filename[-3:] == ".gz":
+        import gzip
+        f = gzip.open(file_or_filename, 'wb')
+    else:
+        f = open(file_or_filename, 'wb')
     for o in objects:
         if isinstance(o, np.ndarray):
             cPickle.dump(o.dtype, f)
+            cPickle.dump(o.shape, f)
             o.tofile(f)
         else:
             cPickle.dump(o, f)
-    f.close()
+    if not isinstance(file_or_filename, file):
+        f.close()
