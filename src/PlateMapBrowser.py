@@ -94,6 +94,8 @@ class PlateMapBrowser(wx.Frame):
     '''
     def __init__(self, parent, size=(800,-1)):
         wx.Frame.__init__(self, parent, -1, size=size)
+        assert (p.well_id is not None and p.plate_id is not None), \
+            'PlateMapBrowser requires the well_id and plate_id columns to be defined in your properties file.'
 
         self.link_cols = {} # link_cols[table] = columns that link this table to the per-image table
 
