@@ -65,7 +65,7 @@ class ClassifierGUI(wx.Frame):
 
         wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600))
         self.tbicon = wx.TaskBarIcon()
-        self.tbicon.SetIcon(get_icon())
+        self.tbicon.SetIcon(get_icon(), 'CellProfiler Analyst 2.0')
         
         self.pmb = None
         self.worker = None

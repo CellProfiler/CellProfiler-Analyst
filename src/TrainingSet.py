@@ -5,7 +5,7 @@ import base64
 import zlib
 import wx
 
-from DBConnect import DBConnect
+from DBConnect import *
 from Singleton import Singleton
 
 db = DBConnect.getInstance()
@@ -75,7 +75,7 @@ class TrainingSet:
                 label = l.strip().split(' ')[0]
                 if (label == "label"): continue
                 
-                obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:]])
+                obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:len(object_key_columns())+1]])
                 labelDict[label] = labelDict.get(label, []) + [obKey]
 
             except:
