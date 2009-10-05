@@ -1,6 +1,7 @@
 from DataModel import *
 from DBConnect import DBConnect
 from Properties import Properties
+import ImageTools
 import wx
 import numpy as np
 import matplotlib.cm
@@ -11,8 +12,9 @@ abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 ROUNDED  = 'rounded'
 CIRCLE   = 'circle'
 SQUARE   = 'square'
+IMAGE    = 'image'
 
-all_well_shapes = [SQUARE, ROUNDED, CIRCLE]
+all_well_shapes = [SQUARE, ROUNDED, CIRCLE, IMAGE]
 
 class PlateMapPanel(wx.Panel):
     '''
@@ -128,17 +130,6 @@ class PlateMapPanel(wx.Panel):
             self.well_labels = np.array(labels)
         self.well_labels = self.well_labels.reshape(self.data.shape)
         
-    def GetWellLabelAtCoord(self, x, y):
-        '''
-        returns the well label at the given x,y position 
-        '''
-        loc = self.GetWellAtCoord(x,y) 
-        if self.well_labels is not None and loc is not None:
-            row, col = loc
-            return self.well_labels[row,col]
-        else:
-            return None
-        
     def SetWellShape(self, wellshape):
         '''
         wellshape in PlatMapPanel.ROUNDED,
@@ -180,6 +171,17 @@ class PlateMapPanel(wx.Panel):
         else:
             return None
         
+    def GetWellLabelAtCoord(self, x, y):
+        '''
+        returns the well label at the given x,y position 
+        '''
+        loc = self.GetWellAtCoord(x,y) 
+        if self.well_labels is not None and loc is not None:
+            row, col = loc
+            return self.well_labels[row,col]
+        else:
+            return None
+        
     def OnPaint(self, evt):
         dc = wx.PaintDC(self)
         dc.Clear()
@@ -210,7 +212,14 @@ class PlateMapPanel(wx.Panel):
             font.SetPixelSize((3,6))
         wtext, htext = font.GetPixelSize()[0]*2, font.GetPixelSize()[1]
         dc.SetFont(font)
-            
+
+        if self.wellshape == IMAGE:
+            bmp = {}
+            db = DBConnect.getInstance()
+            wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, p.image_id, p.image_table, p.well_id))
+            imgs = {}
+            for well, im in wells_and_images:
+                imgs[well] = (im, )
 
         py = self.yo
         i=0
@@ -232,16 +241,27 @@ class PlateMapPanel(wx.Panel):
                     else:
                         dc.SetPen(wx.Pen("BLACK",0.5))
                     color = np.array(self.colormap(self.data_scaled[y-1][x-1])[:3]) * 255
+                    # NaNs get no color
                     if np.isnan(self.data[y-1][x-1]):
                         dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                     else:
                         dc.SetBrush(wx.Brush(color))
+                    # Draw Well Shape
                     if self.wellshape == ROUNDED:
                         dc.DrawRoundedRectangle(px+1, py+1, r*2, r*2, r*0.75)
                     elif self.wellshape == CIRCLE:
                         dc.DrawCircle(px+r+1, py+r+1, r)
                     elif self.wellshape == SQUARE:
                         dc.DrawRectangle(px+1, py+1, r*2, r*2)
+                    elif self.wellshape == IMAGE:
+                        p.image_buffer_size = int(p.plate_type)
+                        well = self.GetWellLabelAtCoord(px+r, py+r)
+                        ims = ImageTools.FetchImage(imgs[well])
+                        size = ims[0].shape
+                        scale = r*2./max(size)
+                        bmp[well] = ImageTools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
+                        dc.DrawBitmap(bmp[well], px+1, py+1)
+                    # Draw X
                     if np.isnan(self.data[y-1][x-1]):
                         dc.SetPen(wx.Pen("GRAY",1))
                         dc.DrawLine(px+3, py+3, px+r*2-2, py+r*2-2)
