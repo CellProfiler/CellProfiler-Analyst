@@ -256,11 +256,12 @@ class PlateMapPanel(wx.Panel):
                     elif self.wellshape == IMAGE:
                         p.image_buffer_size = int(p.plate_type)
                         well = self.GetWellLabelAtCoord(px+r, py+r)
-                        ims = ImageTools.FetchImage(imgs[well])
-                        size = ims[0].shape
-                        scale = r*2./max(size)
-                        bmp[well] = ImageTools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
-                        dc.DrawBitmap(bmp[well], px+1, py+1)
+                        if imgs.has_key(well):
+                            ims = ImageTools.FetchImage(imgs[well])
+                            size = ims[0].shape
+                            scale = r*2./max(size)
+                            bmp[well] = ImageTools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
+                            dc.DrawBitmap(bmp[well], px+1, py+1)
                     # Draw X
                     if np.isnan(self.data[y-1][x-1]):
                         dc.SetPen(wx.Pen("GRAY",1))
