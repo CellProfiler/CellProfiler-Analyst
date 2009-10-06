@@ -197,7 +197,7 @@ class PlateMapBrowser(wx.Frame):
         self.aggregationMethodsChoice.Bind(wx.EVT_CHOICE, self.OnSelectAggregationMethod)
         self.colorMapsChoice.Bind(wx.EVT_CHOICE, self.OnSelectColorMap)
         self.numberOfPlatesTE.Bind(wx.EVT_TEXT_ENTER, self.OnEnterNumberOfPlates)
-        self.wellShapeChoice.Bind(wx.EVT_CHOICE, lambda(evt): [plateMap.SetWellShape(self.wellShapeChoice.GetStringSelection()) for plateMap in self.plateMaps])
+        self.wellShapeChoice.Bind(wx.EVT_CHOICE, self.OnSelectWellShape)
         
         global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(self.measurementsChoice.GetStringSelection(), 
                                                                        self.measurementsChoice.GetStringSelection(), 
@@ -391,6 +391,18 @@ class PlateMapBrowser(wx.Frame):
         self.colorBar.SetMap(map)
         for plateMap in self.plateMaps:
             plateMap.SetColorMap(map)
+            
+            
+    def OnSelectWellShape(self, evt):
+        sel = self.wellShapeChoice.GetStringSelection()
+        if sel.lower() == 'image':
+            dlg = wx.MessageDialog(self, 'This mode will render each well as a shrunken image loaded from that well. This feature is currently VERY SLOW since it requires loading hundreds of full sized images. Are you sure you want to continue?',
+                                   'Load all images?', wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+            if dlg.ShowModal() != wx.ID_OK:
+                self.wellShapeChoice.SetSelection(0)
+                return
+        for platemap in self.plateMaps:
+            platemap.SetWellShape(sel)
             
             
     def OnEnterNumberOfPlates(self, evt):
