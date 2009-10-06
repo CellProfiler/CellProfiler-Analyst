@@ -205,27 +205,23 @@ class PlateMapBrowser(wx.Frame):
         self.colorBar.SetGlobalExtents(global_extents)
         self.AddPlateMap()
         self.UpdatePlateMaps()
-        
-
+    
     def OnLoadCSV(self, evt):
         dlg = wx.FileDialog(self, "Select a comma-separated-values file to load...",
                             defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             self.LoadCSV(filename)
-    
             
     def LoadCSV(self, filename):
         countsTable = os.path.splitext(os.path.split(filename)[1])[0]
         if db.CreateTempTableFromCSV(filename, countsTable):
             self.AddTableChoice(countsTable)
             
-            
     def AddTableChoice(self, table):
         sel = self.sourceChoice.GetSelection()
         self.sourceChoice.SetItems(self.sourceChoice.GetItems()+[table])
         self.sourceChoice.Select(sel)
-    
             
     def AddPlateMap(self, plateIndex=0):
         '''
@@ -263,7 +259,6 @@ class PlateMapBrowser(wx.Frame):
         
         self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND, wx.ALIGN_CENTER)
             
-    
     def UpdatePlateMaps(self):
         measurement = self.measurementsChoice.GetStringSelection()
         table       = self.sourceChoice.GetStringSelection()
@@ -342,13 +337,11 @@ class PlateMapBrowser(wx.Frame):
                              clip_interval=self.colorBar.GetLocalInterval(), 
                              clip_mode=self.colorBar.GetClipMode())
         
-        
     def GetNumericColumnsFromTable(self, table):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
-        
         
     def OnSelectDataSource(self, evt):
         '''
@@ -362,29 +355,22 @@ class PlateMapBrowser(wx.Frame):
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
-        
     def OnSelectPlate(self, evt):
         ''' Handles the selection of a plate from the plate choice box. '''
         self.UpdatePlateMaps()
         
-        
     def OnSelectMeasurement(self, evt):
-        ''' Handles the selection of a new measurement to plot from a choice box. '''
-#        aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
-        measurement = self.measurementsChoice.GetStringSelection()
-        table       = self.sourceChoice.GetStringSelection()
+        ''' Handles the selection of a measurement to plot from a choice box. '''
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
-        
         
     def OnSelectAggregationMethod(self, evt):
         ''' Handles the selection of an aggregation method from the choice box. '''
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
-        
     def OnSelectColorMap(self, evt):
-        ''' Handles the selection of a new color map from a choice box. '''
+        ''' Handles the selection of a color map from a choice box. '''
         map = self.colorMapsChoice.GetStringSelection()
         cm = matplotlib.cm.get_cmap(map)
         
@@ -392,8 +378,8 @@ class PlateMapBrowser(wx.Frame):
         for plateMap in self.plateMaps:
             plateMap.SetColorMap(map)
             
-            
     def OnSelectWellShape(self, evt):
+        ''' Handles the selection of a well shape from a choice box. '''
         sel = self.wellShapeChoice.GetStringSelection()
         if sel.lower() == 'image':
             dlg = wx.MessageDialog(self, 'This mode will render each well as a shrunken image loaded from that well. This feature is currently VERY SLOW since it requires loading hundreds of full sized images. Are you sure you want to continue?',
@@ -403,7 +389,6 @@ class PlateMapBrowser(wx.Frame):
                 return
         for platemap in self.plateMaps:
             platemap.SetWellShape(sel)
-            
             
     def OnEnterNumberOfPlates(self, evt):
         ''' Handles the entry of a plates to view from a choice box. '''
@@ -437,7 +422,6 @@ class PlateMapBrowser(wx.Frame):
             self.AddPlateMap(plateIndex)
         self.UpdatePlateMaps()
         self.plateMapSizer.Layout()
-        
         
     def GetLinkingColumnsForTable(self, table):
         ''' Returns the column(s) that link this table to the per_image table. '''
@@ -498,7 +482,6 @@ def FormatPlateMapData(wellsAndVals):
             data[row,col] = float(val)
     return data
     
-
 
 
 def LoadProperties():
