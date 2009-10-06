@@ -17,9 +17,10 @@
    I. About Classifier 2.1 Beta
   II. Requirements
  III. Getting Started
-  IV. Other Features
-   V. New Features in 2.1
-  VI. Known Issues
+  IV. PlateMapBrowser
+   V. Other Features
+  VI. New Features in 2.1
+ VII. Known Issues
 ---------------------------------
 
 
@@ -126,7 +127,56 @@ the posterior is computed for each group independently.
 
 
 ---------------------------------
-  IV. Other Features
+ IV. PlateMapBrowser
+---------------------------------
+PlateMapBrowser is a tool for browsing image-based data from 96, 384, and 1536  
+well plates (5600 spot microarrays are also supported). The database tables 
+and images must be in the same form described above. PlateMapBrowser can be 
+launched from the tools menu of Classifier.
+
+In the left hand column, you will find many choice boxes. When you select a
+choice from any box, the plate view on the right will be updated. Here is a 
+description of what each input is for from top to bottom:
+
+Data source: Database tables are displayed here. Select the table you wish to
+  visualize measurements from.
+Measurement: Numeric columns from the selected table are displayed here. Select 
+  the column you wish to visualize.
+Aggregation method: Measurements must be aggregated to a single number for each 
+  well so they may be represented by a color. For example, if one is viewing a 
+  cell_count column in their per_image table, one might like to sum the counts 
+  from each image within a well to get the total cell count per-well. For this 
+  case the "sum" item should be selected.
+Color map: Each value that is computed for the wells is mapped to a color via a 
+  color map. The currently selected color map is represented in a bar beneath 
+  the plate maps.
+Well shape: Mostly for presentation purposes, you may select from different 
+  well shapes.
+Number of plates: Multiple plates may be viewed at once by typing a number here 
+  and pressing ENTER.
+
+The color bar axis at the bottom of the window shows how aggregated values of 
+the selected measurement column map to colors in the plate map view. The 
+numbers at the far left and right of the axis represent the min and max values 
+found across all plates. The value range of the current plate is represented by 
+where the color bar stops and a thin black line begins. One may also rescale or 
+clip the color bar by dragging the handles found at the far ends of the bar. To 
+change the mode from rescaling to clipping, right click on the bar and select 
+the "value bracketing: CLIP" choice. This can be reversed in the same manner. 
+Likewise, the clipping handles can be reset to the ends of the axis by right 
+clicking and selecting "reset sliders."
+
+The rest of the window displays the plate map view(s). Above each is a choice 
+box that controls which plate is being represented. Holding the cursor over a 
+particular well will cause a tooltip to display with the aggregate value at 
+that well. Right-clickong on a well will display a list of images numbers of 
+the images taken in that well. Clicking on a number will open that image in the 
+ImageViewer. Double-clicking on a well will open all images from that well at 
+once in ImageViewers.
+
+
+---------------------------------
+  V. Other Features
 ---------------------------------
 * Training sets may be saved and loaded from file so you can quit, restart and
   resume training.
@@ -155,7 +205,7 @@ the posterior is computed for each group independently.
 
 
 ---------------------------------
-  V. New Features in 2.1
+ VI. New Features in 2.1
 ---------------------------------
 * Classifier now works on Windows!
 * When fetching thumbnails, you may now select "image" from the filter combo-

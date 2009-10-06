@@ -3,6 +3,7 @@ from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from PlateMapPanel import *
 import ImageTools
 import Properties
+import logging
 import numpy as np
 import os
 import matplotlib.cm
@@ -136,21 +137,21 @@ class PlateMapBrowser(wx.Frame):
         dataSourceSizer.Add(self.sourceChoice)
                 
         dataSourceSizer.AddSpacer((-1,10))
-        dataSourceSizer.Add(wx.StaticText(self, label='Measurements:'))
+        dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = self.GetNumericColumnsFromTable(p.image_table)
         self.measurementsChoice = wx.Choice(self, choices=measurements, size=(132,-1))
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         
-        groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data Aggregation:'), wx.VERTICAL)
+        groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
         aggregation = ['average', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
         self.aggregationMethodsChoice = wx.Choice(self, choices=aggregation)
         self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
         
-        viewSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='View Options:'), wx.VERTICAL)
-        viewSizer.Add(wx.StaticText(self, label='Color Map:'))
+        viewSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='View options:'), wx.VERTICAL)
+        viewSizer.Add(wx.StaticText(self, label='Color map:'))
         maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
         maps.sort()
         self.colorMapsChoice = wx.Choice(self, choices=maps)
@@ -158,16 +159,15 @@ class PlateMapBrowser(wx.Frame):
         viewSizer.Add(self.colorMapsChoice)
         
         viewSizer.AddSpacer((-1,10))
-        viewSizer.Add(wx.StaticText(self, label='Well Shape:'))
+        viewSizer.Add(wx.StaticText(self, label='Well shape:'))
         self.wellShapeChoice = wx.Choice(self, choices=all_well_shapes)
         self.wellShapeChoice.Select(0)
         viewSizer.Add(self.wellShapeChoice)
         
         viewSizer.AddSpacer((-1,10))
-        viewSizer.Add(wx.StaticText(self, label='Number of Plates:'))
-        self.numberOfPlatesChoice = wx.Choice(self, choices=['1','2','4','6','9','12','16'])
-        self.numberOfPlatesChoice.Select(0)
-        viewSizer.Add(self.numberOfPlatesChoice)
+        viewSizer.Add(wx.StaticText(self, label='Number of plates:'))
+        self.numberOfPlatesTE = wx.TextCtrl(self, -1, '1', style=wx.TE_PROCESS_ENTER)
+        viewSizer.Add(self.numberOfPlatesTE)
         
         controlSizer = wx.BoxSizer(wx.VERTICAL)
         controlSizer.Add(dataSourceSizer, 0, wx.EXPAND)
@@ -196,7 +196,7 @@ class PlateMapBrowser(wx.Frame):
         self.measurementsChoice.Bind(wx.EVT_CHOICE, self.OnSelectMeasurement)
         self.aggregationMethodsChoice.Bind(wx.EVT_CHOICE, self.OnSelectAggregationMethod)
         self.colorMapsChoice.Bind(wx.EVT_CHOICE, self.OnSelectColorMap)
-        self.numberOfPlatesChoice.Bind(wx.EVT_CHOICE, self.OnSelectNumberOfPlates)
+        self.numberOfPlatesTE.Bind(wx.EVT_TEXT_ENTER, self.OnEnterNumberOfPlates)
         self.wellShapeChoice.Bind(wx.EVT_CHOICE, lambda(evt): [plateMap.SetWellShape(self.wellShapeChoice.GetStringSelection()) for plateMap in self.plateMaps])
         
         global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(self.measurementsChoice.GetStringSelection(), 
@@ -393,9 +393,21 @@ class PlateMapBrowser(wx.Frame):
             plateMap.SetColorMap(map)
             
             
-    def OnSelectNumberOfPlates(self, evt):
-        ''' Handles the selection of predefined # of plates to view from a choice box. '''
-        nPlates = int(self.numberOfPlatesChoice.GetStringSelection())
+    def OnEnterNumberOfPlates(self, evt):
+        ''' Handles the entry of a plates to view from a choice box. '''
+        try:
+            nPlates = int(self.numberOfPlatesTE.GetValue())
+        except:
+            logging.warn('Invalid # of plates! Please enter a number between 1 and 100')
+            return
+        if nPlates>100:
+            logging.warn('Too many plates! Please enter a number between 1 and 100')
+            return
+        if nPlates<1:
+            logging.warn('You must display at least 1 plate.')
+            self.numberOfPlatesTE.SetValue('1')
+            nPlates = 1
+        
         # Record the indices of the plates currently selected.
         # Pad the list with sequential plate indices then crop to the new number of plates.
         currentPlates = [plateChoice.GetSelection() for plateChoice in self.plateMapChoices]
@@ -405,33 +417,15 @@ class PlateMapBrowser(wx.Frame):
         self.plateMaps = []
         self.plateMapChoices = []
         # Restructure the plateMapSizer appropriately
-        if nPlates == 1:
-            self.plateMapSizer.SetRows(1)
-            self.plateMapSizer.SetCols(1)
-        elif nPlates == 2:
-            self.plateMapSizer.SetRows(2)
-            self.plateMapSizer.SetCols(1)
-        elif nPlates == 4:
-            self.plateMapSizer.SetRows(2)
-            self.plateMapSizer.SetCols(2)
-        elif nPlates == 6:
-            self.plateMapSizer.SetRows(3)
-            self.plateMapSizer.SetCols(2)
-        elif nPlates == 9:
-            self.plateMapSizer.SetRows(3)
-            self.plateMapSizer.SetCols(3)
-        elif nPlates == 12:
-            self.plateMapSizer.SetRows(4)
-            self.plateMapSizer.SetCols(3)
-        elif nPlates == 16:
-            self.plateMapSizer.SetRows(4)
-            self.plateMapSizer.SetCols(4)
-        
+        rows = cols = np.ceil(np.sqrt(nPlates))
+        self.plateMapSizer.SetRows(rows)
+        self.plateMapSizer.SetCols(cols)
+        # Add the plate maps
         for plateIndex in currentPlates:
             self.AddPlateMap(plateIndex)
         self.UpdatePlateMaps()
-            
         self.plateMapSizer.Layout()
+        
         
     def GetLinkingColumnsForTable(self, table):
         ''' Returns the column(s) that link this table to the per_image table. '''
