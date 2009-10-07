@@ -336,7 +336,7 @@ class DBConnect(Singleton):
         try:
             if verbose and not silent: 
                 print '[%s] %s'%(connID, query)
-            if p.db_type=='sqlite':
+            if p.db_type.lower()=='sqlite':
                 if args:
                     raise 'Can\'t pass args to sqlite execute!'
                 self.cursors[connID].execute(query)
@@ -533,6 +533,15 @@ class DBConnect(Singleton):
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
     
     
+    def GetTableNames(self):
+        if p.db_type.lower()=='mysql':
+            res = self.execute('SHOW TABLES')
+            return [t[0] for t in res]
+        elif p.db_type.lower()=='sqlite':
+            res = self.execute('SELECT name FROM sqlite_master WHERE type="table" ORDER BY name')
+            return [t[0] for t in res]
+
+    
     def GetColumnNames(self, table):
         '''  Returns a list of the column names for the specified table. '''
         # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
@@ -587,7 +596,8 @@ class DBConnect(Singleton):
         query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
         data = self.execute(query, silent=True)
         if len(data) == 0:
-            print 'No data for obKey:',obKey
+            logging.error('No data for obKey: %s'%str(obKey))
+            return None
         return np.array(data[0])
     
     
