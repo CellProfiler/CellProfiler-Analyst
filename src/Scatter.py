@@ -28,6 +28,7 @@ class DataSourcePanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.table_choice = wx.Choice(self, -1, choices=db.GetTableNames())
+        self.table_choice.Select(0)
         self.x_choice = wx.Choice(self, -1)
         self.y_choice = wx.Choice(self, -1)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
@@ -68,13 +69,19 @@ class DataSourcePanel(wx.Panel):
         
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
-        fieldnames = db.GetColumnNames(tablename)
+        fieldnames = self.get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
         self.x_choice.SetSelection(0)
         self.y_choice.Clear()
         self.y_choice.AppendItems(fieldnames)
-        self.y_choice.SetSelection(0)        
+        self.y_choice.SetSelection(0)
+
+    def get_numeric_columns_from_table(self, table):
+        ''' Fetches names of numeric columns for the given table. '''
+        measurements = db.GetColumnNames(table)
+        types = db.GetColumnTypes(table)
+        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
     def on_update_pressed(self, evt):        
         points = self.loadpoints(self.table_choice.GetStringSelection(),
