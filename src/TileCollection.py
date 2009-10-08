@@ -152,7 +152,7 @@ if __name__ == "__main__":
     p = Properties.getInstance()
     p.LoadFile('../properties/nirht_test.properties')
     db = DBConnect.getInstance()
-    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+    db.connect()
     dm = DataModel.getInstance()
     dm.PopulateModel()
     

@@ -82,13 +82,11 @@ class TestDBConnect(unittest.TestCase):
 
     def test_Connect_Disconnect(self):
         self.setup_mysql()
-        self.db.Connect(db_host=self.p.db_host, db_user=self.p.db_user,
-                        db_passwd=self.p.db_passwd, db_name=self.p.db_name)
+        self.db.connect()
         assert len(self.db.connections)==1
         assert len(self.db.cursors)==1
         assert len(self.db.connectionInfo)==1
-        self.db.Connect(db_host=self.p.db_host, db_user=self.p.db_user,
-                        db_passwd=self.p.db_passwd, db_name=self.p.db_name)
+        self.db.connect()
         assert len(self.db.connections)==1
         assert len(self.db.cursors)==1
         assert len(self.db.connectionInfo)==1
@@ -117,15 +115,13 @@ class TestDBConnect(unittest.TestCase):
         
     def test_Commit(self):
         self.setup_mysql()
-        self.db.Connect(db_host=self.p.db_host, db_user=self.p.db_user,
-                        db_passwd=self.p.db_passwd, db_name=self.p.db_name)
+        self.db.connect()
         self.db.execute('DROP TABLE IF EXISTS temp_test')
         self.db.execute('CREATE TABLE temp_test (id int(11) default NULL)')
         self.db.execute('INSERT INTO temp_test values(1)')
         self.db.Commit()
         self.db.Disconnect()
-        self.db.Connect(db_host=self.p.db_host, db_user=self.p.db_user,
-                        db_passwd=self.p.db_passwd, db_name=self.p.db_name)
+        self.db.connect()
         res = self.db.execute('SELECT id FROM temp_test WHERE id=1')
         assert res == [(1L,)]
         self.db.execute('DROP TABLE temp_test')

@@ -115,7 +115,7 @@ class DataSourcePanel(wx.Panel):
             os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
             p.LoadFile(filename)
             self.importpathtext.SetLabel(filename)
-            db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+            db.connect()
             table_list = db.execute('SHOW TABLES;')
             table_list = [t[0] for t in table_list]
             print table_list
@@ -129,7 +129,7 @@ class DataSourcePanel(wx.Panel):
     def selecttable(self,event):
         tablename =  event.GetString()
         #ok now fetch the list of fields from the database
-        db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)        
+        db.connect()
         fieldnames = db.execute("SHOW COLUMNS FROM %s;"%(tablename))
         fieldnames = [t[0] for t in fieldnames]
         self.field1dropdown.Clear()

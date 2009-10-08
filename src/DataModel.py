@@ -247,7 +247,7 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/2007_10_19_Gilliland_LeukemiaScreens02_12_Jan_09_Combo.properties')
 #    p.LoadFile('../properties/2007_11_07_Hepatotoxicity_1_2008_10_23_GHAIII_Day9_8Fb_repeat_LoG_Classifier2.0.properties')
     db = DBConnect.getInstance()
-    db.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+    db.connect()
     d = DataModel.getInstance()
     d.PopulateModel()
     

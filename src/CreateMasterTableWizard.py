@@ -77,7 +77,7 @@ class Page1(wiz.WizardPageSimple):
         db = DBConnect.getInstance()
         try:
             db.Disconnect()
-            db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd)
+            db.connect()
             self.btnTest.SetLabel('Connection OK')
             wx.FindWindowById(wx.ID_FORWARD).Enable()
         except:
@@ -89,7 +89,7 @@ class Page1(wiz.WizardPageSimple):
         db = DBConnect.getInstance()
         try:
             db.Disconnect()
-            db.Connect(db_host=p.db_host, db_name=p.db_name, db_user=p.db_user, db_passwd=p.db_passwd)
+            db.connect()
             self.btnTest.SetLabel('Connection OK')
             wx.FindWindowById(wx.ID_FORWARD).Enable()
             self.Parent.inDB = self.Parent.outDB = p.db_name

@@ -149,7 +149,7 @@ class DBConnect(Singleton):
                             for (key, val) in self.__dict__.items()])
 
 
-    def Connect(self, db_host, db_user, db_passwd, db_name):
+    def connect(self):
         '''
         Attempts to create a new connection to the specified database using
           the current thread name as a connection ID.
@@ -161,22 +161,24 @@ class DBConnect(Singleton):
         
         # If this connection ID already exists print a warning
         if connID in self.connections.keys():
-            if self.connectionInfo[connID] == (db_host, db_user, db_passwd, db_name):
-                print 'WARNING <DBConnect.Connect>: A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(db_name, db_user, db_host, connID)
+            if self.connectionInfo[connID] == (p.db_host, p.db_user, 
+                                               p.db_passwd, p.db_name):
+                logging.warn('A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
             else:
-                raise DBException, 'A connection already exists for this thread (%s). Close this connection first.'%(connID)
+                raise DBException, 'A connection already exists for this thread (%s). Close this connection first.'%(connID,)
 
         # MySQL database: connect normally
         if p.db_type.lower() == 'mysql':
             try:
-                conn = MySQLdb.connect(host=db_host, db=db_name, user=db_user, passwd=db_passwd)
+                conn = MySQLdb.connect(host=p.db_host, db=p.db_name, 
+                                       user=p.db_user, passwd=p.db_passwd)
                 self.connections[connID] = conn
                 self.cursors[connID] = SSCursor(conn)
-                self.connectionInfo[connID] = (db_host, db_user, db_passwd, db_name)
-                if verbose:
-                    logging.debug('Connected to database: %s as %s@%s (connID = "%s").'%(db_name, db_user, db_host, connID))
+                self.connectionInfo[connID] = (p.db_host, p.db_user, 
+                                               p.db_passwd, p.db_name)
+                logging.debug('Connected to database: %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
             except MySQLdb.Error, e:
-                raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(db_name, db_user, db_host, connID, e)
+                raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
             
         # SQLite database: create database from CSVs
         elif p.db_type.lower() == 'sqlite':
@@ -185,7 +187,8 @@ class DBConnect(Singleton):
             if not p.db_sqlite_file:
                 # Compute a UNIQUE database name for these files
                 import md5
-                dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or os.path.expanduser('~')
+                dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or \
+                    os.path.expanduser('~')
                 dbpath = os.path.join(dbpath,'CPA')
                 try:
                     os.listdir(dbpath)
@@ -193,11 +196,13 @@ class DBConnect(Singleton):
                     os.mkdir(dbpath)
                 if p.db_sql_file:
                     csv_dir = os.path.split(p.db_sql_file)[0]
-                    files = [file for file in os.listdir(csv_dir) if file.lower().endswith('_image.csv') or file.lower().endswith('_object.csv')]
+                    files = [file for file in os.listdir(csv_dir) 
+                             if file.lower().endswith('_image.csv') or 
+                             file.lower().endswith('_object.csv')]
                     files += [os.path.split(p.db_sql_file)[1]]
                     hash = md5.new()
                     for fname in files:
-                        t = os.stat(csv_dir+os.path.sep+fname).st_mtime
+                        t = os.stat(csv_dir + os.path.sep + fname).st_mtime
                         hash.update('%s%s'%(fname,t))
                     dbname = 'CPA_DB_%s.db'%(hash.hexdigest())
                 else:
@@ -206,7 +211,7 @@ class DBConnect(Singleton):
                     l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
                     dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
                     
-                p.db_sqlite_file = dbpath+os.path.sep+dbname
+                p.db_sqlite_file = dbpath + os.path.sep + dbname
             print '[%s] SQLite file: %s'%(connID, p.db_sqlite_file)
             self.connections[connID] = sqlite.connect(p.db_sqlite_file)
             self.cursors[connID] = self.connections[connID].cursor()
@@ -263,7 +268,8 @@ class DBConnect(Singleton):
                 _classifier.create_classifier_function(self.connections[connID])
                 print "[%s] Created fast classifier function in sqlite"%(connID)
             except:
-                self.connections[connID].create_function('classifier', -1, classifier)
+                self.connections[connID].create_function('classifier', -1,
+                                                         classifier)
             
             try:
                 # Try the connection
@@ -320,7 +326,7 @@ class DBConnect(Singleton):
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
         if not connID in self.connections.keys():
-            self.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+            self.connect()
         
         # Test for lost connection
         try:
@@ -328,7 +334,7 @@ class DBConnect(Singleton):
         except MySQLdb.OperationalError, e:
             print 'Lost connection to database. Attempting to reconnect...'
             self.CloseConnection(connID)
-            self.Connect(db_host=p.db_host, db_user=p.db_user, db_passwd=p.db_passwd, db_name=p.db_name)
+            self.connect()
         except AttributeError:
             pass # SQLite doesn't know ping.
         
