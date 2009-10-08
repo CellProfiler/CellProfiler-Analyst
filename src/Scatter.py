@@ -129,7 +129,7 @@ class Scatter(wx.Frame):
         self.SetAcceleratorTable(accelerator_table)
         
         points = [[(1, 1)],[(2, 2)],[(3, 3)],[(4, 4)],[(5, 5)]]
-        clrs = [[225, 200, 160], [219, 112, 147], [219, 112, 147], [219, 112, 147], [219, 112, 147]]
+        clrs = [[238, 70, 148], [219, 112, 147], [219, 112, 147], [219, 112, 147], [219, 112, 147]]
         
         figpanel = FigurePanel(self, points, clrs)
         configpanel = DataSourcePanel(self, figpanel)
