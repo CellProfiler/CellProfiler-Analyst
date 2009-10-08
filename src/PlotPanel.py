@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 import matplotlib
-matplotlib.interactive(True)
-matplotlib.use('WXAgg')
-
 import numpy as num
 import wx
+#matplotlib.interactive(True)
+#matplotlib.use('WXAgg')
+
 
 class PlotPanel (wx.Panel):
     '''
@@ -146,12 +146,5 @@ if __name__ == '__main__':
     app = wx.PySimpleApp( 0 )
     frame = wx.Frame( None, wx.ID_ANY, 'WxPython and Matplotlib', size=(300,300) )
     panel = DemoPlotPanel( frame, points, clrs )
-#    panel = wx.Panel(frame, -1)
-#    panel.SetBackgroundColour('red')
-    btn = wx.Button(frame, -1, 'asdf')
-    sizer = wx.BoxSizer(wx.HORIZONTAL)
-    sizer.Add(panel, 1, wx.EXPAND)
-    sizer.Add(btn, 0)
-    frame.SetSizer(sizer)
     frame.Show()
     app.MainLoop()

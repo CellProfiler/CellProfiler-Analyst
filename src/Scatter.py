@@ -13,6 +13,7 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
+ID_EXIT = wx.NewId()
 
 class DataSourcePanel(wx.Panel):
     '''
@@ -101,6 +102,38 @@ class DataSourcePanel(wx.Panel):
         
 
 
+class Scatter(wx.Frame):
+    '''
+    A very basic scatter plot with controls for setting it's data source.
+    '''
+    def __init__(self, parent, size=(600,600)):
+        wx.Frame.__init__(self, parent, -1, size=size, title='Scatter plot')
+        self.menuBar = wx.MenuBar()
+        self.SetMenuBar(self.menuBar)
+        self.fileMenu = wx.Menu()
+        self.exitMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
+                                        id=ID_EXIT, text='Exit\tCtrl+Q',
+                                        help='Close PlateMapBrowser')
+        self.fileMenu.AppendItem(self.exitMenuItem)
+        self.GetMenuBar().Append(self.fileMenu, 'File')
+        wx.EVT_MENU(self, ID_EXIT, lambda evt:self.Close())
+        
+        accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CTRL,ord('Q'),ID_EXIT),])
+        self.SetAcceleratorTable(accelerator_table)
+        
+        points = [[(1, 1)],[(2, 2)],[(3, 3)],[(4, 4)],[(5, 5)]]
+        clrs = [[225, 200, 160], [219, 112, 147], [219, 112, 147], [219, 112, 147], [219, 112, 147]]
+        
+        figpanel = FigurePanel(self, points, clrs)
+        configpanel = DataSourcePanel(self, figpanel)
+        
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(figpanel, 1, wx.EXPAND)
+        sizer.Add(configpanel, 0)
+        self.SetSizer(sizer)
+        
+
+
 
 def LoadProperties():
     import os
@@ -124,18 +157,9 @@ if __name__ == "__main__":
     else:
         LoadProperties()
 
-    points = [[(1, 1)],[(2, 2)],[(3, 3)],[(4, 4)],[(5, 5)]]
-    clrs = [[225, 200, 160], [219, 112, 147], [219, 112, 147], [219, 112, 147], [219, 112, 147]]
-    frame = wx.Frame(None, -1, "Scatter Plot")
-    figpanel = FigurePanel(frame, points, clrs)
-    configpanel = DataSourcePanel(frame, figpanel)
+    scatter = Scatter(None)
+    scatter.Show()
     
-    sizer = wx.BoxSizer(wx.VERTICAL)
-    sizer.Add(figpanel, 1, wx.EXPAND)
-    sizer.Add(configpanel, 0)
-    frame.SetSizer(sizer)
-    
-    frame.Show(1)
     app.MainLoop()
 
 #if __name__ == "__main__":

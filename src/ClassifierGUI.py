@@ -1,30 +1,31 @@
 # Necessary for py2app 
-import wxversion       
-import matplotlib
-matplotlib.use('WXAgg')
-# ---
-import DBConnect
 from DataGrid import DataGrid
 from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
+from PlateMapBrowser import PlateMapBrowser
+from Scatter import Scatter
 from Properties import Properties
 from ScoreDialog import ScoreDialog
-from PlateMapBrowser import PlateMapBrowser 
-import SortBin
 from TileCollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
+from time import time
+from util import get_icon
+import DBConnect
 import DirichletIntegrate
 import FastGentleBoostingMulticlass
 import ImageTools
 import MulticlassSQL
 import PolyaFit
-from util import get_icon
-
+import SortBin
+import matplotlib
 import numpy as np
 import os
 import wx
-from time import time
+import wxversion
+#matplotlib.use('WXAgg')
+# ---
+
 try:
     from version import VERSION as __version__
 except ImportError:
@@ -305,24 +306,24 @@ class ClassifierGUI(wx.Frame):
         self.fileMenu.AppendItem(self.exitMenuItem)
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
-        # Image Controls Menu
-        displayMenu = wx.Menu()
-        imageControlsMenuItem = wx.MenuItem(parentMenu=displayMenu,
-                                            id=ID_IMAGE_CONTROLS, text='Image Controls\tCtrl+I',
-                                            help='Launches a control panel for adjusting image brightness, size, etc.')
-        displayMenu.AppendItem(imageControlsMenuItem)
-        self.GetMenuBar().Append(displayMenu, 'Display')
-        
         # Tools Menu
         toolsMenu = wx.Menu()
+        imageControlsMenuItem = wx.MenuItem(parentMenu=toolsMenu,
+                                            id=ID_IMAGE_CONTROLS, text='Image Controls\tCtrl+I',
+                                            help='Launches a control panel for adjusting image brightness, size, etc.')
         plateMapMenuItem = wx.MenuItem(parentMenu=toolsMenu,
                                        id=ID_PLATE_MAP_BROWSER, text='Plate Map Browser\tCtrl+P',
                                        help='Launches the Plate Map Browser tool.')
         dataTableMenuItem = wx.MenuItem(parentMenu=toolsMenu,
                                        id=ID_DATA_TABLE, text='Data Table\tCtrl+T',
                                        help='Launches the Data Grid tool.')
-        toolsMenu.AppendItem(dataTableMenuItem)
+        scatterMenuItem = wx.MenuItem(parentMenu=toolsMenu,
+                                      id=ID_DATA_TABLE, text='Scatter plot',
+                                      help='Launches the Scatter Plot tool.')
+        toolsMenu.AppendItem(imageControlsMenuItem)
         toolsMenu.AppendItem(plateMapMenuItem)
+        toolsMenu.AppendItem(dataTableMenuItem)
+        toolsMenu.AppendItem(scatterMenuItem)
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         # Channel Menus
@@ -345,6 +346,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnLaunchPlateMapBrowser, plateMapMenuItem)
         self.Bind(wx.EVT_MENU, self.OnLaunchDataTable, dataTableMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnLaunchScatterPlot, scatterMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowAbout, aboutMenuItem)
         
@@ -385,6 +387,10 @@ class ClassifierGUI(wx.Frame):
     def OnLaunchDataTable(self, evt):
         table = DataGrid(parent=self)
         table.Show()
+        
+    def OnLaunchScatterPlot(self, evt):
+        scatter = Scatter(parent=self)
+        scatter.Show()
 
         
     def AddSortClass(self, label):
