@@ -351,7 +351,8 @@ class ImageViewer(wx.Frame):
         self.imagePanel.ToggleClassRepresentation()
 
 if __name__ == "__main__":
-    p.LoadFile('../properties/nirht_test.properties')
+    p.LoadFile('../../ExampleImages/cpa_example/example.properties')
+#    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
     from DataModel import DataModel
@@ -364,12 +365,6 @@ if __name__ == "__main__":
     for i in xrange(1):
         obKey = dm.GetRandomObject()
         imgs = ImageTools.FetchImage(obKey[:-1])
-                    
-        #imgs = [ImageTools.log_transform(im) for im in imgs]
-#        imgs = [ImageTools.auto_contrast(im) for im in imgs]
-        
-#        f1 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]) )
-#        f1.Show(True)
         f2 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]))
         f2.Show(True)
     
