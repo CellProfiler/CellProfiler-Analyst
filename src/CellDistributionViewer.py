@@ -1,8 +1,3 @@
-#ok so fetch the images from the database
-#then display them on a chart
-#embed the chart into a wx window
-
-
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from PlateMapPanel import *
@@ -28,18 +23,16 @@ ID_REMOVEPOINTS = 1004
 
 class DataSourcePanel(wx.Panel):
     
-    def __init__(self, parent,figurepanel,**kwargs):
-        #one day I'd like to find out why calling the super means
-        #casting errors disappear
+    def __init__(self, parent, figurepanel, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
         
         #the panel to draw charts on
         self.figurepanel = figurepanel
         
-        self.sizer=wx.BoxSizer(wx.VERTICAL)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         
 
-        testpanel = wx.Panel(self,style=wx.BORDER)
+        testpanel = wx.Panel(self, style=wx.BORDER)
         sizer2 = wx.BoxSizer(wx.VERTICAL)
 
 
@@ -56,13 +49,9 @@ class DataSourcePanel(wx.Panel):
         sizer2.Add(self.tabledropdown)        
         testpanel.SetSizer(sizer2)
         
+
         
-        
-        #testpanel.SetAutoLayout(1)
-        #sizer2.Fit(testpanel)
-        
-        
-        testpanel2 = wx.Panel(self,style=wx.BORDER)
+        testpanel2 = wx.Panel(self, style=wx.BORDER)
         sizer3 = wx.BoxSizer(wx.VERTICAL)
 
         self.field1dropdown = wx.Choice(testpanel2)
@@ -83,7 +72,7 @@ class DataSourcePanel(wx.Panel):
         
         
         
-        testpanel3 = wx.Panel(self,style=wx.BORDER)
+        testpanel3 = wx.Panel(self, style=wx.BORDER)
         
         self.plotfieldslistbox = wx.ListBox(testpanel3)
         self.removechartbutton = wx.Button(testpanel3, ID_REMOVEPOINTS, "Remove")
@@ -97,9 +86,9 @@ class DataSourcePanel(wx.Panel):
         
         testpanel3.SetSizer(sizer4)
         
-        self.sizer.Add(testpanel,1,wx.EXPAND)
-        self.sizer.Add(testpanel2,1,wx.EXPAND)
-        self.sizer.Add(testpanel3,1,wx.EXPAND)        
+        self.sizer.Add(testpanel, 1, wx.EXPAND)
+        self.sizer.Add(testpanel2, 1, wx.EXPAND)
+        self.sizer.Add(testpanel3, 1, wx.EXPAND)        
         
         #Layout sizers
         self.SetSizer(self.sizer)
@@ -115,10 +104,7 @@ class DataSourcePanel(wx.Panel):
             os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
             p.LoadFile(filename)
             self.importpathtext.SetLabel(filename)
-            db.connect()
-            table_list = db.execute('SHOW TABLES;')
-            table_list = [t[0] for t in table_list]
-            print table_list
+            table_list = db.GetTableNames()
             self.tabledropdown.Clear()
             self.tabledropdown.AppendItems(table_list)
             
@@ -126,12 +112,10 @@ class DataSourcePanel(wx.Panel):
         else:
             print 'CellDistributionViewer requires a properties file.  Don\'t make me exit :-(.'
 
-    def selecttable(self,event):
-        tablename =  event.GetString()
+    def selecttable(self, event):
+        tablename = event.GetString()
         #ok now fetch the list of fields from the database
-        db.connect()
-        fieldnames = db.execute("SHOW COLUMNS FROM %s;"%(tablename))
-        fieldnames = [t[0] for t in fieldnames]
+        fieldnames = db.GetColumnNames(tablename)
         self.field1dropdown.Clear()
         self.field1dropdown.AppendItems(fieldnames)
         self.field1dropdown.SetSelection(0)
@@ -140,14 +124,14 @@ class DataSourcePanel(wx.Panel):
         self.field2dropdown.SetSelection(0)
         
     
-    def addtochart(self,event):        
+    def addtochart(self, event):        
         addition = self.field1dropdown.GetStringSelection() + '  -  ' + self.field2dropdown.GetStringSelection()
         pointstuple = (self.tabledropdown.GetStringSelection(),
                        self.field1dropdown.GetStringSelection(),
                        self.field2dropdown.GetStringSelection())
-        self.plotfieldslistbox.Append(addition,clientData = pointstuple)
+        self.plotfieldslistbox.Append(addition, clientData=pointstuple)
         
-        points = self.loadpoints(pointstuple[0],pointstuple[1],pointstuple[2])
+        points = self.loadpoints(pointstuple[0], pointstuple[1], pointstuple[2])
         self.plotpoints(points)
 
 
@@ -156,57 +140,52 @@ class DataSourcePanel(wx.Panel):
         self.plotfieldslistbox.Delete(selected)
 
 
-    def loadpoints(self,tablename, xpoints, ypoints):
+    def loadpoints(self, tablename, xpoints, ypoints):
         #loads points from the database
-        points = db.execute(""" SELECT %(xpoints)s, %(ypoints)s
-                                    FROM %(tablename)s
-                                    LIMIT 5000;
-                                """% {'tablename': tablename, 
-                                        'xpoints':xpoints, 
-                                        'ypoints':ypoints}) 
-        #ok so data is returned and ready, next to plot it
+        points = db.execute('SELECT %s, %s FROM %s LIMIT 5000'%(xpoints, ypoints, tablename)) 
         return [points]
         
-    def plotpoints(self,points):
+    def plotpoints(self, points):
         self.figurepanel.setpointslists(points)
         self.figurepanel.draw()
+        self.figurepanel.Refresh()
 
 
 if __name__ == "__main__":
 
-    theta = np.arange( 0, 45*2*np.pi, 0.02 )
+    theta = np.arange(0, 45 * 2 * np.pi, 0.02)
 
-    rad0 = (0.8*theta/(2*np.pi) + 1)
-    r0 = rad0*(8 + np.sin( theta*7 + rad0/1.8 ))
-    x0 = r0*np.cos( theta )
-    y0 = r0*np.sin( theta )
+    rad0 = (0.8 * theta / (2 * np.pi) + 1)
+    r0 = rad0 * (8 + np.sin(theta * 7 + rad0 / 1.8))
+    x0 = r0 * np.cos(theta)
+    y0 = r0 * np.sin(theta)
 
-    rad1 = (0.8*theta/(2*np.pi) + 1)
-    r1 = rad1*(6 + np.sin( theta*7 + rad1/1.9 ))
-    x1 = r1*np.cos( theta )
-    y1 = r1*np.sin( theta )
+    rad1 = (0.8 * theta / (2 * np.pi) + 1)
+    r1 = rad1 * (6 + np.sin(theta * 7 + rad1 / 1.9))
+    x1 = r1 * np.cos(theta)
+    y1 = r1 * np.sin(theta)
 
-    points = [[(1,1)],
-              [(2,2)],
-              [(3,3)],
-              [(4,4)],
-              [(5,5)]
+    points = [[(1, 1)],
+              [(2, 2)],
+              [(3, 3)],
+              [(4, 4)],
+              [(5, 5)]
               ]
-    clrs = [[225,200,160], [219,112,147], [219,112,147], [219,112,147], [219,112,147]]
+    clrs = [[225, 200, 160], [219, 112, 147], [219, 112, 147], [219, 112, 147], [219, 112, 147]]
 
     app = wx.PySimpleApp()
-    frame = wx.Frame(None,-1," Demo with Notebook")
-    nb = wx.Notebook(frame,-1)
+    frame = wx.Frame(None, -1, " Demo with Notebook")
+    nb = wx.Notebook(frame, -1)
     simplepanel = wx.Panel(nb, style=wx.BORDER)
-    figpanel = FigurePanel( simplepanel, points, clrs )
+    figpanel = FigurePanel(simplepanel, points, clrs)
         
     sizer = wx.BoxSizer()
-    sizer.Add(figpanel,1,wx.EXPAND)
+    sizer.Add(figpanel, 1, wx.EXPAND)
     simplepanel.SetSizer(sizer)
     
         
     nb.AddPage(simplepanel, "Display")
-    nb.AddPage(DataSourcePanel(nb,figpanel), "Data Sources") 
+    nb.AddPage(DataSourcePanel(nb, figpanel), "Data Sources") 
     
     frame.Show(1)
     app.MainLoop()
