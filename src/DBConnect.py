@@ -197,8 +197,8 @@ class DBConnect(Singleton):
                 if p.db_sql_file:
                     csv_dir = os.path.split(p.db_sql_file)[0]
                     files = [file for file in os.listdir(csv_dir) 
-                             if file.lower().endswith('_image.csv') or 
-                             file.lower().endswith('_object.csv')]
+                             if file.lower().endswith('image.csv') or 
+                             file.lower().endswith('object.csv')]
                     files += [os.path.split(p.db_sql_file)[1]]
                     hash = md5.new()
                     for fname in files:
@@ -735,13 +735,13 @@ class DBConnect(Singleton):
         imcsvs = [] 
         obcsvs = []
         for file in files:
-            if file.lower().endswith('_image.csv'):
+            if file.lower().endswith('image.csv'):
                 imcsvs += [file]
-            elif file.lower().endswith('_object.csv'):
+            elif file.lower().endswith('object.csv'):
                 obcsvs += [file]
                 
-        assert len(imcsvs)>0, 'No image CSVs were found when trying to create SQLite database from CSV files. The file names are expected to end in "_image.csv" and must reside in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
-        assert len(obcsvs)>0, 'No object CSVs were found when trying to create SQLite database from CSV files. The file names are expected to end in "_object.csv" and must reside in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
+        assert len(imcsvs)>0, 'No image CSVs were found when trying to create SQLite database from CSV files. The file names are expected to end in "image.csv" and must reside in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
+        assert len(obcsvs)>0, 'No object CSVs were found when trying to create SQLite database from CSV files. The file names are expected to end in "object.csv" and must reside in the same directory as "db_sql_file" which is "%s"'%(csv_dir)
         
         # parse out create table statements and execute them
         f = open(p.db_sql_file)
