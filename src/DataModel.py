@@ -66,14 +66,12 @@ class DataModel(Singleton):
         for group in self.groupMaps:
             self.groupColTypes[group] = [type(col) for col in self.groupMaps[group].items()[0][1]]
 
-
     def DeleteModel(self):
         self.data = {}
         self.groupMaps = {}
         self.cumSums = []
         self.obCount = 0
         
-
     def GetRandomFraction(self, num):
         logging.debug("RAND %s %s %s"%(num, self.obCount, int(-2**63 + 2**64 * float(num) / self.obCount)))
         return int(2**64 * float(num) / self.obCount - 2**63)
@@ -98,7 +96,6 @@ class DataModel(Singleton):
                     
         obKey = db.GetObjectIDAtIndex(imKey, obIdx)
         return obKey
-        
 
     def GetRandomObjects(self, N, imKeys=None):
         '''
@@ -126,21 +123,12 @@ class DataModel(Singleton):
                 obs.append(obKey)
             return obs
             
-    
-#    def GetRandomObjectFromImage(self, imKey):
-#        obNum = randint(1, self.data[imKey])
-#        obKey = list(imKey)
-#        obKey.append(obNum)
-#        return tuple(obKey)
-
-
     def GetObjectsFromImage(self, imKey):
         obKeys=[]
         for i in xrange(1,self.GetObjectCountFromImage(imKey)+1):
             obKey = db.GetObjectIDAtIndex(imKey, i)
             obKeys.append(obKey)
         return obKeys
-    
     
     def GetAllImageKeys(self, filter=None):
         ''' Returns all object keys. If a filter is passed in, only the image
@@ -150,11 +138,9 @@ class DataModel(Singleton):
         else:
             return list(db.GetFilteredImages(filter))
 
-
     def GetObjectCountFromImage(self, imKey):
         ''' Returns the number of objects in the specified image. '''
         return self.data[imKey]
-    
     
     def GetImageKeysAndObjectCounts(self, filter=None):
         ''' Returns pairs of imageKeys and object counts. '''
@@ -163,17 +149,14 @@ class DataModel(Singleton):
         else:
             return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter)]
     
-    
     def GetGroupColumnNames(self, group):
         ''' Returns the key column names associated with the specified group. '''
         return list(self.groupColNames[group])   # return a copy of this list so it can't be modified
-    
 
     def GetGroupColumnTypes(self, group):
         ''' Returns the key column types associated with the specified group. '''
         return list(self.groupColTypes[group])   # return a copy of this list so it can't be modified
 
-    
     def SumToGroup(self, imdata, group):
         '''
         Takes image data of the form:
@@ -193,7 +176,6 @@ class DataModel(Singleton):
         
         return groupData
     
-    
     def GetImagesInGroupWithWildcards(self, group, groupKey, filter=None):
         '''
         Returns all imKeys in a particular group. 
@@ -212,7 +194,6 @@ class DataModel(Singleton):
             # if there are no wildcards simply lookup the imkeys
             return self.GetImagesInGroup(group, groupKey, filter)
     
-    
     def GetImagesInGroup(self, group, groupKey, filter=None):
         ''' Returns all imKeys in a particular group. '''
         try:
@@ -228,12 +209,10 @@ class DataModel(Singleton):
         
         return imkeys
     
-    
     def GetGroupKeysInGroup(self, group):
         ''' Returns all groupKeys in specified group '''
         return list(set(self.groupMaps[group].values()))
         
-    
     def IsEmpty(self):
         return self.data is {}
 

@@ -34,7 +34,6 @@ try:
 except ImportError:
     __version__ = 'unknown revision'
     
-    
 ID_LOAD_TS = wx.NewId()
 ID_SAVE_TS = wx.NewId()
 ID_EXIT = wx.NewId()
@@ -55,7 +54,8 @@ class ClassifierGUI(wx.Frame):
             p = properties
             global dm
             dm = DataModel.getInstance()
-            dm.PopulateModel()
+            if dm.IsEmpty():
+                dm.PopulateModel()
             MulticlassSQL.CreateFilterTables()
             global db
             db = DBConnect.DBConnect.getInstance()
@@ -117,7 +117,7 @@ class ClassifierGUI(wx.Frame):
         self.classified_bins_panel = wx.Panel(self.bins_splitter)
 
         # fetch objects interface
-        self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=wx.NewId(), value='20', size=(30,-1))
+        self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=wx.NewId(), value='20', size=(30,-1), style=wx.TE_PROCESS_ENTER)
         self.obClassChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), choices=['random'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), 
                                       choices=['experiment', 'image']+p._filters_ordered+p._groups_ordered)#+['*create new filter*'])
@@ -225,6 +225,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
+        self.nObjectsTxt.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
 
         self.GetStatusBar().Bind(wx.EVT_SIZE, self.status_bar_onsize)
         wx.CallAfter(self.status_bar_onsize, None)

@@ -2,12 +2,13 @@ from __future__ import with_statement
 from DBConnect import DBConnect
 from Properties import Properties
 from Singleton import Singleton
-import ImageTools
+from heapq import heappush, heappop
 from weakref import WeakValueDictionary
+import ImageTools
+import logging
+import numpy
 import threading
 import wx
-import numpy
-from heapq import heappush, heappop
 
 db = DBConnect.getInstance()
 p = Properties.getInstance()
@@ -107,7 +108,7 @@ class TileLoader(threading.Thread):
                 self.tile_collection.cv.wait()
                 
             if self._want_abort:
-                print self.getName()+' aborted'
+                logging.info('%s aborted'%self.getName())
                 return
 
             obKey = heappop(self.tile_collection.loadq)[1]
