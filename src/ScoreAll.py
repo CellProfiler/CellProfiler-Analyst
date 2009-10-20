@@ -1,19 +1,19 @@
 #!/usr/bin/env python
-import wx
-import os
-import MulticlassSQL
-import numpy as np
 from DBConnect import *
-from Properties import Properties
-from DataModel import DataModel
-from StringIO import StringIO
-from TrainingSet import TrainingSet
-from StringIO import StringIO
-import FastGentleBoostingMulticlass
 from DataGrid import DataGrid
-import PolyaFit
-import DirichletIntegrate
+from DataModel import DataModel
+from Properties import Properties
+from StringIO import StringIO, StringIO
+from TrainingSet import TrainingSet
 from time import time
+import DirichletIntegrate
+import FastGentleBoostingMulticlass
+import MulticlassSQL
+import PolyaFit
+import logging
+import numpy as np
+import os
+import wx
 
 USAGE = '''
 ABOUT:
@@ -51,11 +51,11 @@ def score(props, ts, nRules, filter=None, group='Image'):
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
 
-    print 'Loading properties file...'
+    logging.info('Loading properties file...')
     p.LoadFile(props)
     dm.PopulateModel()
     
-    print 'Loading training set...'
+    logging.info('Loading training set...')
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
     
@@ -67,32 +67,32 @@ def score(props, ts, nRules, filter=None, group='Image'):
     assert filter in p._filters.keys()+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter, p._filters.keys(),)
     assert group in p._groups.keys()+['Image'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, p._groups.keys(),)
     
-    print 'Creating tables for filters...'
+    logging.info('Creating tables for filters...')
     MulticlassSQL.CreateFilterTables()
     
     output = StringIO()
-    print 'Training classifier with '+str(nRules)+' rules...'
+    logging.info('Training classifier with %s rules...'%nRules)
     t0 = time()
     weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames,
                                                       nRules, trainingSet.label_matrix, 
                                                       trainingSet.values, output)
-    print 'Training done in %f seconds'%(time()-t0)
+    logging.info('Training done in %f seconds'%(time()-t0))
     
-    print 'Computing per-image class counts...'
+    logging.info('Computing per-image class counts...')
     t0 = time()
     def update(frac): 
-        print'%d%% '%(frac*100.,)
+        logging.info('%d%% '%(frac*100.,))
     keysAndCounts = MulticlassSQL.PerImageCounts(weaklearners, filter=(filter or None), cb=update)
     keysAndCounts.sort()
-    print 'Counts found in %f seconds'%(time()-t0)
+    logging.info('Counts found in %f seconds'%(time()-t0))
         
     if not keysAndCounts:
-        print 'No images are in filter "%s". Please check the filter definition in your properties file.'%(filter)
+        logging.error('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter))
         exit()
         
     # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
     if group != 'Image':
-        print 'Grouping %s counts by %s...' % (p.object_name[0], group)
+        logging.info('Grouping %s counts by %s...' % (p.object_name[0], group))
         t0 = time()
         imData = {}
         for row in keysAndCounts:
@@ -101,19 +101,19 @@ def score(props, ts, nRules, filter=None, group='Image'):
         
         groupedKeysAndCounts = np.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
         nKeyCols = len(dm.GetGroupColumnNames(group))
-        print 'Grouping done in %f seconds'%(time()-t0)
+        logging.info('Grouping done in %f seconds'%(time()-t0))
     else:
         groupedKeysAndCounts = np.array(keysAndCounts, dtype=object)
     
     # FIT THE BETA BINOMIAL
-    print 'Fitting beta binomial distribution to data...'
+    logging.info('Fitting beta binomial distribution to data...')
     counts = groupedKeysAndCounts[:,-nClasses:]
     alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
-    print '   alpha =', alpha, '   converged =', converged
-    print '   alpha/Sum(alpha) = ', [a/sum(alpha) for a in alpha]
+    logging.info('   alpha = %s   converged = %s'%(alpha, converged))
+    logging.info('   alpha/Sum(alpha) = %s'%([a/sum(alpha) for a in alpha]))
                 
     # CONSTRUCT ARRAY OF TABLE DATA
-    print 'Computing enrichment scores for each group...'
+    logging.info('Computing enrichment scores for each group...')
     t0 = time()
     tableData = []
     for i, row in enumerate(groupedKeysAndCounts):
@@ -147,7 +147,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
             tableRow += [np.log10(score)-(np.log10(1-score)) for score in scores]   # compute logit of each probability
         tableData.append(tableRow)
     tableData = np.array(tableData, dtype=object)
-    print 'Enrichments computed in %f seconds'%(time()-t0)
+    logging.info('Enrichments computed in %f seconds'%(time()-t0))
     
     # CREATE COLUMN LABELS LIST
     # if grouping isn't per-image, then get the group key column names.

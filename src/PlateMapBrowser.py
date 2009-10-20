@@ -462,7 +462,7 @@ def FormatPlateMapData(wellsAndVals):
     elif b > a and b > c:
         format = '123'
     else:
-        print 'Could not determine well naming format from the database. Trying default...'
+        logging.warn('Could not determine well naming format from the database. Trying default...')
     
     if p.plate_type == '384': shape = (16,24)
     elif p.plate_type == '96': shape = (8,12)

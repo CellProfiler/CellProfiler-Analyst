@@ -1,4 +1,5 @@
 from sys import stderr
+import logging
 import numpy
 import cPickle
 import base64
@@ -79,7 +80,7 @@ class TrainingSet:
                 labelDict[label] = labelDict.get(label, []) + [obKey]
 
             except:
-                print >>stderr, "error parsing training set %s, line >>>%s<<<"%(filename, l.strip())
+                logging.error('Error parsing training set %s, line >>>%s<<<'%(filename, l.strip()))
                 f.close()
                 raise
             
@@ -153,11 +154,11 @@ class TrainingSet:
                 f.write(line)
             f.write('# ' + self.cache.save_to_string([k[1] for k in self.entries]) + '\n')
         except:
-            print >>stderr, "error saving training set %s" % (filename)
+            logging.error("Error saving training set %s" % (filename))
             f.close()
             raise
         f.close()
-        print 'training set saved to',filename
+        logging.info('Training set saved to %s'%filename)
         self.saved = True
             
 
