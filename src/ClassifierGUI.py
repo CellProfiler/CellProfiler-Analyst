@@ -18,11 +18,14 @@ import ImageTools
 import MulticlassSQL
 import PolyaFit
 import SortBin
+import logging
 import matplotlib
 import numpy as np
 import os
 import wx
 import wxversion
+
+import cellprofiler.gui.cpfigure as cpfig
 #matplotlib.use('WXAgg')
 # ---
 
@@ -38,13 +41,14 @@ ID_EXIT = wx.NewId()
 ID_IMAGE_CONTROLS = wx.NewId()
 ID_PLATE_MAP_BROWSER = wx.NewId()
 ID_DATA_TABLE = wx.NewId()
+ID_SCATTER = wx.NewId()
 ID_HELP = wx.NewId()
 
 class ClassifierGUI(wx.Frame):
     """
     GUI Interface and functionality for the Classifier.
     """
-    def __init__(self, properties=None, parent=None):
+    def __init__(self, properties=None, parent=None, id=-1, **kwargs):
         
         if properties is not None:
             global p
@@ -57,14 +61,14 @@ class ClassifierGUI(wx.Frame):
             db = DBConnect.DBConnect.getInstance()
             
         if p.IsEmpty():
-            print 'Classifier requires a properties file. Exiting.'
+            logging.critical('Classifier requires a properties file. Exiting.')
             exit()
 
         if DataModel.getInstance().IsEmpty():
-            print "DataModel is empty. Classifier requires a populated DataModel to function. Exiting."
+            logging.debug("DataModel is empty. Classifier requires a populated DataModel to function. Exiting.")
             exit()
 
-        wx.Frame.__init__(self, parent, id=-1, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600))
+        wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
         self.tbicon = wx.TaskBarIcon()
         self.tbicon.SetIcon(get_icon(), 'CellProfiler Analyst 2.0')
         
@@ -208,7 +212,7 @@ class ClassifierGUI(wx.Frame):
 
         self.Layout()
 
-        self.Centre()
+        self.Center()
         self.MapChannels(p.image_channel_colors[:])
         self.BindMouseOverHelpText()
 
@@ -281,9 +285,15 @@ class ClassifierGUI(wx.Frame):
             
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
+            for (idx, color, item, menu) in self.chMapById.values():
+                if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
+                    item.Check()   
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
+            for (idx, color, item, menu) in self.chMapById.values():
+                if idx == chIdx and color.lower() == 'none':
+                    item.Check()
             self.chMap[chIdx] = 'None'
             self.MapChannels(self.chMap)
                     
@@ -291,73 +301,31 @@ class ClassifierGUI(wx.Frame):
     def CreateMenus(self):
         ''' Create file menu and menu items '''
         self.fileMenu = wx.Menu()
-        self.loadTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
-                                          id=ID_LOAD_TS, text='Load training set\tCtrl+O', 
-                                          help='Loads objects and classes specified in a training set file.')
-        self.saveTSMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
-                                          id=ID_SAVE_TS, text='Save training set\tCtrl+S', 
-                                          help='Save your training set to file so you can reload these classified cells again.')
-        self.exitMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
-                                        id=ID_EXIT, text='Exit\tCtrl+Q', 
-                                        help='Exit classifier')
-        self.fileMenu.AppendItem(self.loadTSMenuItem)
-        self.fileMenu.AppendItem(self.saveTSMenuItem)
+        self.loadTSMenuItem = self.fileMenu.Append(-1, text='Load training set\tCtrl+O', help='Loads objects and classes specified in a training set file.')
+        self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save training set\tCtrl+S', help='Save your training set to file so you can reload these classified cells again.')
         self.fileMenu.AppendSeparator()
-        self.fileMenu.AppendItem(self.exitMenuItem)
+        self.exitMenuItem = self.fileMenu.Append(id=ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
-        # Tools Menu
-        toolsMenu = wx.Menu()
-        imageControlsMenuItem = wx.MenuItem(parentMenu=toolsMenu,
-                                            id=ID_IMAGE_CONTROLS, text='Image Controls\tCtrl+I',
-                                            help='Launches a control panel for adjusting image brightness, size, etc.')
-        plateMapMenuItem = wx.MenuItem(parentMenu=toolsMenu,
-                                       id=ID_PLATE_MAP_BROWSER, text='Plate Map Browser\tCtrl+P',
-                                       help='Launches the Plate Map Browser tool.')
-        dataTableMenuItem = wx.MenuItem(parentMenu=toolsMenu,
-                                       id=ID_DATA_TABLE, text='Data Table\tCtrl+T',
-                                       help='Launches the Data Grid tool.')
-        scatterMenuItem = wx.MenuItem(parentMenu=toolsMenu,
-                                      id=ID_DATA_TABLE, text='Scatter plot',
-                                      help='Launches the Scatter Plot tool.')
-        toolsMenu.AppendItem(imageControlsMenuItem)
-        toolsMenu.AppendItem(plateMapMenuItem)
-        toolsMenu.AppendItem(dataTableMenuItem)
-        toolsMenu.AppendItem(scatterMenuItem)
-        self.GetMenuBar().Append(toolsMenu, 'Tools')
+        # View Menu
+        viewMenu = wx.Menu()
+        imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+I', help='Launches a control panel for adjusting image brightness, size, etc.')
+        self.GetMenuBar().Append(viewMenu, 'View')
 
         # Channel Menus
         self.CreateChannelMenus()
         
         # Help Menu
         helpMenu = wx.Menu()
-        helpMenuItem = wx.MenuItem(parentMenu=helpMenu,
-                                   id=ID_HELP, text='Readme\tCtrl+H',
-                                   help='Displays the readme file.')
-        aboutMenuItem = wx.MenuItem(parentMenu=helpMenu,
-                                   id=wx.NewId(), text='About',
-                                   help='About Classifier 2.0')
-        helpMenu.AppendItem(helpMenuItem)
-        helpMenu.AppendItem(aboutMenuItem)
+        helpMenuItem = helpMenu.Append(-1, text='Readme\tCtrl+H', help='Displays the readme file.')
+        aboutMenuItem = helpMenu.Append(-1, text='About', help='About Classifier 2.0')
         self.GetMenuBar().Append(helpMenu, 'Help')
         
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnLaunchPlateMapBrowser, plateMapMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnLaunchDataTable, dataTableMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnLaunchScatterPlot, scatterMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowAbout, aboutMenuItem)
-        
-        accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CTRL,ord('O'),ID_LOAD_TS),
-                                                 (wx.ACCEL_CTRL,ord('S'),ID_SAVE_TS),
-                                                 (wx.ACCEL_CTRL,ord('Q'),ID_EXIT),
-                                                 (wx.ACCEL_CTRL,ord('I'),ID_IMAGE_CONTROLS),
-                                                 (wx.ACCEL_CTRL,ord('P'),ID_PLATE_MAP_BROWSER),
-                                                 (wx.ACCEL_CTRL,ord('G'),ID_DATA_TABLE),
-                                                 (wx.ACCEL_CTRL,ord('H'),ID_HELP),])
-        self.SetAcceleratorTable(accelerator_table)
         
         
     def CreateChannelMenus(self):
@@ -368,12 +336,10 @@ class ClassifierGUI(wx.Frame):
             channel_menu = wx.Menu()
             for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
                 id = wx.NewId()
-                self.chMapById[id] = (chIndex,color)
+                item = channel_menu.AppendRadioItem(id,color)
+                self.chMapById[id] = (chIndex,color,item,channel_menu)
                 if color.lower() == setColor.lower():
-                    item = channel_menu.AppendRadioItem(id,color)
                     item.Check()
-                else:
-                    item = channel_menu.AppendRadioItem(id,color)
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
@@ -389,6 +355,10 @@ class ClassifierGUI(wx.Frame):
         table.Show()
         
     def OnLaunchScatterPlot(self, evt):
+#        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
+#        table = np.random.randn(5000,2)
+#        figure.panel.subplot_scatter(0, 0, table)
+        
         scatter = Scatter(parent=self)
         scatter.Show()
 
@@ -610,7 +580,7 @@ class ClassifierGUI(wx.Frame):
         
     def LoadTrainingSet(self, filename):
         ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
-        self.PostMessage('Loading training set from: '+filename)
+        self.PostMessage('Loading training set from: %s'%filename)
         # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         os.chdir(os.path.split(filename)[0])
         self.defaultTSFileName = os.path.split(filename)[1]
@@ -661,13 +631,13 @@ class ClassifierGUI(wx.Frame):
             self.RemoveSortClass(label)
             
         
-        
     def OnMapChannels(self, evt):
         ''' Responds to selection from the color mapping menus. '''
-        (chIdx,color) = self.chMapById[evt.GetId()]
-        self.chMap[chIdx] = color
+        (chIdx,color,item,menu) = self.chMapById[evt.GetId()]
+        item.Check()
+        self.chMap[chIdx] = color.lower()
         if color.lower() != 'none':
-            self.toggleChMap[chIdx] = color
+            self.toggleChMap[chIdx] = color.lower()
         self.MapChannels(self.chMap)
 
         
@@ -707,7 +677,7 @@ class ClassifierGUI(wx.Frame):
         try:
             nRules = int(self.nRulesTxt.GetValue())
         except:
-            print 'Unable to parse number of rules'
+            logging.error('Unable to parse number of rules')
             return
         
         self.keysAndCounts = None    # Must erase current keysAndCounts so they will be recalculated from new rules
@@ -716,7 +686,7 @@ class ClassifierGUI(wx.Frame):
         self.trainingSet.Create(labels = [bin.label for bin in self.classBins],
                                 keyLists = [bin.GetObjectKeys() for bin in self.classBins])
         output = StringIO()
-        self.PostMessage('Training classifier with '+str(nRules)+' rules...')
+        self.PostMessage('Training classifier with %s rules...'%(nRules))
         self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                nRules, self.trainingSet.label_matrix, 
                                                                self.trainingSet.values, output)
@@ -861,7 +831,7 @@ class ClassifierGUI(wx.Frame):
                 self.PostMessage('%s classes saved to table "%s"'%(p.object_name[0].capitalize(), p.class_table))
             
         t2 = time()
-        print 'time to calculate hits: %.3fs'%(t2-t1)
+        logging.info('time to calculate hits: %.3fs'%(t2-t1))
         
         # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
         if group != groupChoices[0]:
@@ -876,17 +846,17 @@ class ClassifierGUI(wx.Frame):
             groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
         
         t3 = time()
-        print 'time to group per-image counts: %.3fs'%(t3-t2)
+        logging.info('time to group per-image counts: %.3fs'%(t3-t2))
                 
         # FIT THE BETA BINOMIAL
         self.PostMessage('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
         alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
-        print '   alpha =', alpha, '   converged =', converged
-        print '   alpha/Sum(alpha) = ', [a/sum(alpha) for a in alpha]
+        logging.info('   alpha = %s   converged = %s'%( alpha, converged))
+        logging.info('   alpha/Sum(alpha) = %s'%([a/sum(alpha) for a in alpha]))
         
         t4 = time()
-        print 'time to fit beta binomial: %.3fs'%(t4-t3)
+        logging.info('time to fit beta binomial: %.3fs'%(t4-t3))
                     
         # CONSTRUCT ARRAY OF TABLE DATA
         self.PostMessage('Computing enrichment scores for each group...')
@@ -924,7 +894,7 @@ class ClassifierGUI(wx.Frame):
         tableData = np.array(tableData, dtype=object)
         
         t5 = time()
-        print 'time to compute enrichment scores: %.3fs'%(t5-t4)
+        logging.info('time to compute enrichment scores: %.3fs'%(t5-t4))
         
         # CREATE COLUMN LABELS LIST
         # if grouping isn't per-image, then get the group key column names.
@@ -1109,9 +1079,9 @@ class ClassifierGUI(wx.Frame):
         
         
     def PostMessage(self, message):
-        ''' Updates the status bar text and prints to stdout. '''
+        ''' Updates the status bar text and logs to info. '''
         self.SetStatusText(message)
-        print message
+        logging.info(message)
         
 
     def OnClose(self, evt):
@@ -1132,7 +1102,7 @@ class ClassifierGUI(wx.Frame):
         import threading
         for thread in threading.enumerate():
             if thread != threading.currentThread():
-                print 'aborting thread', thread.getName()
+                logging.debug('Aborting thread %s'%thread.getName())
                 try:
                     thread.abort()
                 except:
@@ -1154,26 +1124,14 @@ def show_exception_as_dialog(type, value, tb):
 
 
 def LoadProperties():
-    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
+    dlg = wx.FileDialog(None, "Select the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
     if dlg.ShowModal() == wx.ID_OK:
         filename = dlg.GetPath()
         os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         p.LoadFile(filename)
     else:
-        print 'Classifier requires a properties file.  Exiting.'
+        logging.error('Classifier requires a properties file.  Exiting.')
         exit()
-
-
-
-#def WritePhenotypeCountsToDB(filename, data, colHeaders):
-#    db.execute('DROP TABLE IF EXISTS _CPA_counts')
-#    colDefs = ','.join([h+' INT' for h in colHeaders])
-#    db.execute('CREATE TEMPORARY TABLE _CPA_counts (%s)'%(colDefs))
-#    for row in data:
-#        db.execute('INSERT INTO _CPA_counts (%s) VALUES (%s)'
-#                   %(', '.join(colHeaders),
-#                     ', '.join([str(int(i)) for i in row])))
-#    db.execute('SELECT * FROM _CPA_counts')
 
 
 # ----------------- Run -------------------

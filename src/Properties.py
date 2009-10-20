@@ -4,6 +4,9 @@ from Singleton import *
 from StringIO import StringIO
 import re
 import os
+import logging
+
+logr = logging.getLogger('Properties')
 
 # TODO: check type of all field values
 string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
@@ -103,7 +106,7 @@ class Properties(Singleton):
                     if group_name in self._filters.keys():
                         raise Exception, 'Name "%s" is already taken for a filter.'%(group_name)
                     if not val:
-                        print 'PROPERTIES WARNING (%s): Undefined group'%(name)
+                        logr.warn('PROPERTIES WARNING (%s): Undefined group'%(name))
                         continue
                     # TODO: test query
                     self._groups[group_name] = val
@@ -120,17 +123,17 @@ class Properties(Singleton):
                     if re.search('\.|\\\|/| |`', filter_name):
                         raise Exception, 'PROPERTIES ERROR (%s): Filter names cannot contain the following characters `.\/ and space'%(filter_name)
                     if not val:
-                        print 'PROPERTIES WARNING (%s): Undefined filter'%(name)
+                        logr.warn('PROPERTIES WARNING (%s): Undefined filter'%(name))
                         continue
                     # TODO: test query
                     self._filters[filter_name] = val
                     self._filters_ordered += [filter_name]
                 
                 elif name in ['groups', 'filters']:
-                    print 'PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\nOnly the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name)
+                    logr.warn('PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\nOnly the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name))
                     
                 else:
-                    print 'PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name)
+                    logr.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
                 
         f.close()
         self.Validate()
@@ -204,7 +207,7 @@ class Properties(Singleton):
         if self.db_type.lower()=='sqlite':
             for field in ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',]:
                 if field_defined(field):
-                    print 'PROPERTIES WARNING (%s): Field not required with db_type=sqlite.'%(field)
+                    logr.warn('PROPERTIES WARNING (%s): Field not required with db_type=sqlite.'%(field))
             
             assert any([field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file','db_sqlite_file']]), \
                     'PROPERTIES ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR "db_sql_file" OR "db_sqlite_file". See the README.'
@@ -252,39 +255,39 @@ class Properties(Singleton):
                 assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=mysql.'%(field)
             for field in ['image_csv_file','object_csv_file']:
                 if field_defined(field):
-                    print 'PROPERTIES WARNING (%s): Field not required with db_type=mysql.'%(field)
+                    logr.warn('PROPERTIES WARNING (%s): Field not required with db_type=mysql.'%(field))
         
         if field_defined('area_scoring_column'):
-            print 'PROPERTIES: Area scoring will be used.'
+            logr.info('PROPERTIES: Area scoring will be used.')
         
         if not field_defined('image_channel_names'):
-            print 'PROPERTIES WARNING (image_channel_names): No value(s) specified. Classifier will use generic channel names.'
+            logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. Classifier will use generic channel names.')
             self.image_channel_names = ['channel-%d'%(i) for i in range(103)] [:len(self.image_channel_files)]
 
         if not field_defined('image_channel_colors'):
-            print 'PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.'
+            logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.')
             self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(100)] [:len(self.image_channel_files)]
 
         if field_defined('classifier_ignore_substrings'):
-            print 'PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.' 
+            logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 
             if not field_defined('classifier_ignore_columns'):
                 self.__dict__['classifier_ignore_columns'] = self.__dict__['classifier_ignore_substrings']
             else:
                 raise Exception, 'PROPERTIES ERROR: Both classifier_ignore_substrings and classifier_ignore_columns were found in your properties file. The field classifier_ignore_substrings is deprecated and has been renamed to classifier_ignore_columns. Please remove the former from your properties file.'
             del self.__dict__['classifier_ignore_substrings']
         if not field_defined('classifier_ignore_columns'):
-            print 'PROPERTIES WARNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.'
+            logr.warn('PROPERTIES WARNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.')
         
         if not field_defined('image_buffer_size'):
-            print 'PROPERTIES: Using default image_buffer_size=1'
+            logr.warn('PROPERTIES: Using default image_buffer_size=1')
             self.image_buffer_size = '1'
             
         if not field_defined('tile_buffer_size'):
-            print 'PROPERTIES: Using default tile_buffer_size=1'
+            logr.warn('PROPERTIES: Using default tile_buffer_size=1')
             self.tile_buffer_size = '1'
             
         if not field_defined('object_name'):
-            print 'PROPERTIES WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"'
+            logr.warn('PROPERTIES WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"')
             self.object_name = ['cell', 'cells']
         else:
             # if it is defined make sure they do it correctly
@@ -299,29 +302,29 @@ class Properties(Singleton):
                 f = open(self.training_set)
                 f.close()
             except:
-                print 'PROPERTIES WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set)
-            print 'PROPERTIES: Training set found at "%s"'%(self.training_set)
+                logr.warn('PROPERTIES WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set))
+            logr.info('PROPERTIES: Training set found at "%s"'%(self.training_set))
         
         if field_defined('class_table'):
             assert self.class_table != self.image_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as image_table!'
             assert self.class_table != self.object_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as object_table!'
-            print 'PROPERTIES: Per-Object classes will be written to table "%s"'%(self.class_table)
+            logr.info('PROPERTIES: Per-Object classes will be written to table "%s"'%(self.class_table))
             
         if not field_defined('plate_id'):
-            print 'PROPERTIES WARNING (plate_id): Field is required for plate map viewer.'
+            logr.warn('PROPERTIES WARNING (plate_id): Field is required for plate map viewer.')
                                     
         if not field_defined('well_id'):
-            print 'PROPERTIES WARNING (well_id): Field is required for plate map viewer.'
+            logr.warn('PROPERTIES WARNING (well_id): Field is required for plate map viewer.')
                                     
         if not field_defined('plate_type'):
-            print 'PROPERTIES WARNING (plate_type): Field is required for plate map viewer.'   
+            logr.warn('PROPERTIES WARNING (plate_type): Field is required for plate map viewer.')
             
         if field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.check_tables = 'no'
         elif not field_defined('check_tables') or self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.check_tables = 'yes'
         else:
-            print 'PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables)
+            logr.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables))
             self.check_tables = 'yes'
                                      
 

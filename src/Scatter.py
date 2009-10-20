@@ -95,7 +95,7 @@ class DataSourcePanel(wx.Panel):
         
     def loadpoints(self, tablename, xpoints, ypoints):
         #loads points from the database
-        n_points = 99999999
+        n_points = 10000000
         points = db.execute('SELECT %s, %s FROM %s LIMIT %s'%(xpoints, ypoints, tablename, n_points)) 
         return [points]
     

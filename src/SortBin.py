@@ -80,9 +80,9 @@ class SortBin(wx.ScrolledWindow):
         
     def CreatePopupMenu(self):
         popupMenuItems = ['View full images of selected',
-                          'Select all - [ctrl+a]',
-                          'Deselect all - [ctrl+d]',
-                          'Remove selected - [Delete]']
+                          'Select all\tCtrl+A',
+                          'Deselect all\tCtrl+D',
+                          'Remove selected\tDelete']
         if self.label != 'unclassified':
             popupMenuItems += ['Rename class', 'Delete bin']
         self.popupItemIndexById = {}

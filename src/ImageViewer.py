@@ -13,13 +13,12 @@ db = DBConnect.getInstance()
 
 CL_NUMBERED = 'numbered'
 CL_COLORED = 'colored'
-
-ID_SAVE_IMAGE = wx.NewId()
-ID_EXIT = wx.NewId()
+ID_SELECT_ALL = wx.NewId()
+ID_DESELECT_ALL = wx.NewId()
 
 class ImageViewerPanel(ImagePanel):
     '''
-    ImagePanel subclass that does selection.
+    ImagePanel with selection and object class labels.
     '''
     def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0, contrast=None):
         super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast)
@@ -115,7 +114,6 @@ class ImageViewerPanel(ImagePanel):
         self.Refresh()
 
 
-
 class ImageViewer(wx.Frame):
     '''
     A frame that takes a list of np arrays representing image channels 
@@ -125,7 +123,7 @@ class ImageViewer(wx.Frame):
        of ImageViewer can have it's own chMap (if any) updated by changes
        made in the viewer.  Otherwise pass in a copy.
     '''
-    def __init__(self, imgs, chMap, img_key=None, parent=None, title='Image Viewer', 
+    def __init__(self, imgs=None, chMap=None, img_key=None, parent=None, title='Image Viewer', 
                  classifier=None, brightness=1.0, scale=1.0, contrast=None, 
                  classCoords=None):
         '''
@@ -136,62 +134,114 @@ class ImageViewer(wx.Frame):
         img_key : key for this image in the database, to allow selection of cells
         NOTE: imgs lists must be of the same length.
         '''
-        
-        h,w = imgs[0].shape
-        
         wx.Frame.__init__(self, parent, wx.NewId(), title)
                 
-        self.chMap       = chMap
-        self.toggleChMap = chMap[:]
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)
-        self.imagePanel  = ImageViewerPanel(imgs, chMap, self.sw, brightness=brightness, scale=scale, contrast=contrast)
-        self.cp = cp     = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
-        self.controls    = ImageControlPanel(cp.GetPane(), self.imagePanel, brightness=brightness, scale=scale, contrast=contrast)
         self.selection   = []
         self.maxSize     = tuple([xy-50 for xy in wx.DisplaySize()])
-        self.defaultFile = ''
+        self.defaultFile = 'MyImage.png'
         self.defaultPath = ''
+        self.imagePanel  = None
+        self.cp          = None
+        self.controls    = None
+        self.first_layout = True
 
+        self.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        self.CreateMenus()
+        self.CreatePopupMenu()
+        if imgs and chMap:
+            self.SetImage(imgs, chMap, brightness, scale, contrast)
+        self.DoLayout()
+        self.Center()
+        # doesn't work on Mac
+        self.SetBackgroundColour('BLACK')
+        
+        if classCoords is not None:
+            self.SetClasses(classCoords)
+        
+    def CreatePopupMenu(self):
+        self.popupMenu = wx.Menu()
+        self.sel_all = wx.MenuItem(self.popupMenu, ID_SELECT_ALL, 'Select all\tCtrl+A')
+        self.deselect = wx.MenuItem(self.popupMenu, ID_DESELECT_ALL, 'Deselect all\tCtrl+D')
+        self.popupMenu.AppendItem(self.sel_all)
+        self.popupMenu.AppendItem(self.deselect)
+        accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CMD,ord('A'),ID_SELECT_ALL),
+                                                 (wx.ACCEL_CMD,ord('D'),ID_DESELECT_ALL),])
+        self.SetAcceleratorTable(accelerator_table)
+
+    def SetImage(self, imgs, chMap=None, brightness=1, scale=1, contrast=None):
+        self.Title = str(self.img_key)
+        self.chMap = chMap or p.image_channel_colors
+        self.toggleChMap = self.chMap[:]
+        if self.imagePanel:
+            self.imagePanel.Destroy()
+        self.imagePanel = ImageViewerPanel(imgs, self.chMap, self.sw, 
+                                           brightness=brightness, scale=scale, 
+                                           contrast=contrast)
+        self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
+        self.imagePanel.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+
+    def CreateMenus(self):
         self.SetMenuBar(wx.MenuBar())
         # File Menu
         fileMenu = wx.Menu()
-        saveImageMenuItem = wx.MenuItem(parentMenu=fileMenu, id=ID_SAVE_IMAGE, text='Save Image\tCtrl+S')
-        exitMenuItem = wx.MenuItem(parentMenu=fileMenu, id=ID_EXIT, text='Exit\tCtrl+Q')
-        fileMenu.AppendItem(saveImageMenuItem)
+        self.openImageMenuItem = wx.MenuItem(parentMenu=fileMenu, id=-1, text='Open Image\tCtrl+O')
+        self.saveImageMenuItem = wx.MenuItem(parentMenu=fileMenu, id=-1, text='Save Image\tCtrl+S')
+        self.exitMenuItem      = wx.MenuItem(parentMenu=fileMenu, id=-1, text='Exit\tCtrl+Q')
+        fileMenu.AppendItem(self.openImageMenuItem)
+        fileMenu.AppendItem(self.saveImageMenuItem)
         fileMenu.AppendSeparator()
-        fileMenu.AppendItem(exitMenuItem)
+        fileMenu.AppendItem(self.exitMenuItem)
         self.GetMenuBar().Append(fileMenu, 'File')
         # View Menu
         viewMenu = wx.Menu()
         self.classViewMenuItem = wx.MenuItem(parentMenu=viewMenu, id=wx.NewId(), text='View phenotypes as numbers')
         viewMenu.AppendItem(self.classViewMenuItem)
         self.GetMenuBar().Append(viewMenu, 'View')
-        self.CreateChannelMenus()
         
-        self.SetClientSize( (min(self.maxSize[0], w*scale),
-                             min(self.maxSize[1], h*scale+55)) )
-        self.Centre()
-        
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
-        sizer.Add(cp, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-        self.SetSizer(sizer)
-        
-        self.sw.SetScrollbars(1,1,w*scale,h*scale)
-        
-        if classCoords is not None:
-            self.SetClasses(classCoords)
-        
-        self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, cp)
-        self.Bind(wx.EVT_MENU, self.OnSaveImage, saveImageMenuItem)
+    def DoLayout(self):
+        if self.imagePanel:
+            if not self.cp:
+                self.cp = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
+                self.controls  = ImageControlPanel(self.cp.GetPane(), self.imagePanel, 
+                                                   brightness=self.imagePanel.brightness,
+                                                   scale=self.imagePanel.scale, 
+                                                   contrast=self.imagePanel.contrast)
+                self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.cp)
+            else:
+                self.controls.SetListener(self.imagePanel)
+            self.Sizer.Clear()
+            self.Sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
+            self.Sizer.Add(self.cp, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
+            h, w = self.imagePanel.images[0].shape
+            if self.first_layout:
+                self.SetClientSize( (min(self.maxSize[0], w*self.imagePanel.scale),
+                                     min(self.maxSize[1], h*self.imagePanel.scale+55)) )
+                self.Center()
+                self.first_layout = False
+            self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
+            self.CreateChannelMenus()
+            self.saveImageMenuItem.Enable()
+            self.classViewMenuItem.Enable()
+            # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
+            self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
+            self.cp.Bind(wx.EVT_KEY_UP, self.OnKey)
+            self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
+            self.Bind(wx.EVT_MENU, lambda(e):self.SelectAll(), self.sel_all)
+            self.Bind(wx.EVT_MENU, lambda(e):self.DeselectAll(), self.deselect)
+        else:
+            self.saveImageMenuItem.Enable(False)
+            self.classViewMenuItem.Enable(False)
+            
+        self.Bind(wx.EVT_MENU, self.OnOpenImage, self.openImageMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSaveImage, self.saveImageMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSaveImage, self.saveImageMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnOpenImage, self.openImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnChangeClassRepresentation, self.classViewMenuItem)
-        wx.EVT_MENU(self, ID_EXIT, lambda evt:self.Close())
-        self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
-        self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
-        self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
-
+        self.Bind(wx.EVT_MENU, lambda evt:self.Close(), self.exitMenuItem)
 
     def OnPaneChanged(self, evt=None):
         self.Layout()
@@ -199,8 +249,8 @@ class ImageViewer(wx.Frame):
             self.cp.SetLabel('Hide controls')
         else:
             self.cp.SetLabel('Show controls')
-            
-
+    
+    
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
         chIndex=0
@@ -209,17 +259,13 @@ class ImageViewer(wx.Frame):
             channel_menu = wx.Menu()
             for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
                 id = wx.NewId()
-                self.chMapById[id] = (chIndex,color)
+                item = channel_menu.AppendRadioItem(id,color)
+                self.chMapById[id] = (chIndex,color,item,channel_menu)
                 if color.lower() == setColor.lower():
-                    item = channel_menu.AppendRadioItem(id,color).Check()
-                else:
-                    item = channel_menu.AppendRadioItem(id,color)
+                    item.Check()
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
-            channel_menu.InsertSeparator(3)
-            channel_menu.InsertSeparator(8)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
-
 
     def OnMapChannels(self, evt):
         if evt.GetId() in self.chMapById.keys():
@@ -229,11 +275,9 @@ class ImageViewer(wx.Frame):
                 self.toggleChMap[chIdx] = color
             self.MapChannels(self.chMap)
 
-
     def MapChannels(self, chMap):
         self.chMap = chMap
         self.imagePanel.MapChannels(chMap)
-
 
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
@@ -258,21 +302,27 @@ class ImageViewer(wx.Frame):
             else:
                 evt.Skip()
         else:
+            if keycode == ord(' '):
+                self.cp.Collapse(not self.cp.IsCollapsed())
+                self.OnPaneChanged()
             evt.Skip()
         
-            
     def OnResizeImagePanel(self, evt):
         self.sw.SetVirtualSize(evt.GetSize())
-        
             
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
+            for (idx, color, item, menu) in self.chMapById.values():
+                if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
+                    item.Check()   
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
+            for (idx, color, item, menu) in self.chMapById.values():
+                if idx == chIdx and color.lower() == 'none':
+                    item.Check()
             self.chMap[chIdx] = 'None'
             self.MapChannels(self.chMap)
-            
             
     def SelectAll(self):
         if p.object_table:
@@ -280,18 +330,15 @@ class ImageViewer(wx.Frame):
             self.selection = db.GetObjectsFromImage(self.img_key)
             self.imagePanel.SetSelectedPoints(coordList)
         
-        
     def DeselectAll(self):
         self.selection = []
         self.imagePanel.DeselectAll()
-
     
     def SetClasses(self, classCoords):
         self.imagePanel.SetClassPoints(classCoords)
         self.controls.SetClassPoints(classCoords)
         self.Refresh()
         self.Layout()
-        
         
     def OnLeftDown(self, evt):
         if self.img_key and p.object_table:
@@ -323,8 +370,48 @@ class ImageViewer(wx.Frame):
                 result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
                 if result is 0:
                     pass
+                
+    def OnRightDown(self, evt):
+        ''' On right click show popup menu. '''
+        self.PopupMenu(self.popupMenu, evt.GetPosition())
 
-
+    def OnOpenImage(self, evt):
+        # 1) Get the image key
+        # Start with the table_id if there is one
+        tblNum = None
+        if p.table_id:
+            dlg = wx.TextEntryDialog(self, p.table_id+':','Enter '+p.table_id)
+            dlg.SetValue('0')
+            if dlg.ShowModal() == wx.ID_OK:
+                tblNum = int(dlg.GetValue())
+                dlg.Destroy()
+            else:
+                dlg.Destroy()
+                return
+        # Then get the image_id
+        dlg = wx.TextEntryDialog(self, p.image_id+':','Enter '+p.image_id)
+        dlg.SetValue('')
+        if dlg.ShowModal() == wx.ID_OK:
+            imgNum = int(dlg.GetValue())
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
+        # Build the imkey
+        if p.table_id:
+            imkey = (tblNum,imgNum)
+        else:
+            imkey = (imgNum,)
+            
+            dm = DataModel.getInstance()
+            if imkey not in dm.GetAllImageKeys():
+                errdlg = wx.MessageDialog(self, 'There is no image with that key.', "Couldn't find image", wx.OK|wx.ICON_EXCLAMATION)
+                errdlg.ShowModal()
+            else:
+                self.img_key = imkey
+                self.SetImage(ImageTools.FetchImage(imkey), p.image_color_maps)
+                self.DoLayout()
+            
     def OnSaveImage(self, evt):
         import os
         saveDialog = wx.FileDialog(self, message="Save as:",
@@ -350,6 +437,8 @@ class ImageViewer(wx.Frame):
         self.classViewMenuItem.Text = 'View phenotypes as colors'
         self.imagePanel.ToggleClassRepresentation()
 
+
+
 if __name__ == "__main__":
     p.LoadFile('../../ExampleImages/cpa_example/example.properties')
 #    p.LoadFile('../properties/nirht_test.properties')
@@ -362,14 +451,17 @@ if __name__ == "__main__":
     dm = DataModel.getInstance()
     dm.PopulateModel()
     
-    for i in xrange(1):
-        obKey = dm.GetRandomObject()
-        imgs = ImageTools.FetchImage(obKey[:-1])
-        f2 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]))
-        f2.Show(True)
+    f = ImageViewer()
+    f.Show(True)
     
-    classCoords = {'a':[(100,100),(200,200)],'b':[(200,100),(200,300)] }
-    f2.SetClasses(classCoords)
+#    for i in xrange(1):
+#        obKey = dm.GetRandomObject()
+#        imgs = ImageTools.FetchImage(obKey[:-1])
+#        f2 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]))
+#        f2.Show(True)
+    
+#    classCoords = {'a':[(100,100),(200,200)],'b':[(200,100),(200,300)] }
+#    f2.SetClasses(classCoords)
     
     #ImageTools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
            

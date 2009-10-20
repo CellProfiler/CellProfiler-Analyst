@@ -1,5 +1,6 @@
 import wx
 import Image
+import logging
 import numpy
 import urllib2
 import os.path
@@ -9,6 +10,7 @@ from cStringIO import StringIO
 from Properties import Properties
 
 p = Properties.getInstance()
+logr = logging.getLogger('ImageReader')
 
 class ImageReader(object):
     '''
@@ -86,13 +88,13 @@ class ImageReader(object):
         reads their raw data in a list.
         NOTE: This function should not be used for reading large
               numbers of images.
-        '''        
+        '''
         data = []
         streams = []
         for url in urls:
             if self.protocol.upper() == 'HTTP':
                 fullurl = p.image_url_prepend+urllib2.quote(url)
-                print 'Opening image: '+fullurl
+                logr.info('Opening image: %s'%fullurl)
                 try:
                     streams.append(urllib2.urlopen(fullurl))
                 except:
@@ -103,7 +105,7 @@ class ImageReader(object):
                 else:
                     # if no prepend is provided, compute the path relative to the properties file.
                     fullurl = os.path.join(os.path.dirname(p._filename), url)
-                print 'Opening image:',fullurl
+                logr.info('Opening image: %s'%fullurl)
                 streams.append(open(fullurl, "rb"))
                 
         for stream in streams:

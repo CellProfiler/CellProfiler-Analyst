@@ -100,6 +100,7 @@ class PlateMapBrowser(wx.Frame):
 
         self.link_cols = {} # link_cols[table] = columns that link this table to the per-image table
 
+        self.Center()        
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
@@ -145,7 +146,7 @@ class PlateMapBrowser(wx.Frame):
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
-        aggregation = ['average', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
+        aggregation = ['mean', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
         self.aggregationMethodsChoice = wx.Choice(self, choices=aggregation)
         self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
@@ -265,7 +266,7 @@ class PlateMapBrowser(wx.Frame):
         aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
         self.colorBar.ClearNotifyWindows()
 
-        if aggMethod == 'average':
+        if aggMethod == 'mean':
             expression = "AVG(%s.%s)"%(table, measurement)
         elif aggMethod == 'stdev':
             expression = "STDDEV(%s.%s)"%(table, measurement)

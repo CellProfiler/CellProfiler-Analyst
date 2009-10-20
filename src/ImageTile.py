@@ -79,9 +79,9 @@ class ImageTile(ImagePanel):
         if self.popupMenu is not None:
             return
         popupMenuItems = ['View full images of selected',
-                          '[ctrl+a] - Select all',
-                          '[ctrl+d] - Deselect all',
-                          '[Delete] - Remove selected ']
+                          'Select all\tCtrl+A',
+                          'Deselect all\tCtrl+D',
+                          'Remove selected\tDelete']
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
         for i, item in enumerate(popupMenuItems):

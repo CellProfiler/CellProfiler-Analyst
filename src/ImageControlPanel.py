@@ -119,18 +119,37 @@ class ImageControlPanel(wx.Panel):
 
 
     def OnBrightnessSlider(self, evt):
+        self.UpdateBrightness()
+    
+    def UpdateBrightness(self):
         pos = self.brightness_slider.GetValue() / 100.0
         for listener in self.listeners:
             listener.SetBrightness(pos)
         self.brightness_percent.SetLabel(str(self.brightness_slider.GetValue())+'%')
 
-
     def OnScaleSlider(self, evt):
+        self.UpdateScale()
+    
+    def UpdateScale(self):
         pos = self.scale_slider.GetValue() / 100.0      
         for listener in self.listeners:
             listener.SetScale(pos)
         self.scale_percent.SetLabel(str(self.scale_slider.GetValue())+'%')
 
+    def OnSetContrastMode(self, evt):
+        self.UpdateContrastMode()
+        
+    def UpdateContrastMode(self):
+        for listener in self.listeners:
+            listener.SetContrastMode(contrast_modes[self.contrast_radiobox.GetSelection()])
+
+    def SetContrastMode(self, mode):
+        if mode.lower() == 'none':
+            self.contrast_radiobox.SetSelection(0)
+        elif mode.lower() == 'auto':
+            self.contrast_radiobox.SetSelection(1)
+        elif mode.lower() == 'log':
+            self.contrast_radiobox.SetSelection(2)
         
     def OnReset(self, evt):
         for listener in self.listeners:
@@ -141,21 +160,15 @@ class ImageControlPanel(wx.Panel):
         self.brightness_percent.SetLabel('100%')
         self.scale_percent.SetLabel('100%')
         self.Layout()
-
             
     def ConnectTolistener(self, listener):
         self.listeners += [listener]
+    
+    def SetListener(self, listener):
+        self.listeners = [listener]
+        self.UpdateAll()
         
-            
-    def SetContrastMode(self, mode):
-        if mode.lower() == 'none':
-            self.contrast_radiobox.SetSelection(0)
-        elif mode.lower() == 'auto':
-            self.contrast_radiobox.SetSelection(1)
-        elif mode.lower() == 'log':
-            self.contrast_radiobox.SetSelection(2)
-        
-    def OnSetContrastMode(self, evt):
-        for listener in self.listeners:
-            listener.SetContrastMode(contrast_modes[evt.GetEventObject().GetSelection()])
-        
+    def UpdateAll(self):
+        self.UpdateBrightness()
+        self.UpdateScale()
+        self.UpdateContrastMode()

@@ -182,7 +182,10 @@ def auto_contrast(im, interval=None):
 
 def SaveBitmap(bitmap, filename, format='PNG'):
     im = BitmapToPIL(bitmap)
-    im.save(filename, format)
+    if format.lower() in ['jpg', 'jpeg']:
+        im.save(filename, format, quality=95)
+    else:
+        im.save(filename, format)
 
 def ImageToPIL(image):
     '''Convert wx.Image to PIL Image.'''
