@@ -3,6 +3,7 @@ import Image
 import numpy
 import urllib2
 import os.path
+import tifffile
 from array import array
 from cStringIO import StringIO
 from Properties import Properties
@@ -66,35 +67,16 @@ class ImageReader(object):
         return images
     
 
+
     def ReadBitmaps(self, filenames):
         images = []
-        for data in self.GetRawData(filenames):
-            im = Image.open(StringIO(data))
-            
-            # Handle 16 and 12 bit images
-            if im.mode == 'I;16':
-                # deal with the endianness explicitly... I'm not sure
-                # why PIL doesn't get this right.
-                imdata = numpy.fromstring(im.tostring(),numpy.uint8)
-                imdata.shape=(int(imdata.shape[0]/2),2)
-                imdata = imdata.astype(numpy.uint16)
-                hi,lo = (0,1) if im.tag.prefix == 'MM' else (1,0)
-                imdata = imdata[:,hi]*256 + imdata[:,lo]
-                imsize = list(im.size)
-                imsize.reverse()
-                new_img = imdata.reshape(imsize)
-                # The magic # for maximum sample value is 281
-                if im.tag.has_key(281):
-                    imdata = new_img.astype(float) / im.tag[281][0]
-                elif numpy.max(new_img) < 4096:
-                    imdata = new_img.astype(float) / 4095.
-                else:
-                    imdata = new_img.astype(float) / 65535.
-            else:
-                imdata = numpy.asarray(im.convert('L')) / 255.0
-                
+        for data, f in zip(self.GetRawData(filenames), filenames):
+            try:
+                imdata = ReadBitmapViaPIL(data)
+            except:
+                imdata = ReadBitmapViaTIFFfile(data)
+
             images.append(imdata)
-            
         return images
     
 
@@ -125,14 +107,51 @@ class ImageReader(object):
                 streams.append(open(fullurl, "rb"))
                 
         for stream in streams:
-            data.append(stream.read())
-            # Ray claims the call below is safer since read() is not guaranteed to
-            # return the whole file. However, it does not work for local files. 
-            #data.append(stream.read(int(stream.info()['content-length'])))
+            if self.protocol.upper() == 'HTTP':
+                data.append(stream.read(int(stream.info()['content-length'])))
+            else:
+                data.append(stream.read())
             stream.close()
             
         return data
 
+
+def ReadBitmapViaPIL(data):
+    im = Image.open(StringIO(data))
+    
+    # Handle 16 and 12 bit images
+    if im.mode == 'I;16':
+        # deal with the endianness explicitly... I'm not sure
+        # why PIL doesn't get this right.
+        imdata = numpy.fromstring(im.tostring(),numpy.uint8)
+        imdata.shape=(int(imdata.shape[0]/2),2)
+        imdata = imdata.astype(numpy.uint16)
+        hi,lo = (0,1) if im.tag.prefix == 'MM' else (1,0)
+        imdata = imdata[:,hi]*256 + imdata[:,lo]
+        imsize = list(im.size)
+        imsize.reverse()
+        new_img = imdata.reshape(imsize)
+        # The magic # for maximum sample value is 281
+        if im.tag.has_key(281):
+            imdata = new_img.astype(float) / im.tag[281][0]
+        elif numpy.max(new_img) < 4096:
+            imdata = new_img.astype(float) / 4095.
+        else:
+            imdata = new_img.astype(float) / 65535.
+    else:
+        imdata = numpy.asarray(im.convert('L')) / 255.0
+
+    return imdata
+
+def ReadBitmapViaTIFFfile(data):
+    im = tifffile.TIFFfile(StringIO(data))
+    imdata = im.asarray(squeeze=True)
+    if imdata.dtype == numpy.uint16:
+        # for now, assume this is a Buzz Baum file (i.e., 12 bits in a 16 bit format with the high bit high)
+        imdata = (imdata.astype(numpy.float) - 2**15) / 2**12
+    return imdata
+    
+    
 
 ####################### FOR TESTING ######################### 
 if __name__ == "__main__":
