@@ -1,4 +1,5 @@
 import wx
+import logging
 import matplotlib.cm
 import numpy as np
 import Properties
@@ -238,8 +239,8 @@ class ColorBarPanel(wx.Panel):
                                    defaultDir=defaultPath, defaultFile=defaultFileName,
                                    style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
-            print 'Saving filter to %s'%(saveDialog.GetPath())
-            print '   '+filtername, '=', p.__dict__[filtername]
+            logging.info('Saving filter to %s'%(saveDialog.GetPath()))
+            logging.debug('   '+filtername+' = '+p.__dict__[filtername])
             p.SaveFile(saveDialog.GetPath())
         saveDialog.Destroy()
 

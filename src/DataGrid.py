@@ -1,5 +1,6 @@
 # -*- Encoding: utf-8 -*-
 import wx
+import logging
 import wx.grid
 import numpy as np
 import ImageTools
@@ -321,7 +322,7 @@ class DataGrid(wx.Frame):
         
         if autosave and self.grid:
             # Autosave enrichments to temp dir
-            print 'Auto saving data...'
+            logging.info('Auto saving data...')
             filename = gettempdir()+os.sep+'CPA_enrichments_'+ctime().replace(' ','_').replace(':','-')+'.csv'
             self.SaveCSV(filename, self.grid.GetTable().data, self.grid.GetTable().col_labels)
                 
@@ -533,7 +534,7 @@ class DataGrid(wx.Frame):
         for row in data:
             w.writerow(row)
         f.close()
-        print 'Table saved to',filename
+        logging.info('Table saved to %s'%filename)
         self.Title = filename
         self.file = filename
         

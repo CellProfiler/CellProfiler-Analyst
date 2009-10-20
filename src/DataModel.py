@@ -1,3 +1,4 @@
+import logging
 from random import randint
 import numpy as np
 from DBConnect import *
@@ -34,7 +35,7 @@ class DataModel(Singleton):
     def PopulateModel(self):
         self.DeleteModel()
         if db is None:
-            print "Error: No database connection!"
+            logging.error("Error: No database connection!")
             return
         
         if p.check_tables == 'yes':
@@ -74,7 +75,7 @@ class DataModel(Singleton):
         
 
     def GetRandomFraction(self, num):
-        print "RAND", num, self.obCount, int(-2**63 + 2**64 * float(num) / self.obCount)
+        logging.debug("RAND %s %s %s"%(num, self.obCount, int(-2**63 + 2**64 * float(num) / self.obCount)))
         return int(2**64 * float(num) / self.obCount - 2**63)
 
     def GetRandomObject(self):
@@ -122,7 +123,6 @@ class DataModel(Singleton):
                         index -= 1
                     obIdx = obIdx-sums[index-1]
                 obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
-                print obKey
                 obs.append(obKey)
             return obs
             
