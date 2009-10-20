@@ -155,8 +155,6 @@ class ImageViewer(wx.Frame):
             self.SetImage(imgs, chMap, brightness, scale, contrast)
         self.DoLayout()
         self.Center()
-        # doesn't work on Mac
-        self.SetBackgroundColour('BLACK')
         
         if classCoords is not None:
             self.SetClasses(classCoords)
