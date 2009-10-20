@@ -25,7 +25,7 @@ import os
 import wx
 import wxversion
 
-import cellprofiler.gui.cpfigure as cpfig
+#import cellprofiler.gui.cpfigure as cpfig
 #matplotlib.use('WXAgg')
 # ---
 
