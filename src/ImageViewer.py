@@ -276,6 +276,12 @@ class ImageViewer(wx.Frame):
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
         chIndex=0
+
+        # Remove menus if they are already there
+        for ch in p.image_channel_names:
+            if self.MenuBar.FindMenu(ch) > -1:
+                self.MenuBar.Remove(self.MenuBar.FindMenu(ch)).Destroy()
+
         self.chMapById = {}
         for channel, setColor in zip(p.image_channel_names, self.chMap):
             channel_menu = wx.Menu()
