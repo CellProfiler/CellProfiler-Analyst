@@ -40,7 +40,7 @@ def translate(weaklearners):
 
 
 def CreateFilterTables():
-    ''' Creates a temporary with image keys for each filter. '''
+    ''' Creates a temporary table with image keys for each filter. '''
     
     key_col_defs = ",".join([col + " INT" for col in image_key_columns()])
     index_cols = ",".join(image_key_columns())

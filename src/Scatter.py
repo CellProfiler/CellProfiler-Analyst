@@ -118,15 +118,11 @@ class Scatter(wx.Frame):
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
-        self.exitMenuItem = wx.MenuItem(parentMenu=self.fileMenu, 
-                                        id=ID_EXIT, text='Exit\tCtrl+Q',
-                                        help='Close PlateMapBrowser')
+        self.exitMenuItem = self.fileMenu.Append(ID_EXIT, text='Exit\tCtrl+Q',
+                                                 help='Close PlateMapBrowser')
         self.fileMenu.AppendItem(self.exitMenuItem)
         self.GetMenuBar().Append(self.fileMenu, 'File')
         wx.EVT_MENU(self, ID_EXIT, lambda evt:self.Close())
-        
-        accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CTRL,ord('Q'),ID_EXIT),])
-        self.SetAcceleratorTable(accelerator_table)
         
         points = [[(1, 1)],[(2, 2)],[(3, 3)],[(4, 4)],[(5, 5)]]
         clrs = [[238, 70, 148], [219, 112, 147], [219, 112, 147], [219, 112, 147], [219, 112, 147]]

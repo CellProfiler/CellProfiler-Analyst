@@ -98,6 +98,11 @@ class FigurePanel(PlotPanel):
         self.canvas.draw()
 
 
+# Use CP
+#    def launch_scatter(self, evt):
+#        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
+#        table = np.random.randn(5000,2)
+#        figure.panel.subplot_scatter(0, 0, table)
 
 
 
