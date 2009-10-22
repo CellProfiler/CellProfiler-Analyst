@@ -257,6 +257,7 @@ class ImageViewer(wx.Frame):
         classifier = get_classifier_window()
         if classifier is None:
             logging.error('Could not find Classifier!')
+            return
         # Score the Image
         classHits = classifier.ScoreImage(self.img_key)
         # Get object coordinates in image and display
