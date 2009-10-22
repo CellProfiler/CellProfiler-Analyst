@@ -19,10 +19,12 @@ ID_SELECT_ALL = wx.NewId()
 ID_DESELECT_ALL = wx.NewId()
 
 def get_classifier_window():
-    # Because wx.FindWindowById doesn't work for some reason
-    win = [x for x in wx.GetTopLevelWindows() if x.Name=='Classifier']
+    win = wx.FindWindowById(ID_CLASSIFIER)
     if win:
-        return win[0]
+        return win
+    wins = [x for x in wx.GetTopLevelWindows() if x.Name=='Classifier']
+    if wins:
+        return wins[0]
     else:
         return None
 
@@ -253,6 +255,8 @@ class ImageViewer(wx.Frame):
     def OnClassifyImage(self, evt=None):
         logging.info('Classifying image with key=%s...'%str(self.img_key))
         classifier = get_classifier_window()
+        if classifier is None:
+            logging.error('Could not find Classifier!')
         # Score the Image
         classHits = classifier.ScoreImage(self.img_key)
         # Get object coordinates in image and display
