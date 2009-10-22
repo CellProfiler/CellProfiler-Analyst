@@ -96,6 +96,7 @@ class ImageControlPanel(wx.Panel):
         
 
     def SetClassPoints(self, classCoords):
+        self.sizer3.DeleteWindows()
         vals = np.arange(float(len(classCoords))) / len(classCoords)
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2

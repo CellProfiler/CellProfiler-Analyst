@@ -3,8 +3,8 @@ from DataGrid import DataGrid
 from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
 from PlateMapBrowser import PlateMapBrowser
-from Scatter import Scatter
 from Properties import Properties
+from Scatter import Scatter
 from ScoreDialog import ScoreDialog
 from TileCollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
@@ -34,20 +34,14 @@ try:
 except ImportError:
     __version__ = 'unknown revision'
     
-ID_LOAD_TS = wx.NewId()
-ID_SAVE_TS = wx.NewId()
 ID_EXIT = wx.NewId()
-ID_IMAGE_CONTROLS = wx.NewId()
-ID_PLATE_MAP_BROWSER = wx.NewId()
-ID_DATA_TABLE = wx.NewId()
-ID_SCATTER = wx.NewId()
-ID_HELP = wx.NewId()
+ID_CLASSIFIER = wx.NewId()
 
 class ClassifierGUI(wx.Frame):
     """
     GUI Interface and functionality for the Classifier.
     """
-    def __init__(self, properties=None, parent=None, id=-1, **kwargs):
+    def __init__(self, properties=None, parent=None, id=ID_CLASSIFIER, **kwargs):
         
         if properties is not None:
             global p
@@ -56,7 +50,8 @@ class ClassifierGUI(wx.Frame):
             dm = DataModel.getInstance()
             if dm.IsEmpty():
                 dm.PopulateModel()
-            MulticlassSQL.CreateFilterTables()
+            if __name__ != "__main__":
+                MulticlassSQL.CreateFilterTables()
             global db
             db = DBConnect.DBConnect.getInstance()
             
@@ -71,6 +66,7 @@ class ClassifierGUI(wx.Frame):
         wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
         self.tbicon = wx.TaskBarIcon()
         self.tbicon.SetIcon(get_icon(), 'CellProfiler Analyst 2.0')
+        self.SetName('Classifier')
         
         self.pmb = None
         self.worker = None
@@ -344,25 +340,7 @@ class ClassifierGUI(wx.Frame):
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
-            
-            
-    def OnLaunchPlateMapBrowser(self, evt):
-        self.pmb = PlateMapBrowser(parent=self)
-        self.pmb.Show()
         
-    
-    def OnLaunchDataTable(self, evt):
-        table = DataGrid(parent=self)
-        table.Show()
-        
-    def OnLaunchScatterPlot(self, evt):
-#        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
-#        table = np.random.randn(5000,2)
-#        figure.panel.subplot_scatter(0, 0, table)
-        
-        scatter = Scatter(parent=self)
-        scatter.Show()
-
         
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
@@ -439,7 +417,7 @@ class ClassifierGUI(wx.Frame):
                 
     
     def UpdateClassChoices(self):
-        if not self.weaklearners:
+        if not self.IsTrained():
             self.obClassChoice.SetItems(['random'])
             self.obClassChoice.SetSelection(0)
             return
@@ -705,7 +683,7 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnScoreImage(self, evt):
-        # 1) Get the image key
+        # Get the image key
         # Start with the table_id if there is one
         tblNum = None
         if p.table_id:
@@ -731,8 +709,24 @@ class ClassifierGUI(wx.Frame):
             imKey = (tblNum,imgNum)
         else:
             imKey = (imgNum,)
+        
+        # Score the Image
+        classHits = self.ScoreImage(imKey)
+        # Get object coordinates in image and display
+        classCoords = {}
+        for className, obKeys in classHits.items():
+            classCoords[className] = [db.GetObjectCoords(key) for key in obKeys]
+        # Show the image
+        imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
+                                        brightness=self.brightness, scale=self.scale,
+                                        contrast=self.contrast)
+        imViewer.SetClasses(classCoords)
     
-        # 2) Find the hits for each phenotype
+    def ScoreImage(self, imKey):
+        '''
+        Scores an image, then returns a dictionary of object keys indexed by class name
+        eg: ScoreImage(imkey)['positive'] ==> [(6,32), (87,23), (412,65)]
+        '''
         try:
             obKeys = dm.GetObjectsFromImage(imKey)
         except:
@@ -744,17 +738,7 @@ class ClassifierGUI(wx.Frame):
                 classHits[bin.label] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, [imKey])
                 self.PostMessage('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
         
-        # 3) Get object coordinates in image and display
-        classCoords = {}
-        for className, obKeys in classHits.items():
-            coords = []
-            for obKey in obKeys:
-                coords += [db.GetObjectCoords(obKey)]
-            classCoords[className] = coords
-        imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
-                                        brightness=self.brightness, scale=self.scale,
-                                        contrast=self.contrast)
-        imViewer.SetClasses(classCoords)
+        return classHits
          
         
     def OnScoreAll(self, evt):
@@ -1095,6 +1079,10 @@ class ClassifierGUI(wx.Frame):
             elif response == wx.ID_CANCEL:
                 return
         self.Destroy()
+        
+    
+    def IsTrained(self):
+        return self.weaklearners is not None
         
     
     def Destroy(self):

@@ -1,11 +1,13 @@
+from ClassifierGUI import ID_CLASSIFIER
 from DBConnect import DBConnect
 from DataModel import DataModel
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
 from Properties import Properties
-import numpy as np
 import ImageTools
 import cPickle
+import logging
+import numpy as np
 import wx
 
 p = Properties.getInstance()
@@ -15,6 +17,14 @@ CL_NUMBERED = 'numbered'
 CL_COLORED = 'colored'
 ID_SELECT_ALL = wx.NewId()
 ID_DESELECT_ALL = wx.NewId()
+
+def get_classifier_window():
+    # Because wx.FindWindowById doesn't work for some reason
+    win = [x for x in wx.GetTopLevelWindows() if x.Name=='Classifier']
+    if win:
+        return win[0]
+    else:
+        return None
 
 class ImageViewerPanel(ImagePanel):
     '''
@@ -92,7 +102,7 @@ class ImageViewerPanel(ImagePanel):
     def SetClassPoints(self, classes):
         from matplotlib.pyplot import cm
         self.classes = classes
-        vals = np.arange(float(len(self.classes))) / len(self.classes)
+        vals = np.arange(float(len(classes))) / len(classes)
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
         self.colors = [np.array(cm.jet(val))*255 for val in vals]
@@ -134,8 +144,8 @@ class ImageViewer(wx.Frame):
         img_key : key for this image in the database, to allow selection of cells
         NOTE: imgs lists must be of the same length.
         '''
-        wx.Frame.__init__(self, parent, wx.NewId(), title)
-                
+        wx.Frame.__init__(self, parent, -1, title)
+                        
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)
@@ -185,20 +195,20 @@ class ImageViewer(wx.Frame):
     def CreateMenus(self):
         self.SetMenuBar(wx.MenuBar())
         # File Menu
-        fileMenu = wx.Menu()
-        self.openImageMenuItem = wx.MenuItem(parentMenu=fileMenu, id=-1, text='Open Image\tCtrl+O')
-        self.saveImageMenuItem = wx.MenuItem(parentMenu=fileMenu, id=-1, text='Save Image\tCtrl+S')
-        self.exitMenuItem      = wx.MenuItem(parentMenu=fileMenu, id=-1, text='Exit\tCtrl+Q')
-        fileMenu.AppendItem(self.openImageMenuItem)
-        fileMenu.AppendItem(self.saveImageMenuItem)
-        fileMenu.AppendSeparator()
-        fileMenu.AppendItem(self.exitMenuItem)
-        self.GetMenuBar().Append(fileMenu, 'File')
+        self.fileMenu = wx.Menu()
+        self.openImageMenuItem = self.fileMenu.Append(-1, text='Open Image\tCtrl+O')
+        self.saveImageMenuItem = self.fileMenu.Append(-1, text='Save Image\tCtrl+S')
+        self.fileMenu.AppendSeparator()
+        self.exitMenuItem      = self.fileMenu.Append(-1, text='Exit\tCtrl+Q')
+        self.GetMenuBar().Append(self.fileMenu, 'File')
+        # Classify menu (requires classifier window
+        self.classifyMenu = wx.Menu()
+        self.classifyMenuItem = self.classifyMenu.Append(-1, text='Classify Image')
+        self.GetMenuBar().Append(self.classifyMenu, 'Classify')
         # View Menu
-        viewMenu = wx.Menu()
-        self.classViewMenuItem = wx.MenuItem(parentMenu=viewMenu, id=wx.NewId(), text='View phenotypes as numbers')
-        viewMenu.AppendItem(self.classViewMenuItem)
-        self.GetMenuBar().Append(viewMenu, 'View')
+        self.viewMenu = wx.Menu()
+        self.classViewMenuItem = self.viewMenu.Append(-1, text='View phenotypes as numbers')
+        self.GetMenuBar().Append(self.viewMenu, 'View')
         
     def DoLayout(self):
         if self.imagePanel:
@@ -222,24 +232,34 @@ class ImageViewer(wx.Frame):
                 self.first_layout = False
             self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
             self.CreateChannelMenus()
-            self.saveImageMenuItem.Enable()
-            self.classViewMenuItem.Enable()
             # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
             self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.cp.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.Bind(wx.EVT_MENU, lambda(e):self.SelectAll(), self.sel_all)
             self.Bind(wx.EVT_MENU, lambda(e):self.DeselectAll(), self.deselect)
-        else:
-            self.saveImageMenuItem.Enable(False)
-            self.classViewMenuItem.Enable(False)
             
+        self.fileMenu.Bind(wx.EVT_MENU_OPEN, self.OnOpenFileMenu)
+        self.classifyMenu.Bind(wx.EVT_MENU_OPEN, self.OnOpenClassifyMenu)
+        self.viewMenu.Bind(wx.EVT_MENU_OPEN, self.OnOpenViewMenu)
         self.Bind(wx.EVT_MENU, self.OnOpenImage, self.openImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveImage, self.saveImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveImage, self.saveImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnOpenImage, self.openImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnChangeClassRepresentation, self.classViewMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnClassifyImage, self.classifyMenuItem)
         self.Bind(wx.EVT_MENU, lambda evt:self.Close(), self.exitMenuItem)
+        
+    def OnClassifyImage(self, evt=None):
+        logging.info('Classifying image with key=%s...'%str(self.img_key))
+        classifier = get_classifier_window()
+        # Score the Image
+        classHits = classifier.ScoreImage(self.img_key)
+        # Get object coordinates in image and display
+        classCoords = {}
+        for className, obKeys in classHits.items():
+            classCoords[className] = [db.GetObjectCoords(key) for key in obKeys]
+        self.SetClasses(classCoords)
 
     def OnPaneChanged(self, evt=None):
         self.Layout()
@@ -247,7 +267,6 @@ class ImageViewer(wx.Frame):
             self.cp.SetLabel('Hide controls')
         else:
             self.cp.SetLabel('Show controls')
-    
     
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
@@ -267,7 +286,7 @@ class ImageViewer(wx.Frame):
 
     def OnMapChannels(self, evt):
         if evt.GetId() in self.chMapById.keys():
-            (chIdx,color) = self.chMapById[evt.GetId()]
+            (chIdx,color,_,_) = self.chMapById[evt.GetId()]
             self.chMap[chIdx] = color
             if color.lower() != 'none':
                 self.toggleChMap[chIdx] = color
@@ -333,6 +352,7 @@ class ImageViewer(wx.Frame):
         self.imagePanel.DeselectAll()
     
     def SetClasses(self, classCoords):
+        self.classViewMenuItem.Enable()
         self.imagePanel.SetClassPoints(classCoords)
         self.controls.SetClassPoints(classCoords)
         self.Refresh()
@@ -434,6 +454,25 @@ class ImageViewer(wx.Frame):
     def OnChangeClassRepresentation(self, evt):
         self.classViewMenuItem.Text = 'View phenotypes as colors'
         self.imagePanel.ToggleClassRepresentation()
+        
+    def OnOpenFileMenu(self, evt=None):
+        if self.imagePanel:
+            self.saveImageMenuItem.Enable()
+        else:
+            self.saveImageMenuItem.Enable(False)
+        
+    def OnOpenViewMenu(self, evt=None):
+        if self.imagePanel and self.imagePanel.classes:
+            self.classViewMenuItem.Enable()
+        else:
+            self.classViewMenuItem.Enable(False)
+    
+    def OnOpenClassifyMenu(self, evt=None):
+        classifier = get_classifier_window()
+        if classifier and classifier.IsTrained():
+            self.classifyMenuItem.Enable()
+        else:
+            self.classifyMenuItem.Enable(False)
 
 
 
