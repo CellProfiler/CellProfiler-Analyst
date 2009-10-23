@@ -679,7 +679,7 @@ class DBConnect(Singleton):
         statement += ',\nPRIMARY KEY (' + keys + ') )'
         f.close()
         
-        logr.info('Creating table: %s'%s(p.image_table))
+        logr.info('Creating table: %s'%(p.image_table))
         self.execute('DROP TABLE IF EXISTS %s'%(p.image_table))
         self.execute(statement)
         
@@ -790,7 +790,7 @@ class DBConnect(Singleton):
             self.cursors[connID].execute(command, row1)
             self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
             f.close()
-            
+        
         self.Commit()
 
 
@@ -966,6 +966,8 @@ if __name__ == "__main__":
     from cStringIO import StringIO
     from DataModel import DataModel
     
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    
     p = Properties.getInstance()
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
@@ -974,9 +976,11 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
     p.LoadFile('../test_data/export_to_db_test.properties')
 #    p.LoadFile('../test_data/nirht_local.properties')
-    dm.PopulateModel()
     
+    dm.PopulateModel()
+
     print '%s images'%len(db.GetAllImageKeys())
+
     
     # TEST CreateTempTableFromCSV
 #    table = '_blah'
