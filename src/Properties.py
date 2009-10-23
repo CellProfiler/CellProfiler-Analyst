@@ -251,8 +251,11 @@ class Properties(Singleton):
                             raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
             
         if self.db_type.lower()=='mysql':
-            for field in ['db_port', 'db_host', 'db_name', 'db_user',]:
+            for field in ['db_host', 'db_name', 'db_user',]:
                 assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=mysql.'%(field)
+            if not field_defined('db_port'):
+                self.db_port = '3306'
+                logging.info('PROPERTIES: Using default db_port=3306 for MySQL.')
             for field in ['image_csv_file','object_csv_file']:
                 if field_defined(field):
                     logr.warn('PROPERTIES WARNING (%s): Field not required with db_type=mysql.'%(field))
@@ -279,11 +282,11 @@ class Properties(Singleton):
             logr.warn('PROPERTIES WARNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.')
         
         if not field_defined('image_buffer_size'):
-            logr.warn('PROPERTIES: Using default image_buffer_size=1')
+            logr.info('PROPERTIES: Using default image_buffer_size=1')
             self.image_buffer_size = '1'
             
         if not field_defined('tile_buffer_size'):
-            logr.warn('PROPERTIES: Using default tile_buffer_size=1')
+            logr.info('PROPERTIES: Using default tile_buffer_size=1')
             self.tile_buffer_size = '1'
             
         if not field_defined('object_name'):
@@ -343,11 +346,13 @@ class Properties(Singleton):
         
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-#        filename = "../Properties/nirht_test.properties"
-        filename = '/Users/afraser/Desktop/example.properties'
+        filename = "../properties/nirht_test.properties"
+#        filename = '/Users/afraser/Desktop/cpa_example/example.properties'
     
     p = Properties.getInstance()
     p.LoadFile(filename)
