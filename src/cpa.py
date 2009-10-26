@@ -55,7 +55,7 @@ class MainGUI(wx.Frame):
         self.tb = self.CreateToolBar(wx.TB_HORIZONTAL|wx.NO_BORDER|wx.TB_FLAT)
         self.tb.SetToolBitmapSize((32,32))
         self.tb.AddTool(ID_CLASSIFIER, classifier_icon.GetBitmap(), shortHelpString='Classifier', longHelpString='Launch Classifier')
-        self.tb.AddTool(ID_PLATE_MAP_BROWSER, pmb_icon.GetBitmap(), shortHelpString='PlateMapBrowser', longHelpString='Launch PlateMapBrowser')
+        self.tb.AddTool(ID_PLATE_MAP_BROWSER, pmb_icon.GetBitmap(), shortHelpString='Plate Viewer', longHelpString='Launch Plate Viewer')
         self.tb.AddTool(ID_DATA_TABLE, datatable_icon.GetBitmap(), shortHelpString='DataTable', longHelpString='Launch DataTable')
         self.tb.AddTool(ID_SCATTER, scatter_icon.GetBitmap(), shortHelpString='Scatter', longHelpString='Launch Scatter')
         self.tb.AddTool(ID_IMAGE_VIEWER, imviewer_icon.GetBitmap(), shortHelpString='ImageViewer', longHelpString='Launch ImageViewer')
@@ -73,10 +73,10 @@ class MainGUI(wx.Frame):
 
         toolsMenu = wx.Menu()
         classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
-        plateMapMenuItem    = toolsMenu.Append(ID_PLATE_MAP_BROWSER, 'Plate Map Browser\tCtrl+P', help='Launches the Plate Map Browser tool.')
-        dataTableMenuItem   = toolsMenu.Append(ID_DATA_TABLE, 'Data Table\tCtrl+T', help='Launches the Data Table tool.')
-        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter plot\tCtrl+Shift+P', help='Launches the Scatter Plot tool.')
-        imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+I', help='Launches the ImageViewer tool.')
+        plateMapMenuItem    = toolsMenu.Append(ID_PLATE_MAP_BROWSER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
+        dataTableMenuItem   = toolsMenu.Append(ID_DATA_TABLE, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
+        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
+        imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()        
@@ -92,8 +92,8 @@ class MainGUI(wx.Frame):
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         self.console.SetBackgroundColour('#111111')
-        self.console.SetForegroundColour('#DDDDDD')
         
+        self.console.SetForegroundColour('#DDDDDD')
         log_level = logging.DEBUG
         self.logr = logging.getLogger()
         self.log_text = ''
@@ -103,14 +103,15 @@ class MainGUI(wx.Frame):
 #        hdlr.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
 #        hdlr.setFormatter(logging.Formatter('%(levelname)s | %(name)s | %(message)s [@ %(asctime)s in %(filename)s:%(lineno)d]'))
         self.logr.addHandler(hdlr)
-        self.logr.setLevel(log_level)
+        # hackish: log_levels ids are 10,20,30,40,50
+        logMenu.GetMenuItems()[(log_level/10)-1].Check()
         logging.info('Logging level: %s'%(logging.getLevelName(log_level)))
         
-        self.Bind(wx.EVT_MENU, lambda(x):self.set_log_level(logging.DEBUG), debugMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(x):self.set_log_level(logging.INFO), infoMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(x):self.set_log_level(logging.WARN), warnMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(x):self.set_log_level(logging.ERROR), errorMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(x):self.set_log_level(logging.CRITICAL), criticalMenuItem)
+        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.DEBUG), debugMenuItem)
+        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.INFO), infoMenuItem)
+        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.WARN), warnMenuItem)
+        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.ERROR), errorMenuItem)
+        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.CRITICAL), criticalMenuItem)
         self.Bind(wx.EVT_MENU, self.save_log, saveLogMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_classifier, classifierMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_plate_map_browser, plateMapMenuItem)
@@ -140,9 +141,13 @@ class MainGUI(wx.Frame):
         table.Show(True)
         
     def launch_scatter_plot(self, evt=None):
+        import cellprofiler.gui.cpfigure as cpfig
         scatter = Scatter(parent=self)
         scatter.Show(True)
-        
+#        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
+#        table = np.random.randn(5000,2)
+#        figure.panel.subplot_scatter(0, 0, table)
+
     def launch_image_viewer(self, evt=None):
         imviewer = ImageViewer(parent=self)
         imviewer.Show(True)
@@ -184,7 +189,7 @@ if __name__ == "__main__":
     import sys
     import logging
 
-    logging.basicConfig(level=logging.DEBUG,)
+    logging.basicConfig(level=logging.DEBUG)
     
     global defaultDir
     defaultDir = os.getcwd()

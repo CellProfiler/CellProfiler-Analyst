@@ -95,7 +95,7 @@ class PlateMapBrowser(wx.Frame):
     def __init__(self, parent, size=(800,-1)):
         wx.Frame.__init__(self, parent, -1, size=size)
         assert (p.well_id is not None and p.plate_id is not None), \
-            'PlateMapBrowser requires the well_id and plate_id columns to be defined in your properties file.'
+            'Plate Viewer requires the well_id and plate_id columns to be defined in your properties file.'
 
         self.link_cols = {} # link_cols[table] = columns that link this table to the per-image table
 
@@ -105,7 +105,7 @@ class PlateMapBrowser(wx.Frame):
         self.fileMenu = wx.Menu()
         self.loadCSVMenuItem = self.fileMenu.Append(-1, text='Load CSV\tCtrl+O', help='Load a CSV file storing per-image data')
         self.fileMenu.AppendSeparator()
-        self.exitMenuItem = self.fileMenu.Append(id=ID_EXIT, text='Exit\tCtrl+Q',help='Close PlateMapBrowser')
+        self.exitMenuItem = self.fileMenu.Append(id=ID_EXIT, text='Exit\tCtrl+Q',help='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
         
         self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
@@ -483,7 +483,7 @@ def LoadProperties():
         os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         p.LoadFile(filename)
     else:
-        print 'PlateMapBrowser requires a properties file.  Exiting.'
+        print 'Plate Viewer requires a properties file.  Exiting.'
         exit()
 
             
