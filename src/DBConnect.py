@@ -843,7 +843,7 @@ class DBConnect(Singleton):
         self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
         for key in list(well_key_columns()) + list(image_key_columns()):
             if key in colnames:
-                self.execute('CREATE INDEX %s ON %s (%s)'%(key, tablename, key))
+                self.execute('CREATE INDEX %s ON %s (%s)'%('%s_%s'%(tablename,key), tablename, key))
         logr.info('Populating temporary table %s...'%(tablename))
         for row in dtable:
             vals = []
