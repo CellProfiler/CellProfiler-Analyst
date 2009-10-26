@@ -50,7 +50,7 @@ class ClassifierGUI(wx.Frame):
             dm = DataModel.getInstance()
             if dm.IsEmpty():
                 dm.PopulateModel()
-            if __name__ != "__main__":
+            if __name__ == "__main__":
                 MulticlassSQL.CreateFilterTables()
             global db
             db = DBConnect.DBConnect.getInstance()
