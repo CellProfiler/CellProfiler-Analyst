@@ -271,10 +271,6 @@ once in ImageViewers.
 ---------------------------------
   VI. Known Issues
 ---------------------------------
-* Color channel menu bullets may fall out of sync with displayed colors when
-  you toggle channels on/off with Ctrl+1,2,3... 
-* Please report other bugs, issues, or feature requests to the forum at
-  cellprofiler.org/forum 
 * Per-well csv data can't be loaded into PlateMapBrowser if the plate and well 
   columns don't match the corresponding columns in the image table. This may 
   happen when a group is defined in the properties file that selects columns 
@@ -282,3 +278,5 @@ once in ImageViewers.
   the column x will appear as y, and can not be matched back to the database.
 * If multiple PlateMapBrowsers are open, only the most recent one will be 
   updated with an enrichment table if one is generated.
+* Please report other bugs, issues, or feature requests to the forum at
+  cellprofiler.org/forum 
