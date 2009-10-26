@@ -1,5 +1,5 @@
 from ClassifierGUI import ID_CLASSIFIER
-from DBConnect import DBConnect
+from DBConnect import *
 from DataModel import DataModel
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
@@ -170,6 +170,14 @@ class ImageViewer(wx.Frame):
         
         if classCoords is not None:
             self.SetClasses(classCoords)
+            
+    def AutoTitle(self):
+        if p.plate_id and p.well_id:
+            plate, well = db.execute('SELECT %s, %s FROM %s WHERE %s'%(p.plate_id, p.well_id, p.image_table, GetWhereClauseForImages([self.img_key])))[0]
+            title = '%s %s, %s %s, image-key %s'%(p.plate_id, plate, p.well_id, well, str(self.img_key))
+        else:
+            title = 'image-key %s'%(str(self.img_key))
+        self.SetTitle(title)
         
     def CreatePopupMenu(self):
         self.popupMenu = wx.Menu()
@@ -182,7 +190,7 @@ class ImageViewer(wx.Frame):
         self.SetAcceleratorTable(accelerator_table)
 
     def SetImage(self, imgs, chMap=None, brightness=1, scale=1, contrast=None):
-        self.Title = str(self.img_key)
+        self.AutoTitle()
         self.chMap = chMap or p.image_channel_colors
         self.toggleChMap = self.chMap[:]
         if self.imagePanel:
