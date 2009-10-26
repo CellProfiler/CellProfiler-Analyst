@@ -226,7 +226,6 @@ class ClassifierGUI(wx.Frame):
         self.GetStatusBar().Bind(wx.EVT_SIZE, self.status_bar_onsize)
         wx.CallAfter(self.status_bar_onsize, None)
 
-
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows

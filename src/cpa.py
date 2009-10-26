@@ -161,6 +161,8 @@ class MainGUI(wx.Frame):
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
 
     def on_close(self, evt=None):
+        # Classifier needs to be told to close so it can clean up it's threads
+        self.classifier.Close()
         self.Destroy()
         
     def on_idle(self, evt=None):
