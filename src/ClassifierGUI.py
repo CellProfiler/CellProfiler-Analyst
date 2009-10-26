@@ -1076,6 +1076,7 @@ class ClassifierGUI(wx.Frame):
             if response == wx.ID_YES:
                 self.SaveTrainingSet()
             elif response == wx.ID_CANCEL:
+                evt.Veto()
                 return
         self.Destroy()
         

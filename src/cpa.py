@@ -162,8 +162,8 @@ class MainGUI(wx.Frame):
 
     def on_close(self, evt=None):
         # Classifier needs to be told to close so it can clean up it's threads
-        self.classifier.Close()
-        self.Destroy()
+        if self.classifier.Close() != False:
+            self.Destroy()
         
     def on_idle(self, evt=None):
         if self.log_text != '':
