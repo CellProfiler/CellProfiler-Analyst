@@ -81,6 +81,7 @@ class ImageTile(ImagePanel):
         popupMenuItems = ['View full images of selected',
                           'Select all\tCtrl+A',
                           'Deselect all\tCtrl+D',
+                          'Invert selection\tCtrl+I',
                           'Remove selected\tDelete']
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
@@ -106,13 +107,14 @@ class ImageTile(ImagePanel):
                 imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, scale=self.scale,
                                         contrast=self.contrast)
-                pos = db.GetObjectCoords(obKey)
-                imViewer.imagePanel.SelectPoint(pos)
+                imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
         elif choice == 1:
             self.bin.SelectAll()
         elif choice == 2:
             self.bin.DeselectAll()
         elif choice == 3:
+            self.bin.InvertSelection()
+        elif choice == 4:
             self.bin.RemoveSelectedTiles()
             
             

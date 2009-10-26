@@ -82,6 +82,7 @@ class SortBin(wx.ScrolledWindow):
         popupMenuItems = ['View full images of selected',
                           'Select all\tCtrl+A',
                           'Deselect all\tCtrl+D',
+                          'Invert selection\tCtrl+I',
                           'Remove selected\tDelete']
         if self.label != 'unclassified':
             popupMenuItems += ['Rename class', 'Delete bin']
@@ -105,7 +106,7 @@ class SortBin(wx.ScrolledWindow):
             elif evt.GetKeyCode() == ord('D'):
                 self.DeselectAll()
             elif evt.GetKeyCode() == ord('I'):
-                [t.ToggleSelect() for t in self.tiles]
+                self.InvertSelection()
         evt.Skip()
         
             
@@ -119,20 +120,21 @@ class SortBin(wx.ScrolledWindow):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for key in self.SelectedKeys():
-                imViewer = ImageTools.ShowImage((key[0],key[1]), self.chMap[:], parent=self.classifier,
+                imViewer = ImageTools.ShowImage(key[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.classifier.brightness, scale=self.classifier.scale,
                                         contrast=self.classifier.contrast)
-                pos = db.GetObjectCoords(key)
-                imViewer.imagePanel.SelectPoint(pos)
+                imViewer.imagePanel.SelectPoint(db.GetObjectCoords(key))
         elif choice == 1:
             self.SelectAll()
         elif choice == 2:
             self.DeselectAll()
         elif choice == 3:
-            self.RemoveSelectedTiles()
+            self.InvertSelection()
         elif choice == 4:
-            self.classifier.RenameClass(self.label)
+            self.RemoveSelectedTiles()
         elif choice == 5:
+            self.classifier.RenameClass(self.label)
+        elif choice == 6:
             self.classifier.RemoveSortClass(self.label)
     
     
@@ -248,7 +250,10 @@ class SortBin(wx.ScrolledWindow):
         ''' Deselects all tiles on this bin. '''
         for tile in self.tiles:
             tile.Deselect()
-
+            
+    def InvertSelection(self):
+        [t.ToggleSelect() for t in self.tiles]
+        
 
     def OnLeftDown(self, evt):
         ''' Deselect all tiles unless shift is held. '''

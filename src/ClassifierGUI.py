@@ -306,7 +306,7 @@ class ClassifierGUI(wx.Frame):
 
         # View Menu
         viewMenu = wx.Menu()
-        imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+I', help='Launches a control panel for adjusting image brightness, size, etc.')
+        imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I', help='Launches a control panel for adjusting image brightness, size, etc.')
         self.GetMenuBar().Append(viewMenu, 'View')
 
         # Channel Menus
