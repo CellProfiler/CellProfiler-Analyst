@@ -49,7 +49,7 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
         mask = (signed_adjustment > 0)
         margin_correct += signed_adjustment * mask
         margin_incorrect += (- signed_adjustment) * (~ mask)
-        expected_margin = mean(margin_correct / (margin_correct + margin_incorrect))
+        expected_margin = sum(balancing * (margin_correct / (margin_correct + margin_incorrect))) / sum(balancing)
 
         computed_labels = recomputed_labels
         weak_learners += [(colname, thresh, a, b, expected_margin)]
