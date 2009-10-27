@@ -668,6 +668,16 @@ class ClassifierGUI(wx.Frame):
         self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                nRules, self.trainingSet.label_matrix, 
                                                                self.trainingSet.values, output)
+        try:
+            import cellprofiler.gui.cpfigure as cpfig
+            figure = cpfig.create_or_find(self, -1, 'Margin vs. Training Iteration', subplots=(1,1), name='Margin vs. Training Iteration')
+            sp = figure.subplot(0,0)
+            sp.clear()
+            sp.plot([v[-1] for v in self.weaklearners])
+            figure.Refresh()
+        except:
+            logging.debug("Could not import cpfigure, will not display Margin vs. Iteration plot.")
+            pass
         self.SetStatusText('')
         self.rules_text.Value = output.getvalue()
         self.scoreAllBtn.Enable()
