@@ -129,6 +129,12 @@ class MainGUI(wx.Frame):
 
         
     def launch_classifier(self, evt=None):
+        classifier = wx.FindWindowByName('Classifier')
+        if classifier:
+            classifier.Show()
+            classifier.SetFocus()
+            logging.warn('You may only run one instance of Classifier at a time.')
+            return
         classifier = ClassifierGUI(parent=self, properties=self.properties)
         classifier.Show(True)
         
