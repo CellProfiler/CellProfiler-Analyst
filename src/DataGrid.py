@@ -1,18 +1,19 @@
 # -*- Encoding: utf-8 -*-
-import wx
-import logging
-import wx.grid
-import numpy as np
-import ImageTools
 from DataModel import DataModel
-import DBConnect
 from Properties import Properties
 from sys import stderr
 from tempfile import gettempdir
 from time import ctime, time
-import os
+from wx.lib.embeddedimage import PyEmbeddedImage
+import DBConnect
+import ImageTools
 import csv
+import logging
+import numpy as np
+import os
 import weakref
+import wx
+import wx.grid
 
 dm = DataModel.getInstance()
 db = DBConnect.DBConnect.getInstance()
@@ -21,6 +22,17 @@ p = Properties.getInstance()
 ID_LOAD_CSV = wx.NewId()
 ID_SAVE_CSV = wx.NewId()
 ID_EXIT = wx.NewId()
+
+ROW_LABEL_SIZE = 30
+
+BITMAP_HEIGHT = 30
+mondrian = PyEmbeddedImage(
+    "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAHFJ"
+    "REFUWIXt1jsKgDAQRdF7xY25cpcWC60kioI6Fm/ahHBCMh+BRmGMnAgEWnvPpzK8dvrFCCCA"
+    "coD8og4c5Lr6WB3Q3l1TBwLYPuF3YS1gn1HphgEEEABcKERrGy0E3B0HFJg7C1N/f/kTBBBA"
+    "+Vi+AMkgFEvBPD17AAAAAElFTkSuQmCC") 
+
+img_icon = PyEmbeddedImage('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')
 
 class HugeTable(wx.grid.PyGridTableBase):
     '''
@@ -45,10 +57,10 @@ class HugeTable(wx.grid.PyGridTableBase):
         assert len(col_labels) == data.shape[1], "DataGrid.__init__: Number of column labels does not match the number of columns in data."
         self.sortdir      =  1    # sort direction (1=descending, -1=descending)
         self.sortcol      =  -1   # column index being sorted
-        self.sortcols     = []    # column indices being sorted (in order)
+        self.sortcols     =  []    # column indices being sorted (in order)
         self.grid         =  grid
         self.data         =  data
-        self.ordered_data = self.data
+        self.ordered_data =  self.data
         self.col_labels   =  np.array(col_labels)
         self.row_order    =  np.arange(self.data.shape[0])
         self.col_order    =  np.arange(self.data.shape[1])
@@ -76,7 +88,8 @@ class HugeTable(wx.grid.PyGridTableBase):
         return self.col_labels[self.col_order]
 
     def GetRowLabelValue(self, row):
-        return ", ".join([str(v) for v in self.GetKeyForRow(row)])
+        return '*'
+#        return ", ".join([str(v) for v in self.GetKeyForRow(row)])
     
     def GetKeyForRow(self, row):
         return tuple([v for v in self.data[self.row_order[row],self.key_col_indices]])
@@ -181,7 +194,7 @@ class HugeTableGrid(wx.grid.Grid):
     
     def __init__(self, parent, data, col_labels, key_col_indices, grouping="Image", chMap=None):
         wx.grid.Grid.__init__(self, parent, -1)
-
+        
         table = HugeTable(self, data, col_labels, key_col_indices)
         
         self.selectedColumns = set()
@@ -201,6 +214,10 @@ class HugeTableGrid(wx.grid.Grid):
         # Avoid self.AutoSize() because it hangs on large tables.
         self.SetSelectionMode(self.wxGridSelectColumns)
         self.SetColumnLabels(self.GetTable().col_labels)
+        # Help prevent spurious horizontal scrollbar
+        self.SetMargins(0-wx.SystemSettings_GetMetric(wx.SYS_VSCROLL_X),
+                        0-wx.SystemSettings_GetMetric(wx.SYS_HSCROLL_Y))
+        self.SetRowLabelSize(ROW_LABEL_SIZE)
         
         wx.grid.EVT_GRID_SELECT_CELL(self, self.OnSelectCell)
         wx.grid.EVT_GRID_LABEL_LEFT_CLICK(self, self.OnLabelClick)
@@ -364,7 +381,7 @@ class DataGrid(wx.Frame):
 
         self.SetSize((800,500))
         if self.grid:
-            self.SetSize((self.grid.Size[0], min(self.grid.Size[1], 500)+22))
+            self.grid.SetSize(self.Size)
         
         self.Bind(wx.EVT_MENU, self.OnSaveCSV, self.saveCSVMenuItem)
         self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
@@ -402,12 +419,14 @@ class DataGrid(wx.Frame):
         self.Destroy()
 
     def OnSize(self, evt):
-        # Hack: subtract 25 in order to avoid spurious scrollbar.
         if not self.grid:
             return
-        cw = (evt.GetSize()[0]-25) / (self.grid.GetTable().GetNumberCols()+1)
+        # HACK CITY: Trying to fix spurious horizontal scrollbar
+        adjustment = ROW_LABEL_SIZE
+        if self.grid.GetScrollRange(wx.VERTICAL)>0:
+            adjustment = wx.SYS_VSCROLL_ARROW_X + 12
+        cw = (evt.GetSize()[0] - adjustment) / self.grid.GetTable().GetNumberCols()
         self.grid.SetDefaultColSize(cw, True)
-        self.grid.SetRowLabelSize(cw)
         evt.Skip()
         
     def RescaleGrid(self):
@@ -583,7 +602,8 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         # ---- testing ----
         
-        p.LoadFile('/Users/afraser/CPA/properties/nirht_test.properties')
+#        p.LoadFile('/Users/afraser/CPA/properties/nirht_test.properties')
+        p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
         dm.PopulateModel()
         
         print 'TESTING DATA GRID' 
