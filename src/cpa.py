@@ -129,8 +129,8 @@ class MainGUI(wx.Frame):
 
         
     def launch_classifier(self, evt=None):
-        self.classifier = ClassifierGUI(parent=self, properties=self.properties)
-        self.classifier.Show(True)
+        classifier = ClassifierGUI(parent=self, properties=self.properties)
+        classifier.Show(True)
         
     def launch_plate_map_browser(self, evt=None):
         self.pmb = PlateMapBrowser(parent=self)
@@ -162,8 +162,10 @@ class MainGUI(wx.Frame):
 
     def on_close(self, evt=None):
         # Classifier needs to be told to close so it can clean up it's threads
-        if self.classifier.Close() != False:
-            self.Destroy()
+        classifier = wx.FindWindowByName('Classifier') or wx.FindWindowById(ID_CLASSIFIER)
+        if classifier and classifier.Close() == False:
+            return
+        self.Destroy()
         
     def on_idle(self, evt=None):
         if self.log_text != '':
