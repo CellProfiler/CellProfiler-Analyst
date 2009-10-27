@@ -42,6 +42,8 @@ class ImageControlPanel(wx.Panel):
         else:
             self.listeners = [listeners]
         
+        self.contrast = contrast
+        
         self.scale_slider      = wx.Slider(parent, -1, scale*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.brightness_slider = wx.Slider(parent, -1, brightness*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.reset_btn         = wx.Button(parent, wx.NewId(), 'Reset')
@@ -71,6 +73,8 @@ class ImageControlPanel(wx.Panel):
         
         self.sizer3 = wx.BoxSizer(wx.VERTICAL)
         self.AddContrastControls(contrast)
+        self.sizer4 = wx.BoxSizer(wx.VERTICAL)
+        self.sizer3.Add(self.sizer4) # place holder for class check boxes
         if classCoords is not None:
             self.SetClasses(classCoords)
 
@@ -85,6 +89,7 @@ class ImageControlPanel(wx.Panel):
 
 
     def AddContrastControls(self, mode):
+        self.contrast = mode
         self.contrast_radiobox = wx.RadioBox(self.GetParent(), -1, 'Contrast Adjust:', choices=contrast_modes)
         try:
             self.contrast_radiobox.SetSelection(contrast_modes.index(mode))
@@ -96,19 +101,19 @@ class ImageControlPanel(wx.Panel):
         
 
     def SetClassPoints(self, classCoords):
-        self.sizer3.DeleteWindows()
+        self.sizer4.DeleteWindows()
         vals = np.arange(float(len(classCoords))) / len(classCoords)
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
             colors = [np.array(cm.jet(val)) * 255 for val in vals]
             
-            self.sizer3.Add(wx.StaticText(self.GetParent(), -1, 'Phenotypes:'))
+            self.sizer4.Add(wx.StaticText(self.GetParent(), -1, 'Phenotypes:'))
             i=1
             for (name, keys), color in zip(classCoords.items(), colors):
                 checkBox = wx.CheckBox(self.GetParent(), wx.NewId(), '%d) %s'%(i,name))
                 checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
                 checkBox.SetValue(True)
-                self.sizer3.Add(checkBox, flag=wx.EXPAND)
+                self.sizer4.Add(checkBox, flag=wx.EXPAND)
                 
                 def OnTogglePhenotype(evt):
                     className = evt.EventObject.Label
