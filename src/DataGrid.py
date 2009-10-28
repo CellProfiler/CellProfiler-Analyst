@@ -23,6 +23,7 @@ ID_LOAD_CSV = wx.NewId()
 ID_SAVE_CSV = wx.NewId()
 ID_EXIT = wx.NewId()
 
+DO_NOT_LINK_TO_IMAGES = 'Do not link to images'
 ROW_LABEL_SIZE = 30
 
 # Icon to be used for row headers (difficult to implement) 
@@ -452,7 +453,12 @@ class DataGrid(wx.Frame):
         if dlg.ShowModal() != wx.ID_OK:
             return
         filename = dlg.GetPath()
-        dlg = wx.SingleChoiceDialog(self, 'How was the data in this file grouped?', 'Specify Grouping', ['Image']+p._groups_ordered)
+        dlg = wx.SingleChoiceDialog(self,
+                                    'In order to link the rows of your file back to your images,\n'
+                                    'you need to specify how your data was grouped. If this file\n'
+                                    'does not contain data linked to your images, then select\n'
+                                    '"%s".'%(DO_NOT_LINK_TO_IMAGES),
+                                    'Specify Grouping', ['Image']+p._groups_ordered+[DO_NOT_LINK_TO_IMAGES])
         if dlg.ShowModal()!=wx.ID_OK:
             return
         group = dlg.GetStringSelection()
@@ -482,7 +488,9 @@ class DataGrid(wx.Frame):
             data += [[coltypes[i](v) for i,v in enumerate(row)]]
         data = np.array(data, dtype=object)
         
-        if group == 'Image':
+        if group == DO_NOT_LINK_TO_IMAGES:
+            keycols = []
+        elif group == 'Image':
             keycols = range(len(DBConnect.image_key_columns()))
         else:
             keycols = range(len(dm.GetGroupColumnNames(group)))
