@@ -165,6 +165,8 @@ class ImageViewer(wx.Frame):
         self.CreatePopupMenu()
         if imgs and chMap:
             self.SetImage(imgs, chMap, brightness, scale, contrast)
+        else:
+            self.OnOpenImage()
         self.DoLayout()
         self.Center()
         
@@ -328,8 +330,8 @@ class ImageViewer(wx.Frame):
                 self.imagePanel.SetContrastMode('None')
                 self.controls.SetContrastMode('None')
             elif keycode == ord('K'):
-                self.imagePanel.SetContrastMode('Auto')
-                self.controls.SetContrastMode('Auto')
+                self.imagePanel.SetContrastMode('Linear')
+                self.controls.SetContrastMode('Linear')
             elif keycode == ord('L'):
                 self.imagePanel.SetContrastMode('Log')
                 self.controls.SetContrastMode('Log')
@@ -412,7 +414,7 @@ class ImageViewer(wx.Frame):
         ''' On right click show popup menu. '''
         self.PopupMenu(self.popupMenu, evt.GetPosition())
 
-    def OnOpenImage(self, evt):
+    def OnOpenImage(self, evt=None):
         # 1) Get the image key
         # Start with the table_id if there is one
         tblNum = None

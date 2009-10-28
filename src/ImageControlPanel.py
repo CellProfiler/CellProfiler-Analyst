@@ -6,7 +6,7 @@ from StringIO import StringIO
 from base64 import b64decode
 p = Properties.getInstance()
 
-contrast_modes = ['None', 'Auto', 'Log']
+contrast_modes = ['None', 'Linear', 'Log']
 
 brightness_icon = 'iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAMAAABhEH5lAAAAGXRFWHRTb2Z\
 0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAMBQTFRFOTk5LS0t////YWFhNjY2ZGRk9fX1VFRUf\
@@ -55,14 +55,14 @@ class ImageControlPanel(wx.Panel):
         sizer2 = wx.BoxSizer(wx.VERTICAL)
         brightness_sizer = wx.BoxSizer(wx.HORIZONTAL)
 #        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Brightness:'))
-        brightness_sizer.Add(wx.StaticBitmap(self.GetParent(), -1, wx.BitmapFromImage(wx.ImageFromStream(StringIO(b64decode(brightness_icon))))), proportion=0)
+        brightness_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.BitmapFromImage(wx.ImageFromStream(StringIO(b64decode(brightness_icon))))), proportion=0)
         brightness_sizer.AddSpacer((5,-1))
         brightness_sizer.Add(self.brightness_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         brightness_sizer.AddSpacer((5,-1))
         brightness_sizer.Add(self.brightness_percent)
         scale_sizer = wx.BoxSizer(wx.HORIZONTAL)
 #        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Scale:'))
-        scale_sizer.Add(wx.StaticBitmap(self.GetParent(), -1, wx.BitmapFromImage(wx.ImageFromStream(StringIO(b64decode(zoom_icon))))), proportion=0)
+        scale_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.BitmapFromImage(wx.ImageFromStream(StringIO(b64decode(zoom_icon))))), proportion=0)
         scale_sizer.AddSpacer((5,-1))
         scale_sizer.Add(self.scale_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         scale_sizer.AddSpacer((5,-1))
@@ -90,7 +90,7 @@ class ImageControlPanel(wx.Panel):
 
     def AddContrastControls(self, mode):
         self.contrast = mode
-        self.contrast_radiobox = wx.RadioBox(self.GetParent(), -1, 'Contrast Adjust:', choices=contrast_modes)
+        self.contrast_radiobox = wx.RadioBox(self.Parent, -1, 'Contrast Stretch:', choices=contrast_modes)
         try:
             self.contrast_radiobox.SetSelection(contrast_modes.index(mode))
         except:
@@ -107,10 +107,10 @@ class ImageControlPanel(wx.Panel):
             vals += (1.0 - vals[-1]) / 2
             colors = [np.array(cm.jet(val)) * 255 for val in vals]
             
-            self.sizer4.Add(wx.StaticText(self.GetParent(), -1, 'Phenotypes:'))
+            self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Phenotypes:'))
             i=1
             for (name, keys), color in zip(classCoords.items(), colors):
-                checkBox = wx.CheckBox(self.GetParent(), wx.NewId(), '%d) %s'%(i,name))
+                checkBox = wx.CheckBox(self.Parent, wx.NewId(), '%d) %s'%(i,name))
                 checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
                 checkBox.SetValue(True)
                 self.sizer4.Add(checkBox, flag=wx.EXPAND)
@@ -152,7 +152,7 @@ class ImageControlPanel(wx.Panel):
     def SetContrastMode(self, mode):
         if mode.lower() == 'none':
             self.contrast_radiobox.SetSelection(0)
-        elif mode.lower() == 'auto':
+        elif mode.lower() == 'linear':
             self.contrast_radiobox.SetSelection(1)
         elif mode.lower() == 'log':
             self.contrast_radiobox.SetSelection(2)
