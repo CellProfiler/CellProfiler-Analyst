@@ -553,8 +553,8 @@ class DBConnect(Singleton):
 
     
     def GetColumnNames(self, table):
-        '''  Returns a list of the column names for the specified table. '''
-        # NOTE: SQLite doesn't like DESCRIBE statements so we do it this way.
+        ''' Returns a list of the column names for the specified table. '''
+        # NOTE: SQLite doesn't like DESCRIBE or SHOW statements so we do it this way.
         self.execute('SELECT * FROM %s LIMIT 1'%(table))
         return self.GetResultColumnNames()   # return the column names
             
@@ -610,6 +610,18 @@ class DBConnect(Singleton):
             return None
         return np.array(data[0])
     
+    
+    def GetCellData(self, obKey):
+        '''
+        Returns a list of measurements for the specified object.
+        '''
+        query = 'SELECT * FROM %s WHERE %s' %(p.object_table, GetWhereClauseForObjects([obKey]))
+        data = self.execute(query, silent=True)
+        if len(data) == 0:
+            logr.error('No data for obKey: %s'%str(obKey))
+            return None
+        return np.array(data[0])
+
     
     def GetPlateNames(self):
         '''
