@@ -505,6 +505,7 @@ class ClassifierGUI(wx.Frame):
                         return
                     
             attempts = 0
+            # Now check which objects fall within the classification
             while len(obKeys) < nObjects:
                 if filter == 'experiment':
                     if p.db_sqlite_file:
@@ -1086,7 +1087,10 @@ class ClassifierGUI(wx.Frame):
             if response == wx.ID_YES:
                 self.SaveTrainingSet()
             elif response == wx.ID_CANCEL:
-                evt.Veto()
+                try:
+                    evt.Veto()
+                except:
+                    pass
                 return
         self.Destroy()
         
