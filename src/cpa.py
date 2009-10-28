@@ -57,7 +57,7 @@ class MainGUI(wx.Frame):
         self.tb.AddTool(ID_CLASSIFIER, classifier_icon.GetBitmap(), shortHelpString='Classifier', longHelpString='Launch Classifier')
         self.tb.AddTool(ID_PLATE_MAP_BROWSER, pmb_icon.GetBitmap(), shortHelpString='Plate Viewer', longHelpString='Launch Plate Viewer')
         self.tb.AddTool(ID_DATA_TABLE, datatable_icon.GetBitmap(), shortHelpString='DataTable', longHelpString='Launch DataTable')
-        self.tb.AddTool(ID_SCATTER, scatter_icon.GetBitmap(), shortHelpString='Scatter', longHelpString='Launch Scatter')
+        self.tb.AddTool(ID_SCATTER, scatter_icon.GetBitmap(), shortHelpString='Scatter Plot', longHelpString='Launch Scatter Plot')
         self.tb.AddTool(ID_IMAGE_VIEWER, imviewer_icon.GetBitmap(), shortHelpString='ImageViewer', longHelpString='Launch ImageViewer')
         self.tb.Realize()
         
@@ -75,7 +75,7 @@ class MainGUI(wx.Frame):
         classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
         plateMapMenuItem    = toolsMenu.Append(ID_PLATE_MAP_BROWSER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
         dataTableMenuItem   = toolsMenu.Append(ID_DATA_TABLE, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
-        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
+        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
         imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
@@ -147,9 +147,9 @@ class MainGUI(wx.Frame):
         table.Show(True)
         
     def launch_scatter_plot(self, evt=None):
-        import cellprofiler.gui.cpfigure as cpfig
         scatter = Scatter(parent=self)
         scatter.Show(True)
+#        import cellprofiler.gui.cpfigure as cpfig
 #        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
 #        table = np.random.randn(5000,2)
 #        figure.panel.subplot_scatter(0, 0, table)
