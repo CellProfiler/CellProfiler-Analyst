@@ -96,7 +96,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     if contrast=='Log':
         logims = [log_transform(im) for im in imgs]
         imData = MergeChannels(logims, chMap, masks=masks)
-    elif contrast=='Auto':
+    elif contrast=='Linear':
         newims = [auto_contrast(im) for im in imgs]
         imData = MergeChannels(newims, chMap, masks=masks)
     else:
