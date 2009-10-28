@@ -99,7 +99,6 @@ class SortBin(wx.ScrolledWindow):
         ''' Keyboard shortcuts '''
         if evt.GetKeyCode() in [wx.WXK_DELETE, wx.WXK_BACK]:        # delete
             self.RemoveSelectedTiles()
-            self.UpdateSizer()
         elif evt.ControlDown() or evt.CmdDown():
             if evt.GetKeyCode() == ord('A'):
                 self.SelectAll()
