@@ -170,17 +170,20 @@ class TrainingSet:
         sub.groups = [self.groups[i] for i in range(len(self.groups)) if mask[i]]
         return sub
 
+
 class CellCache(Singleton):
-    "caching frontend for holding cell data"
+    ''' caching front end for holding cell data '''
     
     def __init__(self):
-        self.data = {}
+        self.data        = {}
+        self.colnames    = db.GetColumnNames(p.object_table)
+        self.col_indices = [self.colnames.index(v) for v in db.GetColnamesForClassifier()]
         self.last_update = db.get_objects_modify_date()
 
     def load_from_string(self, str):
         'load data from a string, verifying that the table has not changed since it was created (encoded in string)'
         try:
-            date, oldcache = cPickle.loads(zlib.decompress(base64.b64decode(str)))
+            date, self.colnames, oldcache = cPickle.loads(zlib.decompress(base64.b64decode(str)))
         except:
             # silent failure
             return
@@ -194,13 +197,13 @@ class CellCache(Singleton):
         for k in keys:
             if k in self.data:
                 temp[k] = self.data[k]
-        output = (db.get_objects_modify_date(), temp)
+        output = (db.get_objects_modify_date(), self.colnames, temp)
         return base64.b64encode(zlib.compress(cPickle.dumps(output)))
 
     def get_object_data(self, key):
         if key not in self.data:
-            self.data[key] = db.GetCellDataForClassifier(key)
-        return self.data[key]
+            self.data[key] = db.GetCellData(key)
+        return self.data[key][self.col_indices]
 
     def clear_if_objects_modified(self):
         if not db.verify_objects_modify_date_earlier(self.last_update):
