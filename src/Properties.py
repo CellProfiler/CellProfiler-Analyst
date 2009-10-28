@@ -265,7 +265,7 @@ class Properties(Singleton):
         
         if not field_defined('image_channel_names'):
             logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. Classifier will use generic channel names.')
-            self.image_channel_names = ['channel-%d'%(i) for i in range(103)] [:len(self.image_channel_files)]
+            self.image_channel_names = ['channel-%d'%(i+1) for i in range(103)] [:len(self.image_channel_files)]
 
         if not field_defined('image_channel_colors'):
             logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.')
