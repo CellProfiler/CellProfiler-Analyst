@@ -375,8 +375,8 @@ class DataGrid(wx.Frame):
         self.dbmenu = wx.Menu()
         self.writeToTempTableMenuItem = \
             wx.MenuItem(parentMenu=self.dbmenu, id=-1,
-                        text='Write to Temporary Table in Database',
-                        help='Writes this table to a temporary table in your database.')
+                        text='Write temporary table for Plate Viewer',
+                        help='Writes this table to a temporary table in your database so Plate Viewer can access it.')
         self.dbmenu.AppendItem(self.writeToTempTableMenuItem)
         self.GetMenuBar().Append(self.dbmenu, 'Database')
         if self.grid:
