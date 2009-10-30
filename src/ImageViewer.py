@@ -422,7 +422,12 @@ class ImageViewer(wx.Frame):
             dlg = wx.TextEntryDialog(self, p.table_id+':','Enter '+p.table_id)
             dlg.SetValue('0')
             if dlg.ShowModal() == wx.ID_OK:
-                tblNum = int(dlg.GetValue())
+                try:
+                    tblNum = int(dlg.GetValue())
+                except ValueError:
+                    errdlg = wx.MessageDialog(self, 'Invalid value for %s!'%(p.table_id), "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+                    errdlg.ShowModal()
+                    return
                 dlg.Destroy()
             else:
                 dlg.Destroy()
@@ -431,7 +436,12 @@ class ImageViewer(wx.Frame):
         dlg = wx.TextEntryDialog(self, p.image_id+':','Enter '+p.image_id)
         dlg.SetValue('')
         if dlg.ShowModal() == wx.ID_OK:
-            imgNum = int(dlg.GetValue())
+            try:
+                imgNum = int(dlg.GetValue())
+            except ValueError:
+                errdlg = wx.MessageDialog(self, 'Invalid value for %s!'%(p.image_id), "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+                errdlg.ShowModal()
+                return
             dlg.Destroy()
         else:
             dlg.Destroy()
