@@ -1104,12 +1104,17 @@ class ClassifierGUI(wx.Frame):
         super(ClassifierGUI, self).Destroy()
         import threading
         for thread in threading.enumerate():
-            if thread != threading.currentThread():
+            if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
                 logging.debug('Aborting thread %s'%thread.getName())
                 try:
                     thread.abort()
                 except:
                     pass
+        from TileCollection import TileCollection
+        # XXX: Hack -- can't figure out what is holding onto TileCollection, but
+        #      it needs to be trashed if Classifier is to be reopened since it
+        #      will otherwise grab the existing instance with a dead tileLoader
+        TileCollection._forgetClassInstanceReferenceForTesting()
         
                 
         

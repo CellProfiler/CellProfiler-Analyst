@@ -42,6 +42,7 @@ class TileCollection(Singleton):
         notify_window: window that will handle TileUpdatedEvent(s)
         priority: priority with which to fetch these tiles (tiles with
             smaller priorities are pushed to the front of the load queue)
+            a 3-tuple is used to provide 3 tiers of priority.
         Returns: a list of lists of tile data (in numpy arrays) in the order
             of the obKeys that were passed in.
         '''
@@ -95,6 +96,7 @@ class TileLoader(threading.Thread):
     '''
     def __init__(self, tc, notify_window):
         threading.Thread.__init__(self)
+        self.setName('TileLoader_%s'%(self.getName()))
         self.notify_window = notify_window
         self.tile_collection = tc
         self._want_abort = False
@@ -108,6 +110,7 @@ class TileLoader(threading.Thread):
                 self.tile_collection.cv.wait()
                 
             if self._want_abort:
+                self.tile_collection.cv.release()
                 logging.info('%s aborted'%self.getName())
                 return
 
@@ -139,8 +142,7 @@ class TileLoader(threading.Thread):
         self.tile_collection.cv.acquire()
         heappush(self.tile_collection.loadq, ((0, 0, 0), '<ABORT>'))
         self.tile_collection.cv.notify()
-        self.tile_collection.cv.release()
-        
+        self.tile_collection.cv.release()        
 
 
 
