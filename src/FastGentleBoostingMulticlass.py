@@ -16,8 +16,8 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
     num_examples, num_classes = label_matrix.shape
     # Set weights, normalize by number of examples
     weights = ones(label_matrix.shape, float32)
-    margin_correct = zeros(label_matrix.shape, float32)
-    margin_incorrect = zeros(label_matrix.shape, float32)
+    margin_correct = zeros((num_examples, num_classes-1), float32)
+    margin_incorrect = zeros((num_examples, num_classes-1), float32)
     for idx in range(num_classes):
         classmask = (label_matrix[:, idx] == 1).reshape((num_examples, 1))
         num_examples_class = sum(classmask)
@@ -45,14 +45,15 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
     weak_learners = []
     for weak_count in range(num_learners):
         err, colname, thresh, a, b, reweight, recomputed_labels, adjustment = get_one_weak_learner()
-        signed_adjustment = adjustment * label_matrix
-        mask = (signed_adjustment > 0)
-        margin_correct += signed_adjustment * mask
-        margin_incorrect += (- signed_adjustment) * (~ mask)
-        expected_margin = sum(balancing * (margin_correct / (margin_correct + margin_incorrect))) / sum(balancing)
+        step_correct_class = adjustment[label_matrix > 0].reshape((num_examples, 1))
+        step_relative = step_correct_class - (adjustment[label_matrix < 0].reshape((num_examples, num_classes - 1)))
+        mask = (step_relative > 0)
+        margin_correct += step_relative * mask
+        margin_incorrect += (- step_relative) * (~ mask)
+        expected_worst_margin = sum(balancing[:,0] * (margin_correct / (margin_correct + margin_incorrect)).min(axis=1)) / sum(balancing[:,0])
 
         computed_labels = recomputed_labels
-        weak_learners += [(colname, thresh, a, b, expected_margin)]
+        weak_learners += [(colname, thresh, a, b, expected_worst_margin)]
         if fout:
             colname, thresh, a, b, e_m = weak_learners[-1]
             fout.write("IF (%s > %s, %s, %s)\n" %
