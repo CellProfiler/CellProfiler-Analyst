@@ -219,7 +219,7 @@ class ImageViewer(wx.Frame):
         self.GetMenuBar().Append(self.classifyMenu, 'Classify')
         # View Menu
         self.viewMenu = wx.Menu()
-        self.classViewMenuItem = self.viewMenu.Append(-1, text='View phenotypes as numbers')
+        self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
         self.GetMenuBar().Append(self.viewMenu, 'View')
         
     def DoLayout(self):
@@ -483,7 +483,7 @@ class ImageViewer(wx.Frame):
 
 
     def OnChangeClassRepresentation(self, evt):
-        self.classViewMenuItem.Text = 'View phenotypes as colors'
+        self.classViewMenuItem.Text = 'View %s classes as colors'%p.object_name[0]
         self.imagePanel.ToggleClassRepresentation()
         
     def OnOpenFileMenu(self, evt=None):
