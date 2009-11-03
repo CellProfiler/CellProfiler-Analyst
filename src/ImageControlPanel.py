@@ -107,7 +107,7 @@ class ImageControlPanel(wx.Panel):
             vals += (1.0 - vals[-1]) / 2
             colors = [np.array(cm.jet(val)) * 255 for val in vals]
             
-            self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Phenotypes:'))
+            self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Classes:'))
             i=1
             for (name, keys), color in zip(classCoords.items(), colors):
                 checkBox = wx.CheckBox(self.Parent, wx.NewId(), '%d) %s'%(i,name))
