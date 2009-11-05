@@ -4,7 +4,6 @@ from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
 from PlateMapBrowser import PlateMapBrowser
 from Properties import Properties
-from Scatter import Scatter
 from ScoreDialog import ScoreDialog
 from TileCollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
