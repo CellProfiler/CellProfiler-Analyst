@@ -39,6 +39,7 @@ class AwesomePMP(PlateMapPanel):
     def SetPlate(self, plate):
         self.plate = plate
 
+
     def OnMotion(self, evt):
         well = self.GetWellAtCoord(evt.X, evt.Y)
         wellLabel = self.GetWellLabelAtCoord(evt.X, evt.Y)
@@ -130,7 +131,7 @@ class PlateMapBrowser(wx.Frame):
         dataSourceSizer.AddSpacer((-1,10))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = self.GetNumericColumnsFromTable(p.image_table)
-        self.measurementsChoice = wx.Choice(self, choices=measurements, size=(132,-1))
+        self.measurementsChoice = wx.Choice(self, choices=measurements)#, size=(132,-1))
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         
