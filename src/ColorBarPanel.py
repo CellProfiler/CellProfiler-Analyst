@@ -205,7 +205,7 @@ class ColorBarPanel(wx.Panel):
         
         aggmethod = self.Parent.aggregationMethodsChoice.GetStringSelection().lower()
         src_table = self.Parent.sourceChoice.GetStringSelection()
-        if (aggmethod in ['average', 'median', 'min', 'max'] 
+        if (aggmethod in ['mean', 'median', 'min', 'max'] 
             and self.interval != self.global_extents 
             and src_table != p.object_table):
             popupMenu.AppendSeparator()
