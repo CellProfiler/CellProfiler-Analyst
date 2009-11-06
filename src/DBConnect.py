@@ -629,6 +629,16 @@ class DBConnect(Singleton):
         '''
         res = self.execute('SELECT %s FROM %s GROUP BY %s'%(p.plate_id, p.image_table, p.plate_id))
         return [str(l[0]) for l in res]
+
+
+    def GetPlatesAndWellsPerImage(self):
+        '''
+        Returns rows containing image key, plate, and well
+        '''
+        if p.plate_id and p.well_id:
+            return self.execute('SELECT %s, %s FROM %s'%(UniqueImageClause(), ','.join(well_key_columns()), p.image_table))
+        else:
+            logging.error('Both plate_id and well_id must be defined in properties!')
     
     
     def InferColTypesFromData(self, tabledata, nCols):

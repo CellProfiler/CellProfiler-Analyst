@@ -838,6 +838,12 @@ class ClassifierGUI(wx.Frame):
             nKeyCols = len(dm.GetGroupColumnNames(group))
         else:
             groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
+            if p.plate_id and p.well_id:
+                pw = db.GetPlatesAndWellsPerImage()
+                platesAndWells = {}
+                for row in pw:
+                    platesAndWells[tuple(row[:nKeyCols])] = list(row[nKeyCols:])
+            
         
         t3 = time()
         logging.info('time to group per-image counts: %.3fs'%(t3-t2))
@@ -851,7 +857,7 @@ class ClassifierGUI(wx.Frame):
         
         t4 = time()
         logging.info('time to fit beta binomial: %.3fs'%(t4-t3))
-                    
+        
         # CONSTRUCT ARRAY OF TABLE DATA
         self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
@@ -862,6 +868,10 @@ class ClassifierGUI(wx.Frame):
             if group != 'Image':
                 # Append the # of images in this group 
                 tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols]), filter))]
+            else:
+                # Append the plate and well ids
+                if p.plate_id and p.well_id:
+                    tableRow += platesAndWells[tuple(row[:nKeyCols])]
             # Append the counts:
             countsRow = [int(v) for v in row[nKeyCols:nKeyCols+nClasses]]
             tableRow += [sum(countsRow)]
@@ -900,6 +910,10 @@ class ClassifierGUI(wx.Frame):
         key_col_indices = [i for i in range(len(labels))]
         if group != 'Image':
             labels += ['Images']
+        else:
+            if p.plate_id and p.well_id:
+                labels += [p.plate_id]
+                labels += [p.well_id]
         labels += ['Total %s Count'%(p.object_name[0].capitalize())]
         for i in xrange(nClasses):
             labels += ['%s %s Count'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
