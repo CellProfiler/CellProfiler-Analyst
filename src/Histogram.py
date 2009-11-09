@@ -1,5 +1,6 @@
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
+from MulticlassSQL import filter_table_prefix
 from PlateMapPanel import *
 from PlotPanel import *
 from Properties import Properties
@@ -12,7 +13,11 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
+NO_FILTER = 'No filter'
+
 ID_EXIT = wx.NewId()
+LOG_SCALE    = 'log'
+LINEAR_SCALE = 'linear'
 
 class DataSourcePanel(wx.Panel):
     '''
@@ -26,10 +31,12 @@ class DataSourcePanel(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.table_choice = wx.Choice(self, -1, choices=db.GetTableNames())
-        self.table_choice.Select(0)
-        self.x_choice = wx.Choice(self, -1)
+        tables = db.GetTableNames()
+        self.table_choice = wx.Choice(self, -1, choices=tables)
+        self.table_choice.Select(tables.index(p.image_table))
+        self.x_choice = wx.Choice(self, -1, size=(200,-1))
         self.bins_input = wx.TextCtrl(self, -1, '100')
+        self.filter_choice = wx.Choice(self, -1, choices=[NO_FILTER]+p._filters_ordered)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
@@ -40,18 +47,28 @@ class DataSourcePanel(wx.Panel):
         sz.Add(self.table_choice, 1, wx.EXPAND)
         sizer.Add(sz)
         sizer.AddSpacer((-1,5))
+        
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.x_choice)
         sizer.Add(sz)
         sizer.AddSpacer((-1,5))
+        
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "bins:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.bins_input)
         sizer.Add(sz)
         sizer.AddSpacer((-1,5))
+        
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.Add(wx.StaticText(self, -1, "filter:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.filter_choice)
+        sizer.Add(sz)
+        sizer.AddSpacer((-1,5))
+        
         sizer.Add(self.update_chart_btn)    
         
         wx.EVT_CHOICE(self.table_choice, -1, self.on_table_selected)
@@ -79,26 +96,33 @@ class DataSourcePanel(wx.Panel):
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
-    def on_update_pressed(self, evt):        
+    def on_update_pressed(self, evt):    
+        filter = self.filter_choice.GetStringSelection()
         points = self.loadpoints(self.table_choice.GetStringSelection(),
-                                 self.x_choice.GetStringSelection())
+                                 self.x_choice.GetStringSelection(),
+                                 filter)    
         bins = int(self.bins_input.GetValue())
-        self.plotpoints(points, bins)
+        self.figpanel.set_x_label(self.x_choice.GetStringSelection())
+        self.figpanel.setpoints(points, bins)
+        self.figpanel.draw()
         
     def removefromchart(self, event):
         selected = self.plotfieldslistbox.GetSelection()
         self.plotfieldslistbox.Delete(selected)
         
-    def loadpoints(self, tablename, xpoints):
-        #loads points from the database
-        n_points = 10000000
-        points = db.execute('SELECT %s FROM %s LIMIT %s'%(xpoints, tablename, n_points)) 
-        return [points]
+    def loadpoints(self, tablename, xpoints, filter=NO_FILTER):
+        fields = '%s.%s'%(tablename, xpoints)
+        tables = tablename
+        where_clause = ''
+        if filter != NO_FILTER:
+            # If a filter is applied we must compute a WHERE clause and add the 
+            # filter table to the FROM clause
+            tables += ', `%s`'%(filter_table_prefix+filter) 
+            filter_clause = ' AND '.join(['%s.%s=`%s`.%s'%(tablename, id, filter_table_prefix+filter, id) 
+                                          for id in db.GetLinkingColumnsForTable(tablename)])
+            where_clause = 'WHERE %s'%(filter_clause)
+        return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
     
-    def plotpoints(self, points, bins):
-        self.figpanel.setpoints(points, bins)
-        self.figpanel.draw()
-        
     def _onsize(self, evt):
         self.figpanel._SetSize()
         evt.Skip()
@@ -108,6 +132,7 @@ class HistogramPanel(PlotPanel):
     def __init__(self, parent, points, bins=100, **kwargs):
         self.parent = parent
         self.setpoints(points, bins)
+        self.x_label = ''
         
         # initiate plotter
         PlotPanel.__init__(self, parent, **kwargs)
@@ -117,6 +142,9 @@ class HistogramPanel(PlotPanel):
         self.points = np.array(points)
         self.bins = bins
     
+    def set_x_label(self, label):
+        self.x_label = label
+        
     def getpointslists(self):
         return self.points
     
@@ -129,6 +157,7 @@ class HistogramPanel(PlotPanel):
                           facecolor=[0.93,0.27,0.58], 
                           edgecolor='none',
                           alpha=0.75)
+        self.subplot.set_xlabel(self.x_label)
         self.canvas.draw()
         
 
@@ -182,6 +211,9 @@ if __name__ == "__main__":
     else:
         LoadProperties()
 
+    import MulticlassSQL
+    MulticlassSQL.CreateFilterTables()
+    
     histogram = Histogram(None)
     histogram.Show()
     

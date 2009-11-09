@@ -145,6 +145,8 @@ class DBConnect(Singleton):
         self.connections = {}
         self.cursors = {}
         self.connectionInfo = {}
+        # link_cols['table'] = columns that link 'table' to the per-image table
+        self.link_cols = {}
 
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
@@ -369,7 +371,6 @@ class DBConnect(Singleton):
         except KeyError, e:
             raise DBException, 'No such connection: "%s".\n' %(connID)
             
-
 
     def GetNextResult(self):
         connID = threading.currentThread().getName()
@@ -676,7 +677,21 @@ class DBConnect(Singleton):
                 except ValueError: 
                     raise Exception, '<ERROR>: Value in table could not be converted to string!'
         return colTypes
-            
+    
+     
+    def GetLinkingColumnsForTable(self, table):
+        ''' Returns the column(s) that link the given table to the per_image table. '''
+        if table not in self.link_cols.keys():
+            cols = self.GetColumnNames(table)
+            imkey = image_key_columns()
+            if all([kcol in cols for kcol in imkey]):
+                self.link_cols[table] = imkey
+            elif p.well_id in cols and p.plate_id in cols:
+                self.link_cols[table] = (p.well_id, p.plate_id)
+            else:
+                raise Exception('Table %s could not be linked to %s'%(table, p.image_table))
+        return self.link_cols[table]       
+    
     
     def CreateSQLiteDB(self):
         '''

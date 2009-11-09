@@ -98,8 +98,6 @@ class PlateMapBrowser(wx.Frame):
         assert (p.well_id is not None and p.plate_id is not None), \
             'Plate Viewer requires the well_id and plate_id columns to be defined in your properties file.'
 
-        self.link_cols = {} # link_cols[table] = columns that link this table to the per-image table
-
         self.Center()        
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
@@ -277,7 +275,7 @@ class PlateMapBrowser(wx.Frame):
             platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
                                       (p.plate_id, p.well_id, expression, table,
                                        'GROUP BY %s, %s'%(p.plate_id, p.well_id) if group else ''))
-        elif set([p.well_id, p.plate_id]) == set(self.GetLinkingColumnsForTable(table)):
+        elif set([p.well_id, p.plate_id]) == set(db.GetLinkingColumnsForTable(table)):
             # For data from tables with well and plate columns, we simply
             # fetch and aggregate
             # XXX: SHOULD we allow aggregation of per-well data since there 
@@ -294,7 +292,7 @@ class PlateMapBrowser(wx.Frame):
             platesWellsAndVals = db.execute('SELECT %s.%s, %s.%s, %s FROM %s, %s WHERE %s %s'%
                                       (p.image_table, p.plate_id, p.image_table, p.well_id, expression, 
                                        p.image_table, table, 
-                                       ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in self.GetLinkingColumnsForTable(table)]),
+                                       ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in db.GetLinkingColumnsForTable(table)]),
                                        'GROUP BY %s.%s, %s.%s'%(p.image_table, p.plate_id, p.image_table, p.well_id) if group else ''))
         platesWellsAndVals = np.array(platesWellsAndVals, dtype=object)
         # Replace None's with nan
@@ -415,19 +413,6 @@ class PlateMapBrowser(wx.Frame):
         self.UpdatePlateMaps()
         self.plateMapSizer.Layout()
         
-    def GetLinkingColumnsForTable(self, table):
-        ''' Returns the column(s) that link this table to the per_image table. '''
-        if table not in self.link_cols.keys():
-            cols = db.GetColumnNames(table)
-            imkey = image_key_columns()
-            if all([kcol in cols for kcol in imkey]):
-                self.link_cols[table] = imkey
-            elif p.well_id in cols and p.plate_id in cols:
-                self.link_cols[table] = (p.well_id, p.plate_id)
-            else:
-                raise Exception('Table %s could not be linked to %s'%(table, p.image_table))
-        return self.link_cols[table]
-
 
 def FormatPlateMapData(wellsAndVals):
     '''

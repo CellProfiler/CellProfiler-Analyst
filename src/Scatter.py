@@ -1,5 +1,7 @@
 from ColorBarPanel import ColorBarPanel
+from ComboCtrl import ListCtrlComboPopup
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
+from MulticlassSQL import filter_table_prefix
 from PlateMapPanel import *
 from PlotPanel import *
 from Properties import Properties
@@ -8,7 +10,7 @@ import numpy as np
 import os
 import re
 import wx
-
+import wx.combo
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -31,13 +33,14 @@ class DataSourcePanel(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.table_choice = wx.Choice(self, -1, choices=db.GetTableNames())
-        self.table_choice.Select(0)
-        self.x_choice = wx.Choice(self, -1)
-        self.y_choice = wx.Choice(self, -1)
-#        self.x_scale_choice = wx.Choice(self, -1, choices=[LINEAR_SCALE, LOG_SCALE])
-#        self.y_scale_choice = wx.Choice(self, -1, choices=[LINEAR_SCALE, LOG_SCALE])
-#        self.filter_choice = wx.Choice(self, -1, choices=[NO_FILTER]+p._filters_ordered)
+        tables = db.GetTableNames()
+        self.table_choice = wx.Choice(self, -1, choices=tables)
+        self.table_choice.Select(tables.index(p.image_table))
+        self.x_choice = wx.Choice(self, -1, size=(200,-1))
+        self.y_choice = wx.Choice(self, -1, size=(200,-1))
+        self.x_scale_choice = wx.Choice(self, -1, choices=[LINEAR_SCALE, LOG_SCALE])
+        self.y_scale_choice = wx.Choice(self, -1, choices=[LINEAR_SCALE, LOG_SCALE])
+        self.filter_choice = wx.Choice(self, -1, choices=[NO_FILTER]+p._filters_ordered)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
@@ -53,10 +56,10 @@ class DataSourcePanel(wx.Panel):
         sz.Add(wx.StaticText(self, -1, "x-axis:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.x_choice)
-#        sz.AddSpacer((5,-1))
-#        sz.Add(wx.StaticText(self, -1, "x-scale:"))
-#        sz.AddSpacer((5,-1))
-#        sz.Add(self.x_scale_choice)
+        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "x-scale:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.x_scale_choice)
         sizer.Add(sz)
         sizer.AddSpacer((-1,5))
         
@@ -64,23 +67,23 @@ class DataSourcePanel(wx.Panel):
         sz.Add(wx.StaticText(self, -1, "y-axis:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.y_choice)
-#        sz.AddSpacer((5,-1))
-#        sz.Add(wx.StaticText(self, -1, "y-scale:"))
-#        sz.AddSpacer((5,-1))
-#        sz.Add(self.y_scale_choice)
+        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "y-scale:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.y_scale_choice)
         sizer.Add(sz)
         sizer.AddSpacer((-1,5))
+        
         sz = wx.BoxSizer(wx.HORIZONTAL)
-#        sz.Add(wx.StaticText(self, -1, "filter:"))
-#        sz.AddSpacer((5,-1))
-#        sz.Add(self.filter_choice)
-#        sizer.Add(sz)
-#        sizer.AddSpacer((-1,5))
+        sz.Add(wx.StaticText(self, -1, "filter:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.filter_choice)
+        sizer.Add(sz)
+        sizer.AddSpacer((-1,5))
+        
         sizer.Add(self.update_chart_btn)    
         
         wx.EVT_CHOICE(self.table_choice, -1, self.on_table_selected)
-#        wx.EVT_CHOICE(self.x_scale_choice, -1, self.on_x_scale_selected)
-#        wx.EVT_CHOICE(self.y_scale_choice, -1, self.on_y_scale_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
         self.Bind(wx.EVT_SIZE, self._onsize)
         
@@ -89,12 +92,6 @@ class DataSourcePanel(wx.Panel):
         sizer.Fit(self)
         self.Show(1)
         
-    def on_x_scale_selected(self, evt):
-        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())        
-        
-    def on_y_scale_selected(self, evt):
-        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
-
     def on_table_selected(self, evt):
         self.update_column_fields()
         
@@ -115,12 +112,16 @@ class DataSourcePanel(wx.Panel):
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
     def on_update_pressed(self, evt):        
-#        self.filter = self.filter_choice.GetStringSelection()
+        filter = self.filter_choice.GetStringSelection()
         points = self.loadpoints(self.table_choice.GetStringSelection(),
                                  self.x_choice.GetStringSelection(),
-                                 self.y_choice.GetStringSelection())
-#                                 self.filter)
+                                 self.y_choice.GetStringSelection(),
+                                 filter)
         # plot the points
+        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
+        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.set_x_label(self.x_choice.GetStringSelection())
+        self.figpanel.set_y_label(self.y_choice.GetStringSelection())
         self.figpanel.setpointslists(points)
         self.figpanel.draw()
         
@@ -129,14 +130,17 @@ class DataSourcePanel(wx.Panel):
         self.plotfieldslistbox.Delete(selected)
         
     def loadpoints(self, tablename, xpoints, ypoints, filter=NO_FILTER):
-        #loads points from the database
-        q = 'SELECT %s, %s FROM %s'%(xpoints, ypoints, tablename)
-#        if filter!=NO_FILTER:
-#            wc_start = p._filters[filter].upper().find(' WHERE ')
-#            q += p._filters[filter][wc_start:]
-        points = db.execute(q) 
-        return [points]
-    
+        fields = '%s.%s, %s.%s'%(tablename, xpoints, tablename, ypoints)
+        tables = tablename
+        where_clause = ''
+        if filter != NO_FILTER:
+            # If a filter is applied we must compute a WHERE clause and add the 
+            # filter table to the FROM clause
+            tables += ', `%s`'%(filter_table_prefix+filter) 
+            filter_clause = ' AND '.join(['%s.%s=`%s`.%s'%(tablename, id, filter_table_prefix+filter, id) 
+                                          for id in db.GetLinkingColumnsForTable(tablename)])
+            where_clause = 'WHERE %s'%(filter_clause)
+        return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
         
     def _onsize(self, evt):
         self.figpanel._SetSize()
@@ -150,6 +154,8 @@ class ScatterPanel(PlotPanel):
         self.clr_list = clr_list
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
+        self.x_label = ''
+        self.y_label = ''
 
         # initiate plotter
         PlotPanel.__init__(self, parent, **kwargs)
@@ -167,6 +173,12 @@ class ScatterPanel(PlotPanel):
     def set_y_scale(self, scale):
         self.y_scale = scale
     
+    def set_x_label(self, label):
+        self.x_label = label
+    
+    def set_y_label(self, label):
+        self.y_label = label
+    
     def draw(self):
         #Draw data.
         if not hasattr(self, 'subplot'):
@@ -174,22 +186,45 @@ class ScatterPanel(PlotPanel):
         self.subplot.clear()
         for i, pt_list in enumerate(self.point_lists):
             plot_pts = np.array(pt_list)
+            
+            if self.x_scale == LOG_SCALE:
+                plot_pts = plot_pts[(plot_pts[:,0]>0)]
+            if self.y_scale == LOG_SCALE:
+                plot_pts = plot_pts[(plot_pts[:,1]>0)]
+                
             clr = [float(c) / 255. for c in self.clr_list[i]]
             self.subplot.scatter(plot_pts[:, 0], plot_pts[:, 1], color=clr, 
                                  edgecolor='none', alpha=0.75)
-#            if self.x_scale == self.y_scale == LOG_SCALE:
-#                self.subplot.loglog()
-#            elif self.x_scale == LOG_SCALE:
-#                self.subplot.semilogx()
-#            elif self.y_scale == LOG_SCALE:
-#                self.subplot.semilogy()
-#            xmin = np.nanmin(plot_pts[:,0])
-#            xmax = np.nanmax(plot_pts[:,0])
-#            ymin = np.nanmin(plot_pts[:,1])
-#            ymax = np.nanmax(plot_pts[:,1])
-#            xpad = (xmax-xmin)/20.
-#            ypad = (ymax-ymin)/20.
-#            self.subplot.axis([xmin, xmax, ymin, ymax])
+            
+            self.subplot.set_xlabel(self.x_label)
+            self.subplot.set_ylabel(self.y_label)
+            
+            if self.x_scale == LOG_SCALE:
+                self.subplot.set_xscale('log', basex=2.1)
+            if self.y_scale == LOG_SCALE:
+                self.subplot.set_yscale('log', basey=2.1)
+            
+            xmin = np.nanmin(plot_pts[:,0])
+            xmax = np.nanmax(plot_pts[:,0])
+            ymin = np.nanmin(plot_pts[:,1])
+            ymax = np.nanmax(plot_pts[:,1])
+            
+            # Pad all sides
+            if self.x_scale==LOG_SCALE:
+                xmin = xmin/1.5
+                xmax = xmax*1.5
+            else:
+                xmin = xmin-(xmax-xmin)/20.
+                xmax = xmax+(xmax-xmin)/20.
+                
+            if self.y_scale==LOG_SCALE:
+                ymin = ymin/1.5
+                ymax = ymax*1.5
+            else:
+                ymin = ymin-(ymax-ymin)/20.
+                ymax = ymax+(ymax-ymin)/20.
+
+            self.subplot.axis([xmin, xmax, ymin, ymax])
         self.canvas.draw()
         
 
@@ -247,6 +282,9 @@ if __name__ == "__main__":
     else:
         LoadProperties()
 
+    import MulticlassSQL
+    MulticlassSQL.CreateFilterTables()
+    
     scatter = Scatter(None)
     scatter.Show()
     
@@ -272,4 +310,3 @@ if __name__ == "__main__":
 #    
 #    frame.Show(1)
 #    app.MainLoop()
-
