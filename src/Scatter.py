@@ -1,5 +1,4 @@
 from ColorBarPanel import ColorBarPanel
-from ComboCtrl import ListCtrlComboPopup
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
 from PlateMapPanel import *
