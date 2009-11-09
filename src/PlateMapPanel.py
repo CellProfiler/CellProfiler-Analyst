@@ -64,6 +64,9 @@ class PlateMapPanel(wx.Panel):
         self.col_labels = ['%02d'%i for i in range(1,self.data.shape[1]+1)]
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.repaint = False
+        self.Bind(wx.EVT_SIZE, self._onsize)
+        self.Bind(wx.EVT_IDLE, self._onidle)
        
     def SetData(self, data, shape=None, data_range=None, clip_interval=None, clip_mode='rescale'):
         '''
@@ -182,7 +185,7 @@ class PlateMapPanel(wx.Panel):
         else:
             return None
         
-    def OnPaint(self, evt):
+    def OnPaint(self, evt=None):
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
@@ -272,7 +275,14 @@ class PlateMapPanel(wx.Panel):
             py += 2*r+1
         dc.EndDrawing()
         return dc
-            
+
+    def _onsize(self, evt):
+        self.repaint = True
+        
+    def _onidle(self, evt):
+        if self.repaint:
+            self.Refresh()
+            self.repaint = False
 
 
 if __name__ == "__main__":

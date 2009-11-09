@@ -9,6 +9,7 @@ import os
 import matplotlib.cm
 import re
 import wx
+from wx.combo import OwnerDrawnComboBox as ComboBox
 
 p = Properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
@@ -122,21 +123,21 @@ class PlateMapBrowser(wx.Frame):
             src_choices += ['__Classifier_output']
         except:
             pass
-        self.sourceChoice = wx.Choice(self, choices=src_choices)
+        self.sourceChoice = ComboBox(self, choices=src_choices)
         self.sourceChoice.Select(0)
         dataSourceSizer.Add(self.sourceChoice)
                 
         dataSourceSizer.AddSpacer((-1,10))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = self.GetNumericColumnsFromTable(p.image_table)
-        self.measurementsChoice = wx.Choice(self, choices=measurements)#, size=(132,-1))
+        self.measurementsChoice = ComboBox(self, choices=measurements)#, size=(132,-1))
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
         aggregation = ['mean', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
-        self.aggregationMethodsChoice = wx.Choice(self, choices=aggregation)
+        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation)
         self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
         
@@ -144,13 +145,13 @@ class PlateMapBrowser(wx.Frame):
         viewSizer.Add(wx.StaticText(self, label='Color map:'))
         maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
         maps.sort()
-        self.colorMapsChoice = wx.Choice(self, choices=maps)
+        self.colorMapsChoice = ComboBox(self, choices=maps)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
         
         viewSizer.AddSpacer((-1,10))
         viewSizer.Add(wx.StaticText(self, label='Well shape:'))
-        self.wellShapeChoice = wx.Choice(self, choices=all_well_shapes)
+        self.wellShapeChoice = ComboBox(self, choices=all_well_shapes)
         self.wellShapeChoice.Select(0)
         viewSizer.Add(self.wellShapeChoice)
         
@@ -182,12 +183,12 @@ class PlateMapBrowser(wx.Frame):
         self.SetSizer(mainSizer)
         self.SetClientSize((self.Size[0],self.Sizer.CalcMin()[1]))
         
-        self.sourceChoice.Bind(wx.EVT_CHOICE, self.OnSelectDataSource)
-        self.measurementsChoice.Bind(wx.EVT_CHOICE, self.OnSelectMeasurement)
-        self.aggregationMethodsChoice.Bind(wx.EVT_CHOICE, self.OnSelectAggregationMethod)
-        self.colorMapsChoice.Bind(wx.EVT_CHOICE, self.OnSelectColorMap)
+        self.sourceChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectDataSource)
+        self.measurementsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectMeasurement)
+        self.aggregationMethodsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectAggregationMethod)
+        self.colorMapsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectColorMap)
         self.numberOfPlatesTE.Bind(wx.EVT_TEXT_ENTER, self.OnEnterNumberOfPlates)
-        self.wellShapeChoice.Bind(wx.EVT_CHOICE, self.OnSelectWellShape)
+        self.wellShapeChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectWellShape)
         
         global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(self.measurementsChoice.GetStringSelection(), 
                                                                        self.measurementsChoice.GetStringSelection(), 
@@ -235,9 +236,9 @@ class PlateMapBrowser(wx.Frame):
         self.plateMaps += [AwesomePMP(self, data, shape, well_labels=well_labels,
                                       colormap=self.colorMapsChoice.GetStringSelection(),
                                       wellshape=self.wellShapeChoice.GetStringSelection())]
-        self.plateMapChoices += [wx.Choice(self, choices=self.plateNames)]
+        self.plateMapChoices += [ComboBox(self, choices=self.plateNames)]
         self.plateMapChoices[-1].Select(plateIndex)
-        self.plateMapChoices[-1].Bind(wx.EVT_CHOICE, self.OnSelectPlate)
+        self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
         
         plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
         plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'))
