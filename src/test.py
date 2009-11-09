@@ -1,235 +1,167 @@
 import wx
-import string
-import numpy
-from DBConnect import DBConnect
-import MySQLdb
-from MySQLdb.cursors import SSCursor
-import exceptions
-import threading
-import re
-from Properties import Properties
-from pysqlite2 import dbapi2 as sqlite
-import csv
-import os
+import wx.combo
 
-p = Properties.getInstance()
-p.LoadFile('../properties/nirht_local.properties')
+def MakeLCCombo(parent, style=0):
+    # Create a ComboCtrl
+    cc = wx.combo.ComboCtrl(parent, style=style, size=(250,-1))
+    
+    # Create a Popup
+    popup = ListCtrlComboPopup()
+
+    # Associate them with each other.  This also triggers the
+    # creation of the ListCtrl.
+    cc.SetPopupControl(popup)
+
+    # Add some items to the listctrl.
+    for x in range(75):
+        popup.AddItem("Item-%02d" % x)
+
+    return cc
 
 
-def CreateSQLiteTables():
-    
-    # CREATE THE IMAGE TABLE
-    f = open(p.image_csv_file, 'r')
-    r = csv.reader(f)
-    # Establish the type of each column in the table
-    columnLabels = r.next()
-    columnLabels = [lbl.strip() for lbl in columnLabels]
-    row = r.next()
-    rowTypes = {}
-    for i in xrange(len(columnLabels)):
-        rowTypes[i]=''
-    maxLen = 1      # Maximum string length
-    while row:
-        for i, e in enumerate(row):
-            if rowTypes[i]!='FLOAT' and not rowTypes[i].startswith('VARCHAR'):
-                try:
-                    x = int(e)
-                    rowTypes[i] = 'INT'
-                    continue
-                except ValueError: pass
-            if not rowTypes[i].startswith('VARCHAR'):
-                try:
-                    x = float(e)
-                    rowTypes[i] = 'FLOAT'
-                    continue
-                except ValueError: pass
-            try:
-                x = str(e)
-                maxLen = max(len(x), maxLen)
-                rowTypes[i] = 'VARCHAR(%d)'%(maxLen)
-            except ValueError: 
-                raise Exception, '<ERROR>: Value in table could not be converted to string!'
-        try:
-            row = r.next()
-        except StopIteration: break
-    statement = 'CREATE TABLE '+os.path.splitext(os.path.split(p.image_table)[1])[0]+' ('
-    statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
-    keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
-    statement += ',\nPRIMARY KEY (' + keys + ') )'
-    f.close()
-    
-    cursor.execute('DROP TABLE IF EXISTS %s'%p.image_table)
-    cursor.execute(statement)
-    
-    # CREATE THE OBJECT TABLE
-    # for the object table we assume that all values are FLOAT
-    # except for the keys
-    f = open(p.object_csv_file, 'r')
-    r = csv.reader(f)
-    columnLabels = r.next()
-    columnLabels = [lbl.strip() for lbl in columnLabels]
-    row = r.next()
-    rowTypes = {}
-    for i, lbl in enumerate(columnLabels):
-        if lbl in [p.table_id, p.image_id, p.object_id]:
-            rowTypes[i] = 'INT'
+class NullLog:
+    def write(*args):
+        print args
+        
+# This class is used to provide an interface between a ComboCtrl and a
+# ListCtrl that is used as the popoup for the combo widget.  In this
+# case we use multiple inheritance to derive from both wx.ListCtrl and
+# wx.ComboPopup, but it also works well when deriving from just
+# ComboPopup and using a has-a relationship with the popup control,
+# you just need to be sure to return the control itself from the
+# GetControl method.
+
+class ListCtrlComboPopup(wx.ListCtrl, wx.combo.ComboPopup):
+        
+    def __init__(self, log=None):
+        if log:
+            self.log = log
         else:
-            rowTypes[i]='FLOAT'
-    statement = 'CREATE TABLE '+os.path.splitext(os.path.split(p.object_table)[1])[0]+' ('
-    statement += ',\n'.join([lbl+' '+rowTypes[i] for i, lbl in enumerate(columnLabels)])
-    keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
-    statement += ',\nPRIMARY KEY (' + keys + ') )'
-    f.close()
+            self.log = NullLog()
+            
+        
+        # Since we are using multiple inheritance, and don't know yet
+        # which window is to be the parent, we'll do 2-phase create of
+        # the ListCtrl instead, and call its Create method later in
+        # our Create method.  (See Create below.)
+        self.PostCreate(wx.PreListCtrl())
 
-#    cursor.execute('DROP TABLE IF EXISTS %s'%p.object_table)
-#    cursor.execute(statement)
+        # Also init the ComboPopup base class.
+        wx.combo.ComboPopup.__init__(self)
+        
 
+    def AddItem(self, txt):
+        self.InsertStringItem(self.GetItemCount(), txt)
 
+    def OnMotion(self, evt):
+        item, flags = self.HitTest(evt.GetPosition())
+        if item >= 0:
+            self.Select(item)
+            self.curitem = item
 
-
-
-
-# Create the SQLite DB
-conn = sqlite.connect('test.db')
-#conn = sqlite.connect(':memory:')
-cursor = conn.cursor()
-
-# Create the tables
-CreateSQLiteTables()
-
-# Insert values from the file into the table
-f = open(p.image_csv_file, 'r')
-r = csv.reader(f)
-row = r.next() # skip the headers
-row = r.next()
-while row: 
-    cursor.execute('INSERT INTO '+os.path.splitext(os.path.split(p.image_table)[1])[0]+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')')
-    try:
-        row = r.next()
-    except StopIteration:
-        break
-f.close()
-
-# QUERY THE DB
-cursor.execute('SELECT * FROM %s LIMIT 1'%(os.path.splitext(os.path.split(p.image_table)[1])[0]))
-print cursor.fetchall()
-
-cursor.execute('CREATE TEMPORARY TABLE temp.db (column1 INTEGER)')
-cursor.execute('INSERT INTO temp.db ("column1") VALUES (1234)')
-cursor.execute('SELECT * FROM temp.db')
-print cursor.fetchall()
+    def OnLeftDown(self, evt):
+        self.value = self.curitem
+        self.Dismiss()
 
 
+    # The following methods are those that are overridable from the
+    # ComboPopup base class.  Most of them are not required, but all
+    # are shown here for demonstration purposes.
 
 
-#
-# Q? What happens when Execute is called again before results are read?
-# A: Results from the second query overwrite the results from the first query.
-#
-#db = DBConnect.getInstance()
-#
-#db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r")
-#
-#q = 'SELECT ImageNumber FROM per_image LIMIT 10'
-#q2 = 'SELECT well FROM per_image LIMIT 10'
-#
-#db.Execute(q)
-#db.Execute(q2)
-#
-#print db.GetResultsAsList()
-#print db.GetResultsAsList()
+    # This is called immediately after construction finishes.  You can
+    # use self.GetCombo if needed to get to the ComboCtrl instance.
+    def Init(self):
+        self.log.write("ListCtrlComboPopup.Init")
+        self.value = -1
+        self.curitem = -1
+
+
+    # Create the popup child control.  Return true for success.
+    def Create(self, parent):
+        self.log.write("ListCtrlComboPopup.Create")
+        wx.ListCtrl.Create(self, parent,
+                           style=wx.LC_LIST|wx.LC_SINGLE_SEL|wx.SIMPLE_BORDER)
+        self.Bind(wx.EVT_MOTION, self.OnMotion)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        return True
+
+
+    # Return the widget that is to be used for the popup
+    def GetControl(self):
+        #self.log.write("ListCtrlComboPopup.GetControl")
+        return self
+
+    # Called just prior to displaying the popup, you can use it to
+    # 'select' the current item.
+    def SetStringValue(self, val):
+        self.log.write("ListCtrlComboPopup.SetStringValue")
+        idx = self.FindItem(-1, val)
+        if idx != wx.NOT_FOUND:
+            self.Select(idx)
+
+    # Return a string representation of the current item.
+    def GetStringValue(self):
+        self.log.write("ListCtrlComboPopup.GetStringValue")
+        if self.value >= 0:
+            return self.GetItemText(self.value)
+        return ""
+
+    # Called immediately after the popup is shown
+    def OnPopup(self):
+        self.log.write("ListCtrlComboPopup.OnPopup")
+        wx.combo.ComboPopup.OnPopup(self)
+
+    # Called when popup is dismissed
+    def OnDismiss(self):
+        self.log.write("ListCtrlComboPopup.OnDismiss")
+        wx.combo.ComboPopup.OnDismiss(self)
+
+    # This is called to custom paint in the combo control itself
+    # (ie. not the popup).  Default implementation draws value as
+    # string.
+    def PaintComboControl(self, dc, rect):
+        self.log.write("ListCtrlComboPopup.PaintComboControl")
+        wx.combo.ComboPopup.PaintComboControl(self, dc, rect)
+
+    # Receives key events from the parent ComboCtrl.  Events not
+    # handled should be skipped, as usual.
+    def OnComboKeyEvent(self, event):
+        self.log.write("ListCtrlComboPopup.OnComboKeyEvent")
+        wx.combo.ComboPopup.OnComboKeyEvent(self, event)
+
+    # Implement if you need to support special action when user
+    # double-clicks on the parent wxComboCtrl.
+    def OnComboDoubleClick(self):
+        self.log.write("ListCtrlComboPopup.OnComboDoubleClick")
+        wx.combo.ComboPopup.OnComboDoubleClick(self)
+
+    # Return final size of popup. Called on every popup, just prior to OnPopup.
+    # minWidth = preferred minimum width for window
+    # prefHeight = preferred height. Only applies if > 0,
+    # maxHeight = max height for window, as limited by screen size
+    #   and should only be rounded down, if necessary.
+    def GetAdjustedSize(self, minWidth, prefHeight, maxHeight):
+        self.log.write("ListCtrlComboPopup.GetAdjustedSize: %d, %d, %d" % (minWidth, prefHeight, maxHeight))
+        return wx.combo.ComboPopup.GetAdjustedSize(self, minWidth, prefHeight, maxHeight)
+
+    # Return true if you want delay the call to Create until the popup
+    # is shown for the first time. It is more efficient, but note that
+    # it is often more convenient to have the control created
+    # immediately.    
+    # Default returns false.
+    def LazyCreate(self):
+        self.log.write("ListCtrlComboPopup.LazyCreate")
+        return wx.combo.ComboPopup.LazyCreate(self)
+        
 
 
 
-
-
-#
-# Q? What if many cursors are used?
-# A: "Commands out of sync; you can't run this command now"
-
-#connection = MySQLdb.connect(host='imgdb01', db='cells', user='cpadmin', passwd='cPus3r')
-#
-#cursor  = SSCursor(connection)
-#cursor2 = SSCursor(connection)
-#
-#cursor.execute('SELECT ImageNumber FROM per_image LIMIT 10')
-#cursor2.execute('SELECT well FROM per_image LIMIT 10')
-#
-#l  = []
-#l2 = []
-#
-#while r:
-#    try:
-#        r = cursor.next()
-#        r2 = cursor2.next()
-#    except MySQLdb.Error, e:
-#        print "Error retrieving next result from database."
-#        r = None
-#    except StopIteration, e:
-#        r = None
-#    if r:
-#       l.append(r)
-#       l2.append(r2)
-#print l
-
-
-
-
-
-#
-# What if we bombard the DB with calls from many threads?
-#
-# Try this with normal DBConnect, then modify DBConnect.Execute to recurse if it fails.
-
-#db = DBConnect.getInstance()
-#db.Connect(db_host="imgdb01", db_name="cells", db_user="cpadmin", db_passwd="cPus3r")
-#
-#EVT_RESULT_ID = wx.NewId()
-#
-#def EVT_RESULT(win, func):
-#    win.Connect(-1, -1, EVT_RESULT_ID, func)
-#   
-#class ResultEvent(wx.PyEvent):
-#    def __init__(self, data):
-#        wx.PyEvent.__init__(self)
-#        self.SetEventType(EVT_RESULT_ID)
-#        self.data = data
-#
-#class Worker(threading.Thread):
-#    def __init__(self, notify_window, query, id):
-#        threading.Thread.__init__(self)
-#        self._notify_window = notify_window
-#        self.query = query
-#        self.ID = id
-#        self.start()
-#
-#    def run(self):
-#        db.Execute(self.query)
-#        res = db.GetResultsAsList()
-#        wx.PostEvent(self._notify_window, ResultEvent((self.ID, res)))
-#        
-#        
-#class Querifier(wx.Frame):
-#    def __init__(self):
-#        wx.Frame.__init__(self, parent=None, id=-1)
-#        EVT_RESULT(self, self.OnResult)
-#    
-#    def go(self):
-#        workers = []
-#        for i in xrange(1):
-#            q = 'SELECT ImageNumber FROM per_image WHERE ImageNumber=%s' %( i+1 ) 
-#            w = Worker(self, query=q, id=i)
-#            workers.append( w )
-#            
-#    def OnResult(self, evt):
-#        print 'results:', str(evt.data)
-#
-#app = wx.PySimpleApp()
-#qwer = Querifier()
-#qwer.go()
-#app.MainLoop()
-#
-#    
+if __name__ == "__main__":
+    app = wx.PySimpleApp()
     
+    f = wx.Frame(None)
     
-    
+    f.Show()
+    cc = MakeLCCombo(f)
+    app.MainLoop()
