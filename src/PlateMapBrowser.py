@@ -1,15 +1,15 @@
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from PlateMapPanel import *
+from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageTools
 import Properties
 import logging
+import matplotlib.cm
 import numpy as np
 import os
-import matplotlib.cm
 import re
 import wx
-from wx.combo import OwnerDrawnComboBox as ComboBox
 
 p = Properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
@@ -123,21 +123,21 @@ class PlateMapBrowser(wx.Frame):
             src_choices += ['__Classifier_output']
         except:
             pass
-        self.sourceChoice = ComboBox(self, choices=src_choices)
+        self.sourceChoice = ComboBox(self, choices=src_choices, style=wx.CB_READONLY)
         self.sourceChoice.Select(0)
         dataSourceSizer.Add(self.sourceChoice)
                 
         dataSourceSizer.AddSpacer((-1,10))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = self.GetNumericColumnsFromTable(p.image_table)
-        self.measurementsChoice = ComboBox(self, choices=measurements)#, size=(132,-1))
+        self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
         aggregation = ['mean', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
-        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation)
+        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation, style=wx.CB_READONLY)
         self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
         
@@ -145,13 +145,13 @@ class PlateMapBrowser(wx.Frame):
         viewSizer.Add(wx.StaticText(self, label='Color map:'))
         maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
         maps.sort()
-        self.colorMapsChoice = ComboBox(self, choices=maps)
+        self.colorMapsChoice = ComboBox(self, choices=maps, style=wx.CB_READONLY)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
         
         viewSizer.AddSpacer((-1,10))
         viewSizer.Add(wx.StaticText(self, label='Well shape:'))
-        self.wellShapeChoice = ComboBox(self, choices=all_well_shapes)
+        self.wellShapeChoice = ComboBox(self, choices=all_well_shapes, style=wx.CB_READONLY)
         self.wellShapeChoice.Select(0)
         viewSizer.Add(self.wellShapeChoice)
         
@@ -236,7 +236,7 @@ class PlateMapBrowser(wx.Frame):
         self.plateMaps += [AwesomePMP(self, data, shape, well_labels=well_labels,
                                       colormap=self.colorMapsChoice.GetStringSelection(),
                                       wellshape=self.wellShapeChoice.GetStringSelection())]
-        self.plateMapChoices += [ComboBox(self, choices=self.plateNames)]
+        self.plateMapChoices += [ComboBox(self, choices=self.plateNames, style=wx.CB_READONLY)]
         self.plateMapChoices[-1].Select(plateIndex)
         self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
         
