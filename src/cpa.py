@@ -53,12 +53,14 @@ class MainGUI(wx.Frame):
         # Setup toolbar
         #
         self.tb = tb = self.CreateToolBar(wx.TB_HORIZONTAL|wx.NO_BORDER|wx.TB_FLAT)
+        self.tb.SetToolBitmapSize((32,32))
+        self.tb.SetSize((-1,132))
         self.classifier_btn   = platebtn.PlateButton(tb, -1, 'Classifier ', classifier_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
         self.pv_btn           = platebtn.PlateButton(tb, -1, 'PlateViewer', pv_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
         self.data_table_btn   = platebtn.PlateButton(tb, -1, 'DataTable', datatable_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
         self.image_viewer_btn = platebtn.PlateButton(tb, -1, 'ImageViewer', imviewer_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
         self.scatter_btn      = platebtn.PlateButton(tb, -1, 'ScatterPlot', scatter_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
-        self.histogram_btn    = platebtn.PlateButton(tb, -1, 'HistogramPlot', histogram_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
+        self.histogram_btn    = platebtn.PlateButton(tb, -1, 'Histogram', histogram_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
         self.density_btn      = platebtn.PlateButton(tb, -1, 'DensityPlot', density_icon.GetBitmap(), style=platebtn.PB_STYLE_GRADIENT)
         
         self.classifier_btn.SetPressColor(wx.Color(0,0,0))
@@ -113,7 +115,7 @@ class MainGUI(wx.Frame):
         self.console.SetBackgroundColour('#111111')
         
         self.console.SetForegroundColour('#DDDDDD')
-        log_level = logging.DEBUG
+        log_level = logging.INFO
         self.logr = logging.getLogger()
         self.log_text = ''
         def update(x):
