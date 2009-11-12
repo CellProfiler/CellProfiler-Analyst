@@ -4,6 +4,7 @@ from MulticlassSQL import filter_table_prefix
 from PlateMapPanel import *
 from PlotPanel import *
 from Properties import Properties
+from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageTools
 import numpy as np
 import os
@@ -32,11 +33,12 @@ class DataSourcePanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         tables = db.GetTableNames()
-        self.table_choice = wx.Choice(self, -1, choices=tables)
+        self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
         self.table_choice.Select(tables.index(p.image_table))
-        self.x_choice = wx.Choice(self, -1, size=(200,-1))
+        self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.bins_input = wx.TextCtrl(self, -1, '100')
-        self.filter_choice = wx.Choice(self, -1, choices=[NO_FILTER]+p._filters_ordered)
+        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
@@ -45,39 +47,34 @@ class DataSourcePanel(wx.Panel):
         sz.Add(wx.StaticText(self, -1, "table:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.table_choice, 1, wx.EXPAND)
-        sizer.Add(sz)
+        sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"))
         sz.AddSpacer((5,-1))
-        sz.Add(self.x_choice)
-        sizer.Add(sz)
-        sizer.AddSpacer((-1,5))
-        
-        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.Add(self.x_choice, 1, wx.EXPAND)
+        sz.AddSpacer((5,-1))
         sz.Add(wx.StaticText(self, -1, "bins:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.bins_input)
-        sizer.Add(sz)
+        sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"))
         sz.AddSpacer((5,-1))
-        sz.Add(self.filter_choice)
-        sizer.Add(sz)
+        sz.Add(self.filter_choice, 1, wx.EXPAND)
+        sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
         sizer.Add(self.update_chart_btn)    
         
-        wx.EVT_CHOICE(self.table_choice, -1, self.on_table_selected)
+        wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
         self.Bind(wx.EVT_SIZE, self._onsize)
         
         self.SetSizer(sizer)
-        self.SetAutoLayout(1)
-        sizer.Fit(self)
         self.Show(1)
 
     def on_table_selected(self, evt):
@@ -183,7 +180,7 @@ class Histogram(wx.Frame):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
-        sizer.Add(configpanel, 0)
+        sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
         
 

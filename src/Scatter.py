@@ -34,15 +34,15 @@ class DataSourcePanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         tables = db.GetTableNames()
-        self.table_choice = ComboBox(self, -1, choices=tables)
+        self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
         self.table_choice.Select(tables.index(p.image_table))
-        self.x_choice = ComboBox(self, -1, size=(200,-1))
-        self.y_choice = ComboBox(self, -1, size=(200,-1))
-        self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE])
+        self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
+        self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
+        self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.x_scale_choice.Select(0)
-        self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE])
+        self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
-        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered)
+        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered, style=wx.CB_READONLY)
         self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
@@ -91,8 +91,6 @@ class DataSourcePanel(wx.Panel):
         self.Bind(wx.EVT_SIZE, self._onsize)
         
         self.SetSizer(sizer)
-#        self.SetAutoLayout(1)
-#        sizer.Fit(self)
         self.Show(1)
         
     def on_table_selected(self, evt):
@@ -190,6 +188,10 @@ class ScatterPanel(PlotPanel):
         for i, pt_list in enumerate(self.point_lists):
             plot_pts = np.array(pt_list)
             
+            if len(plot_pts)==0:
+                logging.error('No points to plot!')
+                return
+            
             if self.x_scale == LOG_SCALE:
                 plot_pts = plot_pts[(plot_pts[:,0]>0)]
             if self.y_scale == LOG_SCALE:
@@ -255,7 +257,7 @@ class Scatter(wx.Frame):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
-        sizer.Add(configpanel, 0, wx.EXPAND)
+        sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
         
 
