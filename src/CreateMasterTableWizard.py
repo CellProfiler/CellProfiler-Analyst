@@ -130,18 +130,19 @@ class Page2(wiz.WizardPageSimple):
         
     def OnPageLoaded(self, evt):
         self.listTables.Clear()
-        perImTables = perObTables = []
+        perImTables = []
+        perObTables = []
         for t in db.GetTableNames():
             # Get tables that are NOT masters (do not have a TableNumber index) 
             indices = [r[4] for r in db.execute('SHOW INDEX FROM %s'%(t))]
             if 'TableNumber' not in indices:
                 if t.lower().endswith('per_image'):
                     perImTables += [t]
-                if t.lower().endswith('per_object'):
+                elif t.lower().endswith('per_object'):
                     perObTables += [t]
         for im in perImTables[::-1]:
             for ob in perObTables:
-                if ob[:-10] == im[:-9]:         # if prefixes match, add these two tables
+                if ob[:-10] == im[:-9]: # if prefixes match, add these two tables
                     prefix = ob[:-10].rstrip('_')
                     self.listTables.Insert(prefix+' ('+im+' / '+ob+')', 0, (im,ob))
 
@@ -151,11 +152,34 @@ class Page2(wiz.WizardPageSimple):
         self.directions.SetForegroundColour('#000001')
             
     def OnPageChanging(self,evt):
-        if self.listTables.GetSelections() == () and evt.GetDirection() == True:
-            evt.Veto()
-            self.directions.SetForegroundColour('#FF0000')
+        if evt.GetDirection() == True:
+            if self.listTables.GetSelections() == ():
+                evt.Veto()
+                self.directions.SetForegroundColour('#FF0000')
             
+            if len(self.Parent.perImageTables) > 1:
+                colnames = set(db.GetColumnNames(self.Parent.perImageTables[0]))
+                for t in self.Parent.perImageTables:
+                    colnames2 = set(db.GetColumnNames(t))
+                    if colnames != colnames2:
+                        errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
+                                                  'Mismatched columns were:\n%s'%(self.Parent.perImageTables[0], 
+                                                            t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                                  'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                        errdlg.ShowModal()
+                        evt.Veto()
 
+            if len(self.Parent.perObjectTables) > 1:
+                colnames = set(db.GetColumnNames(self.Parent.perObjectTables[0]))
+                for t in self.Parent.perObjectTables:
+                    colnames2 = set(db.GetColumnNames(t))
+                    if colnames != colnames2:
+                        errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
+                                                  'Mismatched columns were:\n%s'%(self.Parent.perObjectTables[0], 
+                                                            t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                                  'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                        errdlg.ShowModal()
+                        evt.Veto()
 
 def find_master_tables():
     tables = db.GetTableNames()
@@ -181,7 +205,7 @@ class Page3(wiz.WizardPageSimple):
     def __init__(self, parent):
         wiz.WizardPageSimple.__init__(self, parent)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        title = wx.StaticText(self, -1, 'Choose Prefix (step 3 of 4)')
+        title = wx.StaticText(self, -1, 'Choose Master (step 3 of 4)')
         title.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD))
         self.sizer.AddWindow(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
         self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
@@ -192,11 +216,11 @@ class Page3(wiz.WizardPageSimple):
         
         sizer1 = wx.BoxSizer(wx.VERTICAL)
         sizer1.SetMinSize((600,200))
-        sizer1.Add(wx.StaticText(self, -1, 'Enter a prefix name for your CPA master tables:', style=wx.ALIGN_CENTRE), 0, wx.ALL|wx.EXPAND, 5)
+        sizer1.Add(wx.StaticText(self, -1, 'To create a new master, enter a prefix to use:', style=wx.ALIGN_CENTRE), 0, wx.ALL|wx.EXPAND, 5)
         sizer1.Add(self.txtPrefix, 0, wx.ALL|wx.EXPAND, 10)
         sizer1.Add(self.example, 0, wx.TOP|wx.LEFT|wx.RIGHT|wx.EXPAND, 5)
         sizer1.Add(wx.StaticText(self, -1, '- OR -', style=wx.ALIGN_CENTER), 0, wx.ALL|wx.EXPAND, 10)
-        sizer1.Add(wx.StaticText(self, -1, 'Select a master to append to:', style=wx.ALIGN_CENTER), 0, wx.ALL|wx.EXPAND, 10)
+        sizer1.Add(wx.StaticText(self, -1, 'Select an existing master to append to:', style=wx.ALIGN_CENTER), 0, wx.ALL|wx.EXPAND, 10)
         sizer1.Add(self.listTables, 1, wx.EXPAND, 0)
         
         self.sizer.Add(sizer1)
@@ -248,6 +272,30 @@ class Page3(wiz.WizardPageSimple):
                 self.Parent.outPerImage, self.Parent.outPerObject = self.listTables.GetStringSelection().split(',')
                 self.Parent.masterExists = True
             
+                if len(self.Parent.perImageTables) > 0:
+                    colnames = set(db.GetColumnNames(self.Parent.outPerImage)) - set(['TableNumber'])
+                    for t in self.Parent.perImageTables:
+                        colnames2 = set(db.GetColumnNames(t))
+                        if colnames != colnames2:
+                            errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
+                                                      'Mismatched columns were:\n%s'%(self.Parent.outPerObject, 
+                                                                t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                                      'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                            errdlg.ShowModal()
+                            evt.Veto()
+                            
+                if len(self.Parent.perObjectTables) > 0:
+                    colnames = set(db.GetColumnNames(self.Parent.outPerObject)) - set(['TableNumber'])
+                    for t in self.Parent.perObjectTables:
+                        colnames2 = set(db.GetColumnNames(t))
+                        if colnames != colnames2:
+                            errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
+                                                      'Mismatched columns were:\n%s'%(self.Parent.outPerObject, 
+                                                                t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                                      'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                            errdlg.ShowModal()
+                            evt.Veto()
+            
 class Page4(wiz.WizardPageSimple):
     def __init__(self, parent):
         wiz.WizardPageSimple.__init__(self, parent)
@@ -258,16 +306,12 @@ class Page4(wiz.WizardPageSimple):
         self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         label_1 = wx.StaticText(self, -1, 'Confirm that the following information is correct and click "Finish".', style=wx.ALIGN_CENTRE)
-        self.outDB = wx.StaticText(self, -1, 'Database to write to: ')
-        self.inTables = wx.StaticText(self, -1, 'Tables to merge: ')
-        self.outTables = wx.StaticText(self, -1, 'Tables to write: ')
+        self.report = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_AUTO_SCROLL)
         
         sizer1 = wx.BoxSizer(wx.VERTICAL)
         sizer1.SetMinSize((600,200))
         sizer1.Add(label_1, 0, wx.ALL|wx.EXPAND, 20)
-        sizer1.Add(self.outDB, 0, wx.ALL|wx.EXPAND, 10)
-        sizer1.Add(self.inTables, 0, wx.ALL|wx.EXPAND, 10)
-        sizer1.Add(self.outTables, 0, wx.ALL|wx.EXPAND, 10)
+        sizer1.Add(self.report, 1, wx.ALL|wx.EXPAND, 10)
         
         self.sizer.Add(sizer1)
         self.SetSizer(self.sizer)
@@ -277,81 +321,105 @@ class Page4(wiz.WizardPageSimple):
         self.Bind(wiz.EVT_WIZARD_PAGE_CHANGING, self.OnFinish)
 
     def OnPageLoaded(self, evt):
-        import string
-        self.outDB.SetLabel('Database to write to: '+self.Parent.outDB)
-        self.inTables.SetLabel('Tables to merge: \n'+string.join([str(t[0])+', '+str(t[1]) for t in zip(self.Parent.perImageTables,self.Parent.perObjectTables)],'\n'))
+        rep = 'SELECTED DATABASE: "'+self.Parent.outDB+'"\n\n'
+        rep += 'TABLES TO JOIN: \n'+'\n'.join([str(t[0])+', '+str(t[1]) for t in zip(self.Parent.perImageTables,self.Parent.perObjectTables)])+'\n\n'
         if self.Parent.masterExists:
-            self.outTables.SetLabel('Merging into tables: \n'+self.Parent.outPerImage+', '+self.Parent.outPerObject+', '+self.Parent.outPerImage[:-10]+'_table_index')
+            rep += 'APPENDING TO EXISTING MASTER: \n'+self.Parent.outPerImage+', '+self.Parent.outPerObject+', '+self.Parent.outPerImage[:-10]+'_table_index'
         else:
-            self.outTables.SetLabel('Tables to write: \n'+self.Parent.outPerImage+', '+self.Parent.outPerObject+', '+self.Parent.outPerImage[:-10]+'_table_index')
+            rep += 'CREATING NEW MASTER: \n'+self.Parent.outPerImage+', '+self.Parent.outPerObject+', '+self.Parent.outPerImage[:-10]+'_table_index'
+        self.report.SetValue(rep)
         
     def OnFinish(self, evt):
-        '''
-        DO THE ACTUAL MERGE!
-        '''
-        
-        # TODO: Allow abort from dialog        
-        
+        ''' DO THE MERGE! '''
         if evt.GetDirection() == True:
             nTables = len(self.Parent.perImageTables)
             prefix = self.Parent.outPerImage[:-10]
-            dlg = wx.ProgressDialog("Creating Master Tables", "0%", 100, style=wx.PD_CAN_ABORT|wx.PD_SMOOTH)
+            
+            if not self.Parent.masterExists:
+                ___ing = 'Creating'
+            else:
+                ___ing = 'Updating'
+            dlg = wx.ProgressDialog(___ing+" Master Tables", "0%", 100, style=wx.PD_ELAPSED_TIME|wx.PD_SMOOTH)
             dlg.SetSize((400,150))
             dlg.Show()
             
+            # Find which TableNumber to start at
             if self.Parent.masterExists:
-                t0 = int(db.execute('SELECT MAX(TableNumber) FROM %s'%(self.Parent.outPerObject))[0][0]) + 1
+                t0 = int(db.execute('SELECT MAX(TableNumber) FROM %s'%(self.Parent.outPerImage))[0][0]) + 1
             else:
                 t0 = 0
-                    
-            # Create the DB if it doesn't exist already
-#            db.execute('CREATE DATABASE IF NOT EXISTS '+self.Parent.outDB)
-#            db.execute('USE '+self.Parent.outDB)
+
+            # Build a list of columns to select so their order in the db doesn't matter
+            # Important: Step 3 guarantees that an existing master table has the
+            #            same columns as the table(s) to merge (plus TableNumber)
+            im_cols = ','.join(db.GetColumnNames(self.Parent.perImageTables[0]))
+            ob_cols = ','.join(db.GetColumnNames(self.Parent.perObjectTables[0]))
+
+            #
+            # CREATE/APPEND TO THE MASTER PER_IMAGE TABLE
+            #
             
-            # Create a table_index table which will be used to link the "TableNumber" fields to the original table names
-            db.execute('CREATE TABLE IF NOT EXISTS '+prefix+'_table_index (TableNumber INT, PerImageTable varchar(60), PerObjectTable varchar(60), PRIMARY KEY (TableNumber))')
-            for i in xrange(nTables):
-                db.execute('INSERT INTO '+prefix+'_table_index (TableNumber, PerImageTable, PerObjectTable) VALUES('+str(t0+i)+', "'+self.Parent.perImageTables[i]+'", "'+self.Parent.perObjectTables[i]+'")')
-            
-            # Create the per_image tables
-            if not self.Parent.masterExists:
+            # TableNumber is moved to the last column
+            if self.Parent.masterExists:
+                lastcol = db.GetColumnNames(self.Parent.outPerImage)[-1]
+                if lastcol != 'TableNumber':
+                    db.execute('ALTER TABLE '+self.Parent.outPerImage+' MODIFY COLUMN TableNumber INT AFTER '+lastcol)
+            else:
                 db.execute('CREATE TABLE IF NOT EXISTS '+self.Parent.outPerImage+' LIKE '+self.Parent.inDB+'.'+self.Parent.perImageTables[0])
                 db.execute('ALTER TABLE '+self.Parent.outPerImage+' DROP PRIMARY KEY')
                 db.execute('ALTER TABLE '+self.Parent.outPerImage+' ADD COLUMN TableNumber INT')
                 db.execute('ALTER TABLE '+self.Parent.outPerImage+' ADD PRIMARY KEY (TableNumber, ImageNumber)')
-            else:
-                lastcol = db.GetColumnNames(self.Parent.outPerImage)[-1]
-                db.execute('ALTER TABLE '+self.Parent.outPerImage+' MODIFY COLUMN TableNumber INT AFTER '+lastcol)
             
-            dlg.Update(0, 'Creating "'+self.Parent.outPerImage+'": 0%')
+            # Insert values from each table into the master
+            dlg.Update(0, ___ing+' "'+self.Parent.outPerImage+'": 0%')
             for i in xrange(nTables):
-                db.execute('INSERT INTO '+self.Parent.outPerImage+' SELECT *,'+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perImageTables[i])
+                db.execute('INSERT INTO '+self.Parent.outPerImage+' SELECT '+im_cols+','+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perImageTables[i])
                 percent = 100*i/nTables
-                dlg.Update(percent, '"Creating "'+self.Parent.outPerImage+'": '+str(percent)+'%')
+                dlg.Update(percent, ___ing+' "'+self.Parent.outPerImage+'": '+str(percent)+'%')
             db.execute('ALTER TABLE '+self.Parent.outPerImage+' MODIFY COLUMN TableNumber INT FIRST')
             
-            # Create the per_object tables
-            if not self.Parent.masterExists:
+            #
+            # CREATE/APPEND TO THE MASTER PER_OBJECT TABLE
+            #
+            
+            # Tablenumber is moved to the last column
+            if self.Parent.masterExists:
+                lastcol = db.GetColumnNames(self.Parent.outPerObject)[-1]
+                if lastcol != 'TableNumber':
+                    db.execute('ALTER TABLE '+self.Parent.outPerObject+' MODIFY COLUMN TableNumber INT AFTER '+lastcol)
+            else:
                 db.execute('CREATE TABLE IF NOT EXISTS '+self.Parent.outPerObject+' LIKE '+self.Parent.inDB+'.'+self.Parent.perObjectTables[0])
                 db.execute('ALTER TABLE '+self.Parent.outPerObject+' DROP PRIMARY KEY')
                 db.execute('ALTER TABLE '+self.Parent.outPerObject+' ADD COLUMN TableNumber INT')
                 db.execute('ALTER TABLE '+self.Parent.outPerObject+' ADD PRIMARY KEY (TableNumber, ImageNumber, ObjectNumber)')
-            else:
-                lastcol = db.GetColumnNames(self.Parent.outPerObject)[-1]
-                db.execute('ALTER TABLE '+self.Parent.outPerObject+' MODIFY COLUMN TableNumber INT AFTER '+lastcol)
             
-            dlg.Update(0, 'Creating "'+self.Parent.outPerObject+'": 0%')
+            # Insert values from each table into the master
+            dlg.Update(0, ___ing+' "'+self.Parent.outPerObject+'": 0%')
             for i in xrange(nTables):
-                db.execute('INSERT INTO '+self.Parent.outPerObject+' SELECT *,'+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perObjectTables[i])
+                db.execute('INSERT INTO '+self.Parent.outPerObject+' SELECT '+ob_cols+','+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perObjectTables[i])
                 percent = 100*i/nTables
-                dlg.Update(percent, 'Creating table "'+self.Parent.outPerObject+'": '+str(percent)+'%')
+                dlg.Update(percent, ___ing+' "'+self.Parent.outPerObject+'": '+str(percent)+'%')
             db.execute('ALTER TABLE '+self.Parent.outPerObject+' MODIFY COLUMN TableNumber INT FIRST')
             
+            #
+            # CREATE/UPDATE THE TABLE_INDEX table
+            #   Used to link the TableNumber cols to the original table names
+            #
+            
+            db.execute('CREATE TABLE IF NOT EXISTS '+prefix+'_table_index (TableNumber INT, PerImageTable varchar(60), PerObjectTable varchar(60), PRIMARY KEY (TableNumber))')
+            for i in xrange(nTables):
+                db.execute('INSERT INTO '+prefix+'_table_index (TableNumber, PerImageTable, PerObjectTable) VALUES('+str(t0+i)+', "'+self.Parent.perImageTables[i]+'", "'+self.Parent.perObjectTables[i]+'")')
+            
             # Log the newly created table names in CPA_Merged_Tables.merged
-            db.execute('INSERT INTO CPA_Merged_Tables.merged (per_image, per_object, table_index) VALUES("'+self.Parent.outDB+'.'+self.Parent.outPerImage+'", "'+self.Parent.outDB+'.'+self.Parent.outPerObject+'", "'+self.Parent.outDB+'.'+prefix+'_table_index")' )
+            try:
+                db.execute('INSERT INTO CPA_Merged_Tables.merged (per_image, per_object, table_index) VALUES("'+self.Parent.outDB+'.'+self.Parent.outPerImage+'", "'+self.Parent.outDB+'.'+self.Parent.outPerObject+'", "'+self.Parent.outDB+'.'+prefix+'_table_index")' )
+            except:
+                print 'Logging merge to CPA_Merged_Tables.merged failed.'
             
             dlg.Destroy()
             
+            dlg = wx.MessageDialog(self, 'Tables merged successfully!', 'Success!', wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
             
 
 
