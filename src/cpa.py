@@ -192,7 +192,14 @@ class MainGUI(wx.Frame):
         imviewer.Show(True)
         
     def save_log(self, evt=None):
-        logging.error('"Save Log" feature not yet implemented')
+        dlg = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), 
+                            defaultFile='CPA_log.txt', wildcard='txt', 
+                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            filename = dlg.GetPath()
+        f = open(filename, 'w')
+        f.write(self.console.Value)
+        logging.info('Log saved to "%s"'%filename)
         
     def set_log_level(self, level):
         self.logr.setLevel(level)
