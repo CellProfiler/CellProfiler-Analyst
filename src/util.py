@@ -135,15 +135,20 @@ import sys
 from cStringIO import StringIO
 import wx
 
-def get_image_from_b64data(data64):
-    data = base64.b64decode(data64)
-    stream = StringIO(data)
-    return wx.ImageFromStream(stream)
+class EmbeddedImage(object):
+    ''' Simple way to store and retrieve b64 encoded images. '''
+    def __init__(self, data64):
+        self.data64 = data64
+        
+    def get_image(self):
+        ''' returns a wx.Image '''
+        data = base64.b64decode(self.data64)
+        stream = StringIO(data)
+        return wx.ImageFromStream(stream) 
 
-def get_bitmap_from_b64data(data64):
-    data = base64.b64decode(data64)
-    stream = StringIO(data)
-    return wx.BitmapFromImage(wx.ImageFromStream(stream))
+    def get_bitmap(self):
+        ''' returns a wx.Bitmap '''
+        return wx.BitmapFromImage(self.get_image())
     
 
 def get_cpa_image():
