@@ -4,7 +4,6 @@ import threading
 from util import get_icon
 from ClassifierGUI import *
 from ImageViewer import ImageViewer
-from wx.lib.embeddedimage import PyEmbeddedImage
 from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
