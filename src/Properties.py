@@ -329,19 +329,6 @@ class Properties(Singleton):
         else:
             logr.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables))
             self.check_tables = 'yes'
-                                     
-
-    def object_key(self):
-        if self.table_id:
-            return "%s, %s, %s"%(self.table_id, self.image_id, self.object_id)
-        else:
-            return "%s, %s"%(self.image_id, self.object_id)
-
-    def object_key_defs(self):
-        if self.table_id:
-            return "%s INT, %s INT, %s INT"%(self.table_id, self.image_id, self.object_id)
-        else:
-            return "%s INT, %s INT"%(self.image_id, self.object_id)
 
         
 if __name__ == "__main__":
