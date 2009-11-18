@@ -7,7 +7,7 @@ from ImageViewer import ImageViewer
 from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
-from util import get_image_from_b64data, get_bitmap_from_b64data
+from util import get_bitmap_from_b64data
 
 try:
     from version import VERSION as __version__
