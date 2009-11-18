@@ -4,7 +4,7 @@ from Properties import Properties
 from sys import stderr
 from tempfile import gettempdir
 from time import ctime, time
-from wx.lib.embeddedimage import PyEmbeddedImage
+#from wx.lib.embeddedimage import PyEmbeddedImage
 import DBConnect
 import ImageTools
 import csv
