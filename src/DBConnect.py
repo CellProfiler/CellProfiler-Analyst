@@ -91,6 +91,8 @@ def object_key_columns(table_name=''):
     else:
         return (p.image_id, p.object_id)
 
+def object_key_defs():
+    return ', '.join(['%s INT'%(id) for id in object_key_columns()])
 
 def GetWhereClauseForObjects(obKeys):
     '''

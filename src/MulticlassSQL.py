@@ -109,17 +109,19 @@ def create_perobject_class_table(classnames, rules):
     if p.class_table is None:
         raise ValueError('"class_table" in properties file is not set.')
 
-    index_cols = p.object_key()
-    class_cols = p.object_key() + ', class'
-    class_col_defs = p.object_key_defs() + ', class VARCHAR (%d)'%(max([len(c) for c in classnames])+1)
+    index_cols = UniqueObjectClause()
+    class_cols = UniqueObjectClause() + ', class, class_number'
+    class_col_defs = object_key_defs() + ', class VARCHAR (%d)'%(max([len(c) for c in classnames])+1) + ', class_number INT'
+    
     
     # Drop must be explicitly asked for Classifier.ScoreAll
     db.execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
     db.execute('CREATE TABLE `%s` (%s)'%(p.class_table, class_col_defs))
     db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(p.class_table, p.class_table, index_cols))
         
-    case_expr = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n + 1, classnames[n]) for n in range(nClasses)]) + " END"
-    db.execute('INSERT INTO `%s` (%s) SELECT %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, p.object_table))
+    case_expr = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, classnames[n]) for n in range(nClasses)]) + " END"
+    case_expr2 = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, n+1) for n in range(nClasses)]) + " END"
+    db.execute('INSERT INTO `%s` (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, case_expr2, p.object_table))
     
 def PerImageCounts(weaklearners, filter=None, cb=None):
     '''

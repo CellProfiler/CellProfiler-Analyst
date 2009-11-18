@@ -95,7 +95,7 @@ class ClassifierGUI(wx.Frame):
         
         # fetch & rules
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
-        self.rules_text = wx.TextCtrl(self.fetch_and_rules_panel, wx.NewId(), size=(-1,-1), style=wx.TE_MULTILINE|wx.TE_READONLY)
+        self.rules_text = wx.TextCtrl(self.fetch_and_rules_panel, -1, size=(-1,-1), style=wx.TE_MULTILINE|wx.TE_READONLY)
         self.rules_text.SetMinSize((-1, int(p.image_tile_size)))
         self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
         
@@ -112,21 +112,21 @@ class ClassifierGUI(wx.Frame):
         self.classified_bins_panel = wx.Panel(self.bins_splitter)
 
         # fetch objects interface
-        self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=wx.NewId(), value='20', size=(30,-1), style=wx.TE_PROCESS_ENTER)
-        self.obClassChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), choices=['random'])
-        self.filterChoice = wx.Choice(self.fetch_panel, id=wx.NewId(), 
+        self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=-1, value='20', size=(30,-1), style=wx.TE_PROCESS_ENTER)
+        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
+        self.filterChoice = wx.Choice(self.fetch_panel, id=-1, 
                                       choices=['experiment', 'image']+p._filters_ordered+p._groups_ordered)#+['*create new filter*'])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.fetchBtn = wx.Button(self.fetch_panel, wx.NewId(), 'Fetch!')
+        self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
         # find rules interface
-        self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, wx.NewId(), value='5', size=(30,-1))
-        self.findRulesBtn = wx.Button(self.find_rules_panel, wx.NewId(), 'Find Rules')
-        self.scoreAllBtn = wx.Button(self.find_rules_panel, wx.NewId(), 'Score All')
-        self.scoreImageBtn = wx.Button(self.find_rules_panel, wx.NewId(), 'Score Image')
+        self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30,-1))
+        self.findRulesBtn = wx.Button(self.find_rules_panel, -1, 'Find Rules')
+        self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
+        self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
 
         # add sorting class
-        self.addSortClassBtn = wx.Button(self.GetStatusBar(), wx.NewId(), "Add new class...", style=wx.BU_EXACTFIT)
+        self.addSortClassBtn = wx.Button(self.GetStatusBar(), -1, "Add new class", style=wx.BU_EXACTFIT)
 
         #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -138,15 +138,15 @@ class ClassifierGUI(wx.Frame):
         #### Add elements to sizers and splitters
         # fetch panel
         self.fetchSizer.AddStretchSpacer()
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, wx.NewId(), 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.nObjectsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, wx.NewId(), p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, wx.NewId(), 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5,20))
         self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((10,20))
@@ -159,7 +159,7 @@ class ClassifierGUI(wx.Frame):
         # find rules panel
         self.find_rules_sizer.AddStretchSpacer()
         self.find_rules_sizer.Add((5,20))
-        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, wx.NewId(), 'Max number of rules:'))
+        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, -1, 'Max number of rules:'))
         self.find_rules_sizer.Add((5,20))
         self.find_rules_sizer.Add(self.nRulesTxt)
         self.find_rules_sizer.Add((5,20))
@@ -776,7 +776,7 @@ class ClassifierGUI(wx.Frame):
         
         t1 = time()
         
-        # FETCH PER_IMAGE COUNTS FROM DB
+        # FETCH PER-IMAGE COUNTS FROM DB
         if not self.keysAndCounts or filter!=self.lastScoringFilter:
             # If hit counts havn't been calculated since last training or if the
             # user is filtering the data differently then classify all objects
