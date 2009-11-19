@@ -12,8 +12,8 @@ import PILfix
 if sys.platform == "darwin":
     os.system("svn info | grep Revision | sed -e 's/Revision:/\"Version/' -e 's/^/VERSION = /' -e 's/$/\"/' > version.py")
 
-APPNAME = 'Classifier'
-APP = ['ClassifierGUI.py']
+APPNAME = 'CPAnalyst'
+APP = ['cpa.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': False,
            #'iconfile': "wormprofiler_icons/%s.icns" % APPNAME,
@@ -28,7 +28,7 @@ setup(
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
-    name = "Classifier",
+    name = "CPAnalyst",
     ext_modules = [Extension('_classifier',
                              sources = ['_classifier.c'],
                              libraries = ['sqlite3'])]
