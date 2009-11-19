@@ -58,7 +58,7 @@ class MainGUI(wx.Frame):
         #
         # Setup toolbar
         #
-        tb = self.CreateToolBar(wx.TB_HORZ_TEXT)
+        tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', classifier_icon.get_bitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     MulticlassSQL.CreateFilterTables()
 
 
-    cpa = MainGUI(p, None, size=(600,-1))
+    cpa = MainGUI(p, None, size=(760,-1))
     cpa.Show(True)
     app.MainLoop()
     
