@@ -1,4 +1,11 @@
-# Necessary for py2app 
+# This must come first for py2app/py2exe
+import matplotlib
+matplotlib.use('WXAgg')
+try:
+    import cellprofiler.gui.cpfigure as cpfig
+except: pass
+# ---
+
 from DataGrid import DataGrid
 from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
@@ -18,15 +25,10 @@ import MulticlassSQL
 import PolyaFit
 import SortBin
 import logging
-import matplotlib
 import numpy as np
 import os
 import wx
 import wxversion
-
-#import cellprofiler.gui.cpfigure as cpfig
-#matplotlib.use('WXAgg')
-# ---
 
 try:
     from version import VERSION as __version__
@@ -89,9 +91,9 @@ class ClassifierGUI(wx.Frame):
         
         #### Create GUI elements
         # Top level - three split windows
-        self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER)
+        self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER|wx.SP_3DSASH)
         self.fetch_and_rules_panel = wx.Panel(self.splitter)
-        self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER)
+        self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER|wx.SP_3DSASH)
         
         # fetch & rules
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
