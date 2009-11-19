@@ -959,10 +959,10 @@ class ClassifierGUI(wx.Frame):
             from ColumnFilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(550,80))
             if cff.ShowModal()==wx.OK:
-                p._filters_ordered += [str(cff.GetFilter())]
-                p._filters[str(cff.GetFilter())] = cff.GetFilter().to_sql()
+                p._filters_ordered += [str(cff.get_filter())]
+                p._filters[str(cff.get_filter())] = cff.get_filter().to_sql()
                 items = self.filterChoice.GetItems()
-                self.filterChoice.SetItems(items[:-1]+[str(cff.GetFilter())]+items[-1:])
+                self.filterChoice.SetItems(items[:-1]+[str(cff.get_filter())]+items[-1:])
                 self.filterChoice.SetSelection(len(items)-1)
             cff.Destroy()
 
