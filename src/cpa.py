@@ -1,13 +1,12 @@
 import wx
 import logging
 import threading
-from util import get_icon
 from ClassifierGUI import *
 from ImageViewer import ImageViewer
 from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
-from util import EmbeddedImage
+from util import EmbeddedImage, get_cpa_icon
 
 try:
     from version import VERSION as __version__
@@ -52,23 +51,23 @@ class MainGUI(wx.Frame):
         
         self.properties = properties
         tbicon = wx.TaskBarIcon()
-        tbicon.SetIcon(get_icon(), 'CellProfiler Analyst 2.0')
+        tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
         self.Center(wx.HORIZONTAL)
         self.CreateStatusBar()
         
         #
         # Setup toolbar
         #
-        tb = self.CreateToolBar(wx.TB_HORIZONTAL|wx.NO_BORDER|wx.TB_FLAT)
+        tb = self.CreateToolBar(wx.TB_HORZ_TEXT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
-        tb.AddTool(ID_CLASSIFIER, classifier_icon.get_bitmap(), shortHelpString='Classifier', longHelpString='Launch Classifier')
-        tb.AddTool(ID_PLATE_VIEWER, pv_icon.get_bitmap(), shortHelpString='Plate Viewer', longHelpString='Launch Plate Viewer')
-        tb.AddTool(ID_DATA_TABLE, datatable_icon.get_bitmap(), shortHelpString='Data Table', longHelpString='Launch DataTable')
-        tb.AddTool(ID_IMAGE_VIEWER, imviewer_icon.get_bitmap(), shortHelpString='Image Viewer', longHelpString='Launch ImageViewer')
-        tb.AddTool(ID_SCATTER, scatter_icon.get_bitmap(), shortHelpString='Scatter Plot', longHelpString='Launch Scatter Plot')
-        tb.AddTool(ID_HISTOGRAM, histogram_icon.get_bitmap(), shortHelpString='Histogram', longHelpString='Launch Histogram')
-        tb.AddTool(ID_DENSITY, density_icon.get_bitmap(), shortHelpString='Density Plot', longHelpString='Launch Density Plot')
+        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', classifier_icon.get_bitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
+        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', pv_icon.get_bitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
+        tb.AddLabelTool(ID_DATA_TABLE, 'DataTable', datatable_icon.get_bitmap(), shortHelp='Data Table', longHelp='Launch DataTable')
+        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', imviewer_icon.get_bitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', scatter_icon.get_bitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
+        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', histogram_icon.get_bitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
+        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', density_icon.get_bitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.Realize()
         
         #
