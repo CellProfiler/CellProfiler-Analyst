@@ -1,7 +1,13 @@
+# This must come first for py2app/py2exe
+try:
+    import cellprofiler.gui.cpfigure as cpfig
+except: pass
+from ClassifierGUI import *
+# ---
+
 import wx
 import logging
 import threading
-from ClassifierGUI import *
 from ImageViewer import ImageViewer
 from Scatter import Scatter
 from Histogram import Histogram

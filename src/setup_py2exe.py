@@ -2,12 +2,12 @@ from distutils.core import setup
 import py2exe
 import matplotlib
 
-setup(console=['ClassifierGUI.py'],
+setup(console=['cpa.py'],
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'pysqlite2'],
             'includes' : ['PILfix'],
-            "excludes": ['_gtkagg', '_tkagg', 
+            "excludes": ['_gtkagg', '_tkagg',
                          "Tkconstants","Tkinter","tcl"],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
                              'libgobject-2.0-0.dll', 

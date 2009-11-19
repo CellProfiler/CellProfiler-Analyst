@@ -314,14 +314,14 @@ class ClassifierGUI(wx.Frame):
         
         # Help Menu
         helpMenu = wx.Menu()
-        helpMenuItem = helpMenu.Append(-1, text='Readme\tCtrl+H', help='Displays the readme file.')
+#        helpMenuItem = helpMenu.Append(-1, text='Readme\tCtrl+H', help='Displays the readme file.')
         aboutMenuItem = helpMenu.Append(-1, text='About', help='About Classifier 2.0')
         self.GetMenuBar().Append(helpMenu, 'Help')
         
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
+#        self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowAbout, aboutMenuItem)
         
         
@@ -1057,7 +1057,7 @@ class ClassifierGUI(wx.Frame):
     def OnShowAbout(self, evt):
         ''' Shows a message box with the version number etc.'''
         message = '''Classifier was developed at The Broad Institute Imaging Platform and is distributed under the GNU General Public License version 2.'''
-        dlg = wx.MessageDialog(self, message, 'Classifier 2.0 %s'%(__version__))
+        dlg = wx.MessageDialog(self, message, 'Classifier 2.0 %s'%(__version__), style=wx.OK)
         dlg.ShowModal()
          
         
