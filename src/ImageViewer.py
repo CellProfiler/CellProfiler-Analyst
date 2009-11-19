@@ -120,6 +120,7 @@ class ImageViewerPanel(ImagePanel):
             self.class_rep = CL_COLORED
         else:
             self.class_rep = CL_NUMBERED
+        self.Refresh()
         
     def ToggleClass(self, className, show):
         self.classVisible[className] = show
