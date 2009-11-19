@@ -173,7 +173,7 @@ def get_cpa_bitmap(size=None):
         img.Rescale(size, size, wx.IMAGE_QUALITY_HIGH)
     return wx.BitmapFromImage(img)
     
-def get_icon(size=None):
+def get_cpa_icon(size=None):
     """The CellProfiler icon as a wx.Icon"""
     icon = wx.EmptyIcon()
     if size == None and sys.platform.startswith('win'):

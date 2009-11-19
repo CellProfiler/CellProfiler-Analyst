@@ -9,7 +9,7 @@ from TileCollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 from time import time
-from util import get_icon
+from util import get_cpa_icon
 import DBConnect
 import DirichletIntegrate
 import FastGentleBoostingMulticlass
@@ -64,7 +64,7 @@ class ClassifierGUI(wx.Frame):
 
         wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
         self.tbicon = wx.TaskBarIcon()
-        self.tbicon.SetIcon(get_icon(), 'CellProfiler Analyst 2.0')
+        self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
         self.SetName('Classifier')
         
         self.pmb = None
