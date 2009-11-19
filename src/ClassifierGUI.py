@@ -166,6 +166,15 @@ class ClassifierGUI(wx.Frame):
         self.find_rules_sizer.Add(self.nRulesTxt)
         self.find_rules_sizer.Add((5,20))
         self.find_rules_sizer.Add(self.findRulesBtn)
+        try:
+            import cellprofiler.gui.cpfigure as cpfig
+            self.checkAccuracyBtn = wx.Button(self.find_rules_panel, -1, 'Check Accuracy')
+            self.checkAccuracyBtn.Disable()
+            self.find_rules_sizer.Add((5,20))
+            self.find_rules_sizer.Add(self.checkAccuracyBtn)
+            self.Bind(wx.EVT_BUTTON, self.OnCheckAccuracy, self.checkAccuracyBtn)
+        except:
+            logging.debug("Could not import cpfigure, will not display Margin vs. Iteration plot.")
         self.find_rules_sizer.Add((5,20))
         self.find_rules_sizer.Add(self.scoreAllBtn)
         self.find_rules_sizer.Add((5,20))
@@ -420,6 +429,10 @@ class ClassifierGUI(wx.Frame):
         if not self.IsTrained():
             self.obClassChoice.SetItems(['random'])
             self.obClassChoice.SetSelection(0)
+            self.scoreAllBtn.Disable()
+            self.scoreImageBtn.Disable()
+            if hasattr(self, 'checkAccuracyBtn'):
+                self.checkAccuracyBtn.Disable()
             return
         sel = self.obClassChoice.GetSelection()
         selectableClasses = ['random']+[bin.label for bin in self.classBins if bin.trained]
@@ -649,6 +662,14 @@ class ClassifierGUI(wx.Frame):
           
     
         
+    def OnCheckAccuracy(self, evt):
+        ''' Called when the CheckAccuracy Button is pressed. '''
+        figure = cpfig.create_or_find(self, -1, 'Margin vs. Training Iteration', subplots=(1,1), name='Margin vs. Training Iteration')
+        sp = figure.subplot(0,0)
+        sp.clear()
+        sp.plot([v[-1] for v in self.weaklearners])
+        figure.Refresh()
+        
         
     def OnFindRules(self, evt):
         self.FindRules()
@@ -670,20 +691,12 @@ class ClassifierGUI(wx.Frame):
         self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                nRules, self.trainingSet.label_matrix, 
                                                                self.trainingSet.values, output)
-        try:
-            import cellprofiler.gui.cpfigure as cpfig
-            figure = cpfig.create_or_find(self, -1, 'Margin vs. Training Iteration', subplots=(1,1), name='Margin vs. Training Iteration')
-            sp = figure.subplot(0,0)
-            sp.clear()
-            sp.plot([v[-1] for v in self.weaklearners])
-            figure.Refresh()
-        except:
-            logging.debug("Could not import cpfigure, will not display Margin vs. Iteration plot.")
-            pass
         self.SetStatusText('')
         self.rules_text.Value = output.getvalue()
         self.scoreAllBtn.Enable()
         self.scoreImageBtn.Enable()
+        if hasattr(self, 'checkAccuracyBtn'):
+            self.checkAccuracyBtn.Enable()
 
         for bin in self.classBins:
             if not bin.empty:
