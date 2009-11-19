@@ -1,7 +1,4 @@
 # This must come first for py2app/py2exe
-try:
-    import cellprofiler.gui.cpfigure as cpfig
-except: pass
 from ClassifierGUI import *
 # ---
 
@@ -14,6 +11,9 @@ from Histogram import Histogram
 from Density import Density
 from util import EmbeddedImage, get_cpa_icon
 
+try:
+    import cellprofiler.gui.cpfigure as cpfig
+except: pass
 try:
     from version import VERSION as __version__
 except ImportError:
