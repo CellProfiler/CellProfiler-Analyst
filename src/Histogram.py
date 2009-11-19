@@ -164,17 +164,8 @@ class Histogram(wx.Frame):
     '''
     def __init__(self, parent, size=(600,600)):
         wx.Frame.__init__(self, parent, -1, size=size, title='Histogram plot')
-        self.menuBar = wx.MenuBar()
-        self.SetMenuBar(self.menuBar)
-        self.fileMenu = wx.Menu()
-        self.exitMenuItem = self.fileMenu.Append(ID_EXIT, text='Exit\tCtrl+Q',
-                                                 help='Close Histogram')
-        self.fileMenu.AppendItem(self.exitMenuItem)
-        self.GetMenuBar().Append(self.fileMenu, 'File')
-        wx.EVT_MENU(self, ID_EXIT, lambda evt:self.Close())
         
         points = [1,2,2,3,3,3,4,4,4,4,5,5,5,5,5]
-        
         figpanel = HistogramPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
         

@@ -266,14 +266,6 @@ class Density(wx.Frame):
     '''
     def __init__(self, parent, size=(600,600)):
         wx.Frame.__init__(self, parent, -1, size=size, title='density plot')
-        self.menuBar = wx.MenuBar()
-        self.SetMenuBar(self.menuBar)
-        self.fileMenu = wx.Menu()
-        self.exitMenuItem = self.fileMenu.Append(ID_EXIT, text='Exit\tCtrl+Q',
-                                                 help='Close Density Plot')
-        self.fileMenu.AppendItem(self.exitMenuItem)
-        self.GetMenuBar().Append(self.fileMenu, 'File')
-        wx.EVT_MENU(self, ID_EXIT, lambda evt:self.Close())
         
         figpanel = DensityPanel(self)
         configpanel = DataSourcePanel(self, figpanel)
@@ -283,7 +275,6 @@ class Density(wx.Frame):
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
         
-
 def LoadProperties():
     import os
     dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
