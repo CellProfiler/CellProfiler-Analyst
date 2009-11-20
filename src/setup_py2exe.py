@@ -1,16 +1,21 @@
 from distutils.core import setup
 import py2exe
 import matplotlib
+import os
 
-version ="$Revision: 8488 $"
+s = os.popen('svnversion')
+version = s.read()
+f = open('cpa_version.py', 'w')
+f.write('VERSION = "%s"\n'%(version.strip()))
+f.close()
 
 setup(console=['cpa.py'],
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'pysqlite2'],
-            'includes' : ['PILfix'],
-            "excludes": ['_gtkagg', '_tkagg',
-                         "Tkconstants","Tkinter","tcl"],
+            'includes' : ['PILfix', 'version'],
+            "excludes" : ['_gtkagg', '_tkagg',
+                          "Tkconstants","Tkinter","tcl"],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
                              'libgobject-2.0-0.dll', 
                              'libgdk_pixbuf-2.0-0.dll',

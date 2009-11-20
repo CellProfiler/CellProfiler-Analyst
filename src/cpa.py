@@ -1,9 +1,9 @@
 # This must come first for py2app/py2exe
 __version__ = ''
-try:
-    from version import VERSION as __version__
-    __version__ = 'r'+__version__
-except ImportError: pass
+#try:
+import cpa_version
+__version__ = 'r'+cpa_version.VERSION
+#except: pass
 from ClassifierGUI import *
 # ---
 
