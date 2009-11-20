@@ -2,6 +2,8 @@ from distutils.core import setup
 import py2exe
 import matplotlib
 
+version ="$Revision: 8488 $"
+
 setup(console=['cpa.py'],
       options={
         'py2exe': {
