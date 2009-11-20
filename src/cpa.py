@@ -58,8 +58,9 @@ class MainGUI(wx.Frame):
         wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 %s'%(__version__), **kwargs)
         
         self.properties = properties
-        tbicon = wx.TaskBarIcon()
-        tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+        self.tbicon = wx.TaskBarIcon()
+        self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+        self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
         self.CreateStatusBar()
         
@@ -215,7 +216,7 @@ class MainGUI(wx.Frame):
         message = ('CellProfiler Analyst was developed at The Broad Institute '
                    'Imaging Platform and is distributed under the GNU General '
                    'Public License version 2.')
-        dlg = wx.MessageDialog(self, message, 'CellProfiler Analyst 2.0 %s'%(__version__ or 'unknown revision'), style=wx.OK)
+        dlg = wx.MessageDialog(self, message, 'CellProfiler Analyst 2.0 %s'%(__version__ or 'unknown revision'), style=wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
 
     def on_close(self, evt=None):
