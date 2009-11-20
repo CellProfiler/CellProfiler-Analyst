@@ -16,7 +16,7 @@ APPNAME = 'CPAnalyst'
 APP = ['cpa.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': False,
-           #'iconfile': "wormprofiler_icons/%s.icns" % APPNAME,
+           'iconfile': "../resources/cpa.icns",
            'packages': ['numpy'],
            'excludes': ['pylab', 'nose', 'wx.tools'],
            'resources': ['FastGentleBoostingWorkerMulticlass.py'],
