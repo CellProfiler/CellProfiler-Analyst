@@ -236,19 +236,19 @@ class PlateMapBrowser(wx.Frame):
         self.plateMaps += [AwesomePMP(self, data, shape, well_labels=well_labels,
                                       colormap=self.colorMapsChoice.GetStringSelection(),
                                       wellshape=self.wellShapeChoice.GetStringSelection())]
-        self.plateMapChoices += [ComboBox(self, choices=self.plateNames, style=wx.CB_READONLY)]
+        self.plateMapChoices += [ComboBox(self, choices=self.plateNames, style=wx.CB_READONLY, size=(100,-1))]
         self.plateMapChoices[-1].Select(plateIndex)
         self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
         
         plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
-        plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'))
+        plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), 0, wx.EXPAND)
         plateMapChoiceSizer.Add(self.plateMapChoices[-1])
         
         singlePlateMapSizer = wx.BoxSizer(wx.VERTICAL)
         singlePlateMapSizer.Add(plateMapChoiceSizer, 0, wx.ALIGN_CENTER)
-        singlePlateMapSizer.Add(self.plateMaps[-1], 1, wx.EXPAND, wx.ALIGN_CENTER)
+        singlePlateMapSizer.Add(self.plateMaps[-1], 1, wx.EXPAND|wx.ALIGN_CENTER)
         
-        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND, wx.ALIGN_CENTER)
+        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
             
     def UpdatePlateMaps(self):
         measurement = self.measurementsChoice.GetStringSelection()
@@ -395,11 +395,10 @@ class PlateMapBrowser(wx.Frame):
             logging.warn('You must display at least 1 plate.')
             self.numberOfPlatesTE.SetValue('1')
             nPlates = 1
-        
         # Record the indices of the plates currently selected.
         # Pad the list with sequential plate indices then crop to the new number of plates.
         currentPlates = [plateChoice.GetSelection() for plateChoice in self.plateMapChoices]
-        currentPlates = (currentPlates+[(currentPlates[-1]+1+p)%nPlates for p in range(nPlates)])[:nPlates]
+        currentPlates = (currentPlates+[(currentPlates[-1]+1+p) % len(self.plateNames) for p in range(nPlates)])[:nPlates]
         # Remove all plateMaps
         self.plateMapSizer.Clear(deleteWindows=True)
         self.plateMaps = []
