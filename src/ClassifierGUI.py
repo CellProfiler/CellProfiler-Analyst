@@ -29,11 +29,6 @@ import numpy as np
 import os
 import wx
 import wxversion
-
-try:
-    from version import VERSION as __version__
-except ImportError:
-    __version__ = 'unknown revision'
     
 ID_EXIT = wx.NewId()
 ID_CLASSIFIER = wx.NewId()
@@ -321,17 +316,9 @@ class ClassifierGUI(wx.Frame):
         # Channel Menus
         self.CreateChannelMenus()
         
-        # Help Menu
-        helpMenu = wx.Menu()
-#        helpMenuItem = helpMenu.Append(-1, text='Readme\tCtrl+H', help='Displays the readme file.')
-        aboutMenuItem = helpMenu.Append(-1, text='About', help='About Classifier 2.0')
-        self.GetMenuBar().Append(helpMenu, 'Help')
-        
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
-#        self.Bind(wx.EVT_MENU, self.OnShowReadme, helpMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnShowAbout, aboutMenuItem)
         
         
     def CreateChannelMenus(self):
@@ -1065,23 +1052,7 @@ class ClassifierGUI(wx.Frame):
         self.imageControlFrame = wx.Frame(self)
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale)
         self.imageControlFrame.Show(True)
-        
-    
-    def OnShowAbout(self, evt):
-        ''' Shows a message box with the version number etc.'''
-        message = '''Classifier was developed at The Broad Institute Imaging Platform and is distributed under the GNU General Public License version 2.'''
-        dlg = wx.MessageDialog(self, message, 'Classifier 2.0 %s'%(__version__), style=wx.OK)
-        dlg.ShowModal()
-         
-        
-    def OnShowReadme(self, evt):
-        ''' Shows a scrollable message dialog with the readme. '''
-        from wx.lib.dialogs import ScrolledMessageDialog
-        f = open(os.getcwd().rpartition('/')[0]+'/README.txt', 'U')
-        text = f.read()
-        dlg = ScrolledMessageDialog(self, text, 'Readme', size=(900,600))
-        dlg.ShowModal()
-        
+
         
     def SetBrightness(self, brightness):
         ''' Updates the global image brightness across all tiles. '''

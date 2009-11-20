@@ -1,4 +1,3 @@
-from ClassifierGUI import ID_CLASSIFIER
 from DBConnect import *
 from DataModel import DataModel
 from ImageControlPanel import *
@@ -19,6 +18,7 @@ ID_SELECT_ALL = wx.NewId()
 ID_DESELECT_ALL = wx.NewId()
 
 def get_classifier_window():
+    from ClassifierGUI import ID_CLASSIFIER
     win = wx.FindWindowById(ID_CLASSIFIER)
     if win:
         return win

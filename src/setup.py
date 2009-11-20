@@ -10,7 +10,7 @@ pytz.zoneinfo.UTC = pytz.UTC
 import PILfix
 
 if sys.platform == "darwin":
-    os.system("svn info | grep Revision | sed -e 's/Revision:/\"Version/' -e 's/^/VERSION = /' -e 's/$/\"/' > version.py")
+    os.system("svn info | grep Revision | sed -e 's/Revision: /\"/' -e 's/^/VERSION = /' -e 's/$/\"/' > version.py")
 
 APPNAME = 'CPAnalyst'
 APP = ['cpa.py']

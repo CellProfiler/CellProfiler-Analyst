@@ -1,4 +1,9 @@
 # This must come first for py2app/py2exe
+__version__ = ''
+try:
+    from version import VERSION as __version__
+    __version__ = 'r'+__version__
+except ImportError: pass
 from ClassifierGUI import *
 # ---
 
@@ -14,10 +19,7 @@ from util import EmbeddedImage, get_cpa_icon
 try:
     import cellprofiler.gui.cpfigure as cpfig
 except: pass
-try:
-    from version import VERSION as __version__
-except ImportError:
-    __version__ = 'unknown revision'
+    
 
 # Toolbar icons
 imviewer_icon = EmbeddedImage('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')
@@ -53,7 +55,7 @@ class MainGUI(wx.Frame):
     GUI for CellProfiler Analyst
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
-        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0', **kwargs)
+        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 %s'%(__version__), **kwargs)
         
         self.properties = properties
         tbicon = wx.TaskBarIcon()
@@ -105,6 +107,11 @@ class MainGUI(wx.Frame):
         infoMenuItem.Check()
         self.GetMenuBar().Append(logMenu, 'Logging')
         
+        helpMenu = wx.Menu()
+        aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
+        self.GetMenuBar().Append(helpMenu, 'Help')
+
+        
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
@@ -137,6 +144,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.launch_scatter_plot, scatterMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_histogram_plot, histogramMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_density_plot, densityMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_data_table, id=ID_DATA_TABLE)
@@ -201,6 +209,14 @@ class MainGUI(wx.Frame):
         self.logr.setLevel(level)
         # cheat the logger so these always get displayed
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
+
+    def on_show_about(self, evt):
+        ''' Shows a message box with the version number etc.'''
+        message = ('CellProfiler Analyst was developed at The Broad Institute '
+                   'Imaging Platform and is distributed under the GNU General '
+                   'Public License version 2.')
+        dlg = wx.MessageDialog(self, message, 'CellProfiler Analyst 2.0 %s'%(__version__ or 'unknown revision'), style=wx.OK)
+        dlg.ShowModal()
 
     def on_close(self, evt=None):
         # Classifier needs to be told to close so it can clean up it's threads
