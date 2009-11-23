@@ -1,4 +1,4 @@
-Classifier is distributed under the GNU General Public License,
+CellProfiler Analyst is distributed under the GNU General Public License,
 and disclaimer, included below.
 
 Developed by the Broad Institute of MIT and Harvard.
