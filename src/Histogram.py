@@ -164,7 +164,8 @@ class Histogram(wx.Frame):
     A very basic histogram plot with controls for setting it's data source.
     '''
     def __init__(self, parent, size=(600,600)):
-        wx.Frame.__init__(self, parent, -1, size=size, title='Histogram plot')
+        wx.Frame.__init__(self, parent, -1, size=size, title='Histogram')
+        self.SetName('Histogram')
         
         points = [1,2,2,3,3,3,4,4,4,4,5,5,5,5,5]
         figpanel = HistogramPanel(self, points)

@@ -338,7 +338,8 @@ class ImageViewer(wx.Frame):
             elif keycode == ord('L'):
                 self.imagePanel.SetContrastMode('Log')
                 self.controls.SetContrastMode('Log')
-            elif len(self.chMap) > chIdx >= 0:   # ctrl+n where n is the nth channel
+            elif len(self.chMap) > chIdx >= 0:   
+                # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
             else:
                 evt.Skip()
