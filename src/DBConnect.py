@@ -396,7 +396,7 @@ class DBConnect(Singleton):
         NOTE: this function automatically called by execute.
         '''
         connID = threading.currentThread().getName()
-        return list(self.cursors[connID].fetchall())
+        return self.cursors[connID].fetchall()
 
     def get_results_as_structured_array(self):
         col_names = self.GetResultColumnNames()
@@ -1221,7 +1221,6 @@ if __name__ == "__main__":
     dm.PopulateModel()
 
     print '%s images'%len(db.GetAllImageKeys())
-
     
     # TEST CreateTempTableFromCSV
 #    table = '_blah'
