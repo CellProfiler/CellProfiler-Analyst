@@ -7,8 +7,10 @@ from Properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageTools
 import matplotlib.cm
+from matplotlib.ticker import LogLocator, LogFormatter
 import numpy as np
 import os
+import sys
 import re
 import wx
 
@@ -48,6 +50,8 @@ class DataSourcePanel(wx.Panel):
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
+        self.color_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
+        self.color_scale_choice.Select(0)
         self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered, style=wx.CB_READONLY)
         self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
@@ -84,16 +88,23 @@ class DataSourcePanel(wx.Panel):
         sizer.AddSpacer((-1,5))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)        
-        sz.Add(wx.StaticText(self, -1, "grid size:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.gridsize_input, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
         sz.Add(wx.StaticText(self, label='color map:'))
         sz.AddSpacer((5,-1))
         sz.Add(self.colormap_choice, 1, wx.EXPAND)
+        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "color-scale:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.color_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
+        sz = wx.BoxSizer(wx.HORIZONTAL)        
+        sz.Add(wx.StaticText(self, -1, "grid size:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.gridsize_input, 1, wx.EXPAND)
+        sizer.Add(sz, 1, wx.EXPAND)
+        sizer.AddSpacer((-1,5))
+
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"))
         sz.AddSpacer((5,-1))
@@ -142,6 +153,7 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.setgridsize(int(self.gridsize_input.GetValue()))
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.set_color_scale(self.color_scale_choice.GetStringSelection())
         self.figpanel.set_x_label(self.x_choice.GetStringSelection())
         self.figpanel.set_y_label(self.y_choice.GetStringSelection())
         self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
@@ -178,6 +190,7 @@ class DensityPanel(PlotPanel):
         self.cb = None
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
+        self.color_scale = LINEAR_SCALE
         self.x_label = ''
         self.y_label = ''
         self.cmap ='jet'
@@ -200,6 +213,9 @@ class DensityPanel(PlotPanel):
     
     def set_y_scale(self, scale):
         self.y_scale = scale
+
+    def set_color_scale(self, scale):
+        self.color_scale = scale
 
     def set_x_label(self, label):
         self.x_label = label
@@ -230,7 +246,12 @@ class DensityPanel(PlotPanel):
                                      yscale=self.y_scale,
                                      cmap=matplotlib.cm.get_cmap(self.cmap))
 
-            self.cb = self.figure.colorbar(hb)
+            if self.color_scale == LOG_SCALE:
+                print 'log'
+                l_f = LogFormatter(2, labelOnlyBase=False)
+                self.cb = self.figure.colorbar(hb, format = l_f)
+            else:
+                self.cb = self.figure.colorbar(hb)
             
             self.subplot.set_xlabel(self.x_label)
             self.subplot.set_ylabel(self.y_label)
@@ -284,7 +305,7 @@ def LoadProperties():
         p.LoadFile(filename)
     else:
         print 'Densityplot requires a properties file.  Exiting.'
-        exit()
+        sys.exit()
 
             
 if __name__ == "__main__":

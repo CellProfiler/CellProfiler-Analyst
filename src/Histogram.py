@@ -8,6 +8,7 @@ from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageTools
 import numpy as np
 import os
+import sys
 import re
 import wx
 
@@ -186,7 +187,7 @@ def LoadProperties():
         p.LoadFile(filename)
     else:
         print 'Histogramplot requires a properties file.  Exiting.'
-        exit()
+        sys.exit()
 
             
 if __name__ == "__main__":

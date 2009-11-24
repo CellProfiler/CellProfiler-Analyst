@@ -27,6 +27,7 @@ import SortBin
 import logging
 import numpy as np
 import os
+import sys
 import wx
 import wxversion
     
@@ -53,11 +54,11 @@ class ClassifierGUI(wx.Frame):
             
         if p.IsEmpty():
             logging.critical('Classifier requires a properties file. Exiting.')
-            exit()
+            sys.exit()
 
         if DataModel.getInstance().IsEmpty():
             logging.debug("DataModel is empty. Classifier requires a populated DataModel to function. Exiting.")
-            exit()
+            sys.exit()
 
         wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
         self.tbicon = wx.TaskBarIcon()
@@ -1138,7 +1139,7 @@ def LoadProperties():
         p.LoadFile(filename)
     else:
         logging.error('Classifier requires a properties file.  Exiting.')
-        exit()
+        sys.exit()
 
 
 # ----------------- Run -------------------

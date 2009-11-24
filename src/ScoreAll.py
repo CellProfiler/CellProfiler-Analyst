@@ -13,6 +13,7 @@ import PolyaFit
 import logging
 import numpy as np
 import os
+import sys
 import wx
 
 USAGE = '''
@@ -88,7 +89,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
         
     if not keysAndCounts:
         logging.error('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter))
-        exit()
+        sys.exit()
         
     # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
     if group != 'Image':
@@ -192,11 +193,11 @@ def score(props, ts, nRules, filter=None, group='Image'):
 # run
 #
 if __name__ == "__main__":
-    import sys
-
+    logging.basicConfig(level=logging.DEBUG)
+    
     if len(sys.argv) < 3:
         print USAGE
-        exit()
+        sys.exit()
 
     props  = sys.argv[1]
     ts     = sys.argv[2]

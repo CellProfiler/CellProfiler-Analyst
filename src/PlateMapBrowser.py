@@ -8,6 +8,7 @@ import logging
 import matplotlib.cm
 import numpy as np
 import os
+import sys
 import re
 import wx
 
@@ -470,7 +471,7 @@ def LoadProperties():
         p.LoadFile(filename)
     else:
         print 'Plate Viewer requires a properties file.  Exiting.'
-        exit()
+        sys.exit()
 
             
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ import csv
 import logging
 import numpy as np
 import os
+import sys
 import weakref
 import wx
 import wx.grid
@@ -639,7 +640,7 @@ if __name__ == "__main__":
       
     if not (3 <= len(sys.argv) <= 4):
         print usage
-        exit()
+        sys.exit()
     csvfile = sys.argv[1]
     propsfile = sys.argv[2]
     

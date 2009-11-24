@@ -8,6 +8,7 @@ from ClassifierGUI import *
 # ---
 
 import wx
+import sys
 import logging
 import threading
 from ImageViewer import ImageViewer
@@ -177,12 +178,12 @@ class MainGUI(wx.Frame):
         table.Show(True)
         
     def launch_scatter_plot(self, evt=None):
-        scatter = Scatter(parent=self)
-        scatter.Show(True)
-#        import cellprofiler.gui.cpfigure as cpfig
-#        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
-#        table = np.random.randn(5000,2)
-#        figure.panel.subplot_scatter(0, 0, table)
+#        scatter = Scatter(parent=self)
+#        scatter.Show(True)
+        import cellprofiler.gui.cpfigure as cpfig
+        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
+        table = np.random.randn(5000,2)
+        figure.panel.subplot_scatter(0, 0, table)
 
     def launch_histogram_plot(self, evt=None):
         hist = Histogram(parent=self)
@@ -243,13 +244,12 @@ def load_properties():
         p.LoadFile(filename)
     else:
         print 'CellProfiler Analyst requires a properties file.  Exiting.'
-        exit()
+        sys.exit()
 
 
 
 
 if __name__ == "__main__":
-    import sys
     import logging
 
     logging.basicConfig(level=logging.DEBUG)
