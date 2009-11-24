@@ -45,17 +45,19 @@ class AwesomePMP(PlateMapPanel):
     def OnMotion(self, evt):
         well = self.GetWellAtCoord(evt.X, evt.Y)
         wellLabel = self.GetWellLabelAtCoord(evt.X, evt.Y)
-        if well is not None:
+        if well is not None and wellLabel is not None:
             self.tip.SetTip('%s: %s'%(wellLabel,self.data[well]))
             self.tip.Enable(True)
         else:
             self.tip.Enable(False)
         
     def OnClick(self, evt):
-        if evt.ShiftDown():
-            self.ToggleSelected(self.GetWellAtCoord(evt.X, evt.Y))
-        else:
-            self.SelectWell(self.GetWellAtCoord(evt.X, evt.Y))
+        well = self.GetWellAtCoord(evt.X, evt.Y)
+        if well is not None:
+            if evt.ShiftDown():
+                self.ToggleSelected(well)
+            else:
+                self.SelectWell(well)
             
     def OnDClick(self, evt):
         if self.plate is not None:
