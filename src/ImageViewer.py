@@ -247,6 +247,7 @@ class ImageViewer(wx.Frame):
             self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
             self.CreateChannelMenus()
             # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
+            self.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.cp.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
@@ -345,7 +346,8 @@ class ImageViewer(wx.Frame):
             if keycode == ord(' '):
                 self.cp.Collapse(not self.cp.IsCollapsed())
                 self.OnPaneChanged()
-            evt.Skip()
+            else:
+                evt.Skip()
         
     def OnResizeImagePanel(self, evt):
         self.sw.SetVirtualSize(evt.GetSize())
