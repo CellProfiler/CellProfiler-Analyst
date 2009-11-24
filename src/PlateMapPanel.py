@@ -165,6 +165,8 @@ class PlateMapPanel(wx.Panel):
         returns a 2 tuple of integers indexing a well position 
                 or None if there is no well at the given position.
         '''
+        if not hasattr(self, 'xo'):
+            return None
         r = min(self.Size[0]/(self.data.shape[1]+1.)/2.,
                 self.Size[1]/(self.data.shape[0]+1.)/2.) - 0.5
         i = int((x-2-self.xo)/(r*2+1))
