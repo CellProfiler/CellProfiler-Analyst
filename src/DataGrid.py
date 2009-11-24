@@ -336,6 +336,7 @@ class DataGrid(wx.Frame):
         '''
         
         wx.Frame.__init__(self, parent, id=-1, title=title)
+        self.SetName('DataTable')
         
         self.grid = None
         self.file = None

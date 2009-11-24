@@ -148,7 +148,8 @@ class ImageViewer(wx.Frame):
         NOTE: imgs lists must be of the same length.
         '''
         wx.Frame.__init__(self, parent, -1, title)
-                        
+        self.SetName('ImageViewer')
+        
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)

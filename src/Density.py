@@ -266,7 +266,8 @@ class Density(wx.Frame):
     A very basic density plot with controls for setting it's data source.
     '''
     def __init__(self, parent, size=(600,600)):
-        wx.Frame.__init__(self, parent, -1, size=size, title='density plot')
+        wx.Frame.__init__(self, parent, -1, size=size, title='Density Plot')
+        self.SetName('Density')
         
         figpanel = DensityPanel(self)
         configpanel = DataSourcePanel(self, figpanel)

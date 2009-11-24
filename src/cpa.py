@@ -178,12 +178,12 @@ class MainGUI(wx.Frame):
         table.Show(True)
         
     def launch_scatter_plot(self, evt=None):
-#        scatter = Scatter(parent=self)
-#        scatter.Show(True)
-        import cellprofiler.gui.cpfigure as cpfig
-        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
-        table = np.random.randn(5000,2)
-        figure.panel.subplot_scatter(0, 0, table)
+        scatter = Scatter(parent=self)
+        scatter.Show(True)
+#        import cellprofiler.gui.cpfigure as cpfig
+#        figure = cpfig.create_or_find(self, -1, 'scatter', subplots=(1,1), name='scatter')
+#        table = np.random.randn(5000,2)
+#        figure.panel.subplot_scatter(0, 0, table)
 
     def launch_histogram_plot(self, evt=None):
         hist = Histogram(parent=self)
@@ -225,6 +225,13 @@ class MainGUI(wx.Frame):
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier and classifier.Close() == False:
             return
+        if any([wx.FindWindowByName(n) for n in 
+                ['ImageViewer', 'Density', 'Scatter', 'Histogram', 'DataTable', 'PlateViewer']
+                ]):
+            dlg = wx.MessageDialog(self, 'Some tools are open, are you sure you want to quit CPA?', 'Quit CellProfiler Analyst?', wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
+            response = dlg.ShowModal()
+            if response != wx.ID_YES:
+                return            
         self.Destroy()
         
     def on_idle(self, evt=None):

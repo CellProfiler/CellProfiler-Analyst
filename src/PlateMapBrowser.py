@@ -93,10 +93,10 @@ class AwesomePMP(PlateMapPanel):
 ID_EXIT = wx.NewId()
 
 class PlateMapBrowser(wx.Frame):
-    '''
-    '''
     def __init__(self, parent, size=(800,-1)):
         wx.Frame.__init__(self, parent, -1, size=size)
+        self.SetName('PlateViewer')
+        
         assert (p.well_id is not None and p.plate_id is not None), \
             'Plate Viewer requires the well_id and plate_id columns to be defined in your properties file.'
 

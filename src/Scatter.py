@@ -239,7 +239,8 @@ class Scatter(wx.Frame):
     A very basic scatter plot with controls for setting it's data source.
     '''
     def __init__(self, parent, size=(600,600)):
-        wx.Frame.__init__(self, parent, -1, size=size, title='Scatter plot')
+        wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot')
+        self.SetName('Scatter')
         
         points = [[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]]
         clrs = [[238, 70, 148]]
