@@ -15,7 +15,7 @@ from ImageViewer import ImageViewer
 from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
-from util import EmbeddedImage, get_cpa_icon
+from icons import EmbeddedImage, get_cpa_icon
 
 try:
     import cellprofiler.gui.cpfigure as cpfig

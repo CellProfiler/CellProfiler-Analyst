@@ -86,9 +86,9 @@ def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     return db.execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s %s=%d '%(p.object_table, whereclause, class_query, clNum))
 
 
-def object_scores(weaklearners, filter=None, filterKeys=[]):
+def object_scores(weaklearners):
     stump_stmnts, score_stmnts, find_max_query, _, _ = \
-                  translate(weaklearners, filter=filter, filterKeys=filterKeys)
+                  translate(weaklearners)
     db.execute('DROP TABLE IF EXISTS _stump')
     db.execute('DROP TABLE IF EXISTS _scores')
     [db.execute(stump_query) for stump_query in stump_stmnts] 

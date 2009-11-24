@@ -16,7 +16,7 @@ from TileCollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 from time import time
-from util import get_cpa_icon
+from icons import get_cpa_icon
 import DBConnect
 import DirichletIntegrate
 import FastGentleBoostingMulticlass
@@ -29,7 +29,6 @@ import numpy as np
 import os
 import sys
 import wx
-import wxversion
     
 ID_EXIT = wx.NewId()
 ID_CLASSIFIER = wx.NewId()

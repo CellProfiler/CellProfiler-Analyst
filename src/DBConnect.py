@@ -1,3 +1,4 @@
+import random
 from MySQLdb.cursors import SSCursor
 from Properties import Properties
 from Singleton import Singleton
@@ -13,6 +14,8 @@ import traceback
 import re
 import os.path
 import logging
+import copy
+# This module should be usable on systems without wx.
 
 verbose = True
 
@@ -386,24 +389,20 @@ class DBConnect(Singleton):
             return None
         except KeyError, e:
             raise DBException, 'No such connection: "%s".\n' %(connID)
-        
-        
+
     def _get_results_as_list(self):
         '''
         Returns a list of results retrieved from the last execute query.
         NOTE: this function automatically called by execute.
         '''
         connID = threading.currentThread().getName()
-        r = self.GetNextResult()
-        l = []
-        while r:
-            l.append(r)
-            r = self.GetNextResult()
-        return l
-    
-    
-    
-    
+        return list(self.cursors[connID].fetchall())
+
+    def get_results_as_structured_array(self):
+        col_names = self.GetResultColumnNames()
+        all = self._get_results_as_list()
+        types = [type(x) for x in all[0]]
+        return np.array(all, dtype=zip(col_names, types))
     
     def GetObjectIDAtIndex(self, imKey, index):
         '''
@@ -995,6 +994,209 @@ class DBConnect(Singleton):
         cur = self.get_objects_modify_date()
         return self.get_objects_modify_date() <= later
 
+
+class Entity(object):
+    """Abstract class containing code that is common to Images and
+    Objects.  Do not instantiate directly."""
+
+    class dbiter(object):
+
+        def __init__(self, objects, db):
+            self.length = objects.count()
+            self.db = db
+            self.db.execute(objects.all_query(), return_result=False)
+            self.columns = self.db.GetResultColumnNames()
+
+        def __iter__(self):
+            return self
+
+        def __len__(self):
+            return self.length
+
+        def structured_array(self):
+            return self.db.get_results_as_structured_array()
+
+        def sample(self, n):
+            """
+            Arguments:
+            n -- a non-negative integer or None
+
+            If n is None or n >= length, return all results.
+            """
+            list = self.db._get_results_as_list()
+            n = min(n, len(self))
+            return random.sample(list, n)
+
+        def next(self):
+            try:
+                r = self.db.GetNextResult()
+                if r:
+                    return r
+                else:
+                    raise StopIteration
+            except GeneratorExit:
+                print "GeneratorExit"
+                self.db.cursors[connID].fetchall()
+                
+
+    def __init__(self):
+        self._where = []
+        self.filters = []
+        self._offset = None
+        self._limit = None
+
+    def offset(self, offset):
+        new = copy.deepcopy(self)
+        new._offset = (0 if new._offset is None else new._offset) + offset
+        return new
+
+    def limit(self, limit):
+        new = copy.deepcopy(self)
+        new._limit = limit
+        return new
+
+    def filter(self, name):
+        """Add a filter (as defined in the properties file) by name."""
+        new = copy.deepcopy(self)
+        new.filters.append(name)
+        return new
+
+    def where(self, predicate):
+        new = copy.deepcopy(self)
+        new._where.append(predicate)
+        return new
+
+    def _get_where_clause(self):
+        return "" if self._where == [] else "where " + \
+            " and ".join(self._where)
+    where_clause = property(_get_where_clause)
+
+    def count(self):
+        c = DBConnect.getInstance().execute(self.all_query(columns=["count(*)"]))[0][0]
+        c = max(0, c - (self._offset or 0))
+        c = max(c, self._limit or 0)
+        return c
+
+    def all(self):
+        return self.dbiter(self, DBConnect.getInstance())
+
+    def all_query(self, columns=None):
+        return "select %s from %s %s %s %s" % (
+            ",".join(columns or self.columns()),
+            self.from_clause,
+            self.where_clause,
+            self.ordering_clause,
+            self.offset_limit_clause)
+
+
+class Union(Entity):
+    def __init__(self, *args):
+        super(Union, self).__init__()
+        self.operands = args
+
+    def all_query(self, *args, **kwargs):
+        return " UNION ".join([e.all_query(*args, **kwargs) 
+                               for e in self.operands])
+
+
+class Images(Entity):
+    '''
+    Easy access to images and their objects.
+
+    # Get all objects treated with 10 uM nocodazole
+    >>> cpa.DBConnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
+    '''
+
+    def __init__(self):
+        super(Images, self).__init__()
+
+    def _get_from_clause(self):
+        from_clause = [Properties.getInstance().image_table]
+        for filter in self.filters:
+            from_clause.append("join (%s) as %s using (%s)" %
+                               (Properties.getInstance()._filters[filter],
+                                'filter_SQL_' + filter,
+                                ", ".join(image_key_columns())))
+        return " ".join(from_clause)
+    from_clause = property(_get_from_clause)
+
+    def objects(self):
+        if self._offset is not None or self._limit is not None:
+            raise ValueError, "Cannot join with objects after applying "\
+                "offset/limit."
+        return Objects(images=self)
+
+
+class Objects(Entity):
+    '''
+    Easy access to objects.
+
+    >>> feature = "Cells_NumberNeighbors_SecondClosestDistance"
+    >>> y = [row[0] for row in Objects().ordering([feature]).project([feature]).all()]
+    '''
+
+    def __init__(self, images=None):
+        super(Objects, self).__init__()
+        self._columns = None
+        self._ordering = None
+        if images is None:
+            self._images = None
+        else:
+            self._images = images
+            self._where = images._where
+            self.filters = images.filters
+
+    def ordering(self, ordering):
+        new = copy.deepcopy(self)
+        new._ordering = ordering
+        return new
+
+    def project(self, columns):
+        new = copy.deepcopy(self)
+        new._columns = columns
+        return new
+
+    def _get_from_clause(self):
+        from_clause = [Properties.getInstance().object_table]
+        if self._images is not None:
+            from_clause.append("join %s using (%s)"%
+                               (Properties.getInstance().image_table,
+                                ", ".join(image_key_columns())))
+        for filter in self.filters:
+            from_clause.append("join (%s) as %s using (%s)" %
+                               (Properties.getInstance()._filters[filter],
+                                'filter_SQL_' + filter,
+                                ", ".join(image_key_columns())))
+        return " ".join(from_clause)
+    from_clause = property(_get_from_clause)
+
+    def _get_offset_limit_clause(self):
+        return " ".join((self._limit and ["limit %d" % self._limit] or []) +
+                        (self._offset and ["offset %d" % self._offset] or []))
+    offset_limit_clause = property(_get_offset_limit_clause)
+
+    def _get_ordering_clause(self):
+        if self._ordering is None:
+            return ""
+        else:
+            return "order by " + ", ".join(self._ordering)
+    ordering_clause = property(_get_ordering_clause)
+
+    def columns(self):
+        return self._columns or list(object_key_columns()) + \
+            DBConnect.getInstance().GetColnamesForClassifier()
+
+    def standard_deviations(self):
+        """Returns a list of the standard deviations of the non-key columns.
+        Offsets and limits are ignored here, not sure if they should be."""
+        db = DBConnect.getInstance()
+        return db.execute("select %s from %s %s"%(
+                ",".join(["std(%s)" % c 
+                          for c in db.GetColnamesForClassifier()]),
+                self.from_clause, self.where_clause))[0]
+
+    def __add__(self, other):
+        return Union(self, other)
 
 
 if __name__ == "__main__":
