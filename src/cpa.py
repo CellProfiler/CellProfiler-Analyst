@@ -61,6 +61,7 @@ class MainGUI(wx.Frame):
         self.properties = properties
         self.tbicon = wx.TaskBarIcon()
         self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+        self.SetIcon(get_cpa_icon())
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
         self.CreateStatusBar()
