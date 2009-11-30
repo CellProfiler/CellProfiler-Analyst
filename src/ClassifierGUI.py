@@ -225,7 +225,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnScoreAll, self.scoreAllBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
-        self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
+        self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfRules)
         self.nObjectsTxt.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
 
         self.GetStatusBar().Bind(wx.EVT_SIZE, self.status_bar_onsize)
@@ -659,6 +659,11 @@ class ClassifierGUI(wx.Frame):
         
         
     def OnFindRules(self, evt):
+        if not self.ValidateNumberOfRules():
+            errdlg = wx.MessageDialog(self, 'Classifier will not run for the number of rules you have entered.', "Invalid Number of Rules", wx.OK|wx.ICON_EXCLAMATION)
+            errdlg.ShowModal()
+            errdlg.Destroy()
+            return
         self.FindRules()
         
     def FindRules(self):
@@ -1022,13 +1027,34 @@ class ClassifierGUI(wx.Frame):
     def ValidateIntegerField(self, evt):
         ''' Validates an integer-only TextCtrl '''
         txtCtrl = evt.GetEventObject()
-        # NOTE: textCtrl.SetBackgroundColor doesn't appear to work (probably works on win)
-        #   foreground color only works when not setting to black.  LAAAAMMMEE!
+        # NOTE: textCtrl.SetBackgroundColor doesn't work on Mac
+        #   and foreground color only works when not setting to black.
         try:
             int(txtCtrl.GetValue())
             txtCtrl.SetForegroundColour('#000001')
         except(Exception):
             txtCtrl.SetForegroundColour('#FF0000')
+            
+    
+    def ValidateNumberOfRules(self, evt=None):
+        # NOTE: textCtrl.SetBackgroundColor doesn't work on Mac
+        #   and foreground color only works when not setting to black.
+        try:
+            nRules   = int(self.nRulesTxt.GetValue())
+            if p.db_type == 'sqlite':
+                nClasses = len(self.classBins)
+                maxRules = int((100-1)/(2+nClasses)) - 1
+                if nRules > maxRules:
+                    self.nRulesTxt.SetToolTip(wx.ToolTip(str(maxRules)))
+                    self.nRulesTxt.SetForegroundColour('#FF0000')
+                    logging.warn('For %s classes, the max number of rules is %s. To avoid this limitation, use MySQL.'%(nClasses, maxRules))
+                    return False
+                else:
+                    self.nRulesTxt.SetForegroundColour('#000001')
+                    return True
+        except(Exception):
+            self.nRulesTxt.SetForegroundColour('#FF0000')
+            return False
             
     
     def GetGroupKeyFromGroupSizer(self, group=None):
