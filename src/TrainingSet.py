@@ -162,14 +162,8 @@ class TrainingSet:
         self.saved = True
             
 
-    def Subset(self, mask):
-        sub = TrainingSet(self.properties)
-        sub.colnames = self.colnames
-        sub.labels = self.labels[mask]
-        sub.values = self.values[mask]
-        sub.groups = [self.groups[i] for i in range(len(self.groups)) if mask[i]]
-        return sub
-
+    def get_object_keys(self):
+        return [e[1] for e in self.entries]
 
 class CellCache(Singleton):
     ''' caching front end for holding cell data '''

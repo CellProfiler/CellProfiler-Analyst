@@ -98,7 +98,7 @@ class ImageReader(object):
                 try:
                     streams.append(urllib2.urlopen(fullurl))
                 except:
-                    raise 'Image not found: "'+fullurl+'"'
+                    raise Exception('Image not found: "'+fullurl+'"')
             else:  # Default: local file protocol
                 if p.image_url_prepend:
                     fullurl = os.path.join(p.image_url_prepend, url)

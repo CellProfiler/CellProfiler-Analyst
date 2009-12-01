@@ -258,7 +258,7 @@ class ClassifierGUI(wx.Frame):
         self.nObjectsTxt.SetToolTip(wx.ToolTip('The number of %s to fetch.'%(p.object_name[1])))
         self.obClassChoice.SetToolTip(wx.ToolTip('The phenotype of the %s.'%(p.object_name[1])))
         self.obClassChoice.GetToolTip().SetDelay(3000)
-        self.filterChoice.SetToolTip(wx.ToolTip('Image filters allow you to find %s from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
+        self.filterChoice.SetToolTip(wx.ToolTip('Filters fetched %s to be from a subset of your images. (See groups and filters in the properties file)'%(p.object_name[1])))
         self.filterChoice.GetToolTip().SetDelay(3000)
         self.fetchBtn.SetToolTip(wx.ToolTip('Fetches images of %s to be sorted.'%(p.object_name[1])))
         self.rules_text.SetToolTip(wx.ToolTip('Rules are displayed in this text box.'))
@@ -646,17 +646,72 @@ class ClassifierGUI(wx.Frame):
         except(Exception):
             txtCtrl.SetForegroundColour('#FF0000')       # Set field to red if image doesn't exist
             self.SetStatusText('No such image.')
-          
-    
-        
+
     def OnCheckAccuracy(self, evt):
         ''' Called when the CheckAccuracy Button is pressed. '''
-        figure = cpfig.create_or_find(self, -1, 'Margin vs. Training Iteration', subplots=(1,1), name='Margin vs. Training Iteration')
-        sp = figure.subplot(0,0)
-        sp.clear()
-        sp.plot([v[-1] for v in self.weaklearners])
-        figure.Refresh()
-        
+        # get wells if available, otherwise use imagenumbers
+        try:
+            nRules = int(self.nRulesTxt.GetValue())
+        except:
+            logging.error('Unable to parse number of rules')
+            return
+
+        groups = [db.get_platewell_for_object(key) for key in self.trainingSet.get_object_keys()]
+
+        dlg = wx.ProgressDialog('Computing cross validation accuracy...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)        
+        base = 0.0
+        scale = 1.0
+
+        class StopXValidation(Exception):
+            pass
+
+        def progress_callback(amount):
+            pct = min(int(100 * (amount * scale + base)), 100)
+            cont, skip = dlg.Update(pct, '%d%% Complete'%(pct))
+            if not cont:
+                raise StopXValidation
+
+        # each round of xvalidation takes about (numfolds * (1 - (1 / num_folds))) time
+        step_time_1 = (2.0 * (1.0 - 1.0 / 2.0))
+        step_time_2 = (20.0 * (1.0 - 1.0 / 20.0))
+        scale = step_time_1 / (10 * step_time_1 + step_time_2)
+
+        xvalid_50 = []
+
+        try:
+            for i in range(10):
+                xvalid_50 += FastGentleBoostingMulticlass.xvalidate(self.trainingSet.colnames,
+                                                                    nRules, self.trainingSet.label_matrix, 
+                                                                    self.trainingSet.values, 2,
+                                                                    groups, progress_callback)
+                # each round makes one "scale" size step in progress
+                base += scale
+
+            xvalid_50 = sum(xvalid_50) / 10.0
+
+            # only one more step
+            scale = 1.0 - base
+            xvalid_95 = FastGentleBoostingMulticlass.xvalidate(self.trainingSet.colnames,
+                                                                    nRules, self.trainingSet.label_matrix, 
+                                                                    self.trainingSet.values, 20,
+                                                                    groups, progress_callback)
+
+            dlg.Destroy()
+
+            figure = cpfig.create_or_find(self, -1, 'Cross-validation accuracy', subplots=(1,1), name='Cross-validation accuracy')
+            sp = figure.subplot(0,0)
+            sp.clear()
+            sp.hold(True)
+            sp.plot(range(1, nRules + 1), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
+            sp.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'k', label='95% cross-validation accuracy')
+            sp.legend(loc='lower right')
+            sp.set_xlabel('Rule #')
+            sp.set_ylabel('Accuracy')
+            sp.set_ylim(0, 1)
+            figure.Refresh()
+        except StopXValidation:
+            dlg.Destroy()
+
         
     def OnFindRules(self, evt):
         if not self.ValidateNumberOfRules():

@@ -642,6 +642,11 @@ class DBConnect(Singleton):
         else:
             logging.error('Both plate_id and well_id must be defined in properties!')
     
+    def get_platewell_for_object(self, key):
+        if p.plate_id and p.well_id:
+            return self.execute('SELECT %s FROM %s WHERE %s'%(well_key_columns(), p.image_table, GetWhereClauseForImages(key[:-1])))
+        else:
+            return key[:-1]
     
     def InferColTypesFromData(self, tabledata, nCols):
         '''
