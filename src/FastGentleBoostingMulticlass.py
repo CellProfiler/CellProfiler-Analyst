@@ -114,6 +114,9 @@ def xvalidate(colnames, num_learners, label_matrix, values, folds, group_labels,
         holdin_values = values[holdin_idx, :]
         holdout_values = values[holdout_idx, :]
         holdout_results = train(colnames, num_learners, holdin_labels, holdin_values, test_values=holdout_values)
+        # pad the end of the holdout set with the last element
+        if len(holdout_results) < num_learners:
+            holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
         holdout_labels = label_matrix[holdout_idx, :].argmax(axis=1)
         num_misclassifications += [sum(hr != holdout_labels) for hr in holdout_results]
         progress_callback(f / float(folds))

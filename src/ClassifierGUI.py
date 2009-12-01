@@ -707,7 +707,7 @@ class ClassifierGUI(wx.Frame):
             sp.legend(loc='lower right')
             sp.set_xlabel('Rule #')
             sp.set_ylabel('Accuracy')
-            sp.set_ylim(0, 1)
+            sp.set_ylim(-0.05, 1.05)
             figure.Refresh()
         except StopXValidation:
             dlg.Destroy()
