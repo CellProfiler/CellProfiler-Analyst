@@ -1048,10 +1048,9 @@ class ClassifierGUI(wx.Frame):
                     self.nRulesTxt.SetToolTip(wx.ToolTip(str(maxRules)))
                     self.nRulesTxt.SetForegroundColour('#FF0000')
                     logging.warn('For %s classes, the max number of rules is %s. To avoid this limitation, use MySQL.'%(nClasses, maxRules))
-                    return False
-                else:
-                    self.nRulesTxt.SetForegroundColour('#000001')
-                    return True
+                    return False    
+            self.nRulesTxt.SetForegroundColour('#000001')
+            return True
         except(Exception):
             self.nRulesTxt.SetForegroundColour('#FF0000')
             return False
