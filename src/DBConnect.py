@@ -259,27 +259,9 @@ class DBConnect(Singleton):
                     std = np.sqrt(b/len(self.values))
                     return std
             self.connections[connID].create_aggregate('stddev', 1, stddev)
-            # Create CLASSIFIER function
-            def classifier(num_stumps, *args):
-                args = np.array(args)
-                stumps = args[:num_stumps]  > args[num_stumps:2*num_stumps]
-                num_classes = (len(args) / num_stumps) - 2
-                best = -np.inf
-                data = args[2*num_stumps:]
-                for cl in range(num_classes):
-                    score = (data[:num_stumps] * stumps).sum()
-                    if score > best:
-                        bestcl = cl
-                        best = score
-                    data = data[num_stumps:]
-                return bestcl
-            try:
-                import _classifier
-                _classifier.create_classifier_function(self.connections[connID])
-                logr.debug("[%s] Created fast classifier function in sqlite"%(connID))
-            except:
-                self.connections[connID].create_function('classifier', -1,
-                                                         classifier)
+            import _classifier
+            _classifier.create_classifier_function(self.connections[connID])
+            logr.debug("[%s] Created fast classifier function in sqlite"%(connID))
             
             try:
                 # Try the connection

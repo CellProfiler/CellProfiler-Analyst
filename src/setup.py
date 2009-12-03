@@ -1,5 +1,6 @@
 from setuptools import setup, Extension
 import sys, os
+import numpy
 
 # fix from
 #  http://mail.python.org/pipermail/pythonmac-sig/2008-June/020111.html
@@ -31,6 +32,7 @@ setup(
     name = "CPAnalyst",
     ext_modules = [Extension('_classifier',
                              sources = ['_classifier.c'],
+                             include_dirs=[numpy.get_include()],
                              libraries = ['sqlite3'])]
                              
 )

@@ -22,10 +22,16 @@ def translate(weaklearners):
 
     has_classifier_function = False
     if p.db_type.lower() == 'sqlite':
-        has_classifier_function = True
-    elif p.db_type.lower() == 'mysql':
-        res = db.execute("SELECT * from mysql.func where name='classifier'")
-        has_classifier_function = len(res) > 0
+        import _classifier
+        wl_for_setup = [numpy.hstack(wl[1:4]) for wl in weaklearners]
+        print numpy.array(wl_for_setup)
+        _classifier.setup_classifier(wl_for_setup)
+        return "(classifier(%s)+1)"%(",".join([wl[0] for wl in weaklearners]))
+
+    
+    # MySQL
+    res = db.execute("SELECT * from mysql.func where name='classifier'")
+    has_classifier_function = len(res) > 0
     
     if has_classifier_function:
         num_stumps = len(weaklearners)
