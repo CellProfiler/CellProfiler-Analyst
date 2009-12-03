@@ -1,3 +1,4 @@
+
 /* classify.c - */
 
 // To add this function to mysql, compile it to classify.so, put it in a
@@ -32,10 +33,10 @@ my_bool classifier_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
   int num_stumps, num_classes, i;
 
   // Classifier function can't return null.
-  initid-> maybe_null = 0;
+  initid->maybe_null = 0;
   
   if ((args->arg_count < 4) || (args->args[0] == NULL) || (args->arg_type[0] != INT_RESULT)) {
-    strcpy(message, "Requires at least 4 arguments, the first of which is an integer.");
+    strcpy(message, "Requires at least 4 arguments, the first of which is a constant integer.");
     return 1; // fail
   }
   
