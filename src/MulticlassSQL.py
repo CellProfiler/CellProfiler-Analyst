@@ -26,23 +26,23 @@ def translate(weaklearners):
         wl_for_setup = [numpy.hstack(wl[1:4]) for wl in weaklearners]
         print numpy.array(wl_for_setup)
         _classifier.setup_classifier(wl_for_setup)
-        return "(classifier(%s)+1)"%(",".join([wl[0] for wl in weaklearners]))
+        return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
 
     
-    # MySQL
-    res = db.execute("SELECT * from mysql.func where name='classifier'")
-    has_classifier_function = len(res) > 0
-    
-    if has_classifier_function:
-        num_stumps = len(weaklearners)
-        featurenames = "1," + ",".join([wl[0] for wl in weaklearners])
-        thresholds = "0,"+",".join([str(wl[1]) for wl in weaklearners])
-        base = [sum([wl[3][k] for wl in weaklearners]) for k in range(nClasses)]
-        weights = ",".join([",".join([str(base[k])] + [str(wl[2][k]-wl[3][k]) for wl in weaklearners]) for k in range(nClasses)])
-        return "(classifier(%d, %s, %s, %s)+1)"%(num_stumps + 1, featurenames, thresholds, weights)
-    else:
-        # we should create a stored function here, perhaps
-        raise RuntimeError("No classifier() function available in database.")
+    if p.db_type.lower() == 'mysql':
+        # MySQL
+        res = db.execute("SELECT * from mysql.func where name='classifier'")
+        has_classifier_function = len(res) > 0
+        if has_classifier_function:
+            num_stumps = len(weaklearners)
+            featurenames = "1," + ",".join([wl[0] for wl in weaklearners])
+            thresholds = "0,"+",".join([str(wl[1]) for wl in weaklearners])
+            base = [sum([wl[3][k] for wl in weaklearners]) for k in range(nClasses)]
+            weights = ",".join([",".join([str(base[k])] + [str(wl[2][k]-wl[3][k]) for wl in weaklearners]) for k in range(nClasses)])
+            return "(classifier(%d, %s, %s, %s)+1)"%(num_stumps + 1, featurenames, thresholds, weights)
+        else:
+            class_scores = ['+'.join(['IF(%s > %f, %f, %f)'%(feature, threshold, a[i], b[i]) for (feature, threshold, a, b, ignore) in weaklearners]) for i in range(nClasses)]
+            return "CASE GREATEST(%s) %s END"%(",".join(class_scores), "\n".join(["WHEN %s THEN %d"%(score, idx+1) for idx, score in enumerate(class_scores)]))
 
 
 def CreateFilterTables():

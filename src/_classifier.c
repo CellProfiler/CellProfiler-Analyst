@@ -100,7 +100,7 @@ static void c_classifier(sqlite3_context* context, int argc, sqlite3_value** arg
       }
     }
 
-    sqlite3_result_int(context, best_class);
+    sqlite3_result_int(context, best_class + 1);
 }
 
 
@@ -114,7 +114,6 @@ typedef struct
 
 static PyObject* create_classifier_function(PyObject* self, PyObject* args)
 {
-    PyObject* ret;
     int rc;
     pysqlite_Connection *conn;
 
@@ -141,7 +140,7 @@ static PyMethodDef ClassifierMethods[] = {
 #ifdef __cplusplus
 extern "C"
 #endif
-init_classifier(void)
+PyMODINIT_FUNC init_classifier(void)
 {
      PyObject *m;
 
