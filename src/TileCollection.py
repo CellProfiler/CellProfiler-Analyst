@@ -13,9 +13,11 @@ import wx
 db = DBConnect.getInstance()
 p = Properties.getInstance()
 
+def load_lock():
+    return TileCollection.getInstance().load_lock
+
 class List(list):
     pass
-
 
 class TileCollection(Singleton):
     '''
@@ -119,7 +121,6 @@ class TileLoader(threading.Thread):
 
             # wait until loading has completed before continuing
             with self.tile_collection.load_lock:
-
                 # Make sure tile hasn't been deleted outside this thread
                 if not self.tile_collection.tileData.get(obKey, None):
                     continue
@@ -134,8 +135,7 @@ class TileLoader(threading.Thread):
                             tile_data[i] = newData[i]
                         wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
                 except Exception, e:
-                    import sys
-                    sys.stderr.write('ERROR FETCHING TILE!\n%s\n'%(e))
+                    logging.error('ERROR FETCHING TILE!: %s\n'%(e))
 
     def abort(self):
         self._want_abort = True

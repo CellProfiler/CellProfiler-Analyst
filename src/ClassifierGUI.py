@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 # This must come first for py2app/py2exe
 import matplotlib
 matplotlib.use('WXAgg')
@@ -12,7 +14,7 @@ from ImageControlPanel import ImageControlPanel
 from PlateMapBrowser import PlateMapBrowser
 from Properties import Properties
 from ScoreDialog import ScoreDialog
-from TileCollection import EVT_TILE_UPDATED
+import TileCollection
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 from time import time
@@ -234,12 +236,12 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows
-        EVT_TILE_UPDATED(self, self.OnTileUpdated)
+        TileCollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
         self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.OnQuantityChanged)
         
         # If there's a default training set. Ask to load it.
         if p.training_set and os.access(p.training_set, os.R_OK):
-            # file existence is checked in Properties module
+            # file existence is checked in Properties mobdule
             dlg = wx.MessageDialog(self, 'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.'%(p.training_set),
                                    'Load Default Training Set?', wx.YES_NO|wx.ICON_QUESTION)
             response = dlg.ShowModal()
@@ -560,27 +562,30 @@ class ClassifierGUI(wx.Frame):
         
     def LoadTrainingSet(self, filename):
         ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
-        self.PostMessage('Loading training set from: %s'%filename)
-        # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        os.chdir(os.path.split(filename)[0])
-        self.defaultTSFileName = os.path.split(filename)[1]
         
-        self.trainingSet = TrainingSet(p, filename, labels_only=True)
-        
-        self.RemoveAllSortClasses()
-        for label in self.trainingSet.labels:
-            self.AddSortClass(label)
-            
-        keysPerBin = {}
-        for (label, key) in self.trainingSet.entries:
-            keysPerBin[label] = keysPerBin.get(label, []) + [key]
+        # pause tile loading
+        with TileCollection.load_lock():
+            self.PostMessage('Loading training set from: %s'%filename)
+            # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+            os.chdir(os.path.split(filename)[0])
+            self.defaultTSFileName = os.path.split(filename)[1]
 
-        for bin in self.classBins:
-            if bin.label in keysPerBin.keys():
-                bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
-                
-        self.PostMessage('Training set loaded.')
-        
+            self.trainingSet = TrainingSet(p, filename, labels_only=True)
+
+            self.RemoveAllSortClasses()
+            for label in self.trainingSet.labels:
+                self.AddSortClass(label)
+
+            keysPerBin = {}
+            for (label, key) in self.trainingSet.entries:
+                keysPerBin[label] = keysPerBin.get(label, []) + [key]
+
+            for bin in self.classBins:
+                if bin.label in keysPerBin.keys():
+                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+
+            self.PostMessage('Training set loaded.')
+
     
     def OnSaveTrainingSet(self, evt):
         self.SaveTrainingSet()
@@ -703,7 +708,9 @@ class ClassifierGUI(wx.Frame):
             sp.clear()
             sp.hold(True)
             sp.plot(range(1, nRules + 1), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
-            sp.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'k', label='95% cross-validation accuracy')
+            sp.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
+            chance_level = 1.0 / len(self.classBins)
+            sp.plot([1, nRules + 1], [chance_level, chance_level], 'k--', label='accuracy of random classifier')
             sp.legend(loc='lower right')
             sp.set_xlabel('Rule #')
             sp.set_ylabel('Accuracy')
@@ -730,20 +737,38 @@ class ClassifierGUI(wx.Frame):
         
         self.keysAndCounts = None    # Must erase current keysAndCounts so they will be recalculated from new rules
         
-        self.trainingSet = TrainingSet(p)
-        self.trainingSet.Create(labels = [bin.label for bin in self.classBins],
-                                keyLists = [bin.GetObjectKeys() for bin in self.classBins])
-        output = StringIO()
-        self.PostMessage('Training classifier with %s rules...'%(nRules))
-        self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
-                                                               nRules, self.trainingSet.label_matrix, 
-                                                               self.trainingSet.values, output)
-        self.SetStatusText('')
-        self.rules_text.Value = output.getvalue()
-        self.scoreAllBtn.Enable()
-        self.scoreImageBtn.Enable()
-        if hasattr(self, 'checkAccuracyBtn'):
-            self.checkAccuracyBtn.Enable()
+
+        # pause tile loading
+        with TileCollection.load_lock():
+            try:
+                def cb(frac):
+                    cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
+                    if not cont: # cancel was pressed
+                        dlg.Destroy()
+                        raise StopCalculating()
+
+                dlg = wx.ProgressDialog('Fetching cell data for training set...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                self.trainingSet = TrainingSet(p)
+                self.trainingSet.Create(labels = [bin.label for bin in self.classBins],
+                                        keyLists = [bin.GetObjectKeys() for bin in self.classBins],
+                                        callback=cb)
+                output = StringIO()
+                self.PostMessage('Training classifier with %s rules...'%(nRules))
+                dlg.Destroy()
+                dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
+                                                                       nRules, self.trainingSet.label_matrix, 
+                                                                       self.trainingSet.values, output,
+                                                                       callback=cb)
+                dlg.Destroy()
+                self.SetStatusText('')
+                self.rules_text.Value = output.getvalue()
+                self.scoreAllBtn.Enable()
+                self.scoreImageBtn.Enable()
+                if hasattr(self, 'checkAccuracyBtn'):
+                    self.checkAccuracyBtn.Enable()
+            except StopCalculating:
+                return
 
         for bin in self.classBins:
             if not bin.empty:
@@ -857,14 +882,11 @@ class ClassifierGUI(wx.Frame):
                     else:
                         overwrite_class_table = False
 
-            class StopCalculating(Exception):
-                pass
-
             dlg = wx.ProgressDialog('Calculating %s counts for each class...'%(p.object_name[0]), '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
             def update(frac):
                 cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
                 if not cont: # cancel was pressed
-                    raise StopCalculating
+                    raise StopCalculating()
             try:
                 self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
             except StopCalculating:
@@ -1197,6 +1219,13 @@ class ClassifierGUI(wx.Frame):
         
                 
         
+        
+
+class StopCalculating(Exception):
+    pass
+
+
+
 def show_exception_as_dialog(type, value, tb):
     """Exception handler that show a dialog."""
     import traceback

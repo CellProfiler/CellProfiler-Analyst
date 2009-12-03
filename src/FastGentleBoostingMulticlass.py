@@ -3,7 +3,7 @@ import sys
 from FastGentleBoostingWorkerMulticlass import train_weak_learner
 
 
-def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False, test_values=None):
+def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False, test_values=None, callback=None):
     '''
     label_matrix is an n by k numpy array containing values of either +1 or -1
     values is the n by j numpy array of cell measurements
@@ -72,6 +72,9 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
 
         computed_labels = recomputed_labels
         weak_learners += [(colname, thresh, a, b, expected_worst_margin)]
+
+        if callback is not None:
+            callback(weak_count / float(num_learners))
 
         if fout:
             colname, thresh, a, b, e_m = weak_learners[-1]

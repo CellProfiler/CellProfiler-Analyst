@@ -36,7 +36,7 @@ class TrainingSet:
         self.cache.clear_if_objects_modified()
             
             
-    def Create(self, labels, keyLists, labels_only=False):
+    def Create(self, labels, keyLists, labels_only=False, callback=None):
         '''
         labels:   list of class labels
                   Example: ['pos','neg','other']
@@ -48,12 +48,24 @@ class TrainingSet:
         self.labels = numpy.array(labels)
         self.classifier_labels = 2 * numpy.eye(len(labels), dtype=numpy.int) - 1
         
+        num_to_fetch = sum([len(k) for k in keyLists])
+        num_fetched = [0] # use a list to get static scoping
 
         # Populate the label_matrix, entries, and values
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             self.label_matrix += ([cl_label] * len(keyList))
             self.entries += zip([label] * len(keyList), keyList)
-            self.values += ([] if labels_only else [self.cache.get_object_data(k) for k in keyList])
+
+            if labels_only:
+                self.values += []
+            else:
+                def get_data(k):
+                    d = self.cache.get_object_data(k)
+                    if callback is not None:
+                        callback(num_fetched[0] / float(num_to_fetch))
+                    num_fetched[0] = num_fetched[0] + 1
+                    return d
+                self.values += [get_data(k) for k in keyList]
 
         self.label_matrix = numpy.array(self.label_matrix)
         self.values = numpy.array(self.values)
