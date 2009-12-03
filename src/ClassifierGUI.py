@@ -678,6 +678,7 @@ class ClassifierGUI(wx.Frame):
         
         groups = [db.get_platewell_for_object(key) for key in self.trainingSet.get_object_keys()]
 
+        t1 = time()
         dlg = wx.ProgressDialog('Computing cross validation accuracy...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)        
         base = 0.0
         scale = 1.0
@@ -688,6 +689,7 @@ class ClassifierGUI(wx.Frame):
         def progress_callback(amount):
             pct = min(int(100 * (amount * scale + base)), 100)
             cont, skip = dlg.Update(pct, '%d%% Complete'%(pct))
+            self.PostMessage('Computing cross validation accuracy... %s%% Complete'%(pct))
             if not cont:
                 raise StopXValidation
 
@@ -729,8 +731,10 @@ class ClassifierGUI(wx.Frame):
             sp.legend(loc='lower right')
             sp.set_xlabel('Rule #')
             sp.set_ylabel('Accuracy')
+            sp.set_xlim(1, max(nRules,2))
             sp.set_ylim(-0.05, 1.05)
             figure.Refresh()
+            self.PostMessage('Cross validation complete in %.1fs.'%(time()-t1))
         except StopXValidation:
             dlg.Destroy()
 
