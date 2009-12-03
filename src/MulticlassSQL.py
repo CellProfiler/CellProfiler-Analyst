@@ -24,7 +24,6 @@ def translate(weaklearners):
     if p.db_type.lower() == 'sqlite':
         import _classifier
         wl_for_setup = [numpy.hstack(wl[1:4]) for wl in weaklearners]
-        print numpy.array(wl_for_setup)
         _classifier.setup_classifier(wl_for_setup)
         return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
 

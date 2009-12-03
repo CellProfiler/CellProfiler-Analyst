@@ -33,7 +33,6 @@ static PyObject *setup_classifier(PyObject *self, PyObject *args)
     TYPE_ERROR("one argument required", fail_1);
 
   wl_array = (PyArrayObject *) PyArray_FROM_OTF(weak_learners, NPY_DOUBLE, NPY_IN_ARRAY);
-  printf("die\n");
   if (! wl_array)
     return NULL;
 
@@ -50,7 +49,6 @@ static PyObject *setup_classifier(PyObject *self, PyObject *args)
     classifier_data.thresholds[i] = * (double *) PyArray_GETPTR2(wl_array, i, 0);
 
     for (j = 0; j < classifier_data.num_classes; j++) {
-      printf("%d %d %d %d\n", j, i, 1 + j, 1 + classifier_data.num_classes + j);
       classifier_data.stump_weights_a[i][j] = * (double *) PyArray_GETPTR2(wl_array, i, 1 + j);
       classifier_data.stump_weights_b[i][j] = * (double *) PyArray_GETPTR2(wl_array, i, 1 + classifier_data.num_classes + j);
     }

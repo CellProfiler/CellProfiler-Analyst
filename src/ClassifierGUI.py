@@ -237,7 +237,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows
         TileCollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
-        self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.OnQuantityChanged)
+        self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
         
         # If there's a default training set. Ask to load it.
         if p.training_set and os.access(p.training_set, os.R_OK):
@@ -352,6 +352,7 @@ class ClassifierGUI(wx.Frame):
         self.classBins.append(bin)
         self.classified_bins_panel.Layout()
         self.binsCreated += 1
+        self.QuantityChanged()
         
     
     def RemoveSortClass(self, label):
@@ -371,6 +372,7 @@ class ClassifierGUI(wx.Frame):
         for bin in self.classBins:
             bin.trained = False
         self.UpdateClassChoices()
+        self.QuantityChanged()
         
         
     def RemoveAllSortClasses(self):
@@ -420,8 +422,6 @@ class ClassifierGUI(wx.Frame):
             self.obClassChoice.SetSelection(0)
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
-            if hasattr(self, 'checkAccuracyBtn'):
-                self.checkAccuracyBtn.Disable()
             return
         sel = self.obClassChoice.GetSelection()
         selectableClasses = ['random']+[bin.label for bin in self.classBins if bin.trained]
@@ -430,15 +430,26 @@ class ClassifierGUI(wx.Frame):
             sel=0
         self.obClassChoice.SetSelection(sel)
         
-    def OnQuantityChanged(self, event):
-        """The number of tiles in one of the SortBins has changed.  Go
-        through them all.  Disable the button for finding rules if any
-        SortBin is empty."""
-        self.findRulesBtn.Disable()
+    def QuantityChanged(self, evt=None):
+        '''`
+        When the number of tiles in one of the SortBins has changed. 
+        Disable the buttons for training and checking accuracy if any bin is 
+        empty
+        '''
+        self.findRulesBtn.Enable()
+        if hasattr(self, 'checkAccuracyBtn'):
+            self.checkAccuracyBtn.Enable()
+        if len(self.classBins) <= 1:
+            self.findRulesBtn.Disable()
+            if hasattr(self, 'checkAccuracyBtn'):
+                self.checkAccuracyBtn.Disable()
         for bin in self.classBins:
-            if not bin.empty:
-                self.findRulesBtn.Enable()
-    
+            if bin.empty:
+                self.findRulesBtn.Disable()
+                if hasattr(self, 'checkAccuracyBtn'):
+                    self.checkAccuracyBtn.Disable()
+        
+            
     def OnFetch(self, evt):
         # Parse out the GUI input values        
         nObjects    = int(self.nObjectsTxt.Value)
@@ -661,6 +672,10 @@ class ClassifierGUI(wx.Frame):
             logging.error('Unable to parse number of rules')
             return
 
+        if not self.UpdateTrainingSet():
+            self.PostMessage('Cross-validation canceled.')
+            return
+        
         groups = [db.get_platewell_for_object(key) for key in self.trainingSet.get_object_keys()]
 
         dlg = wx.ProgressDialog('Computing cross validation accuracy...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)        
@@ -697,9 +712,9 @@ class ClassifierGUI(wx.Frame):
             # only one more step
             scale = 1.0 - base
             xvalid_95 = FastGentleBoostingMulticlass.xvalidate(self.trainingSet.colnames,
-                                                                    nRules, self.trainingSet.label_matrix, 
-                                                                    self.trainingSet.values, 20,
-                                                                    groups, progress_callback)
+                                                                nRules, self.trainingSet.label_matrix, 
+                                                                self.trainingSet.values, 20,
+                                                                groups, progress_callback)
 
             dlg.Destroy()
 
@@ -719,7 +734,30 @@ class ClassifierGUI(wx.Frame):
         except StopXValidation:
             dlg.Destroy()
 
-        
+
+    def UpdateTrainingSet(self):
+        # pause tile loading
+        with TileCollection.load_lock():
+            try:
+                def cb(frac):
+                    cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
+                    if not cont: # cancel was pressed
+                        dlg.Destroy()
+                        raise StopCalculating()
+
+                dlg = wx.ProgressDialog('Fetching cell data for training set...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                self.trainingSet = TrainingSet(p)
+                self.trainingSet.Create(labels = [bin.label for bin in self.classBins],
+                                        keyLists = [bin.GetObjectKeys() for bin in self.classBins],
+                                        callback=cb)
+                self.PostMessage('Training set updated.')
+                dlg.Destroy()
+                return True
+            except StopCalculating:
+                self.PostMessage('User canceled updating training set.')
+                return False
+
+
     def OnFindRules(self, evt):
         if not self.ValidateNumberOfRules():
             errdlg = wx.MessageDialog(self, 'Classifier will not run for the number of rules you have entered.', "Invalid Number of Rules", wx.OK|wx.ICON_EXCLAMATION)
@@ -736,7 +774,9 @@ class ClassifierGUI(wx.Frame):
             return
         
         self.keysAndCounts = None    # Must erase current keysAndCounts so they will be recalculated from new rules
-        
+
+        if not self.UpdateTrainingSet():
+            return
 
         # pause tile loading
         with TileCollection.load_lock():
@@ -747,27 +787,19 @@ class ClassifierGUI(wx.Frame):
                         dlg.Destroy()
                         raise StopCalculating()
 
-                dlg = wx.ProgressDialog('Fetching cell data for training set...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
-                self.trainingSet = TrainingSet(p)
-                self.trainingSet.Create(labels = [bin.label for bin in self.classBins],
-                                        keyLists = [bin.GetObjectKeys() for bin in self.classBins],
-                                        callback=cb)
                 output = StringIO()
-                self.PostMessage('Training classifier with %s rules...'%(nRules))
-                dlg.Destroy()
                 dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
                 self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                        nRules, self.trainingSet.label_matrix, 
                                                                        self.trainingSet.values, output,
                                                                        callback=cb)
+                self.PostMessage('Classifier trained with %s rules,'%(nRules))
                 dlg.Destroy()
-                self.SetStatusText('')
                 self.rules_text.Value = output.getvalue()
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
-                if hasattr(self, 'checkAccuracyBtn'):
-                    self.checkAccuracyBtn.Enable()
             except StopCalculating:
+                self.PostMessage('User canceled training.')
                 return
 
         for bin in self.classBins:
@@ -909,7 +941,7 @@ class ClassifierGUI(wx.Frame):
                 self.PostMessage('%s classes saved to table "%s"'%(p.object_name[0].capitalize(), p.class_table))
             
         t2 = time()
-        logging.info('time to calculate hits: %.3fs'%(t2-t1))
+        self.PostMessage('time to calculate hits: %.3fs'%(t2-t1))
         
         # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
         if group != groupChoices[0]:
@@ -930,7 +962,7 @@ class ClassifierGUI(wx.Frame):
             
         
         t3 = time()
-        logging.info('time to group per-image counts: %.3fs'%(t3-t2))
+        self.PostMessage('time to group per-image counts: %.3fs'%(t3-t2))
                 
         # FIT THE BETA BINOMIAL
         self.PostMessage('Fitting beta binomial distribution to data...')
@@ -940,7 +972,7 @@ class ClassifierGUI(wx.Frame):
         logging.info('   alpha/Sum(alpha) = %s'%([a/sum(alpha) for a in alpha]))
         
         t4 = time()
-        logging.info('time to fit beta binomial: %.3fs'%(t4-t3))
+        self.PostMessage('time to fit beta binomial: %.3fs'%(t4-t3))
         
         # CONSTRUCT ARRAY OF TABLE DATA
         self.PostMessage('Computing enrichment scores for each group...')
@@ -982,7 +1014,7 @@ class ClassifierGUI(wx.Frame):
         tableData = np.array(tableData, dtype=object)
         
         t5 = time()
-        logging.info('time to compute enrichment scores: %.3fs'%(t5-t4))
+        self.PostMessage('time to compute enrichment scores: %.3fs'%(t5-t4))
         
         # CREATE COLUMN LABELS LIST
         # if grouping isn't per-image, then get the group key column names.
@@ -1120,11 +1152,11 @@ class ClassifierGUI(wx.Frame):
             nRules   = int(self.nRulesTxt.GetValue())
             if p.db_type == 'sqlite':
                 nClasses = len(self.classBins)
-                maxRules = int((100-1)/(2+nClasses)) - 1
+                maxRules = 99
                 if nRules > maxRules:
                     self.nRulesTxt.SetToolTip(wx.ToolTip(str(maxRules)))
                     self.nRulesTxt.SetForegroundColour('#FF0000')
-                    logging.warn('For %s classes, the max number of rules is %s. To avoid this limitation, use MySQL.'%(nClasses, maxRules))
+                    logging.warn('No more than 99 rules can be used with SQLite. To avoid this limitation, use MySQL.'%(nClasses, maxRules))
                     return False    
             self.nRulesTxt.SetForegroundColour('#000001')
             return True
