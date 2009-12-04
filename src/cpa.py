@@ -123,6 +123,7 @@ class MainGUI(wx.Frame):
         self.console.SetForegroundColour('#DDDDDD')
         log_level = logging.INFO
         self.logr = logging.getLogger()
+        self.set_log_level(log_level)
         self.log_text = ''
         def update(x):
             self.log_text += x+'\n'
@@ -132,7 +133,6 @@ class MainGUI(wx.Frame):
         self.logr.addHandler(hdlr)
         # log_levels are 10,20,30,40,50
         logMenu.GetMenuItems()[(log_level/10)-1].Check()
-        logging.info('Logging level: %s'%(logging.getLevelName(log_level)))
         
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.DEBUG), debugMenuItem)
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.INFO), infoMenuItem)
