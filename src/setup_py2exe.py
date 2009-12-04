@@ -23,6 +23,10 @@ setup(console=['cpa.py'],
             }
         },
       data_files=matplotlib.get_py2exe_datafiles(),
+      ext_modules = [Extension('_classifier',
+                               sources = ['_classifier.c'],
+                               include_dirs=[numpy.get_include()],
+                               libraries = ['sqlite3'])]
 )
 
 
