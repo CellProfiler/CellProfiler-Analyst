@@ -22,6 +22,7 @@ static struct {
 } classifier_data;
 
 #define TYPE_ERROR(str, fail_label) {PyErr_SetString(PyExc_TypeError, (str)); goto fail_label;}
+#define VALUE_ERROR(str, fail_label) {PyErr_SetString(PyExc_ValueError, (str)); goto fail_label;}
 
 static PyObject *setup_classifier(PyObject *self, PyObject *args)
 {
@@ -44,6 +45,12 @@ static PyObject *setup_classifier(PyObject *self, PyObject *args)
 
   classifier_data.num_stumps = PyArray_DIM(wl_array, 0);
   classifier_data.num_classes = PyArray_DIM(wl_array, 1) / 2;
+
+  if (classifier_data.num_stumps > MAX_STUMPS)
+    VALUE_ERROR("maximum number of stumps (100) exceeded.", fail_2);
+
+  if (classifier_data.num_classes > MAX_CLASSES)
+    VALUE_ERROR("maximum number of classes (100) exceeded.", fail_2);
   
   for (i = 0; i < classifier_data.num_stumps; i++) {
     classifier_data.thresholds[i] = * (double *) PyArray_GETPTR2(wl_array, i, 0);
