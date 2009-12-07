@@ -1,13 +1,16 @@
-from distutils.core import setup
+from distutils.core import setup, Extension
 import py2exe
 import matplotlib
 import os
+import numpy
 
 s = os.popen('svnversion')
 version = s.read()
 f = open('cpa_version.py', 'w')
 f.write('VERSION = "%s"\n'%(version.strip()))
 f.close()
+
+
 
 setup(console=['cpa.py'],
       options={
@@ -26,7 +29,7 @@ setup(console=['cpa.py'],
       ext_modules = [Extension('_classifier',
                                sources = ['_classifier.c'],
                                include_dirs=[numpy.get_include()],
-                               libraries = ['sqlite3'])]
+                               libraries = ['sqlite3dll'])]
 )
 
 

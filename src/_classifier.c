@@ -48,9 +48,6 @@ static PyObject *setup_classifier(PyObject *self, PyObject *args)
 
   if (classifier_data.num_stumps > MAX_STUMPS)
     VALUE_ERROR("maximum number of stumps (100) exceeded.", fail_2);
-
-  if (classifier_data.num_classes > MAX_CLASSES)
-    VALUE_ERROR("maximum number of classes (100) exceeded.", fail_2);
   
   for (i = 0; i < classifier_data.num_stumps; i++) {
     classifier_data.thresholds[i] = * (double *) PyArray_GETPTR2(wl_array, i, 0);
@@ -124,7 +121,7 @@ static PyObject* create_classifier_function(PyObject* self, PyObject* args)
 
     if (!PyArg_ParseTuple(args, "O", &conn))
       return NULL;
-
+    sqlite3_initialize();
     rc = sqlite3_create_function(conn->db, "classifier", -1, SQLITE_UTF8, NULL, c_classifier, NULL, NULL);
 
     if (rc != SQLITE_OK) {
