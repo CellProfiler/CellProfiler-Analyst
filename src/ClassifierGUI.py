@@ -165,11 +165,11 @@ class ClassifierGUI(wx.Frame):
         self.find_rules_sizer.Add(self.findRulesBtn)
         try:
             import cellprofiler.gui.cpfigure as cpfig
-            self.checkAccuracyBtn = wx.Button(self.find_rules_panel, -1, 'Check Accuracy')
-            self.checkAccuracyBtn.Disable()
+            self.checkProgressBtn = wx.Button(self.find_rules_panel, -1, 'Check Progress')
+            self.checkProgressBtn.Disable()
             self.find_rules_sizer.Add((5,20))
-            self.find_rules_sizer.Add(self.checkAccuracyBtn)
-            self.Bind(wx.EVT_BUTTON, self.OnCheckAccuracy, self.checkAccuracyBtn)
+            self.find_rules_sizer.Add(self.checkProgressBtn)
+            self.Bind(wx.EVT_BUTTON, self.OnCheckProgress, self.checkProgressBtn)
         except:
             logging.debug("Could not import cpfigure, will not display Margin vs. Iteration plot.")
         self.find_rules_sizer.Add((5,20))
@@ -437,17 +437,17 @@ class ClassifierGUI(wx.Frame):
         empty
         '''
         self.findRulesBtn.Enable()
-        if hasattr(self, 'checkAccuracyBtn'):
-            self.checkAccuracyBtn.Enable()
+        if hasattr(self, 'checkProgressBtn'):
+            self.checkProgressBtn.Enable()
         if len(self.classBins) <= 1:
             self.findRulesBtn.Disable()
-            if hasattr(self, 'checkAccuracyBtn'):
-                self.checkAccuracyBtn.Disable()
+            if hasattr(self, 'checkProgressBtn'):
+                self.checkProgressBtn.Disable()
         for bin in self.classBins:
             if bin.empty:
                 self.findRulesBtn.Disable()
-                if hasattr(self, 'checkAccuracyBtn'):
-                    self.checkAccuracyBtn.Disable()
+                if hasattr(self, 'checkProgressBtn'):
+                    self.checkProgressBtn.Disable()
         
             
     def OnFetch(self, evt):
@@ -663,8 +663,8 @@ class ClassifierGUI(wx.Frame):
             txtCtrl.SetForegroundColour('#FF0000')       # Set field to red if image doesn't exist
             self.SetStatusText('No such image.')
 
-    def OnCheckAccuracy(self, evt):
-        ''' Called when the CheckAccuracy Button is pressed. '''
+    def OnCheckProgress(self, evt):
+        ''' Called when the CheckProgress Button is pressed. '''
         # get wells if available, otherwise use imagenumbers
         try:
             nRules = int(self.nRulesTxt.GetValue())
