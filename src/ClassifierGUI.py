@@ -457,7 +457,7 @@ class ClassifierGUI(wx.Frame):
         obClassName = self.obClassChoice.GetStringSelection()
         filter      = self.filterChoice.GetStringSelection()
         
-        statusMsg = 'fetching %d %s %s'%(nObjects, obClassName, p.object_name[1])
+        statusMsg = 'Fetched %d %s %s'%(nObjects, obClassName, p.object_name[1])
         
         # Get object keys
         # unclassified:
@@ -521,6 +521,7 @@ class ClassifierGUI(wx.Frame):
             attempts = 0
             # Now check which objects fall within the classification
             while len(obKeys) < nObjects:
+                self.PostMessage('Gathering random %s.'%(p.object_name[1]))
                 if filter == 'experiment':
                     if p.db_sqlite_file:
                         obKeysToTry = 'RANDOM() < %d'%(dm.GetRandomFraction(100))
@@ -541,6 +542,8 @@ class ClassifierGUI(wx.Frame):
                     elif filter in p._groups_ordered:
                         loopMsg = ' from group %s: %s'%(filter,
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)]))
+                
+                self.PostMessage('Classifying %s.'%(p.object_name[1]))
                 obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
                 attempts += len(obKeysToTry)
                 if attempts%10000.0==0:
@@ -552,9 +555,8 @@ class ClassifierGUI(wx.Frame):
                         break
             statusMsg += loopMsg
             
-        self.PostMessage(statusMsg)
         self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
-        
+        self.PostMessage(statusMsg)
     
 
     def OnTileUpdated(self, evt):
@@ -734,7 +736,7 @@ class ClassifierGUI(wx.Frame):
             sp.set_xlim(1, max(nRules,2))
             sp.set_ylim(-0.05, 1.05)
             figure.Refresh()
-            self.PostMessage('Cross validation complete in %.1fs.'%(time()-t1))
+            self.PostMessage('Cross-validation complete in %.1fs.'%(time()-t1))
         except StopXValidation:
             dlg.Destroy()
 
@@ -791,13 +793,14 @@ class ClassifierGUI(wx.Frame):
                         dlg.Destroy()
                         raise StopCalculating()
 
+                t1 = time()
                 output = StringIO()
                 dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
                 self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
                                                                        nRules, self.trainingSet.label_matrix, 
                                                                        self.trainingSet.values, output,
                                                                        callback=cb)
-                self.PostMessage('Classifier trained with %s rules,'%(nRules))
+                self.PostMessage('Classifier trained with %s rules in %.1fs.'%(nRules, time()-t1))
                 dlg.Destroy()
                 self.rules_text.Value = output.getvalue()
                 self.scoreAllBtn.Enable()
