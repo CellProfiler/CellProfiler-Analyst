@@ -1,8 +1,7 @@
 /* _classifier.c - */
 
-// Compile with:
-//   python setup.py build_ext 
-//   mv build/lib.macosx-10.3-fat-2.5/_classifier.so  .
+// Compile (for testing) with:
+//   python setup.py build_ext -i
 
 #include "sqlite3.h"
 #include "Python.h"
