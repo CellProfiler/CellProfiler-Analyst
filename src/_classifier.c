@@ -121,7 +121,9 @@ static PyObject* create_classifier_function(PyObject* self, PyObject* args)
 
     if (!PyArg_ParseTuple(args, "O", &conn))
       return NULL;
-    sqlite3_initialize();
+
+    if (SQLITE_VERSION_NUMBER >= 3006021)
+      sqlite3_initialize();
     rc = sqlite3_create_function(conn->db, "classifier", -1, SQLITE_UTF8, NULL, c_classifier, NULL, NULL);
 
     if (rc != SQLITE_OK) {
