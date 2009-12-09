@@ -25,7 +25,12 @@ def translate(weaklearners):
         import _classifier
         wl_for_setup = [numpy.hstack(wl[1:4]) for wl in weaklearners]
         _classifier.setup_classifier(wl_for_setup)
-        return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
+        try:
+            return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
+        else:
+            class_scores = ['+'.join(['IF(%s > %f, %f, %f)'%(feature, threshold, a[i], b[i]) for (feature, threshold, a, b, ignore) in weaklearners]) for i in range(nClasses)]
+            return "CASE GREATEST(%s) %s END"%(",".join(class_scores), "\n".join(["WHEN %s THEN %d"%(score, idx+1) for idx, score in enumerate(class_scores)]))
+            
 
     
     if p.db_type.lower() == 'mysql':
