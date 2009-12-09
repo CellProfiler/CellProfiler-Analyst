@@ -23,16 +23,11 @@ def translate(weaklearners):
 
     has_classifier_function = False
     if p.db_type.lower() == 'sqlite':
-        import _classifier
-        wl_for_setup = [numpy.hstack(wl[1:4]) for wl in weaklearners]
-        _classifier.setup_classifier(wl_for_setup)
-        if 'win' not in sys.platform.lower():
-            return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
-        else:
-            class_scores = ['+'.join(['IF(%s > %f, %f, %f)'%(feature, threshold, a[i], b[i]) for (feature, threshold, a, b, ignore) in weaklearners]) for i in range(nClasses)]
-            return "CASE GREATEST(%s) %s END"%(",".join(class_scores), "\n".join(["WHEN %s THEN %d"%(score, idx+1) for idx, score in enumerate(class_scores)]))
-            
-
+        thresholds = numpy.array([wl[1] for wl in weaklearners])
+        a = numpy.array([wl[2] for wl in weaklearners])
+        b = numpy.array([wl[3] for wl in weaklearners])
+        db.setup_sqlite_classifier(thresholds, a, b)
+        return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
     
     if p.db_type.lower() == 'mysql':
         # MySQL

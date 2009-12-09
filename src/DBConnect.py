@@ -135,8 +135,17 @@ def UniqueImageClause(table_name=None):
     return ','.join(image_key_columns(table_name))
 
 
+class SqliteClassifier():
+    def __init__(self):
+        pass
 
+    def setup_classifier(self, thresholds, a, b):
+        self.thresholds = thresholds
+        self.a = a.T
+        self.b = b.T
 
+    def classify(self, *features):
+        return 1 + np.where((features > self.thresholds), self.a, self.b).sum(axis=1).argmax()
 
 class DBConnect(Singleton):
     '''
@@ -152,6 +161,7 @@ class DBConnect(Singleton):
         self.connectionInfo = {}
         # link_cols['table'] = columns that link 'table' to the per-image table
         self.link_cols = {}
+        self.sqlite_classifier = SqliteClassifier()
 
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
@@ -227,12 +237,6 @@ class DBConnect(Singleton):
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
-            def sqlite_if(arg1, arg2, arg3):
-                if arg1:
-                    return arg2
-                else:
-                    return arg3
-            self.connections[connID].create_function('if', -1, sqlite_if)
             # Create MEDIAN function
             class median:
                 def __init__(self):
@@ -265,9 +269,7 @@ class DBConnect(Singleton):
                     std = np.sqrt(b/len(self.values))
                     return std
             self.connections[connID].create_aggregate('stddev', 1, stddev)
-            import _classifier
-            _classifier.create_classifier_function(self.connections[connID])
-            logr.debug("[%s] Created fast classifier function in sqlite"%(connID))
+            self.connections[connID].create_function('classifier', -1, self.sqlite_classifier.classify)
             
             try:
                 # Try the connection
@@ -290,6 +292,8 @@ class DBConnect(Singleton):
         else:
             raise DBException, "Unknown db_type in properties: '%s'\n"%(p.db_type)
 
+    def setup_sqlite_classifier(self, thresh, a, b):
+        self.sqlite_classifier.setup_classifier(thresh, a, b)
 
     def Disconnect(self):
         for connID in self.connections.keys():
