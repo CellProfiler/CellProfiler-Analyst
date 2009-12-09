@@ -227,6 +227,12 @@ class DBConnect(Singleton):
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
+            def sqlite_if(arg1, arg2, arg3):
+                if arg1:
+                    return arg2
+                else:
+                    return arg3
+            self.connections[connID].create_function('if', -1, sqlite_if)
             # Create MEDIAN function
             class median:
                 def __init__(self):

@@ -1,4 +1,5 @@
 import numpy
+import sys
 from DBConnect import *
 from Properties import Properties
 from DataModel import DataModel
@@ -25,7 +26,7 @@ def translate(weaklearners):
         import _classifier
         wl_for_setup = [numpy.hstack(wl[1:4]) for wl in weaklearners]
         _classifier.setup_classifier(wl_for_setup)
-        try:
+        if 'win' not in sys.platform.lower():
             return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
         else:
             class_scores = ['+'.join(['IF(%s > %f, %f, %f)'%(feature, threshold, a[i], b[i]) for (feature, threshold, a, b, ignore) in weaklearners]) for i in range(nClasses)]
