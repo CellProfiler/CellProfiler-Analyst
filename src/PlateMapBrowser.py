@@ -96,7 +96,7 @@ ID_EXIT = wx.NewId()
 
 class PlateMapBrowser(wx.Frame):
     def __init__(self, parent, size=(800,-1)):
-        wx.Frame.__init__(self, parent, -1, size=size)
+        wx.Frame.__init__(self, parent, -1, size=size, title='Plate Viewer')
         self.SetName('PlateViewer')
         
         assert (p.well_id is not None and p.plate_id is not None), \
