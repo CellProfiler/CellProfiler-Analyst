@@ -223,7 +223,29 @@ class ImageViewer(wx.Frame):
         self.viewMenu = wx.Menu()
         self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
         self.GetMenuBar().Append(self.viewMenu, 'View')
-        
+    
+    def CreateChannelMenus(self):
+        ''' Create color-selection menus for each channel. '''
+        chIndex=0
+
+        # Remove menus if they are already there
+        for ch in p.image_channel_names:
+            if self.MenuBar.FindMenu(ch) > -1:
+                self.MenuBar.Remove(self.MenuBar.FindMenu(ch)).Destroy()
+
+        self.chMapById = {}
+        for channel, setColor in zip(p.image_channel_names, self.chMap):
+            channel_menu = wx.Menu()
+            for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
+                id = wx.NewId()
+                item = channel_menu.AppendRadioItem(id,color)
+                self.chMapById[id] = (chIndex,color,item,channel_menu)
+                if color.lower() == setColor.lower():
+                    item.Check()
+                self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
+            self.GetMenuBar().Append(channel_menu, channel)
+            chIndex+=1
+                    
     def DoLayout(self):
         if self.imagePanel:
             if not self.cp:
@@ -238,14 +260,15 @@ class ImageViewer(wx.Frame):
             self.Sizer.Clear()
             self.Sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
             self.Sizer.Add(self.cp, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-            h, w = self.imagePanel.images[0].shape
+            h, w = self.imagePanel.images[0].shape[:2]
             if self.first_layout:
                 self.SetClientSize( (min(self.maxSize[0], w*self.imagePanel.scale),
                                      min(self.maxSize[1], h*self.imagePanel.scale+55)) )
                 self.Center()
                 self.first_layout = False
             self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
-            self.CreateChannelMenus()
+            if not p.brightfield:
+                self.CreateChannelMenus()
             # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
             self.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
@@ -285,28 +308,6 @@ class ImageViewer(wx.Frame):
             self.cp.SetLabel('Hide controls')
         else:
             self.cp.SetLabel('Show controls')
-    
-    def CreateChannelMenus(self):
-        ''' Create color-selection menus for each channel. '''
-        chIndex=0
-
-        # Remove menus if they are already there
-        for ch in p.image_channel_names:
-            if self.MenuBar.FindMenu(ch) > -1:
-                self.MenuBar.Remove(self.MenuBar.FindMenu(ch)).Destroy()
-
-        self.chMapById = {}
-        for channel, setColor in zip(p.image_channel_names, self.chMap):
-            channel_menu = wx.Menu()
-            for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
-                id = wx.NewId()
-                item = channel_menu.AppendRadioItem(id,color)
-                self.chMapById[id] = (chIndex,color,item,channel_menu)
-                if color.lower() == setColor.lower():
-                    item.Check()
-                self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
-            self.GetMenuBar().Append(channel_menu, channel)
-            chIndex+=1
 
     def OnMapChannels(self, evt):
         if evt.GetId() in self.chMapById.keys():

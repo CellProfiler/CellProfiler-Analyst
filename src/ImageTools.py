@@ -80,8 +80,12 @@ def Crop(imgdata, (w,h), (x,y)):
     dest_hix = dest_lox + hix - lox
     dest_hiy = dest_loy + hiy - loy
 
-    crop = np.zeros((h,w), dtype='float32')
-    crop[dest_loy:dest_hiy, dest_lox:dest_hix] = imgdata[loy:hiy, lox:hix]
+    if not p.brightfield:
+        crop = np.zeros((h,w), dtype='float32')
+        crop[dest_loy:dest_hiy, dest_lox:dest_hix] = imgdata[loy:hiy, lox:hix]
+    else:
+        crop = np.zeros((h,w,imgdata.shape[2]), dtype='uint8')
+        crop[dest_loy:dest_hiy, dest_lox:dest_hix] = imgdata[loy:hiy, lox:hix]
     return crop
 
 def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None):

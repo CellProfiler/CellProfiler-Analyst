@@ -23,7 +23,8 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'plate_type',
                 'check_tables',
                 'db_sql_file',
-                'db_sqlite_file',]
+                'db_sqlite_file',
+                'brightfield',]
 
 list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
             'object_name',
@@ -40,7 +41,8 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'object_name',
                  'check_tables',
                  'db_sql_file',
-                 'db_sqlite_file',]
+                 'db_sqlite_file',
+                 'brightfield']
 
 class Properties(Singleton):
     '''
@@ -270,6 +272,13 @@ class Properties(Singleton):
         if not field_defined('image_channel_colors'):
             logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.')
             self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(100)] [:len(self.image_channel_files)]
+
+        if not field_defined('brightfield'):
+            brightfield = False
+        elif self.brightfield.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.brightfield = False
+        elif self.brightfield.lower() in ['true', 'yes', 'on', 't', 'y']:
+            self.brightfield = True
 
         if field_defined('classifier_ignore_substrings'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 

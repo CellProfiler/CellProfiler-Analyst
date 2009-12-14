@@ -77,7 +77,6 @@ class ImageReader(object):
                 imdata = ReadBitmapViaPIL(data)
             except:
                 imdata = ReadBitmapViaTIFFfile(data)
-
             images.append(imdata)
         return images
     
@@ -141,7 +140,12 @@ def ReadBitmapViaPIL(data):
         else:
             imdata = new_img.astype(float) / 65535.
     else:
-        imdata = numpy.asarray(im.convert('L')) / 255.0
+        import matplotlib
+        imd = matplotlib.image.pil_to_array(im)
+        if len(imd.shape)==3 and imd.shape[2]>1 and p.brightfield:
+            return imd
+        else:
+            imdata = numpy.asarray(im.convert('L')) / 255.0
 
     return imdata
 
@@ -161,12 +165,17 @@ if __name__ == "__main__":
     from DBConnect import DBConnect
     from ImageViewer import ImageViewer
     
+    logging.basicConfig(level=logging.DEBUG,)
+    
     p = Properties.getInstance()
     dm = DataModel.getInstance()
     db = DBConnect.getInstance()
     
-    #p.LoadFile('../properties/nirht_test.properties')
-    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
+    p.LoadFile('../properties/nirht_test.properties')
+#    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
+#    p.LoadFile('/Users/afraser/Desktop/2009_12_08_OilRedO_RuvkunLab.properties')
+
+#    p.brightfield = True
     
     dm.PopulateModel()
     app = wx.PySimpleApp()
@@ -183,8 +192,8 @@ if __name__ == "__main__":
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d1.DIB',
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d2.DIB'])
     
-    
-    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors)
+#    images = ir.ReadImages(['/Users/afraser/Desktop/D03.bmp',])
+    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=(1,))
     frame.Show()
     
     
