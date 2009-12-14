@@ -42,7 +42,7 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'check_tables',
                  'db_sql_file',
                  'db_sqlite_file',
-                 'brightfield']
+                 'brightfield',]
 
 class Properties(Singleton):
     '''
@@ -265,21 +265,24 @@ class Properties(Singleton):
         if field_defined('area_scoring_column'):
             logr.info('PROPERTIES: Area scoring will be used.')
         
-        if not field_defined('image_channel_names'):
-            logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. Classifier will use generic channel names.')
-            self.image_channel_names = ['channel-%d'%(i+1) for i in range(103)] [:len(self.image_channel_files)]
-
-        if not field_defined('image_channel_colors'):
-            logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.')
-            self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(100)] [:len(self.image_channel_files)]
-
         if not field_defined('brightfield'):
-            brightfield = False
+            self.brightfield = False
         elif self.brightfield.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.brightfield = False
         elif self.brightfield.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.brightfield = True
+            assert len(self.image_channel_paths) == len(self.image_channel_files) == 1, 'PROPERTIES ERROR (brightfield): When reading brightfield images, CPA expects single RGB images. Please specify only 1 value for image_channels_paths and image_channel_colors'
+                    
+        if not field_defined('image_channel_names'):
+            if not self.brightfield:
+                logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. Classifier will use generic channel names.')
+            self.image_channel_names = ['channel-%d'%(i+1) for i in range(103)] [:len(self.image_channel_files)]
 
+        if not field_defined('image_channel_colors'):
+            if not self.brightfield:
+                logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.')
+            self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(100)] [:len(self.image_channel_files)]
+        
         if field_defined('classifier_ignore_substrings'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 
             if not field_defined('classifier_ignore_columns'):
@@ -347,9 +350,9 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-        filename = "../properties/nirht_test.properties"
+#        filename = "../properties/nirht_test.properties"
 #        filename = '/Users/afraser/Desktop/cpa_example/example.properties'
-    
+        filename = '/Users/afraser/Desktop/2009_12_08_OilRedO_RuvkunLab.properties'
     p = Properties.getInstance()
     p.LoadFile(filename)
     print p
