@@ -847,8 +847,13 @@ class DBConnect(Singleton):
             row1 = r.next()
             command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
             self.cursors[connID].execute(command, row1)
-            self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
-            self.Commit()
+            while True:
+                # fetch 1000 line efficiently
+                args = [l for idx, l in zip(range(1000), r) if len(l) > 0]
+                if args == []:
+                    break
+                self.cursors[connID].executemany(command, args)
+                self.Commit()
             f.close()
 
 
