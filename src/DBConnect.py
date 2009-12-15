@@ -837,6 +837,7 @@ class DBConnect(Singleton):
             command = 'INSERT INTO '+p.image_table+' VALUES ('+','.join(['?' for i in row1])+')'
             self.cursors[connID].execute(command, row1)
             self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
+            self.Commit()
             f.close()
     
         for file in obcsvs:
@@ -847,9 +848,8 @@ class DBConnect(Singleton):
             command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
             self.cursors[connID].execute(command, row1)
             self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
+            self.Commit()
             f.close()
-        
-        self.Commit()
 
 
     def table_exists(self, name):
