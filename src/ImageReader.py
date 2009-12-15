@@ -103,9 +103,15 @@ class ImageReader(object):
                     fullurl = os.path.join(p.image_url_prepend, url)
                 else:
                     # if no prepend is provided, compute the path relative to the properties file.
-                    fullurl = os.path.join(os.path.dirname(p._filename), url)
+                    if os.path.isabs(url):
+                        fullurl = url
+                    else:
+                        fullurl = os.path.join(os.path.dirname(p._filename), url)
                 logr.info('Opening image: %s'%fullurl)
-                streams.append(open(fullurl, "rb"))
+                try:
+                    streams.append(open(fullurl, "rb"))
+                except:
+                    raise Exception('Image not found: "'+fullurl+'"')
                 
         for stream in streams:
             if self.protocol.upper() == 'HTTP':

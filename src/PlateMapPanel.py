@@ -129,8 +129,7 @@ class PlateMapPanel(wx.Panel):
                                     for i in xrange(self.data.shape[0])
                                     for j in xrange(self.data.shape[1])])
         else:
-            assert len(labels) == self.data.shape[0]*self.data.shape[1]
-            self.well_labels = np.array(labels)
+            self.well_labels = np.array(labels).reshape(self.data.shape)
         self.well_labels = self.well_labels.reshape(self.data.shape)
         
     def SetWellShape(self, wellshape):

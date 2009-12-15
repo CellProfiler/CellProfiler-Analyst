@@ -63,9 +63,13 @@ class AwesomePMP(PlateMapPanel):
         if self.plate is not None:
             well = self.GetWellLabelAtCoord(evt.X, evt.Y)
             imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
-                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
+                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate), silent=False)
             for imKey in imKeys:
-                ImageTools.ShowImage(imKey, self.chMap, parent=self)
+                try:
+                    ImageTools.ShowImage(imKey, self.chMap, parent=self)
+                except Exception, e:
+                    logging.error('Could not open image: %s'%(e))
+                    
 
     def OnRClick(self, evt):
         if self.plate is not None:
@@ -314,7 +318,9 @@ class PlateMapBrowser(wx.Frame):
             plateMap.SetPlate(plate)
             self.colorBar.AddNotifyWindow(plateMap)
             wellsAndVals = [v[1:] for v in platesWellsAndVals if str(v[0])==plate]
-            data += [FormatPlateMapData(wellsAndVals)]
+            platedata, platelabels = FormatPlateMapData(wellsAndVals)
+            data += [platedata]
+            plateMap.SetWellLabels(platelabels)
             dmin = np.nanmin([float(val) for _,val in wellsAndVals]+[dmin])
             dmax = np.nanmax([float(val) for _,val in wellsAndVals]+[dmax])
         
@@ -424,43 +430,52 @@ def FormatPlateMapData(wellsAndVals):
             filling empty slots.  
     '''
     #TODO: well naming format (A##/123..) may have to go in props file
-    format = 'A01'
+    formats = ['A01', '123', 'Unknown']
+
+    # A01 format also matches A1 below.
     
     # Make an educated guess at the well naming format
     res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
-    a = b = c = 0
+    formatA01 = format123 = formatUnknown = 0
     for r in res:
-        if re.match('^[A-Za-z]\d\d$', str(r[0])):
-            a += 1
-        elif re.match('^\d+$', str(r[0])):
-            b += 1
+        if re.match(r'^[A-Za-z]\d+$', str(r[0])):
+            formatA01 += 1
+        elif re.match(r'^\d+$', str(r[0])):
+            format123 += 1
         else:
-            c += 1
-    if a > b and a > c:
+            formatUnknown += 1
+
+    if formatA01 >= format123:
         format = 'A01'
-    elif b > a and b > c:
-        format = '123'
     else:
-        logging.warn('Could not determine well naming format from the database. Trying default...')
-    
-    if p.plate_type == '384': shape = (16,24)
-    elif p.plate_type == '96': shape = (8,12)
-    elif p.plate_type == '5600':
-        shape = (40,140)
         format = '123'
+
+    if (formatUnknown > 0) or (formatA01 and format123):
+        logging.warn('Could not determine well naming format from the database.  Using "%s", but some wells may be missing.'%(format))
+    
+    if p.plate_type == '96': shape = (8,12)
+    elif p.plate_type == '384': shape = (16,24)
     elif p.plate_type == '1536': shape = (32,48)
+    elif p.plate_type == '5600': shape = (40,140)
+
     data = np.ones(shape)*np.nan
+    labels = np.array(['UnknownWell'] * np.prod(shape), dtype=object).reshape(shape)
     for well, val in wellsAndVals:
-        if format=='A01':
-            if re.match('^[a-zA-Z][0-9]?[0-9]?$', well):
-                row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'.index(well[0])
+        if format == 'A01':
+            if re.match('^[a-zA-Z][0-9]+[0-9]?$', well):
+                if shape[0] < 26:
+                    row = 'abcdefghijklmnopqrstuvwxyz'.index(well[0].lower())
+                else:
+                    row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.index(well[0])
                 col = int(well[1:])-1
                 data[row,col] = float(val)
-        elif format=='123':
+                labels[row, col] = well
+        elif format == '123':
             row = (int(well)-1)/shape[1]
             col = (int(well)-1)%shape[1]
             data[row,col] = float(val)
-    return data
+            labels[row, col] = well
+    return data, labels
     
 
 
