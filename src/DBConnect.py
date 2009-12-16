@@ -231,7 +231,7 @@ class DBConnect(Singleton):
                     l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
                     dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
                     
-                p.db_sqlite_file = dbpath + os.path.sep + dbname
+                p.db_sqlite_file = os.path.join(dbpath, dbname)
             logr.info('[%s] SQLite file: %s'%(connID, p.db_sqlite_file))
             self.connections[connID] = sqlite.connect(p.db_sqlite_file)
             self.connections[connID].text_factory = str
@@ -281,7 +281,12 @@ class DBConnect(Singleton):
                     if p.db_sql_file:
                         # TODO: prompt user "create db, y/n"
                         logr.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
-                        self.CreateSQLiteDBFromCSVs()
+                        try:
+                            self.CreateSQLiteDBFromCSVs()
+                        except Exception:
+                            if os.path.isfile(p.db_sqlite_file):
+                                os.remove(p.db_sqlite_file)
+                            raise
                     elif p.image_csv_file and p.object_csv_file:
                         # TODO: prompt user "create db, y/n"
                         logr.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
@@ -849,7 +854,7 @@ class DBConnect(Singleton):
             r = csv.reader(f)
             row1 = r.next()
             command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
-            # guess at a good number of lines, about 250 megabytes, assuming doubles)
+            # guess at a good number of lines, about 250 megabytes, assuming floats)
             nlines = (250*1024*1024) / (len(row1) * 64)
             self.cursors[connID].execute(command, row1)
             while True:
@@ -862,7 +867,6 @@ class DBConnect(Singleton):
                 line_count += len(args)
                 logging.info('Loading: %d lines of object data so far', line_count)
             f.close()
-
 
     def table_exists(self, name):
         res = []
