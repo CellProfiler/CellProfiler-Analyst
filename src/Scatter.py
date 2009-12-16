@@ -187,7 +187,7 @@ class ScatterPanel(PlotPanel):
             self.subplot = self.figure.add_subplot(111)
         self.subplot.clear()
         for i, pt_list in enumerate(self.point_lists):
-            plot_pts = np.array(pt_list)
+            plot_pts = np.array(pt_list).astype(float)
             
             if len(plot_pts)==0:
                 logging.error('No points to plot!')
