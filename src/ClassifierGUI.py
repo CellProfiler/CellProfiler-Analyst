@@ -607,8 +607,8 @@ class ClassifierGUI(wx.Frame):
         if not self.defaultTSFileName:
             self.defaultTSFileName = 'MyTrainingSet.txt'
         saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), 
-                                   defaultFile=self.defaultTSFileName, wildcard='txt', 
-                                   style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)#wx.FD_CHANGE_DIR)
+                                   defaultFile=self.defaultTSFileName, wildcard='Text files (*.txt)|*.txt|All files (*.*)|*.*', 
+                                   style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if saveDialog.ShowModal()==wx.ID_OK:
             filename = saveDialog.GetPath()
             self.defaultTSFileName = os.path.split(filename)[1]
@@ -957,7 +957,8 @@ class ClassifierGUI(wx.Frame):
             for row in self.keysAndCounts:
                 key = tuple(row[:nKeyCols])
                 imData[key] = np.array([float(v) for v in row[nKeyCols:]])
-            groupedKeysAndCounts = np.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
+            groupedKeysAndCounts = np.array([list(k)+vals.tolist() for k, vals 
+                                             in dm.SumToGroup(imData, group).items()], dtype=object)
             nKeyCols = len(dm.GetGroupColumnNames(group))
         else:
             groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
