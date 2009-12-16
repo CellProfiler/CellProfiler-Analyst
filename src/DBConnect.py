@@ -234,6 +234,7 @@ class DBConnect(Singleton):
                 p.db_sqlite_file = dbpath + os.path.sep + dbname
             logr.info('[%s] SQLite file: %s'%(connID, p.db_sqlite_file))
             self.connections[connID] = sqlite.connect(p.db_sqlite_file)
+            self.connections.text_factory = str
             self.cursors[connID] = self.connections[connID].cursor()
             self.connectionInfo[connID] = ('sqlite', 'cpa_user', '', 'CPA_DB')
             self.connections[connID].create_function('greatest', -1, max)
