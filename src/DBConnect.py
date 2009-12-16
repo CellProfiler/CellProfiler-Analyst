@@ -849,8 +849,8 @@ class DBConnect(Singleton):
             r = csv.reader(f)
             row1 = r.next()
             command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
-            # guess at a good number of lines, about 20 megabytes, assuming doubles)
-            nlines = (20*1024*1024) / (len(row1) * 64)
+            # guess at a good number of lines, about 250 megabytes, assuming doubles)
+            nlines = (250*1024*1024) / (len(row1) * 64)
             self.cursors[connID].execute(command, row1)
             while True:
                 # fetch a certain number of lines efficiently
