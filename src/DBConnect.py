@@ -135,6 +135,25 @@ def UniqueImageClause(table_name=None):
     return ','.join(image_key_columns(table_name))
 
 
+def get_csv_filenames_from_sql_file():
+    '''
+    Get the image and object CSVs specified in the .SQL file
+    '''
+    f = open(p.db_sql_file)
+    lines = f.read()
+    f.close()
+    files = re.findall(r" '\w+\.[Cc][Ss][Vv]' ",lines)
+    files = [f[2:-2] for f in files]
+    imcsvs = [] 
+    obcsvs = []
+    for file in files:
+        if file.lower().endswith('image.csv'):
+            imcsvs += [file]
+        elif file.lower().endswith('object.csv'):
+            obcsvs += [file]
+    return imcsvs, obcsvs
+
+
 class SqliteClassifier():
     def __init__(self):
         pass
@@ -216,10 +235,8 @@ class DBConnect(Singleton):
                     os.mkdir(dbpath)
                 if p.db_sql_file:
                     csv_dir = os.path.split(p.db_sql_file)[0]
-                    files = [file for file in os.listdir(csv_dir) 
-                             if file.lower().endswith('image.csv') or 
-                             file.lower().endswith('object.csv')]
-                    files += [os.path.split(p.db_sql_file)[1]]
+                    imcsvs, obcsvs = get_csv_filenames_from_sql_file()
+                    files = imcsvs + obcsvs + [os.path.split(p.db_sql_file)[1]]
                     hash = md5.new()
                     for fname in files:
                         t = os.stat(csv_dir + os.path.sep + fname).st_mtime
@@ -561,7 +578,7 @@ class DBConnect(Singleton):
 
     def GetColumnTypes(self, table):
         ''' Returns the column types for the given table. '''
-        res = self.execute('SELECT * from %s LIMIT 1'%(table), silent=True)
+        res = self.execute('SELECT * FROM %s LIMIT 1'%(table), silent=True)
         return [type(x) for x in res[0]]
 
 
@@ -780,19 +797,7 @@ class DBConnect(Singleton):
         '''
         import csv
         
-        # Find the image and object CSVs specified in the .SQL file
-        f = open(p.db_sql_file)
-        lines = f.read()
-        f.close()
-        files = re.findall(r" '\w+\.[Cc][Ss][Vv]' ",lines)
-        files = [f[2:-2] for f in files]
-        imcsvs = [] 
-        obcsvs = []
-        for file in files:
-            if file.lower().endswith('image.csv'):
-                imcsvs += [file]
-            elif file.lower().endswith('object.csv'):
-                obcsvs += [file]
+        imcsvs, obcsvs = get_csv_filenames_from_sql_file()
                 
         # Verify that the CSVs exist
         csv_dir = os.path.split(p.db_sql_file)[0]
