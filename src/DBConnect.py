@@ -841,20 +841,26 @@ class DBConnect(Singleton):
             self.Commit()
             f.close()
     
+
+        line_count = 0
         for file in obcsvs:
             logr.info('Populating object table with data from %s'%file)
             f = open(csv_dir+os.path.sep+file, 'U')
             r = csv.reader(f)
             row1 = r.next()
             command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
+            # guess at a good number of lines, about 20 megabytes, assuming doubles)
+            nlines = (20*1024*1024) / (len(row1) * 64)
             self.cursors[connID].execute(command, row1)
             while True:
-                # fetch 100000 lines efficiently
-                args = [l for idx, l in zip(range(100000), r) if len(l) > 0]
+                # fetch a certain number of lines efficiently
+                args = [l for idx, l in zip(range(nlines), r) if len(l) > 0]
                 if args == []:
                     break
                 self.cursors[connID].executemany(command, args)
                 self.Commit()
+                line_count += len(args)
+                logging.info('Loading: %d lines of object data so far', line_count)
             f.close()
 
 
