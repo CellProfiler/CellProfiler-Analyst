@@ -218,7 +218,7 @@ class DensityPanel(PlotPanel):
         self.subplot = self.figure.add_subplot(111)
             
         for i, pt_list in enumerate(self.point_lists):
-            plot_pts = np.array(pt_list)
+            plot_pts = np.array(pt_list).astype(float)
             
             if self.x_scale == LOG_SCALE:
                 plot_pts = plot_pts[(plot_pts[:,0]>0)]

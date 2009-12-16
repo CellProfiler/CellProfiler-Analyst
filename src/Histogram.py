@@ -137,7 +137,7 @@ class HistogramPanel(PlotPanel):
         self.SetColor((255, 255, 255))
     
     def setpoints(self, points, bins):
-        self.points = np.array(points)
+        self.points = np.array(points).astype(float)
         self.bins = bins
     
     def set_x_label(self, label):
@@ -151,6 +151,8 @@ class HistogramPanel(PlotPanel):
         if not hasattr(self, 'subplot'):
             self.subplot = self.figure.add_subplot(111)
         self.subplot.clear()
+        # hist apparently doesn't like nans, need to preen them out first
+        self.points = np.array([p for p in self.points[0] if not np.isnan(p)])
         self.subplot.hist(self.points, self.bins, 
                           facecolor=[0.93,0.27,0.58], 
                           edgecolor='none',
@@ -167,7 +169,7 @@ class Histogram(wx.Frame):
         wx.Frame.__init__(self, parent, -1, size=size, title='Histogram')
         self.SetName('Histogram')
         
-        points = [1,2,2,3,3,3,4,4,4,4,5,5,5,5,5]
+        points = [[1,2,2,3,3,3,4,4,4,4,5,5,5,5,5]]
         figpanel = HistogramPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
         
