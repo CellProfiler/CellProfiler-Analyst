@@ -243,7 +243,7 @@ class Scatter(wx.Frame):
         self.SetName('Scatter')
         
         points = [[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]]
-        clrs = [[238, 70, 148]]
+        clrs = [[00, 158, 255]]
         
         figpanel = ScatterPanel(self, points, clrs)
 #        figpanel = cpfig.CPFigurePanel(self, -1)

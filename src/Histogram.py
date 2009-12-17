@@ -154,7 +154,7 @@ class HistogramPanel(PlotPanel):
         # hist apparently doesn't like nans, need to preen them out first
         self.points = self.points[~ np.isnan(self.points)]
         self.subplot.hist(self.points, self.bins, 
-                          facecolor=[0.93,0.27,0.58], 
+                          facecolor=[0.0,0.62,1.0], 
                           edgecolor='none',
                           alpha=0.75)
         self.subplot.set_xlabel(self.x_label)
