@@ -1181,7 +1181,7 @@ class ClassifierGUI(wx.Frame):
             fieldTypes = [int for input in self.groupInputs]
         groupKey = []
         for input, ftype in zip(self.groupInputs, fieldTypes):
-            val = input.GetValue()
+            val = str(input.GetValue())
             # if the value is blank, don't bother typing it, it is a wildcard
             if val != '__ANY__':
                 val = ftype(val)
