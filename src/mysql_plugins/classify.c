@@ -8,27 +8,26 @@
 
 
 
-#ifdef STANDARD
 #include <stdio.h>
 #include <string.h>
 #ifdef __WIN__
 typedef unsigned __int64 ulonglong;     /* Microsofts 64 bit types */
 typedef __int64 longlong;
+#define EXPORT __declspect(dllexport)
 #else
 typedef unsigned long long ulonglong;
 typedef long long longlong;
+#define EXPORT 
 #endif /*__WIN__*/
 #else
+
 #include <my_global.h>
 #include <my_sys.h>
-#endif
 #include <mysql.h>
 #include <m_ctype.h>
 #include <m_string.h>           // To get strmov()
 
-#ifdef HAVE_DLOPEN
-
-my_bool classifier_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
+EXPORT my_bool classifier_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 {
   int num_stumps, num_classes, i;
 
@@ -66,15 +65,14 @@ my_bool classifier_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
   return 0; // success
 }
 
-void classifier_deinit(UDF_INIT *initid)
+EXPORT void classifier_deinit(UDF_INIT *initid)
 {
   if (initid->ptr)
     free(initid->ptr);
 }
 
-/* This function returns the sum of all arguments */
-longlong classifier(UDF_INIT *initid, UDF_ARGS *args, char *is_null,
-                    char *error)
+EXPORT longlong classifier(UDF_INIT *initid, UDF_ARGS *args, char *is_null,
+                           char *error)
 {
   longlong class;
   double best_score;
@@ -106,5 +104,3 @@ longlong classifier(UDF_INIT *initid, UDF_ARGS *args, char *is_null,
 
   return class;
 }
-  
-#endif /* HAVE_DLOPEN */
