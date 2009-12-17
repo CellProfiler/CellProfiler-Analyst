@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef __WIN__
+#ifdef __MINGW32__
 typedef __int64 longlong;
 #define EXPORT __declspect(dllexport)
 #else
