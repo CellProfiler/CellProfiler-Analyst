@@ -44,14 +44,15 @@ class ClassifierGUI(wx.Frame):
         if properties is not None:
             global p
             p = properties
+            global db
+            db = DBConnect.DBConnect.getInstance()
+            db.register_gui_parent(self)
             global dm
             dm = DataModel.getInstance()
             if dm.IsEmpty():
                 dm.PopulateModel()
             if __name__ == "__main__":
                 MulticlassSQL.CreateFilterTables()
-            global db
-            db = DBConnect.DBConnect.getInstance()
             
         if p.IsEmpty():
             logging.critical('Classifier requires a properties file. Exiting.')

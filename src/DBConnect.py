@@ -184,6 +184,7 @@ class DBConnect(Singleton):
         # link_cols['table'] = columns that link 'table' to the per-image table
         self.link_cols = {}
         self.sqlite_classifier = SqliteClassifier()
+        self.gui_parent = None
 
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
@@ -305,6 +306,7 @@ class DBConnect(Singleton):
                             self.CreateSQLiteDBFromCSVs()
                         except Exception:
                             if os.path.isfile(p.db_sqlite_file):
+                                print "REMOVING"
                                 os.remove(p.db_sqlite_file)
                             raise
                     elif p.image_csv_file and p.object_csv_file:
@@ -873,12 +875,25 @@ class DBConnect(Singleton):
         
         for q in create_stmts:
             self.execute(q)
-            
+        
+        if self.gui_parent is not None:
+            import wx
+            dlg = wx.ProgressDialog('Creating Sqlite Database from CSVs...', '0% Complete', 100, self.gui_parent, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+        else:
+            dlg = None
+
+        # find the number of bytes we're going to read
+        total_bytes = 0
+        for file in imcsvs + obcsvs:
+            total_bytes += os.path.getsize(os.path.join(csv_dir, file))
+        total_bytes = float(total_bytes)
+
+        base_bytes = 0
         connID = threading.currentThread().getName()
         # populate tables with contents of csv files
         for file in imcsvs:
             logr.info('Populating image table with data from %s'%file)
-            f = open(csv_dir+os.path.sep+file, 'U')
+            f = open(os.path.join(csv_dir, file), 'U')
             r = csv.reader(f)
             row1 = r.next()
             command = 'INSERT INTO '+p.image_table+' VALUES ('+','.join(['?' for i in row1])+')'
@@ -886,7 +901,13 @@ class DBConnect(Singleton):
             self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
             self.Commit()
             f.close()
-    
+            base_bytes += os.path.getsize(os.path.join(csv_dir, file))
+            pct = min(int(100 * base_bytes / total_bytes), 100)
+            if dlg:
+                c, s = dlg.Update(pct, '%d%% Complete'%(pct))
+                if not c:
+                    raise Exception('cancelled load')
+            logr.info("... loaded %d%% of CSV data"%(pct))
 
         line_count = 0
         for file in obcsvs:
@@ -906,8 +927,18 @@ class DBConnect(Singleton):
                 self.cursors[connID].executemany(command, args)
                 self.Commit()
                 line_count += len(args)
-                logging.info('Loading: %d lines of object data so far', line_count)
+
+                pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
+                if dlg:
+                    c, s = dlg.Update(pct, '%d%% Complete'%(pct))
+                    if not c:
+                        raise Exception('cancelled load')
+                logr.info("... loaded %d%% of CSV data"%(pct))
             f.close()
+            base_bytes += os.path.getsize(os.path.join(csv_dir, file))
+
+        if dlg:
+            dlg.Destroy()
 
     def table_exists(self, name):
         res = []
@@ -1071,6 +1102,8 @@ class DBConnect(Singleton):
         cur = self.get_objects_modify_date()
         return self.get_objects_modify_date() <= later
 
+    def register_gui_parent(self, parent):
+        self.gui_parent = parent
 
 class Entity(object):
     """Abstract class containing code that is common to Images and

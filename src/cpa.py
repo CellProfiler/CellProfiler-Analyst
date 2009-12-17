@@ -279,7 +279,10 @@ if __name__ == "__main__":
         sys.excepthook = show_exception_as_dialog
 
     p = Properties.getInstance()
+    cpa = MainGUI(p, None, size=(760,-1))
+    cpa.Show(True)
     db = DBConnect.DBConnect.getInstance()
+    db.register_gui_parent(cpa)
     dm = DataModel.getInstance()
 
     # Load a properties file if passed in args
@@ -292,9 +295,6 @@ if __name__ == "__main__":
     dm.PopulateModel()
     MulticlassSQL.CreateFilterTables()
 
-
-    cpa = MainGUI(p, None, size=(760,-1))
-    cpa.Show(True)
     app.MainLoop()
     
     
