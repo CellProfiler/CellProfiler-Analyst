@@ -306,7 +306,6 @@ class DBConnect(Singleton):
                             self.CreateSQLiteDBFromCSVs()
                         except Exception:
                             if os.path.isfile(p.db_sqlite_file):
-                                print "REMOVING"
                                 os.remove(p.db_sqlite_file)
                             raise
                     elif p.image_csv_file and p.object_csv_file:
@@ -878,7 +877,7 @@ class DBConnect(Singleton):
         
         if self.gui_parent is not None:
             import wx
-            dlg = wx.ProgressDialog('Creating Sqlite Database from CSVs...', '0% Complete', 100, self.gui_parent, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+            dlg = wx.ProgressDialog('Creating sqlite DB...', '0% Complete', 100, self.gui_parent, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
         else:
             dlg = None
 

@@ -160,12 +160,41 @@ if __name__ == '__main__':
     num_learners = int(sys.argv[1])
     assert num_learners > 0
 
-    colnames = fin.readline().rstrip().split(' ')[1:]
+    import csv
+
+    reader = csv.reader(fin, delimiter='	')
+    header = reader.next()
+
+    label_to_labelidx = {}
+    curlabel = 1
+
+    def get_numlabel(strlabel):
+        if strlabel in label_to_labelidx:
+            return label_to_labelidx[strlabel]
+        global curlabel
+        print "LABEL: ", curlabel, strlabel
+        label_to_labelidx[strlabel] = curlabel
+        curlabel += 1
+        return label_to_labelidx[strlabel]
+
+    l1 = header.index('MountingMedium')
+    l2 = header.index('WormStrain')
+    plate = header.index('Image_Metadata_Plate')
+    colnames = header[plate + 1:]
     labels = []
     values = []
-    rawdata = loadtxt(fin)
-    labels = rawdata[:, 0].astype(int32)
-    values = rawdata[:, 1:].astype(float32)
+    for vals in reader:
+        strlabel = "%s-%s"%(vals[l1], vals[l2])
+        numlabel = get_numlabel(strlabel)
+        if '\\N' in vals:
+            continue
+        values.append([float(v) if v != '\\N' else 0 for v in vals[plate + 1:]])
+        labels.append(numlabel)
+        
+    labels = array(labels).astype(int32)
+    values = array(values).astype(float32)
+    assert len(colnames) == values.shape[1]
+
 
     # convert labels to a matrix with +1/-1 values only (+1 in the column matching the label, 1-indexed)
     num_classes = max(labels)
@@ -174,6 +203,3 @@ if __name__ == '__main__':
         label_matrix[i, j] = 1
 
     wl = train(colnames, num_learners, label_matrix, values, fout)
-    from MulticlassSQL import translate
-    translate(wl, colnames, 'CPA_per_object', 'TEMP')
-    sys.exit(0)
