@@ -190,6 +190,7 @@ class DataModel(Singleton):
             for gkey, ikeys in self.revGroupMaps[group].items():
                 if matches(gkey,groupKey):
                     imkeys += ikeys
+            return imkeys
         else:
             # if there are no wildcards simply lookup the imkeys
             return self.GetImagesInGroup(group, groupKey, filter)
