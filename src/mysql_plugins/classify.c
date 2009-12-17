@@ -11,13 +11,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef __MINGW32__
-typedef __int64 longlong;
-#define EXPORT __declspect(dllexport)
+#if defined(WIN32) || defined(MS_WINDOWS) || defined(WINDOWS)
 #else
 typedef unsigned long long ulonglong;
 typedef long long longlong;
-#define EXPORT 
 #endif /*__WIN__*/
 
 
@@ -27,7 +24,7 @@ typedef long long longlong;
 #include <m_ctype.h>
 #include <m_string.h>           // To get strmov()
 
-EXPORT my_bool classifier_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
+my_bool classifier_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 {
   int num_stumps, num_classes, i;
 
@@ -65,16 +62,16 @@ EXPORT my_bool classifier_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
   return 0; // success
 }
 
-EXPORT void classifier_deinit(UDF_INIT *initid)
+void classifier_deinit(UDF_INIT *initid)
 {
   if (initid->ptr)
     free(initid->ptr);
 }
 
-EXPORT longlong classifier(UDF_INIT *initid, UDF_ARGS *args, char *is_null,
+longlong classifier(UDF_INIT *initid, UDF_ARGS *args, char *is_null,
                            char *error)
 {
-  longlong class;
+  longlong class; 
   double best_score;
   int num_stumps = *((longlong*) args->args[0]);
   int num_classes = ((args->arg_count - 1) / num_stumps) - 2;
