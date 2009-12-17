@@ -1,3 +1,5 @@
+import decimal
+import types
 import random
 from MySQLdb.cursors import SSCursor
 from Properties import Properties
@@ -165,6 +167,7 @@ class SqliteClassifier():
 
     def classify(self, *features):
         return 1 + np.where((features > self.thresholds), self.a, self.b).sum(axis=1).argmax()
+
 
 class DBConnect(Singleton):
     '''
@@ -413,11 +416,44 @@ class DBConnect(Singleton):
         connID = threading.currentThread().getName()
         return list(self.cursors[connID].fetchall())
 
-    def get_results_as_structured_array(self):
+    def result_dtype(self):
+        """
+        Return an approprite descriptor for a numpy array in which the
+        result can be stored.
+        """
+        cursor = self.cursors[threading.currentThread().getName()]
+        descr = []
+        for (name, type_code, display_size, internal_size, precision, 
+             scale, null_ok), flags in zip(cursor.description, 
+                                           cursor.description_flags):
+            conversion = cursor.connection.converter[type_code]
+            if isinstance(conversion, list):
+                fun2 = None
+                for mask, fun in conversion:
+                    fun2 = fun
+                    if mask & flags:
+                        break
+            else:
+                fun2 = conversion
+            if fun2 in [decimal.Decimal, types.FloatType]:
+                dtype = 'f8'
+            elif fun2 in [types.IntType, types.LongType]:
+                dtype = 'i4'
+            elif fun2 in [types.StringType]:
+                dtype = '|S%d'%(internal_size,)
+            descr.append((name, dtype))
+        return descr
+
+    def get_results_as_structured_array(self, n=None):
         col_names = self.GetResultColumnNames()
-        all = self._get_results_as_list()
-        types = [type(x) for x in all[0]]
-        return np.array(all, dtype=zip(col_names, types))
+        connID = threading.currentThread().getName()
+        if n is None:
+            records = self.cursors[connID].fetchall()
+        else:
+            records = self.cursors[connID].fetchmany(n)
+            if len(records) == 0:
+                return None
+        return np.array(list(records), dtype=self.result_dtype())
     
     def GetObjectIDAtIndex(self, imKey, index):
         '''
