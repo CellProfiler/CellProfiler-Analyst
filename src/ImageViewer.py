@@ -32,12 +32,14 @@ class ImageViewerPanel(ImagePanel):
     '''
     ImagePanel with selection and object class labels.
     '''
-    def __init__(self, imgs, chMap, parent, scale=1.0, brightness=1.0, contrast=None):
+    def __init__(self, imgs, chMap, img_key, parent, scale=1.0, brightness=1.0, contrast=None):
         super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast)
         self.selectedPoints = []
         self.classes        = {}  # {'Positive':[(x,y),..], 'Negative': [(x2,y2),..],..}
         self.classVisible   = {}
-        self.class_rep    = CL_COLORED
+        self.class_rep      = CL_COLORED
+        self.img_key        = img_key
+        self.show_object_numbers = False
     
     def OnPaint(self, evt):
         dc = super(ImageViewerPanel, self).OnPaint(evt)
@@ -45,6 +47,15 @@ class ImageViewerPanel(ImagePanel):
         font.SetPixelSize((6,12))
         dc.SetFont(font)
         dc.SetTextForeground('WHITE')
+
+        # Draw object numbers
+        if self.show_object_numbers:
+            dc.BeginDrawing()
+            for i, (x,y) in enumerate(self.ob_coords):
+                x = x * self.scale - 6*(len('%s'%i)-1)
+                y = y * self.scale - 6
+                dc.DrawText('%s'%(i), x, y)
+            dc.EndDrawing()
 
         # Draw class numbers over each object
         if self.classes:
@@ -113,6 +124,12 @@ class ImageViewerPanel(ImagePanel):
         self.classVisible = {}
         for className in classes.keys():
             self.classVisible[className] = True 
+        self.Refresh()
+        
+    def ToggleObjectNumbers(self):
+        self.show_object_numbers = not self.show_object_numbers
+        if self.show_object_numbers:
+            self.ob_coords = db.GetAllObjectCoordsFromImage(self.img_key)
         self.Refresh()
         
     def ToggleClassRepresentation(self):
@@ -199,9 +216,9 @@ class ImageViewer(wx.Frame):
         self.toggleChMap = self.chMap[:]
         if self.imagePanel:
             self.imagePanel.Destroy()
-        self.imagePanel = ImageViewerPanel(imgs, self.chMap, self.sw, 
-                                           brightness=brightness, scale=scale, 
-                                           contrast=contrast)
+        self.imagePanel = ImageViewerPanel(imgs, self.chMap, self.img_key, 
+                                           self.sw, brightness=brightness, 
+                                           scale=scale, contrast=contrast)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
         self.imagePanel.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
@@ -221,6 +238,7 @@ class ImageViewer(wx.Frame):
         self.GetMenuBar().Append(self.classifyMenu, 'Classify')
         # View Menu
         self.viewMenu = wx.Menu()
+        self.objectNumberMenuItem = self.viewMenu.Append(-1, text='Show %s numbers\tCtrl+`'%p.object_name[0])
         self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
         self.GetMenuBar().Append(self.viewMenu, 'View')
     
@@ -285,6 +303,7 @@ class ImageViewer(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSaveImage, self.saveImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnOpenImage, self.openImageMenuItem)
         self.Bind(wx.EVT_MENU, self.OnChangeClassRepresentation, self.classViewMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnShowObjectNumbers, self.objectNumberMenuItem)
         self.Bind(wx.EVT_MENU, self.OnClassifyImage, self.classifyMenuItem)
         self.Bind(wx.EVT_MENU, lambda evt:self.Close(), self.exitMenuItem)
         
@@ -492,6 +511,10 @@ class ImageViewer(wx.Frame):
         self.classViewMenuItem.Text = 'View %s classes as colors'%p.object_name[0]
         self.imagePanel.ToggleClassRepresentation()
         
+    def OnShowObjectNumbers(self, evt):
+        self.objectNumberMenuItem = 'Hide %s numbers'%(p.object_name[0])
+        self.imagePanel.ToggleObjectNumbers()
+        
     def OnOpenFileMenu(self, evt=None):
         if self.imagePanel:
             self.saveImageMenuItem.Enable()
@@ -514,19 +537,24 @@ class ImageViewer(wx.Frame):
 
 
 if __name__ == "__main__":
-    p.LoadFile('../../ExampleImages/cpa_example/example.properties')
+    p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
     from DataModel import DataModel
     import ImageTools
+    from ImageReader import ImageReader
     
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
     dm.PopulateModel()
+    ir = ImageReader()
     
-    f = ImageViewer()
-    f.Show(True)
+    obKey = dm.GetRandomObject()
+    filenames = db.GetFullChannelPathsForImage(obKey[:-1])
+    images = ir.ReadImages(filenames)
+    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obKey[:-1])
+    frame.Show()
     
 #    for i in xrange(1):
 #        obKey = dm.GetRandomObject()
