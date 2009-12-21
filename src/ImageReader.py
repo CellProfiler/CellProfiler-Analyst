@@ -1,7 +1,7 @@
 import wx
 import Image
 import logging
-import numpy
+import numpy as np
 import urllib2
 import os.path
 import tifffile
@@ -46,16 +46,16 @@ class ImageReader(object):
     
     
     def ReadDIBs(self, filenames):
-        ''' Reads Cellomics DIB files and returns a list of numpy arrays '''
+        ''' Reads Cellomics DIB files and returns a list of np arrays '''
         images = []
         bufs = self.GetRawData(filenames)
 
         for buf in bufs:
-            assert numpy.fromstring(buf[0:4], dtype='<u4')[0] == 40, 'Unexpected DIB header size.'
-            assert numpy.fromstring(buf[14:16], dtype='<u2')[0] == 16, 'DIB Bit depth is not 16!'
-            size = numpy.fromstring(buf[4:12], dtype='<u4')
+            assert np.fromstring(buf[0:4], dtype='<u4')[0] == 40, 'Unexpected DIB header size.'
+            assert np.fromstring(buf[14:16], dtype='<u2')[0] == 16, 'DIB Bit depth is not 16!'
+            size = np.fromstring(buf[4:12], dtype='<u4')
 
-            imdata = numpy.fromstring(buf[52:], dtype='<u2')   # read data skipping header
+            imdata = np.fromstring(buf[52:], dtype='<u2')   # read data skipping header
             imdata.shape = size[1], size[0]
             imdata = imdata.astype('float32')
             
@@ -67,7 +67,6 @@ class ImageReader(object):
             
             images.append( imdata )
         return images
-    
 
 
     def ReadBitmaps(self, filenames):
@@ -77,7 +76,12 @@ class ImageReader(object):
                 imdata = ReadBitmapViaPIL(data)
             except:
                 imdata = ReadBitmapViaTIFFfile(data)
-            images.append(imdata)
+            if type(imdata) == list:
+                # multiple channels returned
+                images += imdata
+            else:
+                # single channel returned
+                images.append(imdata)
         return images
     
 
@@ -130,9 +134,9 @@ def ReadBitmapViaPIL(data):
     if im.mode == 'I;16':
         # deal with the endianness explicitly... I'm not sure
         # why PIL doesn't get this right.
-        imdata = numpy.fromstring(im.tostring(),numpy.uint8)
+        imdata = np.fromstring(im.tostring(),np.uint8)
         imdata.shape=(int(imdata.shape[0]/2),2)
-        imdata = imdata.astype(numpy.uint16)
+        imdata = imdata.astype(np.uint16)
         hi,lo = (0,1) if im.tag.prefix == 'MM' else (1,0)
         imdata = imdata[:,hi]*256 + imdata[:,lo]
         imsize = list(im.size)
@@ -141,26 +145,30 @@ def ReadBitmapViaPIL(data):
         # The magic # for maximum sample value is 281
         if im.tag.has_key(281):
             imdata = new_img.astype(float) / im.tag[281][0]
-        elif numpy.max(new_img) < 4096:
+        elif np.max(new_img) < 4096:
             imdata = new_img.astype(float) / 4095.
         else:
             imdata = new_img.astype(float) / 65535.
     else:
-        import matplotlib
+        import matplotlib.image
         imd = matplotlib.image.pil_to_array(im)
-        if len(imd.shape)==3 and imd.shape[2]>1 and p.brightfield:
-            return imd
+        if len(imd.shape)==3 and imd.shape[2]>=3:
+            if (np.any(imd[:,:,0]!=imd[:,:,1]) and 
+                np.any(imd[:,:,0]!=imd[:,:,2])):
+                imdata = [imd[:,:,i] / 255.0 for i in range(imd.shape[2])]
+            else:
+                imdata = [imd[:,:,0] / 255.0]
         else:
-            imdata = numpy.asarray(im.convert('L')) / 255.0
+            imdata = np.asarray(im.convert('L')) / 255.0
 
     return imdata
 
 def ReadBitmapViaTIFFfile(data):
     im = tifffile.TIFFfile(StringIO(data))
     imdata = im.asarray(squeeze=True)
-    if imdata.dtype == numpy.uint16:
+    if imdata.dtype == np.uint16:
         # for now, assume this is a Buzz Baum file (i.e., 12 bits in a 16 bit format with the high bit high)
-        imdata = (imdata.astype(numpy.float) - 2**15) / 2**12
+        imdata = (imdata.astype(np.float) - 2**15) / 2**12
     return imdata
     
     
@@ -169,7 +177,7 @@ def ReadBitmapViaTIFFfile(data):
 if __name__ == "__main__":
     from DataModel import DataModel
     from DBConnect import DBConnect
-    from ImageViewer import ImageViewer
+    from ImageViewer import ImageViewer 
     
     logging.basicConfig(level=logging.DEBUG,)
     
@@ -177,11 +185,11 @@ if __name__ == "__main__":
     dm = DataModel.getInstance()
     db = DBConnect.getInstance()
     
-    p.LoadFile('../properties/nirht_test.properties')
+#    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
-#    p.LoadFile('/Users/afraser/Desktop/2009_12_08_OilRedO_RuvkunLab.properties')
+    p.LoadFile('/Users/afraser/Desktop/2009_12_08_OilRedO_RuvkunLab.properties')
 
-#    p.brightfield = True
+    p.color_images = 'true'
     
     dm.PopulateModel()
     app = wx.PySimpleApp()
@@ -189,7 +197,7 @@ if __name__ == "__main__":
     ir = ImageReader()
     obKey = dm.GetRandomObject()
     filenames = db.GetFullChannelPathsForImage(obKey[:-1])
-    images = ir.ReadImages(filenames)
+#    images = ir.ReadImages(filenames)
     
 #    images = ir.ReadImages(['bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w1412D5337-1BB6-4965-9E54-C635BCD4B71F.tif',
 #                            'bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w20A6F4EF9-1200-4EA9-990F-49486F4AF7E4.tif',
@@ -198,7 +206,7 @@ if __name__ == "__main__":
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d1.DIB',
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d2.DIB'])
     
-#    images = ir.ReadImages(['/Users/afraser/Desktop/D03.bmp',])
+    images = ir.ReadImages(['/Users/afraser/Desktop/B02.bmp'])#,'/Users/afraser/Desktop/B02o.png'])
     frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=(1,))
     frame.Show()
     

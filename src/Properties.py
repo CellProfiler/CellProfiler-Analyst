@@ -23,16 +23,17 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'plate_type',
                 'check_tables',
                 'db_sql_file',
-                'db_sqlite_file',
-                'brightfield',]
+                'db_sqlite_file',]
 
-list_vars = ['image_channel_paths', 'image_channel_files', 'image_channel_names', 'image_channel_colors',
+list_vars = ['image_channel_paths', 'image_channel_files', 
+             'image_channel_names', 'image_channel_colors', 'channels_per_image', 
             'object_name',
             'classifier_ignore_substrings', 'classifier_ignore_columns']
 
 optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'table_id', 'image_url_prepend', 'image_csv_file',
                  'image_channel_names', 'image_channel_colors',
+                 'channels_per_image',
                  'object_csv_file', 'area_scoring_column', 'training_set',
                  'class_table',
                  'image_buffer_size', 'tile_buffer_size',
@@ -41,8 +42,7 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'object_name',
                  'check_tables',
                  'db_sql_file',
-                 'db_sqlite_file',
-                 'brightfield',]
+                 'db_sqlite_file',]
 
 class Properties(Singleton):
     '''
@@ -265,24 +265,18 @@ class Properties(Singleton):
         if field_defined('area_scoring_column'):
             logr.info('PROPERTIES: Area scoring will be used.')
         
-        if not field_defined('brightfield'):
-            self.brightfield = False
-        elif self.brightfield.lower() in ['false', 'no', 'off', 'f', 'n']:
-            self.brightfield = False
-        elif self.brightfield.lower() in ['true', 'yes', 'on', 't', 'y']:
-            self.brightfield = True
-            assert len(self.image_channel_paths) == len(self.image_channel_files) == 1, 'PROPERTIES ERROR (brightfield): When reading brightfield images, CPA expects single RGB images. Please specify only 1 value for image_channels_paths and image_channel_colors'
-                    
         if not field_defined('image_channel_names'):
-            if not self.brightfield:
-                logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. Classifier will use generic channel names.')
-            self.image_channel_names = ['channel-%d'%(i+1) for i in range(103)] [:len(self.image_channel_files)]
+            logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. CPA will use generic channel names.')
+            self.image_channel_names = ['channel-%d'%(i+1) for i in range(100)]
 
         if not field_defined('image_channel_colors'):
-            if not self.brightfield:
-                logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. Classifier will use a generic channel-color mapping.')
-            self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(100)] [:len(self.image_channel_files)]
-        
+            logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. CPA will use a generic channel-color mapping.')
+            self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(97)]
+
+        if not field_defined('channels_per_image'):
+            logr.warn('PROPERTIES WARNING (channels_per_image): No value(s) specified. CPA will assume 1 channel per image.')
+            self.channels_per_image = ['1' for i in range(len(self.image_channel_files))]
+
         if field_defined('classifier_ignore_substrings'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 
             if not field_defined('classifier_ignore_columns'):
@@ -350,9 +344,9 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-#        filename = "../properties/nirht_test.properties"
+        filename = "../properties/nirht_test.properties"
 #        filename = '/Users/afraser/Desktop/cpa_example/example.properties'
-        filename = '/Users/afraser/Desktop/2009_12_08_OilRedO_RuvkunLab.properties'
+    
     p = Properties.getInstance()
     p.LoadFile(filename)
     print p

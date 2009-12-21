@@ -252,12 +252,14 @@ class ImageViewer(wx.Frame):
                 self.MenuBar.Remove(self.MenuBar.FindMenu(ch)).Destroy()
 
         self.chMapById = {}
-        for channel, setColor in zip(p.image_channel_names, self.chMap):
+        nChannels = sum([int(n) for n in p.channels_per_image])
+        print nChannels
+        for i, channel, setColor in zip(xrange(nChannels), p.image_channel_names[:nChannels], self.chMap[:nChannels]):
             channel_menu = wx.Menu()
             for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
                 id = wx.NewId()
                 item = channel_menu.AppendRadioItem(id,color)
-                self.chMapById[id] = (chIndex,color,item,channel_menu)
+                self.chMapById[id] = (chIndex, color, item, channel_menu)
                 if color.lower() == setColor.lower():
                     item.Check()
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
@@ -284,9 +286,8 @@ class ImageViewer(wx.Frame):
                                      min(self.maxSize[1], h*self.imagePanel.scale+55)) )
                 self.Center()
                 self.first_layout = False
-            self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
-            if not p.brightfield:
-                self.CreateChannelMenus()
+            self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)    
+            self.CreateChannelMenus()
             # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
             self.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
