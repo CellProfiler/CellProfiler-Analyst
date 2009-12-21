@@ -65,7 +65,7 @@ db_passwd  =  <your_password>
 	#   uncomment the fields below.
 	
 	#db_type         =  sqlite
-	#db_sqlite_file  =  </path/to/per_image.csv>
+	#db_sqlite_file  =  </path/to/sqlite_database.db>
 	
 	
 	# ======== CSV File Info ========
