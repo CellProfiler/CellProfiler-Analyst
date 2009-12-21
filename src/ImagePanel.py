@@ -85,6 +85,7 @@ class ImagePanel(wx.Panel):
     def SetContrastMode(self, mode):
         self.contrast = mode
         self.UpdateBitmap()
+
     
 
         

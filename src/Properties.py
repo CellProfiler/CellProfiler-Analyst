@@ -26,14 +26,15 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'db_sqlite_file',]
 
 list_vars = ['image_channel_paths', 'image_channel_files', 
-             'image_channel_names', 'image_channel_colors', 'channels_per_image', 
+             'image_channel_names', 'image_channel_colors', 
+             'channels_per_image', 'image_channel_blend_modes', 
             'object_name',
             'classifier_ignore_substrings', 'classifier_ignore_columns']
 
 optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'table_id', 'image_url_prepend', 'image_csv_file',
                  'image_channel_names', 'image_channel_colors',
-                 'channels_per_image',
+                 'channels_per_image', 'image_channel_blend_modes',
                  'object_csv_file', 'area_scoring_column', 'training_set',
                  'class_table',
                  'image_buffer_size', 'tile_buffer_size',

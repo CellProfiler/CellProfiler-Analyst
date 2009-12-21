@@ -88,11 +88,15 @@ def Crop(imgdata, (w,h), (x,y)):
 def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None):
     '''
     imgs  - list of np arrays containing pixel data for each channel of an image
-    chMap - list of colors to map each corresponding channel onto.  eg: ['red', 'green', 'blue']
+    chMap - list of colors to map each corresponding channel onto.  
+            eg: ['red', 'green', 'blue']
     brightness - value around 1.0 to multiply color values by
     contrast - value around 1.0 to scale contrast by
     scale - value around 1.0 to scale the image by
+    masks - not currently used, see MergeChannels
     contrast - contrast mode to use
+    blending - list, how to blend this channel with others 'add' or 'subtract'
+               eg: ['add','add','add','subtract']
     '''
     if contrast=='Log':
         logims = [log_transform(im) for im in imgs]
@@ -102,7 +106,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         imData = MergeChannels(newims, chMap, masks=masks)
     else:
         imData = MergeChannels(imgs, chMap, masks=masks)
-
+        
     h,w = imgs[0].shape
     
     # Convert from float [0-1] to 8bit
@@ -110,7 +114,10 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     imData[imData>255] = 255
 
     # Write wx.Image
-    img = wx.EmptyImage(w,h)
+    if p.image_rescale:
+        img = wx.EmptyImage(p.image_rescale[1], p.image_rescale[0])
+    else:
+        img = wx.EmptyImage(w,h)
     img.SetData(imData.astype('uint8').flatten())
     
     # Apply brightness & scale
@@ -129,9 +136,9 @@ def MergeChannels(imgs, chMap, masks=[]):
     Merges the given image data into the channels listed in chMap.
     Masks are passed in pairs (mask, blendingfunc).
     '''
+    
     nChannels = len(p.image_channel_paths)
     h,w = imgs[0].shape
-    imData = np.zeros((h,w,3), dtype='float')
     
     colormap = {'red'      : [1,0,0], 
                 'green'    : [0,1,0], 
@@ -142,39 +149,50 @@ def MergeChannels(imgs, chMap, masks=[]):
                 'gray'     : [1,1,1], 
                 'none'     : [0,0,0] }
     
-    # Check image shape compatibility
-#    if np.any([imgs[i].shape!=imgs[0].shape for i in xrange(len(imgs))]):
-#        dims = [im.shape for im in imgs]
-#        aspect_ratios = [float(dims[i][0])/dims[i][1] for i in xrange(len(dims))]
-#        def almost_equal(expected, actual, rel_err=1e-7, abs_err=1e-20):
-#            absolute_error = abs(actual - expected)
-#            return absolute_error <= max(abs_err, rel_err * abs(expected))
-#        for i in xrange(len(aspect_ratios)):
-#            assert (almost_equal(aspect_ratios[0], aspect_ratios[i], abs_err=0.01),
-#                    'Can\'t merge image channels. Aspect ratios do not match.')
-#        areas = map(np.product, dims)
-#        max_idx = areas.index(max(areas))
-#        min_idx = areas.index(min(areas))
-#        
-#        dlg = wx.SingleChoiceDialog(None, 'Some of your images were found to have different\n'
-#                                   'scales. Please choose a size and CPA will\n'
-#                                   'automatically rescale image channels to fit a\n'
-#                                   'single image.',
-#                                   'Inconsistent image channel sizes',
-#                                   [str(imgs[max_idx].shape), str(imgs[min_idx].shape)])
-#        if dlg.ShowModal() == wx.ID_OK:
-#            dims = eval(dlg.GetStringSelection())
-#            p.image_rescale = dims
-#        else:
-#            return None
-        
+    blending = p.image_channel_blend_modes
+
+    if not p.image_rescale:
+        # Check image shape compatibility
+        if np.any([imgs[i].shape!=imgs[0].shape for i in xrange(len(imgs))]):
+            dims = [im.shape for im in imgs]
+            aspect_ratios = [float(dims[i][0])/dims[i][1] for i in xrange(len(dims))]
+            def almost_equal(expected, actual, rel_err=1e-7, abs_err=1e-20):
+                absolute_error = abs(actual - expected)
+                return absolute_error <= max(abs_err, rel_err * abs(expected))
+            for i in xrange(len(aspect_ratios)):
+                assert (almost_equal(aspect_ratios[0], aspect_ratios[i], abs_err=0.01),
+                        'Can\'t merge image channels. Aspect ratios do not match.')
+            areas = map(np.product, dims)
+            max_idx = areas.index(max(areas))
+            min_idx = areas.index(min(areas))
+            
+            s = [imgs[max_idx].shape, imgs[min_idx].shape]
+            dlg = wx.SingleChoiceDialog(None, 'Some of your images were found to have different\n'
+                                       'scales. Please choose a size and CPA will\n'
+                                       'automatically rescale image channels to fit a\n'
+                                       'single image.',
+                                       'Inconsistent image channel sizes',
+                                       [str(s[0]), str(s[1])])
+            if dlg.ShowModal() == wx.ID_OK:
+                dims = eval(dlg.GetStringSelection())
+                p.image_rescale = dims
+            else:
+                return None
+    
+    if p.image_rescale:
+        imData = np.zeros((p.image_rescale[0], p.image_rescale[1], 3), dtype='float')
+    else:
+        imData = np.zeros((h,w,3), dtype='float')
+    
     for i, im in enumerate(imgs):
-        print im.shape, p.image_rescale
         if p.image_rescale and im.shape != p.image_rescale:
-            im = rescale(im, p.image_rescale)
+            im = rescale(im, (p.image_rescale[1],p.image_rescale[0]))
         c = colormap[chMap[i].lower()]
         for chan in range(3):
-            imData[:,:,chan] += im * c[chan]
+            if blending[i] == 'add':
+                imData[:,:,chan] += im * c[chan]
+            elif blending[i] == 'subtract':
+                imData[:,:,chan] -= im * c[chan]
     
     for mask, func in masks:
         imData = func(imData, mask)
@@ -242,22 +260,5 @@ def npToPIL(imdata):
     return im
 
 def PIL_to_np(im):
-    return matplotlib.image.pil_to_array(im)
+    return matplotlib.image.pil_to_array(im) / 255.0
 
-
-if __name__ == "__main__":
-    app = wx.PySimpleApp()
-    p.image_channel_paths = [1,2]
-    images = Image.open('/Users/afraser/Desktop/B02.bmp')
-    rgb = PIL_to_np(images)
-    imdata = [rgb[:,:,0], rgb[:,:,1], rgb[:,:,2]]
-    
-    outlines = Image.open('/Users/afraser/Desktop/B02o.png')
-    outline_data = PIL_to_np(outlines)
-    imdata += [rescale(outline_data, (imdata[0].shape[1],imdata[0].shape[0]))]
-    
-    MergeToBitmap(imdata, chMap=['red','green','blue','gray'])
-    
-    app.MainLoop()
-
-    

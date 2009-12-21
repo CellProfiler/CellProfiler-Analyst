@@ -67,6 +67,7 @@ class ImageReader(object):
             
             images.append( imdata )
         return images
+    
 
 
     def ReadBitmaps(self, filenames):
@@ -153,11 +154,26 @@ def ReadBitmapViaPIL(data):
         import matplotlib.image
         imd = matplotlib.image.pil_to_array(im)
         if len(imd.shape)==3 and imd.shape[2]>=3:
+            if imd.shape[2] == 4:
+                logging.warn('Discarding alpha channel in color image.')
+                imd = imd[:,:,:-1]
             if (np.any(imd[:,:,0]!=imd[:,:,1]) and 
                 np.any(imd[:,:,0]!=imd[:,:,2])):
                 imdata = [imd[:,:,i] / 255.0 for i in range(imd.shape[2])]
             else:
                 imdata = [imd[:,:,0] / 255.0]
+            
+#            red_image = imdata[0]
+#            green_image = imdata[1]
+#            blue_image = imdata[2]
+#            inverted_red = 1 - red_image
+#            inverted_green = 1 - green_image
+#            inverted_blue = 1 - blue_image
+#            inverted_red = (1 - green_image) * (1 - blue_image)
+#            inverted_green = (1 - red_image) * (1 - blue_image)
+#            inverted_blue = (1 - red_image) * (1 - green_image)
+#            imdata = [inverted_red, inverted_green, inverted_blue]
+#            imdata = [np.transpose(im, (1,0)) for im in imdata]
         else:
             imdata = np.asarray(im.convert('L')) / 255.0
 
@@ -206,8 +222,8 @@ if __name__ == "__main__":
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d1.DIB',
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d2.DIB'])
     
-    images = ir.ReadImages(['/Users/afraser/Desktop/B02.bmp'])#,'/Users/afraser/Desktop/B02o.png'])
-    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=(1,))
+    images = ir.ReadImages(['/Users/afraser/Desktop/B02.bmp','/Users/afraser/Desktop/B02o.png'])
+    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obKey[:-1])
     frame.Show()
     
     

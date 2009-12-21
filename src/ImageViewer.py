@@ -30,7 +30,7 @@ def get_classifier_window():
 
 class ImageViewerPanel(ImagePanel):
     '''
-    ImagePanel with selection and object class labels.
+    ImagePanel with selection and object class labels. 
     '''
     def __init__(self, imgs, chMap, img_key, parent, scale=1.0, brightness=1.0, contrast=None):
         super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast)
@@ -253,7 +253,6 @@ class ImageViewer(wx.Frame):
 
         self.chMapById = {}
         nChannels = sum([int(n) for n in p.channels_per_image])
-        print nChannels
         for i, channel, setColor in zip(xrange(nChannels), p.image_channel_names[:nChannels], self.chMap[:nChannels]):
             channel_menu = wx.Menu()
             for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
@@ -280,7 +279,7 @@ class ImageViewer(wx.Frame):
             self.Sizer.Clear()
             self.Sizer.Add(self.sw, proportion=1, flag=wx.EXPAND)
             self.Sizer.Add(self.cp, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-            h, w = self.imagePanel.images[0].shape[:2]
+            w, h = self.imagePanel.GetSize()
             if self.first_layout:
                 self.SetClientSize( (min(self.maxSize[0], w*self.imagePanel.scale),
                                      min(self.maxSize[1], h*self.imagePanel.scale+55)) )
