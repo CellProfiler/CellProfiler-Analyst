@@ -203,7 +203,7 @@ if __name__ == "__main__":
     
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
-    p.LoadFile('/Users/afraser/Desktop/2009_12_08_OilRedO_RuvkunLab.properties')
+    p.LoadFile('/Users/afraser/Desktop/RuvkunLab_afraser.properties')
 
     p.color_images = 'true'
     
@@ -211,9 +211,10 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
 
     ir = ImageReader()
-    obKey = dm.GetRandomObject()
-    filenames = db.GetFullChannelPathsForImage(obKey[:-1])
-#    images = ir.ReadImages(filenames)
+    obkey = dm.GetRandomObject()
+    obkey = (0,1,1)
+    filenames = db.GetFullChannelPathsForImage(obkey[:-1])
+    images = ir.ReadImages(filenames)
     
 #    images = ir.ReadImages(['bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w1412D5337-1BB6-4965-9E54-C635BCD4B71F.tif',
 #                            'bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w20A6F4EF9-1200-4EA9-990F-49486F4AF7E4.tif',
@@ -222,8 +223,8 @@ if __name__ == "__main__":
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d1.DIB',
 #                            '/Users/afraser/Desktop/ims/2006_02_15_NIRHT/trcHT29Images/NIRHTa+001/AS_09125_050116000001_A02f00d2.DIB'])
     
-    images = ir.ReadImages(['/Users/afraser/Desktop/B02.bmp','/Users/afraser/Desktop/B02o.png'])
-    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obKey[:-1])
+#    images = ir.ReadImages(['/Users/afraser/Desktop/B02.bmp','/Users/afraser/Desktop/B02o.png'])
+    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obkey[:-1])
     frame.Show()
     
     

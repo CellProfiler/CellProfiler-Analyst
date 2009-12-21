@@ -185,20 +185,30 @@ def MergeChannels(imgs, chMap, masks=[]):
         imData = np.zeros((h,w,3), dtype='float')
     
     for i, im in enumerate(imgs):
-        if p.image_rescale and im.shape != p.image_rescale:
-            im = rescale(im, (p.image_rescale[1],p.image_rescale[0]))
-        c = colormap[chMap[i].lower()]
-        for chan in range(3):
-            if blending[i] == 'add':
+        if blending[i].lower() == 'add':
+            if p.image_rescale and im.shape != p.image_rescale:
+                im = rescale(im, (p.image_rescale[1], p.image_rescale[0]))
+            c = colormap[chMap[i].lower()]
+            for chan in range(3):
                 imData[:,:,chan] += im * c[chan]
-            elif blending[i] == 'subtract':
+    
+    imData[imData>1.0] = 1.0
+    imData[imData<0.0] = 0.0
+    
+    for i, im in enumerate(imgs):
+        if blending[i].lower() == 'subtract':
+            if p.image_rescale and im.shape != p.image_rescale:
+                im = rescale(im, (p.image_rescale[1], p.image_rescale[0]))
+            c = colormap[chMap[i].lower()]
+            for chan in range(3):
                 imData[:,:,chan] -= im * c[chan]
+            
+    imData[imData>1.0] = 1.0
+    imData[imData<0.0] = 0.0
     
     for mask, func in masks:
         imData = func(imData, mask)
-        imData[imData>1.0] = 1.0
-        imData[imData<0.0] = 0.0
-    
+
     return imData
 
 def rescale(im, scale):
