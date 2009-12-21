@@ -212,7 +212,8 @@ def MergeChannels(imgs, chMap, masks=[]):
     return imData
 
 def rescale(im, scale):
-    return PIL_to_np(npToPIL(im).resize(scale))[:,:,0]
+    from scipy.misc import imresize
+    return imresize(im, (scale[1], scale[0])) / 255.
 
 def log_transform(im, interval=None):
     '''Takes a single image in the form of a np array and returns it
