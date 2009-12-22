@@ -138,7 +138,7 @@ def MergeChannels(imgs, chMap, masks=[]):
     '''
     
     n_channels = sum(map(int, p.channels_per_image))
-    blending = p.image_channel_blend_modes or ['add' for i in range(n_channels)]
+    blending = p.image_channel_blend_modes or ['add']*n_channels
     h,w = imgs[0].shape
     
     colormap = {'red'      : [1,0,0], 

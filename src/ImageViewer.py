@@ -54,7 +54,7 @@ class ImageViewerPanel(ImagePanel):
             for i, (x,y) in enumerate(self.ob_coords):
                 x = x * self.scale - 6*(len('%s'%i)-1)
                 y = y * self.scale - 6
-                dc.DrawText('%s'%(i), x, y)
+                dc.DrawText('%s'%(i + 1), x, y)
             dc.EndDrawing()
 
         # Draw class numbers over each object
