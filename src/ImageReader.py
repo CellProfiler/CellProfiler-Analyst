@@ -67,16 +67,15 @@ class ImageReader(object):
             
             images.append( imdata )
         return images
-    
 
 
     def ReadBitmaps(self, filenames):
         images = []
         for data, f in zip(self.GetRawData(filenames), filenames):
-            try:
-                imdata = ReadBitmapViaPIL(data)
-            except:
-                imdata = ReadBitmapViaTIFFfile(data)
+#            try:
+            imdata = ReadBitmapViaPIL(data)
+#            except:
+#                imdata = ReadBitmapViaTIFFfile(data)
             if type(imdata) == list:
                 # multiple channels returned
                 images += imdata
@@ -151,32 +150,29 @@ def ReadBitmapViaPIL(data):
         else:
             imdata = new_img.astype(float) / 65535.
     else:
-        import matplotlib.image
-        imd = matplotlib.image.pil_to_array(im)
+        im.show()
+        import ImageTools
+        imd = ImageTools.pil_to_np(im)
+        imd = imd / 255.0
+        
         if len(imd.shape)==3 and imd.shape[2]>=3:
-            if imd.shape[2] == 4:
-                logging.warn('Discarding alpha channel in color image.')
-                imd = imd[:,:,:-1]
+        	# 3-channels in image
             if (np.any(imd[:,:,0]!=imd[:,:,1]) and 
                 np.any(imd[:,:,0]!=imd[:,:,2])):
-                imdata = [imd[:,:,i] / 255.0 for i in range(imd.shape[2])]
+                if imd.shape[2] == 4:
+                    # strip alpha channel if all values are the same
+                    assert np.all(imd[:,:,3]==imd[0,0,3]), 'CPA does not yet support non-opaque alpha channels in images.'
+                    logging.warn('Discarding alpha channel in color image.')
+                    imd = imd[:,:,:-1]
+                # Return all (3) channels if not identical
+                imdata = [imd[:,:,i] for i in range(imd.shape[2])]
             else:
-                imdata = [imd[:,:,0] / 255.0]
-            
-#            red_image = imdata[0]
-#            green_image = imdata[1]
-#            blue_image = imdata[2]
-#            inverted_red = 1 - red_image
-#            inverted_green = 1 - green_image
-#            inverted_blue = 1 - blue_image
-#            inverted_red = (1 - green_image) * (1 - blue_image)
-#            inverted_green = (1 - red_image) * (1 - blue_image)
-#            inverted_blue = (1 - red_image) * (1 - green_image)
-#            imdata = [inverted_red, inverted_green, inverted_blue]
-#            imdata = [np.transpose(im, (1,0)) for im in imdata]
+            	# Channels are identical, return only 1
+                imdata = imd[:,:,0]
         else:
+        	# Single-channel image, return that channel
             imdata = np.asarray(im.convert('L')) / 255.0
-
+            
     return imdata
 
 def ReadBitmapViaTIFFfile(data):
@@ -204,6 +200,7 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
     p.LoadFile('/Users/afraser/Desktop/RuvkunLab_afraser.properties')
+#    p.LoadFile('/Users/afraser/Desktop/2009_04_14_CristinaNogueira_MitosisFlyScreens.properties')
 
     p.color_images = 'true'
     
@@ -212,7 +209,7 @@ if __name__ == "__main__":
 
     ir = ImageReader()
     obkey = dm.GetRandomObject()
-    obkey = (0,1,1)
+#    obkey = (0,1,1)
     filenames = db.GetFullChannelPathsForImage(obkey[:-1])
     images = ir.ReadImages(filenames)
     
