@@ -259,16 +259,56 @@ def BitmapToPIL(bitmap):
     return ImageToPIL(wx.ImageFromBitmap(bitmap))
 
 def npToPIL(imdata):
-    '''Convert np image data to PIL Image.'''
+    '''Convert np image data to PIL Image'''
     if type(imdata) == list:
         buf = np.dstack(imdata)
-    else:
+    elif len(imdata.shape) == 2:
         buf = np.dstack([imdata, imdata, imdata])
-    buf = (buf * 255.0).astype('uint8')
+    elif len(imdata.shape) == 3:
+        buf = imdata
+        assert imdata.shape[2] >=3, 'Cannot convert the given numpy array to PIL'
+    if buf.dtype != 'uint8':
+        buf = (buf * 255.0).astype('uint8')
     im = Image.fromstring(mode='RGB', size=(buf.shape[1],buf.shape[0]),
                           data=buf.tostring())
     return im
 
-def PIL_to_np(im):
-    return matplotlib.image.pil_to_array(im) / 255.0
+
+def pil_to_np( pilImage ):
+    """
+    load a PIL image and return it as a numpy array of uint8.  For
+    grayscale images, the return array is MxN.  For RGB images, the
+    return value is MxNx3.  For RGBA images the return value is MxNx4
+    """
+    def toarray(im):
+        'return a 1D array of floats'
+        x_str = im.tostring('raw', im.mode)
+        x = np.fromstring(x_str,np.uint8)
+        return x
+
+    if pilImage.mode in ('RGBA', 'RGBX'):
+        im = pilImage # no need to convert images
+    elif pilImage.mode=='L':
+        im = pilImage # no need to luminance images
+        # return MxN luminance array
+        x = toarray(im)
+        x.shape = im.size[1], im.size[0]
+        return x
+    elif pilImage.mode=='RGB':
+        #return MxNx3 RGB array
+        im = pilImage # no need to RGB images
+        x = toarray(im)
+        x.shape = im.size[1], im.size[0], 3
+        return x
+
+    else: # try to convert to an rgba image
+        try:
+            im = pilImage.convert('RGBA')
+        except ValueError:
+            raise RuntimeError('Unknown image mode')
+
+    # return MxNx4 RGBA array
+    x = toarray(im)
+    x.shape = im.size[1], im.size[0], 4
+    return x
 
