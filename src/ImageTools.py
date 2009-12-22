@@ -285,16 +285,14 @@ def pil_to_np( pilImage ):
         x_str = im.tostring('raw', im.mode)
         x = np.fromstring(x_str,np.uint8)
         return x
-
     
     if pilImage.mode[0] == 'P':
         im = pilImage.convert('RGBA')
         x = toarray(im)
         x = x.reshape(-1, 4)
-        if (x[:,0] == x).all():
+        if np.all(x[:,0] == x):
             im = pilImage.convert('L')
         pilImage = im
-
 
     if pilImage.mode[0] in ('1', 'L', 'I', 'F'):
         x = toarray(pilImage)
@@ -304,6 +302,6 @@ def pil_to_np( pilImage ):
         x = toarray(pilImage.convert('RGBA'))
         x.shape = pilImage.size[1], pilImage.size[0], 4
         # discard alpha if all 1s
-        if (x[:,:,4] == 255).all():
+        if (x[:,:,3] == 255).all():
             return x[:,:,:3]
         return x

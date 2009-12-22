@@ -153,7 +153,6 @@ def ReadBitmapViaPIL(data):
         else:
             imdata = new_img.astype(float) / 65535.
     else:
-        im.show()
         import ImageTools
         imd = ImageTools.pil_to_np(im)
         imd = imd / 255.0
@@ -164,9 +163,9 @@ def ReadBitmapViaPIL(data):
                 np.any(imd[:,:,0]!=imd[:,:,2])):
                 if imd.shape[2] == 4:
                     # strip alpha channel if all values are the same
-                    assert np.all(imd[:,:,3]==imd[0,0,3]), 'CPA does not yet support non-opaque alpha channels in images.'
+                    assert np.all(imd[:,:,3]==imd[0,0,3]), 'CPA does not yet support alpha channels in images.'
                     logging.warn('Discarding alpha channel in color image.')
-                    imd = imd[:,:,:-1]
+                    imd = imd[:,:,:3]
                 # Return all (3) channels if not identical
                 imdata = [imd[:,:,i] for i in range(imd.shape[2])]
             else:
@@ -202,8 +201,8 @@ if __name__ == "__main__":
     
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
-    p.LoadFile('/Users/afraser/Desktop/RuvkunLab_afraser.properties')
-#    p.LoadFile('/Users/afraser/Desktop/2009_04_14_CristinaNogueira_MitosisFlyScreens.properties')
+#    p.LoadFile('/Users/afraser/Desktop/RuvkunLab_afraser.properties')
+    p.LoadFile('/Users/afraser/Desktop/2009_04_14_CristinaNogueira_MitosisFlyScreens.properties')
 
     p.color_images = 'true'
     
