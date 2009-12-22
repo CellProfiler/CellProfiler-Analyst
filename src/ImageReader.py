@@ -131,6 +131,9 @@ def ReadBitmapViaPIL(data):
     im = Image.open(StringIO(data))
     
     # Handle 16 and 12 bit images
+    if im.mode == 'I':
+        raise "Can't handle 32 bit grayscale yet"
+
     if im.mode == 'I;16':
         # deal with the endianness explicitly... I'm not sure
         # why PIL doesn't get this right.

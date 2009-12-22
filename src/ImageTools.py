@@ -286,29 +286,24 @@ def pil_to_np( pilImage ):
         x = np.fromstring(x_str,np.uint8)
         return x
 
-    if pilImage.mode in ('RGBA', 'RGBX'):
-        im = pilImage # no need to convert images
-    elif pilImage.mode=='L':
-        im = pilImage # no need to luminance images
-        # return MxN luminance array
+    
+    if pilImage.mode[0] == 'P':
+        im = pilImage.convert('RGBA')
         x = toarray(im)
-        x.shape = im.size[1], im.size[0]
+        x = x.reshape(-1, 4)
+        if (x[:,0] == x).all():
+            im = pilImage.convert('L')
+        pilImage = im
+
+
+    if pilImage.mode[0] in ('1', 'L', 'I', 'F'):
+        x = toarray(pilImage)
+        x.shape = pilImage.size[1], -1
         return x
-    elif pilImage.mode=='RGB':
-        #return MxNx3 RGB array
-        im = pilImage # no need to RGB images
-        x = toarray(im)
-        x.shape = im.size[1], im.size[0], 3
+    else:
+        x = toarray(pilImage.convert('RGBA'))
+        x.shape = pilImage.size[1], pilImage.size[0], 4
+        # discard alpha if all 1s
+        if (x[:,:,4] == 255).all():
+            return x[:,:,:3]
         return x
-
-    else: # try to convert to an rgba image
-        try:
-            im = pilImage.convert('RGBA')
-        except ValueError:
-            raise RuntimeError('Unknown image mode')
-
-    # return MxNx4 RGBA array
-    x = toarray(im)
-    x.shape = im.size[1], im.size[0], 4
-    return x
-
