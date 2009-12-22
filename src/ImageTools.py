@@ -137,7 +137,8 @@ def MergeChannels(imgs, chMap, masks=[]):
     Masks are passed in pairs (mask, blendingfunc).
     '''
     
-    nChannels = len(p.image_channel_paths)
+    n_channels = sum(map(int, p.channels_per_image))
+    blending = p.image_channel_blend_modes or ['add' for i in range(n_channels)]
     h,w = imgs[0].shape
     
     colormap = {'red'      : [1,0,0], 
@@ -149,8 +150,6 @@ def MergeChannels(imgs, chMap, masks=[]):
                 'gray'     : [1,1,1], 
                 'none'     : [0,0,0] }
     
-    blending = p.image_channel_blend_modes
-
     if not p.image_rescale:
         # Check image shape compatibility
         if np.any([imgs[i].shape!=imgs[0].shape for i in xrange(len(imgs))]):

@@ -278,6 +278,10 @@ class Properties(Singleton):
             logr.warn('PROPERTIES WARNING (channels_per_image): No value(s) specified. CPA will assume 1 channel per image.')
             self.channels_per_image = ['1' for i in range(len(self.image_channel_files))]
 
+        if field_defined('image_channel_blend_modes'):
+            for mode in self.image_channel_blend_modes:
+                assert mode in ['add', 'subtract'], 'PROPERTIES ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add and subtract.'
+            
         if field_defined('classifier_ignore_substrings'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 
             if not field_defined('classifier_ignore_columns'):
