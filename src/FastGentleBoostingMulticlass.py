@@ -102,12 +102,14 @@ def xvalidate(colnames, num_learners, label_matrix, values, folds, group_labels,
     
     # break into folds, randomly, but with all identical group_labels together
     for f in range(folds):
+        print "fold", f
         current_holdout = [False] * len(group_labels)
         while unique_labels and (sum(current_holdout) < fold_min_size):
             to_add = unique_labels.pop()
             current_holdout = [(a or b) for a, b in zip(current_holdout, [g == to_add for g in group_labels])]
         
         if sum(current_holdout) == 0:
+            print "no holdout"
             break
 
         holdout_idx = nonzero(current_holdout)[0]
@@ -122,7 +124,8 @@ def xvalidate(colnames, num_learners, label_matrix, values, folds, group_labels,
             holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
         holdout_labels = label_matrix[holdout_idx, :].argmax(axis=1)
         num_misclassifications += [sum(hr != holdout_labels) for hr in holdout_results]
-        progress_callback(f / float(folds))
+        if progress_callback:
+            progress_callback(f / float(folds))
 
     return [num_misclassifications]
         
@@ -161,13 +164,10 @@ if __name__ == '__main__':
     assert num_learners > 0
 
     import csv
-
     reader = csv.reader(fin, delimiter='	')
     header = reader.next()
-
     label_to_labelidx = {}
     curlabel = 1
-
     def get_numlabel(strlabel):
         if strlabel in label_to_labelidx:
             return label_to_labelidx[strlabel]
@@ -185,6 +185,8 @@ if __name__ == '__main__':
     values = []
     for vals in reader:
         strlabel = "%s-%s"%(vals[l1], vals[l2])
+        if 'NoVecta' not in strlabel:
+            continue
         numlabel = get_numlabel(strlabel)
         if '\\N' in vals:
             continue
@@ -193,6 +195,11 @@ if __name__ == '__main__':
         
     labels = array(labels).astype(int32)
     values = array(values).astype(float32)
+    
+    exclude = array([('bubble' in c) or ('dark_w' in c) for c in colnames])
+    values = values[:, nonzero(~exclude)[0]]
+    colnames = [c for c in colnames if not (('bubble' in c) or ('dark_w' in c))]
+    
     assert len(colnames) == values.shape[1]
 
 
@@ -202,4 +209,7 @@ if __name__ == '__main__':
     for i, j in zip(range(len(labels)), array(labels)-1):
         label_matrix[i, j] = 1
 
-    wl = train(colnames, num_learners, label_matrix, values, fout)
+    #wl = train(colnames, num_learners, label_matrix, values, fout)
+    print label_matrix.shape, "groups"
+    print xvalidate(colnames, num_learners, label_matrix, values, 20, range(1, label_matrix.shape[0]+1), None)
+
