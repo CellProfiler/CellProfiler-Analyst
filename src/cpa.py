@@ -1,9 +1,16 @@
-# This must come first for py2app/py2exe
+from __future__ import with_statement
+
+# This must come almost first for py2app/py2exe
 __version__ = ''
 try:
     import cpa_version
     __version__ = 'r'+cpa_version.VERSION
-except: pass
+    svn_version = int(cpa_version.VERSION)
+except: 
+    # this can be updated periodically just to ensure there's a reasonable value here.
+    svn_version = 8641
+
+
 from ClassifierGUI import *
 # ---
 
@@ -16,6 +23,7 @@ from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
 from icons import get_cpa_icon, get_cpa_splash, imviewer_icon, datatable_icon, classifier_icon, pv_icon, scatter_icon, histogram_icon, density_icon
+import cpaprefs
 
 # Toolbar icons
 
@@ -236,6 +244,8 @@ def load_properties():
         p.LoadFile(filename)
     else:
         print 'CellProfiler Analyst requires a properties file.  Exiting.'
+        # necessary in case other modal dialogs are up (notably, 
+        wx.GetApp().Exit()
         sys.exit()
 
 
@@ -276,19 +286,54 @@ if __name__ == "__main__":
     dc.Destroy() # necessary to avoid a crash in splashscreen
     splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT, 2000, None, -1)
 
+    # new version check
+    def new_version_cb(new_version, new_version_info):
+        print "NEW VERSION"
+        # called from a child thread, so use CallAfter to bump it to the gui thread
+        def cb2():
+            def set_check_pref(val):
+                cpaprefs.set_check_new_versions(val)
+
+            def skip_this_version():
+                cpaprefs.set_skip_version(new_version)
+
+            # showing a modal dialog while the splashscreen is up causes a hang
+            try: splash.Destroy()
+            except: pass
+
+            import cellprofiler.gui.newversiondialog as nvd
+            dlg = nvd.NewVersionDialog(None, "CPAnalyst update available (version %d)"%(new_version),
+                                       new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
+                                       cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
+            dlg.Show()
+
+        wx.CallAfter(cb2)
+
+
+    try:
+        import cellprofiler.utilities.check_for_updates as cfu
+        cfu.check_for_updates('http://broad.mit.edu/~thouis/CPAversion.html', 
+                              max(svn_version, cpaprefs.get_skip_version()), 
+                              new_version_cb)
+    except:
+        # can't import
+        pass
+
+
     cpa = MainGUI(p, None, size=(760,-1))
     cpa.Show(True)
+
     db = DBConnect.DBConnect.getInstance()
     db.register_gui_parent(cpa)
     dm = DataModel.getInstance()
 
-    # Load a properties file if passed in args
     if len(sys.argv) > 1:
+        # Load a properties file if passed in args
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
         load_properties()
-        
+
     dm.PopulateModel()
     MulticlassSQL.CreateFilterTables()
 
