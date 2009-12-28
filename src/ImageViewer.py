@@ -50,6 +50,7 @@ class ImageViewerPanel(ImagePanel):
 
         # Draw object numbers
         if self.show_object_numbers:
+            dc.SetLogicalFunction(wx.XOR)
             dc.BeginDrawing()
             for i, (x,y) in enumerate(self.ob_coords):
                 x = x * self.scale - 6*(len('%s'%i)-1)
@@ -64,6 +65,7 @@ class ImageViewerPanel(ImagePanel):
                     dc.BeginDrawing()
                     for (x,y) in cl:
                         if self.class_rep==CL_NUMBERED:
+                            dc.SetLogicalFunction(wx.XOR)
                             x = x * self.scale - 3
                             y = y * self.scale - 6
                             dc.DrawText(clnum, x, y)
@@ -508,11 +510,17 @@ class ImageViewer(wx.Frame):
 
 
     def OnChangeClassRepresentation(self, evt):
-        self.classViewMenuItem.Text = 'View %s classes as colors'%p.object_name[0]
+        if self.classViewMenuItem.Text.endswith('numbers'):
+            self.classViewMenuItem.Text = 'View %s classes as colors'%p.object_name[0]
+        else:
+            self.classViewMenuItem.Text = 'View %s classes as numbers'%p.object_name[0]
         self.imagePanel.ToggleClassRepresentation()
         
     def OnShowObjectNumbers(self, evt):
-        self.objectNumberMenuItem = 'Hide %s numbers'%(p.object_name[0])
+        if self.objectNumberMenuItem.Text.startswith('Hide'):
+            self.objectNumberMenuItem.Text = 'Show %s numbers\tCtrl+`'%(p.object_name[0])
+        else:
+            self.objectNumberMenuItem.Text = 'Hide %s numbers\tCtrl+`'%(p.object_name[0])
         self.imagePanel.ToggleObjectNumbers()
         
     def OnOpenFileMenu(self, evt=None):
