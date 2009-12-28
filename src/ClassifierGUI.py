@@ -1182,6 +1182,7 @@ class ClassifierGUI(wx.Frame):
             fieldTypes = [int for input in self.groupInputs]
         groupKey = []
         for input, ftype in zip(self.groupInputs, fieldTypes):
+            # GetValue returns unicode from ComboBox, but we need a string
             val = str(input.GetValue())
             # if the value is blank, don't bother typing it, it is a wildcard
             if val != '__ANY__':
