@@ -12,6 +12,11 @@ import sys
 import re
 import wx
 import wx.combo
+from matplotlib.widgets import Lasso
+from matplotlib.nxutils import points_inside_poly
+from matplotlib.colors import colorConverter
+from matplotlib.collections import RegularPolyCollection
+from matplotlib.pyplot import figure, show
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -21,6 +26,89 @@ NO_FILTER = 'No filter'
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
 LINEAR_SCALE = 'linear'
+
+
+class Datum:
+    colorin = colorConverter.to_rgba('red', alpha=0.75)
+    colorout = colorConverter.to_rgba((0., 0.61960784, 1.), alpha=0.75)
+    def __init__(self, x, y, include=False):
+        self.x = x
+        self.y = y
+        if include: self.color = self.colorin
+        else: self.color = self.colorout
+
+
+class LassoManager:
+    def __init__(self, ax, data, fig):
+        self.update_data(ax, data, fig)
+
+        self.canvas.mpl_connect('button_press_event', self.on_press)
+        self.canvas.mpl_connect('button_release_event', self.on_release)
+
+    def update_data(self, ax, data, fig):
+        '''Sets the data points to be drawn and selected.'''
+        self.axes = ax
+        self.canvas = ax.figure.canvas
+        self.data = data
+
+        self.n_points = len(data)
+
+        facecolors = [d.color for d in data]
+        self.xys = [(d.x, d.y) for d in data]
+
+        self.collection = RegularPolyCollection(
+            fig.dpi, 1, sizes=(25,),
+            facecolors = facecolors,
+            offsets = self.xys,
+            transOffset = ax.transData,
+            edgecolor = 'none',
+            alpha = 0.75)
+
+        ax.add_collection(self.collection)
+
+    def callback(self, verts):
+        # Note: If the mouse is released outside of the canvas, (None,None) is
+        #   returned as the last coordinate pair.
+        # Cancel selection if user releases outside the canvas.
+        for v in verts:
+            if None in v:
+                return
+            
+        facecolors = self.collection.get_facecolors()
+        xys = (self.xys - np.min(self.xys)) / np.max(self.xys)
+        verts = (verts - np.min(self.xys)) / np.max(self.xys)
+
+        sel = np.nonzero(points_inside_poly(xys, verts))[0]
+        for i in range(self.n_points):
+            if i in sel:
+                facecolors[i] = Datum.colorin
+            else:
+                facecolors[i] = Datum.colorout
+
+        self.canvas.draw_idle()
+
+    def on_press(self, evt):
+        if self.canvas.widgetlock.locked(): return
+        if evt.inaxes is None: return
+        self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.callback)
+        # acquire a lock on the widget drawing
+        self.canvas.widgetlock(self.lasso)
+        
+    def on_release(self, event):
+        # Note: callback is not called on click without drag so we release the
+        #   lock here to handle this case as well.
+        if self.__dict__.has_key('lasso') and self.lasso:
+            self.canvas.draw_idle()
+            self.canvas.widgetlock.release(self.lasso)
+            del self.lasso
+
+
+
+
+
+
+
+
 
 class DataSourcePanel(wx.Panel):
     '''
@@ -162,7 +250,12 @@ class ScatterPanel(PlotPanel):
         # initiate plotter
         PlotPanel.__init__(self, parent, **kwargs)
         self.SetColor((255, 255, 255))
-    
+        
+        self.Bind(wx.EVT_RIGHT_DOWN, self.show_popup_menu)
+        
+    def show_popup_menu(self):
+        print 'asdf'
+        
     def setpointslists(self, points):
         self.point_lists = points
     
@@ -199,8 +292,15 @@ class ScatterPanel(PlotPanel):
                 plot_pts = plot_pts[(plot_pts[:,1]>0)]
                 
             clr = [float(c) / 255. for c in self.clr_list[i]]
-            self.subplot.scatter(plot_pts[:, 0], plot_pts[:, 1], color=clr, 
-                                 edgecolor='none', alpha=0.75)
+#           self.subplot.scatter(plot_pts[:, 0], plot_pts[:, 1], color=clr, 
+#                                 edgecolor='none', alpha=0.75)
+            ax = self.figure.add_subplot(111)#, xlim=(np.min(plot_pts[:,0]), np.max(plot_pts[:,0])), ylim=(np.min(plot_pts[:,1]), np.max(plot_pts[:,1])))
+            data = [Datum(*xy) for xy in plot_pts]
+            if self.__dict__.has_key('lman'):
+                self.lman.update_data(ax, data, self.figure)
+            else: 
+                self.lman = LassoManager(ax, data, self.figure)
+                
             
             self.subplot.set_xlabel(self.x_label)
             self.subplot.set_ylabel(self.y_label)
@@ -243,7 +343,7 @@ class Scatter(wx.Frame):
         self.SetName('Scatter')
         
         points = [[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]]
-        clrs = [[00, 158, 255]]
+        clrs = [[0, 158, 255]]
         
         figpanel = ScatterPanel(self, points, clrs)
 #        figpanel = cpfig.CPFigurePanel(self, -1)
