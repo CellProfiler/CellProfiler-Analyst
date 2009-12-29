@@ -22,7 +22,8 @@ from ImageViewer import ImageViewer
 from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
-from icons import get_cpa_icon, get_cpa_splash, imviewer_icon, datatable_icon, classifier_icon, pv_icon, scatter_icon, histogram_icon, density_icon
+from icons import cpa_splash, get_cpa_icon, image_viewer, data_grid, \
+                  classifier, platemapbrowser, scatter, histogram, density
 import cpaprefs
 
 # Toolbar icons
@@ -68,13 +69,13 @@ class MainGUI(wx.Frame):
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
-        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', classifier_icon.get_bitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
-        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', pv_icon.get_bitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
-        tb.AddLabelTool(ID_DATA_TABLE, 'DataTable', datatable_icon.get_bitmap(), shortHelp='Data Table', longHelp='Launch DataTable')
-        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', imviewer_icon.get_bitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
-        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', scatter_icon.get_bitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
-        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', histogram_icon.get_bitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
-        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', density_icon.get_bitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
+        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
+        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
+        tb.AddLabelTool(ID_DATA_TABLE, 'DataTable', data_grid.ConvertToBitmap(), shortHelp='Data Table', longHelp='Launch DataTable')
+        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
+        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
+        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.Realize()
         
         #
@@ -276,7 +277,7 @@ if __name__ == "__main__":
 
     # splashscreen
     # splash
-    splashimage = get_cpa_splash()
+    splashimage = cpa_splash.ConvertToBitmap()
     # If the splash image has alpha, it shows up transparently on
     # windows, so we blend it into a white background.
     splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(), splashimage.GetHeight(), 255, 255, 255, 255)
@@ -284,7 +285,7 @@ if __name__ == "__main__":
     dc.SelectObject(splashbitmap)
     dc.DrawBitmap(splashimage, 0, 0)
     dc.Destroy() # necessary to avoid a crash in splashscreen
-    splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT, 2000, None, -1)
+    splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT, 20000, None, -1)
 
     # new version check
     def new_version_cb(new_version, new_version_info):
