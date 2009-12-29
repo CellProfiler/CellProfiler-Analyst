@@ -27,6 +27,13 @@ packages:
  - PIL
 
 
+OPTIONAL: Classifier can be sped up by installing the user-defined function
+found in mysql_plugins/classify.c. To add this function to MySQL, compile 
+classify.c to classify.so, and put this in a directory on the LD_LIBRARY_PATH 
+for MySQL, then execute this statement within MySQL:
+mysql> CREATE FUNCTION classifier RETURNS INTEGER SONAME 'classify.so';
+
+
 CellProfiler Analyst can be run from a terminal as follows:
 
  python CPAnalyst/src/cpa.py
