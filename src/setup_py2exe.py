@@ -20,13 +20,14 @@ setup(console=['cpa.py'],
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'pysqlite2'],
-            'includes' : ['PILfix', './icons'],
+            'includes' : ['PILfix'],
             "excludes" : ['_gtkagg', '_tkagg',
                           "Tkconstants","Tkinter","tcl"],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
                              'libgobject-2.0-0.dll', 
                              'libgdk_pixbuf-2.0-0.dll',
                              'tcl84.dll', 'tk84.dll'],
+            'data_files' : [('icons', glob.globg('./icons/*.png'))]
             }
         },
       data_files=matplotlib.get_py2exe_datafiles(),
