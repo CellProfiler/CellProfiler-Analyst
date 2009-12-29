@@ -8,7 +8,7 @@ try:
     svn_version = int(cpa_version.VERSION)
 except: 
     # this can be updated periodically just to ensure there's a reasonable value here.
-    svn_version = 8641
+    svn_version = 8895
 
 
 from ClassifierGUI import *
@@ -22,11 +22,8 @@ from ImageViewer import ImageViewer
 from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
-from icons import cpa_splash, get_cpa_icon, image_viewer, data_grid, \
-                  classifier, platemapbrowser, scatter, histogram, density
+import icons
 import cpaprefs
-
-# Toolbar icons
 
 ID_CLASSIFIER = wx.NewId()
 ID_PLATE_VIEWER = wx.NewId()
@@ -69,13 +66,13 @@ class MainGUI(wx.Frame):
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
-        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
-        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
-        tb.AddLabelTool(ID_DATA_TABLE, 'DataTable', data_grid.ConvertToBitmap(), shortHelp='Data Table', longHelp='Launch DataTable')
-        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
-        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
-        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
-        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
+        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
+        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
+        tb.AddLabelTool(ID_DATA_TABLE, 'DataTable', icons.data_grid.ConvertToBitmap(), shortHelp='Data Table', longHelp='Launch DataTable')
+        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
+        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
+        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.Realize()
         
         #
@@ -277,7 +274,7 @@ if __name__ == "__main__":
 
     # splashscreen
     # splash
-    splashimage = cpa_splash.ConvertToBitmap()
+    splashimage = icons.cpa_splash.ConvertToBitmap()
     # If the splash image has alpha, it shows up transparently on
     # windows, so we blend it into a white background.
     splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(), splashimage.GetHeight(), 255, 255, 255, 255)
@@ -285,7 +282,7 @@ if __name__ == "__main__":
     dc.SelectObject(splashbitmap)
     dc.DrawBitmap(splashimage, 0, 0)
     dc.Destroy() # necessary to avoid a crash in splashscreen
-    splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT, 20000, None, -1)
+    splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT, 2000, None, -1)
 
     # new version check
     def new_version_cb(new_version, new_version_info):
@@ -313,7 +310,7 @@ if __name__ == "__main__":
 
     try:
         import cellprofiler.utilities.check_for_updates as cfu
-        cfu.check_for_updates('http://broad.mit.edu/~thouis/CPAversion.html', 
+        cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
                               max(svn_version, cpaprefs.get_skip_version()), 
                               new_version_cb)
     except:
