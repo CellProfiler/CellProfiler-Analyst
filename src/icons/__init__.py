@@ -3,7 +3,12 @@ import os.path
 import glob
 import sys
 
-for f in glob.glob(os.path.join(__path__[0], "*.png")):
+if 'library.zip' in __path__[0]:
+    search_path = 'icons'
+else:
+    search_path = __path__[0]
+
+for f in glob.glob(os.path.join(search_path, "*.png")):
     globals()[os.path.basename(f)[:-4]] = wx.Image(f)
 
 def get_cpa_icon(size=None):

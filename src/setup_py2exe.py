@@ -27,8 +27,8 @@ setup(console=['cpa.py'],
                              'libgobject-2.0-0.dll', 
                              'libgdk_pixbuf-2.0-0.dll',
                              'tcl84.dll', 'tk84.dll'],
-            'data_files' : [('icons', glob.globg('./icons/*.png'))]
             }
         },
-      data_files=matplotlib.get_py2exe_datafiles(),
+      data_files=(matplotlib.get_py2exe_datafiles()+
+              [('icons', glob.glob('icons\\*.png'))]),
 )
