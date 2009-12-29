@@ -45,7 +45,7 @@ def translate(weaklearners):
             return "CASE GREATEST(%s) %s END"%(",".join(class_scores), "\n".join(["WHEN %s THEN %d"%(score, idx+1) for idx, score in enumerate(class_scores)]))
 
 
-def CreateFilterTables():
+def CreateFilterTables(cb=None):
     ''' Creates a temporary table with image keys for each filter. '''
     
     key_col_defs = ",".join([col + " INT" for col in image_key_columns()])
@@ -56,6 +56,9 @@ def CreateFilterTables():
         db.execute('CREATE TEMPORARY TABLE `%s` (%s)'%(filter_table_prefix+name, key_col_defs))
         db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(filter_table_prefix+name, filter_table_prefix+name, index_cols))
         db.execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+name, index_cols, query))
+        # these queries can take a while, so allow a callback to run (wx.Yield being a good example)
+        if cb is not None:
+            cb()
         
 
 def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):

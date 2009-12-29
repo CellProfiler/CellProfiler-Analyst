@@ -286,7 +286,6 @@ if __name__ == "__main__":
 
     # new version check
     def new_version_cb(new_version, new_version_info):
-        print "NEW VERSION"
         # called from a child thread, so use CallAfter to bump it to the gui thread
         def cb2():
             def set_check_pref(val):
@@ -333,10 +332,7 @@ if __name__ == "__main__":
         load_properties()
 
     dm.PopulateModel()
-    MulticlassSQL.CreateFilterTables()
+    cpa.console.AppendText('Creating filter tables.\n')
+    MulticlassSQL.CreateFilterTables(wx.Yield)
 
     app.MainLoop()
-    
-    
-    
-    

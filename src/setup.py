@@ -1,6 +1,9 @@
 from setuptools import setup, Extension
-import sys, os
+import sys
+import os
+import os.path
 import numpy
+import glob
 
 # fix from
 #  http://mail.python.org/pipermail/pythonmac-sig/2008-June/020111.html
@@ -16,12 +19,10 @@ if sys.platform == "darwin":
 APPNAME = 'CPAnalyst'
 APP = ['cpa.py']
 DATA_FILES = []
-OPTIONS = {'argv_emulation': False,
-           'iconfile': "../resources/cpa.icns",
-           'packages': ['numpy'],
-           'excludes': ['pylab', 'nose', 'wx.tools'],
-           'resources': ['FastGentleBoostingWorkerMulticlass.py'],
-#           'resources':['wormprofiler_icons/WormProfiler_icon_32.png', 'change_malloc_zone.dylib']
+OPTIONS = {'argv_emulation': True,
+           'iconfile': "icons/cpa.icns",
+           'packages': ['numpy', './icons'],
+           'excludes': ['nose', 'wx.tools'],
            }
 
 setup(
@@ -30,10 +31,5 @@ setup(
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
     name = "CPAnalyst",
-    ext_modules = [Extension('_classifier',
-                             sources = ['_classifier.c'],
-                             include_dirs=[numpy.get_include()],
-                             libraries = ['sqlite3'])]
-                             
 )
 
