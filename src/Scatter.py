@@ -191,7 +191,6 @@ class ScatterPanel(PlotPanel):
             if None in v: return
         
         for c, collection in enumerate(self.subplot.collections):
-            print c
             # Build the selection
             new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
             if self.sel_key == None:
@@ -232,12 +231,13 @@ class ScatterPanel(PlotPanel):
             del self.lasso
         
     def show_popup_menu(self, (x, y), data):
-        popup = wx.Menu()
-        test = wx.MenuItem(popup, -1, 'test')
-        popup.AppendItem(test)
-        def test_cb(evt):
-            print data
-        self.PopupMenu(popup, (x,y))
+        pass
+#        popup = wx.Menu()
+#        test = wx.MenuItem(popup, -1, 'test')
+#        popup.AppendItem(test)
+#        def test_cb(evt):
+#            print data
+#        self.PopupMenu(popup, (x,y))
         
     def set_point_lists(self, points, colors=None):
         '''
