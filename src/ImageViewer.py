@@ -117,7 +117,7 @@ class ImageViewerPanel(ImagePanel):
     def SetClassPoints(self, classes):
         from matplotlib.pyplot import cm
         self.classes = classes
-        vals = np.arange(float(len(classes))) / len(classes)
+        vals = np.arange(0, 1, 1./len(classes))
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
         self.colors = [np.array(cm.jet(val))*255 for val in vals]
