@@ -16,7 +16,7 @@ from matplotlib.widgets import Lasso, RectangleSelector
 from matplotlib.nxutils import points_inside_poly
 from matplotlib.colors import colorConverter
 from matplotlib.collections import RegularPolyCollection
-from matplotlib.pyplot import figure, show
+from matplotlib.pyplot import figure, show, cm
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -27,15 +27,14 @@ ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
 LINEAR_SCALE = 'linear'
 
+SELECTED_COLOR = colorConverter.to_rgba('red', alpha=0.75)
 
 class Datum:
-    colorin = colorConverter.to_rgba('red', alpha=0.75)
-    colorout = colorConverter.to_rgba((0., 0.61960784, 1.), alpha=0.75)
-    def __init__(self, x, y, include=False):
+    def __init__(self, (x, y), color, include=False):
         self.x = x
         self.y = y
-        if include: self.color = self.colorin
-        else: self.color = self.colorout
+        if include: self.color = SELECTED_COLOR
+        else: self.color = color
 
 
 class DataSourcePanel(wx.Panel):
@@ -140,7 +139,7 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
         self.figpanel.set_x_label(self.x_choice.GetStringSelection())
         self.figpanel.set_y_label(self.y_choice.GetStringSelection())
-        self.figpanel.setpointslists(points)
+        self.figpanel.set_point_lists(points)
         self.figpanel.draw()
         
     def removefromchart(self, event):
@@ -166,50 +165,49 @@ class DataSourcePanel(wx.Panel):
         
 
 class ScatterPanel(PlotPanel):
-    def __init__(self, parent, point_lists, clr_list, **kwargs):
-        PlotPanel.__init__(self, parent, **kwargs)
-        self.SetColor((255, 255, 255))
+    '''
+    ScatterPanel contains the guts for drawing scatter plots to a PlotPanel.
+    '''
+    def __init__(self, parent, point_lists, clr_list=None, **kwargs):
+        PlotPanel.__init__(self, parent, (255,255,255), **kwargs)
         
-        self.clr_list = clr_list
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
         self.x_label = ''
         self.y_label = ''
-        self.setpointslists(point_lists)
-        
+        self.sel     = {}
+        self.set_point_lists(point_lists, clr_list)
         
         self.Bind(wx.EVT_RIGHT_DOWN, self.show_popup_menu)
         
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
 
-    def callback(self, verts):
+    def lasso_callback(self, verts):
         # Note: If the mouse is released outside of the canvas, (None,None) is
         #   returned as the last coordinate pair.
         # Cancel selection if user releases outside the canvas.
         for v in verts:
-            if None in v:
-                return
+            if None in v: return
+        
+        for c, collection in enumerate(self.subplot.collections):
+            print c
+            # Build the selection
+            new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
+            if self.sel_key == None:
+                self.sel[c] = new_sel
+            elif self.sel_key == 'shift':
+                self.sel[c] = set(self.sel.get(c,[])).union(new_sel)
+            elif self.sel_key == 'alt':
+                self.sel[c] = set(self.sel.get(c,[])).difference(new_sel)
             
-        xys = (self.xys - np.min(self.xys)) / np.max(self.xys)
-        verts = (verts - np.min(self.xys)) / np.max(self.xys)
-
-        # Build the selection
-        new_sel = np.nonzero(points_inside_poly(xys, verts))[0]
-        if self.sel_key == None:
-            self.sel = new_sel
-        elif self.sel_key == 'shift':
-            self.sel = set(self.sel).union(new_sel)
-        elif self.sel_key == 'alt':
-            self.sel = set(self.sel).difference(new_sel)
-            
-        # Color the points
-        facecolors = self.collection.get_facecolors()
-        for i in range(self.n_points):
-            if i in self.sel:
-                facecolors[i] = Datum.colorin
-            else:
-                facecolors[i] = Datum.colorout
+            # Color the points
+            facecolors = collection.get_facecolors()
+            for i in range(len(self.point_lists[c])):
+                if i in self.sel[c]:
+                    facecolors[i] = SELECTED_COLOR
+                else:
+                    facecolors[i] = self.colors[c]
 
         self.canvas.draw_idle()
         
@@ -219,20 +217,20 @@ class ScatterPanel(PlotPanel):
             if self.canvas.widgetlock.locked(): return
             if evt.inaxes is None: return
             
-            self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.callback)
-#             acquire a lock on the widget drawing
+            self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.lasso_callback)
+            # acquire a lock on the widget drawing
             self.canvas.widgetlock(self.lasso)
         else:
             self.canvas.Parent.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
         
     def on_release(self, event):
-        # Note: callback is not called on click without drag so we release the
-        #   lock here to handle this case as well.
+        # Note: lasso_callback is not called on click without drag so we release
+        #   the lock here to handle this case as well.
         if self.__dict__.has_key('lasso') and self.lasso:
             self.canvas.draw_idle()
             self.canvas.widgetlock.release(self.lasso)
             del self.lasso
-            
+        
     def show_popup_menu(self, (x, y), data):
         popup = wx.Menu()
         test = wx.MenuItem(popup, -1, 'test')
@@ -241,69 +239,87 @@ class ScatterPanel(PlotPanel):
             print data
         self.PopupMenu(popup, (x,y))
         
-    def setpointslists(self, points):
-        self.point_lists = np.array(points).astype(float)
-        plot_pts = self.point_lists[0]
+    def set_point_lists(self, points, colors=None):
+        '''
+        points - a list of lists of points
+        colors - a list of colors to be applied to each inner list of points
+        '''
+        if len(points)==0: points = [[]]
+        points = [np.array(pl).astype(float) for pl in points]
+        self.point_lists = points
         
-        data = [Datum(*xy) for xy in plot_pts]
-        self.n_points = len(data)
-
-        facecolors = [d.color for d in data]
-        self.xys = [(d.x, d.y) for d in data]
-
+        # Create and clear the subplot
         if not hasattr(self, 'subplot'):
             self.subplot = self.figure.add_subplot(111)
         self.subplot.clear()
-            
-        self.collection = RegularPolyCollection(
-            self.figure.get_dpi(), 1, sizes=(25,),
-            facecolors = facecolors,
-            offsets = self.xys,
-            transOffset = self.subplot.transData,
-            edgecolor = 'none',
-            alpha = 0.75)
-
-        self.subplot.add_collection(self.collection)
         
-        #Draw data.
-        for i, pt_list in enumerate(self.point_lists):
-            if len(pt_list)==0:
-                logging.error('No points to plot!')
-                return
+        # Label the axes
+        self.subplot.set_xlabel(self.x_label)
+        self.subplot.set_ylabel(self.y_label)
+        
+        # Set axis scales
+        if self.x_scale == LOG_SCALE:
+            self.subplot.set_xscale('log', basex=2.1)
+        if self.y_scale == LOG_SCALE:
+            self.subplot.set_yscale('log', basey=2.1)
             
-            # Label axes
-            self.subplot.set_xlabel(self.x_label)
-            self.subplot.set_ylabel(self.y_label)
-            
-            # Set axis scales
-            # and clip negative values if in log space
-            if self.x_scale == LOG_SCALE:
-                pt_list = pt_list[(pt_list[:,0]>0)]
-                self.subplot.set_xscale('log', basex=2.1)
-            if self.y_scale == LOG_SCALE:
-                pt_list = pt_list[(pt_list[:,1]>0)]
-                self.subplot.set_yscale('log', basey=2.1)
-            
-            # Pad all sides
-            xmin = np.nanmin(pt_list[:,0])
-            xmax = np.nanmax(pt_list[:,0])
-            ymin = np.nanmin(pt_list[:,1])
-            ymax = np.nanmax(pt_list[:,1])
-            if self.x_scale==LOG_SCALE:
-                xmin = xmin/1.5
-                xmax = xmax*1.5
-            else:
-                xmin = xmin-(xmax-xmin)/20.
-                xmax = xmax+(xmax-xmin)/20.
-            if self.y_scale==LOG_SCALE:
-                ymin = ymin/1.5
-                ymax = ymax*1.5
-            else:
-                ymin = ymin-(ymax-ymin)/20.
-                ymax = ymax+(ymax-ymin)/20.
-            self.subplot.axis([xmin, xmax, ymin, ymax])
+        # Choose colors from jet colormap starting with light blue (0.28)
+        if colors is None:
+            vals = np.arange(0.28, 1.28, 1./len(points)) % 1.
+            colors = np.array([colorConverter.to_rgba(cm.jet(val), alpha=0.75) 
+                               for val in vals])
+        self.colors = colors
+        
+        # Each point list is converted to a separate point collection
+        self.collections = []
+        self.xys = []
+        for plot_pts, color in zip(points, colors):
+            data = [Datum(xy, color) for xy in plot_pts]
+            facecolors = [d.color for d in data]
+            self.xys.append([(d.x, d.y) for d in data])
+
+            collection = RegularPolyCollection(
+                self.figure.get_dpi(), 1, sizes=(25,),
+                facecolors = facecolors,
+                offsets = self.xys[-1] or None,
+                transOffset = self.subplot.transData,
+                edgecolor = 'none',
+                alpha = 0.75)
     
-    def getpointslists(self):
+            self.subplot.add_collection(collection)
+
+        # Stop if there is no data in any of the point lists
+        if max(map(len, points))==0:
+            return
+
+         # Clip negative values if in log space
+        if self.x_scale == LOG_SCALE:
+            logging.warn('Discarding points with negative x-values.')
+            points = [points[i][c[:,0]>3] for i,c in enumerate(points)]
+        if self.y_scale == LOG_SCALE:
+            logging.warn('Discarding points with negative y-values.')
+            points = [points[i][c[:,1]>3] for i,c in enumerate(points)]
+        
+        # Add padding around the points in the plot
+        xmin = min([np.nanmin(pts[:,0]) for pts in points if len(pts)>0])
+        xmax = max([np.nanmax(pts[:,0]) for pts in points if len(pts)>0])
+        ymin = min([np.nanmin(pts[:,1]) for pts in points if len(pts)>0])
+        ymax = max([np.nanmax(pts[:,1]) for pts in points if len(pts)>0])
+        if self.x_scale==LOG_SCALE:
+            xmin = xmin/1.5
+            xmax = xmax*1.5
+        else:
+            xmin = xmin-(xmax-xmin)/20.
+            xmax = xmax+(xmax-xmin)/20.
+        if self.y_scale==LOG_SCALE:
+            ymin = ymin/1.5
+            ymax = ymax*1.5
+        else:
+            ymin = ymin-(ymax-ymin)/20.
+            ymax = ymax+(ymax-ymin)/20.
+        self.subplot.axis([xmin, xmax, ymin, ymax])
+
+    def get_point_lists(self):
         return self.point_lists
     
     def set_x_scale(self, scale):
@@ -330,11 +346,17 @@ class Scatter(wx.Frame):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot')
         self.SetName('Scatter')
         
-        points = [[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)], [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6)]]
-        clrs = [[0, 158, 255], [1,2,3]]
+        points = []
+#        points = [[],
+#                  [(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)],
+#                  [],
+#                  [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
+#                  [],]
+        clrs = [(0., 0.62, 1., 0.75),
+                (0.1, 0.2, 0.3, 0.75)]
+
         
-        figpanel = ScatterPanel(self, points, clrs)
-#        figpanel = cpfig.CPFigurePanel(self, -1)
+        figpanel = ScatterPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
         
         sizer = wx.BoxSizer(wx.VERTICAL)
