@@ -3,6 +3,9 @@ import os.path
 import glob
 import sys
 
+# py2exe puts this module into its library.zip, and I'm not sure how
+# to stop it from doing so.  However, I can force it to include the
+# icons in a directory at the top level.
 if 'library.zip' in __path__[0]:
     search_path = 'icons'
 else:
