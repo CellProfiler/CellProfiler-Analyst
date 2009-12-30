@@ -34,6 +34,14 @@ for MySQL, then execute this statement within MySQL:
 mysql> CREATE FUNCTION classifier RETURNS INTEGER SONAME 'classify.so';
 
 
+OPTIONAL: Some features in CPA (e.g. "Check Rules" in Classifier) require some
+code from CellProfiler 2.0 to work.  This requires that you also check out 
+CellProfiler 2.0 from SVN:
+https://svn.broadinstitute.org/CellProfiler/trunk/CellProfiler/pyCellProfiler/
+and set your PYTHONPATH environment variable to include the pyCellProfiler 
+directory. 
+
+
 CellProfiler Analyst can be run from a terminal as follows:
 
  python CPAnalyst/src/cpa.py
