@@ -59,7 +59,6 @@ class Properties(Singleton):
                 s += k+" = "+str(v)+"\n"
         return s
         
-    
     def __getattr__(self, field):
         # The name may not be loaded for optional fields.
         if not self.__dict__.has_key(field):
@@ -67,11 +66,20 @@ class Properties(Singleton):
         else:
             return self.__dict__[field]
         
-    
     def __setattr__(self, id, val):
         self.__dict__[id] = val
     
-    
+    def show_load_dialog(self):
+        import wx
+        dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            filename = dlg.GetPath()
+            os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+            self.LoadFile(filename)
+            return True
+        else:
+            return False
+            
     def LoadFile(self, filename):
         ''' Loads variables in from a properties file. '''
         self.Clear()
@@ -340,7 +348,7 @@ class Properties(Singleton):
         else:
             logr.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables))
             self.check_tables = 'yes'
-
+        
         
 if __name__ == "__main__":
     import sys

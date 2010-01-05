@@ -1267,7 +1267,6 @@ class StopCalculating(Exception):
     pass
 
 
-
 def show_exception_as_dialog(type, value, tb):
     """Exception handler that show a dialog."""
     import traceback
@@ -1280,18 +1279,6 @@ def show_exception_as_dialog(type, value, tb):
     dlg = ScrolledMessageDialog(None, "".join(lines), 'Error')
     dlg.ShowModal()
     raise value
-
-
-
-def LoadProperties():
-    dlg = wx.FileDialog(None, "Select the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        p.LoadFile(filename)
-    else:
-        logging.error('Classifier requires a properties file.  Exiting.')
-        sys.exit()
 
 
 # ----------------- Run -------------------
@@ -1327,7 +1314,10 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        LoadProperties()
+        if not p.show_load_dialog():
+            logging.error('Classifier requires a properties file.  Exiting.')
+            wx.GetApp().Exit()
+            sys.exit()
         
     dm.PopulateModel()
     MulticlassSQL.CreateFilterTables()

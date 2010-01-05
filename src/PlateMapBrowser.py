@@ -479,18 +479,6 @@ def FormatPlateMapData(wellsAndVals):
     
 
 
-def LoadProperties():
-    import os
-    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        p.LoadFile(filename)
-    else:
-        print 'Plate Viewer requires a properties file.  Exiting.'
-        sys.exit()
-
-            
 if __name__ == "__main__":
     app = wx.PySimpleApp()
         
@@ -499,7 +487,12 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        LoadProperties()
+        if not p.show_load_dialog():
+            print 'Plate Viewer requires a properties file.  Exiting.'
+            # necessary in case other modal dialogs are up
+            wx.GetApp().Exit()
+            sys.exit()
+
 #        p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
 #        p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
 
