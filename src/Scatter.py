@@ -8,7 +8,7 @@ from PlateMapPanel import *
 from PlotPanel import *
 from Properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import ImageTools
+import ImageList
 import numpy as np
 import os
 import sys
@@ -189,9 +189,7 @@ class ScatterPanel(PlotPanel):
         self.set_point_lists(point_lists, clr_list)
         
 #        self.marquee = RectangleSelector(self.subplot, self.marquee_callback, drawtype='box')
-        
-        self.Bind(wx.EVT_RIGHT_DOWN, self.show_popup_menu)
-        
+                
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
 #        self.canvas.mpl_connect('pick_event', self.on_pick)
@@ -272,16 +270,17 @@ class ScatterPanel(PlotPanel):
                 
             if self.mouse_mode == 'marquee':
                 pass
-        else:
-            self.canvas.Parent.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
         
-    def on_release(self, event):
+    def on_release(self, evt):
         # Note: lasso_callback is not called on click without drag so we release
         #   the lock here to handle this case as well.
-        if self.__dict__.has_key('lasso') and self.lasso:
-            self.canvas.draw_idle()
-            self.canvas.widgetlock.release(self.lasso)
-            del self.lasso
+        if evt.button == 1:
+            if self.__dict__.has_key('lasso') and self.lasso:
+                self.canvas.draw_idle()
+                self.canvas.widgetlock.release(self.lasso)
+                del self.lasso
+        else:
+            self.canvas.Parent.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
                     
     def show_popup_menu(self, (x, y), data):
         popup = wx.Menu()
@@ -310,8 +309,8 @@ class ScatterPanel(PlotPanel):
         def show_images(evt):
             for i, sel in self.selection.items():
                 keys = self.key_lists[i][sel]
-                for key in keys[:10]:
-                    ImageTools.ShowImage(tuple(key), p.image_channel_colors, parent=self)
+                ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i+1))
+                ilf.Show(True)
             
 ##        self.Bind(wx.EVT_MENU, set_lasso_mode, lasso_item)
 ##        self.Bind(wx.EVT_MENU, set_marquee_mode, marquee_item)
