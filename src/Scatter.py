@@ -1,3 +1,6 @@
+# TODO: add hooks to change point size, alpha, numsides etc.
+#
+
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
@@ -147,7 +150,13 @@ class DataSourcePanel(wx.Panel):
         self.plotfieldslistbox.Delete(selected)
         
     def loadpoints(self, tablename, xpoints, ypoints, filter=NO_FILTER):
-        fields = '%s.%s, %s.%s'%(tablename, xpoints, tablename, ypoints)
+        if tablename == p.image_table:
+            fields = UniqueImageClause(tablename)
+        elif tablename == p.object_table:
+            fields = UniqueObjectClause(tablename)
+        else:
+            raise UnimplementedError
+        fields += ', %s.%s, %s.%s'%(tablename, xpoints, tablename, ypoints)
         tables = tablename
         where_clause = ''
         if filter != NO_FILTER:
@@ -175,14 +184,21 @@ class ScatterPanel(PlotPanel):
         self.y_scale = LINEAR_SCALE
         self.x_label = ''
         self.y_label = ''
-        self.sel     = {}
+        self.selection     = {}
+        self.mouse_mode = 'lasso'
         self.set_point_lists(point_lists, clr_list)
+        
+#        self.marquee = RectangleSelector(self.subplot, self.marquee_callback, drawtype='box')
         
         self.Bind(wx.EVT_RIGHT_DOWN, self.show_popup_menu)
         
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
-
+#        self.canvas.mpl_connect('pick_event', self.on_pick)
+        
+#    def on_pick(self, evt):
+#        print 'pick'
+        
     def lasso_callback(self, verts):
         # Note: If the mouse is released outside of the canvas, (None,None) is
         #   returned as the last coordinate pair.
@@ -192,33 +208,70 @@ class ScatterPanel(PlotPanel):
         
         for c, collection in enumerate(self.subplot.collections):
             # Build the selection
-            new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
-            if self.sel_key == None:
-                self.sel[c] = new_sel
-            elif self.sel_key == 'shift':
-                self.sel[c] = set(self.sel.get(c,[])).union(new_sel)
-            elif self.sel_key == 'alt':
-                self.sel[c] = set(self.sel.get(c,[])).difference(new_sel)
+            if len(self.xys[c]) > 0:
+                new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
+            else:
+                new_sel = []
+            if self.selection_key == None:
+                self.selection[c] = new_sel
+            elif self.selection_key == 'shift':
+                self.selection[c] = set(self.selection.get(c,[])).union(new_sel)
+            elif self.selection_key == 'alt':
+                self.selection[c] = set(self.selection.get(c,[])).difference(new_sel)
             
             # Color the points
             facecolors = collection.get_facecolors()
             for i in range(len(self.point_lists[c])):
-                if i in self.sel[c]:
+                if i in self.selection[c]:
                     facecolors[i] = SELECTED_COLOR
                 else:
                     facecolors[i] = self.colors[c]
 
         self.canvas.draw_idle()
         
+##    def marquee_callback(self, eclick, erelease):
+##        'eclick and erelease are matplotlib events at press and release'
+##        verts = [(eclick.xdata, eclick.ydata),
+##                 (eclick.xdata, erelease.ydata),
+##                 (erelease.xdata, erelease.ydata),
+##                 (erelease.xdata, eclick.ydata)]
+##        
+##        for c, collection in enumerate(self.subplot.collections):
+##            
+##            if len(self.xys[c]) > 0:
+##                new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
+##            else:
+##                new_sel = []
+##            if self.selection_key == None:
+##                self.selection[c] = new_sel
+##            elif self.selection_key == 'shift':
+##                self.selection[c] = set(self.selection.get(c,[])).union(new_sel)
+##            elif self.selection_key == 'alt':
+##                self.selection[c] = set(self.selection.get(c,[])).difference(new_sel)
+##
+##            # Color the points
+##            facecolors = collection.get_facecolors()
+##            for i in range(len(self.point_lists[c])):
+##                if i in self.selection[c]:
+##                    facecolors[i] = SELECTED_COLOR
+##                else:
+##                    facecolors[i] = self.colors[c]
+##
+##            self.canvas.draw_idle()
+        
     def on_press(self, evt):
         if evt.button == 1:
-            self.sel_key = evt.key
+            self.selection_key = evt.key
             if self.canvas.widgetlock.locked(): return
             if evt.inaxes is None: return
             
-            self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.lasso_callback)
-            # acquire a lock on the widget drawing
-            self.canvas.widgetlock(self.lasso)
+            if self.mouse_mode == 'lasso':
+                self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.lasso_callback)
+                # acquire a lock on the widget drawing
+                self.canvas.widgetlock(self.lasso)
+                
+            if self.mouse_mode == 'marquee':
+                pass
         else:
             self.canvas.Parent.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
         
@@ -229,28 +282,85 @@ class ScatterPanel(PlotPanel):
             self.canvas.draw_idle()
             self.canvas.widgetlock.release(self.lasso)
             del self.lasso
-        
+                    
     def show_popup_menu(self, (x, y), data):
-        pass
-#        popup = wx.Menu()
-#        test = wx.MenuItem(popup, -1, 'test')
-#        popup.AppendItem(test)
-#        def test_cb(evt):
-#            print data
-#        self.PopupMenu(popup, (x,y))
+        popup = wx.Menu()
+##        lasso_item = wx.MenuItem(popup, -1, 'Lasso')
+##        marquee_item = wx.MenuItem(popup, -1, 'Marquee')
+##        picker_item = wx.MenuItem(popup, -1, 'Picker')
+        show_images_item = wx.MenuItem(popup, -1, 'Show images from selection')
         
-    def set_point_lists(self, points, colors=None):
+##        popup.AppendItem(lasso_item)
+##        popup.AppendItem(marquee_item)
+##        popup.AppendItem(picker_item)
+        popup.AppendItem(show_images_item)
+        
+##        def set_lasso_mode(evt):
+##            print 'lasso mode'
+##            self.mouse_mode = 'lasso'
+##            
+##        def set_marquee_mode(evt):
+##            print 'marquee mode'
+##            self.mouse_mode = 'marquee'
+##            
+##        def set_picker_mode(evt):
+##            print 'picker mode'
+##            self.mouse_mode = 'picker'
+        
+        def show_images(evt):
+            for i, sel in self.selection.items():
+                keys = self.key_lists[i][sel]
+                for key in keys[:10]:
+                    ImageTools.ShowImage(tuple(key), p.image_channel_colors, parent=self)
+            
+##        self.Bind(wx.EVT_MENU, set_lasso_mode, lasso_item)
+##        self.Bind(wx.EVT_MENU, set_marquee_mode, marquee_item)
+##        self.Bind(wx.EVT_MENU, set_picker_mode, picker_item)
+        self.Bind(wx.EVT_MENU, show_images, show_images_item)
+        
+        self.PopupMenu(popup, (x,y))
+        
+    def set_point_lists(self, keys_and_points, colors=None):
         '''
-        points - a list of lists of points
+        points - a list of lists of keys and points
         colors - a list of colors to be applied to each inner list of points
+                 if not supplied colors will be chosen from the Jet color map
         '''
-        if len(points)==0: points = [[]]
-        points = [np.array(pl).astype(float) for pl in points]
-        self.point_lists = points
+        if len(keys_and_points)==0: keys_and_points = [[]]
+        # Convert each list of keys and points into a np float array
+        points = [np.array(pl).astype('f') for pl in keys_and_points]
+        # Strip out keys and points 
+        self.point_lists = []
+        self.key_lists = []
+        for pl in points:
+            if len(pl)>0:
+                self.point_lists += [pl[:,-2:]]
+                self.key_lists += [pl[:,:-2].astype(int)]
+            else:
+                self.point_lists += [np.array([]).astype('f')]
+                self.key_lists += [np.array([]).astype(int)]
+        
+        # Choose colors from jet colormap starting with light blue (0.28)
+        if max(map(len, self.point_lists))==0:
+            colors = []
+        elif colors is None:
+            vals = np.arange(0.28, 1.28, 1./len(self.point_lists)) % 1.
+            colors = [colorConverter.to_rgba(cm.jet(val), alpha=0.75) 
+                      for val in vals]
+        else:
+            assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
+        self.colors = colors
+        
+        self.update_plot()
+        
+    def update_plot(self):
+        points = self.point_lists
+        colors = self.colors
         
         # Create and clear the subplot
         if not hasattr(self, 'subplot'):
             self.subplot = self.figure.add_subplot(111)
+#            self.subplot.set_picker(1.)
         self.subplot.clear()
         
         # Label the axes
@@ -262,13 +372,6 @@ class ScatterPanel(PlotPanel):
             self.subplot.set_xscale('log', basex=2.1)
         if self.y_scale == LOG_SCALE:
             self.subplot.set_yscale('log', basey=2.1)
-            
-        # Choose colors from jet colormap starting with light blue (0.28)
-        if colors is None:
-            vals = np.arange(0.28, 1.28, 1./len(points)) % 1.
-            colors = np.array([colorConverter.to_rgba(cm.jet(val), alpha=0.75) 
-                               for val in vals])
-        self.colors = colors
         
         # Each point list is converted to a separate point collection
         self.collections = []
@@ -279,12 +382,15 @@ class ScatterPanel(PlotPanel):
             self.xys.append([(d.x, d.y) for d in data])
 
             collection = RegularPolyCollection(
-                self.figure.get_dpi(), 1, sizes=(25,),
+                numsides = 20, 
+                rotation = 0, 
+                sizes = (30,),
                 facecolors = facecolors,
                 offsets = self.xys[-1] or None,
                 transOffset = self.subplot.transData,
                 edgecolor = 'none',
-                alpha = 0.75)
+                alpha = 0.75
+                )
     
             self.subplot.add_collection(collection)
 
@@ -330,9 +436,11 @@ class ScatterPanel(PlotPanel):
     
     def set_x_label(self, label):
         self.x_label = label
+        self.subplot.set_xlabel(self.x_label)
     
     def set_y_label(self, label):
         self.y_label = label
+        self.subplot.set_ylabel(self.y_label)
     
     def draw(self):
         self.canvas.draw()
@@ -342,30 +450,22 @@ class Scatter(wx.Frame):
     '''
     A very basic scatter plot with controls for setting it's data source.
     '''
-    def __init__(self, parent, size=(600,600)):
-        wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot')
+    def __init__(self, parent, point_lists=[], clr_lists=None,
+                 show_controls=True,
+                 size=(600,600), **kwargs):
+        wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
         self.SetName('Scatter')
         
-        points = []
-#        points = [[],
-#                  [(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)],
-#                  [],
-#                  [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
-#                  [],]
-        clrs = [(0., 0.62, 1., 0.75),
-                (0.1, 0.2, 0.3, 0.75)]
-
-        
-        figpanel = ScatterPanel(self, points)
-        configpanel = DataSourcePanel(self, figpanel)
-        
+        self.figpanel = ScatterPanel(self, point_lists, clr_lists)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(figpanel, 1, wx.EXPAND)
-        sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
+        sizer.Add(self.figpanel, 1, wx.EXPAND)
+        
+        if show_controls:
+            configpanel = DataSourcePanel(self, self.figpanel)
+            sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
+        
         self.SetSizer(sizer)
         
-
-
 
 def LoadProperties():
     import os
@@ -378,7 +478,7 @@ def LoadProperties():
         print 'Scatterplot requires a properties file.  Exiting.'
         sys.exit()
 
-            
+
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     
@@ -394,7 +494,26 @@ if __name__ == "__main__":
     import MulticlassSQL
     MulticlassSQL.CreateFilterTables()
     
-    scatter = Scatter(None)
+    points = []
+    clrs = None
+#    points = [[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)],
+#              [],
+#              [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
+#              [],]
+
+#    points = [np.random.normal(0, 1.5, size=(500,2)),
+#              np.random.normal(3, 2, size=(500,2)),
+#              np.random.normal(2, 3, size=(500,2)),]
+
+#    clrs = [(0., 0.62, 1., 0.75),
+#            (0.1, 0.2, 0.3, 0.75),
+#            (0,0,0,1),
+#            (1,0,1,1),
+#            ]
+
+    scatter = Scatter(None, points, clrs)
     scatter.Show()
+#    scatter.figpanel.set_x_label('test')
+#    scatter.figpanel.set_y_label('test')
     
     app.MainLoop()
