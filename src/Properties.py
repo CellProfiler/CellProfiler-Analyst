@@ -43,7 +43,8 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'object_name',
                  'check_tables',
                  'db_sql_file',
-                 'db_sqlite_file',]
+                 'db_sqlite_file',
+                 'object_table']
 
 class Properties(Singleton):
     '''

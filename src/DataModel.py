@@ -215,7 +215,7 @@ class DataModel(Singleton):
         return list(set(self.groupMaps[group].values()))
         
     def IsEmpty(self):
-        return self.data is {}
+        return self.data == {}
 
 
 

@@ -28,6 +28,7 @@ class PlotPanel (wx.Panel):
         
         self.figure = Figure(None, dpi)
         self.canvas = FigureCanvasWxAgg(self, -1, self.figure)
+        self.color = color
         self.SetColor(color)
         self.draw()
 
