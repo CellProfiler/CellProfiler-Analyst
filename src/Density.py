@@ -248,8 +248,6 @@ class DensityPanel(PlotPanel):
             self.cb = self.figure.colorbar(hb)
             if self.color_scale==LOG_SCALE:
                 self.cb.set_label('log10(N)')
-            else:
-                self.cb.set_label('(N)')
             
             self.subplot.set_xlabel(self.x_label)
             self.subplot.set_ylabel(self.y_label)
@@ -294,19 +292,9 @@ class Density(wx.Frame):
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
-        
-def LoadProperties():
-    import os
-    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        p.LoadFile(filename)
-    else:
-        print 'Densityplot requires a properties file.  Exiting.'
-        sys.exit()
 
-            
+
+
 if __name__ == "__main__":
     app = wx.PySimpleApp()
         
@@ -315,7 +303,11 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        LoadProperties()
+        if not p.show_load_dialog():
+            print 'Density plot requires a properties file.  Exiting.'
+            # necessary in case other modal dialogs are up
+            wx.GetApp().Exit()
+            sys.exit()
 
     import MulticlassSQL
     MulticlassSQL.CreateFilterTables()
