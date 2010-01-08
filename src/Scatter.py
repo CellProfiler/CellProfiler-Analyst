@@ -183,6 +183,8 @@ class ScatterPanel(PlotPanel):
         
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
+        self.x_label = ''
+        self.y_label = ''
         self.selection     = {}
         self.mouse_mode = 'lasso'
         self.set_point_lists(point_lists, clr_list)
@@ -254,7 +256,6 @@ class ScatterPanel(PlotPanel):
         
         
         def show_images(evt):
-            print self.selection.items()
             for i, sel in self.selection.items():
                 keys = self.key_lists[i][sel]
                 ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i+1))
@@ -306,6 +307,9 @@ class ScatterPanel(PlotPanel):
             self.subplot = self.figure.add_subplot(111)
 #            self.subplot.set_picker(1.)
         self.subplot.clear()
+        
+        self.subplot.set_xlabel(self.x_label)
+        self.subplot.set_ylabel(self.y_label)
         
         # Set axis scales
         if self.x_scale == LOG_SCALE:
@@ -375,10 +379,10 @@ class ScatterPanel(PlotPanel):
         self.y_scale = scale
     
     def set_x_label(self, label):
-        self.subplot.set_xlabel(label)
+        self.x_label = label
     
     def set_y_label(self, label):
-        self.subplot.set_ylabel(label)
+        self.y_label = label
     
     def draw(self):
         self.canvas.draw()
