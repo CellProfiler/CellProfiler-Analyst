@@ -40,11 +40,13 @@ class DataSourcePanel(wx.Panel):
         self.table_choice.Select(tables.index(p.image_table))
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
-        self.gridsize_input = wx.TextCtrl(self, -1, '100')
+        self.gridsize_input = wx.TextCtrl(self, -1, '50')
         maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
         maps.sort()
         self.colormap_choice = ComboBox(self, -1, choices=maps, style=wx.CB_READONLY)
         self.colormap_choice.SetSelection(maps.index('jet'))
+        self.color_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
+        self.color_scale_choice.Select(0)
         self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
@@ -92,6 +94,10 @@ class DataSourcePanel(wx.Panel):
         sz.Add(wx.StaticText(self, label='color map:'))
         sz.AddSpacer((5,-1))
         sz.Add(self.colormap_choice, 1, wx.EXPAND)
+        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, label='color scale:'))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.color_scale_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
@@ -143,6 +149,7 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.setgridsize(int(self.gridsize_input.GetValue()))
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.set_color_scale(self.color_scale_choice.GetStringSelection())
         self.figpanel.set_x_label(self.x_choice.GetStringSelection())
         self.figpanel.set_y_label(self.y_choice.GetStringSelection())
         self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
@@ -175,10 +182,11 @@ class DensityPanel(PlotPanel):
     def __init__(self, parent, **kwargs):
         self.parent = parent
         self.point_lists = []
-        self.gridsize = 100
+        self.gridsize = 50
         self.cb = None
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
+        self.color_scale = None
         self.x_label = ''
         self.y_label = ''
         self.cmap ='jet'
@@ -201,6 +209,11 @@ class DensityPanel(PlotPanel):
     
     def set_y_scale(self, scale):
         self.y_scale = scale
+        
+    def set_color_scale(self, scale):
+        if scale==LINEAR_SCALE:
+            scale = None
+        self.color_scale = scale
 
     def set_x_label(self, label):
         self.x_label = label
@@ -224,14 +237,19 @@ class DensityPanel(PlotPanel):
                 plot_pts = plot_pts[(plot_pts[:,0]>0)]
             if self.y_scale == LOG_SCALE:
                 plot_pts = plot_pts[(plot_pts[:,1]>0)]
-
+            
             hb = self.subplot.hexbin(plot_pts[:, 0], plot_pts[:, 1], 
                                      gridsize=self.gridsize,
                                      xscale=self.x_scale,
                                      yscale=self.y_scale,
+                                     bins=self.color_scale,
                                      cmap=matplotlib.cm.get_cmap(self.cmap))
 
             self.cb = self.figure.colorbar(hb)
+            if self.color_scale==LOG_SCALE:
+                self.cb.set_label('log10(N)')
+            else:
+                self.cb.set_label('(N)')
             
             self.subplot.set_xlabel(self.x_label)
             self.subplot.set_ylabel(self.y_label)
