@@ -20,6 +20,7 @@ from matplotlib.nxutils import points_inside_poly
 from matplotlib.colors import colorConverter
 from matplotlib.collections import RegularPolyCollection
 from matplotlib.pyplot import figure, show, cm
+from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -40,7 +41,7 @@ class Datum:
         else: self.color = color
 
 
-class DataSourcePanel(wx.Panel):
+class ScatterControlPanel(wx.Panel):
     '''
     A panel with controls for selecting the source data for a scatterplot 
     '''
@@ -51,7 +52,7 @@ class DataSourcePanel(wx.Panel):
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
-
+        
         tables = db.GetTableNames()
         self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
         self.table_choice.Select(tables.index(p.image_table))
@@ -182,20 +183,12 @@ class ScatterPanel(PlotPanel):
         
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
-        self.x_label = ''
-        self.y_label = ''
         self.selection     = {}
         self.mouse_mode = 'lasso'
         self.set_point_lists(point_lists, clr_list)
         
-#        self.marquee = RectangleSelector(self.subplot, self.marquee_callback, drawtype='box')
-                
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
-#        self.canvas.mpl_connect('pick_event', self.on_pick)
-        
-#    def on_pick(self, evt):
-#        print 'pick'
         
     def lasso_callback(self, verts):
         # Note: If the mouse is released outside of the canvas, (None,None) is
@@ -213,9 +206,9 @@ class ScatterPanel(PlotPanel):
             if self.selection_key == None:
                 self.selection[c] = new_sel
             elif self.selection_key == 'shift':
-                self.selection[c] = set(self.selection.get(c,[])).union(new_sel)
+                self.selection[c] = list(set(self.selection.get(c,[])).union(new_sel))
             elif self.selection_key == 'alt':
-                self.selection[c] = set(self.selection.get(c,[])).difference(new_sel)
+                self.selection[c] = list(set(self.selection.get(c,[])).difference(new_sel))
             
             # Color the points
             facecolors = collection.get_facecolors()
@@ -226,36 +219,6 @@ class ScatterPanel(PlotPanel):
                     facecolors[i] = self.colors[c]
 
         self.canvas.draw_idle()
-        
-##    def marquee_callback(self, eclick, erelease):
-##        'eclick and erelease are matplotlib events at press and release'
-##        verts = [(eclick.xdata, eclick.ydata),
-##                 (eclick.xdata, erelease.ydata),
-##                 (erelease.xdata, erelease.ydata),
-##                 (erelease.xdata, eclick.ydata)]
-##        
-##        for c, collection in enumerate(self.subplot.collections):
-##            
-##            if len(self.xys[c]) > 0:
-##                new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
-##            else:
-##                new_sel = []
-##            if self.selection_key == None:
-##                self.selection[c] = new_sel
-##            elif self.selection_key == 'shift':
-##                self.selection[c] = set(self.selection.get(c,[])).union(new_sel)
-##            elif self.selection_key == 'alt':
-##                self.selection[c] = set(self.selection.get(c,[])).difference(new_sel)
-##
-##            # Color the points
-##            facecolors = collection.get_facecolors()
-##            for i in range(len(self.point_lists[c])):
-##                if i in self.selection[c]:
-##                    facecolors[i] = SELECTED_COLOR
-##                else:
-##                    facecolors[i] = self.colors[c]
-##
-##            self.canvas.draw_idle()
         
     def on_press(self, evt):
         if evt.button == 1:
@@ -280,41 +243,23 @@ class ScatterPanel(PlotPanel):
                 self.canvas.widgetlock.release(self.lasso)
                 del self.lasso
         else:
-            self.canvas.Parent.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
+            self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
+        
                     
     def show_popup_menu(self, (x, y), data):
         popup = wx.Menu()
-##        lasso_item = wx.MenuItem(popup, -1, 'Lasso')
-##        marquee_item = wx.MenuItem(popup, -1, 'Marquee')
-##        picker_item = wx.MenuItem(popup, -1, 'Picker')
         show_images_item = wx.MenuItem(popup, -1, 'Show images from selection')
         
-##        popup.AppendItem(lasso_item)
-##        popup.AppendItem(marquee_item)
-##        popup.AppendItem(picker_item)
         popup.AppendItem(show_images_item)
         
-##        def set_lasso_mode(evt):
-##            print 'lasso mode'
-##            self.mouse_mode = 'lasso'
-##            
-##        def set_marquee_mode(evt):
-##            print 'marquee mode'
-##            self.mouse_mode = 'marquee'
-##            
-##        def set_picker_mode(evt):
-##            print 'picker mode'
-##            self.mouse_mode = 'picker'
         
         def show_images(evt):
+            print self.selection.items()
             for i, sel in self.selection.items():
                 keys = self.key_lists[i][sel]
                 ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i+1))
                 ilf.Show(True)
             
-##        self.Bind(wx.EVT_MENU, set_lasso_mode, lasso_item)
-##        self.Bind(wx.EVT_MENU, set_marquee_mode, marquee_item)
-##        self.Bind(wx.EVT_MENU, set_picker_mode, picker_item)
         self.Bind(wx.EVT_MENU, show_images, show_images_item)
         
         self.PopupMenu(popup, (x,y))
@@ -361,10 +306,6 @@ class ScatterPanel(PlotPanel):
             self.subplot = self.figure.add_subplot(111)
 #            self.subplot.set_picker(1.)
         self.subplot.clear()
-        
-        # Label the axes
-        self.subplot.set_xlabel(self.x_label)
-        self.subplot.set_ylabel(self.y_label)
         
         # Set axis scales
         if self.x_scale == LOG_SCALE:
@@ -434,12 +375,10 @@ class ScatterPanel(PlotPanel):
         self.y_scale = scale
     
     def set_x_label(self, label):
-        self.x_label = label
-        self.subplot.set_xlabel(self.x_label)
+        self.subplot.set_xlabel(label)
     
     def set_y_label(self, label):
-        self.y_label = label
-        self.subplot.set_ylabel(self.y_label)
+        self.subplot.set_ylabel(label)
     
     def draw(self):
         self.canvas.draw()
@@ -458,24 +397,13 @@ class Scatter(wx.Frame):
         self.figpanel = ScatterPanel(self, point_lists, clr_lists)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.figpanel, 1, wx.EXPAND)
-        
-        if show_controls:
-            configpanel = DataSourcePanel(self, self.figpanel)
-            sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
-        
-        self.SetSizer(sizer)
-        
 
-def LoadProperties():
-    import os
-    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        p.LoadFile(filename)
-    else:
-        print 'Scatterplot requires a properties file.  Exiting.'
-        sys.exit()
+        if show_controls:
+            configpanel = ScatterControlPanel(self, self.figpanel)
+            sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
+                
+        self.SetSizer(sizer)
+
 
 
 if __name__ == "__main__":
@@ -488,7 +416,11 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        LoadProperties()
+        if not p.show_load_dialog():
+            print 'Scatterplot requires a properties file.  Exiting.'
+            # necessary in case other modal dialogs are up
+            wx.GetApp().Exit()
+            sys.exit()
 
     import MulticlassSQL
     MulticlassSQL.CreateFilterTables()
