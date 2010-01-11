@@ -155,13 +155,12 @@ class HistogramPanel(PlotPanel):
         self.x_label = label
         
     def set_y_scale(self, scale):
-        if scale == 'linear':
+        if scale == LINEAR_SCALE:
             self.log_y = False
-        elif scale == 'log':
+        elif scale == LOG_SCALE:
             self.log_y = True
         else:
             raise 'Unsupported y-axis scale.' 
-
 
     def getpointslists(self):
         return self.points
