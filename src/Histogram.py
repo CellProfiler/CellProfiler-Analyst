@@ -38,6 +38,8 @@ class DataSourcePanel(wx.Panel):
         self.table_choice.Select(tables.index(p.image_table))
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.bins_input = wx.TextCtrl(self, -1, '100')
+        self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
+        self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
         self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered, style=wx.CB_READONLY)
@@ -65,6 +67,10 @@ class DataSourcePanel(wx.Panel):
         sizer.AddSpacer((-1,5))
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.Add(wx.StaticText(self, -1, "x_scale:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.x_scale_choice, 1, wx.EXPAND)
+        sz.AddSpacer((5,-1))
         sz.Add(wx.StaticText(self, -1, "y_scale:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.y_scale_choice, 1, wx.EXPAND)
@@ -110,6 +116,7 @@ class DataSourcePanel(wx.Panel):
                                  filter)    
         bins = int(self.bins_input.GetValue())
         self.figpanel.set_x_label(self.x_choice.GetStringSelection())
+        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
         self.figpanel.setpoints(points, bins)
         self.figpanel.draw()
@@ -142,6 +149,7 @@ class HistogramPanel(PlotPanel):
         self.setpoints(points, bins)
         self.x_label = ''
         self.log_y = LINEAR_SCALE
+        self.x_scale = LINEAR_SCALE
         
         # initiate plotter
         PlotPanel.__init__(self, parent, **kwargs)
@@ -153,6 +161,9 @@ class HistogramPanel(PlotPanel):
     
     def set_x_label(self, label):
         self.x_label = label
+        
+    def set_x_scale(self, scale):
+        self.x_scale = scale
         
     def set_y_scale(self, scale):
         if scale == LINEAR_SCALE:
@@ -166,20 +177,26 @@ class HistogramPanel(PlotPanel):
         return self.points
     
     def draw(self):
+        points = self.points
+        x_label = self.x_label
         #Draw data.
         if not hasattr(self, 'subplot'):
             self.subplot = self.figure.add_subplot(111)
         self.subplot.clear()
-        if len(self.points)==0 or self.points==[[]]:
-            return
+        # log xform the x-axis?
+        if self.x_scale==LOG_SCALE:
+            points = np.log(self.points)
+            x_label = 'Log(%s)'%(self.x_label)
         # hist apparently doesn't like nans, need to preen them out first
-        self.points = self.points[~ np.isnan(self.points)]
-        self.subplot.hist(self.points, self.bins, 
+        self.points = points[~ np.isnan(points)]
+        # nothing to plot?
+        if len(points)==0 or points==[[]]: return
+        self.subplot.hist(points, self.bins, 
                           facecolor=[0.0,0.62,1.0], 
                           edgecolor='none',
                           log=self.log_y,
                           alpha=0.75)
-        self.subplot.set_xlabel(self.x_label)
+        self.subplot.set_xlabel(x_label)
         self.canvas.draw()
         
 
