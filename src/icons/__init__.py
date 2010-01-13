@@ -12,7 +12,7 @@ if 'library.zip' in __path__[0]:
     # py2exe puts this module into its library.zip, and I'm not sure
     # how to stop it from doing so.  However, I can force it to
     # include the icons in a directory at the top level.
-    search_path = 'icons'
+    search_path = __path__[0].replace('library.zip', 'icons')
 else:
     search_path = __path__[0]
 
