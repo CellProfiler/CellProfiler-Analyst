@@ -26,8 +26,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Temp\cparelease\CPAnalyst_2.0_r9038\cpa.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Temp\cparelease\CPAnalyst_2.0_r9038\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\cpa.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
@@ -38,5 +38,6 @@ Name: "{commondesktop}\CellProfiler Analyst"; Filename: "{app}\cpa.exe"; Tasks: 
 
 [Run]
 Filename: "{app}\cpa.exe"; Description: "{cm:LaunchProgram,CellProfiler Analyst}"; Flags: nowait postinstall skipifsilent
+
 
 
