@@ -47,18 +47,19 @@ class ClassifierGUI(wx.Frame):
             global db
             db = DBConnect.DBConnect.getInstance()
             db.register_gui_parent(self)
-            global dm
-            dm = DataModel.getInstance()
-            if dm.IsEmpty():
-                dm.PopulateModel()
-            if __name__ == "__main__":
-                MulticlassSQL.CreateFilterTables()
+        
+        global dm
+        dm = DataModel.getInstance()
+        if dm.IsEmpty():
+            dm.PopulateModel()
+        if __name__ == "__main__":
+            MulticlassSQL.CreateFilterTables()
             
         if p.IsEmpty():
             logging.critical('Classifier requires a properties file. Exiting.')
             sys.exit()
 
-        if DataModel.getInstance().IsEmpty():
+        if dm.IsEmpty():
             logging.debug("DataModel is empty. Classifier requires a populated DataModel to function. Exiting.")
             sys.exit()
 
@@ -1318,9 +1319,6 @@ if __name__ == "__main__":
             logging.error('Classifier requires a properties file.  Exiting.')
             wx.GetApp().Exit()
             sys.exit()
-        
-    dm.PopulateModel()
-    MulticlassSQL.CreateFilterTables()
         
     classifier = ClassifierGUI()
     classifier.Show(True)
