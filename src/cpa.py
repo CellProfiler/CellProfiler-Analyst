@@ -317,6 +317,8 @@ if __name__ == "__main__":
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
+    dm.PopulateModel()
+        
 
     cpa.console.AppendText('Creating filter tables.\n')
     MulticlassSQL.CreateFilterTables(wx.Yield)

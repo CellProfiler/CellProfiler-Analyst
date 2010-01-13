@@ -97,11 +97,15 @@ class Properties(Singleton):
         self._filters = {}
         self._filters_ordered = []
 
-        for line in lines:
+        for idx, line in enumerate(lines):
             if not line.strip().startswith('#') and line.strip()!='':          # skip commented and empty lines
-                (name, val) = line.split('=', 1)                               # split each side of the first eq sign
-                name = name.strip()
-                val = val.strip()
+                try:
+                    (name, val) = line.split('=', 1)                               # split each side of the first eq sign
+                    name = name.strip()
+                    val = val.strip()
+                except:
+                    logr.warn('PROPERTIES WARNING: could not parse line #%d, ignoring: "%s"'%(idx, line))
+                    continue
                 
                 if name in string_vars:
                     self.__dict__[name] = val or None

@@ -483,6 +483,7 @@ class ImageViewer(wx.Frame):
         if imkey not in dm.GetAllImageKeys():
             errdlg = wx.MessageDialog(self, 'There is no image with that key.', "Couldn't find image", wx.OK|wx.ICON_EXCLAMATION)
             errdlg.ShowModal()
+            self.Destroy()
         else:
             self.img_key = imkey
             self.SetImage(ImageTools.FetchImage(imkey), p.image_color_maps)
