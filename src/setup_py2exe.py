@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../../CellProfiler/pyCellProfiler')
 from distutils.core import setup, Extension
 import py2exe
 import matplotlib
@@ -5,7 +7,6 @@ import os
 import os.path
 import glob
 import numpy
-import sys
 
 s = os.popen('svnversion')
 version = s.read()
