@@ -92,9 +92,9 @@ def object_key_columns(table_name=''):
     if table_name != '':
         table_name += '.'
     if p.table_id:
-        return (p.table_id, p.image_id, p.object_id)
+        return (table_name+p.table_id, table_name+p.image_id, table_name+p.object_id)
     else:
-        return (p.image_id, p.object_id)
+        return (table_name+p.image_id, table_name+p.object_id)
 
 def object_key_defs():
     return ', '.join(['%s INT'%(id) for id in object_key_columns()])
