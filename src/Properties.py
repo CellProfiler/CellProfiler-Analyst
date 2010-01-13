@@ -104,7 +104,7 @@ class Properties(Singleton):
                     name = name.strip()
                     val = val.strip()
                 except:
-                    logr.warn('PROPERTIES WARNING: could not parse line #%d, ignoring: "%s"'%(idx, line))
+                    logr.warn('PROPERTIES WARNING: could not parse line #%d, ignoring: "%s"'%(idx + 1, line))
                     continue
                 
                 if name in string_vars:
