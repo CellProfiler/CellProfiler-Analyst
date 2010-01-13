@@ -11,8 +11,9 @@ http://www.cellprofiler.org
 The CellProfiler Analyst project is developed in Python and tested under Mac 
 OSX 10.5, Windows XP, and to a lesser extent some versions of Linux.
 
+
 Code may be checked out from our SVN repository here:
-https://svn.broadinstitute.org/CellProfiler/trunk/CPAnalyst/
+  https://svn.broadinstitute.org/CellProfiler/trunk/CPAnalyst/
 
 
 To run the developer version, you will need Python 2.5 and the following python 
@@ -24,25 +25,29 @@ packages:
  - numpy 1.3
  - scipy 0.7
  - matplotlib 0.98 (for plotting functionality)
- - PIL
+ - PIL 1.1.6
 
+It might be possible to run CPAnalyst with other versions of Python or
+these packages.
 
-OPTIONAL: Classifier can be sped up by installing the user-defined function
-found in mysql_plugins/classify.c. To add this function to MySQL, compile 
-classify.c to classify.so, and put this in a directory on the LD_LIBRARY_PATH 
-for MySQL, then execute this statement within MySQL:
+CellProfiler Analyst can be run from a terminal as follows:
+ % python CPAnalyst/src/cpa.py
+
+Some minor functionality of CPAnalyst depends on having an
+installation of CellProfiler 2.0's source code available and on the
+PYTHONPATH.  However, the only functionality that will be missing
+without this are cross-validation plots for Classifier and checking
+for new releases at startup.  The CellProfiler 2.0 code is available
+at:
+  https://svn.broadinstitute.org/CellProfiler/trunk/CellProfiler/pyCellProfiler
+
+Classifier using MySQL can be sped up by installing the UDF in
+mysql_plugins/classify.c. To add this function to MySQL, compile
+classify.c to classify.so, and put this in a directory on the
+LD_LIBRARY_PATH for MySQL, then execute this statement within MySQL:
 mysql> CREATE FUNCTION classifier RETURNS INTEGER SONAME 'classify.so';
 
 
-OPTIONAL: Some features in CPA (e.g. "Check Rules" in Classifier) require some
-code from CellProfiler 2.0 to work.  This requires that you also check out 
-CellProfiler 2.0 from SVN:
-https://svn.broadinstitute.org/CellProfiler/trunk/CellProfiler/pyCellProfiler/
-and set your PYTHONPATH environment variable to include the pyCellProfiler 
-directory. 
-
-
-CellProfiler Analyst can be run from a terminal as follows:
-
- python CPAnalyst/src/cpa.py
-
+There is a developers mailing list, to subscribe, send mail to 
+   cpa-dev-request@broadinstitute.org
+with the word 'subscribe' in the subject.
