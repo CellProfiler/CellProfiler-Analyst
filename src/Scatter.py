@@ -2,24 +2,26 @@
 #
 
 from ColorBarPanel import ColorBarPanel
-from DBConnect import DBConnect, UniqueImageClause, image_key_columns
+from DBConnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
-from PlateMapPanel import *
-from PlotPanel import *
 from Properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageList
+import logging
 import numpy as np
 import os
 import sys
 import re
+from time import time
 import wx
 import wx.combo
 from matplotlib.widgets import Lasso, RectangleSelector
 from matplotlib.nxutils import points_inside_poly
 from matplotlib.colors import colorConverter
 from matplotlib.collections import RegularPolyCollection
-from matplotlib.pyplot import figure, show, cm
+from matplotlib.pyplot import cm
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
 p = Properties.getInstance()
@@ -108,7 +110,6 @@ class ScatterControlPanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
-        self.Bind(wx.EVT_SIZE, self._onsize)
         
         self.SetSizer(sizer)
         self.Show(1)
@@ -168,19 +169,20 @@ class ScatterControlPanel(wx.Panel):
                                           for id in db.GetLinkingColumnsForTable(tablename)])
             where_clause = 'WHERE %s'%(filter_clause)
         return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
-        
-    def _onsize(self, evt):
-        self.figpanel._SetSize()
-        evt.Skip()
-        
 
-class ScatterPanel(PlotPanel):
+
+class ScatterPanel(FigureCanvasWxAgg):
     '''
     ScatterPanel contains the guts for drawing scatter plots to a PlotPanel.
     '''
     def __init__(self, parent, point_lists, clr_list=None, **kwargs):
-        PlotPanel.__init__(self, parent, (255,255,255), **kwargs)
+        self.figure = Figure()
+        FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
+        self.canvas = self.figure.canvas
+        self.SetMinSize((100,100))
         
+        self.subplot = self.figure.add_subplot(111)
+        self.navtoolbar = None
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
         self.x_label = ''
@@ -254,10 +256,10 @@ class ScatterPanel(PlotPanel):
         
         popup.AppendItem(show_images_item)
         
-        
         def show_images(evt):
             for i, sel in self.selection.items():
                 keys = self.key_lists[i][sel]
+                keys = list(set([tuple(k) for k in keys]))
                 ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i+1))
                 ilf.Show(True)
             
@@ -271,6 +273,7 @@ class ScatterPanel(PlotPanel):
         colors - a list of colors to be applied to each inner list of points
                  if not supplied colors will be chosen from the Jet color map
         '''
+        t0 = time()
         if len(keys_and_points)==0: keys_and_points = [[]]
         # Convert each list of keys and points into a np float array
         points = [np.array(pl).astype('f') for pl in keys_and_points]
@@ -280,7 +283,7 @@ class ScatterPanel(PlotPanel):
         for pl in points:
             if len(pl)>0:
                 self.point_lists += [pl[:,-2:]]
-                self.key_lists += [pl[:,:-2].astype(int)]
+                self.key_lists += [pl[:,:len(image_key_columns())].astype(int)]
             else:
                 self.point_lists += [np.array([]).astype('f')]
                 self.key_lists += [np.array([]).astype(int)]
@@ -295,27 +298,28 @@ class ScatterPanel(PlotPanel):
         else:
             assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
         self.colors = colors
-        
-        self.update_plot()
-        
-    def update_plot(self):
-        points = self.point_lists
-        colors = self.colors
-        
-        # Create and clear the subplot
-        if not hasattr(self, 'subplot'):
-            self.subplot = self.figure.add_subplot(111)
-#            self.subplot.set_picker(1.)
+
         self.subplot.clear()
-        
         self.subplot.set_xlabel(self.x_label)
         self.subplot.set_ylabel(self.y_label)
+        points = self.point_lists
         
-        # Set axis scales
+        # Set log axes and print warning if any values will be masked out
+        ignored = 0
         if self.x_scale == LOG_SCALE:
-            self.subplot.set_xscale('log', basex=2.1)
+            self.subplot.set_xscale('log', basex=2.1, nonposx='mask')
+            ignored = sum([len(points[i][c[:,0]<=0]) for i,c in enumerate(points) if len(c)>0])
         if self.y_scale == LOG_SCALE:
-            self.subplot.set_yscale('log', basey=2.1)
+            self.subplot.set_yscale('log', basey=2.1, nonposy='mask')
+            ignored += sum([len(points[i][c[:,1]<=0]) for i,c in enumerate(points) if len(c)>0])
+        if ignored > 0:
+            logging.warn('Scatter masked out %s points with negative values.'%(ignored))
+        
+        # Stop if there is no data in any of the point lists
+        if max(map(len, points))==0:
+            logging.warn('No data to plot.')
+            self.reset_toolbar()
+            return
         
         # Each point list is converted to a separate point collection
         self.collections = []
@@ -324,33 +328,21 @@ class ScatterPanel(PlotPanel):
             data = [Datum(xy, color) for xy in plot_pts]
             facecolors = [d.color for d in data]
             self.xys.append([(d.x, d.y) for d in data])
-
-            collection = RegularPolyCollection(
-                numsides = 20, 
-                rotation = 0, 
-                sizes = (30,),
-                facecolors = facecolors,
-                offsets = self.xys[-1] or None,
-                transOffset = self.subplot.transData,
-                edgecolor = 'none',
-                alpha = 0.75
-                )
-    
-            self.subplot.add_collection(collection)
-
-        # Stop if there is no data in any of the point lists
-        if max(map(len, points))==0:
-            return
-
-         # Clip negative values if in log space
+            
+            self.subplot.scatter(plot_pts[:,0], plot_pts[:,1],
+                                 s=30,
+                                 facecolors = facecolors,
+                                 edgecolor = 'none',
+                                 alpha = 0.75)
+            
+        # Set axis scales & clip negative values if in log space
+        # must be done after scatter
         if self.x_scale == LOG_SCALE:
-            logging.warn('Discarding points with negative x-values.')
-            points = [points[i][c[:,0]>3] for i,c in enumerate(points)]
+            self.subplot.set_xscale('log', basex=2.1)
         if self.y_scale == LOG_SCALE:
-            logging.warn('Discarding points with negative y-values.')
-            points = [points[i][c[:,1]>3] for i,c in enumerate(points)]
-        
-        # Add padding around the points in the plot
+            self.subplot.set_yscale('log', basey=2.1)
+            
+        # Set axis bounds
         xmin = min([np.nanmin(pts[:,0]) for pts in points if len(pts)>0])
         xmax = max([np.nanmax(pts[:,0]) for pts in points if len(pts)>0])
         ymin = min([np.nanmin(pts[:,1]) for pts in points if len(pts)>0])
@@ -369,6 +361,22 @@ class ScatterPanel(PlotPanel):
             ymax = ymax+(ymax-ymin)/20.
         self.subplot.axis([xmin, xmax, ymin, ymax])
 
+        logging.debug('Scatter: Plotted %s points in %.3f seconds.'%(sum(map(len, self.point_lists)), time()-t0))
+        self.reset_toolbar()
+    
+    def get_toolbar(self):
+        if not self.navtoolbar:
+            self.navtoolbar = NavigationToolbar(self.canvas)
+            self.navtoolbar.DeleteToolByPos(6)
+        return self.navtoolbar
+
+    def reset_toolbar(self):
+        # Cheat since there is no way reset
+        if self.navtoolbar:
+            self.navtoolbar._views.clear()
+            self.navtoolbar._positions.clear()
+            self.navtoolbar.push_current()
+    
     def get_point_lists(self):
         return self.point_lists
     
@@ -384,8 +392,6 @@ class ScatterPanel(PlotPanel):
     def set_y_label(self, label):
         self.y_label = label
     
-    def draw(self):
-        self.canvas.draw()
         
 
 class Scatter(wx.Frame):
@@ -398,21 +404,22 @@ class Scatter(wx.Frame):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
         self.SetName('Scatter')
         
-        self.figpanel = ScatterPanel(self, point_lists, clr_lists)
+        figpanel = ScatterPanel(self, point_lists, clr_lists)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.figpanel, 1, wx.EXPAND)
-
-        if show_controls:
-            configpanel = ScatterControlPanel(self, self.figpanel)
-            sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
+        sizer.Add(figpanel, 1, wx.EXPAND)
                 
+        if show_controls:
+            configpanel = ScatterControlPanel(self, figpanel)
+            sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
+            
+        self.SetToolBar(figpanel.get_toolbar())
+            
         self.SetSizer(sizer)
 
 
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-    
     logging.basicConfig(level=logging.DEBUG,)
         
     # Load a properties file if passed in args
@@ -436,9 +443,9 @@ if __name__ == "__main__":
 #              [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
 #              [],]
 
-#    points = [np.random.normal(0, 1.5, size=(500,2)),
-#              np.random.normal(3, 2, size=(500,2)),
-#              np.random.normal(2, 3, size=(500,2)),]
+    points = [np.random.normal(0, 1.5, size=(500,2)),
+              np.random.normal(3, 2, size=(500,2)),
+              np.random.normal(2, 3, size=(500,2)),]
 
 #    clrs = [(0., 0.62, 1., 0.75),
 #            (0.1, 0.2, 0.3, 0.75),

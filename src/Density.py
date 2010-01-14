@@ -1,17 +1,18 @@
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
-from PlateMapPanel import *
-from PlotPanel import *
 from Properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageTools
-import matplotlib.cm
 import numpy as np
 import os
 import sys
 import re
 import wx
+import matplotlib.cm
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -112,8 +113,7 @@ class DataSourcePanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_COMBOBOX(self.colormap_choice, -1, self.on_cmap_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
-        self.Bind(wx.EVT_SIZE, self._onsize)
+        wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)
         
         self.SetSizer(sizer)
         self.Show(1)
@@ -172,15 +172,16 @@ class DataSourcePanel(wx.Panel):
                                           for id in db.GetLinkingColumnsForTable(tablename)])
             where_clause = 'WHERE %s'%(filter_clause)
         return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
-    
-    def _onsize(self, evt):
-        self.figpanel._SetSize()
-        evt.Skip()
         
 
-class DensityPanel(PlotPanel):
+class DensityPanel(FigureCanvasWxAgg):
     def __init__(self, parent, **kwargs):
-        self.parent = parent
+        self.figure = Figure()
+        FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
+        self.canvas = self.figure.canvas
+        self.SetMinSize((100,100))
+        
+        self.navtoolbar = None
         self.point_lists = []
         self.gridsize = 50
         self.cb = None
@@ -190,44 +191,11 @@ class DensityPanel(PlotPanel):
         self.x_label = ''
         self.y_label = ''
         self.cmap ='jet'
-        
-        # initiate plotter
-        PlotPanel.__init__(self, parent, color=(255, 255, 255), **kwargs)
-        self.SetColor((255, 255, 255))
     
     def setpointslists(self, points):
         self.point_lists = points
-    
-    def getpointslists(self):
-        return self.point_lists
-    
-    def setgridsize(self, gridsize):
-        self.gridsize = gridsize
-
-    def set_x_scale(self, scale):
-        self.x_scale = scale
-    
-    def set_y_scale(self, scale):
-        self.y_scale = scale
         
-    def set_color_scale(self, scale):
-        if scale==LINEAR_SCALE:
-            scale = None
-        self.color_scale = scale
-
-    def set_x_label(self, label):
-        self.x_label = label
-    
-    def set_y_label(self, label):
-        self.y_label = label
-        
-    def set_colormap(self, cmap):
-        self.cmap = cmap
-        self.draw()
-        
-    def draw(self):
-        #Draw data.
-        self.clear_figure()
+        self.figure.clear()
         self.subplot = self.figure.add_subplot(111)
             
         for i, pt_list in enumerate(self.point_lists):
@@ -244,7 +212,12 @@ class DensityPanel(PlotPanel):
                                      yscale=self.y_scale,
                                      bins=self.color_scale,
                                      cmap=matplotlib.cm.get_cmap(self.cmap))
-
+            
+#            h, xedges, yedges = np.histogram2d(plot_pts[:, 0], plot_pts[:, 1],
+#                                               bins=self.gridsize)
+#            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+#            hb = self.subplot.imshow(h, extent=extent, interpolation='nearest')
+            
             self.cb = self.figure.colorbar(hb)
             if self.color_scale==LOG_SCALE:
                 self.cb.set_label('log10(N)')
@@ -273,9 +246,49 @@ class DensityPanel(PlotPanel):
                 ymax = ymax+(ymax-ymin)/20.
 
             self.subplot.axis([xmin, xmax, ymin, ymax])
+    
+        self.reset_toolbar()
+    
+    def getpointslists(self):
+        return self.point_lists
+    
+    def setgridsize(self, gridsize):
+        self.gridsize = gridsize
 
-        self.canvas.draw()
+    def set_x_scale(self, scale):
+        self.x_scale = scale
+    
+    def set_y_scale(self, scale):
+        self.y_scale = scale
         
+    def set_color_scale(self, scale):
+        if scale==LINEAR_SCALE:
+            scale = None
+        self.color_scale = scale
+
+    def set_x_label(self, label):
+        self.x_label = label
+    
+    def set_y_label(self, label):
+        self.y_label = label
+        
+    def set_colormap(self, cmap):
+        self.cmap = cmap
+        self.draw()
+
+    def get_toolbar(self):
+        if not self.navtoolbar:
+            self.navtoolbar = NavigationToolbar(self.canvas)
+            self.navtoolbar.DeleteToolByPos(6)
+        return self.navtoolbar
+
+    def reset_toolbar(self):
+        # Cheat since there is no way reset
+        if self.navtoolbar:
+            self.navtoolbar._views.clear()
+            self.navtoolbar._positions.clear()
+            self.navtoolbar.push_current()
+    
 
 class Density(wx.Frame):
     '''
@@ -287,7 +300,7 @@ class Density(wx.Frame):
         
         figpanel = DensityPanel(self)
         configpanel = DataSourcePanel(self, figpanel)
-        
+        self.SetToolBar(figpanel.get_toolbar())
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)

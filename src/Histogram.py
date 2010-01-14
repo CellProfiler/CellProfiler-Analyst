@@ -1,16 +1,19 @@
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
-from PlateMapPanel import *
-from PlotPanel import *
 from Properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageTools
+import logging
 import numpy as np
 import os
 import sys
 import re
 import wx
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
+
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -88,7 +91,6 @@ class DataSourcePanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
-        self.Bind(wx.EVT_SIZE, self._onsize)
         
         self.SetSizer(sizer)
         self.Show(1)
@@ -137,27 +139,52 @@ class DataSourcePanel(wx.Panel):
                                           for id in db.GetLinkingColumnsForTable(tablename)])
             where_clause = 'WHERE %s'%(filter_clause)
         return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
-    
-    def _onsize(self, evt):
-        self.figpanel._SetSize()
-        evt.Skip()
         
 
-class HistogramPanel(PlotPanel):
+class HistogramPanel(FigureCanvasWxAgg):
     def __init__(self, parent, points, bins=100, **kwargs):
-        self.parent = parent
-        self.setpoints(points, bins)
+        self.figure = Figure()
+        FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
+        self.canvas = self.figure.canvas
+        self.SetMinSize((100,100))
+        
+        self.navtoolbar = None
         self.x_label = ''
         self.log_y = LINEAR_SCALE
         self.x_scale = LINEAR_SCALE
+        self.setpoints(points, bins)
         
-        # initiate plotter
-        PlotPanel.__init__(self, parent, **kwargs)
-        self.SetColor((255, 255, 255))
-    
     def setpoints(self, points, bins):
         self.points = np.array(points).astype('f')
         self.bins = bins
+        
+        points = self.points
+        x_label = self.x_label
+        #Draw data.
+        if not hasattr(self, 'subplot'):
+            self.subplot = self.figure.add_subplot(111)
+        self.subplot.clear()
+        # log xform the data, ignoring non-positives
+        # XXX: This will not work for selection since the data is changed
+        if self.x_scale==LOG_SCALE:
+            points = np.log(self.points[self.points>0])
+            ignored = len(self.points[self.points<=0])
+            if ignored>0:
+                logging.warn('Histogram ignored %s negative value%s.'%
+                             (ignored, (ignored!=1 and's' or '')))
+            x_label = 'Log(%s)'%(self.x_label)
+        # hist apparently doesn't like nans, need to preen them out first
+        self.points = points[~ np.isnan(points)]
+        # nothing to plot?
+        if len(points)==0 or points==[[]]: return
+        self.subplot.hist(points, self.bins, 
+                          facecolor=[0.0,0.62,1.0], 
+                          edgecolor='none',
+                          log=self.log_y,
+                          alpha=0.75)
+        self.subplot.set_xlabel(x_label)
+        
+        self.reset_toolbar()
     
     def set_x_label(self, label):
         self.x_label = label
@@ -176,28 +203,18 @@ class HistogramPanel(PlotPanel):
     def getpointslists(self):
         return self.points
     
-    def draw(self):
-        points = self.points
-        x_label = self.x_label
-        #Draw data.
-        if not hasattr(self, 'subplot'):
-            self.subplot = self.figure.add_subplot(111)
-        self.subplot.clear()
-        # log xform the x-axis?
-        if self.x_scale==LOG_SCALE:
-            points = np.log(self.points)
-            x_label = 'Log(%s)'%(self.x_label)
-        # hist apparently doesn't like nans, need to preen them out first
-        self.points = points[~ np.isnan(points)]
-        # nothing to plot?
-        if len(points)==0 or points==[[]]: return
-        self.subplot.hist(points, self.bins, 
-                          facecolor=[0.0,0.62,1.0], 
-                          edgecolor='none',
-                          log=self.log_y,
-                          alpha=0.75)
-        self.subplot.set_xlabel(x_label)
-        self.canvas.draw()
+    def get_toolbar(self):
+        if not self.navtoolbar:
+            self.navtoolbar = NavigationToolbar(self.canvas)
+            self.navtoolbar.DeleteToolByPos(6)
+        return self.navtoolbar
+
+    def reset_toolbar(self):
+        # Cheat since there is no way reset
+        if self.navtoolbar:
+            self.navtoolbar._views.clear()
+            self.navtoolbar._positions.clear()
+            self.navtoolbar.push_current()
         
 
 class Histogram(wx.Frame):
@@ -213,35 +230,28 @@ class Histogram(wx.Frame):
         figpanel = HistogramPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
         
+        self.SetToolBar(figpanel.get_toolbar())
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
-        
 
-
-
-def LoadProperties():
-    import os
-    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        p.LoadFile(filename)
-    else:
-        print 'Histogramplot requires a properties file.  Exiting.'
-        sys.exit()
-
-            
+                    
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-        
+    logging.basicConfig(level=logging.DEBUG,)
+
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        LoadProperties()
+        if not p.show_load_dialog():
+            print 'Histogram requires a properties file.  Exiting.'
+            # necessary in case other modal dialogs are up
+            wx.GetApp().Exit()
+            sys.exit()
 
     import MulticlassSQL
     MulticlassSQL.CreateFilterTables()
