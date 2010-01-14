@@ -26,8 +26,9 @@ class AwesomePMP(PlateMapPanel):
                  colormap='jet', wellshape=ROUNDED, row_label_format=None, **kwargs):
         PlateMapPanel.__init__(self, parent, data, shape, well_labels, 
                                colormap, wellshape, row_label_format,  **kwargs)
-                
+    
         self.chMap = p.image_channel_colors
+        
         self.plate = None
         self.tip = wx.ToolTip('')
         self.tip.Enable(False)
@@ -40,7 +41,6 @@ class AwesomePMP(PlateMapPanel):
         
     def SetPlate(self, plate):
         self.plate = plate
-
 
     def OnMotion(self, evt):
         well = self.GetWellAtCoord(evt.X, evt.Y)
@@ -105,6 +105,8 @@ class PlateMapBrowser(wx.Frame):
         
         assert (p.well_id is not None and p.plate_id is not None), \
             'Plate Viewer requires the well_id and plate_id columns to be defined in your properties file.'
+
+        self.chMap = p.image_channel_colors[:]
 
         self.Center()        
         self.menuBar = wx.MenuBar()
