@@ -34,6 +34,7 @@ import wx
     
 ID_EXIT = wx.NewId()
 ID_CLASSIFIER = wx.NewId()
+CREATE_NEW_FILTER = '*create new filter*'
 
 class ClassifierGUI(wx.Frame):
     """
@@ -116,7 +117,7 @@ class ClassifierGUI(wx.Frame):
         self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=-1, value='20', size=(30,-1), style=wx.TE_PROCESS_ENTER)
         self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1, 
-                                      choices=['experiment', 'image']+p._filters_ordered+p._groups_ordered)#+['*create new filter*'])
+                                      choices=['experiment', 'image']+p._filters_ordered+p._groups_ordered+[CREATE_NEW_FILTER])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
@@ -1078,15 +1079,17 @@ class ClassifierGUI(wx.Frame):
         elif filter == 'image' or filter in p._groups_ordered:
             self.SetupFetchFromGroupSizer(filter)
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
-        elif filter == '*create new filter*':
+        elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
             from ColumnFilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(550,80))
+            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
-                p._filters_ordered += [str(cff.get_filter())]
-                p._filters[str(cff.get_filter())] = cff.get_filter().to_sql()
+                fltr = str(cff.get_filter())
+                fname = str(cff.get_filter_name())
+                p._filters_ordered += [fname]
+                p._filters[fname] = fltr
                 items = self.filterChoice.GetItems()
-                self.filterChoice.SetItems(items[:-1]+[str(cff.get_filter())]+items[-1:])
+                self.filterChoice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filterChoice.SetSelection(len(items)-1)
             cff.Destroy()
 
