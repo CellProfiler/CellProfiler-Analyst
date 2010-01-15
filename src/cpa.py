@@ -45,6 +45,11 @@ class FuncLog(logging.Handler):
         self.update(self.format(record))
 
 
+def get_cpa_tools_windows():
+    return [wx.FindWindowByName(n) for n in 
+            ['ImageViewer', 'Density', 'Scatter', 'Histogram', 'DataTable', 
+             'PlateViewer', 'Classifier']]
+
 class MainGUI(wx.Frame):
     '''
     GUI for CellProfiler Analyst
@@ -108,14 +113,13 @@ class MainGUI(wx.Frame):
         aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
         self.GetMenuBar().Append(helpMenu, 'Help')
 
-        
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         self.console.SetBackgroundColour('#111111')
         
         self.console.SetForegroundColour('#DDDDDD')
-        log_level = logging.INFO
+        log_level = logging.DEBUG
         self.logr = logging.getLogger()
         self.set_log_level(log_level)
         self.log_text = ''
@@ -152,7 +156,6 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
-
         
     def launch_classifier(self, evt=None):
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
@@ -216,20 +219,22 @@ class MainGUI(wx.Frame):
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier and classifier.Close() == False:
             return
-        if any([wx.FindWindowByName(n) for n in 
-                ['ImageViewer', 'Density', 'Scatter', 'Histogram', 'DataTable', 'PlateViewer']
-                ]):
+        if any(get_cpa_tools_windows()):
             dlg = wx.MessageDialog(self, 'Some tools are open, are you sure you want to quit CPA?', 'Quit CellProfiler Analyst?', wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response != wx.ID_YES:
-                return            
+                return
+        # Blow up EVVVVERYTHIIINGGG!!! Muahahahahhahahah!
+        for win in wx.GetTopLevelWindows():
+            logging.debug('Destroying: %s'%(win))
+            win.Destroy()
         self.Destroy()
         
     def on_idle(self, evt=None):
         if self.log_text != '':
             self.console.AppendText(self.log_text)
             self.log_text = ''
-        
+
 
 
 if __name__ == "__main__":
