@@ -20,16 +20,23 @@ class ImageListCtrl(wx.ListCtrl):
 
     def set_key_list(self, imkeys):
         self.imkeys = imkeys
-        self.cols = (p.table_id or []) + [p.image_id, p.plate_id, p.well_id]
 
         if len(self.imkeys) > 0:
-            self.data = np.array(db.execute('SELECT %s, %s, %s FROM %s WHERE %s'%(
-                                    UniqueImageClause(), 
-                                    p.plate_id, p.well_id,
-                                    p.image_table,
-                                    GetWhereClauseForImages(imkeys))))
+            columns_of_interest = well_key_columns(p.image_table)
+            if len(columns_of_interest) > 0:
+                columns_of_interest = ','+','.join(columns_of_interest)
+                self.data = np.array(db.execute('SELECT %s %s FROM %s WHERE %s'%(
+                                     UniqueImageClause(), 
+                                     columns_of_interest,
+                                     p.image_table,
+                                     GetWhereClauseForImages(imkeys))))
+                self.cols = image_key_columns() + well_key_columns()
+            else:
+                self.data = np.array(self.imkeys)
+                self.cols = image_key_columns() 
         else:
             self.data = []
+            self.cols = []
 
         for i, col in enumerate(self.cols):
            self.InsertColumn(i, col)
