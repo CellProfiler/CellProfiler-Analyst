@@ -310,7 +310,6 @@ if __name__ == "__main__":
 
     db = DBConnect.DBConnect.getInstance()
     db.register_gui_parent(cpa)
-    dm = DataModel.getInstance()
 
     if len(sys.argv) > 1:
         # Load a properties file if passed in args
@@ -321,9 +320,7 @@ if __name__ == "__main__":
             print 'CellProfiler Analyst requires a properties file.  Exiting.'
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
-            sys.exit()
-    dm.PopulateModel()
-        
+            sys.exit()        
 
     cpa.console.AppendText('Creating filter tables.\n')
     MulticlassSQL.CreateFilterTables(wx.Yield)
