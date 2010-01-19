@@ -7,6 +7,7 @@ from MulticlassSQL import filter_table_prefix
 from Properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageList
+#from icons import lasso_tool
 import logging
 import numpy as np
 import os
@@ -173,13 +174,16 @@ class ScatterControlPanel(wx.Panel):
 
 class ScatterPanel(FigureCanvasWxAgg):
     '''
-    ScatterPanel contains the guts for drawing scatter plots to a PlotPanel.
+    Contains the guts for drawing scatter plots.
     '''
     def __init__(self, parent, point_lists, clr_list=None, **kwargs):
         self.figure = Figure()
         FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
         self.SetMinSize((100,100))
+        self.figure.set_facecolor((1,1,1))
+        self.figure.set_edgecolor((1,1,1))
+        self.canvas.SetBackgroundColour('white')
         
         self.subplot = self.figure.add_subplot(111)
         self.navtoolbar = None
@@ -364,10 +368,17 @@ class ScatterPanel(FigureCanvasWxAgg):
         logging.debug('Scatter: Plotted %s points in %.3f seconds.'%(sum(map(len, self.point_lists)), time()-t0))
         self.reset_toolbar()
     
+    def toggle_lasso_tool(self):
+        print ':',self.navtoolbar.mode
+    
     def get_toolbar(self):
         if not self.navtoolbar:
             self.navtoolbar = NavigationToolbar(self.canvas)
             self.navtoolbar.DeleteToolByPos(6)
+#            ID_LASSO_TOOL = wx.NewId()
+#            lasso = self.navtoolbar.InsertSimpleTool(5, ID_LASSO_TOOL, lasso_tool.ConvertToBitmap(), '', '', isToggle=True)
+#            self.navtoolbar.Realize()
+#            self.Bind(wx.EVT_TOOL, self.toggle_lasso_tool, id=ID_LASSO_TOOL)
         return self.navtoolbar
 
     def reset_toolbar(self):
