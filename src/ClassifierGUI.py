@@ -52,9 +52,13 @@ class ClassifierGUI(wx.Frame):
         global dm
         dm = DataModel.getInstance()
         if dm.IsEmpty():
+            logging.info('Populating image/object data model for Classifier...')
             dm.PopulateModel()
+            logging.info('Done populating image/object data model for Classifier.')
         if __name__ == "__main__":
+            logging.info('Creating temporary filter tables...')
             MulticlassSQL.CreateFilterTables()
+            logging.info('Done creating temporary filter tables.')
             
         if p.IsEmpty():
             logging.critical('Classifier requires a properties file. Exiting.')
@@ -463,6 +467,7 @@ class ClassifierGUI(wx.Frame):
         statusMsg = 'Fetched %d %s %s'%(nObjects, obClassName, p.object_name[1])
         
         # Get object keys
+        obKeys = []
         # unclassified:
         if obClass == 0:
             if filter == 'experiment':
@@ -500,7 +505,6 @@ class ClassifierGUI(wx.Frame):
         # classified
         else:
             hits = 0
-            obKeys = []
             # Get images within any selected filter or group
             if filter != 'experiment':
                 if filter == 'image':
@@ -1280,7 +1284,7 @@ def show_exception_as_dialog(type, value, tb):
     lines += traceback.format_exception_only(type, value)
     lines += ['\nTraceback (most recent call last):\n']
     lines += traceback.format_tb(tb)
-    dlg = ScrolledMessageDialog(None, "".join(lines), 'Error')
+    dlg = ScrolledMessageDialog(None, "".join(lines), 'Error', style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
     dlg.ShowModal()
     raise value
 
