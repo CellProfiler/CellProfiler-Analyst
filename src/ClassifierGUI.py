@@ -36,6 +36,8 @@ ID_EXIT = wx.NewId()
 ID_CLASSIFIER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
+required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+
 class ClassifierGUI(wx.Frame):
     """
     GUI Interface and functionality for the Classifier.
@@ -47,7 +49,17 @@ class ClassifierGUI(wx.Frame):
             p = properties
             global db
             db = DBConnect.DBConnect.getInstance()
-            db.register_gui_parent(self)
+        
+        wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
+        self.tbicon = wx.TaskBarIcon()
+        self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+        self.SetName('Classifier')
+
+        db.register_gui_parent(self)
+        for field in required_fields:
+            if not p.field_defined(field):
+                logging.critical('Properties field %s is required for Classifier.')
+                return
         
         global dm
         dm = DataModel.getInstance()
@@ -68,11 +80,6 @@ class ClassifierGUI(wx.Frame):
             logging.debug("DataModel is empty. Classifier requires a populated DataModel to function. Exiting.")
             sys.exit()
 
-        wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
-        self.tbicon = wx.TaskBarIcon()
-        self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
-        self.SetName('Classifier')
-        
         self.pmb = None
         self.worker = None
         self.weaklearners = None
