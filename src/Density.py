@@ -180,6 +180,9 @@ class DensityPanel(FigureCanvasWxAgg):
         FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
         self.SetMinSize((100,100))
+        self.figure.set_facecolor((1,1,1))
+        self.figure.set_edgecolor((1,1,1))
+        self.canvas.SetBackgroundColour('white')
         
         self.navtoolbar = None
         self.point_lists = []
