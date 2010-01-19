@@ -313,10 +313,13 @@ class DBConnect(Singleton):
                         logr.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
                         try:
                             self.CreateSQLiteDBFromCSVs()
-                        except Exception:
-                            if os.path.isfile(p.db_sqlite_file):
-                                os.remove(p.db_sqlite_file)
-                            raise
+                        except Exception, e:
+                            try:
+                                if os.path.isfile(p.db_sqlite_file):
+                                    os.remove(p.db_sqlite_file)
+                            except:
+                                pass
+                            raise e
                     elif p.image_csv_file and p.object_csv_file:
                         # TODO: prompt user "create db, y/n"
                         logr.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
