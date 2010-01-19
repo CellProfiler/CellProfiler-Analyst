@@ -1024,24 +1024,37 @@ class DBConnect(Singleton):
         tables agree on image numbers.
         '''
         if p.db_type=='sqlite':
-            logr.info('Skipping table verification step for sqlite')
+            logr.warn('Skipping table checking step for sqlite')
             return
-        
+
+        logr.info('Checking database tables...')
         # Check for index on image_table
         res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
         idx_cols = [r[4] for r in res]
         for col in image_key_columns():
             assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.image_table)
-                
+
+        # Explicitly check for TableNumber in case it was not specified in props file
+        if not p.object_table and 'TableNumber' in idx_cols:
+            raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
+        
+        # STOP here if there is no object table
+        if not p.object_table:
+            return
+        
         # Check for index on object_table
         res = self.execute('SHOW INDEX FROM %s'%(p.object_table))
         idx_cols = [r[4] for r in res]
         for col in object_key_columns():
             assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.object_table)
-                
+        
         # Explicitly check for TableNumber in case it was not specified in props file
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in idx_cols):
             raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
+        elif ('TableNumber' in idx_cols):
+            logr.warn('TableNumber column was found indexed in your image table but not your object table.')
+        elif ('TableNumber' not in object_key_columns()):
+            logr.warn('TableNumber column was found indexed in your object table but not your image table.')
         
         # Removed because it doesn't work (ignores TableNumber), and is slow.
         #
@@ -1053,20 +1066,16 @@ class DBConnect(Singleton):
         
         # Check for unlabeled wells
         if p.well_id:
-            res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
-                               (UniqueImageClause(), p.image_table, p.well_id, p.well_id))
+            res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%(UniqueImageClause(), p.image_table, p.well_id, p.well_id))
             if any(res):
                 logr.warn('WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id))
-#            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id)
         
         # Check for unlabeled plates
         if p.plate_id:
-            res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%
-                               (UniqueImageClause(), p.image_table, p.plate_id, p.plate_id))
+            res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%(UniqueImageClause(), p.image_table, p.plate_id, p.plate_id))
             if any(res):
                 logr.warn('WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id))
-#            assert not any(res), 'Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id)
-    
+        logr.info('Done checking database tables.')
 
     def histogram(self, column, table_or_query, nbins, range=None):
         """
