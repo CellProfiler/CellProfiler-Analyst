@@ -99,27 +99,38 @@ def object_key_columns(table_name=''):
 def object_key_defs():
     return ', '.join(['%s INT'%(id) for id in object_key_columns()])
 
-def GetWhereClauseForObjects(obKeys):
+def GetWhereClauseForObjects(obkeys):
     '''
     Return a SQL WHERE clause that matches any of the given object keys.
     Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => "ImageNumber=1 
              AND ObjectNumber=3 OR ImageNumber=2 AND ObjectNumber=4"
     '''
     return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
-                                      for col, value in zip(object_key_columns(), obKey)])
-                        for obKey in obKeys]) + ')'
+              for col, value in zip(object_key_columns(), obkey)])
+              for obkey in obkeys]) + ')'
 
-
-def GetWhereClauseForImages(imKeys):
+def GetWhereClauseForImages(imkeys):
     '''
     Return a SQL WHERE clause that matches any of the give image keys.
     Example: GetWhereClauseForImages([(3,), (4,)]) => 
-             "ImageNumber=3 OR ImageNumber=4"
+             "(ImageNumber IN (3, 4))"
     '''
-    return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
-                                      for col, value in zip(image_key_columns(), imKey)])
-                        for imKey in imKeys]) + ')'
-
+    imkeys.sort()
+    if not p.table_id:
+        return '%s IN (%s)'%(p.image_id, ','.join([str(k[0]) for k in imkeys]))
+    else:
+        imkeys = np.array(imkeys)
+        count = 0
+        tnum = 0
+        wheres = []
+        while count<len(imkeys):
+            imnums = imkeys[(imkeys[:,0]==tnum), 1]
+            count += len(imnums)
+            if len(imnums)>0:
+                wheres += ['(%s=%s AND %s IN (%s))'%(p.table_id, tnum, 
+                            p.image_id, ','.join([str(k) for k in imnums]))]
+            tnum += 1
+        return ' OR '.join(wheres)
 
 def UniqueObjectClause(table_name=None):
     '''
@@ -128,14 +139,12 @@ def UniqueObjectClause(table_name=None):
     '''
     return ','.join(object_key_columns(table_name))
 
-
 def UniqueImageClause(table_name=None):
     '''
     Returns a clause for specifying a unique image in MySQL.
     Example: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all image keys 
     '''
     return ','.join(image_key_columns(table_name))
-
 
 def get_csv_filenames_from_sql_file():
     '''
@@ -419,9 +428,10 @@ class DBConnect(Singleton):
 
     def result_dtype(self):
         """
-        Return an approprite descriptor for a numpy array in which the
+        Return an appropriate descriptor for a numpy array in which the
         result can be stored.
         """
+        #XXX: This doesn't work for SQLite... no cursor.description_flags
         cursor = self.cursors[threading.currentThread().getName()]
         descr = []
         for (name, type_code, display_size, internal_size, precision, 
@@ -446,6 +456,7 @@ class DBConnect(Singleton):
         return descr
 
     def get_results_as_structured_array(self, n=None):
+        #XXX: this doesn't work for SQLite
         col_names = self.GetResultColumnNames()
         connID = threading.currentThread().getName()
         if n is None:
