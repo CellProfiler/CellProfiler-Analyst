@@ -206,29 +206,29 @@ class Properties(Singleton):
         return self.__dict__ == {}
 
 
+    def field_defined(self, name):
+        # field name exists and has a non-empty value.
+        return name in self.__dict__.keys() and self.__dict__[name] not in ['', None]
+        
+
     def Validate(self):
-        
-        def field_defined(name):
-            # field name exists and has a non-empty value.
-            return name in self.__dict__.keys() and self.__dict__[name] not in ['', None]
-        
         # check that all required fields are defined
         for name in string_vars + list_vars:
             if name not in optional_vars:
-                assert field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)        
+                assert self.field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)
         
         assert self.db_type.lower() in ['mysql', 'sqlite'], 'PROPERTIES ERROR (db_type): Value must be either "mysql" or "sqlite".'
         
         # BELOW: Check sometimes-optional fields, and print warnings etc
         if self.db_type.lower()=='sqlite':
             for field in ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',]:
-                if field_defined(field):
+                if self.field_defined(field):
                     logr.warn('PROPERTIES WARNING (%s): Field not required with db_type=sqlite.'%(field))
             
-            assert any([field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file','db_sqlite_file']]), \
+            assert any([self.field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file','db_sqlite_file']]), \
                     'PROPERTIES ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR "db_sql_file" OR "db_sqlite_file". See the README.'
             
-            if field_defined('db_sqlite_file'):
+            if self.field_defined('db_sqlite_file'):
                 if not os.path.isabs(self.db_sqlite_file):
                     # Make relative paths relative to the props file location
                     # TODO: This sholdn't be permanent
@@ -239,7 +239,7 @@ class Properties(Singleton):
                 except:
                     raise Exception, 'PROPERTIES ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file)
             
-            if field_defined('db_sql_file'):
+            if self.field_defined('db_sql_file'):
                 if not os.path.isabs(self.db_sql_file):
                     # Make relative paths relative to the props file location
                     # TODO: This sholdn't be permanent
@@ -251,10 +251,10 @@ class Properties(Singleton):
                     raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.db_sql_file)
                 
                 for field in ['image_csv_file','object_csv_file']:
-                    assert not field_defined(field), 'PROPERTIES ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
+                    assert not self.field_defined(field), 'PROPERTIES ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
             else:        
                 for field in ['image_csv_file','object_csv_file']:
-                    if field_defined(field):
+                    if self.field_defined(field):
                         if not os.path.isabs(self.__dict__[field]):
                             # Make relative paths relative to the props file location
                             # TODO: This sholdn't be permanent
@@ -268,59 +268,59 @@ class Properties(Singleton):
             
         if self.db_type.lower()=='mysql':
             for field in ['db_host', 'db_name', 'db_user',]:
-                assert field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=mysql.'%(field)
-            if not field_defined('db_port'):
+                assert self.field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=mysql.'%(field)
+            if not self.field_defined('db_port'):
                 self.db_port = '3306'
                 logging.info('PROPERTIES: Using default db_port=3306 for MySQL.')
             for field in ['image_csv_file','object_csv_file']:
-                if field_defined(field):
+                if self.field_defined(field):
                     logr.warn('PROPERTIES WARNING (%s): Field not required with db_type=mysql.'%(field))
         
-        if field_defined('area_scoring_column'):
+        if self.field_defined('area_scoring_column'):
             logr.info('PROPERTIES: Area scoring will be used.')
         
-        if not field_defined('image_channel_names'):
+        if not self.field_defined('image_channel_names'):
             logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. CPA will use generic channel names.')
             self.image_channel_names = ['channel-%d'%(i+1) for i in range(100)]
 
-        if not field_defined('image_channel_colors'):
+        if not self.field_defined('image_channel_colors'):
             logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. CPA will use a generic channel-color mapping.')
             self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(97)]
 
-        if not field_defined('channels_per_image'):
+        if not self.field_defined('channels_per_image'):
             logr.warn('PROPERTIES WARNING (channels_per_image): No value(s) specified. CPA will assume 1 channel per image.')
             self.channels_per_image = ['1' for i in range(len(self.image_channel_files))]
 
-        if field_defined('image_channel_blend_modes'):
+        if self.field_defined('image_channel_blend_modes'):
             for mode in self.image_channel_blend_modes:
                 assert mode in ['add', 'subtract'], 'PROPERTIES ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add and subtract.'
             
-        if field_defined('classifier_ignore_substrings'):
+        if self.field_defined('classifier_ignore_substrings'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 
-            if not field_defined('classifier_ignore_columns'):
+            if not self.field_defined('classifier_ignore_columns'):
                 self.__dict__['classifier_ignore_columns'] = self.__dict__['classifier_ignore_substrings']
             else:
                 raise Exception, 'PROPERTIES ERROR: Both classifier_ignore_substrings and classifier_ignore_columns were found in your properties file. The field classifier_ignore_substrings is deprecated and has been renamed to classifier_ignore_columns. Please remove the former from your properties file.'
             del self.__dict__['classifier_ignore_substrings']
-        if not field_defined('classifier_ignore_columns'):
+        if not self.field_defined('classifier_ignore_columns'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.')
         
-        if not field_defined('image_buffer_size'):
+        if not self.field_defined('image_buffer_size'):
             logr.info('PROPERTIES: Using default image_buffer_size=1')
             self.image_buffer_size = '1'
             
-        if not field_defined('tile_buffer_size'):
+        if not self.field_defined('tile_buffer_size'):
             logr.info('PROPERTIES: Using default tile_buffer_size=1')
             self.tile_buffer_size = '1'
             
-        if not field_defined('object_name'):
+        if not self.field_defined('object_name'):
             logr.warn('PROPERTIES WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"')
             self.object_name = ['cell', 'cells']
         else:
             # if it is defined make sure they do it correctly
             assert len(self.object_name)==2, 'PROPERTIES ERROR (object_name): Found %d names instead of 2! This field should contain the singular and plural name of the objects you are classifying. (Example: object_name=cell,cells)'%(len(self.object_name))
 
-        if field_defined('training_set'):
+        if self.field_defined('training_set'):
             if not os.path.isabs(self.training_set):
                 # Make relative paths relative to the props file location
                 # TODO: This sholdn't be permanent
@@ -332,23 +332,23 @@ class Properties(Singleton):
                 logr.warn('PROPERTIES WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set))
             logr.info('PROPERTIES: Training set found at "%s"'%(self.training_set))
         
-        if field_defined('class_table'):
+        if self.field_defined('class_table'):
             assert self.class_table != self.image_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as image_table!'
             assert self.class_table != self.object_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as object_table!'
             logr.info('PROPERTIES: Per-Object classes will be written to table "%s"'%(self.class_table))
             
-        if not field_defined('plate_id'):
+        if not self.field_defined('plate_id'):
             logr.warn('PROPERTIES WARNING (plate_id): Field is required for plate map viewer.')
                                     
-        if not field_defined('well_id'):
+        if not self.field_defined('well_id'):
             logr.warn('PROPERTIES WARNING (well_id): Field is required for plate map viewer.')
                                     
-        if not field_defined('plate_type'):
+        if not self.field_defined('plate_type'):
             logr.warn('PROPERTIES WARNING (plate_type): Field is required for plate map viewer.')
             
-        if field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
+        if self.field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.check_tables = 'no'
-        elif not field_defined('check_tables') or self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
+        elif not self.field_defined('check_tables') or self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.check_tables = 'yes'
         else:
             logr.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables))
