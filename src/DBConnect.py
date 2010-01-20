@@ -889,8 +889,8 @@ class DBConnect(Singleton):
         for q in create_stmts:
             self.execute(q)
         
+        import wx
         if self.gui_parent is not None and issubclass(self.gui_parent.__class__, wx.Window):
-            import wx
             dlg = wx.ProgressDialog('Creating sqlite DB...', '0% Complete', 100, self.gui_parent, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
         else:
             dlg = None
@@ -1349,8 +1349,6 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../test_data/export_to_db_test.properties')
     p.LoadFile('../test_data/nirht_local.properties')
-    
-    dm.PopulateModel()
 
     print '%s images'%len(db.GetAllImageKeys())
     
@@ -1381,7 +1379,6 @@ if __name__ == "__main__":
         
     
 #    p.LoadFile('../properties/nirht_local.properties')
-#    dm.PopulateModel()
 #    
 #    print 'group maps:',db.GetGroupMaps()
 #    print 'filter "firstten":',db.GetFilteredImages('FirstTen')
