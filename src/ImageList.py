@@ -25,11 +25,11 @@ class ImageListCtrl(wx.ListCtrl):
             columns_of_interest = well_key_columns(p.image_table)
             if len(columns_of_interest) > 0:
                 columns_of_interest = ','+','.join(columns_of_interest)
-                self.data = np.array(db.execute('SELECT %s %s FROM %s WHERE %s'%(
-                                     UniqueImageClause(), 
-                                     columns_of_interest,
-                                     p.image_table,
-                                     GetWhereClauseForImages(imkeys))))
+                self.data = db.execute('SELECT %s%s FROM %s WHERE %s'%(
+                            UniqueImageClause(), 
+                            columns_of_interest,
+                            p.image_table,
+                            GetWhereClauseForImages(imkeys)))
                 self.cols = image_key_columns() + well_key_columns()
             else:
                 self.data = np.array(self.imkeys)
@@ -37,6 +37,8 @@ class ImageListCtrl(wx.ListCtrl):
         else:
             self.data = []
             self.cols = []
+
+        self.data.sort()
 
         for i, col in enumerate(self.cols):
            self.InsertColumn(i, col)
