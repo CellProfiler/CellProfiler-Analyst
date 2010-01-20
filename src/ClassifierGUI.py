@@ -64,10 +64,6 @@ class ClassifierGUI(wx.Frame):
         
         global dm
         dm = DataModel.getInstance()
-        if dm.IsEmpty():
-            logging.info('Populating image/object data model for Classifier...')
-            dm.PopulateModel()
-            logging.info('Done populating image/object data model for Classifier.')
         if __name__ == "__main__":
             logging.info('Creating temporary filter tables...')
             MulticlassSQL.CreateFilterTables()
