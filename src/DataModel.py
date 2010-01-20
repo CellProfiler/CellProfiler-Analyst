@@ -31,7 +31,6 @@ class DataModel(Singleton):
         return str(self.obCount)+" objects in "+ \
                str(len(self.data))+" images"
                
-    
     def PopulateModel(self):
         self.DeleteModel()
         if db is None:
@@ -235,57 +234,10 @@ class DataModel(Singleton):
         return self.data == {}
 
 
-
 if __name__ == "__main__":
     p = Properties.getInstance()
     p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
-#    p.LoadFile('../properties/nirht.properties')
-#    p.LoadFile('../properties/nirht_testdups.properties')
-#    p.LoadFile('../properties/2007_10_19_Gilliland_LeukemiaScreens02_12_Jan_09_Combo.properties')
-#    p.LoadFile('../properties/2007_11_07_Hepatotoxicity_1_2008_10_23_GHAIII_Day9_8Fb_repeat_LoG_Classifier2.0.properties')
     db = DBConnect.getInstance()
     db.connect()
     d = DataModel.getInstance()
     d.PopulateModel()
-    
-    
-#    for i in range(100):
-#        print d.GetRandomObject()
-#    imKeys = d.GetImagesInGroup('Gene', d.groupMaps['Gene'][(1,)])
-#    print len(imKeys)
-#    for im in imKeys:
-#        print im
-    
-#    imKeysInGroup = db.GetImagesInGroup('Accuracy75')
-#    a = d.GetRandomObjects(1000, imKeysInGroup)
-#    for obKey in a:
-#        assert d.GetObjectCountFromImage(obKey[:-1]) != 0, 'image contains no objects'
-#    print a
-
-#    a = [d.GetRandomObject() for i in xrange(2000)]
-#    for obKey in a:
-#        assert d.GetObjectCountFromImage(obKey[:-1]) != 0, 'image contains no objects'
-
-    # Test random for whole dataset
-#    for j in xrange(1,10000):
-#        obKey = d.GetRandomObjectFromImageList(db.GetImagesInGroup('CDKs'))
-#        if obKey[-1] > d.GetObjectCountFromImage(obKey[:-1]) and obKey[-1]>0:
-#            print "ERROR:",str(obKey),">",d.GetObjectCountFromImage(t,i)
-
-    # Test random for image lists
-    # NOTE: obKey[:-1] is always imKey
-#    a=b=0
-#    for j in xrange(1,10000):
-#        imKeys = [(2,1536),(2,1496)]
-#        obKey = d.GetRandomObjectFromImageList(imKeys)
-#        if obKey[:-1] == (2,1536):
-#            a+=1
-#        elif obKey[:-1] == (2,1496):
-#            b+=1
-#        else:
-#            print "ERROR"
-#    print a,"should be about half of",b
-#    
-#    # Get random objects from group 'good_control'
-#    for j in xrange(10):
-#        print d.GetRandomObjectFromImageList(db.GetImagesInGroup('good_control'))
