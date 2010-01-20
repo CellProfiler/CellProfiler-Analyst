@@ -889,7 +889,7 @@ class DBConnect(Singleton):
         for q in create_stmts:
             self.execute(q)
         
-        if self.gui_parent is not None:
+        if self.gui_parent is not None and issubclass(gui_parent.__class__, wx.Window):
             import wx
             dlg = wx.ProgressDialog('Creating sqlite DB...', '0% Complete', 100, self.gui_parent, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
         else:
