@@ -72,7 +72,12 @@ class DataModel(Singleton):
         self.cumSums = []
         self.obCount = 0
         
+    def _if_empty_populate(self):
+        if self.IsEmpty:
+            self.PopulateModel()
+        
     def GetRandomFraction(self, num):
+        self._if_empty_populate()
         logging.debug("RAND %s %s %s"%(num, self.obCount, int(-2**63 + 2**64 * float(num) / self.obCount)))
         return int(2**64 * float(num) / self.obCount - 2**63)
 
@@ -83,6 +88,7 @@ class DataModel(Singleton):
         every time since we build cumSums from that same ordering.  This
         need not necessarily be in sorted order.
         '''
+        self._if_empty_populate()
         obIdx = randint(1, self.obCount)
         imIdx = np.searchsorted(self.cumSums, obIdx, 'left')
         # SUBTLETY: images which have zero objects will appear as repeated
@@ -103,6 +109,7 @@ class DataModel(Singleton):
         If a list of imKeys is specified, GetRandomObjects will return 
         objects from only these images.
         '''
+        self._if_empty_populate()
         if imKeys == None:
             return [self.GetRandomObject() for i in xrange(N)]
         elif imKeys == []:
@@ -124,6 +131,7 @@ class DataModel(Singleton):
             return obs
             
     def GetObjectsFromImage(self, imKey):
+        self._if_empty_populate()
         obKeys=[]
         for i in xrange(1,self.GetObjectCountFromImage(imKey)+1):
             obKey = db.GetObjectIDAtIndex(imKey, i)
@@ -133,6 +141,7 @@ class DataModel(Singleton):
     def GetAllImageKeys(self, filter=None):
         ''' Returns all object keys. If a filter is passed in, only the image
         keys that fall within the filter will be returned.'''
+        self._if_empty_populate()
         if filter is None:
             return list(self.data.keys())
         else:
@@ -140,10 +149,12 @@ class DataModel(Singleton):
 
     def GetObjectCountFromImage(self, imKey):
         ''' Returns the number of objects in the specified image. '''
+        self._if_empty_populate()
         return self.data[imKey]
     
     def GetImageKeysAndObjectCounts(self, filter=None):
         ''' Returns pairs of imageKeys and object counts. '''
+        self._if_empty_populate()
         if filter is None:
             return self.data.items()
         else:
@@ -151,10 +162,12 @@ class DataModel(Singleton):
     
     def GetGroupColumnNames(self, group):
         ''' Returns the key column names associated with the specified group. '''
+        self._if_empty_populate()
         return list(self.groupColNames[group])   # return a copy of this list so it can't be modified
 
     def GetGroupColumnTypes(self, group):
         ''' Returns the key column types associated with the specified group. '''
+        self._if_empty_populate()
         return list(self.groupColTypes[group])   # return a copy of this list so it can't be modified
 
     def SumToGroup(self, imdata, group):
@@ -164,6 +177,7 @@ class DataModel(Singleton):
         and sums the data into the specified group to return:
            groupdata = { groupKey : np.array(values), ... }
         '''
+        self._if_empty_populate()
         groupData = {}
         nvals = len(imdata.values()[0])
         for imKey in imdata.keys():
@@ -181,6 +195,7 @@ class DataModel(Singleton):
         Returns all imKeys in a particular group. 
         '__ANY__' in the groupKey matches anything.
         '''
+        self._if_empty_populate()
         if '__ANY__' in groupKey:
             # if there are wildcards in the groupKey then accumulate
             #   imkeys from all matching groupKeys
@@ -197,6 +212,7 @@ class DataModel(Singleton):
     
     def GetImagesInGroup(self, group, groupKey, filter=None):
         ''' Returns all imKeys in a particular group. '''
+        self._if_empty_populate()
         try:
             imkeys = self.revGroupMaps[group][groupKey]
         except KeyError:
@@ -212,6 +228,7 @@ class DataModel(Singleton):
     
     def GetGroupKeysInGroup(self, group):
         ''' Returns all groupKeys in specified group '''
+        self._if_empty_populate()
         return list(set(self.groupMaps[group].values()))
         
     def IsEmpty(self):
