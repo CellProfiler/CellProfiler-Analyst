@@ -157,7 +157,6 @@ if __name__ == "__main__":
     db = DBConnect.getInstance()
     db.connect()
     dm = DataModel.getInstance()
-    dm.PopulateModel()
     
     test = TileCollection.getInstance()
     
