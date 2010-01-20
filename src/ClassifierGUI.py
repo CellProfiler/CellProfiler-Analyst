@@ -21,7 +21,7 @@ from time import time
 from icons import get_cpa_icon
 import DBConnect
 import DirichletIntegrate
-import FastGentleBoostingMulticlass
+import FastGentleBoostingMulticlass     
 import ImageTools
 import MulticlassSQL
 import PolyaFit
@@ -58,7 +58,8 @@ class ClassifierGUI(wx.Frame):
         db.register_gui_parent(self)
         for field in required_fields:
             if not p.field_defined(field):
-                logging.critical('Properties field %s is required for Classifier.')
+                raise 'Properties field "%s" is required for Classifier.'%(field)
+                self.Destroy()
                 return
         
         global dm
