@@ -202,11 +202,8 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
 #    p.LoadFile('/Users/afraser/Desktop/RuvkunLab_afraser.properties')
-    p.LoadFile('/Users/afraser/Desktop/2009_04_14_CristinaNogueira_MitosisFlyScreens.properties')
+    p.LoadFile('/Users/afraser/Downloads/RuvkunLab_afraser.properties')
 
-    p.color_images = 'true'
-    
-    dm.PopulateModel()
     app = wx.PySimpleApp()
 
     ir = ImageReader()

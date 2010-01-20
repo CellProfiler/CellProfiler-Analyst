@@ -54,7 +54,6 @@ def score(props, ts, nRules, filter=None, group='Image'):
 
     logging.info('Loading properties file...')
     p.LoadFile(props)
-    dm.PopulateModel()
     
     logging.info('Loading training set...')
     trainingSet = TrainingSet(p)

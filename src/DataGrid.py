@@ -617,7 +617,6 @@ if __name__ == "__main__":
         
 #        p.LoadFile('/Users/afraser/CPA/properties/nirht_test.properties')
         p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
-        dm.PopulateModel()
         
         print 'TESTING DATA GRID' 
         classes = ['a', 'b']
@@ -649,8 +648,7 @@ if __name__ == "__main__":
     db = DBConnect.DBConnect.getInstance()
     dm = DataModel.getInstance()
 
-    p.LoadFile(propsfile)    
-    dm.PopulateModel()
+    p.LoadFile(propsfile)
     r = csv.reader(open(csvfile))
     labels = r.next()
     dtable = DBConnect.get_data_table_from_csv_reader(r)

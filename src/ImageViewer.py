@@ -556,7 +556,6 @@ if __name__ == "__main__":
     
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
-    dm.PopulateModel()
     ir = ImageReader()
     
     obKey = dm.GetRandomObject()

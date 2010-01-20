@@ -281,7 +281,6 @@ if __name__ == "__main__":
 #    filter = 'afraser_test'
     
     p.LoadFile(props)
-    dm.PopulateModel()
     CreateFilterTables()
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
