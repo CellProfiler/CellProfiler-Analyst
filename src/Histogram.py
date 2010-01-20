@@ -22,6 +22,7 @@ NO_FILTER = 'No filter'
 
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
+LOG2_SCALE   = 'log2'
 LINEAR_SCALE = 'linear'
 
 class DataSourcePanel(wx.Panel):
@@ -41,7 +42,7 @@ class DataSourcePanel(wx.Panel):
         self.table_choice.Select(tables.index(p.image_table))
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.bins_input = wx.TextCtrl(self, -1, '100')
-        self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
+        self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE, LOG2_SCALE], style=wx.CB_READONLY)
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
@@ -169,13 +170,17 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.subplot.clear()
         # log xform the data, ignoring non-positives
         # XXX: This will not work for selection since the data is changed
-        if self.x_scale==LOG_SCALE:
-            points = np.log(self.points[self.points>0])
+        if self.x_scale in [LOG_SCALE, LOG2_SCALE]:
+            if self.x_scale == LOG_SCALE:
+                points = np.log(self.points[self.points>0])
+                x_label = 'Log(%s)'%(self.x_label)
+            elif self.x_scale == LOG2_SCALE:
+                points = np.log2(self.points[self.points>0])
+                x_label = 'Log2(%s)'%(self.x_label)
             ignored = len(self.points[self.points<=0])
             if ignored>0:
                 logging.warn('Histogram ignored %s negative value%s.'%
                              (ignored, (ignored!=1 and's' or '')))
-            x_label = 'Log(%s)'%(self.x_label)
         # hist apparently doesn't like nans, need to preen them out first
         self.points = points[~ np.isnan(points)]
         # nothing to plot?
