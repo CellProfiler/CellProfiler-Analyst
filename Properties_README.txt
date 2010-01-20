@@ -135,7 +135,7 @@ image_channel_colors  =  <red>, <green>,
 
 # How to blend in each channel into the image. Use: add or subtract.
 # If left blank all channels are blended additively, this is best for 
-# flourescent images.
+# fluorescent images.
 #
 # Subtract may be desirable when you wish to display outlines over a brightfield
 # image. The outline channel could be blended in with subtract so it is black
@@ -151,7 +151,7 @@ image_channel_blend_modes = <add>, <add>,
 # Doing this would require that you pass 4 values into image_channel_names,
 # image_channel_colors, and image_channel_blend_modes
 
-channels_per_image  = 1, 1,
+channels_per_image  = <1>, <1>,
 
 
 # ======== Image access info ======== 
