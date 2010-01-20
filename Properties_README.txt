@@ -115,10 +115,9 @@ cell_y_loc  =  <your_object_y_location_column>
 # Specify the column names from your per-image table that contain the image
 # paths and file names here.
 #
-# Individual image files are expected to be monochromatic and represent a single
-# channel. However, any number of images may be combined by adding a new channel
-# path and filename column to the per-image table of your database and then 
-# adding those column names here.
+# Any number of images may be combined by adding a new channel path and filename
+# column to the per-image table of your database and then adding those column 
+# names here.
 #
 # NOTE: These lists must have equal length!
 
@@ -133,6 +132,26 @@ image_channel_names   =  <DNA>, <Actin>,
 # Valid colors are: [red, green, blue, magenta, cyan, yellow, gray, none]
 
 image_channel_colors  =  <red>, <green>,
+
+# How to blend in each channel into the image. Use: add or subtract.
+# If left blank all channels are blended additively, this is best for 
+# flourescent images.
+#
+# Subtract may be desirable when you wish to display outlines over a brightfield
+# image. The outline channel could be blended in with subtract so it is black
+# against the white background. 
+
+image_channel_blend_modes = <add>, <add>,
+
+# Number of channels present in each image file?  If left blank, CPA will expect 
+# to find 1 channel per image.
+#
+# eg: If the image specified by the first image_channel_file field is RGB, but
+# the second image had only 1 channel you would set: channels_per_image = 3, 1
+# Doing this would require that you pass 4 values into image_channel_names,
+# image_channel_colors, and image_channel_blend_modes
+
+channels_per_image  = 1, 1,
 
 
 # ======== Image access info ======== 
