@@ -11,7 +11,7 @@ import numpy
 s = os.popen('svnversion')
 version = s.read()
 f = open('cpa_version.py', 'w')
-f.write('VERSION = "%s"\n'%(version.strip()))
+f.write('VERSION = "%s"\n'%("".join([v for v in version.strip() if v in '0123456789'])))
 f.close()
 
 if not 'py2exe' in sys.argv:
