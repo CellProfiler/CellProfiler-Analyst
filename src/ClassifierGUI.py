@@ -51,8 +51,9 @@ class ClassifierGUI(wx.Frame):
             db = DBConnect.DBConnect.getInstance()
         
         wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
-        self.tbicon = wx.TaskBarIcon()
-        self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+        if parent is not None:
+            self.tbicon = wx.TaskBarIcon()
+            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
         self.SetName('Classifier')
 
         db.register_gui_parent(self)
