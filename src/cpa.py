@@ -242,10 +242,35 @@ class MainGUI(wx.Frame):
             self.log_text = ''
 
 
+def setup_frozen_logging():
+    # py2exe has a version of this in boot_common.py, but it causes an
+    # error window to appear if any messages are actually written.
+    class Stderr(object):
+        softspace = 0 # python uses this for printing
+        _file = None
+        _error = None
+        def write(self, text, fname=sys.executable + '.log'):
+            if self._file is None and self._error is None:
+                try:
+                    self._file = open(fname, 'a')
+                except Exception, details:
+                    self._error = details
+            if self._file is not None:
+                self._file.write(text)
+                self._file.flush()
+        def flush(self):
+            if self._file is not None:
+                self._file.flush()
+    # send everything to logfile
+    sys.stderr = Stderr()
+    sys.stdout = sys.stderr
 
 if __name__ == "__main__":
-    import logging
+    if sys.frozen == 'windows_exe':
+        # on windows, log to a file (Mac goes to console)
+        setup_frozen_logging()
 
+    import logging
     logging.basicConfig(level=logging.DEBUG)
     
     global defaultDir
