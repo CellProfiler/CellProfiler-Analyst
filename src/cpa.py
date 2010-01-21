@@ -252,7 +252,7 @@ def setup_frozen_logging():
         def write(self, text, fname=sys.executable + '.log'):
             if self._file is None and self._error is None:
                 try:
-                    self._file = open(fname, 'a')
+                    self._file = open(fname, 'w')
                 except Exception, details:
                     self._error = details
             if self._file is not None:
