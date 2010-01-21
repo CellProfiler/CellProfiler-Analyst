@@ -228,6 +228,7 @@ class MainGUI(wx.Frame):
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
             win.Destroy()
+        self.tbicon.Destroy()
         self.Destroy()
         
     def on_idle(self, evt=None):
