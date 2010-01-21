@@ -73,10 +73,6 @@ class ClassifierGUI(wx.Frame):
             logging.critical('Classifier requires a properties file. Exiting.')
             raise Exception('Classifier requires a properties file. Exiting.')
 
-        if dm.IsEmpty():
-            logging.debug("DataModel is empty. Classifier requires a populated DataModel to function. Exiting.")
-            raise Exception('DataModel is empty. Classifier requires a populated DataModel to function. Exiting.')
-
         self.pmb = None
         self.worker = None
         self.weaklearners = None
