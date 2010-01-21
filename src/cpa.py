@@ -58,9 +58,13 @@ class MainGUI(wx.Frame):
         wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 %s'%(__version__), **kwargs)
         
         self.properties = properties
-        self.tbicon = wx.TaskBarIcon()
-        self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
         self.SetIcon(get_cpa_icon())
+        if not sys.platform.startswith('win'):
+            # this is good for Mac, but on windows creates a (currently) unused icon in the system tray
+            self.tbicon = wx.TaskBarIcon()
+            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+        else:
+            self.tbicon = None
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
         self.CreateStatusBar()
@@ -228,7 +232,8 @@ class MainGUI(wx.Frame):
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
             win.Destroy()
-        self.tbicon.Destroy()
+        if self.tbicon is not None:
+            self.tbicon.Destroy()
         self.Destroy()
         
     def on_idle(self, evt=None):

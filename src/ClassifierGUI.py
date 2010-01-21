@@ -50,10 +50,12 @@ class ClassifierGUI(wx.Frame):
             global db
             db = DBConnect.DBConnect.getInstance()
         
-        wx.Frame.__init__(self, parent, id=id, title='Classifier 2.0 - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
-        if parent is not None:
+        wx.Frame.__init__(self, parent, id=id, title='CPA/Classifier - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
+        if parent is None and not sys.platform.startswith('win'):
             self.tbicon = wx.TaskBarIcon()
-            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+            self.tbicon.SetIcon(get_cpa_icon(), 'CPA/Classifier')
+        else:
+            self.SetIcon(get_cpa_icon())
         self.SetName('Classifier')
 
         db.register_gui_parent(self)
