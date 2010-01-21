@@ -17,7 +17,7 @@ f.close()
 if not 'py2exe' in sys.argv:
     sys.argv.append('py2exe')
 
-setup(console=['cpa.py'],
+setup(windows=['cpa.py'],
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'pysqlite2'],
