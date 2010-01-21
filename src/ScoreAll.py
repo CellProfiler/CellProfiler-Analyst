@@ -88,7 +88,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
         
     if not keysAndCounts:
         logging.error('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter))
-        sys.exit()
+        raise Exception('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter))
         
     # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
     if group != 'Image':

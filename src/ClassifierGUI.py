@@ -71,11 +71,11 @@ class ClassifierGUI(wx.Frame):
             
         if p.IsEmpty():
             logging.critical('Classifier requires a properties file. Exiting.')
-            sys.exit()
+            raise Exception('Classifier requires a properties file. Exiting.')
 
         if dm.IsEmpty():
             logging.debug("DataModel is empty. Classifier requires a populated DataModel to function. Exiting.")
-            sys.exit()
+            raise Exception('DataModel is empty. Classifier requires a populated DataModel to function. Exiting.')
 
         self.pmb = None
         self.worker = None
@@ -1329,7 +1329,7 @@ if __name__ == "__main__":
         if not p.show_load_dialog():
             logging.error('Classifier requires a properties file.  Exiting.')
             wx.GetApp().Exit()
-            sys.exit()
+            raise Exception('Classifier requires a properties file.  Exiting.')
         
     classifier = ClassifierGUI()
     classifier.Show(True)

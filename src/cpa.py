@@ -317,10 +317,9 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
     else:
         if not p.show_load_dialog():
-            print 'CellProfiler Analyst requires a properties file.  Exiting.'
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
-            sys.exit()        
+            raise Exception('CellProfiler Analyst requires a properties file.  Exiting.')
 
     cpa.console.AppendText('Creating filter tables.\n')
     MulticlassSQL.CreateFilterTables(wx.Yield)
