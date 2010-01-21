@@ -31,8 +31,13 @@ class DataModel(Singleton):
         return str(self.obCount)+" objects in "+ \
                str(len(self.data))+" images"
                
-    def PopulateModel(self):
-        self.DeleteModel()
+    def PopulateModel(self, delete_model=False):
+        if delete_model:
+            self.DeleteModel()
+        elif not self.IsEmpty():
+            # No op if already populated
+            return
+        
         if db is None:
             logging.error("Error: No database connection!")
             return
