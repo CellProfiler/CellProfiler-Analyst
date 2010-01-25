@@ -211,8 +211,8 @@ if __name__ == '__main__':
         numlabel = get_numlabel(strlabel)
         labels.append(numlabel)
 
-     labels = array(labels).astype(int32)
-     values = array(values).astype(float32)
+    labels = array(labels).astype(int32)
+    values = array(values).astype(float32)
         
 
     # convert labels to a matrix with +1/-1 values only (+1 in the column matching the label, 1-indexed)
