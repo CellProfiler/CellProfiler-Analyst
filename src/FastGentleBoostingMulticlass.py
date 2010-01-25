@@ -207,8 +207,8 @@ if __name__ == '__main__':
     labels = []
     values = []
     for vals in reader:
-        values.append([float(v) for v in vals])
-        numlabel = get_numlabel(strlabel)
+        values.append([0 if v == 'None' else float(v) for v in vals[1:]])
+        numlabel = get_numlabel(vals[0])
         labels.append(numlabel)
 
     labels = array(labels).astype(int32)
@@ -221,7 +221,9 @@ if __name__ == '__main__':
     for i, j in zip(range(len(labels)), array(labels)-1):
         label_matrix[i, j] = 1
 
-    #wl = train(colnames, num_learners, label_matrix, values, fout)
+    wl = train(colnames, num_learners, label_matrix, values, fout)
+    for w in wl:
+        print w
     print label_matrix.shape, "groups"
     print xvalidate(colnames, num_learners, label_matrix, values, 20, range(1, label_matrix.shape[0]+1), None)
 
