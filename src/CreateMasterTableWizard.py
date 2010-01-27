@@ -424,7 +424,7 @@ class Page4(wiz.WizardPageSimple):
 
 
 app = wx.PySimpleApp()
-wizard = wiz.Wizard(None, -1, "Create Master Table")
+wizard = wiz.Wizard(None, -1, "Create Master Table", style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
 page1 = Page1(wizard)
 page2 = Page2(wizard)
 page3 = Page3(wizard)
