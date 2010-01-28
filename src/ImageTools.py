@@ -166,12 +166,13 @@ def MergeChannels(imgs, chMap, masks=[]):
             min_idx = areas.index(min(areas))
             
             s = [imgs[max_idx].shape, imgs[min_idx].shape]
-            dlg = wx.SingleChoiceDialog(None, 'Some of your images were found to have different\n'
-                                       'scales. Please choose a size and CPA will\n'
-                                       'automatically rescale image channels to fit a\n'
-                                       'single image.',
-                                       'Inconsistent image channel sizes',
-                                       [str(s[0]), str(s[1])])
+            dlg = wx.SingleChoiceDialog(None, 
+                     'Some of your images were found to have different\n'
+                     'scales. Please choose a size and CPA will\n'
+                     'automatically rescale image channels to fit a\n'
+                     'single image.',
+                     'Inconsistent image channel sizes',
+                     [str(s[0]), str(s[1])])
             if dlg.ShowModal() == wx.ID_OK:
                 dims = eval(dlg.GetStringSelection())
                 p.image_rescale = dims
