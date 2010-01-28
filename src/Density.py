@@ -38,7 +38,10 @@ class DataSourcePanel(wx.Panel):
 
         tables = db.GetTableNames()
         self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
-        self.table_choice.Select(tables.index(p.image_table))
+        if p.image_table in tables:
+            self.table_choice.Select(tables.index(p.image_table))
+        else:
+            logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.gridsize_input = wx.TextCtrl(self, -1, '50')

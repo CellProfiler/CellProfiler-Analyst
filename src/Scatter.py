@@ -58,7 +58,10 @@ class ScatterControlPanel(wx.Panel):
         
         tables = db.GetTableNames()
         self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
-        self.table_choice.Select(tables.index(p.image_table))
+        if p.image_table in tables:
+            self.table_choice.Select(tables.index(p.image_table))
+        else:
+            logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
@@ -252,14 +255,38 @@ class ScatterPanel(FigureCanvasWxAgg):
                 del self.lasso
         else:
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
+
+    def _new_collection_from_filter(self, evt):       
+        filter = self.popup_menu_filters[evt.Id]   
+        filter_keys = db.GetFilteredImages(filter)
+        kls = self.key_lists
+        pls = self.point_lists
+        newkp = []
+        coll = []
+        for i in xrange(len(kls)):
+            newkp += [[]]
+            for j in xrange(len(kls[i])):
+                entry = list(kls[i][j])+list(pls[i][j])
+                if kls[i][j] in filter_keys:
+                    coll += [entry]
+                else:
+                    newkp[i] += [entry]
+        newkp += [coll]
+        self.set_point_lists(newkp)
+        self.figure.canvas.draw()
         
-                    
-    def show_popup_menu(self, (x, y), data):
+    def show_popup_menu(self, (x,y), data):
+        self.popup_menu_filters = {}
         popup = wx.Menu()
-        show_images_item = wx.MenuItem(popup, -1, 'Show images from selection')
-        
-        popup.AppendItem(show_images_item)
-        
+        show_images_item = popup.Append(-1, 'Show images from selection')
+#        submenu = wx.Menu()
+#        for f in p._filters_ordered:
+#            id = wx.NewId()
+#            item = submenu.Append(id, f)
+#            self.popup_menu_filters[id] = f
+#            self.Bind(wx.EVT_MENU, self._new_collection_from_filter, item)
+#        popup.AppendMenu(-1, 'Color points by filter', submenu)
+            
         def show_images(evt):
             for i, sel in self.selection.items():
                 keys = self.key_lists[i][sel]
@@ -454,9 +481,9 @@ if __name__ == "__main__":
 #              [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
 #              [],]
 
-    points = [np.random.normal(0, 1.5, size=(500,2)),
-              np.random.normal(3, 2, size=(500,2)),
-              np.random.normal(2, 3, size=(500,2)),]
+#    points = [np.random.normal(0, 1.5, size=(500,2)),
+#              np.random.normal(3, 2, size=(500,2)),
+#              np.random.normal(2, 3, size=(500,2)),]
 
 #    clrs = [(0., 0.62, 1., 0.75),
 #            (0.1, 0.2, 0.3, 0.75),
