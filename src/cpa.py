@@ -330,7 +330,8 @@ if __name__ == "__main__":
         import cellprofiler.utilities.check_for_updates as cfu
         cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
                               max(svn_version, cpaprefs.get_skip_version()), 
-                              new_version_cb)
+                              new_version_cb,
+                              user_agent='CPAnalyst/2.0.%d'%(svn_version))
     except:
         # can't import
         pass
