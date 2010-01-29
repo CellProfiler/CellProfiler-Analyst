@@ -33,7 +33,7 @@ class Page1(wiz.WizardPageSimple):
         self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         directions = wx.StaticText(self, -1, "Load a Properties file that contains the database info below.", style=wx.ALIGN_CENTRE)
-        browseBtn = wx.Button(self, wx.NewId(), 'Choose file…')
+        browseBtn = wx.Button(self, wx.NewId(), u'Choose file…')
         self.Bind(wx.EVT_BUTTON, self.OnBrowse, browseBtn)
         label_2 = wx.StaticText(self, -1, "DB Host: ")
         self.lblDBHost = wx.StaticText(self, -1, "")
