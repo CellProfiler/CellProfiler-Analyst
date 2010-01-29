@@ -3,6 +3,7 @@ import os
 import re
 import wx
 import wx.wizard as wiz
+from wx.lib.dialogs import ScrolledMessageDialog
 from DBConnect import DBConnect
 from Properties import Properties
 import logging
@@ -162,10 +163,11 @@ class Page2(wiz.WizardPageSimple):
                 for t in self.Parent.perImageTables:
                     colnames2 = set(db.GetColumnNames(t))
                     if colnames != colnames2:
-                        errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
-                                                  'Mismatched columns were:\n%s'%(self.Parent.perImageTables[0], 
-                                                            t, ', '.join(colnames.symmetric_difference(colnames2))), 
-                                                  'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                        errdlg = ScrolledMessageDialog(self, 'The column names in tables "%s" and "%s" do not match.\n\n'
+                                     'Mismatched columns were:\n%s'%(self.Parent.perImageTables[0], 
+                                         t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                     'Table column names do not match.',
+                                     style=wx.OK|wx.ICON_EXCLAMATION|wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
                         errdlg.ShowModal()
                         evt.Veto()
 
@@ -174,10 +176,11 @@ class Page2(wiz.WizardPageSimple):
                 for t in self.Parent.perObjectTables:
                     colnames2 = set(db.GetColumnNames(t))
                     if colnames != colnames2:
-                        errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
-                                                  'Mismatched columns were:\n%s'%(self.Parent.perObjectTables[0], 
-                                                            t, ', '.join(colnames.symmetric_difference(colnames2))), 
-                                                  'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                        errdlg = ScrolledMessageDialog(self, 'The column names in tables "%s" and "%s" do not match.\n\n'
+                                     'Mismatched columns were:\n%s'%(self.Parent.perObjectTables[0], 
+                                         t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                     'Table column names do not match.',
+                                     style=wx.OK|wx.ICON_EXCLAMATION|wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
                         errdlg.ShowModal()
                         evt.Veto()
 
@@ -277,10 +280,11 @@ class Page3(wiz.WizardPageSimple):
                     for t in self.Parent.perImageTables:
                         colnames2 = set(db.GetColumnNames(t))
                         if colnames != colnames2:
-                            errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
-                                                      'Mismatched columns were:\n%s'%(self.Parent.outPerObject, 
-                                                                t, ', '.join(colnames.symmetric_difference(colnames2))), 
-                                                      'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                            errdlg = ScrolledMessageDialog(self, 'The column names in tables "%s" and "%s" do not match.\n\n'
+                                        'Mismatched columns were:\n%s'%(self.Parent.outPerObject, 
+                                            t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                        'Table column names do not match.',
+                                     style=wx.OK|wx.ICON_EXCLAMATION|wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
                             errdlg.ShowModal()
                             evt.Veto()
                             
@@ -289,10 +293,11 @@ class Page3(wiz.WizardPageSimple):
                     for t in self.Parent.perObjectTables:
                         colnames2 = set(db.GetColumnNames(t))
                         if colnames != colnames2:
-                            errdlg = wx.MessageDialog(self, 'The column names in tables %s and %s do not match.\n'
-                                                      'Mismatched columns were:\n%s'%(self.Parent.outPerObject, 
-                                                                t, ', '.join(colnames.symmetric_difference(colnames2))), 
-                                                      'Table column names do not match.', wx.OK|wx.ICON_EXCLAMATION)
+                            errdlg = ScrolledMessageDialog(self, 'The column names in tables "%s" and "%s" do not match.\n\n'
+                                        'Mismatched columns were:\n%s'%(self.Parent.outPerObject, 
+                                            t, ', '.join(colnames.symmetric_difference(colnames2))), 
+                                        'Table column names do not match.',
+                                     style=wx.OK|wx.ICON_EXCLAMATION|wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
                             errdlg.ShowModal()
                             evt.Veto()
             
