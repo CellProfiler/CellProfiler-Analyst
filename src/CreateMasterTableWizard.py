@@ -57,10 +57,10 @@ class Page1(wiz.WizardPageSimple):
         gridsizer.Add(self.lblDBHost, 1, 0, 0)
         gridsizer.Add(label_3, 0, wx.ALIGN_RIGHT, 0)
         gridsizer.Add(self.lblDBName, 1, 0, 0)
-        sizer1.Add(gridsizer, 0, 0, 0)
+        sizer1.Add(gridsizer, 0, wx.EXPAND, 10)
         sizer1.Add(self.btnTest, 0, wx.ALIGN_CENTER)
         
-        self.sizer.Add(sizer1)
+        self.sizer.Add(sizer1, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
         self.sizer.Fit(self)
         
@@ -223,7 +223,7 @@ class Page3(wiz.WizardPageSimple):
         sizer1.Add(wx.StaticText(self, -1, 'Select an existing master to append to:', style=wx.ALIGN_CENTER), 0, wx.ALL|wx.EXPAND, 10)
         sizer1.Add(self.listTables, 1, wx.EXPAND, 0)
         
-        self.sizer.Add(sizer1)
+        self.sizer.Add(sizer1, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
         self.sizer.Fit(self)
         
@@ -313,7 +313,7 @@ class Page4(wiz.WizardPageSimple):
         sizer1.Add(label_1, 0, wx.ALL|wx.EXPAND, 20)
         sizer1.Add(self.report, 1, wx.ALL|wx.EXPAND, 10)
         
-        self.sizer.Add(sizer1)
+        self.sizer.Add(sizer1, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
         self.sizer.Fit(self)
         
@@ -322,7 +322,9 @@ class Page4(wiz.WizardPageSimple):
 
     def OnPageLoaded(self, evt):
         rep = 'SELECTED DATABASE: "'+self.Parent.outDB+'"\n\n'
-        rep += 'TABLES TO JOIN: \n'+'\n'.join([str(t[0])+', '+str(t[1]) for t in zip(self.Parent.perImageTables,self.Parent.perObjectTables)])+'\n\n'
+        tables = [str(t[0])+', '+str(t[1]) for t in zip(self.Parent.perImageTables,self.Parent.perObjectTables)]
+        tables.sort()
+        rep += 'TABLES TO JOIN: \n'+'\n'.join(tables)+'\n\n'
         if self.Parent.masterExists:
             rep += 'APPENDING TO EXISTING MASTER: \n'+self.Parent.outPerImage+', '+self.Parent.outPerObject+', '+self.Parent.outPerImage[:-10]+'_table_index'
         else:
