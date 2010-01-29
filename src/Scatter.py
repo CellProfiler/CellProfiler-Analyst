@@ -1,6 +1,4 @@
 # TODO: add hooks to change point size, alpha, numsides etc.
-#
-
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
@@ -37,13 +35,56 @@ LINEAR_SCALE = 'linear'
 SELECTED_COLOR = colorConverter.to_rgba('red', alpha=0.75)
 
 class Datum:
-    def __init__(self, (x, y), color, include=False):
+    def __init__(self, (x, y), color, edgecolor='none', include=False):
         self.x = x
         self.y = y
         if include: self.color = SELECTED_COLOR
         else: self.color = color
+        self.edgecolor = edgecolor
+        
+        
+class DraggableLegend:
+    '''
+    Attaches interaction to a subplot legend to allow dragging.
+    usage: DraggableLegend(subplot.legend())
+    '''
+    def __init__(self, legend):
+        self.legend = legend
+        self.dragging = False
+        self.cids = [legend.figure.canvas.mpl_connect('motion_notify_event', self.on_motion),
+                     legend.figure.canvas.mpl_connect('pick_event', self.on_pick),
+                     legend.figure.canvas.mpl_connect('button_release_event', self.on_release)]
+        legend.set_picker(self.legend_picker)
+        
+    def on_motion(self, evt):
+        if self.dragging:
+            dx = evt.x - self.mouse_x
+            dy = evt.y - self.mouse_y
+            loc_in_canvas = self.legend_x + dx, self.legend_y + dy
+            loc_in_norm_axes = self.legend.parent.transAxes.inverted().transform_point(loc_in_canvas)
+            self.legend._loc = tuple(loc_in_norm_axes)
+            self.legend.figure.canvas.draw()
+    
+    def legend_picker(self, legend, evt): 
+        return legend.legendPatch.contains(evt)
 
-
+    def on_pick(self, evt):
+        if evt.artist == self.legend:
+            bbox = self.legend.get_window_extent()
+            self.mouse_x = evt.mouseevent.x
+            self.mouse_y = evt.mouseevent.y
+            self.legend_x = bbox.xmin
+            self.legend_y = bbox.ymin 
+            self.dragging = 1
+            
+    def on_release(self, evt):
+        self.dragging = False
+            
+    def disconnect_bindings(self):
+        for cid in self.cids:
+            self.legend.figure.canvas.mpl_disconnect(cid)
+            
+            
 class ScatterControlPanel(wx.Panel):
     '''
     A panel with controls for selecting the source data for a scatterplot 
@@ -194,12 +235,16 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.y_scale = LINEAR_SCALE
         self.x_label = ''
         self.y_label = ''
-        self.selection     = {}
+        self.selection = {}
         self.mouse_mode = 'lasso'
+        self.legend = None
         self.set_point_lists(point_lists, clr_list)
         
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
+    
+    def selection_is_empty(self):
+        return self.selection == {} or all([len(s)==0 for s in self.selection.values()])
         
     def lasso_callback(self, verts):
         # Note: If the mouse is released outside of the canvas, (None,None) is
@@ -222,16 +267,18 @@ class ScatterPanel(FigureCanvasWxAgg):
                 self.selection[c] = list(set(self.selection.get(c,[])).difference(new_sel))
             
             # Color the points
-            facecolors = collection.get_facecolors()
+            edgecolors = collection.get_edgecolors()
             for i in range(len(self.point_lists[c])):
                 if i in self.selection[c]:
-                    facecolors[i] = SELECTED_COLOR
+                    edgecolors[i] = colorConverter.to_rgba('black')
                 else:
-                    facecolors[i] = self.colors[c]
+                    edgecolors[i] = colorConverter.to_rgba('none')
 
         self.canvas.draw_idle()
         
     def on_press(self, evt):
+        if self.legend and self.legend.dragging:
+            return
         if evt.button == 1:
             self.selection_key = evt.key
             if self.canvas.widgetlock.locked(): return
@@ -256,9 +303,29 @@ class ScatterPanel(FigureCanvasWxAgg):
         else:
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
 
-    def _new_collection_from_filter(self, evt):       
+    def show_image_list_from_selection(self, evt=None):
+        '''Callback for "Show images from selection" popup item.'''
+        for i, sel in self.selection.items():
+            keys = self.key_lists[i][sel]
+            keys = list(set([tuple(k) for k in keys]))
+            ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i+1))
+            ilf.Show(True)
+            
+    def on_new_collection_from_filter(self, evt):
+        '''Callback for "Collection from filter" popup menu options.'''
         filter = self.popup_menu_filters[evt.Id]   
         filter_keys = db.GetFilteredImages(filter)
+        self.create_collection_from_keys(filter_keys)
+        
+    def on_collection_from_selection(self, evt):
+        keys = []
+        for c, collection in enumerate(self.subplot.collections):
+            keys = [tuple(self.key_lists[c][id]) for id in self.selection[c]]
+        self.create_collection_from_keys(keys)
+        
+    def create_collection_from_keys(self, keys):
+        '''Finds the given keys in self.point_lists, and pulls them into a new
+        list which will be colored differently from the rest.'''
         kls = self.key_lists
         pls = self.point_lists
         newkp = []
@@ -267,34 +334,38 @@ class ScatterPanel(FigureCanvasWxAgg):
             newkp += [[]]
             for j in xrange(len(kls[i])):
                 entry = list(kls[i][j])+list(pls[i][j])
-                if kls[i][j] in filter_keys:
+                if kls[i][j] in keys:
                     coll += [entry]
                 else:
                     newkp[i] += [entry]
         newkp += [coll]
         self.set_point_lists(newkp)
+        if self.legend:
+            self.legend.disconnect_bindings()
+        self.legend = DraggableLegend(self.subplot.legend(fancybox=True))
         self.figure.canvas.draw()
-        
+    
     def show_popup_menu(self, (x,y), data):
         self.popup_menu_filters = {}
         popup = wx.Menu()
         show_images_item = popup.Append(-1, 'Show images from selection')
-#        submenu = wx.Menu()
-#        for f in p._filters_ordered:
-#            id = wx.NewId()
-#            item = submenu.Append(id, f)
-#            self.popup_menu_filters[id] = f
-#            self.Bind(wx.EVT_MENU, self._new_collection_from_filter, item)
-#        popup.AppendMenu(-1, 'Color points by filter', submenu)
+        if self.selection_is_empty():
+            show_images_item.Enable(False)
+        self.Bind(wx.EVT_MENU, self.show_image_list_from_selection, show_images_item)
+        
+        collection_from_selection_item = popup.Append(-1, 'Collection from selection')
+        if self.selection_is_empty():
+            collection_from_selection_item.Enable(False)
+        self.Bind(wx.EVT_MENU, self.on_collection_from_selection, collection_from_selection_item)
             
-        def show_images(evt):
-            for i, sel in self.selection.items():
-                keys = self.key_lists[i][sel]
-                keys = list(set([tuple(k) for k in keys]))
-                ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i+1))
-                ilf.Show(True)
-            
-        self.Bind(wx.EVT_MENU, show_images, show_images_item)
+        # Color points by filter submenu
+        submenu = wx.Menu()
+        for f in p._filters_ordered:
+            id = wx.NewId()
+            item = submenu.Append(id, f)
+            self.popup_menu_filters[id] = f
+            self.Bind(wx.EVT_MENU, self.on_new_collection_from_filter, item)
+        popup.AppendMenu(-1, 'Collection from filter', submenu)
         
         self.PopupMenu(popup, (x,y))
         
@@ -306,18 +377,17 @@ class ScatterPanel(FigureCanvasWxAgg):
         '''
         t0 = time()
         if len(keys_and_points)==0: keys_and_points = [[]]
+        self.selection = {}
         # Convert each list of keys and points into a np float array
         points = [np.array(pl).astype('f') for pl in keys_and_points]
         # Strip out keys and points 
         self.point_lists = []
         self.key_lists = []
         for pl in points:
+            # Note, empty point lists are simply discarded
             if len(pl)>0:
                 self.point_lists += [pl[:,-2:]]
                 self.key_lists += [pl[:,:len(image_key_columns())].astype(int)]
-            else:
-                self.point_lists += [np.array([]).astype('f')]
-                self.key_lists += [np.array([]).astype(int)]
         
         # Choose colors from jet colormap starting with light blue (0.28)
         if max(map(len, self.point_lists))==0:
@@ -352,19 +422,20 @@ class ScatterPanel(FigureCanvasWxAgg):
             self.reset_toolbar()
             return
         
-        # Each point list is converted to a separate point collection
-        self.collections = []
+        # Each point list is converted to a separate point collection by 
+        # subplot.scatter
         self.xys = []
-        for plot_pts, color in zip(points, colors):
-            data = [Datum(xy, color) for xy in plot_pts]
+        for pts, color in zip(points, colors):
+            data = [Datum(xy, color) for xy in pts]
             facecolors = [d.color for d in data]
+            edgecolors = [d.edgecolor for d in data]
             self.xys.append([(d.x, d.y) for d in data])
-            
-            self.subplot.scatter(plot_pts[:,0], plot_pts[:,1],
-                                 s=30,
-                                 facecolors = facecolors,
-                                 edgecolor = 'none',
-                                 alpha = 0.75)
+            if len(pts) > 0:
+                self.subplot.scatter(pts[:,0], pts[:,1],
+                    s=30,
+                    facecolors = facecolors,
+                    edgecolors = edgecolors,
+                    alpha = 0.75)
             
         # Set axis scales & clip negative values if in log space
         # must be done after scatter
@@ -481,9 +552,10 @@ if __name__ == "__main__":
 #              [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
 #              [],]
 
-#    points = [np.random.normal(0, 1.5, size=(500,2)),
-#              np.random.normal(3, 2, size=(500,2)),
-#              np.random.normal(2, 3, size=(500,2)),]
+    points = [np.random.normal(0, 1.5, size=(500,2)),
+              np.random.normal(3, 2, size=(500,2)),
+              [],
+              np.random.normal(2, 3, size=(500,2))]
 
 #    clrs = [(0., 0.62, 1., 0.75),
 #            (0.1, 0.2, 0.3, 0.75),
