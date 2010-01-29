@@ -330,20 +330,29 @@ class ScatterPanel(FigureCanvasWxAgg):
         pls = self.point_lists
         newkp = []
         coll = []
-        for i in xrange(len(kls)):
-            newkp += [[]]
-            for j in xrange(len(kls[i])):
-                entry = list(kls[i][j])+list(pls[i][j])
-                if kls[i][j] in keys:
-                    coll += [entry]
-                else:
-                    newkp[i] += [entry]
+        for c, col in enumerate(self.subplot.collections):
+            indices = xrange(len(col.get_offsets()))
+            sel_indices = self.selection[c]
+            unsel_indices = list(set(indices).difference(sel_indices))
+            
+            sel_keys = self.key_lists[c][sel_indices]
+            sel_pts = col.get_offsets()[sel_indices]
+            coll += [list(k)+list(p) for k, p in zip(sel_keys, sel_pts)]
+            
+            keys = self.key_lists[c][unsel_indices]
+            pts = col.get_offsets()[unsel_indices]
+            newkp += [np.array([list(k)+list(p) for k, p in zip(keys, pts)])]
+        coll = np.array(coll)
         newkp += [coll]
         self.set_point_lists(newkp)
-        if self.legend:
-            self.legend.disconnect_bindings()
-        self.legend = DraggableLegend(self.subplot.legend(fancybox=True))
         self.figure.canvas.draw()
+        
+    def on_scatter_from_selection(self, evt):
+        point_lists = []
+        for c, collection in enumerate(self.subplot.collections):
+            point_lists += [[self.point_lists[c][id] for id in self.selection[c]]]
+        scatter = Scatter(self.Parent, point_lists)
+        scatter.Show()
     
     def show_popup_menu(self, (x,y), data):
         self.popup_menu_filters = {}
@@ -352,6 +361,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         if self.selection_is_empty():
             show_images_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.show_image_list_from_selection, show_images_item)
+        
+        scatter_from_sel_item = popup.Append(-1, 'New scatter plot from selection')
+        if self.selection_is_empty():
+            scatter_from_sel_item.Enable(False)
+        self.Bind(wx.EVT_MENU, self.on_scatter_from_selection, scatter_from_sel_item)
         
         collection_from_selection_item = popup.Append(-1, 'Collection from selection')
         if self.selection_is_empty():
@@ -432,10 +446,15 @@ class ScatterPanel(FigureCanvasWxAgg):
             self.xys.append([(d.x, d.y) for d in data])
             if len(pts) > 0:
                 self.subplot.scatter(pts[:,0], pts[:,1],
-                    s=30,
+                    s = 30,
                     facecolors = facecolors,
                     edgecolors = edgecolors,
                     alpha = 0.75)
+        
+        if len(points)>1:
+            if self.legend:
+                self.legend.disconnect_bindings()
+            self.legend = DraggableLegend(self.subplot.legend(fancybox=True))
             
         # Set axis scales & clip negative values if in log space
         # must be done after scatter
