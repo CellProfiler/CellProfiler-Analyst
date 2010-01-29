@@ -68,7 +68,7 @@ class TrainingSet:
                 self.values += [get_data(k) for k in keyList]
 
         self.label_matrix = numpy.array(self.label_matrix)
-        self.values = numpy.array(self.values)
+        self.values = numpy.array(self.values, np.float64)
 
 
     def Load(self, filename, labels_only=False):
@@ -189,13 +189,19 @@ class CellCache(Singleton):
     def load_from_string(self, str):
         'load data from a string, verifying that the table has not changed since it was created (encoded in string)'
         try:
-            date, self.colnames, oldcache = cPickle.loads(zlib.decompress(base64.b64decode(str)))
+            date, colnames, oldcache = cPickle.loads(zlib.decompress(base64.b64decode(str)))
         except:
             # silent failure
             return
+        # Strings started sneaking into some caches when we started classifying entire images.
+        # Detect this case and force an update to flush them.
+        if len(oldcache) > 0:
+            if oldcache.values()[0].dtype.kind == 'S':
+                return
         # verify the database hasn't been changed
         if db.verify_objects_modify_date_earlier(date):
             self.data.update(oldcache)
+            self.colnames = colnames
 
     def save_to_string(self, keys):
         'convert the cache data to a string, but only for certain keys'

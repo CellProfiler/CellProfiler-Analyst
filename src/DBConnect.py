@@ -676,6 +676,8 @@ class DBConnect(Singleton):
         if len(data) == 0:
             logr.error('No data for obKey: %s'%str(obKey))
             return None
+        # This should be the case
+        assert all([type(x) in [int, long, float] for x in data[0]])
         return np.array(data[0])
     
     
@@ -688,7 +690,9 @@ class DBConnect(Singleton):
         if len(data) == 0:
             logr.error('No data for obKey: %s'%str(obKey))
             return None
-        return np.array(data[0])
+        # fetch out only numeric data
+        values = [x if type(x) in [int, long, float] else 0.0 for x in data[0]]
+        return np.array(values)
 
     
     def GetPlateNames(self):
