@@ -318,6 +318,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         pls = self.point_lists
         newkp = []
         coll = []
+        # HORRIBLY inefficient, needs improvement
         for i in xrange(len(kls)):
             newkp += [[]]
             for j in xrange(len(kls[i])):
@@ -331,6 +332,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.figure.canvas.draw_idle()
         
     def on_collection_from_selection(self, evt):
+        '''Callback for "Collection from selection" popup menu option.'''
         newkp = []
         coll = []
         for c, col in enumerate(self.subplot.collections):
