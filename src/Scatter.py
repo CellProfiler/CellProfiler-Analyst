@@ -32,15 +32,14 @@ ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
 LINEAR_SCALE = 'linear'
 
-SELECTED_COLOR = colorConverter.to_rgba('red', alpha=0.75)
+SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
+UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
 class Datum:
-    def __init__(self, (x, y), color, edgecolor='none', include=False):
+    def __init__(self, (x, y), color):
         self.x = x
         self.y = y
-        if include: self.color = SELECTED_COLOR
-        else: self.color = color
-        self.edgecolor = edgecolor
+        self.color = color
         
         
 class DraggableLegend:
@@ -270,9 +269,9 @@ class ScatterPanel(FigureCanvasWxAgg):
             edgecolors = collection.get_edgecolors()
             for i in range(len(self.point_lists[c])):
                 if i in self.selection[c]:
-                    edgecolors[i] = colorConverter.to_rgba((0,0,0,1))
+                    edgecolors[i] = SELECTED_OUTLINE_COLOR
                 else:
-                    edgecolors[i] = colorConverter.to_rgba((0,0,0,0))
+                    edgecolors[i] = UNSELECTED_OUTLINE_COLOR
 
         self.canvas.draw_idle()
         
@@ -314,20 +313,24 @@ class ScatterPanel(FigureCanvasWxAgg):
     def on_new_collection_from_filter(self, evt):
         '''Callback for "Collection from filter" popup menu options.'''
         filter = self.popup_menu_filters[evt.Id]   
-        filter_keys = db.GetFilteredImages(filter)
-        self.create_collection_from_keys(filter_keys)
-        
-    def on_collection_from_selection(self, evt):
-        keys = []
-        for c, collection in enumerate(self.subplot.collections):
-            keys = [tuple(self.key_lists[c][id]) for id in self.selection[c]]
-        self.create_collection_from_keys(keys)
-        
-    def create_collection_from_keys(self, keys):
-        '''Finds the given keys in self.point_lists, and pulls them into a new
-        list which will be colored differently from the rest.'''
+        keys = db.GetFilteredImages(filter)
         kls = self.key_lists
         pls = self.point_lists
+        newkp = []
+        coll = []
+        for i in xrange(len(kls)):
+            newkp += [[]]
+            for j in xrange(len(kls[i])):
+                entry = list(kls[i][j])+list(pls[i][j])
+                if kls[i][j] in keys:
+                    coll += [entry]
+                else:
+                    newkp[i] += [entry]
+        newkp += [coll]
+        self.set_point_lists(newkp)
+        self.figure.canvas.draw_idle()
+        
+    def on_collection_from_selection(self, evt):
         newkp = []
         coll = []
         for c, col in enumerate(self.subplot.collections):
@@ -345,7 +348,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         coll = np.array(coll)
         newkp += [coll]
         self.set_point_lists(newkp)
-        self.figure.canvas.draw()
+        self.figure.canvas.draw_idle()
         
     def on_scatter_from_selection(self, evt):
         point_lists = []
@@ -446,16 +449,15 @@ class ScatterPanel(FigureCanvasWxAgg):
         # Each point list is converted to a separate point collection by 
         # subplot.scatter
         self.xys = []
-        for pts, color in zip(points, colors):
+        for c, (pts, color) in enumerate(zip(points, colors)):
             data = [Datum(xy, color) for xy in pts]
             facecolors = [d.color for d in data]
-            edgecolors = [d.edgecolor for d in data]
             self.xys.append([(d.x, d.y) for d in data])
             if len(pts) > 0:
                 self.subplot.scatter(pts[:,0], pts[:,1],
                     s = 30,
                     facecolors = facecolors,
-                    edgecolors = edgecolors,
+                    edgecolors = ['none' for f in facecolors],
                     alpha = 0.75)
         
         if len(points)>1:
