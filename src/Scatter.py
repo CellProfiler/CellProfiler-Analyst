@@ -220,7 +220,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     '''
     Contains the guts for drawing scatter plots.
     '''
-    def __init__(self, parent, point_lists, clr_list=None, **kwargs):
+    def __init__(self, parent, point_lists=[], clr_list=None, **kwargs):
         self.figure = Figure()
         FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
@@ -389,6 +389,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         colors - a list of colors to be applied to each inner list of points
                  if not supplied colors will be chosen from the Jet color map
         '''
+        self.subplot.clear()
         t0 = time()
         if len(keys_and_points)==0: keys_and_points = [[]]
         self.selection = {}
@@ -403,6 +404,12 @@ class ScatterPanel(FigureCanvasWxAgg):
                 self.point_lists += [pl[:,-2:]]
                 self.key_lists += [pl[:,:len(image_key_columns())].astype(int)]
         
+        # Stop if there is no data in any of the point lists
+        if len(self.point_lists)==0:
+            logging.warn('No data to plot.')
+            self.reset_toolbar()
+            return
+        
         # Choose colors from jet colormap starting with light blue (0.28)
         if max(map(len, self.point_lists))==0:
             colors = []
@@ -414,7 +421,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
         self.colors = colors
 
-        self.subplot.clear()
+        
         self.subplot.set_xlabel(self.x_label)
         self.subplot.set_ylabel(self.y_label)
         points = self.point_lists
@@ -431,7 +438,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             logging.warn('Scatter masked out %s points with negative values.'%(ignored))
         
         # Stop if there is no data in any of the point lists
-        if max(map(len, points))==0:
+        if len(points)==0:
             logging.warn('No data to plot.')
             self.reset_toolbar()
             return
@@ -571,10 +578,10 @@ if __name__ == "__main__":
 #              [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
 #              [],]
 
-    points = [np.random.normal(0, 1.5, size=(500,2)),
-              np.random.normal(3, 2, size=(500,2)),
-              [],
-              np.random.normal(2, 3, size=(500,2))]
+#    points = [np.random.normal(0, 1.5, size=(500,2)),
+#              np.random.normal(3, 2, size=(500,2)),
+#              [],
+#              np.random.normal(2, 3, size=(500,2))]
 
 #    clrs = [(0., 0.62, 1., 0.75),
 #            (0.1, 0.2, 0.3, 0.75),
