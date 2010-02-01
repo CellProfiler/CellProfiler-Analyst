@@ -270,9 +270,9 @@ class ScatterPanel(FigureCanvasWxAgg):
             edgecolors = collection.get_edgecolors()
             for i in range(len(self.point_lists[c])):
                 if i in self.selection[c]:
-                    edgecolors[i] = colorConverter.to_rgba('black')
+                    edgecolors[i] = colorConverter.to_rgba((0,0,0,1))
                 else:
-                    edgecolors[i] = colorConverter.to_rgba('none')
+                    edgecolors[i] = colorConverter.to_rgba((0,0,0,0))
 
         self.canvas.draw_idle()
         
