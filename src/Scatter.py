@@ -404,8 +404,9 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.point_lists = []
         self.key_lists = []
         for pl in points:
-            # Note, empty point lists are simply discarded
+            # Note: empty point lists are simply discarded
             if len(pl)>0:
+                pl = np.array([x for x in pl if not np.isnan(x).any()])
                 self.point_lists += [pl[:,-2:]]
                 self.key_lists += [pl[:,:len(image_key_columns())].astype(int)]
         
