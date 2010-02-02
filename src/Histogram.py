@@ -119,7 +119,8 @@ class DataSourcePanel(wx.Panel):
         filter = self.filter_choice.GetStringSelection()
         points = self.loadpoints(self.table_choice.GetStringSelection(),
                                  self.x_choice.GetStringSelection(),
-                                 filter)    
+                                 filter)
+        points = np.array(points[0]).T[0]
         bins = int(self.bins_input.GetValue())
         self.figpanel.set_x_label(self.x_choice.GetStringSelection())
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
@@ -157,11 +158,15 @@ class HistogramPanel(FigureCanvasWxAgg):
         
         self.navtoolbar = None
         self.x_label = ''
-        self.log_y = LINEAR_SCALE
+        self.log_y = False
         self.x_scale = LINEAR_SCALE
         self.setpoints(points, bins)
         
     def setpoints(self, points, bins):
+        ''' Updates the data to be plotted and redraws the plot.
+        points - array of samples
+        bins - number of bins to aggregate points in
+        '''
         self.points = np.array(points).astype('f')
         self.bins = bins
         
@@ -184,10 +189,15 @@ class HistogramPanel(FigureCanvasWxAgg):
             if ignored>0:
                 logging.warn('Histogram ignored %s negative value%s.'%
                              (ignored, (ignored!=1 and's' or '')))
+
         # hist apparently doesn't like nans, need to preen them out first
-        self.points = points[~ np.isnan(points)]
+        points = points[~ np.isnan(points)]
+        
         # nothing to plot?
-        if len(points)==0 or points==[[]]: return
+        if len(points)==0:
+            logging.warn('No data to plot.')
+            return
+        
         self.subplot.hist(points, self.bins, 
                           facecolor=[0.0,0.62,1.0], 
                           edgecolor='none',
@@ -237,7 +247,8 @@ class Histogram(wx.Frame):
         self.SetName('Histogram')
         
         points = []
-#        points = [[1,2,2,3,3,3,4,4,4,4,5,5,5,5,5]]
+#        points = [[1],[2],[2],[3],[3],[3],[4],[4],[4],[4],[5],[5],[5],[5],[5]]
+#        points = db.execute('SELECT Image_Intensity_DNA_Mean_intensity, Image_Intensity_Actin_Mean_intensity FROM per_image ')
         figpanel = HistogramPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
         
