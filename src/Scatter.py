@@ -307,8 +307,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
             keys = list(set([tuple(k) for k in keys]))
-            ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i+1))
-            ilf.Show(True)
+            if len(keys)>0:
+                ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i))
+                ilf.Show(True)
+            else:
+                logging.info('No points were selected in collection %d'%(i))
             
     def on_new_collection_from_filter(self, evt):
         '''Callback for "Collection from filter" popup menu options.'''
@@ -388,11 +391,12 @@ class ScatterPanel(FigureCanvasWxAgg):
         
         self.PopupMenu(popup, (x,y))
         
-    def set_point_lists(self, keys_and_points, colors=None):
+    def set_point_lists(self, keys_and_points, colors=None, labels=None):
         '''
-        points - a list of lists of keys and points
+        keys_and_points - a list of lists of keys and points
         colors - a list of colors to be applied to each inner list of points
                  if not supplied colors will be chosen from the Jet color map
+        labels - labels for each collection in keys_and_points
         '''
         self.subplot.clear()
         t0 = time()
@@ -427,6 +431,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
         self.colors = colors
 
+        
         
         self.subplot.set_xlabel(self.x_label)
         self.subplot.set_ylabel(self.y_label)
