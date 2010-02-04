@@ -1098,6 +1098,9 @@ class ClassifierGUI(wx.Frame):
                 items = self.filterChoice.GetItems()
                 self.filterChoice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filterChoice.SetSelection(len(items)-1)
+                logging.info('Creating filter table...')
+                MulticlassSQL.CreateFilterTable(fname, wx.Yield)
+                logging.info('Done creating filter.')
             cff.Destroy()
 
         self.fetch_panel.Layout()

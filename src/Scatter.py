@@ -27,6 +27,7 @@ p = Properties.getInstance()
 db = DBConnect.getInstance()
 
 NO_FILTER = 'No filter'
+CREATE_NEW_FILTER = '*create new filter*'
 
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
@@ -108,7 +109,7 @@ class ScatterControlPanel(wx.Panel):
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
-        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered, style=wx.CB_READONLY)
+        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
         self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
@@ -153,6 +154,7 @@ class ScatterControlPanel(wx.Panel):
         sizer.Add(self.update_chart_btn)
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
+        wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
         
         self.SetSizer(sizer)
@@ -160,6 +162,25 @@ class ScatterControlPanel(wx.Panel):
         
     def on_table_selected(self, evt):
         self.update_column_fields()
+        
+    def on_filter_selected(self, evt):
+        filter = self.filter_choice.GetStringSelection()
+        if filter == CREATE_NEW_FILTER:
+            from ColumnFilter import ColumnFilterDialog
+            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
+            if cff.ShowModal()==wx.OK:
+                fltr = str(cff.get_filter())
+                fname = str(cff.get_filter_name())
+                p._filters_ordered += [fname]
+                p._filters[fname] = fltr
+                items = self.filter_choice.GetItems()
+                self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
+                self.filter_choice.SetSelection(len(items)-1)
+                from MulticlassSQL import CreateFilterTable
+                logging.info('Creating filter table...')
+                CreateFilterTable(fname)
+                logging.info('Done creating filter.')
+            cff.Destroy()
         
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
