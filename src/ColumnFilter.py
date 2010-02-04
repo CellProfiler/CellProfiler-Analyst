@@ -89,7 +89,7 @@ class ColumnFilterPanel(wx.Panel):
     def get_filter(self):
         table = self.tableChoice.GetStringSelection()
         column = self.colChoice.GetStringSelection()
-        comparator = self.comparatorChoice.GetStringSelection()
+        comparator = self.comparatorChoice.GetValue()
         value = self.valueField.GetValue()
         return Filter(table, column, comparator, value)
     
@@ -185,6 +185,7 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
     else:
         p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
+#        p.LoadFile('/Users/afraser/CPA/properties/nirht.properties')
 #        p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
 
 
