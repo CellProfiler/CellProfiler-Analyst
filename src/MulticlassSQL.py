@@ -59,7 +59,20 @@ def CreateFilterTables(cb=None):
         # these queries can take a while, so allow a callback to run (wx.Yield being a good example)
         if cb is not None:
             cb()
-        
+            
+def CreateFilterTable(filter, cb=None):
+    '''Creates a temporary table with image keys for the given filter. '''
+    key_col_defs = ",".join([col + " INT" for col in image_key_columns()])
+    index_cols = ",".join(image_key_columns())
+    query = p._filters[filter]
+    db.execute('DROP TABLE IF EXISTS `%s`'%(filter_table_prefix+filter))
+    db.execute('CREATE TEMPORARY TABLE `%s` (%s)'%(filter_table_prefix+filter, key_col_defs))
+    db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(filter_table_prefix+filter, filter_table_prefix+filter, index_cols))
+    db.execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+filter, index_cols, query))
+    # these queries can take a while, so allow a callback to run (wx.Yield being a good example)
+    if cb is not None:
+        cb()
+    
 
 def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     '''
