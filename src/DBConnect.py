@@ -644,7 +644,7 @@ class DBConnect(Singleton):
             # automatically ignore all string-type columns
             self.classifierColNames = [col for col, type in zip(col_names, col_types) if type!=str]
             # automatically ignore ID columns
-            if p.table_id:
+            if p.table_id in self.classifierColNames:
                 self.classifierColNames.remove(p.table_id)
             self.classifierColNames.remove(p.image_id)
             self.classifierColNames.remove(p.object_id)
