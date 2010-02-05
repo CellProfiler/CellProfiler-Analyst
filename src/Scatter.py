@@ -5,6 +5,7 @@ from MulticlassSQL import filter_table_prefix
 from Properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageList
+import ImageTools
 #from icons import lasso_tool
 import logging
 import numpy as np
@@ -323,8 +324,24 @@ class ScatterPanel(FigureCanvasWxAgg):
         else:
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
 
-    def show_image_list_from_selection(self, evt=None):
+    def show_images_from_selection(self, evt=None):
         '''Callback for "Show images from selection" popup item.'''
+        show_keys = []
+        for i, sel in self.selection.items():
+            keys = self.key_lists[i][sel]
+            show_keys += list(set([tuple(k) for k in keys]))
+        if len(show_keys)>10:
+            dlg = wx.MessageDialog(self, 'You are about to open %s images. This may take some time depending on your settings.'%(len(show_keys)),
+                                   'Warning', wx.YES_NO|wx.ICON_QUESTION)
+            response = dlg.ShowModal()
+            if response != wx.ID_YES:
+                return
+        logging.info('Opening %s images.'%(len(show_keys)))
+        for key in show_keys:
+            ImageTools.ShowImage(key, p.image_channel_colors, parent=self)
+            
+    def show_image_list_from_selection(self, evt=None):
+        '''Callback for "Show image list from selection" popup item.'''
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
             keys = list(set([tuple(k) for k in keys]))
@@ -386,17 +403,23 @@ class ScatterPanel(FigureCanvasWxAgg):
     def show_popup_menu(self, (x,y), data):
         self.popup_menu_filters = {}
         popup = wx.Menu()
+        
         show_images_item = popup.Append(-1, 'Show images from selection')
         if self.selection_is_empty():
             show_images_item.Enable(False)
-        self.Bind(wx.EVT_MENU, self.show_image_list_from_selection, show_images_item)
+        self.Bind(wx.EVT_MENU, self.show_images_from_selection, show_images_item)
         
-        scatter_from_sel_item = popup.Append(-1, 'New scatter plot from selection')
+        show_imagelist_item = popup.Append(-1, 'Show image list from selection')
+        if self.selection_is_empty():
+            show_imagelist_item.Enable(False)
+        self.Bind(wx.EVT_MENU, self.show_image_list_from_selection, show_imagelist_item)
+        
+        scatter_from_sel_item = popup.Append(-1, 'Open selected points in new plot')
         if self.selection_is_empty():
             scatter_from_sel_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.on_scatter_from_selection, scatter_from_sel_item)
         
-        collection_from_selection_item = popup.Append(-1, 'Collection from selection')
+        collection_from_selection_item = popup.Append(-1, 'Create collection from selection')
         if self.selection_is_empty():
             collection_from_selection_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.on_collection_from_selection, collection_from_selection_item)
@@ -408,7 +431,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             item = submenu.Append(id, f)
             self.popup_menu_filters[id] = f
             self.Bind(wx.EVT_MENU, self.on_new_collection_from_filter, item)
-        popup.AppendMenu(-1, 'Collection from filter', submenu)
+        popup.AppendMenu(-1, 'Create collection from filter', submenu)
         
         self.PopupMenu(popup, (x,y))
         
