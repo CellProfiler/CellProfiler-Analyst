@@ -30,7 +30,6 @@ class ImageTileDropTarget(wx.DropTarget):
         return self.tile.bin.ReceiveDrop(srcID, obKeys) 
 
 
-
 class ImageTile(ImagePanel):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
@@ -62,7 +61,6 @@ class ImageTile(ImagePanel):
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseOut)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
-
     def OnPaint(self, evt):
         dc = ImagePanel.OnPaint(self, evt)
         if self.showCenter:
@@ -73,7 +71,6 @@ class ImageTile(ImagePanel):
             dc.DrawRectangle(self.bitmap.Width/2.-1, self.bitmap.Height/2.-1, 3, 3)
             dc.EndDrawing()
         return dc
-
 
     def CreatePopupMenu(self):
         if self.popupMenu is not None:
@@ -92,12 +89,10 @@ class ImageTile(ImagePanel):
             self.popupMenu.Append(id,item)
         self.popupMenu.Bind(wx.EVT_MENU,self.OnSelectFromPopupMenu)
         
-        
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''
         self.CreatePopupMenu()
         self.PopupMenu(self.popupMenu, evt.GetPosition())
-    
     
     def OnSelectFromPopupMenu(self, evt):
         ''' Handles selections from the popup menu. '''
@@ -116,7 +111,6 @@ class ImageTile(ImagePanel):
         elif choice == 4:
             self.bin.RemoveSelectedTiles()
             
-            
     def OnDClick(self, evt):
         try:
             imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
@@ -127,27 +121,22 @@ class ImageTile(ImagePanel):
             errdlg = wx.MessageDialog(self.bin, e.args[0], 'Could not load image', wx.OK|wx.ICON_EXCLAMATION)
             errdlg.ShowModal()
             errdlg.Destroy()
-
-        
         
     def Select(self):
         if not self.selected:
             self.selected = True
             self.Refresh()
 
-
     def Deselect(self):
         if self.selected:
             self.selected = False
             self.Refresh()
-        
     
     def ToggleSelect(self):
         if self.selected:
             self.Deselect()
         else:
             self.Select()
-    
     
     def OnLeftDown(self, evt):
         self.bin.SetFocusIgnoringChildren()
@@ -158,21 +147,17 @@ class ImageTile(ImagePanel):
         elif evt.ShiftDown():
             self.ToggleSelect()
 
-
     def OnLeftUp(self, evt):
         inMotion = False
-            
             
     def OnMouseOver(self, evt):
         self.showCenter = True
         self.Refresh()
         
-        
     def OnMouseOut(self, evt):
         self.showCenter = False
         self.leftPressed = False
         self.Refresh()
-
             
     def OnMotion(self, evt):
         if not evt.LeftIsDown() or not self.leftPressed:
@@ -192,7 +177,6 @@ class ImageTile(ImagePanel):
         result = source.DoDragDrop(wx.Drag_DefaultMove)
         if result is wx.DragMove:
             self.bin.RemoveSelectedTiles()
-                
     
     def OnSize(self, evt):
         self.SetClientSize(evt.GetSize())
