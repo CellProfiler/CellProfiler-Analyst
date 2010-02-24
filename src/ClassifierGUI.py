@@ -105,7 +105,7 @@ class ClassifierGUI(wx.Frame):
         # fetch & rules
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
         self.rules_text = wx.TextCtrl(self.fetch_and_rules_panel, -1, size=(-1,-1), style=wx.TE_MULTILINE|wx.TE_READONLY)
-        self.rules_text.SetMinSize((-1, int(p.image_tile_size)))
+        self.rules_text.SetMinSize((-1, 50))
         self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
         
         # sorting bins
@@ -208,9 +208,9 @@ class ClassifierGUI(wx.Frame):
         self.splitter.SetSashGravity(0.0)
         self.bins_splitter.SetSashGravity(0.5)
 
-        self.splitter.SetMinimumPaneSize(max(int(p.image_tile_size), self.fetch_and_rules_panel.GetMinHeight()))
-        self.bins_splitter.SetMinimumPaneSize(int(p.image_tile_size))
-        self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * int(p.image_tile_size) + self.fetch_and_rules_panel.GetMinHeight()))
+        self.splitter.SetMinimumPaneSize(max(50, self.fetch_and_rules_panel.GetMinHeight()))
+        self.bins_splitter.SetMinimumPaneSize(50)
+        self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * 50 + self.fetch_and_rules_panel.GetMinHeight()))
 
         # Set initial state
         self.obClassChoice.SetSelection(0)
