@@ -114,8 +114,7 @@ class ImageTile(ImagePanel):
     def OnDClick(self, evt):
         try:
             imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
-                                            brightness=self.brightness, scale=self.scale, 
-                                            contrast=self.contrast)
+                                            brightness=self.brightness, contrast=self.contrast)
             imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         except Exception, e:
             errdlg = wx.MessageDialog(self.bin, e.args[0], 'Could not load image', wx.OK|wx.ICON_EXCLAMATION)
