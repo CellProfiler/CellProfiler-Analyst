@@ -105,8 +105,7 @@ class ImageTile(ImagePanel):
         if choice == 0:
             for obKey in self.bin.SelectedKeys():
                 imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
-                                        brightness=self.brightness, scale=self.scale,
-                                        contrast=self.contrast)
+                                        brightness=self.brightness, contrast=self.contrast)
                 imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
         elif choice == 1:
             self.bin.SelectAll()
