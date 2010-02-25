@@ -48,39 +48,21 @@ class VirtualList(wx.ListCtrl):
         if table is None:
             table = p.image_table
         self.set_table(table)
-
-#        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected)
-#        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
-#        self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnItemDeselected)
-
+        
     def set_table(self, table):
+        print 'set table'
         self.table = table
         self.cache = odict()
-        self.cols = db.GetColumnNames(self.table)[:100]
-        for i, col in enumerate(self.cols):
-            self.InsertColumn(i, col)
-            self.SetColumnWidth(i, 150)
+        self.cols = db.GetColumnNames(self.table)
+        self.Freeze()
+        self.ClearAll()
         n_rows = db.execute('SELECT COUNT(*) FROM %s'%(self.table))[0][0]
         self.SetItemCount(n_rows)
-        
-#    def OnItemSelected(self, event):
-#        self.currentItem = event.m_itemIndex
-#        print 'OnItemSelected: "%s", "%s", "%s", "%s"\n' % (self.currentItem,
-#                self.GetItemText(self.currentItem),
-#                self.getColumnText(self.currentItem, 1),
-#                self.getColumnText(self.currentItem, 2))
-#
-#    def OnItemActivated(self, event):
-#        self.currentItem = event.m_itemIndex
-#        print "OnItemActivated: %s\nTopItem: %s\n" %(self.GetItemText(self.currentItem), self.GetTopItem())
-#
-#    def getColumnText(self, index, col):
-#        item = self.GetItem(index, col)
-#        return item.GetText()
-#
-#    def OnItemDeselected(self, evt):
-#        print "OnItemDeselected: %s" % evt.m_itemIndex
-
+        for i, col in enumerate(self.cols):
+            self.InsertColumn(i, col)
+            self.SetColumnWidth(i, 100)
+        self.Thaw()
+        self.Refresh()
 
     #---------------------------------------------------
     # These methods are callbacks for implementing the
@@ -89,27 +71,20 @@ class VirtualList(wx.ListCtrl):
     # on values from some external data source, but for
     # this demo we'll just calculate them
     def OnGetItemText(self, row, col):
-        if not '%s,%s'%(row,col) in self.cache.keys():
+        if not row in self.cache:
+            print "query", row
+            lo = row - 10
+            hi = row + 10
             cols = ','.join(self.cols)
-            where = '%s>=%s AND %s<=%s'%(p.image_id, row+1, p.image_id, row+11)
-            vals = np.array(db.execute('SELECT %s FROM %s WHERE %s'%(cols, self.table, where)))
-            for i in range(10):
-                for j in range(len(self.cols)):
-                    self.cache['%s,%s'%(row+i,col+j)] = vals[i][j]
+            where = '%s BETWEEN %s AND %s'%(p.image_id, lo, hi)
+            vals = db.execute('SELECT %s, %s FROM %s WHERE %s'%(p.image_id, cols, self.table, where))
+            self.cache.update((v[0] - 1, v[1:]) for v in vals)
             # if cache exceeds 10000 entries, clip to last 5000
             if len(self.cache) > 10000:
                 for key in self.cache.keys()[:-5000]:
-                    self.cache.pop(key)
-        return self.cache['%s,%s'%(row,col)]
+                    del self.cache[key]
+        return self.cache[row][col]
 
-# XXX: If uncommented, the second column is rendered empty.  Why?
-#    def OnGetItemImage(self, item):
-#        pass
-#    
-#    def OnGetItemAttr(self, item):
-#        # eg: li = ListItemAttr()
-#        #     li.SetBackgroundColor('blue')
-#        pass
 
 
 class VirtualListPanel(wx.Panel):
@@ -136,6 +111,7 @@ def LoadProperties():
         print 'Scatterplot requires a properties file.  Exiting.'
         sys.exit()
 
+
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     
@@ -143,21 +119,21 @@ if __name__ == "__main__":
     
     LoadProperties()
 
-    f = wx.Frame(None)
-    vlp = VirtualListPanel(f)
-    f.Show()
+    frame = wx.Frame(None)
+    vlp = VirtualListPanel(frame)
+    frame.Show()
 
     # Add menu items for changing the table
-    f.SetMenuBar(wx.MenuBar())
+    frame.SetMenuBar(wx.MenuBar())
     tableMenu = wx.Menu()
     imtblMenuItem = tableMenu.Append(-1, p.image_table)
     obtblMenuItem = tableMenu.Append(-1, p.object_table)
-    f.GetMenuBar().Append(tableMenu, 'Tables')
+    frame.GetMenuBar().Append(tableMenu, 'Tables')
     def setimtable(evt):
         vlp.vlist.set_table(p.image_table)
     def setobtable(evt):
-        vlp.vlist.set_table(p.object_table)    
-    f.Bind(wx.EVT_MENU, setimtable, imtblMenuItem)
-    f.Bind(wx.EVT_MENU, setobtable, obtblMenuItem)
+        vlp.vlist.set_table(p.object_table)
+    frame.Bind(wx.EVT_MENU, setimtable, imtblMenuItem)
+    frame.Bind(wx.EVT_MENU, setobtable, obtblMenuItem)
     
     app.MainLoop()
