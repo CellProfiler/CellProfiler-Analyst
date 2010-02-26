@@ -181,6 +181,8 @@ class ClassifierGUI(wx.Frame):
             self.find_rules_sizer.Add(self.checkProgressBtn)
             self.Bind(wx.EVT_BUTTON, self.OnCheckProgress, self.checkProgressBtn)
         except:
+            import traceback
+            traceback.print_exc()
             logging.debug("Could not import cpfigure, will not display Margin vs. Iteration plot.")
         self.find_rules_sizer.Add((5,20))
         self.find_rules_sizer.Add(self.scoreAllBtn)
@@ -1285,11 +1287,13 @@ def show_exception_as_dialog(type, value, tb):
     """Exception handler that show a dialog."""
     import traceback
     from wx.lib.dialogs import ScrolledMessageDialog
-    traceback.print_exc()
+    if tb:
+        print traceback.format_tb(tb)
     lines = ['An error occurred in the program:\n']
     lines += traceback.format_exception_only(type, value)
     lines += ['\nTraceback (most recent call last):\n']
-    lines += traceback.format_tb(tb)
+    if tb:
+        lines += traceback.format_tb(tb)
     dlg = ScrolledMessageDialog(None, "".join(lines), 'Error', style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
     dlg.ShowModal()
     raise value
