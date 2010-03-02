@@ -159,8 +159,8 @@ class DataSourcePanel(wx.Panel):
         if filter != NO_FILTER:
             # If a filter is applied we must compute a WHERE clause and add the 
             # filter table to the FROM clause
-            tables += ', `%s`'%(filter_table_prefix+filter) 
-            filter_clause = ' AND '.join(['%s.%s=`%s`.%s'%(tablename, id, filter_table_prefix+filter, id) 
+            tables += ', %s'%(filter_table_prefix+filter) 
+            filter_clause = ' AND '.join(['%s.%s=%s.%s'%(tablename, id, filter_table_prefix+filter, id) 
                                           for id in db.GetLinkingColumnsForTable(tablename)])
             where_clause = 'WHERE %s'%(filter_clause)
         return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]

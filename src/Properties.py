@@ -137,8 +137,8 @@ class Properties(Singleton):
                         raise Exception, 'Filter "%s" is defined twice in properties file.'%(filter_name)
                     if filter_name in self._groups.keys():
                         raise Exception, 'Name "%s" is already taken for a group.'%(filter_name)
-                    if re.search('\.|\\\|/| |`', filter_name):
-                        raise Exception, 'PROPERTIES ERROR (%s): Filter names cannot contain the following characters `.\/ and space'%(filter_name)
+                    if re.search('\W', filter_name):
+                        raise Exception, 'PROPERTIES ERROR (%s): Filter names may only contain alphanumeric characters and "_".'%(filter_name)
                     if not val:
                         logr.warn('PROPERTIES WARNING (%s): Undefined filter'%(name))
                         continue

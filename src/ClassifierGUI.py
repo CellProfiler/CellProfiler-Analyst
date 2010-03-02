@@ -443,7 +443,7 @@ class ClassifierGUI(wx.Frame):
         self.obClassChoice.SetSelection(sel)
         
     def QuantityChanged(self, evt=None):
-        '''`
+        '''
         When the number of tiles in one of the SortBins has changed. 
         Disable the buttons for training and checking accuracy if any bin is 
         empty

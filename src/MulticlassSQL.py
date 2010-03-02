@@ -52,10 +52,10 @@ def CreateFilterTables(cb=None):
     index_cols = ",".join(image_key_columns())
 
     for name, query in p._filters.items():
-        db.execute('DROP TABLE IF EXISTS `%s`'%(filter_table_prefix+name))
-        db.execute('CREATE TEMPORARY TABLE `%s` (%s)'%(filter_table_prefix+name, key_col_defs))
-        db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(filter_table_prefix+name, filter_table_prefix+name, index_cols))
-        db.execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+name, index_cols, query))
+        db.execute('DROP TABLE IF EXISTS %s'%(filter_table_prefix+name))
+        db.execute('CREATE TEMPORARY TABLE %s (%s)'%(filter_table_prefix+name, key_col_defs))
+        db.execute('CREATE INDEX idx_%s ON %s (%s)'%(filter_table_prefix+name, filter_table_prefix+name, index_cols))
+        db.execute('INSERT INTO %s (%s) %s'%(filter_table_prefix+name, index_cols, query))
         # these queries can take a while, so allow a callback to run (wx.Yield being a good example)
         if cb is not None:
             cb()
@@ -65,10 +65,10 @@ def CreateFilterTable(filter, cb=None):
     key_col_defs = ",".join([col + " INT" for col in image_key_columns()])
     index_cols = ",".join(image_key_columns())
     query = p._filters[filter]
-    db.execute('DROP TABLE IF EXISTS `%s`'%(filter_table_prefix+filter))
-    db.execute('CREATE TEMPORARY TABLE `%s` (%s)'%(filter_table_prefix+filter, key_col_defs))
-    db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(filter_table_prefix+filter, filter_table_prefix+filter, index_cols))
-    db.execute('INSERT INTO `%s` (%s) %s'%(filter_table_prefix+filter, index_cols, query))
+    db.execute('DROP TABLE IF EXISTS %s'%(filter_table_prefix+filter))
+    db.execute('CREATE TEMPORARY TABLE %s (%s)'%(filter_table_prefix+filter, key_col_defs))
+    db.execute('CREATE INDEX idx_%s ON %s (%s)'%(filter_table_prefix+filter, filter_table_prefix+filter, index_cols))
+    db.execute('INSERT INTO %s (%s) %s'%(filter_table_prefix+filter, index_cols, query))
     # these queries can take a while, so allow a callback to run (wx.Yield being a good example)
     if cb is not None:
         cb()
@@ -137,13 +137,13 @@ def create_perobject_class_table(classnames, rules):
     
     
     # Drop must be explicitly asked for Classifier.ScoreAll
-    db.execute('DROP TABLE IF EXISTS `%s`'%(p.class_table))
-    db.execute('CREATE TABLE `%s` (%s)'%(p.class_table, class_col_defs))
-    db.execute('CREATE INDEX `idx_%s` ON `%s` (%s)'%(p.class_table, p.class_table, index_cols))
+    db.execute('DROP TABLE IF EXISTS %s'%(p.class_table))
+    db.execute('CREATE TABLE %s (%s)'%(p.class_table, class_col_defs))
+    db.execute('CREATE INDEX idx_%s ON %s (%s)'%(p.class_table, p.class_table, index_cols))
         
     case_expr = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, classnames[n]) for n in range(nClasses)]) + " END"
     case_expr2 = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, n+1) for n in range(nClasses)]) + " END"
-    db.execute('INSERT INTO `%s` (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, case_expr2, p.object_table))
+    db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, case_expr2, p.object_table))
     
 def PerImageCounts(weaklearners, filter=None, cb=None):
     '''
@@ -226,8 +226,8 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
     filter_clause = ''
     tables = p.object_table
     if filter is not None:
-        tables += ', `' + filter_table_prefix+filter + '`' 
-        filter_clause = " AND ".join(["%s=`%s`.%s "%(objectify(id), filter_table_prefix+filter, id) for id in image_key_columns()])
+        tables += ', ' + filter_table_prefix+filter + '' 
+        filter_clause = " AND ".join(["%s=%s.%s "%(objectify(id), filter_table_prefix+filter, id) for id in image_key_columns()])
 
     class_query = translate(weaklearners)
 
