@@ -339,7 +339,20 @@ class ClassifierGUI(wx.Frame):
         ''' Create color-selection menus for each channel. '''
         chIndex=0
         self.chMapById = {}
-        for channel, setColor in zip(p.image_channel_names, self.chMap):
+        channel_names = []
+        for i, chans in enumerate(p.channels_per_image):
+            chans = int(chans)
+            # Construct channel names, for RGB images, append a # to the end of
+            # each channel. 
+            name = p.image_channel_names[i]
+            if chans == 1:
+                channel_names += [name]
+            elif chans == 3: #RGB
+                channel_names += ['%s [%s]'%(name,x) for x in 'RGB']
+            else:
+                raise ValueError('Unsupported number of channels (%s) specified in properties field channels_per_image.'%(chans))
+        
+        for channel, setColor in zip(channel_names, self.chMap):
             channel_menu = wx.Menu()
             for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
                 id = wx.NewId()

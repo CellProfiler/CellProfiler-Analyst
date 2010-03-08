@@ -32,7 +32,7 @@ class TileCollection(Singleton):
         # Gray placeholder for unloaded images
         self.imagePlaceholder = List([numpy.zeros((int(p.image_tile_size),
                                                    int(p.image_tile_size)))+0.1
-                                      for ch in p.image_channel_files])
+                                      for i in range(sum(map(int,p.channels_per_image)))])
         self.loader = TileLoader(self, None)
 
     def GetTileData(self, obKey, notify_window, priority=1):
@@ -126,16 +126,17 @@ class TileLoader(threading.Thread):
                     continue
 
                 try:
-                    newData = ImageTools.FetchTile(obKey)
-                    tile_data = self.tile_collection.tileData.get(obKey, None)
-                    # Make sure tile hasn't been deleted outside this thread
-                    if tile_data is not None:
-                        # copy each channel
-                        for i in range(len(tile_data)):
-                            tile_data[i] = newData[i]
-                        wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
+                    new_data = ImageTools.FetchTile(obKey)
                 except Exception, e:
                     logging.error('ERROR FETCHING TILE!: %s\n'%(e))
+                tile_data = self.tile_collection.tileData.get(obKey, None)
+                
+                # Make sure tile hasn't been deleted outside this thread
+                if tile_data is not None:
+                    # copy each channel
+                    for i in range(len(tile_data)):
+                        tile_data[i] = new_data[i]
+                    wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
 
     def abort(self):
         self._want_abort = True

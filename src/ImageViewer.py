@@ -27,6 +27,24 @@ def get_classifier_window():
         return wins[0]
     else:
         return None
+    
+    
+def rescale_image_coord_to_display(x, y):
+    ''' Rescale coordinate to fit the rescaled image dimensions '''
+    if not p.rescale_object_coords:
+        return x,y
+    x = x * p.image_rescale[0] / p.image_rescale_from[0]
+    y = y * p.image_rescale[1] / p.image_rescale_from[1]
+    return x,y
+
+def rescale_display_coord_to_image(x, y):
+    ''' Rescale coordinate to fit the display image dimensions '''
+    if not p.rescale_object_coords:
+        return x,y
+    x = x * p.image_rescale_from[0] / p.image_rescale[0]
+    y = y * p.image_rescale_from[1] / p.image_rescale[1]
+    return x,y
+
 
 class ImageViewerPanel(ImagePanel):
     '''
@@ -247,26 +265,32 @@ class ImageViewer(wx.Frame):
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
         chIndex=0
-
-        # Remove menus if they are already there
-        for ch in p.image_channel_names:
-            if self.MenuBar.FindMenu(ch) > -1:
-                self.MenuBar.Remove(self.MenuBar.FindMenu(ch)).Destroy()
-
         self.chMapById = {}
-        nChannels = sum([int(n) for n in p.channels_per_image])
-        for i, channel, setColor in zip(xrange(nChannels), p.image_channel_names[:nChannels], self.chMap[:nChannels]):
+        channel_names = []
+        for i, chans in enumerate(p.channels_per_image):
+            chans = int(chans)
+            # Construct channel names, for RGB images, append a # to the end of
+            # each channel. 
+            name = p.image_channel_names[i]
+            if chans == 1:
+                channel_names += [name]
+            elif chans == 3: #RGB
+                channel_names += ['%s [%s]'%(name,x) for x in 'RGB']
+            else:
+                raise ValueError('Unsupported number of channels (%s) specified in properties field channels_per_image.'%(chans))
+        
+        for channel, setColor in zip(channel_names, self.chMap):
             channel_menu = wx.Menu()
             for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
                 id = wx.NewId()
                 item = channel_menu.AppendRadioItem(id,color)
-                self.chMapById[id] = (chIndex, color, item, channel_menu)
+                self.chMapById[id] = (chIndex,color,item,channel_menu)
                 if color.lower() == setColor.lower():
                     item.Check()
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
-                    
+                                
     def DoLayout(self):
         if self.imagePanel:
             if not self.cp:
@@ -391,9 +415,11 @@ class ImageViewer(wx.Frame):
             
     def SelectAll(self):
         if p.object_table:
-            coordList = db.GetAllObjectCoordsFromImage(self.img_key)
+            coords = db.GetAllObjectCoordsFromImage(self.img_key)
             self.selection = db.GetObjectsFromImage(self.img_key)
-            self.imagePanel.SetSelectedPoints(coordList)
+            if p.rescale_object_coords:
+                coords = [rescale_image_coord_to_display(x, y) for (x, y) in coords]
+            self.imagePanel.SetSelectedPoints(coords)
         
     def DeselectAll(self):
         self.selection = []
@@ -410,22 +436,28 @@ class ImageViewer(wx.Frame):
         if self.img_key and p.object_table:
             x = evt.GetPosition().x / self.imagePanel.scale
             y = evt.GetPosition().y / self.imagePanel.scale
+            if p.rescale_object_coords:
+                x, y = rescale_display_coord_to_image(x, y)
             obKey = db.GetObjectNear(self.img_key, x, y)
 
             if not obKey: return
             
-            # update selection
+            # update existing selection
             if not evt.ShiftDown():
                 self.selection = [obKey]
                 self.imagePanel.DeselectAll()
-                self.imagePanel.TogglePointSelection(db.GetObjectCoords(obKey))
             else:
                 if obKey not in self.selection:
                     self.selection += [obKey]
                 else:
                     self.selection.remove(obKey)
-                self.imagePanel.TogglePointSelection(db.GetObjectCoords(obKey))
-
+            
+            # select the object
+            (x,y) = db.GetObjectCoords(obKey)            
+            if p.rescale_object_coords:
+                x, y = rescale_image_coord_to_display(x, y)
+            self.imagePanel.TogglePointSelection((x,y))
+            
             if self.selection:
                 # start drag
                 source = wx.DropSource(self)
@@ -546,23 +578,31 @@ class ImageViewer(wx.Frame):
 
 
 if __name__ == "__main__":
-    p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
+    logging.basicConfig()
+    
+#    p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
     from DataModel import DataModel
     import ImageTools
     from ImageReader import ImageReader
+
+    if not p.show_load_dialog():
+        logging.error('ImageViewer requires a properties file.  Exiting.')
+        wx.GetApp().Exit()
+        raise Exception('ImageViewer requires a properties file.  Exiting.')
     
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
     ir = ImageReader()
     
     obKey = dm.GetRandomObject()
-    filenames = db.GetFullChannelPathsForImage(obKey[:-1])
-    images = ir.ReadImages(filenames)
-    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obKey[:-1])
-    frame.Show()
+    ImageTools.ShowImage(obKey[:-1], p.image_channel_colors, None)
+#    filenames = db.GetFullChannelPathsForImage(obKey[:-1])
+#    images = ir.ReadImages(filenames)
+#    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obKey[:-1])
+#    frame.Show()
     
 #    for i in xrange(1):
 #        obKey = dm.GetRandomObject()

@@ -36,13 +36,16 @@ class ImageReader(object):
         can be loaded more quickly together.
         '''
         format = filenames[0].split('.')[-1]
-        
+        pixels = []
         if format.upper() in ['TIF', 'TIFF', 'BMP', 'JPG', 'PNG', 'GIF']:
-            return self.ReadBitmaps(filenames)
+            pixels = self.ReadBitmaps(filenames)
         elif format.upper() in ['DIB']:
-            return self.ReadDIBs(filenames)
-        else:
-            return []
+            pixels = self.ReadDIBs(filenames)
+        
+        from ImageTools import check_image_shape_compatibility
+        check_image_shape_compatibility(pixels)
+        
+        return pixels
     
     
     def ReadDIBs(self, filenames):

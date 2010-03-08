@@ -100,7 +100,8 @@ class ImageTile(ImagePanel):
         if choice == 0:
             for obKey in self.bin.SelectedKeys():
                 imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
-                                        brightness=self.brightness, contrast=self.contrast)
+                                        brightness=self.brightness, contrast=self.contrast,
+                                        scale=self.scale)
                 imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
         elif choice == 1:
             self.bin.SelectAll()
@@ -112,14 +113,10 @@ class ImageTile(ImagePanel):
             self.bin.RemoveSelectedTiles()
             
     def OnDClick(self, evt):
-        try:
-            imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
-                                            brightness=self.brightness, contrast=self.contrast)
-            imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
-        except Exception, e:
-            errdlg = wx.MessageDialog(self.bin, e.args[0], 'Could not load image', wx.OK|wx.ICON_EXCLAMATION)
-            errdlg.ShowModal()
-            errdlg.Destroy()
+        imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
+                                        brightness=self.brightness, contrast=self.contrast,
+                                        scale=self.scale)
+        imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
     def Select(self):
         if not self.selected:

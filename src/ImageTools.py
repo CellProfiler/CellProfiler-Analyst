@@ -14,8 +14,6 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
-#last_imkey = None
-#last_image = None
 cache = {}
 cachedkeys = []
 
@@ -25,24 +23,29 @@ def FetchTile(obKey):
         and a list of intensity intervals of the original uncropped images
     '''
     imKey = obKey[:-1]
-    pos = db.GetObjectCoords(obKey)
+    pos = list(db.GetObjectCoords(obKey))
     size = (int(p.image_tile_size),int(p.image_tile_size))
-    return [Crop(im,size,pos) for im in FetchImage(imKey)]
+    # Could transform object coords here
+    imgs = FetchImage(imKey)
+    if p.rescale_object_coords:
+        pos[0] *= p.image_rescale[0] / p.image_rescale_from[0]
+        pos[1] *= p.image_rescale[1] / p.image_rescale_from[1]
+    return [Crop(im,size,pos) for im in imgs]
 
 def FetchImage(imKey):
-#    global last_image
-#    global last_imkey
-#    if imKey == last_imkey:
-#        return last_image
-#    else:
-#        last_imkey = imKey
     global cachedkeys
     if imKey in cache.keys():
         return cache[imKey]
     else:
         ir = ImageReader()
         filenames = db.GetFullChannelPathsForImage(imKey)
-        cache[imKey] = ir.ReadImages(filenames)
+        imgs = ir.ReadImages(filenames)
+        if p.image_rescale:
+            for i in range(len(imgs)):
+                if imgs[i].shape != p.image_rescale:
+                    imgs[i] = rescale(imgs[i], (p.image_rescale[1], p.image_rescale[0]))
+                    
+        cache[imKey] = imgs
         cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
             del cache[cachedkeys.pop(0)]
@@ -114,10 +117,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     imData[imData>255] = 255
 
     # Write wx.Image
-    if p.image_rescale:
-        img = wx.EmptyImage(p.image_rescale[1], p.image_rescale[0])
-    else:
-        img = wx.EmptyImage(w,h)
+    img = wx.EmptyImage(w,h)
     img.SetData(imData.astype('uint8').flatten())
     
     # Apply brightness & scale
@@ -136,7 +136,6 @@ def MergeChannels(imgs, chMap, masks=[]):
     Merges the given image data into the channels listed in chMap.
     Masks are passed in pairs (mask, blendingfunc).
     '''
-    
     n_channels = sum(map(int, p.channels_per_image))
     blending = p.image_channel_blend_modes or ['add']*n_channels
     h,w = imgs[0].shape
@@ -150,8 +149,46 @@ def MergeChannels(imgs, chMap, masks=[]):
                 'gray'     : [1,1,1], 
                 'none'     : [0,0,0] }
     
+    imData = np.zeros((h,w,3), dtype='float')
+    
+    for i, im in enumerate(imgs):
+        if blending[i].lower() == 'add':
+            c = colormap[chMap[i].lower()]
+            for chan in range(3):
+                imData[:,:,chan] += im * c[chan]
+    
+    imData[imData>1.0] = 1.0
+    imData[imData<0.0] = 0.0
+    
+    for i, im in enumerate(imgs):
+        if blending[i].lower() == 'subtract':
+            c = colormap[chMap[i].lower()]
+            for chan in range(3):
+                imData[:,:,chan] -= im * c[chan]
+
+    imData[imData>1.0] = 1.0
+    imData[imData<0.0] = 0.0
+    
+    for i, im in enumerate(imgs):
+        if blending[i].lower() == 'solid':
+            if chMap[i].lower() != 'none':
+                c = colormap[chMap[i].lower()]
+                for chan in range(3):
+                    imData[:,:,chan][im == 1] = c[chan]
+            
+    imData[imData>1.0] = 1.0
+    imData[imData<0.0] = 0.0
+    
+    for mask, func in masks:
+        imData = func(imData, mask)
+
+    return imData
+
+def check_image_shape_compatibility(imgs):
+    '''If all of the images are not of the same shape, then prompt the user
+    to choose a shape to resize them to.
+    '''
     if not p.image_rescale:
-        # Check image shape compatibility
         if np.any([imgs[i].shape!=imgs[0].shape for i in xrange(len(imgs))]):
             dims = [im.shape for im in imgs]
             aspect_ratios = [float(dims[i][0])/dims[i][1] for i in xrange(len(dims))]
@@ -166,50 +203,36 @@ def MergeChannels(imgs, chMap, masks=[]):
             min_idx = areas.index(min(areas))
             
             s = [imgs[max_idx].shape, imgs[min_idx].shape]
-            dlg = wx.SingleChoiceDialog(None, 
-                     'Some of your images were found to have different\n'
-                     'scales. Please choose a size and CPA will\n'
-                     'automatically rescale image channels to fit a\n'
-                     'single image.',
-                     'Inconsistent image channel sizes',
-                     [str(s[0]), str(s[1])])
-            if dlg.ShowModal() == wx.ID_OK:
-                dims = eval(dlg.GetStringSelection())
-                p.image_rescale = dims
-            else:
-                return None
-    
-    if p.image_rescale:
-        imData = np.zeros((p.image_rescale[0], p.image_rescale[1], 3), dtype='float')
-    else:
-        imData = np.zeros((h,w,3), dtype='float')
-    
-    for i, im in enumerate(imgs):
-        if blending[i].lower() == 'add':
-            if p.image_rescale and im.shape != p.image_rescale:
-                im = rescale(im, (p.image_rescale[1], p.image_rescale[0]))
-            c = colormap[chMap[i].lower()]
-            for chan in range(3):
-                imData[:,:,chan] += im * c[chan]
-    
-    imData[imData>1.0] = 1.0
-    imData[imData<0.0] = 0.0
-    
-    for i, im in enumerate(imgs):
-        if blending[i].lower() == 'subtract':
-            if p.image_rescale and im.shape != p.image_rescale:
-                im = rescale(im, (p.image_rescale[1], p.image_rescale[0]))
-            c = colormap[chMap[i].lower()]
-            for chan in range(3):
-                imData[:,:,chan] -= im * c[chan]
             
-    imData[imData>1.0] = 1.0
-    imData[imData<0.0] = 0.0
-    
-    for mask, func in masks:
-        imData = func(imData, mask)
-
-    return imData
+            if p.use_larger_image_scale:
+                p.image_rescale = map(float, imgs[max_idx].shape)
+                if p.rescale_object_coords:
+                    p.image_rescale_from = map(float, imgs[min_idx].shape)
+            else:
+                p.image_rescale = map(float, imgs[min_idx].shape)
+                if p.rescale_object_coords:
+                    p.image_rescale_from = map(float, imgs[max_idx].shape)
+            
+#            dlg = wx.SingleChoiceDialog(None, 
+#                     'Some of your images were found to have different\n'
+#                     'scales. Please choose a size and CPA will\n'
+#                     'automatically rescale image channels to fit a\n'
+#                     'single image.',
+#                     'Inconsistent image channel sizes',
+#                     [str(s[0]), str(s[1])])
+#            if dlg.ShowModal() == wx.ID_OK:
+#                dims = eval(dlg.GetStringSelection())
+#                p.image_rescale = dims
+#                dlg = wx.MessageDialog(None,
+#                        'Your %s coordinates may need to be rescaled as\n'
+#                        ' well in order to crop the images properly for\n'
+#                        'Classifier.\n'
+#                        'Rescale %s coordinates?'%(p.object_name[1], p.object_name[1]),
+#                        'Rescale %s coordinates?'%(p.object_name[1]),
+#                        wx.YES_NO|wx.ICON_QUESTION)
+#                if dlg.ShowModal() == wx.ID_YES:
+#                    p.rescale_object_coords = True
+#                    p.image_rescale_from = set(s).difference([dims]).pop()
 
 def rescale(im, scale):
     from scipy.misc import imresize
