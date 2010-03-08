@@ -75,7 +75,6 @@ class SortBin(wx.ScrolledWindow):
 
     def __str__(self):
         return 'Bin %s with %d objects'%(self.label, len(self.sizer.GetChildren()))
-    
         
     def CreatePopupMenu(self):
         popupMenuItems = ['View full images of selected',
@@ -92,7 +91,6 @@ class SortBin(wx.ScrolledWindow):
             self.popupItemIndexById[id] = i
             self.popupMenu.Append(id,item)
         self.popupMenu.Bind(wx.EVT_MENU,self.OnSelectFromPopupMenu)
-            
         
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
@@ -106,12 +104,10 @@ class SortBin(wx.ScrolledWindow):
             elif evt.GetKeyCode() == ord('I'):
                 self.InvertSelection()
         evt.Skip()
-        
             
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''
         self.PopupMenu(self.popupMenu, evt.GetPosition())
-        
     
     def OnSelectFromPopupMenu(self, evt):
         ''' Handles selections from the popup menu. '''
@@ -135,10 +131,8 @@ class SortBin(wx.ScrolledWindow):
         elif choice == 6:
             self.classifier.RemoveSortClass(self.label)
     
-    
     def AddObject(self, obKey, chMap, priority=1, pos='first'):
         self.AddObjects([obKey], chMap, priority, pos)
-                 
                         
     def AddObjects(self, obKeys, chMap, priority=1, pos='first'):
         if self.tile_collection == None:
@@ -158,11 +152,9 @@ class SortBin(wx.ScrolledWindow):
         self.UpdateSizer()
         self.UpdateQuantity()
 
-    
     def RemoveKey(self, obKey):
         ''' Removes the specified tile. '''
         self.RemoveKeys([obKey])
-        
         
     def RemoveKeys(self, obKeys):
         ''' Removes the specified tile. '''
@@ -174,7 +166,6 @@ class SortBin(wx.ScrolledWindow):
         self.UpdateSizer()
         self.UpdateQuantity()
 
-
     def RemoveSelectedTiles(self):
         for tile in self.Selection():
             self.tiles.remove(tile)
@@ -183,16 +174,13 @@ class SortBin(wx.ScrolledWindow):
         self.UpdateSizer()
         self.UpdateQuantity()
     
-    
     def Clear(self):
         self.RemoveKeys(self.GetObjectKeys())
-        
 
     def find_selected_tile_for_key(self, obkey):
         for t in self.tiles:
             if t.obKey == obkey and t.selected:
                 return t
-            
         
     def ReceiveDrop(self, srcID, obKeys):
         # TODO: stop drops from happening on the same board they originated on 
@@ -204,14 +192,12 @@ class SortBin(wx.ScrolledWindow):
         self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
         return wx.DragMove
         
-        
     def MapChannels(self, chMap):
         ''' Recalculates the displayed bitmap for all tiles in this bin. '''
         self.chMap = chMap
         for tile in self.tiles:
             tile.MapChannels(self.chMap)
             
-    
     def SelectedKeys(self):
         ''' Returns the keys of currently selected tiles on this bin. '''
         return [tile.obKey for tile in self.tiles if tile.selected]
@@ -224,25 +210,20 @@ class SortBin(wx.ScrolledWindow):
                 tiles.append(tile)
         return tiles
     
-    
     def GetObjectKeys(self):
         return [tile.obKey for tile in self.tiles]
         
-    
     def GetNumberOfTiles(self):
         return len(self.tiles)
-    
     
     def GetNumberOfSelectedTiles(self):
         return len(self.SelectedKeys())
         
-    
     def SelectAll(self):
         ''' Selects all tiles on this bin. '''
         for tile in self.tiles:
             tile.Select()
         
-    
     def DeselectAll(self):
         ''' Deselects all tiles on this bin. '''
         for tile in self.tiles:
@@ -251,13 +232,11 @@ class SortBin(wx.ScrolledWindow):
     def InvertSelection(self):
         [t.ToggleSelect() for t in self.tiles]
         
-
     def OnLeftDown(self, evt):
         ''' Deselect all tiles unless shift is held. '''
         self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
         if not evt.ShiftDown():
             self.DeselectAll()
-
 
     def UpdateTile(self, obKey):
         ''' Called when image data is available for a specific tile. '''
@@ -267,7 +246,6 @@ class SortBin(wx.ScrolledWindow):
                 
     def UpdateSizer(self):
         return self.SetVirtualSize(self.sizer.CalcMin())        
-
 
     def UpdateQuantity(self):
         '''
@@ -285,3 +263,4 @@ class SortBin(wx.ScrolledWindow):
             self.parentSizer.GetStaticBox().SetLabel('%s (%d)'%(self.label,len(self.tiles)))
         except:
             pass
+        
