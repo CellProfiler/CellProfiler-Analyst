@@ -23,7 +23,8 @@ string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd
                 'plate_type',
                 'check_tables',
                 'db_sql_file',
-                'db_sqlite_file',]
+                'db_sqlite_file',
+                'use_larger_image_scale', 'rescale_object_coords',]
 
 list_vars = ['image_channel_paths', 'image_channel_files', 
              'image_channel_names', 'image_channel_colors', 
@@ -45,7 +46,8 @@ optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
                  'db_sql_file',
                  'db_sqlite_file',
                  'object_table', 'object_id',
-                 'cell_x_loc', 'cell_y_loc',]
+                 'cell_x_loc', 'cell_y_loc',
+                 'use_larger_image_scale', 'rescale_object_coords',]
 
 class Properties(Singleton):
     '''
@@ -294,7 +296,7 @@ class Properties(Singleton):
 
         if self.field_defined('image_channel_blend_modes'):
             for mode in self.image_channel_blend_modes:
-                assert mode in ['add', 'subtract'], 'PROPERTIES ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add and subtract.'
+                assert mode in ['add', 'subtract', 'solid'], 'PROPERTIES ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add, subtract and solid.'
             
         if self.field_defined('classifier_ignore_substrings'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 
@@ -354,6 +356,22 @@ class Properties(Singleton):
         else:
             logr.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables))
             self.check_tables = 'yes'
+            
+        if not self.field_defined('use_larger_image_scale') or self.use_larger_image_scale.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.use_larger_image_scale = False
+        elif self.field_defined('use_larger_image_scale') and self.use_larger_image_scale.lower() in ['true', 'yes', 'on', 't', 'y']:
+            self.use_larger_image_scale = True
+        else:
+            logr.warn('PROPERTIES WARNING (use_larger_image_scale): Field value "%s" is invalid. Replacing with "false".'%(self.use_larger_image_scale))
+            self.use_larger_image_scale = False
+            
+        if not self.field_defined('rescale_object_coords') or self.rescale_object_coords.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.rescale_object_coords = False
+        elif self.field_defined('rescale_object_coords') and self.rescale_object_coords.lower() in ['true', 'yes', 'on', 't', 'y']:
+            self.rescale_object_coords = True
+        else:
+            logr.warn('PROPERTIES WARNING (rescale_object_coords): Field value "%s" is invalid. Replacing with "false".'%(self.rescale_object_coords))
+            self.rescale_object_coords = False
         
         
 if __name__ == "__main__":
