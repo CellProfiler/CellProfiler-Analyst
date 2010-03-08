@@ -23,11 +23,12 @@ class ImagePanel(wx.Panel):
         self.chMap       = channel_map
         self.toggleChMap = channel_map[:]
         self.images      = images
+        # Displayed bitmap
         self.bitmap      = ImageTools.MergeToBitmap(images,
-                                                    chMap = channel_map,
-                                                    scale = scale,
-                                                    brightness = brightness,
-                                                    contrast = contrast)   # displayed wx.Bitmap
+                               chMap = channel_map,
+                               scale = scale,
+                               brightness = brightness,
+                               contrast = contrast)
         
         wx.Panel.__init__(self, parent, wx.NewId(), size=self.bitmap.Size)
         
@@ -37,7 +38,6 @@ class ImagePanel(wx.Panel):
         self.selected      = False
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        
         
     def OnPaint(self, evt):
         self.SetClientSize((self.bitmap.Width, self.bitmap.Height))
@@ -53,7 +53,6 @@ class ImagePanel(wx.Panel):
             dc.EndDrawing()
         return dc
 
-
     def UpdateBitmap(self):
         self.bitmap = ImageTools.MergeToBitmap(self.images,
                                                chMap = self.chMap,
@@ -68,27 +67,19 @@ class ImagePanel(wx.Panel):
         self.chMap = chMap
         self.UpdateBitmap()
         
-
     def SetScale(self, scale):
         if scale != self.scale:
             self.scale = scale
             self.UpdateBitmap()
             self.SetClientSize((self.bitmap.Width, self.bitmap.Height))
 
-        
     def SetBrightness(self, brightness):
         if brightness != self.brightness:
             self.brightness = brightness
             self.UpdateBitmap()
             
-    
     def SetContrastMode(self, mode):
         self.contrast = mode
         self.UpdateBitmap()
-
-    
-
-        
-            
 
 
