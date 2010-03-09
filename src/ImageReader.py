@@ -122,7 +122,13 @@ class ImageReader(object):
                 
         for stream in streams:
             if self.protocol.upper() == 'HTTP':
-                data.append(stream.read(int(stream.info()['content-length'])))
+                d = ''
+                while True:
+                    chunk = stream.read()
+                    if len(chunk)==0:
+                        break
+                    d += chunk
+                data.append(d)
             else:
                 data.append(stream.read())
             stream.close()
