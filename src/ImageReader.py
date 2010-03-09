@@ -75,10 +75,10 @@ class ImageReader(object):
     def ReadBitmaps(self, filenames):
         images = []
         for data, f in zip(self.GetRawData(filenames), filenames):
-#            try:
-            imdata = ReadBitmapViaPIL(data)
-#            except:
-#                imdata = ReadBitmapViaTIFFfile(data)
+            try:
+                imdata = ReadBitmapViaPIL(data)
+            except:
+                imdata = ReadBitmapViaTIFFfile(data)
             if type(imdata) == list:
                 # multiple channels returned
                 images += imdata
