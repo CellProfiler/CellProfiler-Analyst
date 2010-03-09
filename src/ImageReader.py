@@ -157,13 +157,12 @@ def ReadBitmapViaPIL(data):
             imdata = new_img.astype(float) / 65535.
     else:
         import ImageTools
-        imd = ImageTools.pil_to_np(im)
-        imd = imd / 255.0
+        imd = np.asarray(im) / 255.0
         
         if len(imd.shape)==3 and imd.shape[2]>=3:
-        	# 3-channels in image
-            if (np.any(imd[:,:,0]!=imd[:,:,1]) and 
-                np.any(imd[:,:,0]!=imd[:,:,2])):
+            # 3-channels in image
+            if (np.any(imd[:,:,0] != imd[:,:,1]) and 
+                np.any(imd[:,:,0] != imd[:,:,2])):
                 if imd.shape[2] == 4:
                     # strip alpha channel if all values are the same
                     assert np.all(imd[:,:,3]==imd[0,0,3]), 'CPA does not yet support alpha channels in images.'
@@ -176,7 +175,7 @@ def ReadBitmapViaPIL(data):
                 imdata = imd[:,:,0]
         else:
         	# Single-channel image, return that channel
-            imdata = np.asarray(im.convert('L')) / 255.0
+            imdata = imd
             
     return imdata
 
