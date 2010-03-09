@@ -125,10 +125,10 @@ class TileLoader(threading.Thread):
                 if not self.tile_collection.tileData.get(obKey, None):
                     continue
 
-                try:
-                    new_data = ImageTools.FetchTile(obKey)
-                except Exception, e:
-                    logging.error('ERROR FETCHING TILE!: %s\n'%(e))
+#                try:
+                new_data = ImageTools.FetchTile(obKey)
+#                except Exception, e:
+#                    logging.error('ERROR FETCHING TILE!: %s\n'%(e))
                 tile_data = self.tile_collection.tileData.get(obKey, None)
                 
                 # Make sure tile hasn't been deleted outside this thread
