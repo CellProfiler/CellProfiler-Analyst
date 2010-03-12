@@ -318,7 +318,7 @@ if __name__ == "__main__":
             except: pass
 
             import cellprofiler.gui.newversiondialog as nvd
-            dlg = nvd.NewVersionDialog(None, "CPAnalyst update available (version %d)"%(new_version),
+            dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
                                        new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
                                        cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
             dlg.Show()
