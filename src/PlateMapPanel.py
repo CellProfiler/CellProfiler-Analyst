@@ -74,11 +74,20 @@ class PlateMapPanel(wx.Panel):
            to layout the plate unless overridden by the shape parameter
         shape -- If passed, this will be used to reshape the data. (rows,cols)
         '''
+        self.text_data = None
         self.data = np.array(data).astype('float')
         if shape is not None:
             self.data = self.data.reshape(shape)
             
         self.SetClipInterval(clip_interval, data_range, clip_mode)
+        
+    def SetTextData(self, data):
+        '''data -- An iterable containing values to be printed on top of each 
+              well. The length of this must match the size of the platemap.
+        '''
+        self.text_data = np.array(data)
+        assert self.data.size == self.text_data.size
+        self.text_data = self.text_data.reshape(self.data.shape)
         
     def SetClipInterval(self, clip_interval, data_range=None, clip_mode='rescale'):
         '''
@@ -226,7 +235,6 @@ class PlateMapPanel(wx.Panel):
                 imgs[well] = (im, )
 
         py = self.yo
-        i=0
         for y in range(rows_data+1):
             texty = py+(2.*r - htext)/2.
             px = self.xo
@@ -238,8 +246,19 @@ class PlateMapPanel(wx.Panel):
                 # Draw row headers
                 elif y!=0 and x==0:
                     dc.DrawText(self.row_labels[y-1], textx, texty)
+                px += 2*r+1
+            py += 2*r+1
+
+        py = self.yo
+        font.SetPixelSize((4,8))
+        dc.SetFont(font)
+        for y in range(rows_data+1):
+            texty = py+(2.*r - htext)/2.
+            px = self.xo
+            for x in range(cols_data+1):
+                textx = px+(2.*r - wtext)/2.
                 # Draw wells
-                elif y>0 and x>0:
+                if y>0 and x>0:
                     if (y-1, x-1) in self.selection:
                         dc.SetPen(wx.Pen("BLACK",5))
                     else:
@@ -266,12 +285,14 @@ class PlateMapPanel(wx.Panel):
                             scale = r*2./max(size)
                             bmp[well] = ImageTools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
+                    # Draw text data
+                    if self.text_data is not None:
+                        dc.DrawText(str(self.text_data[y-1][x-1]), px+3, py+r)
                     # Draw X
-                    if np.isnan(self.data[y-1][x-1]):
+                    elif np.isnan(self.data[y-1][x-1]):
                         dc.SetPen(wx.Pen("GRAY",1))
                         dc.DrawLine(px+3, py+3, px+r*2-2, py+r*2-2)
-                        dc.DrawLine(px+3, py+r*2-2, px+r*2-2, py+3)    
-                    i+=1
+                        dc.DrawLine(px+3, py+r*2-2, px+r*2-2, py+3)
                 px += 2*r+1
             py += 2*r+1
         dc.EndDrawing()
@@ -290,12 +311,13 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     
     # test plate map panel
-    data = np.arange(5600.)
-    labels = [str(i) for i in xrange(1,5601)]
-#    data = np.ones(384)
+#    data = np.arange(5600.)
+#    labels = [str(i) for i in xrange(1,5601)]
+    data = np.arange(384).reshape(16,24)
     data[100:102] = np.nan
     frame = wx.Frame(None, size=(900.,800.))
-    p = PlateMapPanel(frame, data, shape=(40,140), well_labels=labels, wellshape='square', data_range=(400,500))
+    p = PlateMapPanel(frame, data, wellshape='square')
+    p.SetTextData(data)
     frame.Show()
     
     app.MainLoop()

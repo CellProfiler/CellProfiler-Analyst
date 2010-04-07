@@ -69,7 +69,6 @@ class AwesomePMP(PlateMapPanel):
                     ImageTools.ShowImage(imKey, self.chMap, parent=self)
                 except Exception, e:
                     logging.error('Could not open image: %s'%(e))
-                    
 
     def OnRClick(self, evt):
         if self.plate is not None:
@@ -138,7 +137,8 @@ class PlateMapBrowser(wx.Frame):
                 
         dataSourceSizer.AddSpacer((-1,10))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
-        measurements = self.GetNumericColumnsFromTable(p.image_table)
+        #measurements = self.GetNumericColumnsFromTable(p.image_table)
+        measurements = db.GetColumnNames(p.image_table)
         self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
@@ -258,86 +258,130 @@ class PlateMapBrowser(wx.Frame):
         singlePlateMapSizer.Add(self.plateMaps[-1], 1, wx.EXPAND|wx.ALIGN_CENTER)
         
         self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
-            
+        
     def UpdatePlateMaps(self):
         measurement = self.measurementsChoice.GetStringSelection()
         table       = self.sourceChoice.GetStringSelection()
         aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
+        table = self.sourceChoice.GetStringSelection()
+        numeric_measurements = self.GetNumericColumnsFromTable(table)
+        categorical = measurement not in numeric_measurements
         self.colorBar.ClearNotifyWindows()
 
-        if aggMethod == 'mean':
-            expression = "AVG(%s.%s)"%(table, measurement)
-        elif aggMethod == 'stdev':
-            expression = "STDDEV(%s.%s)"%(table, measurement)
-        elif aggMethod == 'cv%':
-            expression = "STDDEV(%s.%s)/AVG(%s.%s)*100"%(table, measurement, table, measurement)
-        elif aggMethod == 'sum':
-            expression = "SUM(%s.%s)"%(table, measurement)
-        elif aggMethod == 'min':
-            expression = "MIN(%s.%s)"%(table, measurement)
-        elif aggMethod == 'max':
-            expression = "MAX(%s.%s)"%(table, measurement)
-        elif aggMethod == 'median':
-            expression = "MEDIAN(%s.%s)"%(table, measurement)
-        
-        if table == p.image_table:
-            group = True
-            platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
-                                      (p.plate_id, p.well_id, expression, table,
-                                       'GROUP BY %s, %s'%(p.plate_id, p.well_id) if group else ''))
-        elif set([p.well_id, p.plate_id]) == set(db.GetLinkingColumnsForTable(table)):
-            # For data from tables with well and plate columns, we simply
-            # fetch and aggregate
-            # XXX: SHOULD we allow aggregation of per-well data since there 
-            #      should logically only be one row per well???? 
-            group = True
-            platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
-                                      (p.plate_id, p.well_id, expression, table,
-                                       'GROUP BY %s, %s'%(p.plate_id, p.well_id) if group else ''))
-        else:
-            # For data from other tables without well and plate columns, we 
-            # need to link the table to the per image table via the 
-            # ImageNumber column
-            group = True
-            platesWellsAndVals = db.execute('SELECT %s.%s, %s.%s, %s FROM %s, %s WHERE %s %s'%
-                                      (p.image_table, p.plate_id, p.image_table, p.well_id, expression, 
-                                       p.image_table, table, 
-                                       ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in db.GetLinkingColumnsForTable(table)]),
-                                       'GROUP BY %s.%s, %s.%s'%(p.image_table, p.plate_id, p.image_table, p.well_id) if group else ''))
-        platesWellsAndVals = np.array(platesWellsAndVals, dtype=object)
-        # Replace None's with nan
-        for row in platesWellsAndVals:
-            if row[2] is None:
-                row[2] = np.nan
-        gmin = np.nanmin([float(val) for _,_,val in platesWellsAndVals])
-        gmax = np.nanmax([float(val) for _,_,val in platesWellsAndVals])
+        if not categorical:
+            if aggMethod == 'mean':
+                expression = "AVG(%s.%s)"%(table, measurement)
+            elif aggMethod == 'stdev':
+                expression = "STDDEV(%s.%s)"%(table, measurement)
+            elif aggMethod == 'cv%':
+                expression = "STDDEV(%s.%s)/AVG(%s.%s)*100"%(table, measurement, table, measurement)
+            elif aggMethod == 'sum':
+                expression = "SUM(%s.%s)"%(table, measurement)
+            elif aggMethod == 'min':
+                expression = "MIN(%s.%s)"%(table, measurement)
+            elif aggMethod == 'max':
+                expression = "MAX(%s.%s)"%(table, measurement)
+            elif aggMethod == 'median':
+                expression = "MEDIAN(%s.%s)"%(table, measurement)
+            
+            if table == p.image_table:
+                group = True
+                platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
+                                          (p.plate_id, p.well_id, expression, table,
+                                           'GROUP BY %s, %s'%(p.plate_id, p.well_id) if group else ''))
+            elif set([p.well_id, p.plate_id]) == set(db.GetLinkingColumnsForTable(table)):
+                # For data from tables with well and plate columns, we simply
+                # fetch and aggregate
+                # XXX: SHOULD we allow aggregation of per-well data since there 
+                #      should logically only be one row per well???? 
+                group = True
+                platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
+                                          (p.plate_id, p.well_id, expression, table,
+                                           'GROUP BY %s, %s'%(p.plate_id, p.well_id) if group else ''))
+            else:
+                # For data from other tables without well and plate columns, we 
+                # need to link the table to the per image table via the 
+                # ImageNumber column
+                group = True
+                platesWellsAndVals = db.execute('SELECT %s.%s, %s.%s, %s FROM %s, %s WHERE %s %s'%
+                                          (p.image_table, p.plate_id, p.image_table, p.well_id, expression, 
+                                           p.image_table, table, 
+                                           ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in db.GetLinkingColumnsForTable(table)]),
+                                           'GROUP BY %s.%s, %s.%s'%(p.image_table, p.plate_id, p.image_table, p.well_id) if group else ''))
+            platesWellsAndVals = np.array(platesWellsAndVals, dtype=object)
+            
+            # Replace None's with nan
+            for row in platesWellsAndVals:
+                if row[2] is None:
+                    row[2] = np.nan
+            gmin = np.nanmin([float(val) for _,_,val in platesWellsAndVals])
+            gmax = np.nanmax([float(val) for _,_,val in platesWellsAndVals])
+    
+            data = []
+            dmax = -np.inf
+            dmin = np.inf
+            for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
+                plate = plateChoice.GetStringSelection()
+                plateMap.SetPlate(plate)
+                self.colorBar.AddNotifyWindow(plateMap)
+                wellsAndVals = [v[1:] for v in platesWellsAndVals if str(v[0])==plate]
+                platedata, platelabels = FormatPlateMapData(wellsAndVals)
+                data += [platedata]
+                plateMap.SetWellLabels(platelabels)
+                dmin = np.nanmin([float(val) for _,val in wellsAndVals]+[dmin])
+                dmax = np.nanmax([float(val) for _,val in wellsAndVals]+[dmax])
+            
+            if np.isinf(dmin) or np.isinf(dmax):
+                dlg = wx.MessageDialog(self, 'No numeric data was found in this column ("%s.%s") for the selected plate ("%s").'%(table,measurement,plate), 'No data!', style=wx.OK)
+                dlg.ShowModal()
+                gmin = gmax = dmin = dmax = 1.
+            
+            self.colorBar.SetLocalExtents([dmin,dmax])
+            self.colorBar.SetGlobalExtents([gmin,gmax])
 
-        data = []
-        dmax = -np.inf
-        dmin = np.inf
-        for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
-            plate = plateChoice.GetStringSelection()
-            plateMap.SetPlate(plate)
-            self.colorBar.AddNotifyWindow(plateMap)
-            wellsAndVals = [v[1:] for v in platesWellsAndVals if str(v[0])==plate]
-            platedata, platelabels = FormatPlateMapData(wellsAndVals)
-            data += [platedata]
-            plateMap.SetWellLabels(platelabels)
-            dmin = np.nanmin([float(val) for _,val in wellsAndVals]+[dmin])
-            dmax = np.nanmax([float(val) for _,val in wellsAndVals]+[dmax])
-        
-        if np.isinf(dmin) or np.isinf(dmax):
-            dlg = wx.MessageDialog(self, 'No numeric data was found in this column ("%s.%s") for the selected plate ("%s").'%(table,measurement,plate), 'No data!', style=wx.OK)
-            dlg.ShowModal()
-            gmin = gmax = dmin = dmax = 1.
-        
-        self.colorBar.SetLocalExtents([dmin,dmax])
-        self.colorBar.SetGlobalExtents([gmin,gmax])
-        
+        else:
+            # CATEGORICAL data
+            if table == p.image_table:
+                platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
+                                          (p.plate_id, p.well_id, measurement, table,
+                                           'GROUP BY %s, %s'%(p.plate_id, p.well_id)))
+            elif set([p.well_id, p.plate_id]) == set(db.GetLinkingColumnsForTable(table)):
+                # For data from tables with well and plate columns
+                platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
+                                          (p.plate_id, p.well_id, measurement, table,
+                                           'GROUP BY %s, %s'%(p.plate_id, p.well_id)))
+            else:
+                # For data from other tables without well and plate columns, we 
+                # need to link the table to the per image table via the 
+                # ImageNumber column
+                platesWellsAndVals = db.execute('SELECT %s.%s, %s.%s, %s FROM %s, %s WHERE %s %s'%
+                                          (p.image_table, p.plate_id, p.image_table, p.well_id, measurement, 
+                                           p.image_table, table, 
+                                           ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in db.GetLinkingColumnsForTable(table)]),
+                                           'GROUP BY %s.%s, %s.%s'%(p.image_table, p.plate_id, p.image_table, p.well_id)))
+            
+            data = []
+            for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
+                plate = plateChoice.GetStringSelection()
+                plateMap.SetPlate(plate)
+                self.colorBar.AddNotifyWindow(plateMap)
+                wellsAndVals = [v[1:] for v in platesWellsAndVals if str(v[0])==plate]
+                platedata, platelabels = FormatPlateMapData(wellsAndVals, categorical=True)
+                data += [platedata]
+                plateMap.SetWellLabels(platelabels)
+
+            self.colorBar.SetLocalExtents([0,1])
+            self.colorBar.SetGlobalExtents([0,1])
+            
         for d, plateMap in zip(data, self.plateMaps):
-            plateMap.SetData(d, data_range=self.colorBar.GetLocalExtents(), 
-                             clip_interval=self.colorBar.GetLocalInterval(), 
-                             clip_mode=self.colorBar.GetClipMode())
+            if categorical:
+                plateMap.SetData(np.ones(d.shape) * np.nan)
+                plateMap.SetTextData(d)
+            else:
+                plateMap.SetData(d, data_range=self.colorBar.GetLocalExtents(), 
+                                 clip_interval=self.colorBar.GetLocalInterval(), 
+                                 clip_mode=self.colorBar.GetClipMode())
+
         
     def GetNumericColumnsFromTable(self, table):
         ''' Fetches names of numeric columns for the given table. '''
@@ -363,6 +407,15 @@ class PlateMapBrowser(wx.Frame):
         
     def OnSelectMeasurement(self, evt):
         ''' Handles the selection of a measurement to plot from a choice box. '''
+        selected_measurement = self.measurementsChoice.GetStringSelection() 
+        table = self.sourceChoice.GetStringSelection()
+        numeric_measurements = self.GetNumericColumnsFromTable(table)
+        if selected_measurement not in numeric_measurements:
+            self.aggregationMethodsChoice.Disable()
+            self.colorMapsChoice.Disable()
+        else:
+            self.aggregationMethodsChoice.Enable()
+            self.colorMapsChoice.Enable()
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
         
@@ -425,7 +478,7 @@ class PlateMapBrowser(wx.Frame):
         self.plateMapSizer.Layout()
         
 
-def FormatPlateMapData(wellsAndVals):
+def FormatPlateMapData(wellsAndVals, categorical=False):
     '''
     wellsAndVals: a list of 2-tuples of wells and values
     returns a properly shaped numpy array of the given values with NaNs
@@ -460,7 +513,9 @@ def FormatPlateMapData(wellsAndVals):
     elif p.plate_type == '1536': shape = (32,48)
     elif p.plate_type == '5600': shape = (40,140)
 
-    data = np.ones(shape)*np.nan
+    data = np.ones(shape) * np.nan
+    if categorical: 
+        data = data.astype('object')
     labels = np.array(['UnknownWell'] * np.prod(shape), dtype=object).reshape(shape)
     for well, val in wellsAndVals:
         if format == 'A01':
@@ -470,13 +525,19 @@ def FormatPlateMapData(wellsAndVals):
                 else:
                     row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.index(well[0])
                 col = int(well[1:])-1
-                data[row,col] = float(val)
+                if not categorical:
+                    data[row,col] = float(val)
+                else:
+                    data[row,col] = val
                 labels[row, col] = well
         elif format == '123':
-            row = (int(well)-1)/shape[1]
-            col = (int(well)-1)%shape[1]
-            data[row,col] = float(val)
-            labels[row, col] = well
+            row = (int(well) - 1) / shape[1]
+            col = (int(well) - 1) % shape[1]
+            if not categorical:
+                data[row,col] = float(val)
+            else:
+                data[row,col] = val
+            labels[row,col] = well
     return data, labels
     
 
