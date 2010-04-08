@@ -98,7 +98,7 @@ class ScatterControlPanel(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        tables = db.GetTableNames()
+        tables = [p.image_table, p.object_table] #db.GetTableNames()
         self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
         if p.image_table in tables:
             self.table_choice.Select(tables.index(p.image_table))
