@@ -98,7 +98,7 @@ class ScatterControlPanel(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        tables = [p.image_table, p.object_table] #db.GetTableNames()
+        tables = db.GetTableNames()
         self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
         if p.image_table in tables:
             self.table_choice.Select(tables.index(p.image_table))
@@ -218,12 +218,10 @@ class ScatterControlPanel(wx.Panel):
         self.plotfieldslistbox.Delete(selected)
         
     def loadpoints(self, tablename, xpoints, ypoints, filter=NO_FILTER):
-        if tablename == p.image_table:
-            fields = UniqueImageClause(tablename)
-        elif tablename == p.object_table:
-            fields = UniqueObjectClause(tablename)
-        else:
-            raise UnimplementedError
+        ''' Returns a list of rows containing:
+        (TableNumber), ImageNumber, X measurement, Y measurement
+        '''
+        fields = UniqueImageClause(tablename)
         fields += ', %s.%s, %s.%s'%(tablename, xpoints, tablename, ypoints)
         tables = tablename
         where_clause = ''

@@ -153,6 +153,9 @@ class DataSourcePanel(wx.Panel):
         self.plotfieldslistbox.Delete(selected)
         
     def loadpoints(self, tablename, xpoints, filter=NO_FILTER):
+        ''' Returns a list of rows containing:
+        (TableNumber), ImageNumber, X measurement
+        '''
         fields = '%s.%s'%(tablename, xpoints)
         tables = tablename
         where_clause = ''
