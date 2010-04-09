@@ -17,6 +17,7 @@ p = Properties.Properties.getInstance()
 Properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
 
+required_fields = ['plate_type', 'plate_id', 'well_id']
 
 class AwesomePMP(PlateMapPanel):
     '''
@@ -101,6 +102,16 @@ class PlateMapBrowser(wx.Frame):
     def __init__(self, parent, size=(800,-1)):
         wx.Frame.__init__(self, parent, -1, size=size, title='Plate Viewer')
         self.SetName('PlateViewer')
+        
+        # Check for required properties fields.
+        fail = False
+        for field in required_fields:
+            if not p.field_defined(field):
+                raise 'Properties field "%s" is required for PlateViewer.'%(field)
+                fail = True
+        if fail:    
+            self.Destroy()
+            return
         
         assert (p.well_id is not None and p.plate_id is not None), \
             'Plate Viewer requires the well_id and plate_id columns to be defined in your properties file.'
