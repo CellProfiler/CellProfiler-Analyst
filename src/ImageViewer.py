@@ -12,6 +12,8 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
+REQUIRED_PROPERTIES = ['image_channel_colors', 'object_name', 'image_names', 'image_id']
+
 CL_NUMBERED = 'numbered'
 CL_COLORED = 'colored'
 ID_SELECT_ALL = wx.NewId()
@@ -44,7 +46,6 @@ def rescale_display_coord_to_image(x, y):
     x = x * p.image_rescale_from[0] / p.image_rescale[0]
     y = y * p.image_rescale_from[1] / p.image_rescale[1]
     return x,y
-
 
 class ImageViewerPanel(ImagePanel):
     '''
@@ -198,6 +199,11 @@ class ImageViewer(wx.Frame):
         self.cp          = None
         self.controls    = None
         self.first_layout = True
+        if chMap is None:
+            try:
+                chMap = p.image_channel_colors
+            except:
+                pass
 
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         self.CreateMenus()
@@ -264,14 +270,15 @@ class ImageViewer(wx.Frame):
     
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
-        chIndex=0
+        chIndex = 0
         self.chMapById = {}
         channel_names = []
+        
         for i, chans in enumerate(p.channels_per_image):
             chans = int(chans)
             # Construct channel names, for RGB images, append a # to the end of
             # each channel. 
-            name = p.image_channel_names[i]
+            name = p.image_names[i]
             if chans == 1:
                 channel_names += [name]
             elif chans == 3: #RGB
@@ -284,7 +291,7 @@ class ImageViewer(wx.Frame):
             for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
                 id = wx.NewId()
                 item = channel_menu.AppendRadioItem(id,color)
-                self.chMapById[id] = (chIndex,color,item,channel_menu)
+                self.chMapById[id] = (chIndex, color, item, channel_menu)
                 if color.lower() == setColor.lower():
                     item.Check()
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
@@ -517,8 +524,21 @@ class ImageViewer(wx.Frame):
             errdlg.ShowModal()
             self.Destroy()
         else:
+            # clean up existing channel menus
+            try:
+                menus = set([items[2].Menu for items in self.chMapById.values()])
+                for menu in menus:
+                    for i, mbmenu in enumerate(self.MenuBar.Menus):
+                        if mbmenu[0] == menu:
+                            self.MenuBar.Remove(i)
+                for menu in menus:
+                    menu.Destroy()
+            except:
+                pass
+            
+            # load the image
             self.img_key = imkey
-            self.SetImage(ImageTools.FetchImage(imkey), p.image_color_maps)
+            self.SetImage(ImageTools.FetchImage(imkey), p.image_channel_colors)
             self.DoLayout()
             
     def OnSaveImage(self, evt):
