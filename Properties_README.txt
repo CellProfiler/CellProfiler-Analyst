@@ -121,12 +121,12 @@ cell_y_loc  =  <your_object_y_location_column>
 #
 # NOTE: These lists must have equal length!
 
-image_channel_paths  =  <col_containing_dna_stain_image_paths>, <col_containing_actin_stain_image_paths>,
-image_channel_files  =  <col_containing_dna_stain_image_filenames>, <col_containing_actin_stain_image_filenames>,
+image_path_cols  =  <col_containing_dna_stain_image_paths>, <col_containing_actin_stain_image_paths>,
+image_file_cols  =  <col_containing_dna_stain_image_filenames>, <col_containing_actin_stain_image_filenames>,
 
-# Give short names for each of the channels (respectively)
+# Give short names for each of the images listed above
 
-image_channel_names   =  <DNA>, <Actin>,
+image_names   =  <DNA>, <Actin>,
 
 # Specify a default color for each of the channels (respectively)
 # Valid colors are: [red, green, blue, magenta, cyan, yellow, gray, none]
@@ -147,7 +147,7 @@ image_channel_blend_modes = <add>, <add>,
 #
 # eg: If the image specified by the first image_channel_file field is RGB, but
 # the second image had only 1 channel you would set: channels_per_image = 3, 1
-# Doing this would require that you pass 4 values into image_channel_names,
+# Doing this would require that you pass 4 values into image_names,
 # image_channel_colors, and image_channel_blend_modes
 
 channels_per_image  = <1>, <1>,
