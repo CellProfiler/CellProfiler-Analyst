@@ -8,46 +8,93 @@ import logging
 
 logr = logging.getLogger('Properties')
 
-# TODO: check type of all field values
-string_vars = ['db_type', 'db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
-                'image_table', 'object_table',
-                'image_csv_file', 'object_csv_file',
-                'table_id', 'image_id', 'object_id', 'plate_id', 'well_id',
-                'cell_x_loc', 'cell_y_loc',
-                'image_url_prepend',
-                'image_tile_size', 'image_buffer_size',
-                'tile_buffer_size',
-                'area_scoring_column',
-                'training_set',
-                'class_table',
-                'plate_type',
-                'check_tables',
-                'db_sql_file',
-                'db_sqlite_file',
-                'use_larger_image_scale', 'rescale_object_coords',]
+#
+# THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
+#
 
-list_vars = ['image_channel_paths', 'image_channel_files', 
-             'image_channel_names', 'image_channel_colors', 
-             'channels_per_image', 'image_channel_blend_modes', 
-            'object_name',
-            'classifier_ignore_substrings', 'classifier_ignore_columns']
+string_vars = ['db_type', 
+               'db_port', 
+               'db_host', 
+               'db_name', 
+               'db_user', 
+               'db_passwd',
+               'image_table', 
+               'object_table',
+               'image_csv_file', 
+               'object_csv_file',
+               'table_id', 
+               'image_id', 
+               'object_id', 
+               'plate_id', 
+               'well_id',
+               'cell_x_loc', 
+               'cell_y_loc',
+               'image_url_prepend',
+               'image_tile_size', 
+               'image_buffer_size',
+               'tile_buffer_size',
+               'area_scoring_column',
+               'training_set',
+               'class_table',
+               'plate_type',
+               'check_tables',
+               'db_sql_file',
+               'db_sqlite_file',
+               'use_larger_image_scale', 
+               'rescale_object_coords',]
 
-optional_vars = ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',
-                 'table_id', 'image_url_prepend', 'image_csv_file',
-                 'image_channel_names', 'image_channel_colors',
-                 'channels_per_image', 'image_channel_blend_modes',
-                 'object_csv_file', 'area_scoring_column', 'training_set',
+list_vars = ['image_path_cols', 'image_channel_paths', 
+             'image_file_cols', 'image_channel_files', 
+             'image_names', 'image_channel_names', 
+             'image_channel_colors', 
+             'channels_per_image', 
+             'image_channel_blend_modes', 
+             'object_name',
+             'classifier_ignore_substrings', 
+             'classifier_ignore_columns']
+
+optional_vars = ['db_port', 
+                 'db_host', 
+                 'db_name', 
+                 'db_user', 
+                 'db_passwd',
+                 'table_id', 
+                 'image_url_prepend', 
+                 'image_csv_file',
+                 'image_channel_names', 'image_names', 
+                 'image_channel_colors',
+                 'channels_per_image', 
+                 'image_channel_blend_modes',
+                 'object_csv_file', 
+                 'area_scoring_column', 
+                 'training_set',
                  'class_table',
-                 'image_buffer_size', 'tile_buffer_size',
-                 'plate_id', 'well_id', 'plate_type',
+                 'image_buffer_size', 
+                 'tile_buffer_size',
+                 'plate_id', 
+                 'well_id', 
+                 'plate_type',
                  'classifier_ignore_substrings', 'classifier_ignore_columns',
                  'object_name',
                  'check_tables',
                  'db_sql_file',
                  'db_sqlite_file',
-                 'object_table', 'object_id',
-                 'cell_x_loc', 'cell_y_loc',
-                 'use_larger_image_scale', 'rescale_object_coords',]
+                 'object_table', 
+                 'object_id',
+                 'cell_x_loc', 
+                 'cell_y_loc',
+                 'use_larger_image_scale', 
+                 'rescale_object_coords',]
+
+# map deprecated fields to new fields
+field_mappings = {'classifier_ignore_substrings' : 'classifier_ignore_columns',
+                  'image_channel_files' : 'image_file_cols',
+                  'image_channel_paths' : 'image_path_cols',
+                  'image_channel_names' : 'image_names',
+                  }
+
+required_vars = list(set(list_vars + string_vars) - set(optional_vars) 
+                     - set(field_mappings.keys()))
 
 class Properties(Singleton):
     '''
@@ -92,7 +139,8 @@ class Properties(Singleton):
         
         lines = f.read()
         self._textfile = lines
-#        lines = lines.replace('\r', '\n')                        # replace CRs with LFs
+        # replace CRs with LFs
+#        lines = lines.replace('\r', '\n')
         lines = lines.split('\n')
 
         self._groups = {}
@@ -101,9 +149,10 @@ class Properties(Singleton):
         self._filters_ordered = []
 
         for idx, line in enumerate(lines):
-            if not line.strip().startswith('#') and line.strip()!='':          # skip commented and empty lines
+            # skip commented and empty lines
+            if not line.strip().startswith('#') and line.strip() != '':
                 try:
-                    (name, val) = line.split('=', 1)                               # split each side of the first eq sign
+                    (name, val) = line.split('=', 1)
                     name = name.strip()
                     val = val.strip()
                 except:
@@ -119,7 +168,9 @@ class Properties(Singleton):
                 elif name.startswith('group_SQL_'):
                     group_name = name[10:]
                     if group_name == '':
-                        raise Exception, 'PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\nExample: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\na MySQL query "<QUERY>". See the README.'%(name)
+                        raise Exception, ('PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\n'
+                                          'Example: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\n'
+                                          'a MySQL query "<QUERY>". See the README.'%(name))
                     if group_name in self._groups.keys():
                         raise Exception, 'Group "%s" is defined twice in properties file.'%(group_name)
                     if group_name in self._filters.keys():
@@ -134,7 +185,9 @@ class Properties(Singleton):
                 elif name.startswith('filter_SQL_'):
                     filter_name = name[11:]
                     if filter_name == '':
-                        raise Exception, 'PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\nExample: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\na MySQL query "<QUERY>". See the README.'%(name)
+                        raise Exception, ('PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
+                                          'Example: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\n'
+                                          'a MySQL query "<QUERY>". See the README.'%(name))
                     if filter_name in self._filters.keys():
                         raise Exception, 'Filter "%s" is defined twice in properties file.'%(filter_name)
                     if filter_name in self._groups.keys():
@@ -149,7 +202,8 @@ class Properties(Singleton):
                     self._filters_ordered += [filter_name]
                 
                 elif name in ['groups', 'filters']:
-                    logr.warn('PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\nOnly the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name))
+                    logr.warn('PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\n'
+                              'Only the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name))
                     
                 else:
                     logr.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
@@ -157,7 +211,6 @@ class Properties(Singleton):
         f.close()
         self.Validate()
         
-    
     def SaveFile(self, filename):
         '''
         Saves the file including original comments and whitespace. 
@@ -200,25 +253,41 @@ class Properties(Singleton):
         
         f.close()
         
-    
     def Clear(self):
         del self.__dict__
-        
         
     def IsEmpty(self):
         return self.__dict__ == {}
 
-
     def field_defined(self, name):
         # field name exists and has a non-empty value.
         return name in self.__dict__.keys() and self.__dict__[name] not in ['', None]
-        
+    
+    def backwards_compatiblize(self):
+        ''' Update any old fields to new ones in field_mappings.
+        '''
+        for old, new in field_mappings.items():
+            if self.field_defined(old):
+                logr.warn('PROPERTIES WARNING (%s): This field name has been '
+                          'deprecated, use "%s" instead.'%(old, new)) 
+                if not self.field_defined(new):
+                    self.__dict__[new] = self.__dict__[old]
+                else:
+                    raise Exception, ('PROPERTIES ERROR: Both "%s" and "%s" were '
+                        'found in your properties file. The field "%s" has been '
+                        'deprecated and renamed to "%s". Please remove "%s" from '
+                        'your properties file.'%(old, new, old, new, old))
+                del self.__dict__[old]
 
     def Validate(self):
+        '''Checks the validity of each field and their values.
+        '''
+        # update old fields
+        self.backwards_compatiblize()
+        
         # check that all required fields are defined
-        for name in string_vars + list_vars:
-            if name not in optional_vars:
-                assert self.field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)
+        for name in required_vars:
+            assert self.field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)
         
         assert self.db_type.lower() in ['mysql', 'sqlite'], 'PROPERTIES ERROR (db_type): Value must be either "mysql" or "sqlite".'
         
@@ -281,30 +350,43 @@ class Properties(Singleton):
         
         if self.field_defined('area_scoring_column'):
             logr.info('PROPERTIES: Area scoring will be used.')
-        
-        if not self.field_defined('image_channel_names'):
-            logr.warn('PROPERTIES WARNING (image_channel_names): No value(s) specified. CPA will use generic channel names.')
-            self.image_channel_names = ['channel-%d'%(i+1) for i in range(100)]
-
+                
         if not self.field_defined('image_channel_colors'):
             logr.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. CPA will use a generic channel-color mapping.')
             self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(97)]
-
+        
         if not self.field_defined('channels_per_image'):
             logr.warn('PROPERTIES WARNING (channels_per_image): No value(s) specified. CPA will assume 1 channel per image.')
-            self.channels_per_image = ['1' for i in range(len(self.image_channel_files))]
+            self.channels_per_image = ['1' for i in range(len(self.image_file_cols))]
 
+        if not self.field_defined('image_names'):
+            logr.warn('PROPERTIES WARNING (image_names): No value(s) specified. CPA will use generic channel names.')
+            self.image_names = ['channel-%d'%(i+1) for i in range(len(self.image_file_cols))]
+
+        if len(self.image_channel_colors) < sum(map(int, self.channels_per_image)):
+            self.image_channel_colors = ['red', 'green', 'blue']
+            self.image_channel_colors += ['none' for x in range(min(sum(map(int, self.channels_per_image)) - 3, 0))]
+            logr.warn('PROPERTIES WARNING (image_channel_colors): You did not '
+                      'specify enough colors for all the channels in your images. '
+                      'One color should be listed for each file column listed in '
+                      'image_file_cols unless your images contain multiple '
+                      'channels, in which case you need one for the sum of all '
+                      'the channels specified by "channels_per_image". CPA, will '
+                      'use channel colors %s for this run.'%(self.image_channel_colors,))
+
+        assert len(self.image_file_cols) == len(self.image_path_cols), \
+               'PROPERTIES ERROR: image_file_cols and image_path_cols must have an equal number of values.'
+        
+        assert len(self.image_file_cols) == len(self.channels_per_image), \
+               'PROPERTIES ERROR: channels_per_image must have the same number of values as image_file_cols  and image_path_cols.'
+
+        assert len(self.image_file_cols) == len(self.image_names), \
+               'PROPERTIES ERROR: image_names must have the same number of values as image_file_cols  and image_path_cols.'
+                    
         if self.field_defined('image_channel_blend_modes'):
             for mode in self.image_channel_blend_modes:
                 assert mode in ['add', 'subtract', 'solid'], 'PROPERTIES ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add, subtract and solid.'
             
-        if self.field_defined('classifier_ignore_substrings'):
-            logr.warn('PROPERTIES WARNING (classifier_ignore_substrings): This field name is deprecated, use classifier_ignore_columns.') 
-            if not self.field_defined('classifier_ignore_columns'):
-                self.__dict__['classifier_ignore_columns'] = self.__dict__['classifier_ignore_substrings']
-            else:
-                raise Exception, 'PROPERTIES ERROR: Both classifier_ignore_substrings and classifier_ignore_columns were found in your properties file. The field classifier_ignore_substrings is deprecated and has been renamed to classifier_ignore_columns. Please remove the former from your properties file.'
-            del self.__dict__['classifier_ignore_substrings']
         if not self.field_defined('classifier_ignore_columns'):
             logr.warn('PROPERTIES WARNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.')
         
@@ -407,9 +489,9 @@ if __name__ == "__main__":
 #    p.cell_x_loc = ''
 #    p.cell_y_loc = ''
 #    p.image_url_prepend = ''
-#    p.image_channel_paths = ['../...','qierubvalerb']
-#    p.image_channel_files = ['']
-#    p.image_channel_names = ['','']
+#    p.image_path_cols = ['../...','qierubvalerb']
+#    p.image_file_cols = ['']
+#    p.image_names = ['','']
 #    p.image_channel_colors = ['yellow', 'magenta']
 
 #    p.filter_SQL_AFRASER = 'TESTESTESTESTESTEST' 

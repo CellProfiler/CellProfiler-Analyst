@@ -344,7 +344,7 @@ class ClassifierGUI(wx.Frame):
             chans = int(chans)
             # Construct channel names, for RGB images, append a # to the end of
             # each channel. 
-            name = p.image_channel_names[i]
+            name = p.image_names[i]
             if chans == 1:
                 channel_names += [name]
             elif chans == 3: #RGB

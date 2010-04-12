@@ -547,18 +547,18 @@ class DBConnect(Singleton):
         Returns a list of image channel filenames for a particular image
         including the absolute path.
         '''
-        assert len(p.image_channel_paths) == len(p.image_channel_files), "Number of image_channel_paths and image_channel_files do not match!"
+        assert len(p.image_path_cols) == len(p.image_file_cols), "Number of image_path_cols and image_file_cols do not match!"
         
-        nChannels = len(p.image_channel_paths)
+        nChannels = len(p.image_path_cols)
         select = 'SELECT '
         for i in xrange(nChannels):
-            select += p.image_channel_paths[i]+', '+p.image_channel_files[i]+', '
+            select += p.image_path_cols[i]+', '+p.image_file_cols[i]+', '
         select = select[:-2] # chop off the last ', '
         select += ' FROM '+p.image_table+' WHERE '+GetWhereClauseForImages([imKey])
         imPaths = self.execute(select)[0]
         # parse filenames out of results
         filenames = []
-        for i in xrange(0,len(p.image_channel_paths*2),2):
+        for i in xrange(0,len(p.image_path_cols*2),2):
             if p.image_url_prepend:
                 filenames.append( imPaths[i]+'/'+imPaths[i+1] )
             else:
