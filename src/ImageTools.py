@@ -39,12 +39,7 @@ def FetchImage(imKey):
     else:
         ir = ImageReader()
         filenames = db.GetFullChannelPathsForImage(imKey)
-        imgs = ir.ReadImages(filenames)
-        if p.image_rescale:
-            for i in range(len(imgs)):
-                if imgs[i].shape != p.image_rescale:
-                    imgs[i] = rescale(imgs[i], (p.image_rescale[1], p.image_rescale[0]))
-                    
+        imgs = ir.ReadImages(filenames)                    
         cache[imKey] = imgs
         cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
@@ -189,7 +184,7 @@ def check_image_shape_compatibility(imgs):
     to choose a shape to resize them to.
     '''
     if not p.image_rescale:
-        if np.any([imgs[i].shape!=imgs[0].shape for i in xrange(len(imgs))]):
+        if np.any([imgs[i].shape != imgs[0].shape for i in xrange(len(imgs))]):
             dims = [im.shape for im in imgs]
             aspect_ratios = [float(dims[i][0])/dims[i][1] for i in xrange(len(dims))]
             def almost_equal(expected, actual, rel_err=1e-7, abs_err=1e-20):
