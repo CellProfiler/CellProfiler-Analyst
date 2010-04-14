@@ -234,7 +234,7 @@ class DBConnect(Singleton):
             
         # SQLite database: create database from CSVs
         elif p.db_type.lower() == 'sqlite':
-            from pysqlite2 import dbapi2 as sqlite
+            import sqlite3 as sqlite
             
             if not p.db_sqlite_file:
                 # Compute a UNIQUE database name for these files

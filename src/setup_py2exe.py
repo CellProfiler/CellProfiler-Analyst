@@ -20,7 +20,7 @@ if not 'py2exe' in sys.argv:
 setup(windows=['cpa.py'],
       options={
         'py2exe': {
-            'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'pysqlite2'],
+            'packages' : ['matplotlib', 'pytz', 'MySQLdb'],
             'includes' : ['PILfix'],
             "excludes" : ['_gtkagg', '_tkagg',
                           "Tkconstants","Tkinter","tcl"],
