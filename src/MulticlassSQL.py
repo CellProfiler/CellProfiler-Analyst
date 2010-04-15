@@ -31,8 +31,11 @@ def translate(weaklearners):
     
     if p.db_type.lower() == 'mysql':
         # MySQL
-        res = db.execute("SELECT * from mysql.func where name='classifier'")
-        has_classifier_function = len(res) > 0
+        try:
+            res = db.execute("SELECT * from mysql.func where name='classifier'")
+            has_classifier_function = len(res) > 0
+        except:
+            has_classifier_function = False
         if has_classifier_function:
             num_stumps = len(weaklearners)
             featurenames = "1," + ",".join([wl[0] for wl in weaklearners])
