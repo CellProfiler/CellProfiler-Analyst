@@ -9,19 +9,19 @@ class TestDBConnect(unittest.TestCase):
         self.p  = Properties.getInstance()
         self.db = DBConnect.getInstance( )
         self.db.Disconnect()
-        self.p.LoadFile('../test_data/nirht_test.properties')
+        self.p.LoadFile('../../CPAnalyst_test_data/nirht_test.properties')
 
     def setup_sqlite(self):
         self.p  = Properties.getInstance()
         self.db = DBConnect.getInstance()
         self.db.Disconnect()
-        self.p.LoadFile('../test_data/nirht_local.properties')
+        self.p.LoadFile('../../CPAnalyst_test_data/nirht_local.properties')
         
     def setup_sqlite2(self):
         self.p  = Properties.getInstance()
         self.db = DBConnect.getInstance()
         self.db.Disconnect()
-        self.p.LoadFile('../test_data/export_to_db_test.properties')
+        self.p.LoadFile('../../CPAnalyst_test_data/export_to_db_test.properties')
         
         
     #
@@ -58,10 +58,10 @@ class TestDBConnect(unittest.TestCase):
         
     def test_GetWhereClauseForImages(self):
         self.setup_mysql()
-        assert GetWhereClauseForImages([(1,)]) == '(ImageNumber=1)'
-        assert GetWhereClauseForImages([(1,), (2,)]) == '(ImageNumber=1 OR ImageNumber=2)'
+        assert GetWhereClauseForImages([(1,)]) == 'ImageNumber IN (1)'
+        assert GetWhereClauseForImages([(1,), (2,)]) == 'ImageNumber IN (1,2)'
         self.setup_sqlite()
-        assert GetWhereClauseForImages([(0,1), (0,2)]) == '(TableNumber=0 AND ImageNumber=1 OR TableNumber=0 AND ImageNumber=2)'
+        assert GetWhereClauseForImages([(0,1), (0,2)]) == '(TableNumber=0 AND ImageNumber IN (1,2))'
     
     def test_UniqueObjectClause(self):
         self.setup_mysql()
@@ -285,4 +285,5 @@ class TestDBConnect(unittest.TestCase):
         assert res==[('A01', 1, 1.0), ('A02', 1, 2.0), ('A03', 1, None), ('A04', 1, None), ('A04', 1, None), ('A04', 1, 100.0), ('A04', 1, 200.0)]
     
         
-        
+if __name__ == '__main__':
+    unittest.main()        
