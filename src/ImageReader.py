@@ -202,7 +202,7 @@ def ReadBitmapViaPIL(data):
             imdata = imd
 
     else:
-        raise 'Image mode not supported.'
+        raise Exception('Image mode not supported.')
 
     return imdata
 
@@ -210,8 +210,17 @@ def ReadBitmapViaTIFFfile(data):
     im = tifffile.TIFFfile(StringIO(data))
     imdata = im.asarray(squeeze=True)
     if imdata.dtype == np.uint16:
-        # for now, assume this is a Buzz Baum file (i.e., 12 bits in a 16 bit format with the high bit high)
-        imdata = (imdata.astype(np.float) - 2**15) / 2**12
+        if im.byte_order == '<':
+            if np.max(imdata) < 4096:
+                imdata = imdata.astype(np.float32) / 4095.
+            else:
+                imdata = imdata.astype(np.float32) / 65535.
+        else:
+            raise Exception('Image byte order not yet supported')
+            # We used to do this for Buzz Baum files (i.e., 12 bits in a 16 bit format with the high bit high)
+            # This doesn't work for the Buzz Baum images I have in CPA
+            #imdata = (imdata.astype(np.float32) - 2**15) / 2**12
+            
         if imdata.ndim == 3:
             # check if channels are identical:
             #   if so return only the first
@@ -255,18 +264,18 @@ if __name__ == "__main__":
 ##    fds = db.GetFullChannelPathsForImage(obkey[:-1])
 ##    images = ir.ReadImages(fds)
 
-    p.channels_per_image = ['3']
-    fds = ['color.tif']
-    images = ir.ReadImages(fds)
-    for im in images:
-        print im.shape
-    ImageViewer(images).Show()
-
-    fds = ['30-2A1b.jpg']
-    images = ir.ReadImages(fds)
-    for im in images:
-        print im.shape
-    ImageViewer(images).Show()
+##    p.channels_per_image = ['3']
+##    fds = ['color.tif']
+##    images = ir.ReadImages(fds)
+##    for im in images:
+##        print im.shape
+##    ImageViewer(images).Show()
+##
+##    fds = ['30-2A1b.jpg']
+##    images = ir.ReadImages(fds)
+##    for im in images:
+##        print im.shape
+##    ImageViewer(images).Show()
 
     p.channels_per_image = ['1','1','1']
     fds = ['01_POS002_D.TIF',
@@ -277,38 +286,47 @@ if __name__ == "__main__":
         print im.shape
     ImageViewer(images).Show()
 
-    fds = ['AS_09125_050116030001_D03f00d0.DIB',
-           'AS_09125_050116030001_D03f00d1.DIB',
-           'AS_09125_050116030001_D03f00d2.DIB',]
-    images = ir.ReadImages(fds)
-    for im in images:
-        print im.shape
-    ImageViewer(images).Show()
-
-    fds = ['AS_09125_050116030001_D03f00d0.tif',
-           'AS_09125_050116030001_D03f00d1.tif',
-           'AS_09125_050116030001_D03f00d2.tif',]
-    images = ir.ReadImages(fds)
-    for im in images:
-        print im.shape
-    ImageViewer(images).Show()
-
-    fds = ['AS_09125_050116000001_A01f00d0.png',
-           'AS_09125_050116000001_A01f00d1.png',
-           'AS_09125_050116000001_A01f00d2.png',]
-    images = ir.ReadImages(fds)
-    for im in images:
-        print im.shape
-    ImageViewer(images).Show()
-
-    # READ different image types into same channel set
-    fds = ['AS_09125_050116030001_D03f00d0.DIB',
-           'AS_09125_050116030001_D03f00d1.tif',
-           'AS_09125_050116000001_A01f00d2.png',]
-    images = ir.ReadImages(fds)
-    for im in images:
-        print im.shape
-    ImageViewer(images).Show()
+##    fds = ['AS_09125_050116030001_D03f00d0.DIB',
+##           'AS_09125_050116030001_D03f00d1.DIB',
+##           'AS_09125_050116030001_D03f00d2.DIB',]
+##    images = ir.ReadImages(fds)
+##    for im in images:
+##        print im.shape
+##    ImageViewer(images).Show()
+##
+##    fds = ['AS_09125_050116030001_D03f00d0.tif',
+##           'AS_09125_050116030001_D03f00d1.tif',
+##           'AS_09125_050116030001_D03f00d2.tif',]
+##    images = ir.ReadImages(fds)
+##    for im in images:
+##        print im.shape
+##    ImageViewer(images).Show()
+##
+##    fds = ['AS_09125_050116000001_A01f00d0.png',
+##           'AS_09125_050116000001_A01f00d1.png',
+##           'AS_09125_050116000001_A01f00d2.png',]
+##    images = ir.ReadImages(fds)
+##    for im in images:
+##        print im.shape
+##    ImageViewer(images).Show()
+##
+##    # READ different image types into same channel set
+##    fds = ['AS_09125_050116030001_D03f00d0.DIB',
+##           'AS_09125_050116030001_D03f00d1.tif',
+##           'AS_09125_050116000001_A01f00d2.png',]
+##    images = ir.ReadImages(fds)
+##    for im in images:
+##        print im.shape
+##    ImageViewer(images).Show()
+##
+##    # 
+##    fds = ['PANDORA_100324070001_P14f00d0.TIF',
+##           'PANDORA_100324070001_P14f00d1.TIF',]
+##    images = ir.ReadImages(fds)
+##    assert len(images) == 2
+##    for im in images:
+##        print im.shape
+##    ImageViewer(images).Show()
 
 #    images = ir.ReadImages(['bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w1412D5337-1BB6-4965-9E54-C635BCD4B71F.tif',
 #                            'bcb/image09/HCS/StewartAlison/StewartA1137HSC2454a/2008-06-24/9168/StewartA1137HSC2454a_D10_s3_w20A6F4EF9-1200-4EA9-990F-49486F4AF7E4.tif',
