@@ -270,10 +270,21 @@ class ImageViewer(wx.Frame):
     
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
+        # clean up existing channel menus
+        try:
+            menus = set([items[2].Menu for items in self.chMapById.values()])
+            for menu in menus:
+                for i, mbmenu in enumerate(self.MenuBar.Menus):
+                    if mbmenu[0] == menu:
+                        self.MenuBar.Remove(i)
+            for menu in menus:
+                menu.Destroy()
+        except:
+            pass
+        
         chIndex = 0
         self.chMapById = {}
         channel_names = []
-        
         for i, chans in enumerate(p.channels_per_image):
             chans = int(chans)
             # Construct channel names, for RGB images, append a # to the end of
@@ -523,19 +534,7 @@ class ImageViewer(wx.Frame):
             errdlg = wx.MessageDialog(self, 'There is no image with that key.', "Couldn't find image", wx.OK|wx.ICON_EXCLAMATION)
             errdlg.ShowModal()
             self.Destroy()
-        else:
-            # clean up existing channel menus
-            try:
-                menus = set([items[2].Menu for items in self.chMapById.values()])
-                for menu in menus:
-                    for i, mbmenu in enumerate(self.MenuBar.Menus):
-                        if mbmenu[0] == menu:
-                            self.MenuBar.Remove(i)
-                for menu in menus:
-                    menu.Destroy()
-            except:
-                pass
-            
+        else:            
             # load the image
             self.img_key = imkey
             self.SetImage(ImageTools.FetchImage(imkey), p.image_channel_colors)
