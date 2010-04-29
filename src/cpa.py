@@ -266,7 +266,7 @@ def setup_frozen_logging():
     sys.stdout = sys.stderr
 
 if __name__ == "__main__":
-    if hasattr(sys, 'frozen') and sys.frozen == 'windows_exe':
+    if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
         # on windows, log to a file (Mac goes to console)
         setup_frozen_logging()
 
