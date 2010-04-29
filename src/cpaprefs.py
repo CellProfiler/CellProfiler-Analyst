@@ -31,7 +31,6 @@ def set_check_new_versions(val):
 def get_skip_version():
     if not get_config().Exists(SKIPVERSION):
         return 0
-    print "Skipped version check."
     return get_config().ReadInt(SKIPVERSION)
 
 def set_skip_version(ver):
