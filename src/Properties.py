@@ -6,7 +6,7 @@ import re
 import os
 import logging
 
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 
 #
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
@@ -51,7 +51,8 @@ list_vars = ['image_path_cols', 'image_channel_paths',
              'image_channel_blend_modes', 
              'object_name',
              'classifier_ignore_substrings', 
-             'classifier_ignore_columns']
+             'classifier_ignore_columns',
+             'image_thumbnail_cols']
 
 optional_vars = ['db_port', 
                  'db_host', 
@@ -84,7 +85,8 @@ optional_vars = ['db_port',
                  'cell_x_loc', 
                  'cell_y_loc',
                  'use_larger_image_scale', 
-                 'rescale_object_coords',]
+                 'rescale_object_coords',
+                 'image_thumbnail_cols',]
 
 # map deprecated fields to new fields
 field_mappings = {'classifier_ignore_substrings' : 'classifier_ignore_columns',
