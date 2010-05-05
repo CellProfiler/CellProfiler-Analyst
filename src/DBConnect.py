@@ -22,7 +22,6 @@ import copy
 verbose = True
 
 p = Properties.getInstance()
-logr = logging.getLogger('DBConnect')
 
 class DBException(Exception):
     def __str__(self):
@@ -210,12 +209,12 @@ class DBConnect(Singleton):
         '''
         connID = threading.currentThread().getName()
         
-        logr.info('[%s] Connecting to the database...'%(connID))
+        logging.info('[%s] Connecting to the database...'%(connID))
         # If this connection ID already exists print a warning
         if connID in self.connections.keys():
             if self.connectionInfo[connID] == (p.db_host, p.db_user, 
                                                p.db_passwd, p.db_name):
-                logr.warn('A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
+                logging.warn('A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
             else:
                 raise DBException, 'A connection already exists for this thread (%s). Close this connection first.'%(connID,)
 
@@ -228,7 +227,7 @@ class DBConnect(Singleton):
                 self.cursors[connID] = SSCursor(conn)
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
                                                p.db_passwd, p.db_name)
-                logr.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
+                logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
             except MySQLdb.Error, e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
             
@@ -262,7 +261,7 @@ class DBConnect(Singleton):
                     dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
                     
                 p.db_sqlite_file = os.path.join(dbpath, dbname)
-            logr.info('[%s] SQLite file: %s'%(connID, p.db_sqlite_file))
+            logging.info('[%s] SQLite file: %s'%(connID, p.db_sqlite_file))
             self.connections[connID] = sqlite.connect(p.db_sqlite_file)
             self.connections[connID].text_factory = str
             self.cursors[connID] = self.connections[connID].cursor()
@@ -310,7 +309,7 @@ class DBConnect(Singleton):
                 if len(self.connections) == 1:
                     if p.db_sql_file:
                         # TODO: prompt user "create db, y/n"
-                        logr.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
+                        logging.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
                         try:
                             self.CreateSQLiteDBFromCSVs()
                         except Exception, e:
@@ -322,11 +321,11 @@ class DBConnect(Singleton):
                             raise e
                     elif p.image_csv_file and p.object_csv_file:
                         # TODO: prompt user "create db, y/n"
-                        logr.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
+                        logging.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
                         self.CreateSQLiteDB()
                     else:
                         raise DBException, 'Database at %s appears to be empty.'%(p.db_sqlite_file)
-            logr.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
+            logging.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
         # Unknown database type (this should never happen)
         else:
             raise DBException, "Unknown db_type in properties: '%s'\n"%(p.db_type)
@@ -353,9 +352,9 @@ class DBConnect(Singleton):
             self.cursors.pop(connID)
             self.connections.pop(connID).close()
             (db_host, db_user, db_passwd, db_name) = self.connectionInfo.pop(connID)
-            logr.info('Closed connection: %s as %s@%s (connID="%s").' % (db_name, db_user, db_host, connID))
+            logging.info('Closed connection: %s as %s@%s (connID="%s").' % (db_name, db_user, db_host, connID))
         else:
-            logr.warn('WARNING <DBConnect.CloseConnection>: No connection ID "%s" found!' %(connID))
+            logging.warn('WARNING <DBConnect.CloseConnection>: No connection ID "%s" found!' %(connID))
 
 
     def execute(self, query, args=None, silent=False, return_result=True):
@@ -373,7 +372,7 @@ class DBConnect(Singleton):
         try:
             self.connections[connID].ping()
         except MySQLdb.OperationalError, e:
-            logr.error('Lost connection to database. Attempting to reconnect...')
+            logging.error('Lost connection to database. Attempting to reconnect...')
             self.CloseConnection(connID)
             self.connect()
         except AttributeError:
@@ -382,7 +381,7 @@ class DBConnect(Singleton):
         # Finally make the query
         try:
             if verbose and not silent: 
-                logr.debug('[%s] %s'%(connID, query))
+                logging.debug('[%s] %s'%(connID, query))
             if p.db_type.lower()=='sqlite':
                 if args:
                     raise 'Can\'t pass args to sqlite execute!'
@@ -400,7 +399,7 @@ class DBConnect(Singleton):
     def Commit(self):
         connID = threading.currentThread().getName()
         try:
-            logr.debug('[%s] Commit'%(connID))
+            logging.debug('[%s] Commit'%(connID))
             self.connections[connID].commit()
         except MySQLdb.Error, e:
             raise DBException, 'Commit failed for connection "%s"\n\t%s\n' %(connID, e)
@@ -606,8 +605,8 @@ class DBConnect(Singleton):
         try:
             return self.execute(p._filters[filter])
         except Exception, e:
-            logr.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter))
-            logr.error(e)
+            logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter))
+            logging.error(e)
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
     
     
@@ -631,7 +630,12 @@ class DBConnect(Singleton):
         ''' Returns the column types for the given table. '''
         res = self.execute('SELECT * FROM %s LIMIT 1'%(table), silent=True)
         return [type(x) for x in res[0]]
-
+    
+    def GetColumnType(self, table, colname):
+        ''' Returns the type of a given table column. '''
+        for col, coltype in zip(self.GetColumnNames(table), self.GetColumnTypes(table)):
+            if col == colname:
+                return coltype
 
     def GetColnamesForClassifier(self):
         '''
@@ -654,7 +658,7 @@ class DBConnect(Singleton):
                 self.classifierColNames = [col for col in self.classifierColNames
                                                 if not any([re.match('^'+user_exp+'$',col)
                                                        for user_exp in p.classifier_ignore_columns])]
-            logr.info('Ignoring columns: %s'%([x for x in col_names if x not in self.classifierColNames]))
+            logging.info('Ignoring columns: %s'%([x for x in col_names if x not in self.classifierColNames]))
         return self.classifierColNames
     
     
@@ -674,7 +678,7 @@ class DBConnect(Singleton):
         query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
         data = self.execute(query, silent=True)
         if len(data) == 0:
-            logr.error('No data for obKey: %s'%str(obKey))
+            logging.error('No data for obKey: %s'%str(obKey))
             return None
         # This should be the case
         assert all([type(x) in [int, long, float] for x in data[0]])
@@ -688,7 +692,7 @@ class DBConnect(Singleton):
         query = 'SELECT * FROM %s WHERE %s' %(p.object_table, GetWhereClauseForObjects([obKey]))
         data = self.execute(query, silent=True)
         if len(data) == 0:
-            logr.error('No data for obKey: %s'%str(obKey))
+            logging.error('No data for obKey: %s'%str(obKey))
             return None
         # fetch out only numeric data
         values = [x if type(x) in [int, long, float] else 0.0 for x in data[0]]
@@ -792,7 +796,7 @@ class DBConnect(Singleton):
         statement += ',\nPRIMARY KEY (' + keys + ') )'
         f.close()
         
-        logr.info('Creating table: %s'%(p.image_table))
+        logging.info('Creating table: %s'%(p.image_table))
         self.execute('DROP TABLE IF EXISTS %s'%(p.image_table))
         self.execute(statement)
         
@@ -811,7 +815,7 @@ class DBConnect(Singleton):
         statement += ',\nPRIMARY KEY (' + keys + ') )'
         f.close()
     
-        logr.info('Creating table: %s'%(p.object_table))
+        logging.info('Creating table: %s'%(p.object_table))
         self.execute('DROP TABLE IF EXISTS '+p.object_table)
         self.execute(statement)
         
@@ -909,7 +913,7 @@ class DBConnect(Singleton):
         connID = threading.currentThread().getName()
         # populate tables with contents of csv files
         for file in imcsvs:
-            logr.info('Populating image table with data from %s'%file)
+            logging.info('Populating image table with data from %s'%file)
             f = open(os.path.join(csv_dir, file), 'U')
             r = csv.reader(f)
             row1 = r.next()
@@ -924,11 +928,11 @@ class DBConnect(Singleton):
                 c, s = dlg.Update(pct, '%d%% Complete'%(pct))
                 if not c:
                     raise Exception('cancelled load')
-            logr.info("... loaded %d%% of CSV data"%(pct))
+            logging.info("... loaded %d%% of CSV data"%(pct))
 
         line_count = 0
         for file in obcsvs:
-            logr.info('Populating object table with data from %s'%file)
+            logging.info('Populating object table with data from %s'%file)
             f = open(csv_dir+os.path.sep+file, 'U')
             r = csv.reader(f)
             row1 = r.next()
@@ -950,7 +954,7 @@ class DBConnect(Singleton):
                     c, s = dlg.Update(pct, '%d%% Complete'%(pct))
                     if not c:
                         raise Exception('cancelled load')
-                logr.info("... loaded %d%% of CSV data"%(pct))
+                logging.info("... loaded %d%% of CSV data"%(pct))
             f.close()
             base_bytes += os.path.getsize(os.path.join(csv_dir, file))
 
@@ -1007,7 +1011,7 @@ class DBConnect(Singleton):
         for key in list(well_key_columns()) + list(image_key_columns()):
             if key in colnames:
                 self.execute('CREATE INDEX %s ON %s (%s)'%('%s_%s'%(tablename,key), tablename, key))
-        logr.info('Populating temporary table %s...'%(tablename))
+        logging.info('Populating temporary table %s...'%(tablename))
         for row in dtable:
             vals = []
             for i, val in enumerate(row):
@@ -1028,10 +1032,10 @@ class DBConnect(Singleton):
         tables agree on image numbers.
         '''
         if p.db_type=='sqlite':
-            logr.warn('Skipping table checking step for sqlite')
+            logging.warn('Skipping table checking step for sqlite')
             return
 
-        logr.info('Checking database tables...')
+        logging.info('Checking database tables...')
         # Check for index on image_table
         res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
         idx_cols = [r[4] for r in res]
@@ -1056,9 +1060,9 @@ class DBConnect(Singleton):
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in idx_cols):
             raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
         elif ('TableNumber' in idx_cols):
-            logr.warn('TableNumber column was found indexed in your image table but not your object table.')
+            logging.warn('TableNumber column was found indexed in your image table but not your object table.')
         elif ('TableNumber' not in object_key_columns()):
-            logr.warn('TableNumber column was found indexed in your object table but not your image table.')
+            logging.warn('TableNumber column was found indexed in your object table but not your image table.')
         
         # Removed because it doesn't work (ignores TableNumber), and is slow.
         #
@@ -1072,14 +1076,14 @@ class DBConnect(Singleton):
         if p.well_id:
             res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%(UniqueImageClause(), p.image_table, p.well_id, p.well_id))
             if any(res):
-                logr.warn('WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id))
+                logging.warn('WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.well_id))
         
         # Check for unlabeled plates
         if p.plate_id:
             res = self.execute('SELECT %s FROM %s WHERE %s IS NULL OR %s=""'%(UniqueImageClause(), p.image_table, p.plate_id, p.plate_id))
             if any(res):
-                logr.warn('WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id))
-        logr.info('Done checking database tables.')
+                logging.warn('WARNING: Images were found in "%s" that had a NULL or empty "%s" column value'%(p.image_table, p.plate_id))
+        logging.info('Done checking database tables.')
 
     def histogram(self, column, table_or_query, nbins, range=None):
         """
