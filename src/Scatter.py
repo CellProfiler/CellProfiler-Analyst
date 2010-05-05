@@ -185,7 +185,7 @@ class ScatterControlPanel(wx.Panel):
         
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
-        fieldnames = self.get_numeric_columns_from_table(tablename)
+        fieldnames = db.GetColumnNames(tablename)#self.get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
         self.x_choice.SetSelection(0)
@@ -201,28 +201,47 @@ class ScatterControlPanel(wx.Panel):
         
     def on_update_pressed(self, evt):        
         filter = self.filter_choice.GetStringSelection()
-        points = self.loadpoints(self.table_choice.GetStringSelection(),
+        keys_and_points = self.loadpoints(self.table_choice.GetStringSelection(),
                                  self.x_choice.GetStringSelection(),
                                  self.y_choice.GetStringSelection(),
                                  filter)
+        col_types = self.get_selected_column_types()
+                
+        # Convert keys and points into a np array
+        kps = np.array(keys_and_points)
+        # Strip out keys
+        keys = kps[:,:len(image_key_columns())].astype(int)
+        # Strip out x coords
+        if col_types[0] in [float, int, long]:
+            xpoints = kps[:,-2].astype('float32')
+        else:
+            xpoints = kps[:,-2]
+        # Strip out y coords
+        if col_types[1] in [float, int, long]:
+            ypoints = kps[:,-1].astype('float32')
+        else:
+            ypoints = kps[:,-1]
+
         # plot the points
-        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
-        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.set_points(xpoints, ypoints)
+        self.figpanel.set_keys(keys)
         self.figpanel.set_x_label(self.x_choice.GetStringSelection())
         self.figpanel.set_y_label(self.y_choice.GetStringSelection())
-        self.figpanel.set_point_lists(points)
+        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
+        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.redraw()
         self.figpanel.draw()
         
     def removefromchart(self, event):
         selected = self.plotfieldslistbox.GetSelection()
         self.plotfieldslistbox.Delete(selected)
         
-    def loadpoints(self, tablename, xpoints, ypoints, filter=NO_FILTER):
+    def loadpoints(self, tablename, xcol, ycol, filter=NO_FILTER):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, X measurement, Y measurement
         '''
         fields = UniqueImageClause(tablename)
-        fields += ', %s.%s, %s.%s'%(tablename, xpoints, tablename, ypoints)
+        fields += ', %s.%s, %s.%s'%(tablename, xcol, tablename, ycol)
         tables = tablename
         where_clause = ''
         if filter != NO_FILTER:
@@ -232,14 +251,22 @@ class ScatterControlPanel(wx.Panel):
             filter_clause = ' AND '.join(['%s.%s=%s.%s'%(tablename, id, filter_table_prefix+filter, id) 
                                           for id in db.GetLinkingColumnsForTable(tablename)])
             where_clause = 'WHERE %s'%(filter_clause)
-        return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
+            
+        return db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))
+    
+    def get_selected_column_types(self):
+        ''' Returns a tuple containing the x and y column types. '''
+        table = self.table_choice.GetStringSelection()
+        xcol = self.x_choice.GetStringSelection()
+        ycol = self.y_choice.GetStringSelection()
+        return (db.GetColumnType(table, xcol), db.GetColumnType(table, ycol))
 
 
 class ScatterPanel(FigureCanvasWxAgg):
     '''
     Contains the guts for drawing scatter plots.
     '''
-    def __init__(self, parent, point_lists=[], clr_list=None, **kwargs):
+    def __init__(self, parent, xpoints=[], ypoints=[], keys=None, clr_list=None, **kwargs):
         self.figure = Figure()
         FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
@@ -250,6 +277,10 @@ class ScatterPanel(FigureCanvasWxAgg):
         
         self.subplot = self.figure.add_subplot(111)
         self.navtoolbar = None
+        self.x_points = []
+        self.y_points = []
+        self.key_lists = None
+        self.colors = []
         self.x_scale = LINEAR_SCALE
         self.y_scale = LINEAR_SCALE
         self.x_label = ''
@@ -257,7 +288,12 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.selection = {}
         self.mouse_mode = 'lasso'
         self.legend = None
-        self.set_point_lists(point_lists, clr_list)
+        self.set_points(xpoints, ypoints)
+        if keys is not None:
+            self.set_keys(keys)
+        if clr_list is not None:
+            self.set_colors(clr_list)
+        self.redraw()
         
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
@@ -287,12 +323,12 @@ class ScatterPanel(FigureCanvasWxAgg):
             
             # Color the points
             edgecolors = collection.get_edgecolors()
-            for i in range(len(self.point_lists[c])):
+            for i in range(len(self.xys[c])):
                 if i in self.selection[c]:
                     edgecolors[i] = SELECTED_OUTLINE_COLOR
                 else:
                     edgecolors[i] = UNSELECTED_OUTLINE_COLOR
-
+        logging.info('Selected %s points.'%(np.sum([len(sel) for sel in self.selection.values()])))
         self.canvas.draw_idle()
         
     def on_press(self, evt):
@@ -351,51 +387,103 @@ class ScatterPanel(FigureCanvasWxAgg):
             
     def on_new_collection_from_filter(self, evt):
         '''Callback for "Collection from filter" popup menu options.'''
+        assert self.key_lists, 'Can not create a collection from a filter since image keys have not been set for this plot.'
         filter = self.popup_menu_filters[evt.Id]   
         keys = db.GetFilteredImages(filter)
-        kls = self.key_lists
-        pls = self.point_lists
-        newkp = []
-        coll = []
-        # HORRIBLY inefficient, needs improvement
-        for i in xrange(len(kls)):
-            newkp += [[]]
-            for j in xrange(len(kls[i])):
-                entry = list(kls[i][j])+list(pls[i][j])
-                if kls[i][j] in keys:
-                    coll += [entry]
+        key_lists = []
+        xpoints = []
+        ypoints = []
+        sel_keys = []
+        sel_xs = []
+        sel_ys = []
+        for c, col in enumerate(self.subplot.collections):
+            # Find indices of keys that fall in the filter.
+            # Horribly inefficient (n^2), needs improvement
+            # (maybe sort keys and use searchsorted)
+            sel_indices = []
+            unsel_indices = []
+            for i in xrange(len(self.key_lists[c])):
+                if self.key_lists[c][i] in keys:
+                    sel_indices += [i]
                 else:
-                    newkp[i] += [entry]
-        newkp += [coll]
-        self.set_point_lists(newkp)
+                    unsel_indices += [i]
+            # Build the new collections
+            if len(sel_indices) > 0:
+                if self.key_lists:
+                    sel_keys += list(self.key_lists[c][sel_indices])
+                    sel_xs += list(self.x_points[c][sel_indices])
+                    sel_ys += list(self.y_points[c][sel_indices])
+            if len(unsel_indices) > 0:
+                if self.key_lists:
+                    key_lists += [self.key_lists[c][unsel_indices]]
+                xpoints += [np.array(self.x_points[c][unsel_indices])]
+                ypoints += [np.array(self.y_points[c][unsel_indices])]
+        xpoints += [np.array(sel_xs)]
+        ypoints += [np.array(sel_ys)]
+        if self.key_lists:
+            key_lists += [np.array(sel_keys)]
+        
+        self.set_points(xpoints, ypoints)
+        if self.key_lists:
+            self.set_keys(key_lists)
+        # reset scale (this is so the user is warned of masked non-positive values)
+        self.set_x_scale(self.x_scale)
+        self.set_y_scale(self.y_scale)
+        self.redraw()
         self.figure.canvas.draw_idle()
         
     def on_collection_from_selection(self, evt):
         '''Callback for "Collection from selection" popup menu option.'''
-        newkp = []
-        coll = []
+        key_lists = []
+        xpoints = []
+        ypoints = []
+        sel_keys = []
+        sel_xs = []
+        sel_ys = []
         for c, col in enumerate(self.subplot.collections):
             indices = xrange(len(col.get_offsets()))
             sel_indices = self.selection[c]
             unsel_indices = list(set(indices).difference(sel_indices))
-            
-            sel_keys = self.key_lists[c][sel_indices]
-            sel_pts = col.get_offsets()[sel_indices]
-            coll += [list(k)+list(p) for k, p in zip(sel_keys, sel_pts)]
-            
-            keys = self.key_lists[c][unsel_indices]
-            pts = col.get_offsets()[unsel_indices]
-            newkp += [np.array([list(k)+list(p) for k, p in zip(keys, pts)])]
-        coll = np.array(coll)
-        newkp += [coll]
-        self.set_point_lists(newkp)
+            if len(sel_indices) > 0:
+                if self.key_lists:
+                    sel_keys += list(self.key_lists[c][sel_indices])
+                    sel_xs += list(self.x_points[c][sel_indices])
+                    sel_ys += list(self.y_points[c][sel_indices])
+            if len(unsel_indices) > 0:
+                if self.key_lists:
+                    key_lists += [self.key_lists[c][unsel_indices]]
+                xpoints += [np.array(self.x_points[c][unsel_indices])]
+                ypoints += [np.array(self.y_points[c][unsel_indices])]
+
+        xpoints += [np.array(sel_xs)]
+        ypoints += [np.array(sel_ys)]
+        if self.key_lists:
+            key_lists += [np.array(sel_keys)]
+        
+        self.set_points(xpoints, ypoints)
+        if self.key_lists:
+            self.set_keys(key_lists)
+        # reset scale (this is so the user is warned of masked non-positive values)
+        self.set_x_scale(self.x_scale)
+        self.set_y_scale(self.y_scale)
+        self.redraw()
         self.figure.canvas.draw_idle()
         
     def on_scatter_from_selection(self, evt):
-        point_lists = []
+        ''' Creates a new scatter plot from the current selection. '''
+        sel_keys = []
+        sel_xs = []
+        sel_ys = []
         for c, collection in enumerate(self.subplot.collections):
-            point_lists += [[self.point_lists[c][id] for id in self.selection[c]]]
-        scatter = Scatter(self.Parent, point_lists)
+            indices = xrange(len(collection.get_offsets()))
+            sel_indices = self.selection[c]
+            if len(sel_indices) > 0:
+                if self.key_lists:
+                    sel_keys += [self.key_lists[c][sel_indices]]
+                sel_xs += [self.x_points[c][sel_indices]]
+                sel_ys += [self.y_points[c][sel_indices]]
+            
+        scatter = Scatter(self.Parent, sel_xs, sel_ys, (sel_keys or None))
         scatter.Show()
     
     def show_popup_menu(self, (x,y), data):
@@ -432,116 +520,171 @@ class ScatterPanel(FigureCanvasWxAgg):
         popup.AppendMenu(-1, 'Create collection from filter', submenu)
         
         self.PopupMenu(popup, (x,y))
-        
-    def set_point_lists(self, keys_and_points, colors=None, labels=None):
-        '''
-        keys_and_points - a list of lists of keys and points
-        colors - a list of colors to be applied to each inner list of points
-                 if not supplied colors will be chosen from the Jet color map
-        labels - labels for each collection in keys_and_points
-        '''
-        self.subplot.clear()
-        t0 = time()
-        if len(keys_and_points)==0: keys_and_points = [[]]
-        self.selection = {}
-        # Convert each list of keys and points into a np float array
-        points = [np.array(pl).astype('f') for pl in keys_and_points]
-        # Strip out keys and points 
-        self.point_lists = []
-        self.key_lists = []
-        for pl in points:
-            # Note: empty point lists are simply discarded
-            if len(pl)>0:
-                pl = np.array([x for x in pl if not np.isnan(x).any()])
-                self.point_lists += [pl[:,-2:]]
-                self.key_lists += [pl[:,:len(image_key_columns())].astype(int)]
-        
-        # Stop if there is no data in any of the point lists
-        if len(self.point_lists)==0:
-            logging.warn('No data to plot.')
-            self.reset_toolbar()
-            return
-        
-        # Choose colors from jet colormap starting with light blue (0.28)
-        if max(map(len, self.point_lists))==0:
-            colors = []
-        elif colors is None:
-            vals = np.arange(0.28, 1.28, 1./len(self.point_lists)) % 1.
-            colors = [colorConverter.to_rgba(cm.jet(val), alpha=0.75) 
-                      for val in vals]
-        else:
-            assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
+            
+    def get_key_lists(self):
+        return self.key_lists
+                                
+    def set_colors(self):
+        assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
         self.colors = colors
 
+    def get_colors(self):
+        if self.colors:
+            colors = self.colors
+        elif max(map(len, self.x_points))==0:
+            colors = []
+        else:
+            # Choose colors from jet colormap starting with light blue (0.28)
+            vals = np.arange(0.28, 1.28, 1. / len(self.x_points)) % 1.
+            colors = [colorConverter.to_rgba(cm.jet(val), alpha=0.75) 
+                      for val in vals]
+        return colors
+
+    def set_keys(self, keys):
+        if len(keys) == 0:
+            self.key_lists = None
+        if type(keys) != list:
+            assert len(keys) == len(self.x_points[0])
+            assert len(self.x_points) == 1
+            self.key_lists = [keys]
+        else:
+            assert len(keys) == len(self.x_points)
+            for ks, xs in zip(keys, self.x_points):
+                assert len(ks) == len(xs)
+            self.key_lists = keys
+
         
+    def set_points(self, xpoints, ypoints):
+        ''' 
+        xpoints - an array or a list of arrays containing points
+        ypoints - an array or a list of arrays containing points
+        xpoints and ypoints must be of equal size and shape
+        each array will be interpreted as a separate collection
+        '''
+        assert len(xpoints) == len(ypoints)
+        if len(xpoints) == 0:
+            self.x_points = []
+            self.y_points = []
+        elif type(xpoints[0]) != np.ndarray:
+            self.x_points = [xpoints]
+            self.y_points = [ypoints]
+        else:
+            self.x_points = xpoints
+            self.y_points = ypoints
         
+    def get_x_points(self):
+        return self.x_points
+
+    def get_y_points(self):
+        return self.y_points
+
+    def redraw(self):
+        t0 = time()
+        # XXX: maybe attempt to maintain selection based on keys
+        self.selection = {}
+        self.subplot.clear()
+        
+        # XXX: move to setters?
         self.subplot.set_xlabel(self.x_label)
         self.subplot.set_ylabel(self.y_label)
-        points = self.point_lists
         
-        # Set log axes and print warning if any values will be masked out
-        ignored = 0
-        if self.x_scale == LOG_SCALE:
-            self.subplot.set_xscale('log', basex=2.1, nonposx='mask')
-            ignored = sum([len(points[i][c[:,0]<=0]) for i,c in enumerate(points) if len(c)>0])
-        if self.y_scale == LOG_SCALE:
-            self.subplot.set_yscale('log', basey=2.1, nonposy='mask')
-            ignored += sum([len(points[i][c[:,1]<=0]) for i,c in enumerate(points) if len(c)>0])
-        if ignored > 0:
-            logging.warn('Scatter masked out %s points with negative values.'%(ignored))
+        xpoints = self.get_x_points()
+        ypoints = self.get_y_points()
         
         # Stop if there is no data in any of the point lists
-        if len(points)==0:
+        if len(xpoints) == 0:
             logging.warn('No data to plot.')
             self.reset_toolbar()
             return
-        
+
+        # Gather all categorical data to be plotted so we can populate
+        # the axis the same regardless of which collections the categories
+        # fall in.
+        xvalmap = {}
+        yvalmap = {}
+        if not issubclass(self.x_points[0].dtype.type, np.number):
+            x_categories = sorted(set(np.hstack(self.x_points)))
+            # Map all categorical values to integer values from 0..N
+            for i, category in enumerate(x_categories):
+                xvalmap[category] = i
+        if not issubclass(self.y_points[0].dtype.type, np.number):
+            y_categories = sorted(set(np.hstack(self.y_points)))
+            # Map all categorical values to integer values from 0..N
+            for i, category in enumerate(y_categories):
+                yvalmap[category] = i        
+            
         # Each point list is converted to a separate point collection by 
         # subplot.scatter
         self.xys = []
-        for c, (pts, color) in enumerate(zip(points, colors)):
-            data = [Datum(xy, color) for xy in pts]
-            facecolors = [d.color for d in data]
-            self.xys.append([(d.x, d.y) for d in data])
-            if len(pts) > 0:
-                self.subplot.scatter(pts[:,0], pts[:,1],
+        xx = []
+        yy = []
+        for c, (xs, ys, color) in enumerate(zip(self.x_points, self.y_points, self.get_colors())):
+            if len(xs) > 0:
+                xx = xs
+                yy = ys
+                # Map categorical values to integers 0..N
+                if xvalmap:
+                    xx = [xvalmap[l] for l in xx]
+                # Map categorical values to integers 0..N
+                if yvalmap:
+                    yy = [yvalmap[l] for l in yy]
+
+                data = [Datum(xy, color) for xy in zip(xx, yy)]
+                facecolors = [d.color for d in data]
+                self.xys.append(np.array([(d.x, d.y) for d in data]))
+                
+                self.subplot.scatter(xx, yy,
                     s = 30,
                     facecolors = facecolors,
                     edgecolors = ['none' for f in facecolors],
                     alpha = 0.75)
         
-        if len(points)>1:
+        # Set ticks and ticklabels if data is categorical
+        if xvalmap:
+            self.subplot.set_xticks(range(len(x_categories)))
+            self.subplot.set_xticklabels(sorted(x_categories))
+            self.figure.autofmt_xdate() # rotates and shifts xtick-labels so they look nice
+        if yvalmap:
+            self.subplot.set_yticks(range(len(y_categories)))
+            self.subplot.set_yticklabels(sorted(y_categories))
+        
+        if len(self.x_points) > 1:
             if self.legend:
                 self.legend.disconnect_bindings()
             self.legend = DraggableLegend(self.subplot.legend(fancybox=True))
             
-        # Set axis scales & clip negative values if in log space
-        # must be done after scatter
+        # Set axis scales
         if self.x_scale == LOG_SCALE:
             self.subplot.set_xscale('log', basex=2.1)
         if self.y_scale == LOG_SCALE:
             self.subplot.set_yscale('log', basey=2.1)
             
-        # Set axis bounds
-        xmin = min([np.nanmin(pts[:,0]) for pts in points if len(pts)>0])
-        xmax = max([np.nanmax(pts[:,0]) for pts in points if len(pts)>0])
-        ymin = min([np.nanmin(pts[:,1]) for pts in points if len(pts)>0])
-        ymax = max([np.nanmax(pts[:,1]) for pts in points if len(pts)>0])
-        if self.x_scale==LOG_SCALE:
-            xmin = xmin/1.5
-            xmax = xmax*1.5
+        # Set axis bounds. Clip non-positive values if in log space
+        # Must be done after scatter.
+        xmin = min([np.nanmin(pts[:,0]) for pts in self.xys if len(pts)>0])
+        xmax = max([np.nanmax(pts[:,0]) for pts in self.xys if len(pts)>0])
+        ymin = min([np.nanmin(pts[:,1]) for pts in self.xys if len(pts)>0])
+        ymax = max([np.nanmax(pts[:,1]) for pts in self.xys if len(pts)>0])
+        if self.x_scale == LOG_SCALE:
+            xmin = min([np.nanmin(pts[:,0][pts[:,0].flatten() > 0]) 
+                        for pts in self.xys if len(pts)>0])
+            xmin = xmin / 1.5
+            xmax = xmax * 1.5
         else:
-            xmin = xmin-(xmax-xmin)/20.
-            xmax = xmax+(xmax-xmin)/20.
-        if self.y_scale==LOG_SCALE:
-            ymin = ymin/1.5
-            ymax = ymax*1.5
+            xmin = xmin - (xmax - xmin) / 20.
+            xmax = xmax + (xmax - xmin) / 20.
+        if self.y_scale == LOG_SCALE:
+            ymin = min([np.nanmin(pts[:,1][pts[:,1].flatten() > 0]) 
+                        for pts in self.xys if len(pts)>0])
+            ymin = ymin / 1.5
+            ymax = ymax * 1.5
         else:
-            ymin = ymin-(ymax-ymin)/20.
-            ymax = ymax+(ymax-ymin)/20.
+            ymin = ymin - (ymax - ymin) / 20.
+            ymax = ymax + (ymax - ymin) / 20.
         self.subplot.axis([xmin, xmax, ymin, ymax])
 
-        logging.debug('Scatter: Plotted %s points in %.3f seconds.'%(sum(map(len, self.point_lists)), time()-t0))
+        logging.debug('Scatter: Plotted %s points in %.3f seconds.'
+                      %(sum(map(len, self.x_points)), time() - t0))
         self.reset_toolbar()
     
     def toggle_lasso_tool(self):
@@ -564,14 +707,27 @@ class ScatterPanel(FigureCanvasWxAgg):
             self.navtoolbar._positions.clear()
             self.navtoolbar.push_current()
     
-    def get_point_lists(self):
-        return self.point_lists
-    
     def set_x_scale(self, scale):
         self.x_scale = scale
-    
+        # Set log axes and print warning if any values will be masked out
+        ignored = 0
+        if self.x_scale == LOG_SCALE:
+            self.subplot.set_xscale('log', basex=2.1, nonposx='mask')
+            ignored = sum([len(self.x_points[i][xs <= 0]) 
+                           for i, xs in enumerate(self.x_points) if len(xs) > 0])
+        if ignored > 0:
+            logging.warn('Scatter masked out %s points with non-positive X values.'%(ignored))        
+            
     def set_y_scale(self, scale):
         self.y_scale = scale
+        # Set log axes and print warning if any values will be masked out
+        ignored = 0
+        if self.y_scale == LOG_SCALE:
+            self.subplot.set_yscale('log', basey=2.1, nonposy='mask')
+            ignored += sum([len(self.y_points[i][ys <= 0]) 
+                            for i, ys in enumerate(self.y_points) if len(ys) > 0])
+        if ignored > 0:
+            logging.warn('Scatter masked out %s points with non-positive Y values.'%(ignored))  
     
     def set_x_label(self, label):
         self.x_label = label
@@ -585,13 +741,13 @@ class Scatter(wx.Frame):
     '''
     A very basic scatter plot with controls for setting it's data source.
     '''
-    def __init__(self, parent, point_lists=[], clr_lists=None,
+    def __init__(self, parent, xpoints=[], ypoints=[], keys=None, clr_lists=None,
                  show_controls=True,
                  size=(600,600), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
         self.SetName('Scatter')
         
-        figpanel = ScatterPanel(self, point_lists, clr_lists)
+        figpanel = ScatterPanel(self, xpoints, ypoints, keys, clr_lists)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
                 
@@ -623,17 +779,9 @@ if __name__ == "__main__":
     import MulticlassSQL
     MulticlassSQL.CreateFilterTables()
     
-    points = []
+    xpoints = []
+    ypoints = []
     clrs = None
-#    points = [[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)],
-#              [],
-#              [(1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
-#              [],]
-
-#    points = [np.random.normal(0, 1.5, size=(500,2)),
-#              np.random.normal(3, 2, size=(500,2)),
-#              [],
-#              np.random.normal(2, 3, size=(500,2))]
 
 #    clrs = [(0., 0.62, 1., 0.75),
 #            (0.1, 0.2, 0.3, 0.75),
@@ -641,7 +789,7 @@ if __name__ == "__main__":
 #            (1,0,1,1),
 #            ]
 
-    scatter = Scatter(None, points, clrs)
+    scatter = Scatter(None, xpoints, ypoints, clrs)
     scatter.Show()
 #    scatter.figpanel.set_x_label('test')
 #    scatter.figpanel.set_y_label('test')
