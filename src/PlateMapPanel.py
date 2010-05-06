@@ -5,6 +5,12 @@ import ImageTools
 import wx
 import numpy as np
 import matplotlib.cm
+import Image
+from StringIO import StringIO
+try:
+    from agw import supertooltip as STT
+except ImportError: # if it's not there locally, try the wxPython lib.
+    import wx.lib.agw.supertooltip as STT
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -22,18 +28,18 @@ class PlateMapPanel(wx.Panel):
     data (in the range [0,1]).  The panel provides mechanisms for selection,
     color mapping, setting row & column labels, and reshaping the layout.
     '''
-    
-    def __init__(self, parent, data, shape=None, well_labels=None,
+
+    def __init__(self, parent, data, shape=None, well_keys=None,
                  colormap='jet', wellshape=ROUNDED, row_label_format=None,
                  data_range=None, **kwargs):
         '''
         ARGUMENTS:
         parent -- wx parent window
         data -- a numpy array of numeric values
-        
+
         KEYWORD ARGUMENTS:
         shape -- a 2-tuple to reshape the data to (must fit the data)
-        well_labels -- list of labels for each well (must be same len as data)
+        well_keys -- list of keys for each well (plate, well)
         colormap -- a colormap name from matplotlib.cm
         wellshape -- ROUNDED, CIRCLE, or SQUARE
         row_label_format -- 'ABC' or '123'
@@ -41,7 +47,7 @@ class PlateMapPanel(wx.Panel):
            should be normalized to. Otherwise the min and max will be taken 
            from the data (ignoring NaNs).
         '''
-        
+
         wx.Panel.__init__(self, parent, **kwargs)
         self.hideLabels = False
         self.selection = set([])
@@ -55,19 +61,26 @@ class PlateMapPanel(wx.Panel):
                 self.row_label_format = '123'
         else:
             self.row_label_format = row_label_format
-        self.SetWellLabels(well_labels)
-        
+
+        self.well_keys = []
+        if well_keys:
+            for x, val in enumerate(well_keys):
+                if x % self.data.shape[1] == 0:
+                    self.well_keys += [[]]	
+                self.well_keys[-1] += [val]
+
         if self.row_label_format == 'ABC':
             self.row_labels = ['%2s'%c for c in abc[:self.data.shape[0]]]
         elif self.row_label_format == '123':
             self.row_labels = ['%02d'%(i+1) for i in range(self.data.shape[0])]
         self.col_labels = ['%02d'%i for i in range(1,self.data.shape[1]+1)]
-        
+
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.repaint = False
         self.Bind(wx.EVT_SIZE, self._onsize)
         self.Bind(wx.EVT_IDLE, self._onidle)
-       
+        self.Bind(wx.EVT_LEFT_DOWN, self._onclick)
+
     def SetData(self, data, shape=None, data_range=None, clip_interval=None, clip_mode='rescale'):
         '''
         data -- An iterable containing numeric values. It's shape will be used
@@ -75,12 +88,12 @@ class PlateMapPanel(wx.Panel):
         shape -- If passed, this will be used to reshape the data. (rows,cols)
         '''
         self.text_data = None
-        self.data = np.array(data).astype('float')
+        self.data = np.array(data).astype('float32')
         if shape is not None:
             self.data = self.data.reshape(shape)
-            
+
         self.SetClipInterval(clip_interval, data_range, clip_mode)
-        
+
     def SetTextData(self, data):
         '''data -- An iterable containing values to be printed on top of each 
               well. The length of this must match the size of the platemap.
@@ -88,7 +101,7 @@ class PlateMapPanel(wx.Panel):
         self.text_data = np.array(data)
         assert self.data.size == self.text_data.size
         self.text_data = self.text_data.reshape(self.data.shape)
-        
+
     def SetClipInterval(self, clip_interval, data_range=None, clip_mode='rescale'):
         '''
         Rescales/clips the colormap to fit a new range.
@@ -103,7 +116,7 @@ class PlateMapPanel(wx.Panel):
         self.data_range = data_range
         if clip_interval is None:
             clip_interval = data_range
-                    
+
         if clip_interval[0] == clip_interval[1] or data_range[0] == data_range[1]:
             self.data_scaled = self.data - data_range[0] + 0.5
         else:
@@ -116,31 +129,17 @@ class PlateMapPanel(wx.Panel):
                 self.data_scaled[self.data_scaled < scaled_interval[0]] = 0.
                 self.data_scaled[self.data_scaled > scaled_interval[1]] = 1.
         self.Refresh()
-    
+
     def SetColLabels(self, labels):
         assert len(labels) >= self.data.shape[1]
         self.col_labels = ['%2s'%c for c in labels]
         self.Refresh()
-    
+
     def SetRowLabels(self, labels):
         assert len(labels) >= self.data.shape[0]
         self.row_labels = ['%2s'%c for c in labels]
         self.Refresh()
-        
-    def SetWellLabels(self, labels):
-        if labels is None:
-            if self.row_label_format=='ABC':
-                self.well_labels = np.array(['%s%02d'%(abc[i],j+1)
-                                    for i in xrange(self.data.shape[0])
-                                    for j in xrange(self.data.shape[1])])
-            elif self.row_label_format=='123':
-                self.well_labels = np.array(['(row:%d col:%d)'%(i+1,j+1)
-                                    for i in xrange(self.data.shape[0])
-                                    for j in xrange(self.data.shape[1])])
-        else:
-            self.well_labels = np.array(labels).reshape(self.data.shape)
-        self.well_labels = self.well_labels.reshape(self.data.shape)
-        
+
     def SetWellShape(self, wellshape):
         '''
         wellshape in PlatMapPanel.ROUNDED,
@@ -149,17 +148,17 @@ class PlateMapPanel(wx.Panel):
         '''
         self.wellshape = wellshape
         self.Refresh()
-        
+
     def SetColorMap(self, map):
         ''' map: the name of a matplotlib.colors.LinearSegmentedColormap instance '''
         self.colormap = matplotlib.cm.get_cmap(map)
         self.Refresh()
-        
+
     def SelectWell(self, well):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
         self.selection = set([well])
         self.Refresh()
-        
+
     def ToggleSelected(self, well):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
         if well in self.selection:
@@ -167,7 +166,7 @@ class PlateMapPanel(wx.Panel):
         else:
             self.selection.add(well)
         self.Refresh()
-    
+
     def GetWellAtCoord(self, x, y):
         '''
         returns a 2 tuple of integers indexing a well position 
@@ -183,30 +182,39 @@ class PlateMapPanel(wx.Panel):
             return (j-1,i-1)
         else:
             return None
-        
+
     def GetWellLabelAtCoord(self, x, y):
         '''
         returns the well label at the given x,y position 
         '''
         loc = self.GetWellAtCoord(x,y) 
-        if self.well_labels is not None and loc is not None:
+        if self.well_keys is not None and loc is not None:
             row, col = loc
-            return self.well_labels[row,col]
+            return str(self.well_keys[row][col][-1])
         else:
             return None
+
+    def GetWellKeyAtCoord(self, x, y):
+        '''
+        returns the well key at the given x,y position 
+        '''
+        loc = self.GetWellAtCoord(x,y) 
+        if self.well_keys is not None and loc is not None:
+            row, col = loc
+            return self.well_keys[row][col]
         
     def OnPaint(self, evt=None):
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
-        
+
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
         cols_data, rows_data = (self.data.shape[1], self.data.shape[0])
-        
+
         # calculate the well radius
         r = min(w_win/(cols_data+1.)/2.,
                 h_win/(rows_data+1.)/2.) - 0.5
-                
+
         # calculate start position to draw at so image is centered.
         w_data, h_data = ((cols_data+1)*2.*(r+0.5), (rows_data+1)*2.*(r+0.5))
         self.xo, self.yo = (0., 0.)
@@ -214,7 +222,7 @@ class PlateMapPanel(wx.Panel):
             self.yo = (h_win-h_data)/2
         else:
             self.xo = (w_win-w_data)/2
-            
+
         # Set font size to fit
         font = dc.GetFont()
         if r>14:
@@ -227,12 +235,20 @@ class PlateMapPanel(wx.Panel):
         dc.SetFont(font)
 
         if self.wellshape == IMAGE:
-            bmp = {}
             db = DBConnect.getInstance()
-            wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, p.image_id, p.image_table, p.well_id))
+            bmp = {}
             imgs = {}
-            for well, im in wells_and_images:
-                imgs[well] = (im, )
+            if p.image_thumbnail_cols:
+                wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, p.well_id))
+                for wims in wells_and_images:
+                    ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
+                    ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
+                           for im in ims]
+                    imgs[wims[0]] =  ims
+            else:
+                wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, p.image_id, p.image_table, p.well_id))
+                for well, im in wells_and_images:
+                    imgs[well] = (im, )
 
         py = self.yo
         for y in range(rows_data+1):
@@ -278,9 +294,12 @@ class PlateMapPanel(wx.Panel):
                         dc.DrawRectangle(px+1, py+1, r*2, r*2)
                     elif self.wellshape == IMAGE:
                         p.image_buffer_size = int(p.plate_type)
-                        well = self.GetWellLabelAtCoord(px+r, py+r)
+                        plate, well = self.GetWellKeyAtCoord(px+r, py+r)
                         if imgs.has_key(well):
-                            ims = ImageTools.FetchImage(imgs[well])
+                            if p.image_thumbnail_cols:
+                                ims = imgs[well]
+                            else:
+                                ims = ImageTools.FetchImage(imgs[well])
                             size = ims[0].shape
                             scale = r*2./max(size)
                             bmp[well] = ImageTools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
@@ -300,27 +319,70 @@ class PlateMapPanel(wx.Panel):
 
     def _onsize(self, evt):
         self.repaint = True
-        
+
     def _onidle(self, evt):
         if self.repaint:
             self.Refresh()
             self.repaint = False
 
+    def _onclick(self, evt):
+        if not p.image_thumbnail_cols:
+            evt.Skip()
+            return
+
+        try:
+            self.tipwin.Destroy()
+        except:
+            pass
+        tip = STT.SuperToolTip('')
+        
+        try:
+            plate, well = self.GetWellKeyAtCoord(evt.X, evt.Y)
+        except:
+            return
+        images = db.execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s'%
+                            (','.join(p.image_thumbnail_cols), p.image_table,
+                             p.plate_id, plate, p.well_id, well))
+        for row in images:
+            ims = [Image.open(StringIO(im), 'r') for im in row]
+            ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
+                    for im in ims]
+            bmp = ImageTools.MergeToBitmap(ims, p.image_channel_colors)
+        
+        tip.SetEndDelay(1)
+        tip.SetBodyImage(bmp)
+        tip.SetHeader('Plate: %s, Well: %s'%self.GetWellKeyAtCoord(evt.X, evt.Y))
+        tip.ApplyStyle("Silver")
+        self.tipwin = STT.ToolTipWindow(self, tip)
+        self.tipwin.SetPosition((self.Parent.GetPosition()[0] + evt.X, 
+                                 self.Parent.GetPosition()[1] + evt.Y))
+        self.tipwin.SetSize((bmp.Width+10, bmp.Height+10))
+        self.tipwin.Show()
+
+
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-    
+
     # test plate map panel
-#    data = np.arange(5600.)
+    data = np.arange(5600.)
+    a = np.zeros((40,140))
+    i = 0
+    for r, row in enumerate(a):
+        if r % 2 == 0:
+            a[r] = data[i:i+140]
+        else:
+            a[r]= np.array(list(reversed(data[i:i+140])))
+        i += 140
 #    labels = [str(i) for i in xrange(1,5601)]
-    data = np.arange(384).reshape(16,24)
-    data[100:102] = np.nan
+##    data = np.arange(384).reshape(16,24)
+##    data[100:102] = np.nan
     frame = wx.Frame(None, size=(900.,800.))
-    p = PlateMapPanel(frame, data, wellshape='square')
-    p.SetTextData(data)
+    pmp = PlateMapPanel(frame, a, wellshape='square')
+##    p.SetTextData(data)
     frame.Show()
-    
+
     app.MainLoop()
-    
-    
-    
+
+
+
