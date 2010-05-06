@@ -152,6 +152,13 @@ image_channel_blend_modes = <add>, <add>,
 
 channels_per_image  = <1>, <1>,
 
+# Some features in CPA can take advantage of thumbnail images if they are stored
+# as "BLOBs" in your per-image table. Specify the column names for each image 
+# channel thumbnail separately here.
+
+image_thumbnail_cols = <col_containing_dna_stain_thumbnail>, <col_containing_actin_stain_thumbnail>,
+
+
 
 # ======== Image access info ======== 
 # Specify for HTTP image access. This address will be prepended to the image 
