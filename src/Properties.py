@@ -157,9 +157,10 @@ class Properties(Singleton):
                     (name, val) = line.split('=', 1)
                     name = name.strip()
                     val = val.strip()
-                except:
-                    logging.warn('PROPERTIES WARNING: could not parse line #%d, ignoring: "%s"'%(idx + 1, line))
-                    continue
+                except ValueError:
+                    raise Exception('PROPERTIES ERROR: Could not parse line #%d\n'
+                                    '\t"%s"\n'
+                                    'Did you accidentally load your training set instead of your properties file?'%(idx + 1, line))
                 
                 if name in string_vars:
                     self.__dict__[name] = val or None
