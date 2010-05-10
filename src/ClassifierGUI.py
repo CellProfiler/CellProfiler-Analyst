@@ -32,6 +32,9 @@ import os
 import sys
 import wx
     
+# number of cells to classify before prompting the user for whether to continue
+MAX_ATTEMPTS = 10000
+
 ID_EXIT = wx.NewId()
 ID_CLASSIFIER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
@@ -543,7 +546,7 @@ class ClassifierGUI(wx.Frame):
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)])))
                         return
                     
-            attempts = 0
+            total_attempts = attempts = 0
             # Now check which objects fall within the classification
             while len(obKeys) < nObjects:
                 self.PostMessage('Gathering random %s.'%(p.object_name[1]))
@@ -555,9 +558,10 @@ class ClassifierGUI(wx.Frame):
                     loopMsg = ' from whole experiment'
                 elif filter == 'image':
                     # All objects are tried in first pass
-                    if attempts>0: break
+                    if attempts>0: 
+                        break
                     imKey = self.GetGroupKeyFromGroupSizer()
-                    obKeysToTry = dm.GetObjectsFromImage(imKey)
+                    obKeysToTry = [imKey]
                     loopMsg = ' from image %s'%(imKey,)
                 else:
                     obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
@@ -571,13 +575,16 @@ class ClassifierGUI(wx.Frame):
                 self.PostMessage('Classifying %s.'%(p.object_name[1]))
                 obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
                 attempts += len(obKeysToTry)
-                if attempts%10000.0==0:
+                total_attempts += len(obKeysToTry)
+                if attempts >= MAX_ATTEMPTS:
                     dlg = wx.MessageDialog(self, 'Found %d %s after %d attempts. Continue searching?'
-                                           %(len(obKeys), p.object_name[1], attempts), 
+                                           %(len(obKeys), p.object_name[1], total_attempts), 
                                            'Continue searching?', wx.YES_NO|wx.ICON_QUESTION)
                     response = dlg.ShowModal()
+                    dlg.Destroy()
                     if response == wx.ID_NO:
                         break
+                    attempts = 0
             statusMsg += loopMsg
             
         self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')

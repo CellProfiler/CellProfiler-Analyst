@@ -104,9 +104,20 @@ def GetWhereClauseForObjects(obkeys):
     Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => "ImageNumber=1 
              AND ObjectNumber=3 OR ImageNumber=2 AND ObjectNumber=4"
     '''
-    return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
-              for col, value in zip(object_key_columns(), obkey)])
-              for obkey in obkeys]) + ')'
+
+    # To limit the depth of this expression, we split it into a binary tree.
+    # This helps avoid SQLITE_MAX_LIMIT_EXPR_DEPTH
+    def split(keys):
+        if len(keys) <= 3:
+            return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
+                                                    for col, value in zip(object_key_columns(), obkey)])
+                                      for obkey in keys]) + ')'
+        else:
+            halflen = len(keys) // 2
+            return '(' + split(keys[:halflen]) + ' OR ' + split(keys[halflen:]) + ')'
+
+    return split(obkeys)
+
 
 def GetWhereClauseForImages(imkeys):
     '''
