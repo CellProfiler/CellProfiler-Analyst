@@ -606,18 +606,42 @@ if __name__ == "__main__":
     from DataModel import DataModel
     import ImageTools
     from ImageReader import ImageReader
+    
+    p = Properties.getInstance()
+    p.image_channel_colors = ['red','green','blue']
+    p.object_name = ['cell', 'cells']
+    p.image_names = ['a', 'b', 'c']
+    p.image_id = 'ImageNumber'
+    p.channels_per_image = [1,1,1]
+    images = [np.ones((200,200)),
+              np.ones((200,200)) / 2. ,
+              np.ones((200,200)) / 4. ,
+              np.ones((200,200)) / 8. ,
+              np.ones((200,200)),
+              np.ones((200,200)) / 2. ,
+              np.ones((200,200)) / 4. ,
+              np.ones((200,200)) / 8. ,
+              ]
 
-    if not p.show_load_dialog():
-        logging.error('ImageViewer requires a properties file.  Exiting.')
-        wx.GetApp().Exit()
-        raise Exception('ImageViewer requires a properties file.  Exiting.')
+    pixels = []
+    for channel in p.image_channel_colors:        
+        pixels += [ImageTools.tile_images(images)]
     
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
-    ir = ImageReader()
+    f = ImageViewer(pixels)
+    f.Show()
     
-    obKey = dm.GetRandomObject()
-    ImageTools.ShowImage(obKey[:-1], p.image_channel_colors, None)
+
+##    if not p.show_load_dialog():
+##        logging.error('ImageViewer requires a properties file.  Exiting.')
+##        wx.GetApp().Exit()
+##        raise Exception('ImageViewer requires a properties file.  Exiting.')
+##    
+##    db = DBConnect.getInstance()
+##    dm = DataModel.getInstance()
+##    ir = ImageReader()
+##    
+##    obKey = dm.GetRandomObject()
+##    ImageTools.ShowImage(obKey[:-1], p.image_channel_colors, None)
 #    filenames = db.GetFullChannelPathsForImage(obKey[:-1])
 #    images = ir.ReadImages(filenames)
 #    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obKey[:-1])

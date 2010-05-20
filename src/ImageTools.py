@@ -260,6 +260,30 @@ def auto_contrast(im, interval=None):
             im /= im.max()
     return im
 
+def tile_images(images):
+    '''
+    images - a list of images (arrays) of the same dimensions
+    returns an image that is a composite of the given images tiled in in as
+       nearly a square grid as possible
+    '''        
+    h, w = images[0].shape
+    for im in images:
+        assert (im.shape == (h,w)), 'Images must be the same size to tile them.'
+    cols = np.ceil(len(images)**0.5)
+    
+    composite = np.zeros((h, w * cols))
+    i = 0
+    for row in range(0, cols * h, h):
+        for col in range(0, cols * w, w):
+            composite[row : row + h, col : col + w] = images[i]
+            i += 1
+            if i >= len(images): break
+        if i >= len(images): break
+        # add another row
+        composite = np.vstack((composite, np.zeros((h, w * cols))))
+        row += h
+    return composite
+
 def SaveBitmap(bitmap, filename, format='PNG'):
     im = BitmapToPIL(bitmap)
     if format.lower() in ['jpg', 'jpeg']:
