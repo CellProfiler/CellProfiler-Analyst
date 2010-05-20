@@ -344,11 +344,11 @@ class PlateMapBrowser(wx.Frame):
                 plate = plateChoice.GetStringSelection()
                 plateMap.SetPlate(plate)
                 self.colorBar.AddNotifyWindow(plateMap)
-                wellsAndVals = [v[1:] for v in platesWellsAndVals if str(v[0])==plate]
-                platedata, platelabels = FormatPlateMapData(wellsAndVals)
+                keys_and_vals = [v for v in platesWellsAndVals if str(v[0])==plate]
+                platedata, platelabels = FormatPlateMapData(keys_and_vals)
                 data += [platedata]
-                dmin = np.nanmin([float(val) for _,val in wellsAndVals]+[dmin])
-                dmax = np.nanmax([float(val) for _,val in wellsAndVals]+[dmax])
+                dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
+                dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
 
             if np.isinf(dmin) or np.isinf(dmax):
                 dlg = wx.MessageDialog(self, 'No numeric data was found in this column ("%s.%s") for the selected plate ("%s").'%(table,measurement,plate), 'No data!', style=wx.OK)
@@ -384,14 +384,15 @@ class PlateMapBrowser(wx.Frame):
                 plate = plateChoice.GetStringSelection()
                 plateMap.SetPlate(plate)
                 self.colorBar.AddNotifyWindow(plateMap)
-                wellsAndVals = [v[1:] for v in platesWellsAndVals if str(v[0])==plate]
-                platedata, platelabels = FormatPlateMapData(wellsAndVals, categorical=True)
+                keys_and_vals = [v for v in platesWellsAndVals if str(v[0])==plate]
+                platedata, platelabels = FormatPlateMapData(keys_and_vals, categorical=True)
                 data += [platedata]
 
             self.colorBar.SetLocalExtents([0,1])
             self.colorBar.SetGlobalExtents([0,1])
 
         for d, plateMap in zip(data, self.plateMaps):
+            plateMap.SetWellKeys(platelabels)
             if categorical:
                 plateMap.SetData(np.ones(d.shape) * np.nan)
                 plateMap.SetTextData(d)
@@ -496,11 +497,12 @@ class PlateMapBrowser(wx.Frame):
         self.plateMapSizer.Layout()
 
 
-def FormatPlateMapData(wellsAndVals, categorical=False):
+def FormatPlateMapData(keys_and_vals, categorical=False):
     '''
-    wellsAndVals: a list of 2-tuples of wells and values
-    returns a properly shaped numpy array of the given values with NaNs
-            filling empty slots.  
+    wellsAndVals: a list of lists of plates, wells and values
+    returns a 2-tuple containing:
+       -an array in the shape of the plate containing the given values with NaNs filling empty slots.  
+       -an array in the shape of the plate containing the given keys with (unknownplate, unknownwell) filling empty slots
     '''
     #TODO: well naming format (A##/123..) may have to go in props file
     formats = ['A01', '123', 'Unknown']
@@ -531,19 +533,25 @@ def FormatPlateMapData(wellsAndVals, categorical=False):
     elif p.plate_type == '1536': shape = P1536
     elif p.plate_type == '5600': 
         shape = P5600
-        data = np.array(wellsAndVals)[:,-1]
-        labels = np.array(wellsAndVals)[:,:-1]
+        data = np.array(keys_and_vals)[:,-1]
+        well_keys = np.array(keys_and_vals)[:,:-1]
         assert data.ndim == 1
+        if len(data) < 5600: raise Exception(
+            '''The measurement you chose to plot was missing for some wells. 
+            Because CPA doesn't know the well labelling convention used by this
+            microarray, we can't be sure how to plot the data. If you are 
+            plotting an object measurement, you probably have no objects in 
+            some of your wells.''')
         assert len(data) == 5600
         data = np.array(list(meander(data.reshape(shape)))).reshape(shape)
-        labels = np.array(list(meander(labels.reshape(shape)))).reshape(shape)
-        return data, labels
+        well_keys = np.array(list(meander(well_keys.reshape(shape + (2,))))).reshape(shape + (2,))
+        return data, well_keys
 
     data = np.ones(shape) * np.nan
     if categorical:
         data = data.astype('object')
-    labels = np.array(['UnknownWell'] * np.prod(shape), dtype=object).reshape(shape)
-    for well, val in wellsAndVals:
+    well_keys = np.array([('UnknownPlate', 'UnknownWell')] * np.prod(shape), dtype=object).reshape(shape + (2,))
+    for plate, well, val in keys_and_vals:
         if format == 'A01':
             if re.match('^[a-zA-Z][0-9]+[0-9]?$', well):
                 if shape[0] < 26:
@@ -555,7 +563,7 @@ def FormatPlateMapData(wellsAndVals, categorical=False):
                     data[row,col] = float(val)
                 else:
                     data[row,col] = val
-                labels[row, col] = well
+                well_keys[row, col] = (plate, well)
         elif format == '123':
             row = (int(well) - 1) / shape[1]
             col = (int(well) - 1) % shape[1]
@@ -563,8 +571,8 @@ def FormatPlateMapData(wellsAndVals, categorical=False):
                 data[row,col] = float(val)
             else:
                 data[row,col] = val
-            labels[row,col] = well
-    return data, labels
+            well_keys[row,col] = well
+    return data, well_keys
 
 def meander(a):
     ''' a - 2D array

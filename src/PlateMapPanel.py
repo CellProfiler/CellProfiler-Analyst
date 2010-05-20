@@ -62,8 +62,9 @@ class PlateMapPanel(wx.Panel):
         else:
             self.row_label_format = row_label_format
 
-        self.well_keys = []
+        self.well_keys = None
         if well_keys:
+            self.well_keys = []
             for x, val in enumerate(well_keys):
                 if x % self.data.shape[1] == 0:
                     self.well_keys += [[]]	
@@ -153,6 +154,10 @@ class PlateMapPanel(wx.Panel):
         ''' map: the name of a matplotlib.colors.LinearSegmentedColormap instance '''
         self.colormap = matplotlib.cm.get_cmap(map)
         self.Refresh()
+        
+    def SetWellKeys(self, keys):
+        ''' keys - an array of keys uniquely identifying each well in the plate.'''
+        self.well_keys = keys
 
     def SelectWell(self, well):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
@@ -340,18 +345,27 @@ class PlateMapPanel(wx.Panel):
             plate, well = self.GetWellKeyAtCoord(evt.X, evt.Y)
         except:
             return
-        images = db.execute('SELECT %s FROM %s WHERE %s=%s AND %s=%s'%
+        if plate == 'UnknownPlate' or well == 'UnknownWell':
+            return
+        images = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
                             (','.join(p.image_thumbnail_cols), p.image_table,
                              p.plate_id, plate, p.well_id, well))
+        imsets = []
         for row in images:
-            ims = [Image.open(StringIO(im), 'r') for im in row]
-            ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
-                    for im in ims]
-            bmp = ImageTools.MergeToBitmap(ims, p.image_channel_colors)
+            pngs = [Image.open(StringIO(im), 'r') for im in row]
+            imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
+                    for png in pngs]]
+        
+        n_channels = len(imsets[0])
+        composite = []
+        for i in xrange(n_channels):
+            # composite each channel separately
+            composite += [ImageTools.tile_images([imset[i] for imset in imsets])]
+        bmp = ImageTools.MergeToBitmap(composite, p.image_channel_colors)
         
         tip.SetEndDelay(1)
         tip.SetBodyImage(bmp)
-        tip.SetHeader('Plate: %s, Well: %s'%self.GetWellKeyAtCoord(evt.X, evt.Y))
+        tip.SetHeader('Plate: %s, Well: %s'%(plate, well))
         tip.ApplyStyle("Silver")
         self.tipwin = STT.ToolTipWindow(self, tip)
         self.tipwin.SetPosition((self.Parent.GetPosition()[0] + evt.X, 
