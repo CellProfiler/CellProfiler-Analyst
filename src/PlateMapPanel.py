@@ -14,13 +14,14 @@ except ImportError: # if it's not there locally, try the wxPython lib.
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
-# Well Shapes
-ROUNDED  = 'rounded'
-CIRCLE   = 'circle'
-SQUARE   = 'square'
-IMAGE    = 'image'
+# Well Displays
+ROUNDED   = 'rounded'
+CIRCLE    = 'circle'
+SQUARE    = 'square'
+IMAGE     = 'image'
+THUMBNAIL = 'thumbnail'
 
-all_well_shapes = [SQUARE, ROUNDED, CIRCLE, IMAGE]
+all_well_shapes = [SQUARE, ROUNDED, CIRCLE, THUMBNAIL, IMAGE]
 
 class PlateMapPanel(wx.Panel):
     '''
@@ -30,7 +31,7 @@ class PlateMapPanel(wx.Panel):
     '''
 
     def __init__(self, parent, data, shape=None, well_keys=None,
-                 colormap='jet', wellshape=ROUNDED, row_label_format=None,
+                 colormap='jet', well_disp=ROUNDED, row_label_format=None,
                  data_range=None, **kwargs):
         '''
         ARGUMENTS:
@@ -41,7 +42,7 @@ class PlateMapPanel(wx.Panel):
         shape -- a 2-tuple to reshape the data to (must fit the data)
         well_keys -- list of keys for each well (plate, well)
         colormap -- a colormap name from matplotlib.cm
-        wellshape -- ROUNDED, CIRCLE, or SQUARE
+        well_disp -- ROUNDED, CIRCLE, SQUARE, THUMBNAIL or IMAGE
         row_label_format -- 'ABC' or '123'
         data_range -- 2-tuple containing the min and max values that the data 
            should be normalized to. Otherwise the min and max will be taken 
@@ -52,7 +53,7 @@ class PlateMapPanel(wx.Panel):
         self.hideLabels = False
         self.selection = set([])
         self.SetColorMap(colormap)
-        self.wellshape = wellshape
+        self.well_disp = well_disp
         self.SetData(data, shape, data_range=data_range)
         if row_label_format is None:
             if self.data.shape[0] <= len(abc):
@@ -141,13 +142,13 @@ class PlateMapPanel(wx.Panel):
         self.row_labels = ['%2s'%c for c in labels]
         self.Refresh()
 
-    def SetWellShape(self, wellshape):
+    def SetWellDisplay(self, well_disp):
         '''
-        wellshape in PlatMapPanel.ROUNDED,
+        well_disp in PlatMapPanel.ROUNDED,
                      PlatMapPanel.CIRCLE,
                      PlatMapPanel.SQUARE
         '''
-        self.wellshape = wellshape
+        self.well_disp = well_disp
         self.Refresh()
 
     def SetColorMap(self, map):
@@ -239,21 +240,21 @@ class PlateMapPanel(wx.Panel):
         wtext, htext = font.GetPixelSize()[0]*2, font.GetPixelSize()[1]
         dc.SetFont(font)
 
-        if self.wellshape == IMAGE:
-            db = DBConnect.getInstance()
-            bmp = {}
-            imgs = {}
-            if p.image_thumbnail_cols:
-                wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, p.well_id))
-                for wims in wells_and_images:
-                    ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
-                    ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
-                           for im in ims]
-                    imgs[wims[0]] =  ims
-            else:
-                wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, p.image_id, p.image_table, p.well_id))
-                for well, im in wells_and_images:
-                    imgs[well] = (im, )
+        db = DBConnect.getInstance()
+        bmp = {}
+        imgs = {}
+        if self.well_disp == IMAGE:
+            wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, p.image_id, p.image_table, p.well_id))
+            for well, im in wells_and_images:
+                imgs[well] = (im, )
+        elif self.well_disp == THUMBNAIL:
+            assert p.image_thumbnail_cols, 'No thumbnail columns are defined in the database. Platemap cannot be drawn.'
+            wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, p.well_id))
+            for wims in wells_and_images:
+                ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
+                ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
+                       for im in ims]
+                imgs[wims[0]] =  ims
 
         py = self.yo
         for y in range(rows_data+1):
@@ -290,21 +291,26 @@ class PlateMapPanel(wx.Panel):
                         dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                     else:
                         dc.SetBrush(wx.Brush(color))
-                    # Draw Well Shape
-                    if self.wellshape == ROUNDED:
+                    # Draw Well Display
+                    if self.well_disp == ROUNDED:
                         dc.DrawRoundedRectangle(px+1, py+1, r*2, r*2, r*0.75)
-                    elif self.wellshape == CIRCLE:
+                    elif self.well_disp == CIRCLE:
                         dc.DrawCircle(px+r+1, py+r+1, r)
-                    elif self.wellshape == SQUARE:
+                    elif self.well_disp == SQUARE:
                         dc.DrawRectangle(px+1, py+1, r*2, r*2)
-                    elif self.wellshape == IMAGE:
+                    elif self.well_disp == THUMBNAIL:
                         p.image_buffer_size = int(p.plate_type)
                         plate, well = self.GetWellKeyAtCoord(px+r, py+r)
                         if imgs.has_key(well):
-                            if p.image_thumbnail_cols:
-                                ims = imgs[well]
-                            else:
-                                ims = ImageTools.FetchImage(imgs[well])
+                            size = imgs[well][0].shape
+                            scale = r*2./max(size)
+                            bmp[well] = ImageTools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
+                            dc.DrawBitmap(bmp[well], px+1, py+1)
+                    elif self.well_disp == IMAGE:
+                        p.image_buffer_size = int(p.plate_type)
+                        plate, well = self.GetWellKeyAtCoord(px+r, py+r)
+                        if imgs.has_key(well):
+                            ims = ImageTools.FetchImage(imgs[well])
                             size = ims[0].shape
                             scale = r*2./max(size)
                             bmp[well] = ImageTools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
@@ -392,7 +398,7 @@ if __name__ == "__main__":
 ##    data = np.arange(384).reshape(16,24)
 ##    data[100:102] = np.nan
     frame = wx.Frame(None, size=(900.,800.))
-    pmp = PlateMapPanel(frame, a, wellshape='square')
+    pmp = PlateMapPanel(frame, a, well_disp='square')
 ##    p.SetTextData(data)
     frame.Show()
 

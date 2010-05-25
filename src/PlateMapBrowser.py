@@ -1,6 +1,6 @@
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
-from PlateMapPanel import *
+import PlateMapPanel as pmp
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageTools
 import Properties
@@ -24,14 +24,14 @@ P5600 = (40, 140)
 
 required_fields = ['plate_type', 'plate_id', 'well_id']
 
-class AwesomePMP(PlateMapPanel):
+class AwesomePMP(pmp.PlateMapPanel):
     '''
     PlateMapPanel that does selection and tooltips for data.
     '''
     def __init__(self, parent, data, shape=None, well_keys=None,
-                 colormap='jet', wellshape=ROUNDED, row_label_format=None, **kwargs):
-        PlateMapPanel.__init__(self, parent, data, shape, well_keys, 
-                               colormap, wellshape, row_label_format,  **kwargs)
+                 colormap='jet', well_disp=pmp.ROUNDED, row_label_format=None, **kwargs):
+        pmp.PlateMapPanel.__init__(self, parent, data, shape, well_keys, 
+                               colormap, well_disp, row_label_format,  **kwargs)
 
         self.chMap = p.image_channel_colors
 
@@ -153,8 +153,7 @@ class PlateMapBrowser(wx.Frame):
 
         dataSourceSizer.AddSpacer((-1,10))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
-        #measurements = self.GetNumericColumnsFromTable(p.image_table)
-        measurements = db.GetColumnNames(p.image_table)
+        measurements = get_non_blob_types_from_table(p.image_table)
         self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
@@ -175,10 +174,15 @@ class PlateMapBrowser(wx.Frame):
         viewSizer.Add(self.colorMapsChoice)
 
         viewSizer.AddSpacer((-1,10))
-        viewSizer.Add(wx.StaticText(self, label='Well shape:'))
-        self.wellShapeChoice = ComboBox(self, choices=all_well_shapes, style=wx.CB_READONLY)
-        self.wellShapeChoice.Select(0)
-        viewSizer.Add(self.wellShapeChoice)
+        viewSizer.Add(wx.StaticText(self, label='Well display:'))
+        if p.image_thumbnail_cols:
+            choices = pmp.all_well_shapes
+        else:
+            choices = pmp.all_well_shapes
+            choices.remove(pmp.THUMBNAIL)
+        self.wellDisplayChoice = ComboBox(self, choices=choices, style=wx.CB_READONLY)
+        self.wellDisplayChoice.Select(0)
+        viewSizer.Add(self.wellDisplayChoice)
 
         viewSizer.AddSpacer((-1,10))
         viewSizer.Add(wx.StaticText(self, label='Number of plates:'))
@@ -213,7 +217,7 @@ class PlateMapBrowser(wx.Frame):
         self.aggregationMethodsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectAggregationMethod)
         self.colorMapsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectColorMap)
         self.numberOfPlatesTE.Bind(wx.EVT_TEXT_ENTER, self.OnEnterNumberOfPlates)
-        self.wellShapeChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectWellShape)
+        self.wellDisplayChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectWellDisplay)
 
         global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(self.measurementsChoice.GetStringSelection(), 
                                                                        self.measurementsChoice.GetStringSelection(), 
@@ -267,7 +271,7 @@ class PlateMapBrowser(wx.Frame):
 
         self.plateMaps += [AwesomePMP(self, data, shape, well_keys=well_keys,
                                       colormap=self.colorMapsChoice.GetStringSelection(),
-                                      wellshape=self.wellShapeChoice.GetStringSelection())]
+                                      well_disp=self.wellDisplayChoice.GetStringSelection())]
 
         plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
         plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), 0, wx.EXPAND)
@@ -284,7 +288,7 @@ class PlateMapBrowser(wx.Frame):
         table       = self.sourceChoice.GetStringSelection()
         aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
         table = self.sourceChoice.GetStringSelection()
-        numeric_measurements = self.GetNumericColumnsFromTable(table)
+        numeric_measurements = get_numeric_columns_from_table(table)
         categorical = measurement not in numeric_measurements
         self.colorBar.ClearNotifyWindows()
 
@@ -401,13 +405,6 @@ class PlateMapBrowser(wx.Frame):
                                  clip_interval=self.colorBar.GetLocalInterval(), 
                                  clip_mode=self.colorBar.GetClipMode())
 
-
-    def GetNumericColumnsFromTable(self, table):
-        ''' Fetches names of numeric columns for the given table. '''
-        measurements = db.GetColumnNames(table)
-        types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
-
     def OnSelectDataSource(self, evt):
         '''
         Handles the selection of a source table (per-image or per-object) from
@@ -415,7 +412,7 @@ class PlateMapBrowser(wx.Frame):
         of numeric columns from the selected table.
         '''
         table = self.sourceChoice.GetStringSelection()
-        self.measurementsChoice.SetItems(self.GetNumericColumnsFromTable(table))
+        self.measurementsChoice.SetItems(get_numeric_columns_from_table(table))
         self.measurementsChoice.Select(0)
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
@@ -428,7 +425,7 @@ class PlateMapBrowser(wx.Frame):
         ''' Handles the selection of a measurement to plot from a choice box. '''
         selected_measurement = self.measurementsChoice.GetStringSelection() 
         table = self.sourceChoice.GetStringSelection()
-        numeric_measurements = self.GetNumericColumnsFromTable(table)
+        numeric_measurements = get_numeric_columns_from_table(table)
         if selected_measurement not in numeric_measurements:
             self.aggregationMethodsChoice.Disable()
             self.colorMapsChoice.Disable()
@@ -452,17 +449,21 @@ class PlateMapBrowser(wx.Frame):
         for plateMap in self.plateMaps:
             plateMap.SetColorMap(map)
 
-    def OnSelectWellShape(self, evt):
-        ''' Handles the selection of a well shape from a choice box. '''
-        sel = self.wellShapeChoice.GetStringSelection()
+    def OnSelectWellDisplay(self, evt):
+        ''' Handles the selection of a well display choice from a choice box. '''
+        sel = self.wellDisplayChoice.GetStringSelection()
         if sel.lower() == 'image':
-            dlg = wx.MessageDialog(self, 'This mode will render each well as a shrunken image loaded from that well. This feature is currently VERY SLOW since it requires loading hundreds of full sized images. Are you sure you want to continue?',
-                                   'Load all images?', wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+            dlg = wx.MessageDialog(self, 
+                'This mode will render each well as a shrunken image loaded '
+                'from that well. This feature is currently VERY SLOW since it '
+                'requires loading hundreds of full sized images. Are you sure '
+                'you want to continue?',
+                'Load all images?', wx.OK|wx.CANCEL|wx.ICON_QUESTION)
             if dlg.ShowModal() != wx.ID_OK:
-                self.wellShapeChoice.SetSelection(0)
+                self.wellDisplayChoice.SetSelection(0)
                 return
         for platemap in self.plateMaps:
-            platemap.SetWellShape(sel)
+            platemap.SetWellDisplay(sel)
 
     def OnEnterNumberOfPlates(self, evt):
         ''' Handles the entry of a plates to view from a choice box. '''
@@ -495,7 +496,6 @@ class PlateMapBrowser(wx.Frame):
             self.AddPlateMap(plateIndex)
         self.UpdatePlateMaps()
         self.plateMapSizer.Layout()
-
 
 def FormatPlateMapData(keys_and_vals, categorical=False):
     '''
@@ -586,6 +586,16 @@ def meander(a):
             for val in reversed(row):
                 yield val
 
+def get_numeric_columns_from_table(table):
+    ''' Fetches names of numeric columns for the given table. '''
+    measurements = db.GetColumnNames(table)
+    types = db.GetColumnTypes(table)
+    return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+
+def get_non_blob_types_from_table(table):
+    measurements = db.GetColumnNames(table)
+    types = db.GetColumnTypeStrings(table)
+    return [m for m,t in zip(measurements, types) if not 'blob' in t.lower()]
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()
