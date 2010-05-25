@@ -209,7 +209,6 @@ class DBConnect(Singleton):
         return string.join([ (key + " = " + str(val) + "\n")
                             for (key, val) in self.__dict__.items()])
 
-
     def connect(self):
         '''
         Attempts to create a new connection to the specified database using
@@ -351,7 +350,6 @@ class DBConnect(Singleton):
         self.cursors = {}
         self.connectionInfo = {}
         self.classifierColNames = None
-        
     
     def CloseConnection(self, connID=None):
         if not connID:
@@ -366,7 +364,6 @@ class DBConnect(Singleton):
             logging.info('Closed connection: %s as %s@%s (connID="%s").' % (db_name, db_user, db_host, connID))
         else:
             logging.warn('WARNING <DBConnect.CloseConnection>: No connection ID "%s" found!' %(connID))
-
 
     def execute(self, query, args=None, silent=False, return_result=True):
         '''
@@ -406,7 +403,6 @@ class DBConnect(Singleton):
         except KeyError, e:
             raise DBException, 'No such connection: "%s".\n' %(connID)
             
-            
     def Commit(self):
         connID = threading.currentThread().getName()
         try:
@@ -416,7 +412,6 @@ class DBConnect(Singleton):
             raise DBException, 'Commit failed for connection "%s"\n\t%s\n' %(connID, e)
         except KeyError, e:
             raise DBException, 'No such connection: "%s".\n' %(connID)
-            
 
     def GetNextResult(self):
         connID = threading.currentThread().getName()
@@ -494,7 +489,6 @@ class DBConnect(Singleton):
         object_number = object_number[0][0]
         return tuple(list(imKey)+[int(object_number)])
     
-    
     def GetPerImageObjectCounts(self):
         '''
         Returns a list of (imKey, obCount) tuples. 
@@ -511,16 +505,13 @@ class DBConnect(Singleton):
             counts[r[:-1]] = r[-1]
         return [r+(counts[r],) for r in result2 if r in counts]
     
-    
     def GetAllImageKeys(self):
         ''' Returns a list of all image keys in the image_table. '''
         select = "SELECT "+UniqueImageClause()+" FROM "+p.image_table+" GROUP BY "+UniqueImageClause()
         return self.execute(select)
     
-    
     def GetObjectsFromImage(self, imKey):
         return self.execute('SELECT %s FROM %s WHERE %s'%(UniqueObjectClause(), p.object_table, GetWhereClauseForImages([imKey])))
-    
     
     def GetObjectCoords(self, obKey, none_ok=False, silent=False):
         ''' Returns the specified object's x, y coordinates in an image. '''
@@ -532,12 +523,10 @@ class DBConnect(Singleton):
         assert len(res)==1, "Database unexpectedly returned %s sets of object coordinates instead of 1." % len(res)
         return res[0]
     
-    
     def GetAllObjectCoordsFromImage(self, imKey):
         ''' Returns a list of lists x, y coordinates for all objects in the given image. '''
         select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imKey])+' ORDER BY '+p.object_id
         return self.execute(select)
-
 
     def GetObjectNear(self, imkey, x, y, silent=False):
         ''' Returns obKey of the closest object to x, y in an image. '''
@@ -550,7 +539,6 @@ class DBConnect(Singleton):
             return None
         else:
             return res[0]
-    
     
     def GetFullChannelPathsForImage(self, imKey):
         ''' 
@@ -574,7 +562,6 @@ class DBConnect(Singleton):
             else:
                 filenames.append( imPaths[i]+os.path.sep+imPaths[i+1] )
         return filenames
-
 
     def GetGroupMaps(self, reverse=False):
         '''Return a tuple of two dictionaries: one that maps group
@@ -610,7 +597,6 @@ class DBConnect(Singleton):
                 d[row[:key_size]] = row[key_size:]
         return d, col_names
     
-    
     def GetFilteredImages(self, filter):
         ''' Returns a list of imKeys from the given filter. '''
         try:
@@ -620,7 +606,6 @@ class DBConnect(Singleton):
             logging.error(e)
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
     
-    
     def GetTableNames(self):
         if p.db_type.lower()=='mysql':
             res = self.execute('SHOW TABLES')
@@ -629,22 +614,35 @@ class DBConnect(Singleton):
             res = self.execute('SELECT name FROM sqlite_master WHERE type="table" ORDER BY name')
             return [t[0] for t in res]
 
-    
     def GetColumnNames(self, table):
-        ''' Returns a list of the column names for the specified table. '''
+        '''Returns a list of the column names for the specified table. '''
         # NOTE: SQLite doesn't like DESCRIBE or SHOW statements so we do it this way.
         self.execute('SELECT * FROM %s LIMIT 1'%(table))
         return self.GetResultColumnNames()   # return the column names
-            
 
     def GetColumnTypes(self, table):
-        ''' Returns the column types for the given table. '''
+        '''Returns python types for each column of the given table. '''
         res = self.execute('SELECT * FROM %s LIMIT 1'%(table), silent=True)
         return [type(x) for x in res[0]]
     
     def GetColumnType(self, table, colname):
-        ''' Returns the type of a given table column. '''
+        '''Returns the python type for a given table column. '''
         for col, coltype in zip(self.GetColumnNames(table), self.GetColumnTypes(table)):
+            if col == colname:
+                return coltype
+            
+    def GetColumnTypeStrings(self, table):
+        '''Returns the SQL type string for each column of the given table.'''
+        if p.db_type == 'sqlite':
+            res = self.execute('PRAGMA table_info(%s)'%(table))
+            return [r[2] for r in res]
+        elif p.db_type == 'mysql':
+            res = self.execute('SHOW COLUMNS FROM %s'%(table))
+            return [r[1] for r in res]
+        
+    def GetColumnTypeString(self, table, colname):
+        '''Returns the SQL type string for a given table column. '''
+        for col, coltype in zip(self.GetColumnNames(table), self.GetColumnTypeStrings(table)):
             if col == colname:
                 return coltype
 
@@ -678,7 +676,6 @@ class DBConnect(Singleton):
         connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
     
-    
     def GetCellDataForClassifier(self, obKey):
         '''
         Returns a list of measurements for the specified object excluding
@@ -695,7 +692,6 @@ class DBConnect(Singleton):
         assert all([type(x) in [int, long, float] for x in data[0]])
         return np.array(data[0])
     
-    
     def GetCellData(self, obKey):
         '''
         Returns a list of measurements for the specified object.
@@ -709,14 +705,12 @@ class DBConnect(Singleton):
         values = [x if type(x) in [int, long, float] else 0.0 for x in data[0]]
         return np.array(values)
 
-    
     def GetPlateNames(self):
         '''
         Returns the names of each plate in the per-image table.
         '''
         res = self.execute('SELECT %s FROM %s GROUP BY %s'%(p.plate_id, p.image_table, p.plate_id))
         return [str(l[0]) for l in res]
-
 
     def GetPlatesAndWellsPerImage(self):
         '''
@@ -769,7 +763,6 @@ class DBConnect(Singleton):
                     raise Exception, '<ERROR>: Value in table could not be converted to string!'
         return colTypes
     
-     
     def GetLinkingColumnsForTable(self, table):
         ''' Returns the column(s) that link the given table to the per_image table. '''
         if table not in self.link_cols.keys():
@@ -782,7 +775,6 @@ class DBConnect(Singleton):
             else:
                 raise Exception('Table %s could not be linked to %s'%(table, p.image_table))
         return self.link_cols[table]       
-    
     
     def CreateSQLiteDB(self):
         '''
@@ -858,7 +850,6 @@ class DBConnect(Singleton):
         f.close()
         
         self.Commit()
-        
         
     def CreateSQLiteDBFromCSVs(self):
         '''
@@ -980,7 +971,6 @@ class DBConnect(Singleton):
             res = self.execute("SELECT name FROM sqlite_master WHERE type='table' and name='%s'"%(name))
         return len(res) > 0
 
-
     def CreateTempTableFromCSV(self, filename, tablename):
         '''
         Reads a csv file into a temporary table in the database.
@@ -1004,7 +994,6 @@ class DBConnect(Singleton):
             typed_table += [col]
         typed_table = np.array(typed_table, dtype=object).T
         return self.CreateTempTableFromData(typed_table, colnames, tablename)
-    
     
     def CreateTempTableFromData(self, dtable, colnames, tablename):
         '''
@@ -1035,7 +1024,6 @@ class DBConnect(Singleton):
                           tablename, ', '.join(colnames), vals), silent=True)
         self.Commit()
         return True
-    
     
     def CheckTables(self):
         '''
@@ -1351,7 +1339,7 @@ class Objects(Entity):
 
 
 if __name__ == "__main__":
-
+    ''' For debugging only... '''
     from TrainingSet import TrainingSet
     import FastGentleBoostingMulticlass
     import MulticlassSQL
@@ -1367,61 +1355,4 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../test_data/export_to_db_test.properties')
-    p.LoadFile('../test_data/nirht_local.properties')
-
-    print '%s images'%len(db.GetAllImageKeys())
-    
-    # TEST CreateTempTableFromCSV
-#    table = '_blah'
-#    db.CreateTempTableFromCSV('../test_data/test_per_image.txt', table)
-#    print db.execute('SELECT * from %s LIMIT 10'%(table))
-#
-#    measurements = db.GetColumnNames(table)
-#    types = db.GetColumnTypes(table)
-#    print [m for m,t in zip(measurements, types) if t in[float, int, long]]
-#
-#    print db.GetColumnNames(table)
-#    print db.GetColumnTypes(table)
-
-
-    # TEST reconnect
-#    import time
-#    print db.GetColnamesForClassifier()
-#    while(1):
-#        print '#'
-#        if sys.stdin.readline().strip() == 'q':
-#            break
-#        try:
-#            print db.GetColumnTypes(p.object_table)
-#        except:
-#            print 'ERROR: query failed.  Try again'
-        
-    
-#    p.LoadFile('../properties/nirht_local.properties')
-#    
-#    print 'group maps:',db.GetGroupMaps()
-#    print 'filter "firstten":',db.GetFilteredImages('FirstTen')
-#    
-#    # Train the classifier
-#    imKey = (0,1)
-#    nRules = 5
-#    trainingSet = TrainingSet(p)
-#    # make a training set
-#    positives = [(0,1,56), (0,1,72), (0,1,92), (0,1,90), (0,1,88), (0,1,49), (0,1,11)]
-#    negatives = [(0,1,i) for i in range(1,95) if i not in [56,72,92,90,88,49,11]]
-#    trainingSet.Create(['pos','neg'],[positives, negatives])
-#    output = StringIO()
-#    print 'Training classifier with '+str(nRules)+' rules...'
-#    weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames, nRules,
-#                                                      trainingSet.label_matrix, 
-#                                                      trainingSet.values, output)
-#
-#    obKeys = dm.GetObjectsFromImage(imKey)
-##    imKeysInFilter = db.GetFilteredImages('FirstHundred')
-##    obKeys = dm.GetRandomObjects(100,imKeysInFilter)
-#    hits = []
-#    if obKeys:
-#        clNum = 1
-#        hits = MulticlassSQL.FilterObjectsFromClassN(clNum, weaklearners, [imKey])
-#        
-#    print hits
+#    p.LoadFile('../test_data/nirht_local.properties')
