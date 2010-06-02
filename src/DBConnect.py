@@ -646,12 +646,12 @@ class DBConnect(Singleton):
             if col == colname:
                 return coltype
 
-    def GetColnamesForClassifier(self):
+    def GetColnamesForClassifier(self, force=False):
         '''
         Returns a list of column names for the object_table excluding 
         those specified in Properties.classifier_ignore_columns
         '''
-        if self.classifierColNames is None:
+        if (self.classifierColNames is None) or force:
             col_names = self.GetColumnNames(p.object_table)
             col_types = self.GetColumnTypes(p.object_table)
             # automatically ignore all string-type columns
