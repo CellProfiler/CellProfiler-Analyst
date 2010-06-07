@@ -583,8 +583,8 @@ class DBConnect(Singleton):
         query = p._groups[group]
         try:
             res = self.execute(query)
-        except Exception, e:
-            raise Exception, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.\nError was: "%s"'%(group, e)
+        except DBException, e:
+            raise DBException, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.\nError was: "%s"'%(group, e)
         col_names = self.GetResultColumnNames()[key_size:]
         d = {}
         for row in res:
@@ -740,7 +740,7 @@ class DBConnect(Singleton):
         try:
             tabledata[0][0]
         except: 
-            raise Exception('asdf ERROR: Cannot infer column types from an empty table.')
+            raise Exception, 'Cannot infer column types from an empty table.'
         for row in tabledata:
             for i, e in enumerate(row):
                 if colTypes[i]!='FLOAT' and not colTypes[i].startswith('VARCHAR'):
@@ -760,7 +760,7 @@ class DBConnect(Singleton):
                     maxLen[i] = max(len(x), maxLen[i])
                     colTypes[i] = 'VARCHAR(%d)'%(maxLen[i])
                 except ValueError: 
-                    raise Exception, '<ERROR>: Value in table could not be converted to string!'
+                    raise Exception, 'Value in table could not be converted to string!'
         return colTypes
     
     def GetLinkingColumnsForTable(self, table):
@@ -773,7 +773,7 @@ class DBConnect(Singleton):
             elif p.well_id in cols and p.plate_id in cols:
                 self.link_cols[table] = (p.well_id, p.plate_id)
             else:
-                raise Exception('Table %s could not be linked to %s'%(table, p.image_table))
+                raise Exception, 'Table %s could not be linked to %s'%(table, p.image_table)
         return self.link_cols[table]       
     
     def CreateSQLiteDB(self):
@@ -929,7 +929,7 @@ class DBConnect(Singleton):
             if dlg:
                 c, s = dlg.Update(pct, '%d%% Complete'%(pct))
                 if not c:
-                    raise Exception('cancelled load')
+                    raise Exception, 'cancelled load'
             logging.info("... loaded %d%% of CSV data"%(pct))
 
         line_count = 0
@@ -955,7 +955,7 @@ class DBConnect(Singleton):
                 if dlg:
                     c, s = dlg.Update(pct, '%d%% Complete'%(pct))
                     if not c:
-                        raise Exception('cancelled load')
+                        raise Exception, 'cancelled load'
                 logging.info("... loaded %d%% of CSV data"%(pct))
             f.close()
             base_bytes += os.path.getsize(os.path.join(csv_dir, file))
