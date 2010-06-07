@@ -134,12 +134,14 @@ class ImageViewerPanel(ImagePanel):
         self.Refresh()
 
     def SetClassPoints(self, classes):
+        if len(classes) == 0:
+            logging.warn('There are no objects to classify in this image.')
+            return
         from matplotlib.pyplot import cm
         self.classes = classes
-        vals = np.arange(0, 1, 1./len(classes))
-        if len(vals) > 0:
-            vals += (1.0 - vals[-1]) / 2
-        self.colors = [np.array(cm.jet(val))*255 for val in vals]
+        vals = np.arange(0, 1, 1. / len(classes))
+        vals += (1.0 - vals[-1]) / 2
+        self.colors = [np.array(cm.jet(val)) * 255 for val in vals]
         self.class_nums = [str(i+1) for i,_ in enumerate(classes)]
 
         self.classVisible = {}
