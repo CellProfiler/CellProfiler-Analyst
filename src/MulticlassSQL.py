@@ -147,6 +147,7 @@ def create_perobject_class_table(classnames, rules):
     case_expr = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, classnames[n]) for n in range(nClasses)]) + " END"
     case_expr2 = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, n+1) for n in range(nClasses)]) + " END"
     db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, case_expr2, p.object_table))
+    db.Commit()
     
 def PerImageCounts(weaklearners, filter=None, cb=None):
     '''
