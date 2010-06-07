@@ -235,6 +235,8 @@ class ClassifierGUI(wx.Frame):
         self.BindMouseOverHelpText()
 
         # do event binding
+##        self.Bind(wx.EVT_TEXT, self.OnRulesInput, self.rules_text)
+        
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
         self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
@@ -300,6 +302,27 @@ class ClassifierGUI(wx.Frame):
         else:
             evt.Skip()
             
+    # TODO: Make rules text box editable so custom rules can be used.
+##    def OnRulesInput(self, evt):
+##        import re
+##        weaklearners = []
+##        self.rules_text.SetForegroundColour('#000001')
+##        print 'checking rules'
+##        m = 'IF *\( *(?P<colname>.+) *> *(?P<thresh>.+) *, *(?P<a>\[.+\]) *, *(?P<b>\[.+\]) *\)[ \n]*'
+##        for match in re.finditer(m, self.rules_text.Value):
+##            try:
+##                d = match.groupdict()
+##                colname = d['colname']
+##                thresh = d['thresh']
+##                a = eval(d['a'])
+##                b = eval(d['b'])
+##                weaklearners += [(colname, thresh, a, b, 0)]
+##            except:
+##                print 'failed'
+##                self.rules_text.SetForegroundColour('Red')
+##                return
+##        print 'setting learners'
+##        self.weaklearners = weaklearners
             
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
@@ -428,17 +451,16 @@ class ClassifierGUI(wx.Frame):
                     bin.UpdateQuantity()
                     break
             dlg.Destroy()
+            updatedList = self.obClassChoice.GetItems()
+            sel = self.obClassChoice.GetSelection()
+            for i in xrange(len(updatedList)):
+                if updatedList[i] == label:
+                    updatedList[i] = newLabel
+            self.obClassChoice.SetItems(updatedList)
+            self.obClassChoice.SetSelection(sel)
             return wx.ID_OK
         return wx.ID_CANCEL
         
-        updatedList = self.obClassChoice.GetItems()
-        sel = self.obClassChoice.GetSelection()
-        for i in xrange(len(updatedList)):
-            if updatedList[i] == label:
-                updatedList[i] = newLabel
-        self.obClassChoice.SetItems(updatedList)
-        self.obClassChoice.SetSelection(sel)
-    
 
     def all_sort_bins(self):
         return [self.unclassifiedBin] + self.classBins
