@@ -99,11 +99,12 @@ class ColorBarPanel(wx.Panel):
         range = self.global_extents[1]-self.global_extents[0]
         w = float(self.Size[0])
         if range>0 and w>0:
+            print self.global_extents
             self.interval[0] = self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)
             self.interval[1] = self.global_extents[0] + ((self.high_slider.GetPositionTuple()[0] + s_off) / w * range)
         
             self.low_slider.SetToolTipString(str(self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)))
-            self.high_slider.SetToolTipString(str(self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)))
+            self.high_slider.SetToolTipString(str(self.global_extents[0] + ((self.high_slider.GetPositionTuple()[0] + s_off) / w * range)))
         else:
             self.interval = list(self.local_extents)
         
