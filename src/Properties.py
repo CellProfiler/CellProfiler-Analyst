@@ -6,8 +6,6 @@ import re
 import os
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
 #
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
 #
@@ -468,7 +466,7 @@ if __name__ == "__main__":
     else:
         filename = "../properties/nirht_test.properties"
 #        filename = '/Users/afraser/Desktop/cpa_example/example.properties'
-    
+
     p = Properties.getInstance()
     p.LoadFile(filename)
     print p
