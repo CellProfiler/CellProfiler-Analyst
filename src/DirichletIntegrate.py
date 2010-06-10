@@ -1,8 +1,6 @@
 from numpy import *
 from scipy.integrate import quadrature, romberg, fixed_quad
 from scipy.special import gammaln, betaln, digamma, polygamma, betainc, gamma
-from scipy.special import beta as Beta
-from scipy.stats import beta
 import pdb
 from hypergeom import hyper3F2regularizedZ1, hyper3F2Z1, hyper3F2aZ1
 
