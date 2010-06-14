@@ -178,7 +178,7 @@ class PlateMapBrowser(wx.Frame):
         if p.image_thumbnail_cols:
             choices = pmp.all_well_shapes
         else:
-            choices = pmp.all_well_shapes
+            choices = list(pmp.all_well_shapes)
             choices.remove(pmp.THUMBNAIL)
         self.wellDisplayChoice = ComboBox(self, choices=choices, style=wx.CB_READONLY)
         self.wellDisplayChoice.Select(0)
