@@ -210,16 +210,10 @@ def ReadBitmapViaTIFFfile(data):
     im = tifffile.TIFFfile(StringIO(data))
     imdata = im.asarray(squeeze=True)
     if imdata.dtype == np.uint16:
-        if im.byte_order == '<':
-            if np.max(imdata) < 4096:
-                imdata = imdata.astype(np.float32) / 4095.
-            else:
-                imdata = imdata.astype(np.float32) / 65535.
+        if np.max(imdata) < 4096:
+            imdata = imdata.astype(np.float32) / 4095.
         else:
-            raise Exception('Image byte order not yet supported')
-            # We used to do this for Buzz Baum files (i.e., 12 bits in a 16 bit format with the high bit high)
-            # This doesn't work for the Buzz Baum images I have in CPA
-            #imdata = (imdata.astype(np.float32) - 2**15) / 2**12
+            imdata = imdata.astype(np.float32) / 65535.
             
         if imdata.ndim == 3:
             # check if channels are identical:
