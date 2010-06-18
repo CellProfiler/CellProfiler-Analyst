@@ -31,6 +31,27 @@ class DBException(Exception):
 #        filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
 #        return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
+class DBDisconnectedException(Exception):
+    """
+    Raised when a query or other database operation fails because the
+    database is shutting down or the connection has been lost.
+    """
+
+    def with_mysql_retry(cls, f):
+        """
+        Decorator that tries calling its function a second time if a
+        DBDisconnectedException occurs the first time.
+        """
+        def fn(db, *args, **kwargs):
+            try:
+                return f(db, *args, **kwargs)
+            except DBDisconnectedException:
+                logging.info('Lost connection to the MySQL database; reconnecting.')
+                db.connect()
+                return f(db, *args, **kwargs)
+        return fn
+    with_mysql_retry = classmethod(with_mysql_retry)
+
 
 #TODO: this doesn't belong in this module
 def get_data_table_from_csv_reader(reader):
@@ -186,6 +207,8 @@ class SqliteClassifier():
 
     def classify(self, *features):
         return 1 + np.where((features > self.thresholds), self.a, self.b).sum(axis=1).argmax()
+
+
 
 
 class DBConnect(Singleton):
@@ -365,6 +388,7 @@ class DBConnect(Singleton):
         else:
             logging.warn('WARNING <DBConnect.CloseConnection>: No connection ID "%s" found!' %(connID))
 
+    @DBDisconnectedException.with_mysql_retry
     def execute(self, query, args=None, silent=False, return_result=True):
         '''
         Executes the given query using the connection associated with
@@ -375,16 +399,11 @@ class DBConnect(Singleton):
         connID = threading.currentThread().getName()
         if not connID in self.connections.keys():
             self.connect()
-        
-        # Test for lost connection
+
         try:
-            self.connections[connID].ping()
-        except MySQLdb.OperationalError, e:
-            logging.error('Lost connection to database. Attempting to reconnect...')
-            self.CloseConnection(connID)
-            self.connect()
-        except AttributeError:
-            pass # SQLite doesn't know ping.
+            cursor = self.cursors[connID]
+        except KeyError, e:
+            raise DBException, 'No such connection: "%s".\n' %(connID)
         
         # Finally make the query
         try:
@@ -393,15 +412,16 @@ class DBConnect(Singleton):
             if p.db_type.lower()=='sqlite':
                 if args:
                     raise 'Can\'t pass args to sqlite execute!'
-                self.cursors[connID].execute(query)
+                cursor.execute(query)
             else:
-                self.cursors[connID].execute(query, args=args)
+                cursor.execute(query, args=args)
             if return_result:
                 return self._get_results_as_list()
         except MySQLdb.Error, e:
-            raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
-        except KeyError, e:
-            raise DBException, 'No such connection: "%s".\n' %(connID)
+            if isinstance(e, MySQLdb.OperationalError) and e.args[0] in [2006, 2013, 1053]:
+                raise DBDisconnectedException()
+            else:
+                raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
             
     def Commit(self):
         connID = threading.currentThread().getName()
