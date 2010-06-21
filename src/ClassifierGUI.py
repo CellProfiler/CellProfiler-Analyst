@@ -621,7 +621,7 @@ class ClassifierGUI(wx.Frame):
         
     def OnLoadTrainingSet(self, evt):
         ''' Present user with file select dialog, then load selected training set. '''
-        dlg = wx.FileDialog(self, "Select a the file containing your classifier training set.",
+        dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
