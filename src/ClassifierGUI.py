@@ -11,7 +11,7 @@ except: pass
 from DataGrid import DataGrid
 from DataModel import DataModel
 from ImageControlPanel import ImageControlPanel
-from PlateMapBrowser import PlateMapBrowser
+from plateviewer import PlateViewer
 from Properties import Properties
 from ScoreDialog import ScoreDialog
 import TileCollection
