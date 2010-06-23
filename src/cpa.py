@@ -37,7 +37,7 @@ ID_DENSITY = wx.NewId()
 PLOTS = {'scatter'     : Scatter, 
          'histogram'   : Histogram,
          'density'     : Density, 
-         'platemapbrowser' : PlateViewer,
+         'plateviewer' : PlateViewer,
          'datatable'   : DataGrid, 
          'classifier'  : ClassifierGUI}
 
