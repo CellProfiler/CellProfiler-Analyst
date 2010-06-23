@@ -1,6 +1,5 @@
 # TODO: add hooks to change point size, alpha, numsides etc.
 from cpatool import CPATool
-from ColorBarPanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_key_columns
 from multiclasssql import filter_table_prefix
 from properties import Properties

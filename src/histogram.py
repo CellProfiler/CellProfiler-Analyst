@@ -1,4 +1,3 @@
-from ColorBarPanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from multiclasssql import filter_table_prefix
 from properties import Properties

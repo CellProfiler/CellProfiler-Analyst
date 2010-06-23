@@ -1,5 +1,5 @@
 from cpatool import CPATool
-from ColorBarPanel import ColorBarPanel
+from colorbarpanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 import PlateMapPanel as pmp
 from wx.combo import OwnerDrawnComboBox as ComboBox

@@ -1,4 +1,4 @@
-from ColorBarPanel import ColorBarPanel
+from colorbarpanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from PlateMapPanel import *
 import imagetools
