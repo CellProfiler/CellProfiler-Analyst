@@ -1,9 +1,9 @@
 import logging
 from random import randint
 import numpy as np
-from DBConnect import *
+from dbconnect import *
 from Singleton import *
-from Properties import Properties
+from properties import Properties
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()

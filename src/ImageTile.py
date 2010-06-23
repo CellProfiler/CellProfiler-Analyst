@@ -1,10 +1,10 @@
 '''
 A special image panel meant to be dragged and dropped.
 '''
-from DBConnect import DBConnect
+from dbconnect import DBConnect
 from ImagePanel import ImagePanel
-from Properties import Properties
-import ImageTools
+from properties import Properties
+import imagetools
 import cPickle
 import wx
 
@@ -99,7 +99,7 @@ class ImageTile(ImagePanel):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for obKey in self.bin.SelectedKeys():
-                imViewer = ImageTools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
+                imViewer = imagetools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=self.scale)
                 imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
@@ -113,7 +113,7 @@ class ImageTile(ImagePanel):
             self.bin.RemoveSelectedTiles()
             
     def OnDClick(self, evt):
-        imViewer = ImageTools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
+        imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=self.scale)
         imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))

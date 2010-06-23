@@ -18,10 +18,10 @@ import sys
 import logging
 import threading
 from plateviewer import PlateViewer
-from ImageViewer import ImageViewer
-from Scatter import Scatter
-from Histogram import Histogram
-from Density import Density
+from imageviewer import ImageViewer
+from scatter import Scatter
+from histogram import Histogram
+from density import Density
 import icons
 import cpaprefs
 from cpatool import CPATool
@@ -307,7 +307,7 @@ class CPAnalyst(wx.App):
                 return False
         self.frame = MainGUI(p, None, size=(760,-1))
         self.frame.Show(True)
-        db = DBConnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect.getInstance()
         db.register_gui_parent(self.frame)
         logging.info('Creating filter tables...')
         MulticlassSQL.CreateFilterTables(wx.Yield)

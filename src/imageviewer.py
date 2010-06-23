@@ -1,9 +1,9 @@
-from DBConnect import *
-from DataModel import DataModel
+from dbconnect import *
+from datamodel import DataModel
 from ImageControlPanel import *
 from ImagePanel import ImagePanel
-from Properties import Properties
-import ImageTools
+from properties import Properties
+import imagetools
 import cPickle
 import logging
 import numpy as np
@@ -539,7 +539,7 @@ class ImageViewer(wx.Frame):
         else:            
             # load the image
             self.img_key = imkey
-            self.SetImage(ImageTools.FetchImage(imkey), p.image_channel_colors)
+            self.SetImage(imagetools.FetchImage(imkey), p.image_channel_colors)
             self.DoLayout()
             
     def OnSaveImage(self, evt):
@@ -560,7 +560,7 @@ class ImageViewer(wx.Frame):
                     return self.OnSaveImage(evt)
             if format.upper()=='.JPG':
                 format = '.JPEG'
-            ImageTools.SaveBitmap(self.imagePanel.bitmap, filename, format.upper()[1:])
+            imagetools.SaveBitmap(self.imagePanel.bitmap, filename, format.upper()[1:])
 
 
     def OnChangeClassRepresentation(self, evt):
@@ -605,8 +605,8 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
-    from DataModel import DataModel
-    import ImageTools
+    from datamodel import DataModel
+    import imagetools
     from ImageReader import ImageReader
     
     p = Properties.getInstance()
@@ -627,7 +627,7 @@ if __name__ == "__main__":
 
     pixels = []
     for channel in p.image_channel_colors:        
-        pixels += [ImageTools.tile_images(images)]
+        pixels += [imagetools.tile_images(images)]
     
     f = ImageViewer(pixels)
     f.Show()
@@ -643,7 +643,7 @@ if __name__ == "__main__":
 ##    ir = ImageReader()
 ##    
 ##    obKey = dm.GetRandomObject()
-##    ImageTools.ShowImage(obKey[:-1], p.image_channel_colors, None)
+##    imagetools.ShowImage(obKey[:-1], p.image_channel_colors, None)
 #    filenames = db.GetFullChannelPathsForImage(obKey[:-1])
 #    images = ir.ReadImages(filenames)
 #    frame = ImageViewer(imgs=images, chMap=p.image_channel_colors, img_key=obKey[:-1])
@@ -651,13 +651,13 @@ if __name__ == "__main__":
     
 #    for i in xrange(1):
 #        obKey = dm.GetRandomObject()
-#        imgs = ImageTools.FetchImage(obKey[:-1])
+#        imgs = imagetools.FetchImage(obKey[:-1])
 #        f2 = ImageViewer(imgs=imgs, img_key=obKey[:-1], chMap=p.image_channel_colors, title=str(obKey[:-1]))
 #        f2.Show(True)
     
 #    classCoords = {'a':[(100,100),(200,200)],'b':[(200,100),(200,300)] }
 #    f2.SetClasses(classCoords)
     
-    #ImageTools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
+    #imagetools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
            
     app.MainLoop()

@@ -1,12 +1,12 @@
 # TODO: add hooks to change point size, alpha, numsides etc.
 from cpatool import CPATool
 from ColorBarPanel import ColorBarPanel
-from DBConnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_key_columns
+from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
-from Properties import Properties
+from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import ImageList
-import ImageTools
+import imagetools
 #from icons import lasso_tool
 import logging
 import numpy as np
@@ -408,7 +408,7 @@ class ScatterPanel(FigureCanvasWxAgg):
                 return
         logging.info('Opening %s images.'%(len(show_keys)))
         for key in show_keys:
-            ImageTools.ShowImage(key, p.image_channel_colors, parent=self)
+            imagetools.ShowImage(key, p.image_channel_colors, parent=self)
             
     def show_image_list_from_selection(self, evt=None):
         '''Callback for "Show image list from selection" popup item.'''

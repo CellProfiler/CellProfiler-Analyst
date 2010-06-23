@@ -1,9 +1,9 @@
-from DBConnect import DBConnect
+from dbconnect import DBConnect
 from TileCollection import TileCollection
 from ImageTile import ImageTile
 from ImageTileSizer import ImageTileSizer
-from Properties import Properties
-import ImageTools
+from properties import Properties
+import imagetools
 import cPickle
 import wx
 
@@ -114,7 +114,7 @@ class SortBin(wx.ScrolledWindow):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for key in self.SelectedKeys():
-                imViewer = ImageTools.ShowImage(key[:-1], self.chMap[:], parent=self.classifier,
+                imViewer = imagetools.ShowImage(key[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.classifier.brightness, scale=self.classifier.scale,
                                         contrast=self.classifier.contrast)
                 imViewer.imagePanel.SelectPoint(db.GetObjectCoords(key))

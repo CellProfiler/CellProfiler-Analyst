@@ -1,8 +1,8 @@
 import numpy
 import sys
-from DBConnect import *
-from Properties import Properties
-from DataModel import DataModel
+from dbconnect import *
+from properties import Properties
+from datamodel import DataModel
 
 db = DBConnect.getInstance()
 p = Properties.getInstance()

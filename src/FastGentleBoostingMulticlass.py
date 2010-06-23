@@ -79,7 +79,9 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
         if fout:
             colname, thresh, a, b, e_m = weak_learners[-1]
             fout.write("IF (%s > %s, %s, %s)\n" %
-                       (colname, repr(thresh), "[" + ", ".join([repr(v) for v in a]) + "]", "[" + ", ".join([repr(v) for v in b]) + "]"))
+                       (colname, repr(thresh), 
+                        "[" + ", ".join([repr(v) for v in a]) + "]", 
+                        "[" + ", ".join([repr(v) for v in b]) + "]"))
         if err == 0.0:
             break
         weights = reweight

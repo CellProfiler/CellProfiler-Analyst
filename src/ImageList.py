@@ -1,10 +1,10 @@
 import logging
 import wx
 import numpy as np
-from Properties import Properties
-from DBConnect import *
+from properties import Properties
+from dbconnect import *
 from UserDict import DictMixin
-import ImageTools
+import imagetools
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -47,7 +47,7 @@ class ImageListCtrl(wx.ListCtrl):
 
     def OnItemActivated(self, event):
         imkey = self.imkeys[event.m_itemIndex]
-        f = ImageTools.ShowImage(tuple(imkey), p.image_channel_colors, self.GrandParent or self.Parent)
+        f = imagetools.ShowImage(tuple(imkey), p.image_channel_colors, self.GrandParent or self.Parent)
         f.Raise()
 
     def OnGetItemText(self, row, col):

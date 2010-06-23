@@ -1,79 +1,61 @@
-import wx
-import numpy
-from ImageFrame import ImageFrame
 
+# Fancy-pants method for getting a where clause that groups adjacent image keys 
+# using "BETWEEN X AND Y" ... unfortunately this usually takes far more  
+# characters than using "ImageNumber IN (X,Y,Z...)" since we don't run into  
+# queries asking for consecutive image numbers very often (except when we do it
+# deliberately).  It is also slower than the "IN" method unless the ImageNumbers
+# come in a smaller list of consecutive groups.
+#
+# ...still, this may be very useful since it is notably faster when ImageNumbers
+# are consecutive.
 
-def Crop(im, (w,h), (x,y) ):
-    ''' Crops an image. '''
-    d = numpy.fromstring(im.GetData(), 'uint8')
-    crop = wx.EmptyImage(w,h)
-    for px in xrange(w):
-        for py in xrange(h):
-            xx = px+x-w/2
-            yy = py+y-h/2
-            if 0<=xx<im.GetWidth() and 0<=yy<im.GetHeight():
-                 crop.SetRGB(px, py,
-                             im.GetRed(xx,yy),
-                             im.GetGreen(xx,yy),
-                             im.GetBlue(xx,yy))
+def get_where_clause_for_images(keys, is_sorted=False):
+    '''
+    takes a list of keys and returns a (hopefully) short where clause that
+    includes those keys.
+    '''
+    def in_sequence(k1,k2):
+        if len(k1)>1:
+            if k1[:-1] != k2[:-1]:
+                return False
+        return k1[-1]==(k2[-1]-1)
+    
+    def optimize_for_query(keys, is_sorted=False):
+        if not is_sorted:
+            keys.sort()
+        groups = []
+        in_run = False
+        for i in xrange(len(keys)):
+            if i == len(keys)-1:
+                if in_run:
+                    groups[-1] += [keys[i]]
+                else:
+                    groups += [[keys[i]]]
+                break
+            if in_run:
+                if in_sequence(keys[i], keys[i+1]):
+                    continue
+                else:
+                    groups[-1] += [keys[i]]
+                    in_run = False
             else:
-                crop.SetRGB(px,py, 0,0,0)
-    return crop
-    
-    
-    
-ims =[0,0,0]
-ims[0] = wx.Image('/Users/afraser/Desktop/swinger_r.jpg')
-ims[1] = wx.Image('/Users/afraser/Desktop/swinger_g.jpg')
-ims[2] = wx.Image('/Users/afraser/Desktop/swinger_b.jpg')
+                if in_sequence(keys[i], keys[i+1]):
+                    in_run = True
+                groups += [[keys[i]]]
+        return groups
 
-width = ims[0].GetWidth()
-height = ims[0].GetHeight()
-
-dn = [numpy.fromstring(im.GetData(), 'uint8')[::3] for im in ims]
-for d in dn:
-    d.shape=(height,width)
-
-img = wx.EmptyImage(width,height)
-img.SetData(numpy.dstack([d for d in dn]).flatten())
-
-app = wx.PySimpleApp()
-img.SetRGB(50,50, 255,255,255)
-img.SetRGB(350,0, 255,255,255)
-img.SetRGB(0,233, 255,255,255)
-img.SetRGB(432,603, 255,255,255)
-img.SetRGB(432/2,603/2, 255,255,255)
-
-frame = ImageFrame(image=img)
-frame.Show(True)
-
-imgCrop = Crop(img, (100,100), (0,0))
-frame = ImageFrame(image=imgCrop)
-frame.Show(True)
-
-imgCrop = Crop(img, (100,100), (50,50))
-frame = ImageFrame(image=imgCrop)
-frame.Show(True)
-
-imgCrop = Crop(img, (100,100), (350,0))
-frame = ImageFrame(image=imgCrop)
-frame.Show(True)
-
-imgCrop = Crop(img, (100,100), (0,233))
-frame = ImageFrame(image=imgCrop)
-frame.Show(True)
-
-imgCrop = Crop(img, (100,100), (432,603))
-frame = ImageFrame(image=imgCrop)
-frame.Show(True)
-
-imgCrop = Crop(img, (500,700), (432/2,603/2))
-frame = ImageFrame(image=imgCrop)
-frame.Show(True)
-
-app.MainLoop()
-
-
-
-# TODO: write me!!!
-
+    groups = optimize_for_query(keys)
+    wheres = []
+    for k in groups:
+        if len(k)==1:
+            wheres += ['%s=%s'%(col,value) for col, value in zip(object_key_columns(), k[0])]
+        else:
+            # expect 2 keys: the first and last of a contiguous run
+            first, last = k
+            if p.table_id:
+                wheres += ['(%s=%s AND %s BETWEEN %s and %s)'%
+                           (p.table_id, first[0], p.image_id, first[1], last[1])]
+            else:
+                wheres += ['(%s BETWEEN %s and %s)'%
+                           (p.image_id, first[0], last[0])]
+    return ' OR '.join(wheres)

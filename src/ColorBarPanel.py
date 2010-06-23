@@ -2,9 +2,9 @@ import wx
 import logging
 import matplotlib.cm
 import numpy as np
-import Properties
+import properties
 
-p = Properties.Properties.getInstance()
+p = properties.Properties.getInstance()
 
 slider_width = 30
 s_off = slider_width/2
@@ -233,7 +233,7 @@ class ColorBarPanel(wx.Panel):
         elif ub: 
             where = '%s<%s'%(colname, self.interval[1])
             
-        p.__dict__[filtername] = 'SELECT %s FROM %s WHERE %s'%(DBConnect.UniqueImageClause(), p.image_table, where)
+        p.__dict__[filtername] = 'SELECT %s FROM %s WHERE %s'%(dbconnect.UniqueImageClause(), p.image_table, where)
 
         defaultPath, defaultFileName = os.path.split(p._filename)
         saveDialog = wx.FileDialog(self, message="Save as:",

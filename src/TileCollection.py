@@ -1,10 +1,10 @@
 from __future__ import with_statement
-from DBConnect import DBConnect
-from Properties import Properties
+from dbconnect import DBConnect
+from properties import Properties
 from Singleton import Singleton
 from heapq import heappush, heappop
 from weakref import WeakValueDictionary
-import ImageTools
+import imagetools
 import logging
 import numpy
 import threading
@@ -126,7 +126,7 @@ class TileLoader(threading.Thread):
                     continue
 
 #                try:
-                new_data = ImageTools.FetchTile(obKey)
+                new_data = imagetools.FetchTile(obKey)
 #                except Exception, e:
 #                    logging.error('ERROR FETCHING TILE!: %s\n'%(e))
                 tile_data = self.tile_collection.tileData.get(obKey, None)
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
 
     
-    from DataModel import DataModel
+    from datamodel import DataModel
     p = Properties.getInstance()
     p.LoadFile('../properties/nirht_test.properties')
     db = DBConnect.getInstance()

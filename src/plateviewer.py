@@ -1,10 +1,10 @@
 from cpatool import CPATool
 from ColorBarPanel import ColorBarPanel
-from DBConnect import DBConnect, UniqueImageClause, image_key_columns
+from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 import PlateMapPanel as pmp
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import ImageTools
-import Properties
+import imagetools
+import properties
 import logging
 import matplotlib.cm
 import numpy as np
@@ -13,7 +13,7 @@ import sys
 import re
 import wx
 
-p = Properties.Properties.getInstance()
+p = properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
 Properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
@@ -73,7 +73,7 @@ class AwesomePMP(pmp.PlateMapPanel):
                                 (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate), silent=False)
             for imKey in imKeys:
                 try:
-                    ImageTools.ShowImage(imKey, self.chMap, parent=self)
+                    imagetools.ShowImage(imKey, self.chMap, parent=self)
                 except Exception, e:
                     logging.error('Could not open image: %s'%(e))
 
@@ -98,7 +98,7 @@ class AwesomePMP(pmp.PlateMapPanel):
     def OnSelectFromPopupMenu(self, evt):
         """Handles selections from the popup menu."""
         imKey = self.popupItemById[evt.GetId()]
-        ImageTools.ShowImage(imKey, self.chMap, parent=self)
+        imagetools.ShowImage(imKey, self.chMap, parent=self)
 
 
 

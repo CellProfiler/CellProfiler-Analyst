@@ -7,7 +7,7 @@ import os.path
 import tifffile
 from array import array
 from cStringIO import StringIO
-from Properties import Properties
+from properties import Properties
 
 p = Properties.getInstance()
 logr = logging.getLogger('ImageReader')
@@ -43,10 +43,10 @@ class ImageReader(object):
             else:
                 logging.error('Image format (%s) not supported. Skipping image "%s".'%(format, fds))
 
-        from ImageTools import check_image_shape_compatibility
+        from imagetools import check_image_shape_compatibility
         check_image_shape_compatibility(channels)
         if p.image_rescale:
-            from ImageTools import rescale
+            from imagetools import rescale
             for i in range(len(channels)):
                 if channels[i].shape != p.image_rescale:
                     channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
@@ -180,7 +180,7 @@ def ReadBitmapViaPIL(data):
         imdata = imd.reshape(imsize)
 
     elif im.mode in ['RGB', 'RGBA']:
-        import ImageTools
+        import imagetools
         imd = np.asarray(im) / 255.0
 
         if len(imd.shape)==3 and imd.shape[2]>=3:
@@ -230,9 +230,9 @@ def ReadBitmapViaTIFFfile(data):
 
 ####################### FOR TESTING ######################### 
 if __name__ == "__main__":
-    from DataModel import DataModel
-    from DBConnect import DBConnect
-    from ImageViewer import ImageViewer 
+    from datamodel import DataModel
+    from dbconnect import DBConnect
+    from imageviewer import ImageViewer 
 
     logging.basicConfig(level=logging.DEBUG,)
     app = wx.PySimpleApp()

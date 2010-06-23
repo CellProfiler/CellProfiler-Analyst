@@ -9,20 +9,20 @@ except: pass
 # ---
 
 from DataGrid import DataGrid
-from DataModel import DataModel
+from datamodel import DataModel
 from ImageControlPanel import ImageControlPanel
 from plateviewer import PlateViewer
-from Properties import Properties
+from properties import Properties
 from ScoreDialog import ScoreDialog
 import TileCollection
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 from time import time
 from icons import get_cpa_icon
-import DBConnect
+import dbconnect
 import DirichletIntegrate
 import FastGentleBoostingMulticlass     
-import ImageTools
+import imagetools
 import MulticlassSQL
 import PolyaFit
 import SortBin
@@ -51,7 +51,7 @@ class ClassifierGUI(wx.Frame):
             global p
             p = properties
             global db
-            db = DBConnect.DBConnect.getInstance()
+            db = dbconnect.DBConnect.getInstance()
         
         wx.Frame.__init__(self, parent, id=id, title='CPA/Classifier - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
@@ -906,7 +906,7 @@ class ClassifierGUI(wx.Frame):
         for className, obKeys in classHits.items():
             classCoords[className] = [db.GetObjectCoords(key) for key in obKeys]
         # Show the image
-        imViewer = ImageTools.ShowImage(imKey, list(self.chMap), self,
+        imViewer = imagetools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale,
                                         contrast=self.contrast)
         imViewer.SetClasses(classCoords)
@@ -942,7 +942,7 @@ class ClassifierGUI(wx.Frame):
         filterChoices  =  [None] + p._filters_ordered
         nClasses       =  len(self.classBins)
         two_classes    =  nClasses == 2
-        nKeyCols = len(DBConnect.image_key_columns())
+        nKeyCols = len(dbconnect.image_key_columns())
         
         # GET GROUPING METHOD AND FILTER FROM USER
         dlg = ScoreDialog(self, groupChoices, filterChoices)
@@ -1083,7 +1083,7 @@ class ClassifierGUI(wx.Frame):
         if group != groupChoices[0]:
             labels = dm.GetGroupColumnNames(group)
         else:
-            labels = list(DBConnect.image_key_columns())
+            labels = list(dbconnect.image_key_columns())
         # record the column indices for the keys
         key_col_indices = [i for i in range(len(labels))]
         if group != 'Image':
@@ -1366,7 +1366,7 @@ if __name__ == "__main__":
         sys.excepthook = show_exception_as_dialog
 
     p = Properties.getInstance()
-    db = DBConnect.DBConnect.getInstance()
+    db = dbconnect.DBConnect.getInstance()
     dm = DataModel.getInstance()
 
     # Load a properties file if passed in args

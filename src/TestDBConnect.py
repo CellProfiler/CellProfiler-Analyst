@@ -1,7 +1,7 @@
 import unittest
-from DBConnect import *
-from DataModel import DataModel
-from Properties import Properties
+from dbconnect import *
+from datamodel import DataModel
+from properties import Properties
 import numpy as np
 
 class TestDBConnect(unittest.TestCase):

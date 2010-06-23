@@ -1,6 +1,6 @@
 import unittest
 from ImageReader import ImageReader
-from Properties import Properties
+from properties import Properties
 
 p = Properties.getInstance()
 

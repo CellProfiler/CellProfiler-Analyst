@@ -2,8 +2,8 @@ import  wx
 import  wx.grid as  gridlib
 import logging
 import numpy as np
-from Properties import Properties
-from DBConnect import DBConnect
+from properties import Properties
+from dbconnect import DBConnect
 from UserDict import DictMixin
 
 p = Properties.getInstance()

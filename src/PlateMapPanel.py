@@ -1,7 +1,7 @@
-from DataModel import *
-from DBConnect import DBConnect
-from Properties import Properties
-import ImageTools
+from datamodel import *
+from dbconnect import DBConnect
+from properties import Properties
+import imagetools
 import wx
 import numpy as np
 import matplotlib.cm
@@ -304,16 +304,16 @@ class PlateMapPanel(wx.Panel):
                         if imgs.has_key(well):
                             size = imgs[well][0].shape
                             scale = r*2./max(size)
-                            bmp[well] = ImageTools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
+                            bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     elif self.well_disp == IMAGE:
                         p.image_buffer_size = int(p.plate_type)
                         plate, well = self.GetWellKeyAtCoord(px+r, py+r)
                         if imgs.has_key(well):
-                            ims = ImageTools.FetchImage(imgs[well])
+                            ims = imagetools.FetchImage(imgs[well])
                             size = ims[0].shape
                             scale = r*2./max(size)
-                            bmp[well] = ImageTools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
+                            bmp[well] = imagetools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     # Draw text data
                     if self.text_data is not None:
@@ -366,8 +366,8 @@ class PlateMapPanel(wx.Panel):
         composite = []
         for i in xrange(n_channels):
             # composite each channel separately
-            composite += [ImageTools.tile_images([imset[i] for imset in imsets])]
-        bmp = ImageTools.MergeToBitmap(composite, p.image_channel_colors)
+            composite += [imagetools.tile_images([imset[i] for imset in imsets])]
+        bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)
         
         tip.SetEndDelay(1)
         tip.SetBodyImage(bmp)

@@ -1,6 +1,6 @@
 
-import Properties
-import DBConnect
+import properties
+import dbconnect
 
-properties = Properties.Properties.getInstance()
-db = DBConnect.DBConnect.getInstance()
+properties = properties.Properties.getInstance()
+db = dbconnect.DBConnect.getInstance()

@@ -4,8 +4,8 @@ import re
 import wx
 import wx.wizard as wiz
 from wx.lib.dialogs import ScrolledMessageDialog
-from DBConnect import DBConnect
-from Properties import Properties
+from dbconnect import DBConnect
+from properties import Properties
 import logging
 logging.basicConfig()
 

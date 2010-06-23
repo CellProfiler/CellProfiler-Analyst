@@ -1,6 +1,6 @@
 import wx
-import ImageTools
-from Properties import Properties
+import imagetools
+from properties import Properties
 
 p = Properties.getInstance()
 
@@ -24,7 +24,7 @@ class ImagePanel(wx.Panel):
         self.toggleChMap = channel_map[:]
         self.images      = images
         # Displayed bitmap
-        self.bitmap      = ImageTools.MergeToBitmap(images,
+        self.bitmap      = imagetools.MergeToBitmap(images,
                                chMap = channel_map,
                                scale = scale,
                                brightness = brightness,
@@ -54,7 +54,7 @@ class ImagePanel(wx.Panel):
         return dc
 
     def UpdateBitmap(self):
-        self.bitmap = ImageTools.MergeToBitmap(self.images,
+        self.bitmap = imagetools.MergeToBitmap(self.images,
                                                chMap = self.chMap,
                                                brightness = self.brightness,
                                                scale = self.scale,

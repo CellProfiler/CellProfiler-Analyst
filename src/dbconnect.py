@@ -2,7 +2,7 @@ import decimal
 import types
 import random
 from MySQLdb.cursors import SSCursor
-from Properties import Properties
+from properties import Properties
 from Singleton import Singleton
 from sys import stderr
 import MySQLdb
@@ -386,7 +386,7 @@ class DBConnect(Singleton):
             (db_host, db_user, db_passwd, db_name) = self.connectionInfo.pop(connID)
             logging.info('Closed connection: %s as %s@%s (connID="%s").' % (db_name, db_user, db_host, connID))
         else:
-            logging.warn('WARNING <DBConnect.CloseConnection>: No connection ID "%s" found!' %(connID))
+            logging.warn('No database connection ID "%s" found!' %(connID))
 
     @DBDisconnectedException.with_mysql_retry
     def execute(self, query, args=None, silent=False, return_result=True):
@@ -1263,7 +1263,7 @@ class Images(Entity):
     Easy access to images and their objects.
 
     # Get all objects treated with 10 uM nocodazole
-    >>> cpa.DBConnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
+    >>> cpa.dbconnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
     '''
 
     def __init__(self):
@@ -1364,7 +1364,7 @@ if __name__ == "__main__":
     import FastGentleBoostingMulticlass
     import MulticlassSQL
     from cStringIO import StringIO
-    from DataModel import DataModel
+    from datamodel import DataModel
     
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     

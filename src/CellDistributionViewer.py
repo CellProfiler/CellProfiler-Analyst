@@ -1,8 +1,8 @@
 from ColorBarPanel import ColorBarPanel
-from DBConnect import DBConnect, UniqueImageClause, image_key_columns
+from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from PlateMapPanel import *
-import ImageTools
-from Properties import Properties
+import imagetools
+from properties import Properties
 import numpy as np
 import os
 import re
@@ -12,7 +12,7 @@ from PlotPanelTS import *
 
 p = Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
-#Properties.optional_vars += ['object_table']
+#properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
 
 

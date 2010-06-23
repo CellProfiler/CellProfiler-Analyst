@@ -1,5 +1,5 @@
-from DBConnect import *
-from Properties import Properties
+from dbconnect import *
+from properties import Properties
 
 p = Properties.getInstance() 
 

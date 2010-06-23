@@ -4,9 +4,9 @@ A collection of tools to modify images used in CPA.
 
 import Image
 import PILfix
-from Properties import Properties
-from DBConnect import DBConnect
-from ImageReader import ImageReader
+from properties import Properties
+from dbconnect import DBConnect
+from imagereader import ImageReader
 import matplotlib.image
 import numpy as np
 import wx
@@ -47,7 +47,7 @@ def FetchImage(imKey):
         return cache[imKey]
 
 def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
-    from ImageViewer import ImageViewer
+    from imageviewer import ImageViewer
     imgs = FetchImage(imKey)
     frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
                         parent=parent, title=str(imKey),

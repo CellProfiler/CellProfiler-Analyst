@@ -1,8 +1,8 @@
 import wx
 import re
 from Filter import Filter
-from Properties import Properties
-from DBConnect import DBConnect
+from properties import Properties
+from dbconnect import DBConnect
 from wx.combo import OwnerDrawnComboBox as ComboBox
 
 p = Properties.getInstance()

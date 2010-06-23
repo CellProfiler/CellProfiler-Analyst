@@ -1,9 +1,9 @@
 from ColorBarPanel import ColorBarPanel
-from DBConnect import DBConnect, UniqueImageClause, image_key_columns
+from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
-from Properties import Properties
+from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import ImageTools
+import imagetools
 import logging
 import numpy as np
 import os

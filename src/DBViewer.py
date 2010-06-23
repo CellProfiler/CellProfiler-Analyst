@@ -5,8 +5,8 @@
 import logging
 import  wx
 import numpy as np
-from Properties import Properties
-from DBConnect import DBConnect
+from properties import Properties
+from dbconnect import DBConnect
 from UserDict import DictMixin
 
 p = Properties.getInstance()

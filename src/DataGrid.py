@@ -1,12 +1,12 @@
 # -*- Encoding: utf-8 -*-
-from DataModel import DataModel
-from Properties import Properties
+from datamodel import DataModel
+from properties import Properties
 from sys import stderr
 from tempfile import gettempdir
 from time import ctime, time
 #from wx.lib.embeddedimage import PyEmbeddedImage
-import DBConnect
-import ImageTools
+import dbconnect
+import imagetools
 import csv
 import logging
 import numpy as np
@@ -17,7 +17,7 @@ import wx
 import wx.grid
 
 dm = DataModel.getInstance()
-db = DBConnect.DBConnect.getInstance()
+db = dbconnect.DBConnect.getInstance()
 p = Properties.getInstance()
 
 ID_LOAD_CSV = wx.NewId()
@@ -271,11 +271,11 @@ class HugeTableGrid(wx.grid.Grid):
         if evt.Row >= 0:
             key = self.GetTable().GetKeyForRow(evt.Row)
             if self.grouping=='Image':
-                ImageTools.ShowImage(key, self.chMap, parent=self)
+                imagetools.ShowImage(key, self.chMap, parent=self)
             else:
                 imKeys = dm.GetImagesInGroup(self.grouping, tuple(key))
                 for imKey in imKeys:
-                    ImageTools.ShowImage(imKey, self.chMap, parent=self)
+                    imagetools.ShowImage(imKey, self.chMap, parent=self)
         else:
             self.OnLabelClick(evt)
             
@@ -303,7 +303,7 @@ class HugeTableGrid(wx.grid.Grid):
         """Handles selections from the popup menu."""
         if self.chMap:
             imKey = self.popupItemById[evt.GetId()]
-            ImageTools.ShowImage(imKey, self.chMap, parent=self)
+            imagetools.ShowImage(imKey, self.chMap, parent=self)
     
     def SetColumnLabels(self, labels):
         for i, label in enumerate(labels):
@@ -493,7 +493,7 @@ class DataGrid(wx.Frame):
         if group == DO_NOT_LINK_TO_IMAGES:
             keycols = []
         elif group == 'Image':
-            keycols = range(len(DBConnect.image_key_columns()))
+            keycols = range(len(dbconnect.image_key_columns()))
         else:
             keycols = range(len(dm.GetGroupColumnNames(group)))
         
@@ -529,7 +529,7 @@ class DataGrid(wx.Frame):
                                    style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
-            colHeaders = list(DBConnect.image_key_columns())
+            colHeaders = list(dbconnect.image_key_columns())
             pos = len(colHeaders)
             if p.plate_id:
                 colHeaders += [p.plate_id]
@@ -573,7 +573,7 @@ class DataGrid(wx.Frame):
     def OnWriteTempTableToDB(self, evt):
         from ClassifierGUI import ClassifierGUI
         db.CreateTempTableFromData(self.grid.GetTable().data, 
-                           DBConnect.clean_up_colnames(self.grid.GetTable().col_labels), 
+                           dbconnect.clean_up_colnames(self.grid.GetTable().col_labels), 
                            '__Classifier_output')
         try:
             if self.GetParent().pmb:
@@ -645,7 +645,7 @@ if __name__ == "__main__":
     propsfile = sys.argv[2]
     
     p = Properties.getInstance()
-    db = DBConnect.DBConnect.getInstance()
+    db = dbconnect.DBConnect.getInstance()
     dm = DataModel.getInstance()
 
     p.LoadFile(propsfile)
@@ -669,7 +669,7 @@ if __name__ == "__main__":
         group = sys.argv[3]
     
     if group == 'Image':
-        keycols = range(len(DBConnect.image_key_columns()))
+        keycols = range(len(dbconnect.image_key_columns()))
     else:
         keycols = range(len(dm.GetGroupColumnNames(group)))
     

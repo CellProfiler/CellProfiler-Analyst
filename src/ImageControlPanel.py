@@ -1,5 +1,5 @@
 import wx
-from Properties import Properties
+from properties import Properties
 import numpy as np
 from matplotlib.pyplot import cm
 from StringIO import StringIO

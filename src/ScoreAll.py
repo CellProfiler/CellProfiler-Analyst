@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from DBConnect import *
+from dbconnect import *
 from DataGrid import DataGrid
-from DataModel import DataModel
-from Properties import Properties
+from datamodel import DataModel
+from properties import Properties
 from StringIO import StringIO, StringIO
 from TrainingSet import TrainingSet
 from time import time
