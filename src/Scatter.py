@@ -1,4 +1,5 @@
 # TODO: add hooks to change point size, alpha, numsides etc.
+from cpatool import CPATool
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
@@ -156,7 +157,7 @@ class ScatterControlPanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
+        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
         
         self.SetSizer(sizer)
         self.Show(1)
@@ -199,7 +200,7 @@ class ScatterControlPanel(wx.Panel):
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
-    def on_update_pressed(self, evt):        
+    def update_figpanel(self, evt=None):        
         filter = self.filter_choice.GetStringSelection()
         keys_and_points = self.loadpoints(self.table_choice.GetStringSelection(),
                                  self.x_choice.GetStringSelection(),
@@ -260,6 +261,41 @@ class ScatterControlPanel(wx.Panel):
         xcol = self.x_choice.GetStringSelection()
         ycol = self.y_choice.GetStringSelection()
         return (db.GetColumnType(table, xcol), db.GetColumnType(table, ycol))
+
+    def save_settings(self):
+        '''save_settings is called when saving a workspace to file.
+        
+        returns a dictionary mapping setting names to values encoded as strings
+        '''
+        #TODO: Add axis bounds 
+        return {'table' : self.table_choice.GetStringSelection(),
+                'x-axis' : self.x_choice.GetStringSelection(),
+                'y-axis' : self.y_choice.GetStringSelection(),
+                'x-scale' : self.x_scale_choice.GetStringSelection(),
+                'y-scale' : self.y_scale_choice.GetStringSelection(),
+                'filter' : self.filter_choice.GetStringSelection()
+                }
+    
+    def load_settings(self, settings):
+        '''load_settings is called when loading a workspace from file.
+        
+        settings - a dictionary mapping setting names to values encoded as
+                   strings.
+        '''
+        if 'table' in settings:
+            self.table_choice.SetStringSelection(settings['table'])
+            self.update_column_fields()
+        if 'x-axis' in settings:
+            self.x_choice.SetStringSelection(settings['x-axis'])
+        if 'y-axis' in settings:
+            self.y_choice.SetStringSelection(settings['y-axis'])
+        if 'x-scale' in settings:
+            self.x_scale_choice.SetStringSelection(settings['x-scale'])
+        if 'y-scale' in settings:
+            self.y_scale_choice.SetStringSelection(settings['y-scale'])
+        if 'filter' in settings:
+            self.filter_choice.SetStringSelection(settings['filter'])
+        self.update_figpanel()
 
 
 class ScatterPanel(FigureCanvasWxAgg):
@@ -737,7 +773,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     
         
 
-class Scatter(wx.Frame):
+class Scatter(wx.Frame, CPATool):
     '''
     A very basic scatter plot with controls for setting it's data source.
     '''
@@ -745,7 +781,8 @@ class Scatter(wx.Frame):
                  show_controls=True,
                  size=(600,600), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
-        self.SetName('Scatter')
+        CPATool.__init__(self)
+        self.SetName(self.tool_name)
         
         figpanel = ScatterPanel(self, xpoints, ypoints, keys, clr_lists)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -754,10 +791,14 @@ class Scatter(wx.Frame):
         if show_controls:
             configpanel = ScatterControlPanel(self, figpanel)
             sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
-            
-        self.SetToolBar(figpanel.get_toolbar())
-            
+        
+        self.SetToolBar(figpanel.get_toolbar())            
         self.SetSizer(sizer)
+        #
+        # Forward save and load settings functionality to the configpanel
+        #
+        self.save_settings = configpanel.save_settings
+        self.load_settings = configpanel.load_settings
 
 
 

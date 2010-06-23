@@ -1,5 +1,5 @@
 #!/bin/bash
 cd `dirname $0`
 
-python PlateMapBrowser.py
+python plateviewer.py
 

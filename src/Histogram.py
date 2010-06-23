@@ -14,6 +14,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
+from cpatool import CPATool
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -74,11 +75,11 @@ class DataSourcePanel(wx.Panel):
         sizer.AddSpacer((-1,5))
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "x_scale:"))
+        sz.Add(wx.StaticText(self, -1, "x-scale:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.x_scale_choice, 1, wx.EXPAND)
         sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, -1, "y_scale:"))
+        sz.Add(wx.StaticText(self, -1, "y-scale:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.y_scale_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
@@ -95,7 +96,7 @@ class DataSourcePanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)   
+        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
         
         self.SetSizer(sizer)
         self.Show(1)
@@ -135,7 +136,7 @@ class DataSourcePanel(wx.Panel):
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
-    def on_update_pressed(self, evt):    
+    def update_figpanel(self, evt=None):    
         filter = self.filter_choice.GetStringSelection()
         points = self.loadpoints(self.table_choice.GetStringSelection(),
                                  self.x_choice.GetStringSelection(),
@@ -167,6 +168,41 @@ class DataSourcePanel(wx.Panel):
                                           for id in db.GetLinkingColumnsForTable(tablename)])
             where_clause = 'WHERE %s'%(filter_clause)
         return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
+
+    def save_settings(self):
+        '''save_settings is called when saving a workspace to file.
+        
+        returns a dictionary mapping setting names to values encoded as strings
+        '''
+        #TODO: Add axis bounds 
+        return {'table' : self.table_choice.GetStringSelection(),
+                'x-axis' : self.x_choice.GetStringSelection(),
+                'bins' : self.bins_input.GetValue(),
+                'x-scale' : self.x_scale_choice.GetStringSelection(),
+                'y-scale' : self.y_scale_choice.GetStringSelection(),
+                'filter' : self.filter_choice.GetStringSelection()
+                }
+    
+    def load_settings(self, settings):
+        '''load_settings is called when loading a workspace from file.
+        
+        settings - a dictionary mapping setting names to values encoded as
+                   strings.
+        '''
+        if 'table' in settings:
+            self.table_choice.SetStringSelection(settings['table'])
+            self.update_column_fields()
+        if 'x-axis' in settings:
+            self.x_choice.SetStringSelection(settings['x-axis'])
+        if 'bins' in settings:
+            self.bins_input.SetValue(settings['bins'])
+        if 'x-scale' in settings:
+            self.x_scale_choice.SetStringSelection(settings['x-scale'])
+        if 'y-scale' in settings:
+            self.y_scale_choice.SetStringSelection(settings['y-scale'])
+        if 'filter' in settings:
+            self.filter_choice.SetStringSelection(settings['filter'])
+        self.update_figpanel()
         
 
 class HistogramPanel(FigureCanvasWxAgg):
@@ -259,28 +295,30 @@ class HistogramPanel(FigureCanvasWxAgg):
             self.navtoolbar._views.clear()
             self.navtoolbar._positions.clear()
             self.navtoolbar.push_current()
-        
 
-class Histogram(wx.Frame):
+
+class Histogram(wx.Frame, CPATool):
     '''
     A very basic histogram plot with controls for setting it's data source.
     '''
-    def __init__(self, parent, size=(600,600)):
-        wx.Frame.__init__(self, parent, -1, size=size, title='Histogram')
-        self.SetName('Histogram')
-        
+    def __init__(self, parent, size=(600,600), **kwargs):
+        wx.Frame.__init__(self, parent, -1, size=size, title='Histogram', **kwargs)
+        CPATool.__init__(self)
+        self.SetName(self.tool_name)
         points = []
-#        points = [[1],[2],[2],[3],[3],[3],[4],[4],[4],[4],[5],[5],[5],[5],[5]]
-#        points = db.execute('SELECT Image_Intensity_DNA_Mean_intensity, Image_Intensity_Actin_Mean_intensity FROM per_image ')
         figpanel = HistogramPanel(self, points)
-        configpanel = DataSourcePanel(self, figpanel)
-        
+        configpanel = DataSourcePanel(self, figpanel)        
         self.SetToolBar(figpanel.get_toolbar())
-
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
+        
+        #
+        # Forward save and load settings functionality to the configpanel
+        #
+        self.save_settings = configpanel.save_settings
+        self.load_settings = configpanel.load_settings
 
                     
 if __name__ == "__main__":

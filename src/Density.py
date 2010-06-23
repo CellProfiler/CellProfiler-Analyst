@@ -1,3 +1,4 @@
+from cpatool import CPATool
 from ColorBarPanel import ColorBarPanel
 from DBConnect import DBConnect, UniqueImageClause, image_key_columns
 from MulticlassSQL import filter_table_prefix
@@ -118,7 +119,7 @@ class DataSourcePanel(wx.Panel):
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
         wx.EVT_COMBOBOX(self.colormap_choice, -1, self.on_cmap_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_update_pressed)
+        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
         
         self.SetSizer(sizer)
         self.Show(1)
@@ -164,7 +165,7 @@ class DataSourcePanel(wx.Panel):
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
-    def on_update_pressed(self, evt):
+    def update_figpanel(self, evt=None):
         filter = self.filter_choice.GetStringSelection()
         points = self.loadpoints(self.table_choice.GetStringSelection(),
                                  self.x_choice.GetStringSelection(),
@@ -197,6 +198,49 @@ class DataSourcePanel(wx.Panel):
             where_clause = 'WHERE %s'%(filter_clause)
         return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
         
+    def save_settings(self):
+        '''save_settings is called when saving a workspace to file.
+        
+        returns a dictionary mapping setting names to values encoded as strings
+        '''
+        #TODO: Add axis bounds 
+        return {'table' : self.table_choice.GetStringSelection(),
+                'x-axis' : self.x_choice.GetStringSelection(),
+                'y-axis' : self.y_choice.GetStringSelection(),
+                'x-scale' : self.x_scale_choice.GetStringSelection(),
+                'y-scale' : self.y_scale_choice.GetStringSelection(),
+                'grid size' : self.gridsize_input.GetValue(),
+                'colormap' : self.colormap_choice.GetStringSelection(),
+                'color scale' : self.color_scale_choice.GetStringSelection(),
+                'filter' : self.filter_choice.GetStringSelection()
+                }
+    
+    def load_settings(self, settings):
+        '''load_settings is called when loading a workspace from file.
+        
+        settings - a dictionary mapping setting names to values encoded as
+                   strings.
+        '''
+        if 'table' in settings:
+            self.table_choice.SetStringSelection(settings['table'])
+            self.update_column_fields()
+        if 'x-axis' in settings:
+            self.x_choice.SetStringSelection(settings['x-axis'])
+        if 'y-axis' in settings:
+            self.y_choice.SetStringSelection(settings['y-axis'])
+        if 'x-scale' in settings:
+            self.x_scale_choice.SetStringSelection(settings['x-scale'])
+        if 'y-scale' in settings:
+            self.y_scale_choice.SetStringSelection(settings['y-scale'])
+        if 'grid size' in settings:
+            self.gridsize_input.SetValue(settings['grid size'])
+        if 'colormap' in settings:
+            self.colormap_choice.SetStringSelection(settings['colormap'])
+        if 'color scale' in settings:
+            self.color_scale_choice.SetStringSelection(settings['color scale'])
+        if 'filter' in settings:
+            self.filter_choice.SetStringSelection(settings['filter'])
+        self.update_figpanel()
 
 class DensityPanel(FigureCanvasWxAgg):
     def __init__(self, parent, **kwargs):
@@ -317,13 +361,14 @@ class DensityPanel(FigureCanvasWxAgg):
             self.navtoolbar.push_current()
     
 
-class Density(wx.Frame):
+class Density(wx.Frame, CPATool):
     '''
     A very basic density plot with controls for setting it's data source.
     '''
-    def __init__(self, parent, size=(600,600)):
-        wx.Frame.__init__(self, parent, -1, size=size, title='Density Plot')
-        self.SetName('Density')
+    def __init__(self, parent, size=(600,600), **kwargs):
+        wx.Frame.__init__(self, parent, -1, size=size, title='Density Plot', **kwargs)
+        CPATool.__init__(self)
+        self.SetName(self.tool_name)
         
         figpanel = DensityPanel(self)
         configpanel = DataSourcePanel(self, figpanel)
@@ -332,7 +377,12 @@ class Density(wx.Frame):
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
-
+        
+        #
+        # Forward save and load settings functionality to the configpanel
+        #
+        self.save_settings = configpanel.save_settings
+        self.load_settings = configpanel.load_settings
 
 
 if __name__ == "__main__":

@@ -122,6 +122,8 @@ class Properties(Singleton):
     
     def show_load_dialog(self):
         import wx
+        if not wx.GetApp():
+            raise Exception("Can't display load dialog without a wx App.")
         dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
@@ -461,13 +463,13 @@ if __name__ == "__main__":
     import sys
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     
+    p = Properties.getInstance()
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
         filename = "../properties/nirht_test.properties"
 #        filename = '/Users/afraser/Desktop/cpa_example/example.properties'
 
-    p = Properties.getInstance()
     p.LoadFile(filename)
     print p
 #    p.newfield = 'chickenpox' # will be appended

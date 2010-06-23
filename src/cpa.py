@@ -8,22 +8,23 @@ try:
     svn_version = int(cpa_version.VERSION)
 except: 
     # this can be updated periodically just to ensure there's a reasonable value here.
-    svn_version = 8895
+    svn_version = 10000
 
 
 from ClassifierGUI import *
 # ---
-
 import wx
 import sys
 import logging
 import threading
+from plateviewer import PlateViewer
 from ImageViewer import ImageViewer
 from Scatter import Scatter
 from Histogram import Histogram
 from Density import Density
 import icons
 import cpaprefs
+from cpatool import CPATool
 
 ID_CLASSIFIER = wx.NewId()
 ID_PLATE_VIEWER = wx.NewId()
@@ -33,9 +34,15 @@ ID_SCATTER = wx.NewId()
 ID_HISTOGRAM = wx.NewId()
 ID_DENSITY = wx.NewId()
 
+PLOTS = {'scatter'     : Scatter, 
+         'histogram'   : Histogram,
+         'density'     : Density, 
+         'platemapbrowser' : PlateViewer,
+         'datatable'   : DataGrid, 
+         'classifier'  : ClassifierGUI}
+
 class FuncLog(logging.Handler):
-    '''
-    A logging handler that sends logs to an update function
+    '''A logging handler that sends logs to an update function.
     '''
     def __init__(self, update):
         logging.Handler.__init__(self)
@@ -45,14 +52,8 @@ class FuncLog(logging.Handler):
         self.update(self.format(record))
 
 
-def get_cpa_tools_windows():
-    return [wx.FindWindowByName(n) for n in 
-            ['ImageViewer', 'Density', 'Scatter', 'Histogram', 'DataTable', 
-             'PlateViewer', 'Classifier']]
-
 class MainGUI(wx.Frame):
-    '''
-    GUI for CellProfiler Analyst
+    '''Main GUI frame for CellProfiler Analyst
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
         wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 %s'%(__version__), **kwargs)
@@ -89,19 +90,22 @@ class MainGUI(wx.Frame):
         #
         self.SetMenuBar(wx.MenuBar())
         fileMenu = wx.Menu()
-        saveLogMenuItem = fileMenu.Append(-1, 'Save Log\tCtrl+S', help='Save the contents of the log window.')
+        saveWorkspaceMenuItem = fileMenu.Append(-1, 'Save workspace\tCtrl+S', help='Save the currently open plots and settings.')
+        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load workspace\tCtrl+O', help='Open plots saved in a previous workspace.')
+        fileMenu.AppendSeparator()
+        saveLogMenuItem = fileMenu.Append(-1, 'Save log', help='Save the contents of the log window.')
         fileMenu.AppendSeparator()
         self.exitMenuItem = fileMenu.Append(ID_EXIT, 'Exit\tCtrl+Q', help='Exit classifier')
         self.GetMenuBar().Append(fileMenu, 'File')
 
         toolsMenu = wx.Menu()
-        classifierMenuItem  = toolsMenu.Append(-1, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
-        plateMapMenuItem    = toolsMenu.Append(-1, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
-        dataTableMenuItem   = toolsMenu.Append(-1, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
-        imageViewerMenuItem = toolsMenu.Append(-1, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
-        scatterMenuItem     = toolsMenu.Append(-1, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
-        histogramMenuItem   = toolsMenu.Append(-1, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
-        densityMenuItem     = toolsMenu.Append(-1, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
+        classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
+        plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
+        dataTableMenuItem   = toolsMenu.Append(ID_DATA_TABLE, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
+        imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
+        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
+        histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
+        densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()        
@@ -141,14 +145,9 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.WARN), warnMenuItem)
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.ERROR), errorMenuItem)
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.CRITICAL), criticalMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)        
         self.Bind(wx.EVT_MENU, self.save_log, saveLogMenuItem)
-        self.Bind(wx.EVT_MENU, self.launch_classifier, classifierMenuItem)
-        self.Bind(wx.EVT_MENU, self.launch_plate_map_browser, plateMapMenuItem)
-        self.Bind(wx.EVT_MENU, self.launch_data_table, dataTableMenuItem)
-        self.Bind(wx.EVT_MENU, self.launch_image_viewer, imageViewerMenuItem)
-        self.Bind(wx.EVT_MENU, self.launch_scatter_plot, scatterMenuItem)
-        self.Bind(wx.EVT_MENU, self.launch_histogram_plot, histogramMenuItem)
-        self.Bind(wx.EVT_MENU, self.launch_density_plot, densityMenuItem)
         self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
@@ -172,7 +171,7 @@ class MainGUI(wx.Frame):
         classifier.Show(True)
         
     def launch_plate_map_browser(self, evt=None):
-        self.pv = PlateMapBrowser(parent=self)
+        self.pv = PlateViewer(parent=self)
         self.pv.Show(True)
     
     def launch_data_table(self, evt=None):
@@ -195,8 +194,21 @@ class MainGUI(wx.Frame):
         imviewer = ImageViewer(parent=self)
         imviewer.Show(True)
         
+    def on_save_workspace(self, evt):
+        dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(), 
+                            defaultFile='workspace.txt', wildcard='txt', 
+                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            wx.GetApp().save_workspace(dlg.GetPath())
+        
+    def on_load_workspace(self, evt):
+        dlg = wx.FileDialog(self, "Select the file containing your CPAnalyst workspace...",
+                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            wx.GetApp().load_workspace(dlg.GetPath())
+        
     def save_log(self, evt=None):
-        dlg = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(), 
+        dlg = wx.FileDialog(self, message="Save log as...", defaultDir=os.getcwd(), 
                             defaultFile='CPA_log.txt', wildcard='txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
@@ -223,7 +235,7 @@ class MainGUI(wx.Frame):
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier and classifier.Close() == False:
             return
-        if any(get_cpa_tools_windows()):
+        if any(wx.GetApp().get_plots()):
             dlg = wx.MessageDialog(self, 'Some tools are open, are you sure you want to quit CPA?', 'Quit CellProfiler Analyst?', wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response != wx.ID_YES:
@@ -240,6 +252,135 @@ class MainGUI(wx.Frame):
         if self.log_text != '':
             self.console.AppendText(self.log_text)
             self.log_text = ''
+
+# new version check
+def new_version_cb(new_version, new_version_info):
+    # called from a child thread, so use CallAfter to bump it to the gui thread
+    def cb2():
+        def set_check_pref(val):
+            cpaprefs.set_check_new_versions(val)
+
+        def skip_this_version():
+            cpaprefs.set_skip_version(new_version)
+
+        # showing a modal dialog while the splashscreen is up causes a hang
+        try: splash.Destroy()
+        except: pass
+
+        import cellprofiler.gui.newversiondialog as nvd
+        dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
+                                   new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
+                                   cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
+        dlg.Show()
+
+    wx.CallAfter(cb2)
+
+
+class CPAnalyst(wx.App):
+    '''The CPAnalyst application.
+    This launches the main UI, and keeps track of the session.
+    '''
+    def __init__(self, *args, **kwargs):
+        ''' '''
+        super(CPAnalyst, self).__init__(*args, **kwargs)
+        
+
+    def OnInit(self):
+        # splashscreen
+        splashimage = icons.cpa_splash.ConvertToBitmap()
+        # If the splash image has alpha, it shows up transparently on
+        # windows, so we blend it into a white background.
+        splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(), 
+                                          splashimage.GetHeight(), 
+                                          255, 255, 255, 255)
+        dc = wx.MemoryDC()
+        dc.SelectObject(splashbitmap)
+        dc.DrawBitmap(splashimage, 0, 0)
+        dc.Destroy() # necessary to avoid a crash in splashscreen
+        splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | 
+                                 wx.SPLASH_TIMEOUT, 2000, None, -1)
+        
+        p = Properties.getInstance()
+        if p.IsEmpty():
+            if not p.show_load_dialog():
+                logging.error('CellProfiler Analyst requires a properties file. Exiting.')
+                return False
+        self.frame = MainGUI(p, None, size=(760,-1))
+        self.frame.Show(True)
+        db = DBConnect.DBConnect.getInstance()
+        db.register_gui_parent(self.frame)
+        logging.info('Creating filter tables...')
+        MulticlassSQL.CreateFilterTables(wx.Yield)
+        logging.info('Done.')
+        
+        try:
+            import cellprofiler.utilities.check_for_updates as cfu
+            cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
+                                  max(svn_version, cpaprefs.get_skip_version()), 
+                                  new_version_cb,
+                                  user_agent='CPAnalyst/2.0.%d'%(svn_version))
+        except ImportError:
+            logging.warn("CPA was unable to check for updates. Could not import cellprofiler.utilities.check_for_updates.")
+            
+        return True
+    
+    def get_plots(self):
+        '''return a list of all plots'''
+        return [win for win in self.frame.Children if issubclass(type(win), CPATool)]
+    
+    def get_plot(self, name):
+        '''return the plot with the given name'''
+        return wx.FindWindowByName(name)
+    
+    def load_workspace(self, filepath, close_open_plots=False):
+        '''Loads a CPA workspace file and uses it to restore all plots, gates,
+        and filters that were saved.
+        '''
+        logging.info('loading workspace...')
+        f = open(filepath, 'U')
+        lines = f.read()
+        lines = lines.split('\n')
+        lines = lines [4:] # first 4 lines are header information
+        settings = {}
+        pos = 20
+        for i in range(len(lines)):
+            for plot_type in PLOTS:
+                if lines[i].lower().startswith(plot_type):
+                    logging.info('opening plot "%s"'%(lines[i]))
+                    while lines[i+1].startswith('\t'):
+                        i += 1
+                        setting, value = map(str.strip, lines[i].split(':'))
+                        settings[setting] = value
+                    pos += 15
+                    plot = PLOTS[plot_type](parent=self.frame, pos=(pos,pos))
+                    plot.Show(True)
+                    plot.load_settings(settings)
+        logging.info('...done loading workspace')
+                    
+    def save_workspace(self, filepath):
+        '''Saves the current CPA workspace. This includes the current settings
+        of all open tools along with any gates and filters that have been created.
+        '''
+        f = open(filepath, 'w')
+        f.write('CellProfiler Analyst workflow\n')
+        f.write('version: 1\n')
+        f.write('svn revision: %s\n'%(__version__))
+        f.write('\n')
+        for plot in self.get_plots():
+            f.write('%s\n'%(plot.tool_name))
+            for setting, value in plot.save_settings().items():
+                assert ':' not in setting
+                f.write('\t%s : %s\n'%(setting, str(value)))
+            f.write('\n')
+        f.close()
+
+    def make_unique_plot_name(self, prefix):
+        '''This function must be called to generate a unique name for each plot.
+        eg: plot.SetName(wx.GetApp().make_unique_plot_name('Histogram'))
+        '''
+        plot_num = max([int(plot.Name[len(prefix):]) 
+                        for plot in self.plots if plot.Name.startswith(prefix)])
+        return '%s %d'%(prefix, plot_num)
 
 
 def setup_frozen_logging():
@@ -264,96 +405,28 @@ def setup_frozen_logging():
     # send everything to logfile
     sys.stderr = Stderr()
     sys.stdout = sys.stderr
-
-if __name__ == "__main__":
-    if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
-        # on windows, log to a file (Mac goes to console)
-        setup_frozen_logging()
-
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
     
-    global defaultDir
-    defaultDir = os.getcwd()
+if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
+    # on windows, log to a file (Mac goes to console)
+    setup_frozen_logging()
+logging.basicConfig(level=logging.DEBUG)
     
-    # Handles args to MacOS "Apps"
-    if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
-        del sys.argv[1]
-
-    # Initialize the app early because the fancy exception handler
-    # depends on it in order to show a dialog.
-    app = wx.PySimpleApp()
+# Handles args to MacOS "Apps"
+if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
+    del sys.argv[1]
     
-    # Install our own pretty exception handler unless one has already
-    # been installed (e.g., a debugger)
-    if sys.excepthook == sys.__excepthook__:
-        sys.excepthook = show_exception_as_dialog
-
+if len(sys.argv) > 1:
+    # Load a properties file if passed in args
     p = Properties.getInstance()
+    p.LoadFile(sys.argv[1])
 
-    # splashscreen
-    # splash
-    splashimage = icons.cpa_splash.ConvertToBitmap()
-    # If the splash image has alpha, it shows up transparently on
-    # windows, so we blend it into a white background.
-    splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(), splashimage.GetHeight(), 255, 255, 255, 255)
-    dc = wx.MemoryDC()
-    dc.SelectObject(splashbitmap)
-    dc.DrawBitmap(splashimage, 0, 0)
-    dc.Destroy() # necessary to avoid a crash in splashscreen
-    splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT, 2000, None, -1)
+# Initialize the app early because the fancy exception handler
+# depends on it in order to show a dialog.
+app = CPAnalyst(redirect=False)
+    
+# Install our own pretty exception handler unless one has already
+# been installed (e.g., a debugger)
+if sys.excepthook == sys.__excepthook__:
+    sys.excepthook = show_exception_as_dialog
 
-    # new version check
-    def new_version_cb(new_version, new_version_info):
-        # called from a child thread, so use CallAfter to bump it to the gui thread
-        def cb2():
-            def set_check_pref(val):
-                cpaprefs.set_check_new_versions(val)
-
-            def skip_this_version():
-                cpaprefs.set_skip_version(new_version)
-
-            # showing a modal dialog while the splashscreen is up causes a hang
-            try: splash.Destroy()
-            except: pass
-
-            import cellprofiler.gui.newversiondialog as nvd
-            dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
-                                       new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
-                                       cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
-            dlg.Show()
-
-        wx.CallAfter(cb2)
-
-
-    try:
-        import cellprofiler.utilities.check_for_updates as cfu
-        cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
-                              max(svn_version, cpaprefs.get_skip_version()), 
-                              new_version_cb,
-                              user_agent='CPAnalyst/2.0.%d'%(svn_version))
-    except:
-        # can't import
-        pass
-
-
-    cpa = MainGUI(p, None, size=(760,-1))
-    cpa.Show(True)
-
-    db = DBConnect.DBConnect.getInstance()
-    db.register_gui_parent(cpa)
-
-    if len(sys.argv) > 1:
-        # Load a properties file if passed in args
-        propsFile = sys.argv[1]
-        p.LoadFile(propsFile)
-    else:
-        if not p.show_load_dialog():
-            # necessary in case other modal dialogs are up
-            wx.GetApp().Exit()
-            raise Exception('CellProfiler Analyst requires a properties file.  Exiting.')
-
-    cpa.console.AppendText('Creating filter tables.\n')
-    MulticlassSQL.CreateFilterTables(wx.Yield)
-
-    app.MainLoop()
+app.MainLoop()
