@@ -9,7 +9,7 @@ from dbconnect import *
 from properties import Properties
 from datamodel import DataModel
 from StringIO import StringIO
-from ScoreAll import score
+from scoreall import score
 import base64
 import zlib
 import os
