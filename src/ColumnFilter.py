@@ -1,6 +1,6 @@
 import wx
 import re
-from Filter import Filter
+from filter import Filter
 from properties import Properties
 from dbconnect import DBConnect
 from wx.combo import OwnerDrawnComboBox as ComboBox
