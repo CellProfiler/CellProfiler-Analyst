@@ -10,7 +10,7 @@ except: pass
 
 from datatable import DataGrid
 from datamodel import DataModel
-from ImageControlPanel import ImageControlPanel
+from imagecontrolpanel import ImageControlPanel
 from plateviewer import PlateViewer
 from properties import Properties
 from ScoreDialog import ScoreDialog

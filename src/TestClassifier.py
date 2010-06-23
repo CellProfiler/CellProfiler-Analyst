@@ -1,7 +1,7 @@
 import dbconnect
 from datatable import DataGrid
 from datamodel import DataModel
-from ImageControlPanel import ImageControlPanel
+from imagecontrolpanel import ImageControlPanel
 from properties import Properties
 from ScoreDialog import ScoreDialog
 import SortBin

@@ -1,7 +1,7 @@
 from dbconnect import *
 from datamodel import DataModel
-from ImageControlPanel import *
-from ImagePanel import ImagePanel
+from imagecontrolpanel import *
+from imagepanel import ImagePanel
 from properties import Properties
 import imagetools
 import cPickle

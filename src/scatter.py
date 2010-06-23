@@ -4,7 +4,7 @@ from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_ke
 from multiclasssql import filter_table_prefix
 from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import ImageList
+import imagelist
 import imagetools
 #from icons import lasso_tool
 import logging
@@ -415,7 +415,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             keys = self.key_lists[i][sel]
             keys = list(set([tuple(k) for k in keys]))
             if len(keys)>0:
-                ilf = ImageList.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i))
+                ilf = imagelist.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i))
                 ilf.Show(True)
             else:
                 logging.info('No points were selected in collection %d'%(i))

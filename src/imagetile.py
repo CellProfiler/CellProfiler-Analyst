@@ -2,7 +2,7 @@
 A special image panel meant to be dragged and dropped.
 '''
 from dbconnect import DBConnect
-from ImagePanel import ImagePanel
+from imagepanel import ImagePanel
 from properties import Properties
 import imagetools
 import cPickle
