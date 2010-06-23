@@ -1,7 +1,7 @@
 from dbconnect import DBConnect
 from tilecollection import TileCollection
-from ImageTile import ImageTile
-from ImageTileSizer import ImageTileSizer
+from imagetile import ImageTile
+from imagetilesizer import ImageTileSizer
 from properties import Properties
 import imagetools
 import cPickle

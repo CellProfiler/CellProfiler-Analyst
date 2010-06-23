@@ -1,5 +1,5 @@
 import wx
-from ImageTileSizer import ImageTileSizer
+from imagetilesizer import ImageTileSizer
 
 class Test(wx.ScrolledWindow):
     def __init__(self, parent):
