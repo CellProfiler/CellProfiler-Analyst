@@ -8,7 +8,7 @@ try:
 except: pass
 # ---
 
-from DataGrid import DataGrid
+from datatable import DataGrid
 from datamodel import DataModel
 from ImageControlPanel import ImageControlPanel
 from plateviewer import PlateViewer

@@ -1,5 +1,5 @@
 import dbconnect
-from DataGrid import DataGrid
+from datatable import DataGrid
 from datamodel import DataModel
 from ImageControlPanel import ImageControlPanel
 from properties import Properties

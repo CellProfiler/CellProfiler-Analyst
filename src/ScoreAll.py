@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from dbconnect import *
-from DataGrid import DataGrid
+from datatable import DataGrid
 from datamodel import DataModel
 from properties import Properties
 from StringIO import StringIO, StringIO

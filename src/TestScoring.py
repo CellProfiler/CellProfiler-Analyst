@@ -18,7 +18,7 @@ if __name__ == "__main__":
     from TrainingSet import TrainingSet
     from StringIO import StringIO
     import FastGentleBoostingMulticlass
-    from DataGrid import DataGrid
+    from datatable import DataGrid
     import wx
 
     app = wx.PySimpleApp()
