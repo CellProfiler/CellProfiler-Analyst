@@ -42,7 +42,7 @@ class ImageTile(ImagePanel):
         self.SetDropTarget(ImageTileDropTarget(self))
 
         self.bin         = bin             # the SortBin this object belongs to
-        self.classifier  = bin.classifier  # ClassifierGUI needs to capture the mouse on tile selection
+        self.classifier  = bin.classifier  # Classifier needs to capture the mouse on tile selection
         self.obKey       = obKey           # (table, image, object)
         self.selected    = selected        # whether or not this tile is selected
         self.leftPressed = False

@@ -94,7 +94,7 @@ class TileLoader(threading.Thread):
     will remove them from the queue and fetch the tile data for
     them. The tile data is then written back into TileCollection's
     tileData dict over the existing placeholder. Finally an event is
-    posted to the ClassifierGUI to tell it to refresh the tiles.
+    posted to the svn to tell it to refresh the tiles.
     '''
     def __init__(self, tc, notify_window):
         threading.Thread.__init__(self)

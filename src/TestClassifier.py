@@ -16,7 +16,7 @@ import PolyaFit
 import numpy
 import os
 import wx
-from ClassifierGUI import *
+from classifier import *
 
 
 import time
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     props = '../Properties/nirht_area_test.properties'
     ts = '/Users/afraser/Desktop/MyTrainingSet.txt'
     p.LoadFile(props)
-    classifier = ClassifierGUI(p)
+    classifier = Classifier(p)
     classifier.Show(True)
     classifier.LoadTrainingSet(ts)
     time.sleep(3)

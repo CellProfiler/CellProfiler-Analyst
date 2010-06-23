@@ -571,7 +571,7 @@ class DataGrid(wx.Frame):
         self.file = filename
         
     def OnWriteTempTableToDB(self, evt):
-        from ClassifierGUI import ClassifierGUI
+        from classifier import Classifier
         db.CreateTempTableFromData(self.grid.GetTable().data, 
                            dbconnect.clean_up_colnames(self.grid.GetTable().col_labels), 
                            '__Classifier_output')

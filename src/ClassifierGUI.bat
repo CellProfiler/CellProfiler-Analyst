@@ -1,2 +1,2 @@
 cd /d %~dp0
-python ClassifierGUI.py
+python classifier.py

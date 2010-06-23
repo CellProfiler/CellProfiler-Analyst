@@ -41,7 +41,7 @@ CREATE_NEW_FILTER = '*create new filter*'
 
 required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
 
-class ClassifierGUI(wx.Frame):
+class Classifier(wx.Frame):
     """
     GUI Interface and functionality for the Classifier.
     """
@@ -1302,7 +1302,7 @@ class ClassifierGUI(wx.Frame):
     
     def Destroy(self):
         ''' Kill off all threads before combusting. '''
-        super(ClassifierGUI, self).Destroy()
+        super(Classifier, self).Destroy()
         import threading
         for thread in threading.enumerate():
             if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
@@ -1378,6 +1378,6 @@ if __name__ == "__main__":
             wx.GetApp().Exit()
             raise Exception('Classifier requires a properties file.  Exiting.')
         
-    classifier = ClassifierGUI()
+    classifier = Classifier()
     classifier.Show(True)
     app.MainLoop()

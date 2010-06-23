@@ -11,7 +11,7 @@ except:
     svn_version = 10000
 
 
-from ClassifierGUI import *
+from classifier import *
 # ---
 import wx
 import sys
@@ -39,7 +39,7 @@ PLOTS = {'scatter'     : Scatter,
          'density'     : Density, 
          'plateviewer' : PlateViewer,
          'datatable'   : DataGrid, 
-         'classifier'  : ClassifierGUI}
+         'classifier'  : Classifier}
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -167,7 +167,7 @@ class MainGUI(wx.Frame):
             classifier.SetFocus()
             logging.warn('You may only run one instance of Classifier at a time.')
             return
-        classifier = ClassifierGUI(parent=self, properties=self.properties)
+        classifier = Classifier(parent=self, properties=self.properties)
         classifier.Show(True)
         
     def launch_plate_map_browser(self, evt=None):

@@ -250,7 +250,7 @@ class SortBin(wx.ScrolledWindow):
     def UpdateQuantity(self):
         '''
         If a bin contains no objects then it can't be used for training,
-          so we inform ClassifierGUI whenever this state changes.
+          so we inform Classifier whenever this state changes.
         If the bin is in a StaticBoxSizer (all of them are) we update the
           StaticBox label to contain the current object count.
         '''
