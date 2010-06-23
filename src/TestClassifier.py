@@ -5,13 +5,13 @@ from ImageControlPanel import ImageControlPanel
 from properties import Properties
 from ScoreDialog import ScoreDialog
 import SortBin
-from TileCollection import EVT_TILE_UPDATED
+from tilecollection import EVT_TILE_UPDATED
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 import DirichletIntegrate
 import FastGentleBoostingMulticlass
 import imagetools
-import MulticlassSQL
+import multiclasssql
 import PolyaFit
 import numpy
 import os

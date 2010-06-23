@@ -8,7 +8,7 @@ from TrainingSet import TrainingSet
 from time import time
 import DirichletIntegrate
 import FastGentleBoostingMulticlass
-import MulticlassSQL
+import multiclasssql
 import PolyaFit
 import logging
 import numpy as np
@@ -68,7 +68,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
     assert group in p._groups.keys()+['Image'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, p._groups.keys(),)
     
     logging.info('Creating tables for filters...')
-    MulticlassSQL.CreateFilterTables()
+    multiclasssql.CreateFilterTables()
     
     output = StringIO()
     logging.info('Training classifier with %s rules...'%nRules)
@@ -82,7 +82,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
     t0 = time()
     def update(frac): 
         logging.info('%d%% '%(frac*100.,))
-    keysAndCounts = MulticlassSQL.PerImageCounts(weaklearners, filter=(filter or None), cb=update)
+    keysAndCounts = multiclasssql.PerImageCounts(weaklearners, filter=(filter or None), cb=update)
     keysAndCounts.sort()
     logging.info('Counts found in %f seconds'%(time()-t0))
         

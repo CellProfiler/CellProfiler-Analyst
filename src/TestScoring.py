@@ -1,9 +1,9 @@
 '''
-Checks the per-image counts calculated by MulticlassSQL.
+Checks the per-image counts calculated by multiclasssql.
 '''
 
 import wx
-import MulticlassSQL
+import multiclasssql
 import numpy
 from dbconnect import *
 from properties import Properties

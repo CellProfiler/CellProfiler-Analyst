@@ -310,7 +310,7 @@ class CPAnalyst(wx.App):
         db = dbconnect.DBConnect.getInstance()
         db.register_gui_parent(self.frame)
         logging.info('Creating filter tables...')
-        MulticlassSQL.CreateFilterTables(wx.Yield)
+        multiclasssql.CreateFilterTables(wx.Yield)
         logging.info('Done.')
         
         try:

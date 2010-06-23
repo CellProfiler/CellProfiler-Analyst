@@ -1362,7 +1362,7 @@ if __name__ == "__main__":
     ''' For debugging only... '''
     from TrainingSet import TrainingSet
     import FastGentleBoostingMulticlass
-    import MulticlassSQL
+    import multiclasssql
     from cStringIO import StringIO
     from datamodel import DataModel
     

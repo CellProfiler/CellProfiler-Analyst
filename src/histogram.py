@@ -1,6 +1,6 @@
 from ColorBarPanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from MulticlassSQL import filter_table_prefix
+from multiclasssql import filter_table_prefix
 from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
@@ -117,7 +117,7 @@ class DataSourcePanel(wx.Panel):
                 items = self.filter_choice.GetItems()
                 self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filter_choice.SetSelection(len(items)-1)
-                from MulticlassSQL import CreateFilterTable
+                from multiclasssql import CreateFilterTable
                 logging.info('Creating filter table...')
                 CreateFilterTable(fname)
                 logging.info('Done creating filter.')
@@ -336,8 +336,8 @@ if __name__ == "__main__":
             wx.GetApp().Exit()
             sys.exit()
 
-    import MulticlassSQL
-    MulticlassSQL.CreateFilterTables()
+    import multiclasssql
+    multiclasssql.CreateFilterTables()
     
     histogram = Histogram(None)
     histogram.Show()

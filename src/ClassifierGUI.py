@@ -14,7 +14,7 @@ from ImageControlPanel import ImageControlPanel
 from plateviewer import PlateViewer
 from properties import Properties
 from ScoreDialog import ScoreDialog
-import TileCollection
+import tilecollection
 from TrainingSet import TrainingSet
 from cStringIO import StringIO
 from time import time
@@ -23,7 +23,7 @@ import dbconnect
 import DirichletIntegrate
 import FastGentleBoostingMulticlass     
 import imagetools
-import MulticlassSQL
+import multiclasssql
 import PolyaFit
 import SortBin
 import logging
@@ -72,7 +72,7 @@ class ClassifierGUI(wx.Frame):
         dm = DataModel.getInstance()
         if __name__ == "__main__":
             logging.info('Creating temporary filter tables...')
-            MulticlassSQL.CreateFilterTables()
+            multiclasssql.CreateFilterTables()
             logging.info('Done creating temporary filter tables.')
             
         if p.IsEmpty():
@@ -253,7 +253,7 @@ class ClassifierGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows
-        TileCollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
+        tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
         self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
         
         # If there's a default training set. Ask to load it.
@@ -595,7 +595,7 @@ class ClassifierGUI(wx.Frame):
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)]))
                 
                 self.PostMessage('Classifying %s.'%(p.object_name[1]))
-                obKeys += MulticlassSQL.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
+                obKeys += multiclasssql.FilterObjectsFromClassN(obClass, self.weaklearners, obKeysToTry)
                 attempts += len(obKeysToTry)
                 total_attempts += len(obKeysToTry)
                 if attempts >= MAX_ATTEMPTS:
@@ -631,7 +631,7 @@ class ClassifierGUI(wx.Frame):
         ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
         
         # pause tile loading
-        with TileCollection.load_lock():
+        with tilecollection.load_lock():
             self.PostMessage('Loading training set from: %s'%filename)
             # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
             os.chdir(os.path.split(filename)[0])
@@ -797,7 +797,7 @@ class ClassifierGUI(wx.Frame):
 
     def UpdateTrainingSet(self):
         # pause tile loading
-        with TileCollection.load_lock():
+        with tilecollection.load_lock():
             try:
                 def cb(frac):
                     cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
@@ -839,7 +839,7 @@ class ClassifierGUI(wx.Frame):
             return
 
         # pause tile loading
-        with TileCollection.load_lock():
+        with tilecollection.load_lock():
             try:
                 def cb(frac):
                     cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
@@ -924,7 +924,7 @@ class ClassifierGUI(wx.Frame):
         classHits = {}
         if obKeys:
             for clNum, bin in enumerate(self.classBins):
-                classHits[bin.label] = MulticlassSQL.FilterObjectsFromClassN(clNum+1, self.weaklearners, [imKey])
+                classHits[bin.label] = multiclasssql.FilterObjectsFromClassN(clNum+1, self.weaklearners, [imKey])
                 self.PostMessage('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
         
         return classHits
@@ -981,7 +981,7 @@ class ClassifierGUI(wx.Frame):
                 if not cont: # cancel was pressed
                     raise StopCalculating()
             try:
-                self.keysAndCounts = MulticlassSQL.PerImageCounts(self.weaklearners, filter=filter, cb=update)
+                self.keysAndCounts = multiclasssql.PerImageCounts(self.weaklearners, filter=filter, cb=update)
             except StopCalculating:
                 dlg.Destroy()
                 self.SetStatusText('Scoring canceled.')      
@@ -998,7 +998,7 @@ class ClassifierGUI(wx.Frame):
             
             if p.class_table and overwrite_class_table:
                 self.PostMessage('Saving %s classes to database...'%(p.object_name[0]))
-                MulticlassSQL.create_perobject_class_table(self.trainingSet.labels, self.weaklearners)
+                multiclasssql.create_perobject_class_table(self.trainingSet.labels, self.weaklearners)
                 self.PostMessage('%s classes saved to table "%s"'%(p.object_name[0].capitalize(), p.class_table))
             
         t2 = time()
@@ -1143,7 +1143,7 @@ class ClassifierGUI(wx.Frame):
                 self.filterChoice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filterChoice.SetSelection(len(items)-1)
                 logging.info('Creating filter table...')
-                MulticlassSQL.CreateFilterTable(fname, wx.Yield)
+                multiclasssql.CreateFilterTable(fname, wx.Yield)
                 logging.info('Done creating filter.')
             cff.Destroy()
 
@@ -1311,11 +1311,10 @@ class ClassifierGUI(wx.Frame):
                     thread.abort()
                 except:
                     pass
-        from TileCollection import TileCollection
         # XXX: Hack -- can't figure out what is holding onto TileCollection, but
         #      it needs to be trashed if Classifier is to be reopened since it
         #      will otherwise grab the existing instance with a dead tileLoader
-        TileCollection._forgetClassInstanceReferenceForTesting()
+        tilecollection.TileCollection._forgetClassInstanceReferenceForTesting()
         
                 
         

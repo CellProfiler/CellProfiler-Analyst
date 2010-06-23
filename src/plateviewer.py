@@ -15,7 +15,7 @@ import wx
 
 p = properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
-Properties.optional_vars += ['object_table']
+properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
 
 P96   = (8, 12)

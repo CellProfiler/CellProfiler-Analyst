@@ -1,5 +1,5 @@
 from dbconnect import DBConnect
-from TileCollection import TileCollection
+from tilecollection import TileCollection
 from ImageTile import ImageTile
 from ImageTileSizer import ImageTileSizer
 from properties import Properties
