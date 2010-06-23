@@ -15,7 +15,7 @@ from plateviewer import PlateViewer
 from properties import Properties
 from ScoreDialog import ScoreDialog
 import tilecollection
-from TrainingSet import TrainingSet
+from trainingset import TrainingSet
 from cStringIO import StringIO
 from time import time
 from icons import get_cpa_icon

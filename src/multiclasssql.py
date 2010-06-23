@@ -277,7 +277,7 @@ if __name__ == "__main__":
 #    print keys_and_counts[0,:]
 #    print sum(keys_and_counts[:,-2:])
 
-    from TrainingSet import TrainingSet
+    from trainingset import TrainingSet
     from StringIO import StringIO
     import FastGentleBoostingMulticlass
     from datatable import DataGrid

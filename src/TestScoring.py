@@ -15,7 +15,7 @@ import zlib
 import os
 
 if __name__ == "__main__":
-    from TrainingSet import TrainingSet
+    from trainingset import TrainingSet
     from StringIO import StringIO
     import FastGentleBoostingMulticlass
     from datatable import DataGrid

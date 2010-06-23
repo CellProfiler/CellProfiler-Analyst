@@ -6,7 +6,7 @@ from properties import Properties
 from ScoreDialog import ScoreDialog
 import SortBin
 from tilecollection import EVT_TILE_UPDATED
-from TrainingSet import TrainingSet
+from trainingset import TrainingSet
 from cStringIO import StringIO
 import DirichletIntegrate
 import FastGentleBoostingMulticlass

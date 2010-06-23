@@ -1360,7 +1360,7 @@ class Objects(Entity):
 
 if __name__ == "__main__":
     ''' For debugging only... '''
-    from TrainingSet import TrainingSet
+    from trainingset import TrainingSet
     import FastGentleBoostingMulticlass
     import multiclasssql
     from cStringIO import StringIO

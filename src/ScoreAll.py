@@ -4,7 +4,7 @@ from datatable import DataGrid
 from datamodel import DataModel
 from properties import Properties
 from StringIO import StringIO, StringIO
-from TrainingSet import TrainingSet
+from trainingset import TrainingSet
 from time import time
 import DirichletIntegrate
 import FastGentleBoostingMulticlass
