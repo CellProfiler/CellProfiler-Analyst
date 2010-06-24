@@ -151,7 +151,7 @@ def logit(p):
      return log2(p) - log2(1-p)
 
 if __name__ == '__main__':
-    from PolyaFit import fit_to_data_infile
+    from polyafit import fit_to_data_infile
     alpha, converged, wellnums, wellcounts = fit_to_data_infile('PBcounts.txt')
     print "Fit alpha:", alpha, "\tconverged:", converged
     for idx, wellnum in enumerate(wellnums):

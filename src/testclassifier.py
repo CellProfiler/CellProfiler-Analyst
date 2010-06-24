@@ -11,7 +11,7 @@ from cStringIO import StringIO
 import fastgentleboostingmulticlass
 import imagetools
 import multiclasssql
-import PolyaFit
+import polyafit
 import numpy
 import os
 import wx

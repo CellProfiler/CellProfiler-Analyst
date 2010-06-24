@@ -9,7 +9,7 @@ from time import time
 import dirichletintegrate
 import fastgentleboostingmulticlass
 import multiclasssql
-import PolyaFit
+import polyafit
 import logging
 import numpy as np
 import os
@@ -108,7 +108,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
     # FIT THE BETA BINOMIAL
     logging.info('Fitting beta binomial distribution to data...')
     counts = groupedKeysAndCounts[:,-nClasses:]
-    alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
+    alpha, converged = polyafit.fit_betabinom_minka_alternating(counts)
     logging.info('   alpha = %s   converged = %s'%(alpha, converged))
     logging.info('   alpha/Sum(alpha) = %s'%([a/sum(alpha) for a in alpha]))
                 

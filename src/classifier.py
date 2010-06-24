@@ -24,7 +24,7 @@ import dirichletintegrate
 import fastgentleboostingmulticlass     
 import imagetools
 import multiclasssql
-import PolyaFit
+import polyafit
 import sortbin
 import logging
 import numpy as np
@@ -1029,7 +1029,7 @@ class Classifier(wx.Frame):
         # FIT THE BETA BINOMIAL
         self.PostMessage('Fitting beta binomial distribution to data...')
         counts = groupedKeysAndCounts[:,-nClasses:]
-        alpha, converged = PolyaFit.fit_betabinom_minka_alternating(counts)
+        alpha, converged = polyafit.fit_betabinom_minka_alternating(counts)
         logging.info('   alpha = %s   converged = %s'%( alpha, converged))
         logging.info('   alpha/Sum(alpha) = %s'%([a/sum(alpha) for a in alpha]))
         
