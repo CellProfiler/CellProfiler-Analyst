@@ -6,7 +6,7 @@ from properties import Properties
 from StringIO import StringIO, StringIO
 from trainingset import TrainingSet
 from time import time
-import DirichletIntegrate
+import dirichletintegrate
 import fastgentleboostingmulticlass
 import multiclasssql
 import PolyaFit
@@ -134,7 +134,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
             
         # Append the scores:
         #   compute enrichment probabilities of each class for this image OR group
-        scores = np.array( DirichletIntegrate.score(alpha, np.array(countsRow)) )
+        scores = np.array( dirichletintegrate.score(alpha, np.array(countsRow)) )
         #   clamp to [0,1] to 
         scores[scores>1.] = 1.
         scores[scores<0.] = 0.

@@ -20,7 +20,7 @@ from cStringIO import StringIO
 from time import time
 from icons import get_cpa_icon
 import dbconnect
-import DirichletIntegrate
+import dirichletintegrate
 import fastgentleboostingmulticlass     
 import imagetools
 import multiclasssql
@@ -1061,7 +1061,7 @@ class Classifier(wx.Frame):
                 tableRow += countsRow
             # Append the scores:
             #   compute enrichment probabilities of each class for this image OR group
-            scores = np.array( DirichletIntegrate.score(alpha, np.array(countsRow)) )
+            scores = np.array( dirichletintegrate.score(alpha, np.array(countsRow)) )
             #   clamp to [0,1] to 
             scores[scores>1.] = 1.
             scores[scores<0.] = 0.

@@ -136,7 +136,7 @@ def beta_enriched(prior, posterior):
 
 def score(prior, counts):
     ''' score a well based on the prior fit to the data and the observed counts '''
-    assert prior.shape==counts.shape, "DirichletIntegrate.score: array shapes do not match: "+str(prior.shape)+' and '+str(counts.shape)
+    assert prior.shape==counts.shape, "dirichletintegrate.score: array shapes do not match: "+str(prior.shape)+' and '+str(counts.shape)
     K = len(prior)
     posterior = prior + counts
     def score_idx(idx):
