@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from Singleton import *
+from singleton import *
 from StringIO import StringIO
 import re
 import os

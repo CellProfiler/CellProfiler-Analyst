@@ -7,7 +7,7 @@ import zlib
 import wx
 
 from dbconnect import *
-from Singleton import Singleton
+from singleton import Singleton
 
 db = DBConnect.getInstance()
 

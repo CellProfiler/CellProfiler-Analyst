@@ -3,7 +3,7 @@ import types
 import random
 from MySQLdb.cursors import SSCursor
 from properties import Properties
-from Singleton import Singleton
+from singleton import Singleton
 from sys import stderr
 import MySQLdb
 import exceptions

@@ -2,7 +2,7 @@ import logging
 from random import randint
 import numpy as np
 from dbconnect import *
-from Singleton import *
+from singleton import *
 from properties import Properties
 
 p = Properties.getInstance()

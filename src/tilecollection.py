@@ -1,7 +1,7 @@
 from __future__ import with_statement
 from dbconnect import DBConnect
 from properties import Properties
-from Singleton import Singleton
+from singleton import Singleton
 from heapq import heappush, heappop
 from weakref import WeakValueDictionary
 import imagetools
