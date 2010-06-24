@@ -11,7 +11,7 @@ import pytz
 pytz.zoneinfo = pytz.tzinfo
 pytz.zoneinfo.UTC = pytz.UTC
 
-import PILfix
+import pilfix
 
 if sys.platform == "darwin":
     os.system(''' svnversion | sed -e's/^/VERSION = \"/' -e 's/[0-9]*://' -e 's/M//' -e 's/$/\"/' > cpa_version.py ''')

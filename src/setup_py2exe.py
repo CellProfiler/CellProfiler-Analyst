@@ -21,7 +21,7 @@ setup(windows=['cpa.py'],
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb'],
-            'includes' : ['PILfix'],
+            'includes' : ['pilfix'],
             "excludes" : ['_gtkagg', '_tkagg',
                           "Tkconstants","Tkinter","tcl"],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
