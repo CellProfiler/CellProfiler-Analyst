@@ -7,7 +7,7 @@ from StringIO import StringIO, StringIO
 from trainingset import TrainingSet
 from time import time
 import DirichletIntegrate
-import FastGentleBoostingMulticlass
+import fastgentleboostingmulticlass
 import multiclasssql
 import PolyaFit
 import logging
@@ -73,7 +73,7 @@ def score(props, ts, nRules, filter=None, group='Image'):
     output = StringIO()
     logging.info('Training classifier with %s rules...'%nRules)
     t0 = time()
-    weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames,
+    weaklearners = fastgentleboostingmulticlass.train(trainingSet.colnames,
                                                       nRules, trainingSet.label_matrix, 
                                                       trainingSet.values, output)
     logging.info('Training done in %f seconds'%(time()-t0))

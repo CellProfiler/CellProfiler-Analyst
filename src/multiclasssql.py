@@ -80,7 +80,7 @@ def CreateFilterTable(filter, cb=None):
 def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
     '''
     clNum: 1-based index of the class to retrieve obKeys from
-    weaklearners: Weak learners from FastGentleBoostingMulticlass.train
+    weaklearners: Weak learners from fastgentleboostingmulticlass.train
     filterKeys: (optional) A specific list of imKeys OR obKeys (NOT BOTH)
         to classify.
         * WARNING: If this list is too long, you may exceed the size limit to
@@ -151,7 +151,7 @@ def create_perobject_class_table(classnames, rules):
     
 def PerImageCounts(weaklearners, filter=None, cb=None):
     '''
-    weaklearners: Weak learners from FastGentleBoostingMulticlass.train
+    weaklearners: Weak learners from fastgentleboostingmulticlass.train
     filter: name of filter, or None.
     cb: callback function to update with the fraction complete
     RETURNS: A list of lists of imKeys and respective object counts for each class:
@@ -279,7 +279,7 @@ if __name__ == "__main__":
 
     from trainingset import TrainingSet
     from StringIO import StringIO
-    import FastGentleBoostingMulticlass
+    import fastgentleboostingmulticlass
     from datatable import DataGrid
     import wx
     p = Properties.getInstance()
@@ -303,7 +303,7 @@ if __name__ == "__main__":
     trainingSet.Load(ts)
     output = StringIO()
     print 'Training classifier with '+str(nRules)+' rules...'
-    weaklearners = FastGentleBoostingMulticlass.train(trainingSet.colnames,
+    weaklearners = fastgentleboostingmulticlass.train(trainingSet.colnames,
                                                       nRules, trainingSet.label_matrix, 
                                                       trainingSet.values, output)
     table = PerImageCounts(weaklearners, filter=filter)

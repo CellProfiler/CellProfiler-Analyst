@@ -17,7 +17,7 @@ import os
 if __name__ == "__main__":
     from trainingset import TrainingSet
     from StringIO import StringIO
-    import FastGentleBoostingMulticlass
+    import fastgentleboostingmulticlass
     from datatable import DataGrid
     import wx
 

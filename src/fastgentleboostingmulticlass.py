@@ -1,6 +1,6 @@
 from numpy import *
 import sys
-from FastGentleBoostingWorkerMulticlass import train_weak_learner
+from fastgentleboostingworkermulticlass import train_weak_learner
 
 
 def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False, test_values=None, callback=None):

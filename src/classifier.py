@@ -21,7 +21,7 @@ from time import time
 from icons import get_cpa_icon
 import dbconnect
 import DirichletIntegrate
-import FastGentleBoostingMulticlass     
+import fastgentleboostingmulticlass     
 import imagetools
 import multiclasssql
 import PolyaFit
@@ -758,7 +758,7 @@ class Classifier(wx.Frame):
 
         try:
             for i in range(10):
-                xvalid_50 += FastGentleBoostingMulticlass.xvalidate(self.trainingSet.colnames,
+                xvalid_50 += fastgentleboostingmulticlass.xvalidate(self.trainingSet.colnames,
                                                                     nRules, self.trainingSet.label_matrix, 
                                                                     self.trainingSet.values, 2,
                                                                     groups, progress_callback)
@@ -769,7 +769,7 @@ class Classifier(wx.Frame):
 
             # only one more step
             scale = 1.0 - base
-            xvalid_95 = FastGentleBoostingMulticlass.xvalidate(self.trainingSet.colnames,
+            xvalid_95 = fastgentleboostingmulticlass.xvalidate(self.trainingSet.colnames,
                                                                 nRules, self.trainingSet.label_matrix, 
                                                                 self.trainingSet.values, 20,
                                                                 groups, progress_callback)
@@ -850,7 +850,7 @@ class Classifier(wx.Frame):
                 t1 = time()
                 output = StringIO()
                 dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
-                self.weaklearners = FastGentleBoostingMulticlass.train(self.trainingSet.colnames,
+                self.weaklearners = fastgentleboostingmulticlass.train(self.trainingSet.colnames,
                                                                        nRules, self.trainingSet.label_matrix, 
                                                                        self.trainingSet.values, output,
                                                                        callback=cb)

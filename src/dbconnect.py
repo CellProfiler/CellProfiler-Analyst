@@ -1361,7 +1361,7 @@ class Objects(Entity):
 if __name__ == "__main__":
     ''' For debugging only... '''
     from trainingset import TrainingSet
-    import FastGentleBoostingMulticlass
+    import fastgentleboostingmulticlass
     import multiclasssql
     from cStringIO import StringIO
     from datamodel import DataModel

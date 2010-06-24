@@ -9,7 +9,7 @@ from tilecollection import EVT_TILE_UPDATED
 from trainingset import TrainingSet
 from cStringIO import StringIO
 import DirichletIntegrate
-import FastGentleBoostingMulticlass
+import fastgentleboostingmulticlass
 import imagetools
 import multiclasssql
 import PolyaFit
