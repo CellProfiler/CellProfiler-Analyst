@@ -1,6 +1,6 @@
 from colorbarpanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from PlateMapPanel import *
+from platemappanel import *
 import imagetools
 from properties import Properties
 import numpy as np

@@ -25,7 +25,7 @@ import FastGentleBoostingMulticlass
 import imagetools
 import multiclasssql
 import PolyaFit
-import SortBin
+import sortbin
 import logging
 import numpy as np
 import os
@@ -115,7 +115,7 @@ class Classifier(wx.Frame):
         self.unclassified_panel = wx.Panel(self.bins_splitter)
         self.unclassified_box = wx.StaticBox(self.unclassified_panel, label='unclassified '+p.object_name[1])
         self.unclassified_sizer = wx.StaticBoxSizer(self.unclassified_box, wx.VERTICAL)
-        self.unclassifiedBin = SortBin.SortBin(parent=self.unclassified_panel,
+        self.unclassifiedBin = sortbin.SortBin(parent=self.unclassified_panel,
                                                classifier=self,
                                                label='unclassified',
                                                parentSizer=self.unclassified_sizer)
@@ -254,7 +254,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_CHAR, self.OnKey)     # Doesn't work for windows
         tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
-        self.Bind(SortBin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
+        self.Bind(sortbin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
         
         # If there's a default training set. Ask to load it.
         if p.training_set and os.access(p.training_set, os.R_OK):
@@ -396,7 +396,7 @@ class Classifier(wx.Frame):
         This sizer is then added to the classified_bins_sizer. '''
         sizer = wx.StaticBoxSizer(wx.StaticBox(self.classified_bins_panel, label=label), wx.VERTICAL)
         # NOTE: bin must be created after sizer or drop events will occur on the sizer
-        bin = SortBin.SortBin(parent=self.classified_bins_panel, label=label, 
+        bin = sortbin.SortBin(parent=self.classified_bins_panel, label=label, 
                               classifier=self, parentSizer=sizer)
         sizer.Add(bin, proportion=1, flag=wx.EXPAND)
         self.classified_bins_sizer.Add(sizer, proportion=1, flag=wx.EXPAND)
