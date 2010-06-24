@@ -3,7 +3,7 @@ from datatable import DataGrid
 from datamodel import DataModel
 from imagecontrolpanel import ImageControlPanel
 from properties import Properties
-from ScoreDialog import ScoreDialog
+from scoredialog import ScoreDialog
 import sortbin
 from tilecollection import EVT_TILE_UPDATED
 from trainingset import TrainingSet

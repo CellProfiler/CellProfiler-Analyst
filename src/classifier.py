@@ -13,7 +13,7 @@ from datamodel import DataModel
 from imagecontrolpanel import ImageControlPanel
 from plateviewer import PlateViewer
 from properties import Properties
-from ScoreDialog import ScoreDialog
+from scoredialog import ScoreDialog
 import tilecollection
 from trainingset import TrainingSet
 from cStringIO import StringIO
