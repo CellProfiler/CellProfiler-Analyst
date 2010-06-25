@@ -45,19 +45,36 @@ class HugeTable(gridlib.PyGridTableBase):
         self.table = table
         self.cache = odict()
         self.cols = db.GetColumnNames(self.table)
-        self.order_by_col = self.cols[0]
+        self.order_by = [self.cols[0]]
+        self.order_direction = 'ASC'
         self.filter = '' #'WHERE Image_Intensity_Actin_Total_intensity > 17000'
         
-    def set_sort_col(self, col_index):
-        if self.order_by_col != self.cols[col_index]:
-            self.order_by_col = self.cols[col_index]
+    def set_sort_col(self, col_index, add=False):
+        col = self.cols[col_index]
+        if add:
+            if col in self.order_by:
+                self.order_by.remove(col)
+                if self.order_by == []:
+                    self.order_by = [self.cols[0]]
+            else:
+                self.order_by += [col]
         else:
-            self.order_by_col = self.cols[col_index] + ' DESC'
+            if col in self.order_by:
+                if self.order_direction == 'ASC':
+                    self.order_direction = 'DESC'
+                else:
+                    self.order_direction = 'ASC'
+            else:
+                self.order_by = [col]
+                
+        print self.order_by
+        print self.order_direction
         self.cache.clear()
         
     def get_image_key_at_row(self, row):
         return db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,1'
-                          %(dbconnect.UniqueImageClause(), self.table, self.filter, self.order_by_col, row))[0]
+                          %(dbconnect.UniqueImageClause(), self.table, 
+                            self.filter, ','.join([c+' '+self.order_direction for c in self.order_by]), row))[0]
         
     def GetNumberRows(self):
         return db.execute('SELECT COUNT(*) FROM %s %s'%(self.table, self.filter))[0][0]
@@ -65,8 +82,12 @@ class HugeTable(gridlib.PyGridTableBase):
     def GetNumberCols(self):
         return len(self.cols)
     
-    def GetColLabelValue(self, col):
-        return self.cols[col]
+    def GetColLabelValue(self, col_index):
+        col = self.cols[col_index]
+        if col in self.order_by:
+            return col+' [%s%s]'%(len(self.order_by)>1 and self.order_by.index(col) + 1 or '', 
+                                 self.order_direction=='ASC' and 'v' or '^') 
+        return col
 
     def GetValue(self, row, col):
         if not row in self.cache:
@@ -75,7 +96,9 @@ class HugeTable(gridlib.PyGridTableBase):
             hi = row + 25
             cols = ','.join(self.cols)
             vals = db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,%s'%
-                              (cols, self.table, self.filter, self.order_by_col, lo, hi-lo), 
+                              (cols, self.table, self.filter, 
+                               ','.join([c+' '+self.order_direction for c in self.order_by]),
+                               lo, hi-lo), 
                               silent=True)
             self.cache.update((lo+i, v) for i,v in enumerate(vals))
             # if cache exceeds 1000 entries, clip to last 500
@@ -106,7 +129,13 @@ class HugeTableGrid(gridlib.Grid):
         self.SetTable(table_base, True)
         
     def on_leftclick_label(self, evt):
-        self.Table.set_sort_col(evt.Col)
+        if evt.ShiftDown() or evt.ControlDown() or evt.CmdDown():
+            self.Table.set_sort_col(evt.Col, add=True)
+        else:
+            self.Table.set_sort_col(evt.Col)
+        for col in range(self.Table.GetNumberCols()):
+            print self.Table.GetColLabelValue(col)
+            self.SetColLabelValue(col, self.Table.GetColLabelValue(col))
         self.Refresh()
         
     def on_rightclick_grid(self, evt):
