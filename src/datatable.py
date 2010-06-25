@@ -477,7 +477,7 @@ class DataGrid(wx.Frame):
         except: pass
         r = csv.reader(open(csvfile))
         labels = r.next()
-        dtable = DBConnect.get_data_table_from_csv_reader(r)
+        dtable = dbconnect.get_data_table_from_csv_reader(r)
         coltypes = db.InferColTypesFromData(dtable, len(labels))
         for i in range(len(coltypes)):
             if coltypes[i] == 'INT': coltypes[i] = int
