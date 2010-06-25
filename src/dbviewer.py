@@ -1,16 +1,15 @@
-#
-# Does not yet work for object table
-#
-
+import wx
+import wx.grid as  gridlib
 import logging
-import  wx
 import numpy as np
+from cpatool import CPATool
 from properties import Properties
-from dbconnect import DBConnect
+import dbconnect
+import imagetools
 from UserDict import DictMixin
 
 p = Properties.getInstance()
-db = DBConnect.getInstance()
+db = dbconnect.DBConnect.getInstance()
 
 class odict(DictMixin):
     ''' Ordered dictionary '''
@@ -40,100 +39,109 @@ class odict(DictMixin):
         return copyDict
 
 
-class VirtualList(wx.ListCtrl):
-    def __init__(self, parent, table=None):
-        wx.ListCtrl.__init__(self, parent, -1, 
-            style=wx.LC_REPORT|wx.LC_VIRTUAL|wx.LC_HRULES|wx.LC_VRULES)
-
-        if table is None:
-            table = p.image_table
-        self.set_table(table)
-        
-    def set_table(self, table):
-        print 'set table'
+class HugeTable(gridlib.PyGridTableBase):
+    def __init__(self, table):
+        gridlib.PyGridTableBase.__init__(self)
         self.table = table
         self.cache = odict()
         self.cols = db.GetColumnNames(self.table)
-        self.Freeze()
-        self.ClearAll()
-        n_rows = db.execute('SELECT COUNT(*) FROM %s'%(self.table))[0][0]
-        self.SetItemCount(n_rows)
-        for i, col in enumerate(self.cols):
-            self.InsertColumn(i, col)
-            self.SetColumnWidth(i, 100)
-        self.Thaw()
-        self.Refresh()
+        self.order_by_col = self.cols[0]
+        self.filter = '' #'WHERE Image_Intensity_Actin_Total_intensity > 17000'
+        
+    def set_sort_col(self, col_index):
+        if self.order_by_col != self.cols[col_index]:
+            self.order_by_col = self.cols[col_index]
+        else:
+            self.order_by_col = self.cols[col_index] + ' DESC'
+        self.cache.clear()
+        
+    def get_image_key_at_row(self, row):
+        return db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,1'
+                          %(dbconnect.UniqueImageClause(), self.table, self.filter, self.order_by_col, row))[0]
+        
+    def GetNumberRows(self):
+        return db.execute('SELECT COUNT(*) FROM %s %s'%(self.table, self.filter))[0][0]
+        
+    def GetNumberCols(self):
+        return len(self.cols)
+    
+    def GetColLabelValue(self, col):
+        return self.cols[col]
 
-    #---------------------------------------------------
-    # These methods are callbacks for implementing the
-    # "virtualness" of the list...  Normally you would
-    # determine the text, attributes and/or image based
-    # on values from some external data source, but for
-    # this demo we'll just calculate them
-    def OnGetItemText(self, row, col):
+    def GetValue(self, row, col):
         if not row in self.cache:
             print "query", row
-            lo = row - 10
-            hi = row + 10
+            lo = max(row - 25, 0)
+            hi = row + 25
             cols = ','.join(self.cols)
-            where = '%s BETWEEN %s AND %s'%(p.image_id, lo, hi)
-            vals = db.execute('SELECT %s, %s FROM %s WHERE %s'%(p.image_id, cols, self.table, where))
-            self.cache.update((v[0] - 1, v[1:]) for v in vals)
-            # if cache exceeds 10000 entries, clip to last 5000
-            if len(self.cache) > 10000:
-                for key in self.cache.keys()[:-5000]:
+            vals = db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,%s'%
+                              (cols, self.table, self.filter, self.order_by_col, lo, hi-lo), 
+                              silent=True)
+            self.cache.update((lo+i, v) for i,v in enumerate(vals))
+            # if cache exceeds 1000 entries, clip to last 500
+            if len(self.cache) > 5000:
+                for key in self.cache.keys()[:-500]:
                     del self.cache[key]
         return self.cache[row][col]
 
+    def SetValue(self, row, col, value):
+        print 'SetValue(%d, %d, "%s") ignored.\n' % (row, col, value)
 
 
-class VirtualListPanel(wx.Panel):
-    def __init__(self, parent):
-        wx.Panel.__init__(self, parent, -1)
+class HugeTableGrid(gridlib.Grid):
+    def __init__(self, parent, table):
+        gridlib.Grid.__init__(self, parent, -1)
+        self.SetRowLabelSize(0)
+        self.set_source_table(table)
+##        self.SetReadOnly(5, 5, True)
+        self.Bind(gridlib.EVT_GRID_CELL_RIGHT_CLICK, self.on_rightclick_grid)
+        self.Bind(gridlib.EVT_GRID_CMD_LABEL_LEFT_CLICK, self.on_leftclick_label)
+        self.Bind(gridlib.EVT_GRID_CELL_LEFT_DCLICK, self.on_dclick_grid)
     
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        self.vlist = VirtualList(self)
-        sizer.Add(self.vlist, 1, wx.EXPAND)
+    def set_source_table(self, table):
+        table_base = HugeTable(table)
+        # The second parameter means that the grid is to take ownership of the
+        # table and will destroy it when done. Otherwise you would need to keep
+        # a reference to it and call it's Destroy method later.
+        self.SetTable(table_base, True)
         
-        self.SetSizer(sizer)
-        self.SetAutoLayout(True)
+    def on_leftclick_label(self, evt):
+        self.Table.set_sort_col(evt.Col)
+        self.Refresh()
+        
+    def on_rightclick_grid(self, evt):
+        print self.GetSelectedRows()
+        
+    def on_dclick_grid(self, evt):
+        imagetools.ShowImage(self.Table.get_image_key_at_row(evt.Row),
+                             p.image_channel_colors)
+
+
+class DataTable(wx.Frame, CPATool):
+    def __init__(self, parent, **kwargs):
+        wx.Frame.__init__(self, parent, -1, size=(640,480), **kwargs)
+        CPATool.__init__(self)
+        self.SetName(self.tool_name)
+        
+        grid = HugeTableGrid(self, p.image_table)
+        self.SetMenuBar(wx.MenuBar())
+        tableMenu = wx.Menu()
+        imtblMenuItem = tableMenu.Append(-1, p.image_table)
+        obtblMenuItem = tableMenu.Append(-1, p.object_table)
+        self.GetMenuBar().Append(tableMenu, 'Tables')
+        def setimtable(evt):
+            grid.set_source_table(p.image_table)
+        def setobtable(evt):
+            grid.set_source_table(p.object_table)
+        self.Bind(wx.EVT_MENU, setimtable, imtblMenuItem)
+        self.Bind(wx.EVT_MENU, setobtable, obtblMenuItem)
         
 
-
-def LoadProperties():
-    import os
-    dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        p.LoadFile(filename)
-    else:
-        print 'Scatterplot requires a properties file.  Exiting.'
-        sys.exit()
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
+    import sys
     app = wx.PySimpleApp()
-    
     logging.basicConfig(level=logging.DEBUG,)
-    
-    LoadProperties()
-
-    frame = wx.Frame(None)
-    vlp = VirtualListPanel(frame)
-    frame.Show()
-
-    # Add menu items for changing the table
-    frame.SetMenuBar(wx.MenuBar())
-    tableMenu = wx.Menu()
-    imtblMenuItem = tableMenu.Append(-1, p.image_table)
-    obtblMenuItem = tableMenu.Append(-1, p.object_table)
-    frame.GetMenuBar().Append(tableMenu, 'Tables')
-    def setimtable(evt):
-        vlp.vlist.set_table(p.image_table)
-    def setobtable(evt):
-        vlp.vlist.set_table(p.object_table)
-    frame.Bind(wx.EVT_MENU, setimtable, imtblMenuItem)
-    frame.Bind(wx.EVT_MENU, setobtable, obtblMenuItem)
-    
+    if p.show_load_dialog():
+        frame = DataTable(None)
+        frame.Show(True)
     app.MainLoop()
