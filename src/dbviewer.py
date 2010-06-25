@@ -66,9 +66,6 @@ class HugeTable(gridlib.PyGridTableBase):
                     self.order_direction = 'ASC'
             else:
                 self.order_by = [col]
-                
-        print self.order_by
-        print self.order_direction
         self.cache.clear()
         
     def get_image_key_at_row(self, row):
@@ -116,8 +113,6 @@ class HugeTableGrid(gridlib.Grid):
         gridlib.Grid.__init__(self, parent, -1)
         self.SetRowLabelSize(0)
         self.set_source_table(table)
-##        self.SetReadOnly(5, 5, True)
-        self.Bind(gridlib.EVT_GRID_CELL_RIGHT_CLICK, self.on_rightclick_grid)
         self.Bind(gridlib.EVT_GRID_CMD_LABEL_LEFT_CLICK, self.on_leftclick_label)
         self.Bind(gridlib.EVT_GRID_CELL_LEFT_DCLICK, self.on_dclick_grid)
     
@@ -134,16 +129,13 @@ class HugeTableGrid(gridlib.Grid):
         else:
             self.Table.set_sort_col(evt.Col)
         for col in range(self.Table.GetNumberCols()):
-            print self.Table.GetColLabelValue(col)
             self.SetColLabelValue(col, self.Table.GetColLabelValue(col))
         self.Refresh()
         
-    def on_rightclick_grid(self, evt):
-        print self.GetSelectedRows()
-        
     def on_dclick_grid(self, evt):
         imagetools.ShowImage(self.Table.get_image_key_at_row(evt.Row),
-                             p.image_channel_colors)
+                             p.image_channel_colors,
+                             parent=self.Parent)
 
 
 class DataTable(wx.Frame, CPATool):
