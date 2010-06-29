@@ -1,5 +1,5 @@
 from datamodel import *
-from dbconnect import DBConnect
+import dbconnect
 from properties import Properties
 import imagetools
 import wx
@@ -50,6 +50,14 @@ class PlateMapPanel(wx.Panel):
         '''
 
         wx.Panel.__init__(self, parent, **kwargs)
+        
+        self.chMap = p.image_channel_colors
+
+        self.plate = None
+        self.tip = wx.ToolTip('')
+        self.tip.Enable(False)
+        self.SetToolTip(self.tip)
+        
         self.hideLabels = False
         self.selection = set([])
         self.SetColorMap(colormap)
@@ -79,9 +87,12 @@ class PlateMapPanel(wx.Panel):
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.repaint = False
-        self.Bind(wx.EVT_SIZE, self._onsize)
-        self.Bind(wx.EVT_IDLE, self._onidle)
-        self.Bind(wx.EVT_LEFT_DOWN, self._onclick)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_IDLE, self.OnIdle)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLClick)
+        self.Bind(wx.EVT_MOTION, self.OnMotion)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
+        self.Bind(wx.EVT_RIGHT_UP, self.OnRClick)
 
     def SetData(self, data, shape=None, data_range=None, clip_interval=None, clip_mode='rescale'):
         '''
@@ -240,16 +251,20 @@ class PlateMapPanel(wx.Panel):
         wtext, htext = font.GetPixelSize()[0]*2, font.GetPixelSize()[1]
         dc.SetFont(font)
 
-        db = DBConnect.getInstance()
+        db = dbconnect.DBConnect.getInstance()
         bmp = {}
         imgs = {}
         if self.well_disp == IMAGE:
-            wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, p.image_id, p.image_table, p.well_id))
+            wells_and_images = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" GROUP BY %s'%(
+                p.well_id, p.image_id, p.image_table, p.plate_id, self.plate, 
+                p.well_id))
             for well, im in wells_and_images:
                 imgs[well] = (im, )
         elif self.well_disp == THUMBNAIL:
             assert p.image_thumbnail_cols, 'No thumbnail columns are defined in the database. Platemap cannot be drawn.'
-            wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, p.well_id))
+            wells_and_images = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" GROUP BY %s'%(
+                p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, 
+                p.plate_id, self.plate, p.well_id))
             for wims in wells_and_images:
                 ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
                 ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
@@ -328,15 +343,22 @@ class PlateMapPanel(wx.Panel):
         dc.EndDrawing()
         return dc
 
-    def _onsize(self, evt):
+    def OnSize(self, evt):
         self.repaint = True
 
-    def _onidle(self, evt):
+    def OnIdle(self, evt):
         if self.repaint:
             self.Refresh()
             self.repaint = False
 
-    def _onclick(self, evt):
+    def OnLClick(self, evt):
+        well = self.GetWellAtCoord(evt.X, evt.Y)
+        if well is not None:
+            if evt.ShiftDown():
+                self.ToggleSelected(well)
+            else:
+                self.SelectWell(well)
+                
         if not p.image_thumbnail_cols:
             evt.Skip()
             return
@@ -379,8 +401,53 @@ class PlateMapPanel(wx.Panel):
         self.tipwin.SetSize((bmp.Width+10, bmp.Height+10))
         self.tipwin.Show()
 
+    def SetPlate(self, plate):
+        self.plate = plate
 
+    def OnMotion(self, evt):
+        well = self.GetWellAtCoord(evt.X, evt.Y)
+        wellLabel = self.GetWellLabelAtCoord(evt.X, evt.Y)
+        if well is not None and wellLabel is not None:
+            self.tip.SetTip('%s: %s'%(wellLabel,self.data[well]))
+            self.tip.Enable(True)
+        else:
+            self.tip.Enable(False)
+            
+    def OnDClick(self, evt):
+        if self.plate is not None:
+            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
+            imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
+                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate), silent=False)
+            for imKey in imKeys:
+                try:
+                    imagetools.ShowImage(imKey, self.chMap, parent=self)
+                except Exception, e:
+                    logging.error('Could not open image: %s'%(e))
 
+    def OnRClick(self, evt):
+        if self.plate is not None:
+            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
+            imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
+                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
+            self.ShowPopupMenu(imKeys, (evt.X,evt.Y))
+
+    def ShowPopupMenu(self, items, pos):
+        self.popupItemById = {}
+        popupMenu = wx.Menu()
+        popupMenu.SetTitle('Show Image')
+        for item in items:
+            id = wx.NewId()
+            self.popupItemById[id] = item
+            popupMenu.Append(id,str(item))
+        popupMenu.Bind(wx.EVT_MENU, self.OnSelectFromPopupMenu)
+        self.PopupMenu(popupMenu, pos)
+
+    def OnSelectFromPopupMenu(self, evt):
+        """Handles selections from the popup menu."""
+        imKey = self.popupItemById[evt.GetId()]
+        imagetools.ShowImage(imKey, self.chMap, parent=self)
+
+        
 if __name__ == "__main__":
     app = wx.PySimpleApp()
 

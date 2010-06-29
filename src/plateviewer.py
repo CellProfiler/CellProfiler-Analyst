@@ -25,83 +25,6 @@ P5600 = (40, 140)
 
 required_fields = ['plate_type', 'plate_id', 'well_id']
 
-class AwesomePMP(pmp.PlateMapPanel):
-    '''
-    PlateMapPanel that does selection and tooltips for data.
-    '''
-    def __init__(self, parent, data, shape=None, well_keys=None,
-                 colormap='jet', well_disp=pmp.ROUNDED, row_label_format=None, **kwargs):
-        pmp.PlateMapPanel.__init__(self, parent, data, shape, well_keys, 
-                               colormap, well_disp, row_label_format,  **kwargs)
-
-        self.chMap = p.image_channel_colors
-
-        self.plate = None
-        self.tip = wx.ToolTip('')
-        self.tip.Enable(False)
-        self.SetToolTip(self.tip)
-
-        self.Bind(wx.EVT_LEFT_UP, self.OnClick)
-        self.Bind(wx.EVT_MOTION, self.OnMotion)
-        self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
-        self.Bind(wx.EVT_RIGHT_UP, self.OnRClick)
-
-    def SetPlate(self, plate):
-        self.plate = plate
-
-    def OnMotion(self, evt):
-        well = self.GetWellAtCoord(evt.X, evt.Y)
-        wellLabel = self.GetWellLabelAtCoord(evt.X, evt.Y)
-        if well is not None and wellLabel is not None:
-            self.tip.SetTip('%s: %s'%(wellLabel,self.data[well]))
-            self.tip.Enable(True)
-        else:
-            self.tip.Enable(False)
-
-    def OnClick(self, evt):
-        well = self.GetWellAtCoord(evt.X, evt.Y)
-        if well is not None:
-            if evt.ShiftDown():
-                self.ToggleSelected(well)
-            else:
-                self.SelectWell(well)
-
-    def OnDClick(self, evt):
-        if self.plate is not None:
-            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
-            imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
-                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate), silent=False)
-            for imKey in imKeys:
-                try:
-                    imagetools.ShowImage(imKey, self.chMap, parent=self)
-                except Exception, e:
-                    logging.error('Could not open image: %s'%(e))
-
-    def OnRClick(self, evt):
-        if self.plate is not None:
-            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
-            imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
-                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
-            self.ShowPopupMenu(imKeys, (evt.X,evt.Y))
-
-    def ShowPopupMenu(self, items, pos):
-        self.popupItemById = {}
-        popupMenu = wx.Menu()
-        popupMenu.SetTitle('Show Image')
-        for item in items:
-            id = wx.NewId()
-            self.popupItemById[id] = item
-            popupMenu.Append(id,str(item))
-        popupMenu.Bind(wx.EVT_MENU, self.OnSelectFromPopupMenu)
-        self.PopupMenu(popupMenu, pos)
-
-    def OnSelectFromPopupMenu(self, evt):
-        """Handles selections from the popup menu."""
-        imKey = self.popupItemById[evt.GetId()]
-        imagetools.ShowImage(imKey, self.chMap, parent=self)
-
-
-
 ID_EXIT = wx.NewId()
 
 class PlateViewer(wx.Frame, CPATool):
@@ -271,7 +194,7 @@ class PlateViewer(wx.Frame, CPATool):
             well_keys = None
 
 
-        self.plateMaps += [AwesomePMP(self, data, shape, well_keys=well_keys,
+        self.plateMaps += [pmp.PlateMapPanel(self, data, shape, well_keys=well_keys,
                                       colormap=self.colorMapsChoice.GetStringSelection(),
                                       well_disp=self.wellDisplayChoice.GetStringSelection())]
 
@@ -648,7 +571,7 @@ def get_non_blob_types_from_table(table):
 if __name__ == "__main__":
     app = wx.PySimpleApp()
 
-    logging.basicConfig()
+    logging.basicConfig(level=logging.DEBUG)
 
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
