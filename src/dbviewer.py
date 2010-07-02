@@ -1,5 +1,6 @@
 import wx
 import wx.grid as  gridlib
+import wx.lib.intctrl as intctrl
 import logging
 import numpy as np
 from cpatool import CPATool
@@ -137,13 +138,30 @@ class HugeTableGrid(gridlib.Grid):
                              p.image_channel_colors,
                              parent=self.Parent)
 
+BTN_PREV = wx.NewId()
+BTN_NEXT = wx.NewId()
 
 class DataTable(wx.Frame, CPATool):
     def __init__(self, parent, **kwargs):
         wx.Frame.__init__(self, parent, -1, size=(640,480), **kwargs)
         CPATool.__init__(self)
-        self.SetName(self.tool_name)
+
+        tb = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER | wx.TB_FLAT)
+        tb.AddControl(wx.Button(tb, BTN_PREV, '<', size=(30,-1)))
+        self.Bind(wx.EVT_BUTTON, self.OnPrev, id=BTN_PREV)
         
+        self.row_min = intctrl.IntCtrl(tb, -1, 1, size=(60,-1), min=1, max=999)
+        tb.AddControl(self.row_min)
+        self.row_min.Bind(wx.EVT_TEXT, self.OnEditMin)
+
+        self.row_max = intctrl.IntCtrl(tb, -1, 1000, size=(60,-1), min=2, max=100000)
+        tb.AddControl(self.row_max)
+        self.row_max.Bind(wx.EVT_TEXT, self.OnEditMax)
+        
+        tb.AddControl(wx.Button(tb, BTN_NEXT, '>', size=(30,-1)))
+        self.Bind(wx.EVT_BUTTON, self.OnNext, id=BTN_NEXT)
+        
+        tb.Realize()
         grid = HugeTableGrid(self, p.image_table)
         self.SetMenuBar(wx.MenuBar())
         tableMenu = wx.Menu()
@@ -157,6 +175,23 @@ class DataTable(wx.Frame, CPATool):
         self.Bind(wx.EVT_MENU, setimtable, imtblMenuItem)
         self.Bind(wx.EVT_MENU, setobtable, obtblMenuItem)
         
+    def OnPrev(self, evt=None):
+        diff = int(self.row_max.GetValue()) - int(self.row_min.GetValue())
+        print diff
+
+    def OnNext(self, evt=None):
+        diff = int(self.row_max.GetValue()) - int(self.row_min.GetValue())
+##        self.row_max.SetValue(...)
+        print diff
+
+    def OnEditMin(self, evt=None):
+        diff = int(self.row_max.GetValue()) - int(self.row_min.GetValue())
+        print diff
+
+    def OnEditMax(self, evt=None):
+        diff = int(self.row_max.GetValue()) - int(self.row_min.GetValue())
+        print diff
+
 
 if __name__ == '__main__':
     import sys
