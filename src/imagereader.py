@@ -21,7 +21,7 @@ class ImageReader(object):
 
     def __init__(self):
         if p.__dict__ != {}:
-            if p.image_url_prepend and p.image_url_prepend.startswith('http://'):
+            if p.image_url_prepend and p.image_url_prepend.lower().startswith('http://'):
                 self.protocol = 'http'
             else:
                 self.protocol = 'local'
@@ -103,7 +103,7 @@ class ImageReader(object):
         # Open the file
         #
         if self.protocol.upper() == 'HTTP':
-            fullurl = p.image_url_prepend+urllib2.quote(url)
+            fullurl = 'http://' + urllib2.quote(p.image_url_prepend[7:]) + urllib2.quote(url)
             logr.info('Opening image: %s'%fullurl)
             try:
                 stream = urllib2.urlopen(fullurl)
@@ -238,11 +238,13 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
 
     p = Properties.getInstance()
-    p._filename = '../../CPAnalyst_test_data/test_images/'
+    p.image_url_prepend = 'http://www.broadinstitute.org/~afraser/space folder/'
+##    p._filename = '../../CPAnalyst_test_data/test_images/'
     p.image_channel_colors = ['red','green','blue','none','none','none']
     p.object_name = ['cell', 'cells']
     p.image_names = ['', '', '']
     p.image_id = 'ImageNumber'
+    p.channels_per_image = [3]
 
     dm = DataModel.getInstance()
     db = DBConnect.getInstance()
@@ -271,10 +273,11 @@ if __name__ == "__main__":
 ##        print im.shape
 ##    ImageViewer(images).Show()
 
-    p.channels_per_image = ['1','1','1']
-    fds = ['01_POS002_D.TIF',
-           '01_POS002_F.TIF',
-           '01_POS002_R.TIF']
+##    p.channels_per_image = ['1','1','1']
+##    fds = ['01_POS002_D.TIF',
+##           '01_POS002_F.TIF',
+##           '01_POS002_R.TIF']
+    fds = ['exploding heads2.jpg']
     images = ir.ReadImages(fds)
     for im in images:
         print im.shape
