@@ -241,7 +241,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
         self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
         self.Bind(wx.EVT_BUTTON, self.OnFindRules, self.findRulesBtn)
-        self.Bind(wx.EVT_BUTTON, self.OnScoreAll, self.scoreAllBtn)
+        self.Bind(wx.EVT_BUTTON, self.ScoreAll, self.scoreAllBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfRules)
@@ -928,12 +928,8 @@ class Classifier(wx.Frame):
                 self.PostMessage('%s of %s %s classified as %s in image %s'%(len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
         
         return classHits
-         
-        
-    def OnScoreAll(self, evt):
-        self.ScoreAll()
-    
-    def ScoreAll(self):
+
+    def ScoreAll(self, evt=None):
         '''
         Calculates object counts for each class and enrichment values,
         then builds a table and displays it in a DataGrid.
@@ -949,6 +945,7 @@ class Classifier(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:            
             group = dlg.group
             filter = dlg.filter
+            wants_enrichments = dlg.wants_enrichments
             dlg.Destroy()
         else:
             dlg.Destroy()
@@ -1027,17 +1024,17 @@ class Classifier(wx.Frame):
         self.PostMessage('time to group per-image counts: %.3fs'%(t3-t2))
                 
         # FIT THE BETA BINOMIAL
-        self.PostMessage('Fitting beta binomial distribution to data...')
-        counts = groupedKeysAndCounts[:,-nClasses:]
-        alpha, converged = polyafit.fit_betabinom_minka_alternating(counts)
-        logging.info('   alpha = %s   converged = %s'%( alpha, converged))
-        logging.info('   alpha/Sum(alpha) = %s'%([a/sum(alpha) for a in alpha]))
-        
-        t4 = time()
-        self.PostMessage('time to fit beta binomial: %.3fs'%(t4-t3))
-        
+        if wants_enrichments:
+            self.PostMessage('Fitting beta binomial distribution to data...')
+            counts = groupedKeysAndCounts[:,-nClasses:]
+            alpha, converged = polyafit.fit_betabinom_minka_alternating(counts)
+            logging.info('   alpha = %s   converged = %s'%( alpha, converged))
+            logging.info('   alpha/Sum(alpha) = %s'%([a/sum(alpha) for a in alpha]))
+            t4 = time()
+            logging.info('time to fit beta binomial: %.3fs'%(t4-t3))
+            self.PostMessage('Computing enrichment scores for each group...')
+            
         # CONSTRUCT ARRAY OF TABLE DATA
-        self.PostMessage('Computing enrichment scores for each group...')
         tableData = []
         fraction = 0.0
         for i, row in enumerate(groupedKeysAndCounts):
@@ -1059,24 +1056,27 @@ class Classifier(wx.Frame):
                 countsRow = [int(v) for v in row[-nClasses:]]
                 tableRow += [sum(countsRow)]
                 tableRow += countsRow
-            # Append the scores:
-            #   compute enrichment probabilities of each class for this image OR group
-            scores = np.array( dirichletintegrate.score(alpha, np.array(countsRow)) )
-            #   clamp to [0,1] to 
-            scores[scores>1.] = 1.
-            scores[scores<0.] = 0.
-            tableRow += scores.tolist()
-            # Append the logit scores:
-            # Special case: only calculate logit of "positives" for 2-classes
-            if two_classes:
-                tableRow += [np.log10(scores[0])-(np.log10(1-scores[0]))]   # compute logit of each probability
-            else:
-                tableRow += [np.log10(score)-(np.log10(1-score)) for score in scores]   # compute logit of each probability
+            
+            if wants_enrichments:
+                # Append the scores:
+                #   compute enrichment probabilities of each class for this image OR group
+                scores = np.array( dirichletintegrate.score(alpha, np.array(countsRow)) )
+                #   clamp to [0,1] to 
+                scores[scores>1.] = 1.
+                scores[scores<0.] = 0.
+                tableRow += scores.tolist()
+                # Append the logit scores:
+                # Special case: only calculate logit of "positives" for 2-classes
+                if two_classes:
+                    tableRow += [np.log10(scores[0])-(np.log10(1-scores[0]))]   # compute logit of each probability
+                else:
+                    tableRow += [np.log10(score)-(np.log10(1-score)) for score in scores]   # compute logit of each probability
             tableData.append(tableRow)
         tableData = np.array(tableData, dtype=object)
         
-        t5 = time()
-        self.PostMessage('time to compute enrichment scores: %.3fs'%(t5-t4))
+        if wants_enrichments:
+            t5 = time()
+            self.PostMessage('time to compute enrichment scores: %.3fs'%(t5-t4))
         
         # CREATE COLUMN LABELS LIST
         # if grouping isn't per-image, then get the group key column names.
@@ -1099,15 +1099,16 @@ class Classifier(wx.Frame):
             labels += ['Total %s Area'%(p.object_name[0].capitalize())]
             for i in xrange(nClasses):
                 labels += ['%s %s Area'%(self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
-            labels += ['p(Enriched)\n'+self.classBins[i].label]
-        if two_classes:
-            labels += ['Enriched Score\n'+self.classBins[0].label]
-        else:
+        if wants_enrichments:
             for i in xrange(nClasses):
-                labels += ['Enriched Score\n'+self.classBins[i].label]
+                labels += ['p(Enriched)\n'+self.classBins[i].label]
+            if two_classes:
+                labels += ['Enriched Score\n'+self.classBins[0].label]
+            else:
+                for i in xrange(nClasses):
+                    labels += ['Enriched Score\n'+self.classBins[i].label]
 
-        title = "Enrichments grouped by %s"%(group,)
+        title = "Hit table (grouped by %s)"%(group,)
         if filter:
             title += " filtered by %s"%(filter,)
         title += ' (%s)'%(os.path.split(p._filename)[1])
