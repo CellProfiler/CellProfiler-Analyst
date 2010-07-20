@@ -17,6 +17,7 @@ import wx
 import sys
 import logging
 import threading
+from tableviewer import TableViewer
 from plateviewer import PlateViewer
 from imageviewer import ImageViewer
 from scatter import Scatter
@@ -28,7 +29,7 @@ from cpatool import CPATool
 
 ID_CLASSIFIER = wx.NewId()
 ID_PLATE_VIEWER = wx.NewId()
-ID_DATA_TABLE = wx.NewId()
+ID_TABLE_VIEWER = wx.NewId()
 ID_IMAGE_VIEWER = wx.NewId()
 ID_SCATTER = wx.NewId()
 ID_HISTOGRAM = wx.NewId()
@@ -38,7 +39,7 @@ PLOTS = {'scatter'     : Scatter,
          'histogram'   : Histogram,
          'density'     : Density, 
          'plateviewer' : PlateViewer,
-         'datatable'   : DataGrid, 
+         'datatable'   : TableViewer, 
          'classifier'  : Classifier}
 
 class FuncLog(logging.Handler):
@@ -78,7 +79,7 @@ class MainGUI(wx.Frame):
         tb.SetSize((-1,132))
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
         tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
-        tb.AddLabelTool(ID_DATA_TABLE, 'DataTable', icons.data_grid.ConvertToBitmap(), shortHelp='Data Table', longHelp='Launch DataTable')
+        tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
         tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
         tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
@@ -101,7 +102,7 @@ class MainGUI(wx.Frame):
         toolsMenu = wx.Menu()
         classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
         plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
-        dataTableMenuItem   = toolsMenu.Append(ID_DATA_TABLE, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
+        dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
         imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
         scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
@@ -151,7 +152,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
-        self.Bind(wx.EVT_TOOL, self.launch_data_table, id=ID_DATA_TABLE)
+        self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_image_viewer, id=ID_IMAGE_VIEWER)        
         self.Bind(wx.EVT_TOOL, self.launch_scatter_plot, id=ID_SCATTER)
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
@@ -174,8 +175,9 @@ class MainGUI(wx.Frame):
         self.pv = PlateViewer(parent=self)
         self.pv.Show(True)
     
-    def launch_data_table(self, evt=None):
-        table = DataGrid(parent=self)
+    def launch_table_viewer(self, evt=None):
+        table = TableViewer(parent=self)
+        table.new_blank_table(100,10)
         table.Show(True)
         
     def launch_scatter_plot(self, evt=None):
@@ -286,6 +288,12 @@ class CPAnalyst(wx.App):
         
 
     def OnInit(self):
+        '''Initialize CPA
+        '''
+        
+        '''List of tables created by the user during this session'''
+        self.user_tables = []
+        
         # splashscreen
         splashimage = icons.cpa_splash.ConvertToBitmap()
         # If the splash image has alpha, it shows up transparently on

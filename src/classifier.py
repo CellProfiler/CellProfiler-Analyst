@@ -9,6 +9,7 @@ except: pass
 # ---
 
 from datatable import DataGrid
+import tableviewer
 from datamodel import DataModel
 from imagecontrolpanel import ImageControlPanel
 from plateviewer import PlateViewer
@@ -964,8 +965,10 @@ class Classifier(wx.Frame):
                 overwrite_class_table = True
                 # If p.class_table is already in the db, we need to confirm whether or not to overwrite it.
                 if db.table_exists(p.class_table):
-                    dlg = wx.MessageDialog(self, 'The database table "%s" already exists. Overwrite this table with new per-object class data?'%(p.class_table),
-                                   'Overwrite %s?'%(p.class_table), wx.YES_NO|wx.ICON_QUESTION)
+                    dlg = wx.MessageDialog(self, 
+                            'The database table "%s" already exists. Overwrite '
+                            'this table with new per-object class data?'%(p.class_table),
+                            'Overwrite %s?'%(p.class_table), wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
                     response = dlg.ShowModal()
                     if response == wx.ID_YES:
                         pass
@@ -1018,7 +1021,6 @@ class Classifier(wx.Frame):
                 platesAndWells = {}
                 for row in pw:
                     platesAndWells[tuple(row[:nKeyCols])] = list(row[nKeyCols:])
-            
         
         t3 = time()
         self.PostMessage('time to group per-image counts: %.3fs'%(t3-t2))
@@ -1112,11 +1114,9 @@ class Classifier(wx.Frame):
         if filter:
             title += " filtered by %s"%(filter,)
         title += ' (%s)'%(os.path.split(p._filename)[1])
-        
-        grid = DataGrid(tableData, labels, grouping=group,
-                        key_col_indices=key_col_indices,
-                        chMap=self.chMap[:], parent=self,
-                        title=title)
+                
+        grid = tableviewer.TableViewer(self, title=title)
+        grid.table_from_array(tableData, labels, group, key_col_indices)
         grid.Show()
         
         self.SetStatusText('')
@@ -1377,7 +1377,6 @@ if __name__ == "__main__":
         if not p.show_load_dialog():
             logging.error('Classifier requires a properties file.  Exiting.')
             wx.GetApp().Exit()
-            raise Exception('Classifier requires a properties file.  Exiting.')
         
     classifier = Classifier()
     classifier.Show(True)
