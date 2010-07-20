@@ -52,8 +52,7 @@ class HugeTable(wx.grid.PyGridTableBase):
         
         assert len(col_labels) == data.shape[1], "DataGrid.__init__: Number of column labels does not match the number of columns in data."
         self.sortdir      =  1    # sort direction (1=descending, -1=descending)
-        self.sortcol      =  -1   # column index being sorted
-        self.sortcols     =  []    # column indices being sorted (in order)
+        self.sortcols     =  []   # column indices being sorted (in order)
         self.grid         =  grid
         self.data         =  data
         self.ordered_data =  self.data
@@ -616,7 +615,7 @@ if __name__ == "__main__":
         # ---- testing ----
         
 #        p.LoadFile('/Users/afraser/CPA/properties/nirht_test.properties')
-        p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
+        p.LoadFile('/Users/afraser/cpa_example/example.properties')
         
         print 'TESTING DATA GRID' 
         classes = ['a', 'b']
