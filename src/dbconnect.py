@@ -793,7 +793,7 @@ class DBConnect(Singleton):
             elif p.well_id in cols and p.plate_id in cols:
                 self.link_cols[table] = (p.well_id, p.plate_id)
             else:
-                raise Exception, 'Table %s could not be linked to %s'%(table, p.image_table)
+                return None
         return self.link_cols[table]       
     
     def CreateSQLiteDB(self):
@@ -989,6 +989,7 @@ class DBConnect(Singleton):
             res = self.execute("SELECT table_name FROM information_schema.tables WHERE table_name='%s' AND table_schema='%s'"%(name, p.db_name))
         else:
             res = self.execute("SELECT name FROM sqlite_master WHERE type='table' and name='%s'"%(name))
+            res += self.execute("SELECT name FROM sqlite_temp_master WHERE type='table' and name='%s'"%(name))            
         return len(res) > 0
 
     def CreateTempTableFromCSV(self, filename, tablename):
@@ -1015,7 +1016,7 @@ class DBConnect(Singleton):
         typed_table = np.array(typed_table, dtype=object).T
         return self.CreateTempTableFromData(typed_table, colnames, tablename)
     
-    def CreateTempTableFromData(self, dtable, colnames, tablename):
+    def CreateTempTableFromData(self, dtable, colnames, tablename, temporary=True):
         '''
         Creates and populates a temporary table in the database.
         Column names are taken from the first row.
@@ -1026,12 +1027,15 @@ class DBConnect(Singleton):
         colnames = clean_up_colnames(colnames)
         # Infer column types
         coltypes = self.InferColTypesFromData(dtable, len(colnames))
-        coldefs = ', '.join([lbl+' '+coltypes[i] for i, lbl in enumerate(colnames)])
-        self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
+        coldefs = ', '.join(['`%s` %s'%(lbl, coltypes[i]) for i, lbl in enumerate(colnames)])
+        if not temporary:
+            self.execute('CREATE TABLE %s (%s)'%(tablename, coldefs))
+        else:
+            self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
         for key in list(well_key_columns()) + list(image_key_columns()):
             if key in colnames:
                 self.execute('CREATE INDEX %s ON %s (%s)'%('%s_%s'%(tablename,key), tablename, key))
-        logging.info('Populating temporary table %s...'%(tablename))
+        logging.info('Populating %stable %s...'%((temporary and 'temporary ' or ''), tablename))
         for row in dtable:
             vals = []
             for i, val in enumerate(row):
