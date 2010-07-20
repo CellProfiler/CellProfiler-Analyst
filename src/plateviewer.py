@@ -67,12 +67,13 @@ class PlateViewer(wx.Frame, CPATool):
         src_choices = [p.image_table]
         if p.object_table:
             src_choices += [p.object_table]
-        try:
-            db.execute('SELECT * FROM __Classifier_output LIMIT 1')
-            src_choices += ['__Classifier_output']
-        except:
-            pass
         self.sourceChoice = ComboBox(self, choices=src_choices, style=wx.CB_READONLY)
+        try:
+            for table in wx.GetApp().user_tables:
+                self.AddTableChoice(table)
+        except AttributeError:
+            # running outside the main UI
+            wx.GetApp().user_tables = []
         self.sourceChoice.Select(0)
         dataSourceSizer.Add(self.sourceChoice)
 
@@ -164,6 +165,11 @@ class PlateViewer(wx.Frame, CPATool):
             self.AddTableChoice(countsTable)
 
     def AddTableChoice(self, table):
+        if table in self.sourceChoice.Strings:
+            return
+        if db.GetLinkingColumnsForTable(table) is None:
+            logging.error('Could not add table "%s" to PlateViewer since it could not be linked to the per_image table.'%(table))
+            return
         sel = self.sourceChoice.GetSelection()
         self.sourceChoice.SetItems(self.sourceChoice.GetItems()+[table])
         self.sourceChoice.Select(sel)
@@ -213,9 +219,11 @@ class PlateViewer(wx.Frame, CPATool):
         table       = self.sourceChoice.GetStringSelection()
         aggMethod   = self.aggregationMethodsChoice.GetStringSelection()
         table = self.sourceChoice.GetStringSelection()
-        numeric_measurements = get_numeric_columns_from_table(table)
-        categorical = measurement not in numeric_measurements
+        categorical = measurement not in get_numeric_columns_from_table(table)
         self.colorBar.ClearNotifyWindows()
+        
+        assert (db.GetLinkingColumnsForTable(table) is not None, 
+            'Table "%s" could not be linked to the per_image table.'%(table))
 
         if not categorical:
             if aggMethod == 'mean':
@@ -243,6 +251,7 @@ class PlateViewer(wx.Frame, CPATool):
                 # fetch and aggregate
                 # XXX: SHOULD we allow aggregation of per-well data since there 
                 #      should logically only be one row per well???? 
+                #      -- if well & plate are listed as keys then no.
                 group = True
                 platesWellsAndVals = db.execute('SELECT %s, %s, %s FROM %s %s'%
                                                 (p.plate_id, p.well_id, expression, table,
@@ -337,7 +346,7 @@ class PlateViewer(wx.Frame, CPATool):
         of numeric columns from the selected table.
         '''
         table = self.sourceChoice.GetStringSelection()
-        self.measurementsChoice.SetItems(get_numeric_columns_from_table(table))
+        self.measurementsChoice.SetItems(get_non_blob_types_from_table(table))
         self.measurementsChoice.Select(0)
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
