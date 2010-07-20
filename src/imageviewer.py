@@ -607,7 +607,7 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     from datamodel import DataModel
     import imagetools
-    from ImageReader import ImageReader
+    from imagereader import ImageReader
     
     p = Properties.getInstance()
     p.image_channel_colors = ['red','green','blue']
