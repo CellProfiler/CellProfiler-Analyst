@@ -164,17 +164,27 @@ class PlainTable(TableData):
             col_labels = ABC[:data.shape[1]]
         
         assert len(col_labels) == data.shape[1], "Number of column labels does not match the number of columns in data."
-        self.sortdir      =  1    # sort direction (1=descending, -1=descending)
-        self.sortcols     =  []   # column indices being sorted (in order)
-        self.grid         =  grid
-        self.data         =  data
-        self.ordered_data =  self.data
-        self.col_labels   =  col_labels
-        self.row_order    =  np.arange(self.data.shape[0])
-        self.col_order    =  np.arange(self.data.shape[1])
-        self.key_indices  =  key_indices
-        self.grouping     =  grouping
+        self.sortdir       =  1    # sort direction (1=descending, -1=descending)
+        self.sortcols      =  []   # column indices being sorted (in order)
+        self.grid          =  grid
+        self.data          =  data
+        self.ordered_data  =  self.data
+        self.col_labels    =  np.array(col_labels)
+        self.shown_columns =  np.arange(len(self.col_labels))
+        self.row_order     =  np.arange(self.data.shape[0])
+        self.col_order     =  np.arange(self.data.shape[1])
+        self.key_indices   =  key_indices
+        self.grouping      =  grouping
         TableData.__init__(self)
+        
+    def set_shown_columns(self, col_indices):
+        '''sets which column should be shown from the db table
+        
+        col_indices -- the indices of the columns to show (all others will be 
+                       hidden)
+        '''
+        self.shown_columns = self.col_order = col_indices
+        self.ordered_data = self.data[self.row_order,:][:,self.col_order]
         
     def set_key_col_indices(self, indices):
         '''Sets the indices (starting at 0) of the key columns. These are needed
@@ -222,20 +232,27 @@ class PlainTable(TableData):
         return self.ordered_data.shape[1]
 
     def GetColLabelValueWithoutDecoration(self, col_index):
-        return self.col_labels[col_index]
+        '''returns the column label at a given index (without ^,v decoration)
+        Note: this does not return hidden column labels
+        '''
+        return self.col_labels[self.shown_columns][col_index]
     
     def GetColLabelValue(self, col_index):
-        col = self.col_labels[col_index]
+        '''returns the column label at a given index (for display)
+        '''
+        col = self.col_labels[self.shown_columns][col_index]
         if col_index in self.sortcols:
             return col+' [%s%s]'%(len(self.sortcols)>1 and self.sortcols.index(col_index) + 1 or '', 
                                  self.sortdir>0 and 'v' or '^') 
         return col
 
+    def get_all_column_names(self):
+        '''returns all (hidden and shown) column names in this table.
+        '''
+        return self.col_labels.tolist()
+
     def GetRowLabelValue(self, row):
         return '>'
-
-    def GetOrderedColLabels(self):
-        return self.col_labels[self.col_order]
 
     def IsEmptyCell(self, row, col):
         return False
@@ -249,28 +266,6 @@ class PlainTable(TableData):
     
     def GetColValues(self, col):
         return self.ordered_data[:,col]
-    
-    def GetRowValues(self, row):
-        return self.ordered_data[row,:]
-    
-##    def HideCol(self, index):
-##        '''index -- the raw data index of the column to hide
-##        '''
-##        cols = set(self.col_order)
-##        cols.remove(index)
-##        self.col_order = np.array(list(cols))
-##        self.ordered_data = self.data[self.row_order,:][:,self.col_order]
-##        self.ResetView()
-##        
-##    def ShowCol(self, index):
-##        '''index -- the raw data index of the column to show
-##        '''
-##        cols = self.col_order.tolist()
-##        cols += [index]
-##        cols.sort()
-##        self.col_order = np.array(cols)
-##        self.ordered_data = self.data[self.row_order,:][:,self.col_order]
-##        self.ResetView()
     
     def set_sort_col(self, col_index, add=False):
         '''Set the column to sort this table by. If add is true, this column
@@ -299,35 +294,6 @@ class PlainTable(TableData):
                 self.row_order = np.lexsort(self.data[:,self.sortcols[::-1]].T.tolist())
         self.ordered_data = self.data[self.row_order,:][:,self.col_order]
          
-    def ResetView(self):
-        '''Trim/extend the control's rows and update all values
-        '''
-        self.grid.BeginBatch()
-        for current, new, delmsg, addmsg in [
-                (self.grid.GetNumberRows(), self.GetNumberRows(), wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, wx.grid.GRIDTABLE_NOTIFY_ROWS_APPENDED),
-                (self.grid.GetNumberCols(), self.GetNumberCols(), wx.grid.GRIDTABLE_NOTIFY_COLS_DELETED, wx.grid.GRIDTABLE_NOTIFY_COLS_APPENDED),]:
-            if new < current:
-                msg = wx.grid.GridTableMessage(self, delmsg, new, current-new)
-                self.grid.ProcessTableMessage(msg)
-            elif new > current:
-                msg = wx.grid.GridTableMessage(self, addmsg, new-current)
-                self.grid.ProcessTableMessage(msg)
-        self.UpdateValues()
-        self.grid.EndBatch()
-
-        # The scroll bars aren't resized (at least on windows)
-        # Jiggling the size of the window rescales the scrollbars
-        h,w = self.grid.GetSize()
-        self.grid.SetSize((h+1, w))
-        self.grid.SetSize((h, w))
-        self.grid.Refresh()
-
-    def UpdateValues( self ):
-        '''Update all displayed values
-        '''
-        msg = wx.grid.GridTableMessage(self, wx.grid.GRIDTABLE_REQUEST_VIEW_GET_VALUES)
-        self.grid.ProcessTableMessage(msg)
-
     def GetRowLabelValue(self, row):
         return '*'
     
@@ -335,24 +301,34 @@ class DBTable(TableData):
     '''
     Interface connecting the table grid GUI to the database tables.
     '''
-    def __init__(self, table, rmin=None, rmax=None):
-        self.set_table(table)
+    def __init__(self, table_name, rmin=None, rmax=None):
+        self.set_table(table_name)
         self.filter = '' #'WHERE Image_Intensity_Actin_Total_intensity > 17000'
         self.set_row_interval(rmin, rmax)
         #XXX: should filter be defined at a higher level? Just UI?
         TableData.__init__(self)
         
     def set_table(self, table_name):
-        self.table = table_name
+        self.table_name = table_name
         self.cache = odict()
-        self.col_labels = db.GetColumnNames(self.table)
+        self.col_labels = np.array(db.GetColumnNames(self.table_name))
+        self.shown_columns = np.arange(len(self.col_labels))
         self.order_by = [self.col_labels[0]]
         self.order_direction = 'ASC'
         self.key_indices = None
-        if self.table == p.image_table:
-            self.key_indices = [self.col_labels.index(v) for v in dbconnect.image_key_columns()]
-        if self.table == p.object_table:
-            self.key_indices = [self.col_labels.index(v) for v in dbconnect.object_key_columns()]
+        if self.table_name == p.image_table:
+            self.key_indices = [self.col_labels.tolist().index(v) for v in dbconnect.image_key_columns()]
+        if self.table_name == p.object_table:
+            self.key_indices = [self.col_labels.tolist().index(v) for v in dbconnect.object_key_columns()]
+            
+    def set_shown_columns(self, col_indices):
+        '''sets which column should be shown from the db table
+        
+        col_indices -- the indices of the columns to show (all others will be 
+                       hidden)
+        '''
+        self.shown_columns = col_indices
+        self.cache.clear()
     
     def set_sort_col(self, col_index, add=False):
         col = self.col_labels[col_index]
@@ -388,19 +364,28 @@ class DBTable(TableData):
         self.rmax = rmax
         
     def get_row_key(self, row):
-        return tuple([self.GetValue(row, col) for col in self.key_indices])
+        cols = ','.join(self.col_labels[self.key_indices])
+        key = db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,%s'%
+                          (cols, self.table_name, self.filter, 
+                           ','.join([c+' '+self.order_direction for c in self.order_by]),
+                           row, 1))[0]
+        return key
     
     def get_image_keys_at_row(self, row):
         # XXX: needs to be updated to work for per_well data
-        return [tuple([self.GetValue(row, col) for col in self.key_indices])]
-##        return db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,1'
-##                          %(dbconnect.UniqueImageClause(), self.table, 
-##                            self.filter, ','.join([c+' '+self.order_direction for c in self.order_by]), row))
+        key = self.get_row_key(row)
+        if self.table_name == p.image_table:
+            return [key]
+#            return [tuple([self.GetValue(row, col) for col in self.key_indices])]
+        elif self.table_name == p.object_table:
+            return [key[:-1]]
+        else:
+            raise NotImplementedError
     
     def get_total_number_of_rows(self):
         '''Returns the total number of rows in the database
         '''
-        return int(db.execute('SELECT COUNT(*) FROM %s %s'%(self.table, self.filter))[0][0])
+        return int(db.execute('SELECT COUNT(*) FROM %s %s'%(self.table_name, self.filter))[0][0])
     
     def GetNumberRows(self):
         '''Returns the number of rows on the current page (between rmin,rmax)
@@ -412,17 +397,27 @@ class DBTable(TableData):
             return total
     
     def GetNumberCols(self):
-        return len(self.col_labels)
+        return len(self.shown_columns)
     
-    def GetColLabelValueWithoutDecoration(self, col_index):    
-        return self.col_labels[col_index]
+    def GetColLabelValueWithoutDecoration(self, col_index):
+        '''returns the column label at a given index (without ^,v decoration)
+        Note: this does not return hidden column labels
+        '''
+        return self.col_labels[self.shown_columns][col_index]
     
     def GetColLabelValue(self, col_index):
-        col = self.col_labels[col_index]
+        '''returns the column label at a given index (for display)
+        '''
+        col = self.col_labels[self.shown_columns][col_index]
         if col in self.order_by:
             return col+' [%s%s]'%(len(self.order_by)>1 and self.order_by.index(col) + 1 or '', 
                                  self.order_direction=='ASC' and 'v' or '^') 
         return col
+    
+    def get_all_column_names(self):
+        '''returns all (hidden and shown) column names in this table.
+        '''
+        return db.GetColumnNames(self.table_name)
 
     def GetValue(self, row, col):
         row += self.rmin
@@ -430,9 +425,9 @@ class DBTable(TableData):
             print "query", row
             lo = max(row - 25, 0)
             hi = row + 25
-            cols = ','.join(self.col_labels)
+            cols = ','.join(self.col_labels[self.shown_columns])
             vals = db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,%s'%
-                              (cols, self.table, self.filter, 
+                              (cols, self.table_name, self.filter, 
                                ','.join([c+' '+self.order_direction for c in self.order_by]),
                                lo, hi-lo), 
                               silent=False)
@@ -447,26 +442,27 @@ class DBTable(TableData):
         print 'SetValue(%d, %d, "%s") ignored.\n' % (row, col, value)
         
     def GetColValues(self, col):
-        colname = self.col_labels[col]
+        colname = self.col_labels[self.shown_columns][col]
         vals = db.execute('SELECT %s FROM %s %s ORDER BY %s'%
-                          (colname, self.table, self.filter, 
+                          (colname, self.table_name, self.filter, 
                            ','.join([c+' '+self.order_direction for c in self.order_by])), 
                           silent=False)
         return np.array(vals).flatten()
 
     def GetRowLabelValue(self, row):
         return '*'
+
                 
 BTN_PREV = wx.NewId()
 BTN_NEXT = wx.NewId()
 
-class DataTable(wx.Frame):
+class TableViewer(wx.Frame):
     '''
     Frame containing the data grid, and UI tools that operate on it.
     '''
     def __init__(self, parent, **kwargs):
         wx.Frame.__init__(self, parent, -1, size=(640,480), **kwargs)
-        CPATool.__init__(self)
+##        CPATool.__init__(self)
         
         self.selected_cols = set([])
         
@@ -492,19 +488,17 @@ class DataTable(wx.Frame):
         self.SetMenuBar(wx.MenuBar())
         file_menu = wx.Menu()
         self.GetMenuBar().Append(file_menu, 'File')
-        table_menu = wx.Menu()
-        imtbl_menu_item = table_menu.Append(-1, p.image_table)
-        obtbl_menu_item = table_menu.Append(-1, p.object_table)
-        new_table_item = file_menu.Append(-1, '&New empty table\tCtrl+N')
+        new_table_item = file_menu.Append(-1, 'New empty table\tCtrl+N')
         file_menu.AppendSeparator()
-        file_menu.AppendMenu(-1, 'Load table from database', table_menu)
-        load_csv_menu_item = file_menu.Append(-1, 'L&oad table from CSV\tCtrl+O')
+        load_csv_menu_item = file_menu.Append(-1, 'Load table from CSV\tCtrl+O')
+        load_db_table_menu_item = file_menu.Append(-1, 'Load table from database\tCtrl+Shift+O')
         file_menu.AppendSeparator()
-        save_csv_menu_item = file_menu.Append(-1, '&Save current table to CSV\tCtrl+S')
-        save_temp_table_menu_item = file_menu.Append(-1, 'Save current table to a temporary database table')
+        save_csv_menu_item = file_menu.Append(-1, 'Save table to CSV\tCtrl+S')
+        save_temp_table_menu_item = file_menu.Append(-1, 'Save table in database\tCtrl+Shift+S')
         view_menu = wx.Menu()
         self.GetMenuBar().Append(view_menu, 'View')
         column_width_menu = wx.Menu()
+        show_hide_cols_item = view_menu.Append(-1, 'Show/Hide columns')
         view_menu.AppendMenu(-1, 'Column widths', column_width_menu)
         fixed_cols_menu_item = column_width_menu.Append(-1, 'Fixed width', kind=wx.ITEM_RADIO)
         fit_cols_menu_item = column_width_menu.Append(-1, 'Fit to table', kind=wx.ITEM_RADIO)
@@ -513,10 +507,10 @@ class DataTable(wx.Frame):
         
         self.Bind(wx.EVT_MENU, self.on_new_table, new_table_item)
         self.Bind(wx.EVT_MENU, self.on_load_csv, load_csv_menu_item)
-        self.Bind(wx.EVT_MENU, self.on_load_image_table, imtbl_menu_item)
-        self.Bind(wx.EVT_MENU, self.on_load_object_table, obtbl_menu_item)
+        self.Bind(wx.EVT_MENU, self.on_load_db_table, load_db_table_menu_item)
         self.Bind(wx.EVT_MENU, self.on_save_csv, save_csv_menu_item)
-        self.Bind(wx.EVT_MENU, self.on_save_temp_table_to_db, save_temp_table_menu_item)
+        self.Bind(wx.EVT_MENU, self.on_save_table_to_db, save_temp_table_menu_item)
+        self.Bind(wx.EVT_MENU, self.on_show_hide_cols, show_hide_cols_item)
         self.Bind(wx.EVT_MENU, self.on_set_fixed_col_widths, fixed_cols_menu_item)
         self.Bind(wx.EVT_MENU, self.on_set_fitted_col_widths, fit_cols_menu_item)
         
@@ -538,9 +532,6 @@ class DataTable(wx.Frame):
         gridlib.EVT_GRID_LABEL_RIGHT_CLICK(self.grid, self.on_rightclick_label)
         gridlib.EVT_GRID_SELECT_CELL(self.grid, self.on_select_cell)
         gridlib.EVT_GRID_RANGE_SELECT(self.grid, self.on_select_range)
-        self.new_blank_table(100,10)
-##        self.load_db_table(p.image_table)
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
         
     def on_select_cell(self, evt):
         evt.Skip()
@@ -563,6 +554,16 @@ class DataTable(wx.Frame):
         except:
             self.SetStatusText("Cannot summarize columns.")
 
+    def on_show_hide_cols(self, evt):
+        column_names = self.grid.Table.get_all_column_names()
+        dlg = wx.MultiChoiceDialog(self, 
+                                   'Select the columns you would like to show',
+                                   'Show/Hide Columns', column_names)
+        dlg.SetSelections(self.grid.Table.shown_columns)
+        if (dlg.ShowModal() == wx.ID_OK):
+            selections = dlg.GetSelections()
+            self.grid.Table.set_shown_columns(selections)
+            self.grid.Table.ResetView(self.grid)
         
     def on_set_fixed_col_widths(self, evt):
         self.set_fixed_col_widths()
@@ -618,28 +619,38 @@ class DataTable(wx.Frame):
             else:
                 return
         pos = (self.Position[0]+10, self.Position[1]+10)
-        frame = DataTable(self.Parent, pos=pos)
+        frame = TableViewer(self.Parent, pos=pos)
         frame.Show(True)
         frame.new_blank_table(rows, cols)
         frame.SetTitle('New_Table')
+        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
         
     def new_blank_table(self, rows, cols):
         data = np.array([''] * (rows * cols)).reshape((rows, cols))
         table_base = PlainTable(self, data)
         self.grid.SetTable(table_base, True)
         self.RescaleGrid()
+        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
         
-    def on_load_image_table(self, evt=None):
-        pos = (self.Position[0]+10, self.Position[1]+10)
-        frame = DataTable(self.Parent, pos=pos)
-        frame.Show(True)
-        frame.load_db_table(p.image_table)
-        
-    def on_load_object_table(self, evt=None):
-        pos = (self.Position[0]+10, self.Position[1]+10)
-        frame = DataTable(self.Parent, pos=pos)
-        frame.Show(True)
-        frame.load_db_table(p.object_table)
+    def on_load_db_table(self, evt=None):
+        try:
+            user_tables = wx.GetApp().user_tables
+        except AttributeError:
+            # running outside of main UI
+            wx.GetApp().user_tables = []
+            user_tables = []
+        dlg = wx.SingleChoiceDialog(self, 
+                'Select a table to load from the database',
+                'Load table from database',
+                [p.image_table, p.object_table] + user_tables, 
+                wx.CHOICEDLG_STYLE)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            table_name = dlg.GetStringSelection()
+            pos = (self.Position[0]+10, self.Position[1]+10)
+            frame = TableViewer(self.Parent, pos=pos)
+            frame.Show(True)
+            frame.load_db_table(table_name)
 
     def load_db_table(self, tablename):
         '''Populates the grid with the data found in a given table.
@@ -648,6 +659,7 @@ class DataTable(wx.Frame):
         self.grid.SetTable(table_base, True)
         self.SetTitle(tablename)
         self.RescaleGrid()
+        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
 
     def on_load_csv(self, evt=None):
         '''Prompts the user for a csv file and loads it.
@@ -659,7 +671,7 @@ class DataTable(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             pos = (self.Position[0]+10, self.Position[1]+10)
-            frame = DataTable(self.Parent, pos=pos)
+            frame = TableViewer(self.Parent, pos=pos)
             frame.Show(True)
             frame.load_csv(filename)
             
@@ -677,7 +689,7 @@ class DataTable(wx.Frame):
         first_row_types = db.InferColTypesFromData([dtable[0]], len(dtable[0]))
         coltypes = db.InferColTypesFromData(dtable[1:], len(dtable[0]))
         has_header_row = False
-        if (all([a == b for a, b in zip(first_row_types, coltypes)]) and 
+        if (not all([a == b for a, b in zip(first_row_types, coltypes)]) and 
             all([a.startswith('VARCHAR') for a in first_row_types]) and
             not all([b.startswith('VARCHAR') for b in coltypes])):
             has_header_row = True
@@ -701,6 +713,7 @@ class DataTable(wx.Frame):
         self.grid.Refresh()
         self.SetTitle(filename)
         self.RescaleGrid()
+        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
 
     def on_leftclick_label(self, evt):
         if evt.Col >= 0:
@@ -804,11 +817,11 @@ class DataTable(wx.Frame):
         logging.info('Table saved to %s'%filename)
 ##        self.file = filename
 
-    def on_save_temp_table_to_db(self, evt):
+    def on_save_table_to_db(self, evt):
         valid = False
         while not valid:
             dlg = wx.TextEntryDialog(self, 'What do you want to name your table?', 
-                            'What do you want to name your table?', self.Title)
+                            'Save table to database', self.Title)
             if dlg.ShowModal() != wx.ID_OK:
                 return
             tablename = dlg.Value
@@ -824,6 +837,14 @@ class DataTable(wx.Frame):
                     valid = True
             else:
                 valid = True
+                
+        dlg = wx.SingleChoiceDialog(self, 'Do you want to be able to access\n'
+                'this table after you close CPA?', 'Save table to database',
+                ['Store for this session only.', 'Store permanantly.'], 
+                wx.CHOICEDLG_STYLE)
+        if dlg.ShowModal() != wx.ID_OK:
+            return
+        temporary = (dlg.GetSelection() == 0)
         
         colnames = [self.grid.Table.GetColLabelValueWithoutDecoration(col) 
                     for col in range(self.grid.Table.GetNumberCols())]
@@ -831,12 +852,16 @@ class DataTable(wx.Frame):
                 for col in range(self.grid.Table.GetNumberCols())]
                 for row in range(self.grid.Table.GetNumberRows())]
         db.CreateTempTableFromData(data, dbconnect.clean_up_colnames(colnames), 
-                                   tablename)#, temporary=False)
+                                   tablename, temporary=temporary)
         self.Title = tablename
-        wx.GetApp().user_tables += [tablename]
-        for plot in wx.GetApp().get_plots():
-            if plot.tool_name == 'PlateViewer':
-                plot.AddTableChoice(tablename)
+        try:
+            wx.GetApp().user_tables += [tablename]
+            for plot in wx.GetApp().get_plots():
+                if plot.tool_name == 'PlateViewer':
+                    plot.AddTableChoice(tablename)
+        except AttributeError:
+            # running without main UI
+            user_tables = wx.GetApp().user_tables = []
 
     def on_size(self, evt):
         if not self.grid:
@@ -879,6 +904,7 @@ if __name__ == '__main__':
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
     if p.show_load_dialog():
-        frame = DataTable(None)
+        frame = TableViewer(None)
         frame.Show(True)
+        frame.load_db_table(p.image_table)
     app.MainLoop()
