@@ -232,10 +232,6 @@ class ScatterControlPanel(wx.Panel):
         self.figpanel.redraw()
         self.figpanel.draw()
         
-    def removefromchart(self, event):
-        selected = self.plotfieldslistbox.GetSelection()
-        self.plotfieldslistbox.Delete(selected)
-        
     def loadpoints(self, tablename, xcol, ycol, filter=NO_FILTER):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, X measurement, Y measurement

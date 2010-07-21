@@ -180,10 +180,6 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.setpointslists(points)
         self.figpanel.draw()
         
-    def removefromchart(self, event):
-        selected = self.plotfieldslistbox.GetSelection()
-        self.plotfieldslistbox.Delete(selected)
-        
     def loadpoints(self, tablename, xpoints, ypoints, filter=NO_FILTER):
         fields = '%s.%s, %s.%s'%(tablename, xpoints, tablename, ypoints)
         tables = tablename

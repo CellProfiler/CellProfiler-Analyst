@@ -148,10 +148,6 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.setpoints(points, bins)
         self.figpanel.draw()
         
-    def removefromchart(self, event):
-        selected = self.plotfieldslistbox.GetSelection()
-        self.plotfieldslistbox.Delete(selected)
-        
     def loadpoints(self, tablename, xpoints, filter=NO_FILTER):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, X measurement
