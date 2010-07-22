@@ -173,8 +173,12 @@ class DataSourcePanel(wx.Panel):
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
+        if self.x_choice.Value == SELECT_MULTIPLE:
+            cols = self.x_columns
+        else:
+            cols = [self.x_choice.GetStringSelection()]
         return {'table' : self.table_choice.GetStringSelection(),
-                'x-axis' : self.x_choice.GetStringSelection(),
+                'x-axis' : ','.join(cols),
                 'filter' : self.filter_choice.GetStringSelection()
                 }
     
@@ -188,7 +192,12 @@ class DataSourcePanel(wx.Panel):
             self.table_choice.SetStringSelection(settings['table'])
             self.update_column_fields()
         if 'x-axis' in settings:
-            self.x_choice.SetStringSelection(settings['x-axis'])
+            cols = map(str.strip, settings['x-axis'].split(','))
+            if len(cols) == 1:
+                self.x_choice.SetStringSelection(cols[0])
+            else:
+                self.x_choice.SetValue(SELECT_MULTIPLE)
+                self.x_columns = cols
         if 'filter' in settings:
             self.filter_choice.SetStringSelection(settings['filter'])
         self.update_figpanel()
