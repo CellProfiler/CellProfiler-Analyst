@@ -20,6 +20,7 @@ import threading
 from tableviewer import TableViewer
 from plateviewer import PlateViewer
 from imageviewer import ImageViewer
+from boxplot import BoxPlot
 from scatter import Scatter
 from histogram import Histogram
 from density import Density
@@ -34,13 +35,15 @@ ID_IMAGE_VIEWER = wx.NewId()
 ID_SCATTER = wx.NewId()
 ID_HISTOGRAM = wx.NewId()
 ID_DENSITY = wx.NewId()
+ID_BOXPLOT = wx.NewId()
 
 PLOTS = {'scatter'     : Scatter, 
          'histogram'   : Histogram,
          'density'     : Density, 
          'plateviewer' : PlateViewer,
          'datatable'   : TableViewer, 
-         'classifier'  : Classifier}
+         'classifier'  : Classifier,
+         'boxplot'     : BoxPlot}
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -84,6 +87,7 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
+        tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
         tb.Realize()
         
         #
@@ -107,6 +111,7 @@ class MainGUI(wx.Frame):
         scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
+        boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()        
@@ -157,6 +162,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_scatter_plot, id=ID_SCATTER)
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
+        self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
@@ -196,6 +202,10 @@ class MainGUI(wx.Frame):
         imviewer = ImageViewer(parent=self)
         imviewer.Show(True)
         
+    def launch_box_plot(self, evt=None):
+        boxplot = BoxPlot(parent=self)
+        boxplot.Show(True)
+        
     def on_save_workspace(self, evt):
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(), 
                             defaultFile='workspace.txt', wildcard='txt', 
@@ -215,9 +225,9 @@ class MainGUI(wx.Frame):
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
-        f = open(filename, 'w')
-        f.write(self.console.Value)
-        logging.info('Log saved to "%s"'%filename)
+            f = open(filename, 'w')
+            f.write(self.console.Value)
+            logging.info('Log saved to "%s"'%filename)
         
     def set_log_level(self, level):
         self.logr.setLevel(level)
