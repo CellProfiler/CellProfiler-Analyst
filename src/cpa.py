@@ -89,6 +89,7 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
         tb.Realize()
+        self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
         
         #
         # Setup menu items
@@ -323,7 +324,7 @@ class CPAnalyst(wx.App):
             if not p.show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
-        self.frame = MainGUI(p, None, size=(760,-1))
+        self.frame = MainGUI(p, None, size=(-1,-1))
         self.frame.Show(True)
         db = dbconnect.DBConnect.getInstance()
         db.register_gui_parent(self.frame)
