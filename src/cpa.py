@@ -51,7 +51,7 @@ class FuncLog(logging.Handler):
     def __init__(self, update):
         logging.Handler.__init__(self)
         self.update = update
-                
+
     def emit(self, record):
         self.update(self.format(record))
 
@@ -61,7 +61,7 @@ class MainGUI(wx.Frame):
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
         wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 %s'%(__version__), **kwargs)
-        
+
         self.properties = properties
         self.SetIcon(get_cpa_icon())
         if not sys.platform.startswith('win'):
@@ -73,7 +73,7 @@ class MainGUI(wx.Frame):
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
         self.CreateStatusBar()
-        
+
         #
         # Setup toolbar
         #
@@ -89,8 +89,9 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
         tb.Realize()
-        self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
-        
+        # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs
+        #self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
+
         #
         # Setup menu items
         #
@@ -123,7 +124,7 @@ class MainGUI(wx.Frame):
         criticalMenuItem = logMenu.AppendRadioItem(-1, 'Critical\tCtrl+5', help='Logging window will only display critical messages.')
         infoMenuItem.Check()
         self.GetMenuBar().Append(logMenu, 'Logging')
-        
+
         helpMenu = wx.Menu()
         aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
         self.GetMenuBar().Append(helpMenu, 'Help')
@@ -132,7 +133,7 @@ class MainGUI(wx.Frame):
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         self.console.SetBackgroundColour('#111111')
-        
+
         self.console.SetForegroundColour('#DDDDDD')
         log_level = logging.DEBUG
         self.logr = logging.getLogger()
@@ -146,7 +147,7 @@ class MainGUI(wx.Frame):
         self.logr.addHandler(hdlr)
         # log_levels are 10,20,30,40,50
         logMenu.GetMenuItems()[(log_level/10)-1].Check()
-        
+
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.DEBUG), debugMenuItem)
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.INFO), infoMenuItem)
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.WARN), warnMenuItem)
@@ -167,7 +168,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
-        
+
     def launch_classifier(self, evt=None):
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier:
@@ -177,16 +178,16 @@ class MainGUI(wx.Frame):
             return
         classifier = Classifier(parent=self, properties=self.properties)
         classifier.Show(True)
-        
+
     def launch_plate_map_browser(self, evt=None):
         self.pv = PlateViewer(parent=self)
         self.pv.Show(True)
-    
+
     def launch_table_viewer(self, evt=None):
         table = TableViewer(parent=self)
         table.new_blank_table(100,10)
         table.Show(True)
-        
+
     def launch_scatter_plot(self, evt=None):
         scatter = Scatter(parent=self)
         scatter.Show(True)
@@ -202,24 +203,24 @@ class MainGUI(wx.Frame):
     def launch_image_viewer(self, evt=None):
         imviewer = ImageViewer(parent=self)
         imviewer.Show(True)
-        
+
     def launch_box_plot(self, evt=None):
         boxplot = BoxPlot(parent=self)
         boxplot.Show(True)
-        
+
     def on_save_workspace(self, evt):
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(), 
                             defaultFile='workspace.txt', wildcard='txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().save_workspace(dlg.GetPath())
-        
+
     def on_load_workspace(self, evt):
         dlg = wx.FileDialog(self, "Select the file containing your CPAnalyst workspace...",
                             defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().load_workspace(dlg.GetPath())
-        
+
     def save_log(self, evt=None):
         dlg = wx.FileDialog(self, message="Save log as...", defaultDir=os.getcwd(), 
                             defaultFile='CPA_log.txt', wildcard='txt', 
@@ -229,7 +230,7 @@ class MainGUI(wx.Frame):
             f = open(filename, 'w')
             f.write(self.console.Value)
             logging.info('Log saved to "%s"'%filename)
-        
+
     def set_log_level(self, level):
         self.logr.setLevel(level)
         # cheat the logger so these always get displayed
@@ -260,7 +261,7 @@ class MainGUI(wx.Frame):
         if self.tbicon is not None:
             self.tbicon.Destroy()
         self.Destroy()
-        
+
     def on_idle(self, evt=None):
         if self.log_text != '':
             self.console.AppendText(self.log_text)
@@ -296,15 +297,15 @@ class CPAnalyst(wx.App):
     def __init__(self, *args, **kwargs):
         ''' '''
         super(CPAnalyst, self).__init__(*args, **kwargs)
-        
+
 
     def OnInit(self):
         '''Initialize CPA
         '''
-        
+
         '''List of tables created by the user during this session'''
         self.user_tables = []
-        
+
         # splashscreen
         splashimage = icons.cpa_splash.ConvertToBitmap()
         # If the splash image has alpha, it shows up transparently on
@@ -318,20 +319,20 @@ class CPAnalyst(wx.App):
         dc.Destroy() # necessary to avoid a crash in splashscreen
         splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | 
                                  wx.SPLASH_TIMEOUT, 2000, None, -1)
-        
+
         p = Properties.getInstance()
         if p.IsEmpty():
             if not p.show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
-        self.frame = MainGUI(p, None, size=(-1,-1))
+        self.frame = MainGUI(p, None, size=(860,-1))
         self.frame.Show(True)
         db = dbconnect.DBConnect.getInstance()
         db.register_gui_parent(self.frame)
         logging.info('Creating filter tables...')
         multiclasssql.CreateFilterTables(wx.Yield)
         logging.info('Done.')
-        
+
         try:
             import cellprofiler.utilities.check_for_updates as cfu
             cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
@@ -340,17 +341,17 @@ class CPAnalyst(wx.App):
                                   user_agent='CPAnalyst/2.0.%d'%(svn_version))
         except ImportError:
             logging.warn("CPA was unable to check for updates. Could not import cellprofiler.utilities.check_for_updates.")
-            
+
         return True
-    
+
     def get_plots(self):
         '''return a list of all plots'''
         return [win for win in self.frame.Children if issubclass(type(win), CPATool)]
-    
+
     def get_plot(self, name):
         '''return the plot with the given name'''
         return wx.FindWindowByName(name)
-    
+
     def load_workspace(self, filepath, close_open_plots=False):
         '''Loads a CPA workspace file and uses it to restore all plots, gates,
         and filters that were saved.
@@ -375,7 +376,7 @@ class CPAnalyst(wx.App):
                     plot.Show(True)
                     plot.load_settings(settings)
         logging.info('...done loading workspace')
-                    
+
     def save_workspace(self, filepath):
         '''Saves the current CPA workspace. This includes the current settings
         of all open tools along with any gates and filters that have been created.
@@ -424,16 +425,16 @@ def setup_frozen_logging():
     # send everything to logfile
     sys.stderr = Stderr()
     sys.stdout = sys.stderr
-    
+
 if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
     # on windows, log to a file (Mac goes to console)
     setup_frozen_logging()
 logging.basicConfig(level=logging.DEBUG)
-    
+
 # Handles args to MacOS "Apps"
 if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
     del sys.argv[1]
-    
+
 if len(sys.argv) > 1:
     # Load a properties file if passed in args
     p = Properties.getInstance()
@@ -442,7 +443,7 @@ if len(sys.argv) > 1:
 # Initialize the app early because the fancy exception handler
 # depends on it in order to show a dialog.
 app = CPAnalyst(redirect=False)
-    
+
 # Install our own pretty exception handler unless one has already
 # been installed (e.g., a debugger)
 if sys.excepthook == sys.__excepthook__:
