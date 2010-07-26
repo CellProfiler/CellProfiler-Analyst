@@ -364,6 +364,8 @@ class DBTable(TableData):
         self.rmax = rmax
         
     def get_row_key(self, row):
+        if self.key_indices is None:
+            return None
         cols = ','.join(self.col_labels[self.key_indices])
         key = db.execute('SELECT %s FROM %s %s ORDER BY %s LIMIT %s,%s'%
                           (cols, self.table_name, self.filter, 
@@ -373,15 +375,52 @@ class DBTable(TableData):
     
     def get_image_keys_at_row(self, row):
         # XXX: needs to be updated to work for per_well data
-        key = self.get_row_key(row)
         if self.table_name == p.image_table:
+            key = self.get_row_key(row)
+            if key is None:
+                return None
             return [key]
 #            return [tuple([self.GetValue(row, col) for col in self.key_indices])]
         elif self.table_name == p.object_table:
+            key = self.get_row_key(row)
+            if key is None:
+                return None
             return [key[:-1]]
         else:
-            raise NotImplementedError
+            key = []
+            for col in dbconnect.image_key_columns():
+                if col not in self.col_labels:
+                    return None
+                else:
+                    col_index = self.col_labels.tolist().index(col)
+                    key += [self.GetValue(row, col_index)]
+            return [tuple(key)]
     
+    def get_object_keys_at_row(self, row):
+        # XXX: needs to be updated to work for per_well data
+        if self.table_name == p.image_table:
+            # return all objects in this image
+            key = self.get_row_key(row)
+            if key is None:
+                return None
+            dm = DataModel.getInstance()
+            n_objects = dm.GetObjectCountFromImage(key)
+            return [tuple(list(key) + [i]) for i in range(n_objects)]
+        elif self.table_name == p.object_table:
+            key = self.get_row_key(row)
+            if key is None:
+                return None
+            return [key]
+        else:
+            key = []
+            for col in dbconnect.object_key_columns():
+                if col not in self.col_labels:
+                    return None
+                else:
+                    col_index = self.col_labels.tolist().index(col)
+                    key += [self.GetValue(row, col_index)]
+            return [tuple(key)]
+
     def get_total_number_of_rows(self):
         '''Returns the total number of rows in the database
         '''
@@ -639,10 +678,13 @@ class TableViewer(wx.Frame):
             # running outside of main UI
             wx.GetApp().user_tables = []
             user_tables = []
+            
+        primary_tables = [p.image_table, p.object_table] + user_tables
+        other_tables = list(set(db.GetTableNames()) - set(primary_tables))
         dlg = wx.SingleChoiceDialog(self, 
                 'Select a table to load from the database',
                 'Load table from database',
-                [p.image_table, p.object_table] + user_tables, 
+                primary_tables + other_tables,
                 wx.CHOICEDLG_STYLE)
 
         if dlg.ShowModal() == wx.ID_OK:
@@ -729,6 +771,15 @@ class TableViewer(wx.Frame):
             keys = self.grid.Table.get_image_keys_at_row(evt.Row)
             if keys:
                 self.show_popup_menu(keys, evt.GetPosition())
+            #XXX: Need to prompt user intelligently about linking their table
+            #     Could check for known cols (imkey or wellkey) and go from there
+##            elif keys is None:
+##                dlg = wx.MultiChoiceDialog(self, 
+##                    'Can not display images from this table because it has not '
+##                    'been linked to your per-image table. Select the ',
+##                    'Select Key Columns', column_names)
+##                if dlg.ShowModal() == wx.ID_OK:
+
 
     def show_popup_menu(self, items, pos):
         self.popupItemById = {}
@@ -748,13 +799,23 @@ class TableViewer(wx.Frame):
         imagetools.ShowImage(imkey, p.image_channel_colors, parent=self)
 
     def on_dclick_label(self, evt):
+        '''if there is only one object, then highlight it in the image
+        otherwise just show the image.
+        '''
         if evt.Row >= 0:
-            imkeys = self.grid.Table.get_image_keys_at_row(evt.Row)
-            if imkeys:
-                #XXX: warn if there are a lot
-                for imkey in imkeys:
-                    imagetools.ShowImage(imkey, p.image_channel_colors,
-                                         parent=self.Parent)
+            obkeys = self.grid.Table.get_object_keys_at_row(evt.Row)
+            if obkeys and len(obkeys) == 1:
+                imview = imagetools.ShowImage(obkeys[0][:-1], 
+                                              p.image_channel_colors,
+                                              parent=self.Parent)
+                imview.SelectObject(obkeys[0])
+            else:
+                imkeys = self.grid.Table.get_image_keys_at_row(evt.Row)
+                if imkeys:
+                    #XXX: warn if there are a lot
+                    for imkey in imkeys:
+                        imagetools.ShowImage(imkey, p.image_channel_colors,
+                                             parent=self.Parent)
 
     def OnPrev(self, evt=None):
         rmax = int(self.row_max.GetValue())
@@ -766,7 +827,6 @@ class TableViewer(wx.Frame):
         rmin = int(self.row_min.GetValue())
         self.grid.Table.set_row_interval(rmin-1, rmax)
         self.grid.Table.ResetView(self.grid)
-
 
     def OnNext(self, evt=None):
         rmax = int(self.row_max.GetValue())
