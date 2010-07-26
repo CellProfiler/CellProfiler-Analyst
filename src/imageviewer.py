@@ -444,6 +444,13 @@ class ImageViewer(wx.Frame):
     def DeselectAll(self):
         self.selection = []
         self.imagePanel.DeselectAll()
+        
+    def SelectObject(self, obkey):
+        coord = db.GetObjectCoords(obkey)
+        if p.rescale_object_coords:
+            coord = rescale_image_coord_to_display(coord[0], coord[1])
+        self.selection += [coord]
+        self.imagePanel.SetSelectedPoints([coord])
     
     def SetClasses(self, classCoords):
         self.classViewMenuItem.Enable()
