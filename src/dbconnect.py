@@ -206,9 +206,11 @@ class SqliteClassifier():
         self.b = b.T
 
     def classify(self, *features):
-        return 1 + np.where((features > self.thresholds), self.a, self.b).sum(axis=1).argmax()
-
-
+        class_num = 1 + np.where((features > self.thresholds), self.a, self.b).sum(axis=1).argmax()
+        # CRUCIAL: must make sure class_num is an int or it won't compare
+        #          properly with the class being looked for and nothing will
+        #          be found. This only appears to be a problem on Windows 64bit
+        return int(class_num)
 
 
 class DBConnect(Singleton):
