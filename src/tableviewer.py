@@ -215,7 +215,13 @@ class PlainTable(TableData):
         if self.key_indices is None or self.grouping is None:
             return None
         else:
-            return self.ordered_data[row, self.key_indices]
+            dm = DataModel.getInstance()
+            imkeys = dm.GetImagesInGroup(self.grouping, tuple(self.ordered_data[row, self.key_indices]))
+            obkeys = []
+            for imkey in imkeys:
+                obs = dm.GetObjectCountFromImage(imkey)
+                obkeys += [tuple(list(imkey)+[i]) for i in range(obs)]
+            return obkeys
         
     def get_row_key(self, row):
         '''Returns the key column values at the given row.
@@ -804,7 +810,7 @@ class TableViewer(wx.Frame):
         '''
         if evt.Row >= 0:
             obkeys = self.grid.Table.get_object_keys_at_row(evt.Row)
-            if obkeys and len(obkeys) == 1:
+            if obkeys is not None and len(obkeys) == 1:
                 imview = imagetools.ShowImage(obkeys[0][:-1], 
                                               p.image_channel_colors,
                                               parent=self.Parent)
