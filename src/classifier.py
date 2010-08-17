@@ -1133,7 +1133,7 @@ class Classifier(wx.Frame):
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-            from ColumnFilter import ColumnFilterDialog
+            from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
                 fltr = str(cff.get_filter())

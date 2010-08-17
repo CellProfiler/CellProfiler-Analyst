@@ -129,7 +129,7 @@ class DataSourcePanel(wx.Panel):
     def on_filter_selected(self, evt):
         filter = self.filter_choice.GetStringSelection()
         if filter == CREATE_NEW_FILTER:
-            from ColumnFilter import ColumnFilterDialog
+            from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
                 fltr = str(cff.get_filter())
