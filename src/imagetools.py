@@ -81,6 +81,11 @@ def Crop(imgdata, (w,h), (x,y)):
 
     crop = np.zeros((h,w), dtype='float32')
     crop[dest_loy:dest_hiy, dest_lox:dest_hix] = imgdata[loy:hiy, lox:hix]
+
+    # XXX - hack to make scaling work per-image instead of per-tile
+    crop[0, 0] = imgdata.min()
+    crop[-1, -1] = imgdata.max()
+
     return crop
 
 def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None):
