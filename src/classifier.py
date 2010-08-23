@@ -1,3 +1,4 @@
+# Encoding: utf-8
 from __future__ import with_statement
 
 # This must come first for py2app/py2exe
@@ -32,6 +33,29 @@ import numpy as np
 import os
 import sys
 import wx
+import re
+
+def parse_weak_learners(string):
+    weaklearners = []
+    for line in string.split('\n'):
+        if line.strip() == '':
+            continue
+        m = re.match('^IF \((\w+) > (-{0,1}\d+\.\d+), \[(-{0,1}\d+\.\d+(?:, -{0,1}\d+\.\d+)*)\], \[(-{0,1}\d+\.\d+(?:, -{0,1}\d+\.\d+)*)\]\)',
+                     line, flags=re.IGNORECASE)
+        if m is None:
+            raise ValueError
+        colname, thresh, a, b = m.groups()
+        thresh = float(thresh)
+        a = map(float, a.split(','))
+        b = map(float, b.split(','))
+        weaklearners.append((colname, thresh, a, b, None))
+    return weaklearners
+
+def format_weak_learners(weaklearners):
+    return '\n'.join("IF (%s > %s, %s, %s)"%(colname, repr(thresh), 
+                                             "[" + ", ".join([repr(v) for v in a]) + "]", 
+                                             "[" + ", ".join([repr(v) for v in b]) + "]")
+                     for colname, thresh, a, b, e_m in weaklearners)
     
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
@@ -354,12 +378,18 @@ class Classifier(wx.Frame):
         imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I', help='Launches a control panel for adjusting image brightness, size, etc.')
         self.GetMenuBar().Append(viewMenu, 'View')
 
+        # Rules menu
+        rulesMenu = wx.Menu()
+        rulesEditMenuItem = rulesMenu.Append(-1, text='Edit…', help='Lets you edit the rules')
+        self.GetMenuBar().Append(rulesMenu, 'Rules')
+
         # Channel Menus
         self.CreateChannelMenus()
         
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         
         
     def CreateChannelMenus(self):
@@ -857,7 +887,7 @@ class Classifier(wx.Frame):
                                                                        callback=cb)
                 self.PostMessage('Classifier trained with %s rules in %.1fs.'%(nRules, time()-t1))
                 dlg.Destroy()
-                self.rules_text.Value = output.getvalue()
+                self.rules_text.Value = format_weak_learners(self.weaklearners)
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
             except StopCalculating:
@@ -1255,6 +1285,23 @@ class Classifier(wx.Frame):
         self.imageControlFrame = wx.Frame(self)
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale)
         self.imageControlFrame.Show(True)
+
+        
+    def OnRulesEdit(self, evt):
+        '''Lets the user edit the rules.'''
+        dlg = wx.TextEntryDialog(self, 'Rules:', 'Edit rules', 
+                                 style=wx.TE_MULTILINE|wx.OK|wx.CANCEL)#|wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
+        dlg.SetValue(self.rules_text.Value)
+        if dlg.ShowModal() == wx.ID_OK:
+            try:
+                self.weaklearners = parse_weak_learners(dlg.GetValue())
+            except ValueError, e:
+                wx.MessageDialog(self, 'Unable to parse your edited rules:\n\n' + str(e), 'Parse error', style=wx.OK).ShowModal()
+                self.OnRulesEdit(evt)
+            self.rules_text.Value = format_weak_learners(self.weaklearners)
+            self.scoreAllBtn.Enable(True if self.weaklearners else False)
+            self.scoreImageBtn.Enable(True if self.weaklearners else False)
+
 
         
     def SetBrightness(self, brightness):
