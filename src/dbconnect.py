@@ -1065,9 +1065,9 @@ class DBConnect(Singleton):
         res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
         idx_cols = [r[4] for r in res]
         
-        # This should be a warning, not an assertion
-        # for col in image_key_columns():
-        #     assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.image_table)
+        # RAY: This should be a warning, not an assertion
+        for col in image_key_columns():
+            assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.image_table)
 
         # Explicitly check for TableNumber in case it was not specified in props file
         if not p.object_table and 'TableNumber' in idx_cols:
@@ -1080,9 +1080,9 @@ class DBConnect(Singleton):
         # Check for index on object_table
         res = self.execute('SHOW INDEX FROM %s'%(p.object_table))
         idx_cols = [r[4] for r in res]
-        # This should be a warning, not an assertion
-        # for col in object_key_columns():
-        #     assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.object_table)
+        # RAY: This should be a warning, not an assertion
+        for col in object_key_columns():
+            assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.object_table)
         
         # Explicitly check for TableNumber in case it was not specified in props file
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in idx_cols):
