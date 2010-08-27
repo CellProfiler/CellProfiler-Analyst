@@ -1064,10 +1064,15 @@ class DBConnect(Singleton):
         # Check for index on image_table
         res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
         idx_cols = [r[4] for r in res]
-        
-        # RAY: This should be a warning, not an assertion
         for col in image_key_columns():
-            assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.image_table)
+            if col not in idx_cols:
+                wx.MessageDialog(self, 'Column "%s" is not indexed in table '
+                    '"%s" Without column indices, dabase performance will be '
+                    'severly slowed.\n'
+                    'To avoid this warning, set check_tables = false in your '
+                    'properties file.'%(col, p.object_table),
+                    'Missing column index', 
+                    style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
 
         # Explicitly check for TableNumber in case it was not specified in props file
         if not p.object_table and 'TableNumber' in idx_cols:
@@ -1080,9 +1085,15 @@ class DBConnect(Singleton):
         # Check for index on object_table
         res = self.execute('SHOW INDEX FROM %s'%(p.object_table))
         idx_cols = [r[4] for r in res]
-        # RAY: This should be a warning, not an assertion
         for col in object_key_columns():
-            assert col in idx_cols, 'Column "%s" is not indexed in table "%s"'%(col, p.object_table)
+            if col not in idx_cols:
+                wx.MessageDialog(self, 'Column "%s" is not indexed in table '
+                    '"%s" Without column indices, dabase performance will be '
+                    'severly slowed.\n'
+                    'To avoid this warning, set check_tables = false in your '
+                    'properties file.'%(col, p.object_table),
+                    'Missing column index', 
+                    style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
         
         # Explicitly check for TableNumber in case it was not specified in props file
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in idx_cols):
