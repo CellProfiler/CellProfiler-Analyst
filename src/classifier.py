@@ -48,7 +48,13 @@ def parse_weak_learners(string):
         thresh = float(thresh)
         a = map(float, a.split(','))
         b = map(float, b.split(','))
+        if len(a) != len(b):
+            raise ValueError, 'Alpha and beta must have the same cardinality in "IF (column > threshold, alpha, beta)"'
         weaklearners.append((colname, thresh, a, b, None))
+    n_classes = len(weaklearners[0][2])
+    for wl in weaklearners:
+        if len(wl[2]) != n_classes:
+            raise ValueError, 'Number of classes must remain the same between rules.'
     return weaklearners
 
 def format_weak_learners(weaklearners):
@@ -380,7 +386,7 @@ class Classifier(wx.Frame):
 
         # Rules menu
         rulesMenu = wx.Menu()
-        rulesEditMenuItem = rulesMenu.Append(-1, text='Edit…', help='Lets you edit the rules')
+        rulesEditMenuItem = rulesMenu.Append(-1, text=u'Edit…', help='Lets you edit the rules')
         self.GetMenuBar().Append(rulesMenu, 'Rules')
 
         # Channel Menus
@@ -1290,18 +1296,33 @@ class Classifier(wx.Frame):
     def OnRulesEdit(self, evt):
         '''Lets the user edit the rules.'''
         dlg = wx.TextEntryDialog(self, 'Rules:', 'Edit rules', 
-                                 style=wx.TE_MULTILINE|wx.OK|wx.CANCEL)#|wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
+                                 style=wx.TE_MULTILINE|wx.OK|wx.CANCEL)
         dlg.SetValue(self.rules_text.Value)
         if dlg.ShowModal() == wx.ID_OK:
             try:
-                self.weaklearners = parse_weak_learners(dlg.GetValue())
+                weaklearners = parse_weak_learners(dlg.GetValue())
+                if len(weaklearners[0][2]) != len(self.classBins):
+                    wx.MessageDialog(self, 'The rules you entered specify %s '
+                        'classes but %s bins exist in classifier. Please adjust'
+                        ' your rules or the number of bins so that they agree.'%
+                        (len(weaklearners[0][2]), len(self.classBins)), 
+                        'Rules Error', style=wx.OK).ShowModal()
+                    self.OnRulesEdit(evt)
+                    return
             except ValueError, e:
                 wx.MessageDialog(self, 'Unable to parse your edited rules:\n\n' + str(e), 'Parse error', style=wx.OK).ShowModal()
                 self.OnRulesEdit(evt)
+                return
+            self.weaklearners = weaklearners
             self.rules_text.Value = format_weak_learners(self.weaklearners)
             self.scoreAllBtn.Enable(True if self.weaklearners else False)
             self.scoreImageBtn.Enable(True if self.weaklearners else False)
-
+            for bin in self.classBins:
+                if not bin.empty:
+                    bin.trained = True
+                else:
+                    bin.trained = False
+            self.UpdateClassChoices()
 
         
     def SetBrightness(self, brightness):
