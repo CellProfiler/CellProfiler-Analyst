@@ -1313,6 +1313,7 @@ class Classifier(wx.Frame):
                 wx.MessageDialog(self, 'Unable to parse your edited rules:\n\n' + str(e), 'Parse error', style=wx.OK).ShowModal()
                 self.OnRulesEdit(evt)
                 return
+            self.keysAndCounts = None
             self.weaklearners = weaklearners
             self.rules_text.Value = format_weak_learners(self.weaklearners)
             self.scoreAllBtn.Enable(True if self.weaklearners else False)
