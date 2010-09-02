@@ -187,7 +187,7 @@ image_url_prepend  =  <http://yourserver.com>
 #   dropdown in the user interface. It will also allow you to group your data
 #   by each unique well value when scoring.
 #
-# Example 2: Also note the "Plate+Well" group. This group will specify unique
+# Example 2: Also note the "Plate_and_Well" group. This group specifies unique
 #   pairs of plate and well values. Since well values such as "A01" are likely
 #   to NOT be unique across multiple plates, this will provide a way to refer
 #   to cells from, plate X, well A01, rather than just any well named "A01".
@@ -196,7 +196,7 @@ image_url_prepend  =  <http://yourserver.com>
 #   group_XXX  =  MySQL select statement that returns image-key columns followed by group-key columns. XXX will be the name of the group.
 # EXAMPLE GROUPS:
 #   group_SQL_Well        =  SELECT TableNumber, ImageNumber, well FROM Per_Image_Table
-#   group_SQL_Plate+Well  =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Well_ID_Table.Plate, Per_Image_Table.well FROM Per_Image_Table, WELL_ID_Table WHERE Per_Image_Table.well=Well_ID_Table.well
+#   group_SQL_Plate_and_Well  =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Well_ID_Table.Plate, Per_Image_Table.well FROM Per_Image_Table, WELL_ID_Table WHERE Per_Image_Table.well=Well_ID_Table.well
 #   group_SQL_Treatment   =  SELECT Per_Image_Table.TableNumber, Per_Image_Table.ImageNumber, Well_ID_Table.treatment FROM Per_Image_Table, Well_ID_Table WHERE Per_Image_Table.well=Well_ID_Table.well
 
 group_SQL_YourGroupName  =  
