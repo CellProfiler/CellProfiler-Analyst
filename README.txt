@@ -86,7 +86,7 @@ coordinates for where each object falls in its parent image.
             Example_Per_Object_Table
   +------------------------------------------------+
   | ImgID | ObjID | X_Coord | Y_Coord | other cols |
-  |-------+----------+-----------------------------+
+  |-------+-------+---------+---------+------------+
   |     1 |     1 |   3.243 | 125.234 | ...        |
   |     1 |     2 |  411.12 |  50.001 | ...        |
   |                        ...                     |
