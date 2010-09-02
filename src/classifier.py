@@ -37,6 +37,7 @@ import re
 
 def parse_weak_learners(string):
     weaklearners = []
+    string = string.replace('\r\n', '\n')
     for line in string.split('\n'):
         if line.strip() == '':
             continue
