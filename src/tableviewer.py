@@ -685,7 +685,10 @@ class TableViewer(wx.Frame):
             wx.GetApp().user_tables = []
             user_tables = []
             
-        primary_tables = [p.image_table, p.object_table] + user_tables
+        primary_tables = [p.image_table]
+        if p.object_table:
+            primary_tables += [p.object_table]
+        primary_tables += user_tables
         other_tables = list(set(db.GetTableNames()) - set(primary_tables))
         dlg = wx.SingleChoiceDialog(self, 
                 'Select a table to load from the database',
