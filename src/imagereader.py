@@ -36,7 +36,7 @@ class ImageReader(object):
         channels = []
         for fd in fds:
             format = fd.split('.')[-1]
-            if format.upper() in ['TIF', 'TIFF', 'BMP', 'JPG', 'PNG', 'GIF']:
+            if format.upper() in ['TIF', 'TIFF', 'BMP', 'JPG', 'PNG', 'GIF', 'C01']:
                 channels += self.ReadBitmap(fd)
             elif format.upper() in ['DIB']:
                 channels += [self.ReadDIB(fd)]
