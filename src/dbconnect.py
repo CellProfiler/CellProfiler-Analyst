@@ -119,25 +119,26 @@ def object_key_columns(table_name=''):
 def object_key_defs():
     return ', '.join(['%s INT'%(id) for id in object_key_columns()])
 
-def GetWhereClauseForObjects(obkeys):
+def GetWhereClauseForObjects(obkeys,table_name=''):
     '''
     Return a SQL WHERE clause that matches any of the given object keys.
     Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => "ImageNumber=1 
              AND ObjectNumber=3 OR ImageNumber=2 AND ObjectNumber=4"
     '''
-
+    if table_name is None:
+        table_name = ''
     # To limit the depth of this expression, we split it into a binary tree.
     # This helps avoid SQLITE_MAX_LIMIT_EXPR_DEPTH
-    def split(keys):
+    def split(keys,table_name):
         if len(keys) <= 3:
             return '(' + ' OR '.join([' AND '.join([col + '=' + str(value)
-                                                    for col, value in zip(object_key_columns(), obkey)])
+                                                    for col, value in zip(object_key_columns(table_name), obkey)])
                                       for obkey in keys]) + ')'
         else:
             halflen = len(keys) // 2
-            return '(' + split(keys[:halflen]) + ' OR ' + split(keys[halflen:]) + ')'
+            return '(' + split(keys[:halflen],table_name) + ' OR ' + split(keys[halflen:],table_name) + ')'
 
-    return split(obkeys)
+    return split(obkeys,table_name)
 
 
 def GetWhereClauseForImages(imkeys):

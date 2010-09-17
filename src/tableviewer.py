@@ -202,8 +202,10 @@ class PlainTable(TableData):
         if self.key_indices is None or self.grouping is None:
             return None
         else:
-            if self.grouping.lower() == 'image':            
+            if self.grouping.lower() == 'image':     
                 return [tuple(self.ordered_data[row, self.key_indices])]
+            elif self.grouping.lower() == 'object': 
+                return [tuple([self.ordered_data[row, self.key_indices[:-1]]])]
             else:
                 dm = DataModel.getInstance()
                 return dm.GetImagesInGroup(self.grouping, self.get_row_key(row))
@@ -216,12 +218,16 @@ class PlainTable(TableData):
             return None
         else:
             dm = DataModel.getInstance()
-            imkeys = dm.GetImagesInGroup(self.grouping, tuple(self.ordered_data[row, self.key_indices]))
-            obkeys = []
-            for imkey in imkeys:
-                obs = dm.GetObjectCountFromImage(imkey)
-                obkeys += [tuple(list(imkey)+[i]) for i in range(obs)]
-            return obkeys
+            # If the key index for the row is an object key, just return that key
+            if self.grouping.lower() == 'object': 
+                return [tuple(self.ordered_data[row, self.key_indices])]
+            else: # Otherwise, return all object keys in the image
+                imkeys = self.get_image_keys_at_row(row) 
+                obkeys = []
+                for imkey in imkeys:
+                    obs = dm.GetObjectCountFromImage(imkey)
+                    obkeys += [tuple(list(imkey)+[i]) for i in range(1,obs+1)]
+                return obkeys
         
     def get_row_key(self, row):
         '''Returns the key column values at the given row.
@@ -808,23 +814,31 @@ class TableViewer(wx.Frame):
         imagetools.ShowImage(imkey, p.image_channel_colors, parent=self)
 
     def on_dclick_label(self, evt):
-        '''if there is only one object, then highlight it in the image
-        otherwise just show the image.
-        '''
+        '''Handle display of images and objects'''
         if evt.Row >= 0:
             obkeys = self.grid.Table.get_object_keys_at_row(evt.Row)
-            if obkeys is not None and len(obkeys) == 1:
+            '''For a per-object grouping, show the objects in the image'''
+            if self.grid.Table.grouping.lower() == 'object':
                 imview = imagetools.ShowImage(obkeys[0][:-1], 
-                                              p.image_channel_colors,
-                                              parent=self.Parent)
-                imview.SelectObject(obkeys[0])
+                                                  p.image_channel_colors,
+                                                  parent=self.Parent)
+                if obkeys is not None:
+                    for obkey in obkeys:
+                        imview.SelectObject(obkey)
             else:
-                imkeys = self.grid.Table.get_image_keys_at_row(evt.Row)
-                if imkeys:
-                    #XXX: warn if there are a lot
-                    for imkey in imkeys:
-                        imagetools.ShowImage(imkey, p.image_channel_colors,
-                                             parent=self.Parent)
+                '''Otherwise, just show the image. If there is only one object, then highlight it'''
+                if obkeys is not None and len(obkeys) == 1:
+                    imview = imagetools.ShowImage(obkeys[0][:-1], 
+                                                  p.image_channel_colors,
+                                                  parent=self.Parent)
+                    imview.SelectObject(obkeys[0])
+                else:
+                    imkeys = self.grid.Table.get_image_keys_at_row(evt.Row)
+                    if imkeys:
+                        #XXX: warn if there are a lot
+                        for imkey in imkeys:
+                            imagetools.ShowImage(imkey, p.image_channel_colors,
+                                                 parent=self.Parent)
 
     def OnPrev(self, evt=None):
         rmax = int(self.row_max.GetValue())

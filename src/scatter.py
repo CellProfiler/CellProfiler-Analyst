@@ -1,6 +1,7 @@
 # TODO: add hooks to change point size, alpha, numsides etc.
 from cpatool import CPATool
-from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, image_key_columns
+import tableviewer
+from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
 from multiclasssql import filter_table_prefix
 from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
@@ -212,7 +213,8 @@ class ScatterControlPanel(wx.Panel):
         # Convert keys and points into a np array
         kps = np.array(keys_and_points)
         # Strip out keys
-        keys = kps[:,:len(image_key_columns())].astype(int)
+        key_indices = list(xrange(len(image_key_columns() if self.figpanel.is_per_image_table() else object_key_columns())))
+        keys = kps.take(key_indices,axis=1).astype(int)
         # Strip out x coords
         if col_types[0] in [float, int, long]:
             xpoints = kps[:,-2].astype('float32')
@@ -236,9 +238,12 @@ class ScatterControlPanel(wx.Panel):
         
     def loadpoints(self, tablename, xcol, ycol, filter=NO_FILTER):
         ''' Returns a list of rows containing:
-        (TableNumber), ImageNumber, X measurement, Y measurement
+        (TableNumber), ImageNumber, (ObjectNumber), X measurement, Y measurement
         '''
-        fields = UniqueImageClause(tablename)
+        if self.figpanel.is_per_object_table():
+            fields = UniqueObjectClause(tablename)
+        elif self.figpanel.is_per_image_table():
+            fields = UniqueImageClause(tablename)
         fields += ', %s.%s, %s.%s'%(tablename, xcol, tablename, ycol)
         tables = tablename
         where_clause = ''
@@ -331,6 +336,28 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
     
+    def set_configpanel(self,configpanel):
+        # Allow access of the control panel from the plotting panel
+        self.configpanel = configpanel
+        
+    def get_current_x_measurement_name(self):
+        # Return the x measurement column currently selected in the UI panel
+        return str(self.configpanel.x_choice.GetStringSelection())
+    
+    def get_current_y_measurement_name(self):
+        # Return the x measurement column currently selected in the UI panel
+        return str(self.configpanel.y_choice.GetStringSelection())
+    
+    def is_per_object_table(self):
+        all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
+        object_key_col_names = list(object_key_columns())
+        return all([c in all_col_names for c in object_key_col_names])
+    
+    def is_per_image_table(self):
+        all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
+        image_key_col_names = list(image_key_columns())
+        return all([c in all_col_names for c in image_key_col_names]) and not self.is_per_object_table()
+        
     def selection_is_empty(self):
         return self.selection == {} or all([len(s)==0 for s in self.selection.values()])
         
@@ -412,9 +439,55 @@ class ScatterPanel(FigureCanvasWxAgg):
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
             keys = list(set([tuple(k) for k in keys]))
-            if len(keys)>0:
-                ilf = imagelist.ImageListFrame(self, keys, title='Selection from collection %d in scatter'%(i))
-                ilf.Show(True)
+            if len(keys) > 0:
+                if self.is_per_image_table():
+                    key_column_names = image_key_columns()
+                    unique_key_clause = UniqueImageClause(p.image_table)
+                    table_of_interest = p.image_table
+                    column_labels = list(key_column_names)
+                    where_clause_for_query = GetWhereClauseForImages(keys)
+                    group = 'Image'
+                elif self.is_per_object_table():
+                    key_column_names = object_key_columns()
+                    column_labels = list(key_column_names)
+                    # If the plate and/or well id exist, the query needs to have the per-image id prepended to the object part of the key clause
+                    if p.plate_id or p.well_id:
+                        unique_key_clause = UniqueObjectClause(p.object_table)
+                        table_of_interest = ','.join([p.object_table,p.image_table])
+                    else:
+                        unique_key_clause = UniqueObjectClause()
+                        table_of_interest = p.object_table
+                    where_clause_for_query = image_key_columns(p.image_table)[0] + ' = ' + image_key_columns(p.object_table)[0] + ' AND '
+                    where_clause_for_query += GetWhereClauseForObjects(keys,p.object_table)
+                    group = 'Object'
+                    
+                columns_of_interest = []
+                if p.plate_id:
+                    columns_of_interest += [(p.image_table + '.' if self.is_per_object_table() else '') + p.plate_id]
+                    column_labels += [p.plate_id]
+                if p.well_id:
+                    columns_of_interest += [(p.image_table + '.' if self.is_per_object_table() else '') + p.well_id]
+                    column_labels += [p.well_id]
+                columns_of_interest += [self.get_current_x_measurement_name(), self.get_current_y_measurement_name()]
+                # If using per-object data and columns_of_interest includes a key column, need to prepend per-object table name to avoid ambiguity
+                if self.is_per_object_table():
+                    columns_of_interest = ['.'.join([p.object_table,c]) if c in object_key_columns() else c for c in columns_of_interest]
+
+                column_labels += [self.get_current_x_measurement_name(), self.get_current_y_measurement_name()]
+                key_col_indices = list(xrange(len(key_column_names)))
+                columns_of_interest = ','+','.join(columns_of_interest)
+                
+                query = 'SELECT %s%s FROM %s WHERE %s'%(
+                                unique_key_clause, 
+                                columns_of_interest,
+                                table_of_interest,
+                                where_clause_for_query)
+                tableData = db.execute(query)
+                tableData = np.array(tableData, dtype=object)
+                grid = tableviewer.TableViewer(self, title='Selection from collection %d in scatter'%(i))
+                grid.table_from_array(tableData, column_labels, group, key_col_indices)
+                grid.on_set_fitted_col_widths(None)
+                grid.Show()
             else:
                 logging.info('No points were selected in collection %d'%(i))
             
@@ -787,6 +860,7 @@ class Scatter(wx.Frame, CPATool):
                 
         if show_controls:
             configpanel = ScatterControlPanel(self, figpanel)
+            figpanel.set_configpanel(configpanel)
             sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         
         self.SetToolBar(figpanel.get_toolbar())            
