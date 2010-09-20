@@ -322,10 +322,10 @@ class DBTable(TableData):
     Interface connecting the table grid GUI to the database tables.
     '''
     def __init__(self, table_name, rmin=None, rmax=None):
+        self.grouping = None
         self.set_table(table_name)
         self.filter = '' #'WHERE Image_Intensity_Actin_Total_intensity > 17000'
         self.set_row_interval(rmin, rmax)
-        self.grouping = None
         #XXX: should filter be defined at a higher level? Just UI?
         TableData.__init__(self)
         
@@ -334,6 +334,8 @@ class DBTable(TableData):
             self.grouping = 'Image'
         elif table_name == p.object_table:
             self.grouping = 'Object'
+        else:
+            self.grouping = None
         self.table_name = table_name
         self.cache = odict()
         self.col_labels = np.array(db.GetColumnNames(self.table_name))
@@ -876,16 +878,21 @@ class TableViewer(wx.Frame):
         '''Handle display of images and objects'''
         if evt.Row >= 0:
             obkeys = self.grid.Table.get_object_keys_at_row(evt.Row)
-            # For a per-object grouping, show the objects in the image
-            if self.grid.Table.grouping.lower() == 'object':
+            if self.grid.Table.grouping is None:
+                # We need to know how the table is grouped to know what to do
+                logging.warn('CPA does not know how to link this table to your images. Can\'t launch ImageViewer.')
+                return
+            elif self.grid.Table.grouping.lower() == 'object':
+                # For per-object grouping, show the objects in the image
                 imview = imagetools.ShowImage(obkeys[0][:-1], 
                                                   p.image_channel_colors,
                                                   parent=self.Parent)
                 if obkeys is not None:
                     for obkey in obkeys:
                         imview.SelectObject(obkey)
-            else:
-                # Otherwise, just show the images. If there is only one object, then highlight it
+            elif self.grid.Table.grouping.lower() == 'image':
+                # For per-image grouping just show the images.
+                # If there is only one object, then highlight it
                 if obkeys is not None and len(obkeys) == 1:
                     imview = imagetools.ShowImage(obkeys[0][:-1], 
                                                   p.image_channel_colors,
@@ -898,6 +905,14 @@ class TableViewer(wx.Frame):
                         for imkey in imkeys:
                             imagetools.ShowImage(imkey, p.image_channel_colors,
                                                  parent=self.Parent)
+            else:
+                key_cols = self.grid.Table.get_key_cols()
+                if key_cols:
+                    dm = DataModel.getInstance()
+                    im_keys = dm.GetImagesInGroup(self.grid.Table.grouping, key_cols)
+                    for imkey in imkeys:
+                        imagetools.ShowImage(imkey, p.image_channel_colors,
+                                             parent=self.Parent)
 
     def OnPrev(self, evt=None):
         rmax = int(self.row_max.GetValue())
