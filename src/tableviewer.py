@@ -236,6 +236,14 @@ class PlainTable(TableData):
             return None
         else:
             return tuple(self.ordered_data[row, self.key_indices])
+        
+    def get_key_cols(self):
+        '''Returns a list of the key column names or None if none are specified.
+        '''
+        if self.key_indices is not None:
+            return self.col_labels[self.key_indices].tolist()
+        else:
+            return None
     
     def GetNumberRows(self):
         return self.ordered_data.shape[0]
@@ -317,10 +325,15 @@ class DBTable(TableData):
         self.set_table(table_name)
         self.filter = '' #'WHERE Image_Intensity_Actin_Total_intensity > 17000'
         self.set_row_interval(rmin, rmax)
+        self.grouping = None
         #XXX: should filter be defined at a higher level? Just UI?
         TableData.__init__(self)
         
     def set_table(self, table_name):
+        if table_name == p.image_table:
+            self.grouping = 'Image'
+        elif table_name == p.object_table:
+            self.grouping = 'Object'
         self.table_name = table_name
         self.cache = odict()
         self.col_labels = np.array(db.GetColumnNames(self.table_name))
@@ -469,6 +482,14 @@ class DBTable(TableData):
         '''returns all (hidden and shown) column names in this table.
         '''
         return db.GetColumnNames(self.table_name)
+    
+    def get_key_cols(self):
+        '''Returns a list of the key column names or None if none are specified.
+        '''
+        if self.key_indices is not None:
+            return self.col_labels[self.key_indices].tolist()
+        else:
+            return None
 
     def GetValue(self, row, col):
         row += self.rmin
@@ -545,7 +566,15 @@ class TableViewer(wx.Frame):
         load_db_table_menu_item = file_menu.Append(-1, 'Load table from database\tCtrl+Shift+O')
         file_menu.AppendSeparator()
         save_csv_menu_item = file_menu.Append(-1, 'Save table to CSV\tCtrl+S')
-        save_temp_table_menu_item = file_menu.Append(-1, 'Save table in database\tCtrl+Shift+S')
+        save_temp_table_menu_item = file_menu.Append(-1, 'Save table to database\tCtrl+Shift+S')
+
+        table_menu = wx.Menu()
+        self.GetMenuBar().Append(table_menu, 'Table')
+        tsne_menu_item = table_menu.Append(-1, 'Compute t-SNE on current table',
+                            help='Performs t-Distributed Stochastic Neighbor '
+                            'Embedding on the current table and creates a new '
+                            'table with the resulting columns.')
+        
         view_menu = wx.Menu()
         self.GetMenuBar().Append(view_menu, 'View')
         column_width_menu = wx.Menu()
@@ -564,6 +593,7 @@ class TableViewer(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_show_hide_cols, show_hide_cols_item)
         self.Bind(wx.EVT_MENU, self.on_set_fixed_col_widths, fixed_cols_menu_item)
         self.Bind(wx.EVT_MENU, self.on_set_fitted_col_widths, fit_cols_menu_item)
+        self.Bind(wx.EVT_MENU, self.on_compute_tsne, tsne_menu_item)
         
         #
         # Create the grid
@@ -628,6 +658,35 @@ class TableViewer(wx.Frame):
     def set_fitted_col_widths(self):
         wx.EVT_SIZE(self, self.on_size)
         self.RescaleGrid()
+        
+        
+    def on_compute_tsne(self, evt):
+        '''Performs t-distributed stochastic neighbor embedding on the numeric
+        columns of the current table and saves the resulting columns to a new 
+        table.
+        '''
+        import calc_tsne
+        data = [[self.grid.Table.GetValue(row, col) 
+                for col in range(self.grid.Table.GetNumberCols())]
+                for row in range(self.grid.Table.GetNumberRows())]
+        data = np.array(data)
+        if self.grid.Table.get_key_cols is None:
+            wx.MessageDialog(self, 'The current table does not have key columns defined',
+                                 'key columns required', wx.OK|wx.ICON_INFORMATION).ShowModal()
+            return
+        res = calc_tsne.calc_tsne(data)
+        #XXX: add key cols to results
+        db.CreateTempTableFromData(res, 
+                                   self.grid.Table.get_key_cols()+['a','b'], 
+                                   'tSNE', 
+                                   temporary=True)
+##        db.execute('DROP TABLE IF EXISTS tSNE')
+##        db.execute('CREATE TABLE tSNE(ImageNumber int, a FLOAT, b FLOAT)')
+##        i = 1
+##        for a,b in res:
+##            db.execute('INSERT INTO tSNE (ImageNumber, a, b) VALUES(%s, %s, %s)'%(i,a,b))
+##            i += 1
+        wx.GetApp().user_tables = ['tSNE']
 
     def table_from_array(self, data, col_labels=None, grouping=None, key_indices=None):
         '''Populates the grid with the given data.
@@ -817,7 +876,7 @@ class TableViewer(wx.Frame):
         '''Handle display of images and objects'''
         if evt.Row >= 0:
             obkeys = self.grid.Table.get_object_keys_at_row(evt.Row)
-            '''For a per-object grouping, show the objects in the image'''
+            # For a per-object grouping, show the objects in the image
             if self.grid.Table.grouping.lower() == 'object':
                 imview = imagetools.ShowImage(obkeys[0][:-1], 
                                                   p.image_channel_colors,
@@ -826,7 +885,7 @@ class TableViewer(wx.Frame):
                     for obkey in obkeys:
                         imview.SelectObject(obkey)
             else:
-                '''Otherwise, just show the image. If there is only one object, then highlight it'''
+                # Otherwise, just show the images. If there is only one object, then highlight it
                 if obkeys is not None and len(obkeys) == 1:
                     imview = imagetools.ShowImage(obkeys[0][:-1], 
                                                   p.image_channel_colors,
