@@ -570,12 +570,16 @@ class TableViewer(wx.Frame):
         save_csv_menu_item = file_menu.Append(-1, 'Save table to CSV\tCtrl+S')
         save_temp_table_menu_item = file_menu.Append(-1, 'Save table to database\tCtrl+Shift+S')
 
-        table_menu = wx.Menu()
-        self.GetMenuBar().Append(table_menu, 'Table')
-        tsne_menu_item = table_menu.Append(-1, 'Compute t-SNE on current table',
-                            help='Performs t-Distributed Stochastic Neighbor '
-                            'Embedding on the current table and creates a new '
-                            'table with the resulting columns.')
+##        table_menu = wx.Menu()
+##        self.GetMenuBar().Append(table_menu, 'Table')
+##        pca_menu_item = table_menu.Append(-1, 'Compute PCA on current table',
+##                            help='Performs Principal Component Analysis on '
+##                            'the current table and creates a new table with '
+##                            'the resulting columns.')
+##        tsne_menu_item = table_menu.Append(-1, 'Compute t-SNE on current table',
+##                            help='Performs t-Distributed Stochastic Neighbor '
+##                            'Embedding on the current table and creates a new '
+##                            'table with the resulting columns.')
         
         view_menu = wx.Menu()
         self.GetMenuBar().Append(view_menu, 'View')
@@ -595,7 +599,7 @@ class TableViewer(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_show_hide_cols, show_hide_cols_item)
         self.Bind(wx.EVT_MENU, self.on_set_fixed_col_widths, fixed_cols_menu_item)
         self.Bind(wx.EVT_MENU, self.on_set_fitted_col_widths, fit_cols_menu_item)
-        self.Bind(wx.EVT_MENU, self.on_compute_tsne, tsne_menu_item)
+##        self.Bind(wx.EVT_MENU, self.on_compute_tsne, tsne_menu_item)
         
         #
         # Create the grid
@@ -661,7 +665,7 @@ class TableViewer(wx.Frame):
         wx.EVT_SIZE(self, self.on_size)
         self.RescaleGrid()
         
-        
+    # TODO:
     def on_compute_tsne(self, evt):
         '''Performs t-distributed stochastic neighbor embedding on the numeric
         columns of the current table and saves the resulting columns to a new 
