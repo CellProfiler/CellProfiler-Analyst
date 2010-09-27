@@ -27,7 +27,7 @@ setup(windows=['cpa.py'],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
                              'libgobject-2.0-0.dll', 
                              'libgdk_pixbuf-2.0-0.dll',
-                             'tcl84.dll', 'tk84.dll'],
+                             'tcl84.dll', 'tk84.dll', 'jvm.dll'],
             }
         },
       data_files=(matplotlib.get_py2exe_datafiles()+
