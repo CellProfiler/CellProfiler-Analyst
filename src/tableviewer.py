@@ -910,10 +910,10 @@ class TableViewer(wx.Frame):
                             imagetools.ShowImage(imkey, p.image_channel_colors,
                                                  parent=self.Parent)
             else:
-                key_cols = self.grid.Table.get_key_cols()
+                key_cols = self.grid.Table.get_row_key(evt.Row)
                 if key_cols:
                     dm = DataModel.getInstance()
-                    im_keys = dm.GetImagesInGroup(self.grid.Table.grouping, key_cols)
+                    imkeys = dm.GetImagesInGroup(self.grid.Table.grouping, key_cols)
                     for imkey in imkeys:
                         imagetools.ShowImage(imkey, p.image_channel_colors,
                                              parent=self.Parent)
