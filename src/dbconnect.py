@@ -52,7 +52,24 @@ class DBDisconnectedException(Exception):
         return fn
     with_mysql_retry = classmethod(with_mysql_retry)
 
-
+def sqltype_to_pythontype(t):
+    '''
+    t -- a valid sql typestring
+    returns a python type that will hold the given sqltype
+    '''
+    t = t.upper()
+    if (t.startswith('INT') or t.startswith('DECIMAL') or 
+        t in ['TINYINT', 'SMALLINT', 'MEDIUMINT', 'BIGINT', 'UNSIGNED BIG INT', 
+              'INT2', 'INT8', 'NUMERIC', 'BOOLEAN', 'DATE', 'DATETIME']):
+        return int
+    elif t in ['REAL', 'DOUBLE', 'DOUBLE PRECISION', 'FLOAT']:
+        return float
+    elif (t.startswith('CHARACTER') or t.startswith('VARCHAR') or
+          t.startswith('VARYING CHARACTER') or t.startswith('NCHAR') or 
+          t.startswith('NCHAR') or t.startswith('NATIVE CHARACTER') or
+          t.startswith('NVARCHAR') or t in ['TEXT', 'CLOB']):
+        return str
+    
 #TODO: this doesn't belong in this module
 def get_data_table_from_csv_reader(reader):
     '''reads a csv table into a 2d list'''
@@ -119,7 +136,7 @@ def object_key_columns(table_name=''):
 def object_key_defs():
     return ', '.join(['%s INT'%(id) for id in object_key_columns()])
 
-def GetWhereClauseForObjects(obkeys,table_name=''):
+def GetWhereClauseForObjects(obkeys, table_name=None):
     '''
     Return a SQL WHERE clause that matches any of the given object keys.
     Example: GetWhereClauseForObjects([(1, 3), (2, 4)]) => "ImageNumber=1 
@@ -143,7 +160,7 @@ def GetWhereClauseForObjects(obkeys,table_name=''):
 
 def GetWhereClauseForImages(imkeys):
     '''
-    Return a SQL WHERE clause that matches any of the give image keys.
+    Return a SQL WHERE clause that matches any of the given image keys.
     Example: GetWhereClauseForImages([(3,), (4,)]) => 
              "(ImageNumber IN (3, 4))"
     '''
@@ -155,13 +172,30 @@ def GetWhereClauseForImages(imkeys):
         count = 0
         tnum = 0
         wheres = []
-        while count<len(imkeys):
+        while count < len(imkeys):
             imnums = imkeys[(imkeys[:,0]==tnum), 1]
             count += len(imnums)
             if len(imnums)>0:
                 wheres += ['(%s=%s AND %s IN (%s))'%(p.table_id, tnum, 
                             p.image_id, ','.join([str(k) for k in imnums]))]
             tnum += 1
+        return ' OR '.join(wheres)
+
+def GetWhereClauseForWells(keys, table_name=None):
+    '''
+    Return a SQL WHERE clause that matches any of the given well keys.
+    Example: GetWhereClauseForImages([('plate1', 'A01'), ('plate1', 'A02')]) => 
+             "(plate="plate1" AND well="A01" OR plate="plate1" AND "A02"))"
+    '''
+    if table_name is None:
+        table_name = ''
+    else:
+        table_name += '.'
+    keys.sort()
+    if not p.plate_id:
+        return '%s%s IN (%s)'%(table_name, p.well_id, ','.join([str(k[0]) for k in keys]))
+    else:
+        wheres = ['%s%s=%s AND %s%s=%s'%(table_name, p.plate_id, plate, table_name, p.well_id, well) for plate, well in keys]
         return ' OR '.join(wheres)
 
 def UniqueObjectClause(table_name=None):
@@ -310,15 +344,18 @@ class DBConnect(Singleton):
                 def reset(self):
                     self.values = []
                 def step(self, val):
-                    if not np.isnan(float(val)):
-                        self.values.append(float(val))
+                    if val is not None:
+                        if not np.isnan(float(val)):
+                            self.values.append(float(val))
                 def finalize(self):
-                    self.values.sort()
                     n = len(self.values)
+                    if n == 0:
+                        return None
+                    self.values.sort()
                     if n%2 == 1:
                         return self.values[n//2]
                     else:
-                        return (self.values[n//2-1] + self.values[n//2])/2
+                        return (self.values[n//2-1] + self.values[n//2]) / 2
             self.connections[connID].create_aggregate('median', 1, median)
             # Create STDDEV function
             class stddev:
@@ -327,9 +364,12 @@ class DBConnect(Singleton):
                 def reset(self):
                     self.values = []
                 def step(self, val):
-                    if not np.isnan(float(val)):
-                        self.values.append(float(val))
+                    if val is not None:
+                        if not np.isnan(float(val)):
+                            self.values.append(float(val))
                 def finalize(self):
+                    if len(self.values) == 0:
+                        return None
                     avg = np.mean(self.values)
                     b = np.sum([(x-avg)**2 for x in self.values])
                     std = np.sqrt(b/len(self.values))
@@ -643,10 +683,18 @@ class DBConnect(Singleton):
         self.execute('SELECT * FROM %s LIMIT 1'%(table))
         return self.GetResultColumnNames()   # return the column names
 
+    def GetUserColumnNames(self, table):
+        '''Returns a list of the column names that start with "User_" for the 
+        specified table. '''
+        return [col for col in self.GetColumnNames(table) if col.lower().startswith('user')]
+
     def GetColumnTypes(self, table):
         '''Returns python types for each column of the given table. '''
-        res = self.execute('SELECT * FROM %s LIMIT 1'%(table), silent=True)
-        return [type(x) for x in res[0]]
+        sqltypes = self.GetColumnTypeStrings(table)
+        return [sqltype_to_pythontype(t) for t in sqltypes]        
+        # This method will return Nonetype for columns that begin with a NULL
+        # res = self.execute('SELECT * FROM %s LIMIT 1'%(table), silent=True)
+        # return [type(x) for x in res[0]]
     
     def GetColumnType(self, table, colname):
         '''Returns the python type for a given table column. '''
@@ -732,7 +780,7 @@ class DBConnect(Singleton):
         '''
         Returns the names of each plate in the per-image table.
         '''
-        res = self.execute('SELECT %s FROM %s GROUP BY %s'%(p.plate_id, p.image_table, p.plate_id))
+        res = self.execute('SELECT DISTINCT %s FROM %s'%(p.plate_id, p.image_table))
         return [str(l[0]) for l in res]
 
     def GetPlatesAndWellsPerImage(self):
@@ -797,7 +845,38 @@ class DBConnect(Singleton):
                 self.link_cols[table] = (p.well_id, p.plate_id)
             else:
                 return None
-        return self.link_cols[table]       
+        return self.link_cols[table]
+    
+    def AppendColumn(self, table, colname, coltype):
+        '''
+        Appends a new column to the specified table.
+        The column name must begin with "User_" and contain only A-Za-z0-9_
+        '''
+        if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
+            raise 'Column name must begin with "User_" when appending to the image or object tables'
+        if not re.match('^[A-Za-z0-9_]*$', colname):
+            raise 'Column name may contain only alphanumeric characters and underscore.'
+        self.execute('ALTER TABLE %s ADD %s %s'%(table, colname, coltype))
+        
+    def UpdateWells(self, table, colname, value, wellkeys):
+        '''
+        Sets the value of the specified column in the database for each row
+        associated with wellkeys. Pass value=None to store NULL
+        '''
+        # TODO: handle other tables
+        assert table == p.image_table
+        if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
+            raise 'Can only edit columns beginning with "User_" in the image and object tables.'            
+        if type(value) in (str, unicode):
+            value = '"'+value+'"'
+            if re.match('\"\'\`', value):
+                raise 'No quotes are allowed in values written to the database.'
+        if value is None:
+            value = 'NULL'
+        self.execute('UPDATE %s SET %s=%s WHERE %s'%(table, colname, value,
+                                                GetWhereClauseForWells(wellkeys)))
+        # for some reason non string columns need to be committed or they will not be saved
+        self.Commit()
     
     def CreateSQLiteDB(self):
         '''
@@ -945,7 +1024,6 @@ class DBConnect(Singleton):
             command = 'INSERT INTO '+p.image_table+' VALUES ('+','.join(['?' for i in row1])+')'
             self.cursors[connID].execute(command, row1)
             self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
-            self.Commit()
             f.close()
             base_bytes += os.path.getsize(os.path.join(csv_dir, file))
             pct = min(int(100 * base_bytes / total_bytes), 100)
@@ -971,7 +1049,6 @@ class DBConnect(Singleton):
                 if args == []:
                     break
                 self.cursors[connID].executemany(command, args)
-                self.Commit()
                 line_count += len(args)
 
                 pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
@@ -983,6 +1060,8 @@ class DBConnect(Singleton):
             f.close()
             base_bytes += os.path.getsize(os.path.join(csv_dir, file))
 
+        # Commit only at very end. No use in committing if the db is incomplete.
+        self.Commit()
         if dlg:
             dlg.Destroy()
 
