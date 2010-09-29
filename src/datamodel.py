@@ -8,6 +8,12 @@ from properties import Properties
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
+# Plate formats
+P96   = (8, 12)
+P384  = (16, 24)
+P1536 = (32, 48)
+P5600 = (40, 140)
+
 class DataModel(Singleton):
     '''
     DataModel is a dictionary of perImageObjectCounts indexed by (TableNumber,ImageNumber)
@@ -26,6 +32,8 @@ class DataModel(Singleton):
         self.obCount = 0
         self.keylist = []
         self.filterkeys = {}     # sets of image keys keyed by filter name
+        self.plate_map = {}      # maps well names to (x,y) plate locations
+        self.rev_plate_map = {}  # maps (x,y) plate locations to well names
         
     def __str__(self):
         return str(self.obCount)+" objects in "+ \
@@ -237,6 +245,72 @@ class DataModel(Singleton):
         
     def IsEmpty(self):
         return self.data == {}
+    
+    def populate_plate_maps(self):
+        '''Computes plate_maps which maps well names to their corresponding
+        plate positions, and rev_plate_maps which does the reverse.
+        eg: plate_maps['A01'] = (0,0)
+            rev_plate_maps[(0,0)] = 'A01'
+        '''
+        if p.well_format == 'A01':
+            well_re = r'^[A-Za-z]\d+$'
+        elif p.well_format == '123':
+            well_re = r'^\d+$'
+        else:
+            raise 'Unknown well format'
+        
+        if   p.plate_type == '96':   pshape = P96
+        elif p.plate_type == '384':  pshape = P384
+        elif p.plate_type == '1536': pshape = P1536
+        elif p.plate_type == '5600': pshape = P5600
+
+        res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
+        for r in res:
+            well = r[0]
+            # Make sure all well entries match the naming format
+            if type(well) == str:
+                assert re.match(well_re, well), 'Well "%s" did not match well naming format "%s"'%(r[0], p.well_format)
+            elif type(well) == int:
+                assert p.well_format == '123', 'Well "%s" did not match well naming format "%s"'%(r[0], p.well_format)
+
+            if p.well_format == 'A01':
+                if p.plate_type in ['96', '384']:
+                    row = 'abcdefghijklmnopqrstuvwxyz'.index(well[0].lower())
+                    col = int(well[1:]) - 1
+                elif p.plate_type == '1536':
+                    row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.index(well[0])
+                    col = int(well[1:]) - 1
+                elif p.plate_type == '5600':
+                    raise 'Plate type "5600" cannot have well format "A01" Check your properties file.'
+                self.plate_map[well] = (row, col)
+                self.rev_plate_map[(row, col)] = well
+            elif p.well_format == '123':
+                row = (int(well) - 1) / pshape[1]
+                col = (int(well) - 1) % pshape[1]
+                self.plate_map[well] = (row, col)
+                self.rev_plate_map[(row, col)] = well
+    
+    def get_well_position_from_name(self, well_name):
+        '''returns the plate position tuple (row, col) corresponding to 
+        the given well_name.
+        '''
+        if self.plate_map == {}:
+            self.populate_plate_maps()
+        if well_name in self.plate_map.keys():
+            return self.plate_map[well_name]
+        else:
+            raise 'Well name "%s" could not be mapped to a plate position.'%(well_name)
+
+    def get_well_name_from_position(self, (row, col)):
+        '''returns the well name (eg: "A01") corresponding to the given 
+        plate position tuple.
+        '''
+        if self.plate_map == {}:
+            self.populate_plate_maps()
+        if (row, col) in self.rev_plate_map.keys():
+            return self.plate_map[(row, col)]
+        else:
+            raise 'Plate position "%s" could not be mapped to a well key.'%(str((row,col)))
 
 
 if __name__ == "__main__":
