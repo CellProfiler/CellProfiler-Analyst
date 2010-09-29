@@ -39,7 +39,8 @@ string_vars = ['db_type',
                'db_sql_file',
                'db_sqlite_file',
                'use_larger_image_scale', 
-               'rescale_object_coords',]
+               'rescale_object_coords',
+               'well_format',]
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
              'image_file_cols', 'image_channel_files', 
@@ -84,7 +85,8 @@ optional_vars = ['db_port',
                  'cell_y_loc',
                  'use_larger_image_scale', 
                  'rescale_object_coords',
-                 'image_thumbnail_cols',]
+                 'image_thumbnail_cols',
+                 'well_format',]
 
 # map deprecated fields to new fields
 field_mappings = {'classifier_ignore_substrings' : 'classifier_ignore_columns',
@@ -457,6 +459,10 @@ class Properties(Singleton):
         else:
             logging.warn('PROPERTIES WARNING (rescale_object_coords): Field value "%s" is invalid. Replacing with "false".'%(self.rescale_object_coords))
             self.rescale_object_coords = False
+            
+        if not self.field_defined('well_format'):
+            self.well_format = 'A01'
+            logging.warn('PROPERTIES WARNING (well_format): Field was not defined, using default format of "A01".')
         
         
 if __name__ == "__main__":
