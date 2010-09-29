@@ -60,6 +60,9 @@ class PlateMapPanel(wx.Panel):
         
         self.hideLabels = False
         self.selection = set([])
+        self.outlined = []
+        self.outline_style = wx.SHORT_DASH
+        self.well_selection_handlers = []
         self.SetColorMap(colormap)
         self.well_disp = well_disp
         self.SetData(data, shape, data_range=data_range)
@@ -92,7 +95,7 @@ class PlateMapPanel(wx.Panel):
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLClick)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
-        self.Bind(wx.EVT_RIGHT_UP, self.OnRClick)
+        self.Bind(wx.EVT_RIGHT_UP, self.OnRClick)        
 
     def SetData(self, data, shape=None, data_range=None, clip_interval=None, clip_mode='rescale'):
         '''
@@ -168,8 +171,21 @@ class PlateMapPanel(wx.Panel):
         self.Refresh()
         
     def SetWellKeys(self, keys):
-        ''' keys - an array of keys uniquely identifying each well in the plate.'''
+        ''' keys - a 2D array of keys uniquely identifying each well in the plate.'''
         self.well_keys = keys
+        
+    def SetOutlinedWells(self, well_keys):
+        '''well_keys: list of the well keys to flag'''
+        self.outlined = well_keys
+        self.repaint = True
+        
+    def OutlineWells(self, well_keys):
+        self.outlined = list(set(self.outlined + well_keys))
+        self.repaint = True
+        
+    def UnOutlineWells(self, well_keys):
+        self.outlined = list(set(self.outlined) - set(well_keys))
+        self.repaint = True
 
     def SelectWell(self, well):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
@@ -220,6 +236,12 @@ class PlateMapPanel(wx.Panel):
             row, col = loc
             return self.well_keys[row][col]
         
+    def GetWellKeys(self):
+        return [tuple(wk) for wk in self.well_keys]
+    
+    def get_selected_well_keys(self):
+        return [tuple(self.well_keys[row][col]) for row, col in self.selection]
+
     def OnPaint(self, evt=None):
         dc = wx.PaintDC(self)
         dc.Clear()
@@ -297,9 +319,14 @@ class PlateMapPanel(wx.Panel):
                 # Draw wells
                 if y>0 and x>0:
                     if (y-1, x-1) in self.selection:
+                        # thick black outline for selected wells
                         dc.SetPen(wx.Pen("BLACK",5))
+                    elif tuple(self.well_keys[y-1][x-1]) in self.outlined:
+                        # thick gray outline for selected wells
+                        dc.SetPen(wx.Pen("BLACK",2, style=self.outline_style))
                     else:
-                        dc.SetPen(wx.Pen("BLACK",0.5))
+                        # normal outline
+                        dc.SetPen(wx.Pen("GRAY",0.5))
                     color = np.array(self.colormap(self.data_scaled[y-1][x-1])[:3]) * 255
                     # NaNs get no color
                     if np.isnan(self.data[y-1][x-1]):
@@ -351,13 +378,25 @@ class PlateMapPanel(wx.Panel):
             self.Refresh()
             self.repaint = False
 
+    def add_well_selection_handler(self, handler):
+        '''handler -- a function to call on well selection. The handler must
+              take a single well_key parameter.
+        '''
+        self.well_selection_handlers += [handler]
+            
     def OnLClick(self, evt):
         well = self.GetWellAtCoord(evt.X, evt.Y)
-        if well is not None:
-            if evt.ShiftDown():
-                self.ToggleSelected(well)
-            else:
-                self.SelectWell(well)
+        
+        if well is None:
+            return        
+        
+        if evt.ShiftDown():
+            self.ToggleSelected(well)
+        else:
+            self.SelectWell(well)
+            
+        for handler in self.well_selection_handlers:
+            handler()
                 
         if not p.image_thumbnail_cols:
             evt.Skip()
@@ -451,7 +490,6 @@ class PlateMapPanel(wx.Panel):
 if __name__ == "__main__":
     app = wx.PySimpleApp()
 
-    # test plate map panel
     data = np.arange(5600.)
     a = np.zeros((40,140))
     i = 0

@@ -1,7 +1,8 @@
 from cpatool import CPATool
 from colorbarpanel import ColorBarPanel
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns
+from dbconnect import DBConnect, UniqueImageClause, image_key_columns, GetWhereClauseForWells, well_key_columns
 import platemappanel as pmp
+from datamodel import DataModel
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import properties
@@ -12,6 +13,7 @@ import os
 import sys
 import re
 import wx
+
 
 p = properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
@@ -37,8 +39,8 @@ class PlateViewer(wx.Frame, CPATool):
         fail = False
         for field in required_fields:
             if not p.field_defined(field):
-                raise 'Properties field "%s" is required for PlateViewer.'%(field)
                 fail = True
+                raise 'Properties field "%s" is required for PlateViewer.'%(field)
         if fail:    
             self.Destroy()
             return
@@ -48,7 +50,6 @@ class PlateViewer(wx.Frame, CPATool):
 
         self.chMap = p.image_channel_colors[:]
 
-        self.Center()        
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
@@ -59,8 +60,6 @@ class PlateViewer(wx.Frame, CPATool):
 
         self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
         wx.EVT_MENU(self, ID_EXIT, lambda(_):self.Close())
-
-        self.plateNames = db.GetPlateNames()
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
@@ -115,12 +114,41 @@ class PlateViewer(wx.Frame, CPATool):
         self.numberOfPlatesTE = wx.TextCtrl(self, -1, '1', style=wx.TE_PROCESS_ENTER)
         viewSizer.Add(self.numberOfPlatesTE)
 
+        annotationSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Annotation:'), wx.VERTICAL)
+        annotationSizer.Add(wx.StaticText(self, label='Annotation column:'))
+        annotationColSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.annotation_cols = dict([(col, db.GetColumnType(p.image_table, col)) 
+                                     for col in db.GetUserColumnNames(p.image_table)])
+        self.annotationCol = ComboBox(self, choices=self.annotation_cols.keys(), size=(120,-1), style=wx.CB_READONLY)
+        if len(self.annotation_cols) > 0:
+            self.annotationCol.SetSelection(0)
+        annotationColSizer.Add(self.annotationCol)
+        annotationColSizer.AddSpacer((10,-1))
+        self.addAnnotationColBtn = wx.Button(self, -1, 'Add', size=(44,-1))
+        annotationColSizer.Add(self.addAnnotationColBtn)
+        annotationSizer.Add(annotationColSizer)
+        annotationSizer.AddSpacer((-1,10))
+        annotationSizer.Add(wx.StaticText(self, label='Label:'))
+        self.annotationLabel = wx.TextCtrl(self, -1, 'Select wells')#, style=wx.TE_PROCESS_ENTER)
+        self.annotationLabel.Disable()
+        self.annotationLabel.SetForegroundColour(wx.Color(80,80,80))
+        self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
+        annotationSizer.Add(self.annotationLabel)
+        annotationSizer.AddSpacer((-1,10))
+        self.outlineMarked = wx.CheckBox(self, -1, label='Outline annotated wells')
+        annotationSizer.Add(self.outlineMarked)
+        annotationSizer.AddSpacer((-1,10))
+        self.annotationShowVals = wx.CheckBox(self, -1, label='Show values on plate')
+        annotationSizer.Add(self.annotationShowVals)
+        
         controlSizer = wx.BoxSizer(wx.VERTICAL)
         controlSizer.Add(dataSourceSizer, 0, wx.EXPAND)
         controlSizer.AddSpacer((-1,10))
         controlSizer.Add(groupingSizer, 0, wx.EXPAND)
         controlSizer.AddSpacer((-1,10))
         controlSizer.Add(viewSizer, 0, wx.EXPAND)
+        controlSizer.AddSpacer((-1,10))
+        controlSizer.Add(annotationSizer, 0 , wx.EXPAND)
 
         self.plateMapSizer = wx.GridSizer(1,1,5,5)
         self.plateMaps = []
@@ -144,10 +172,16 @@ class PlateViewer(wx.Frame, CPATool):
         self.colorMapsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectColorMap)
         self.numberOfPlatesTE.Bind(wx.EVT_TEXT_ENTER, self.OnEnterNumberOfPlates)
         self.wellDisplayChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectWellDisplay)
-
-        global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(self.measurementsChoice.GetStringSelection(), 
-                                                                       self.measurementsChoice.GetStringSelection(), 
-                                                                       self.sourceChoice.GetStringSelection()))[0]
+        self.annotationCol.Bind(wx.EVT_COMBOBOX, self.OnSelectAnnotationCol)
+        self.addAnnotationColBtn.Bind(wx.EVT_BUTTON, self.OnAddAnnotationCol)
+        self.annotationLabel.Bind(wx.EVT_KEY_UP, self.OnEnterAnnotation)
+        self.outlineMarked.Bind(wx.EVT_CHECKBOX, self.OnOutlineMarked)
+        self.annotationShowVals.Bind(wx.EVT_CHECKBOX, self.OnShowAnotationValues)
+        
+        global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(
+            self.measurementsChoice.GetStringSelection(), 
+            self.measurementsChoice.GetStringSelection(), 
+            self.sourceChoice.GetStringSelection()))[0]
         self.colorBar.SetGlobalExtents(global_extents)
         self.AddPlateMap()
         self.UpdatePlateMaps()
@@ -190,7 +224,7 @@ class PlateViewer(wx.Frame, CPATool):
         res = db.execute('SELECT %s FROM %s WHERE %s!="" GROUP BY %s'%
                          (p.well_id, p.image_table, p.well_id, p.well_id))
 
-        self.plateMapChoices += [ComboBox(self, choices=self.plateNames, 
+        self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), 
                                           style=wx.CB_READONLY, size=(100,-1))]
         self.plateMapChoices[-1].Select(plateIndex)
         self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
@@ -199,10 +233,11 @@ class PlateViewer(wx.Frame, CPATool):
         if len(well_keys) != len(data):
             well_keys = None
 
-
-        self.plateMaps += [pmp.PlateMapPanel(self, data, shape, well_keys=well_keys,
-                                      colormap=self.colorMapsChoice.GetStringSelection(),
-                                      well_disp=self.wellDisplayChoice.GetStringSelection())]
+        platemap = pmp.PlateMapPanel(self, data, shape, well_keys=well_keys,
+                                     colormap=self.colorMapsChoice.GetStringSelection(),
+                                     well_disp=self.wellDisplayChoice.GetStringSelection())
+        platemap.add_well_selection_handler(self.OnSelectWell)
+        self.plateMaps += [platemap]
 
         plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
         plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), 0, wx.EXPAND)
@@ -210,7 +245,7 @@ class PlateViewer(wx.Frame, CPATool):
 
         singlePlateMapSizer = wx.BoxSizer(wx.VERTICAL)
         singlePlateMapSizer.Add(plateMapChoiceSizer, 0, wx.ALIGN_CENTER)
-        singlePlateMapSizer.Add(self.plateMaps[-1], 1, wx.EXPAND|wx.ALIGN_CENTER)
+        singlePlateMapSizer.Add(platemap, 1, wx.EXPAND|wx.ALIGN_CENTER)
 
         self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
 
@@ -416,7 +451,7 @@ class PlateViewer(wx.Frame, CPATool):
         # Record the indices of the plates currently selected.
         # Pad the list with sequential plate indices then crop to the new number of plates.
         currentPlates = [plateChoice.GetSelection() for plateChoice in self.plateMapChoices]
-        currentPlates = (currentPlates+[(currentPlates[-1]+1+p) % len(self.plateNames) for p in range(nPlates)])[:nPlates]
+        currentPlates = (currentPlates+[(currentPlates[-1]+1+p) % len(db.GetPlateNames()) for p in range(nPlates)])[:nPlates]
         # Remove all plateMaps
         self.plateMapSizer.Clear(deleteWindows=True)
         self.plateMaps = []
@@ -430,7 +465,133 @@ class PlateViewer(wx.Frame, CPATool):
             self.AddPlateMap(plateIndex)
         self.UpdatePlateMaps()
         self.plateMapSizer.Layout()
+        # Update outlines
+        self.OnOutlineMarked()
+        
+    def OnSelectWell(self):
+        '''When wells are selected: display their annotation in the annotation
+        label control. If multiple annotations are found then make sure the
+        user knows.
+        '''
+        wellkeys = []
+        for pm in self.plateMaps:
+            wellkeys += pm.get_selected_well_keys()
+        if len(wellkeys) > 0 and self.annotationCol.Value != '':
+            self.annotationLabel.Enable()
+            self.annotationLabel.SetForegroundColour(wx.BLACK)
+            self.annotationLabel.SetBackgroundColour(wx.WHITE)
+            annotations = db.execute('SELECT %s FROM %s WHERE %s'%(
+                                self.annotationCol.Value, 
+                                p.image_table, 
+                                GetWhereClauseForWells(wellkeys)))
+            annotations = list(set([a[0] for a in annotations]))
+            if len(annotations) == 1:
+                if annotations[0] == None:
+                    self.annotationLabel.SetValue('')
+                else:
+                    self.annotationLabel.SetValue(str(annotations[0]))
+            else:
+                self.annotationLabel.SetValue(str(annotations))
+                
+    def OnAddAnnotationCol(self, evt):
+        '''Add a new user annotation column to the database.
+        '''
+        dlg = wx.TextEntryDialog(self, 'New annotation column name: User_','Add Annotation Column')
+        if dlg.ShowModal() != wx.ID_OK:
+            return
+        new_column = 'User_'+dlg.GetValue()
+        # user-type ==> (sql-type, python-type)
+        coltypes = {'Text'   : ('VARCHAR(255)', str), 
+                    'Number' : ('FLOAT', float)}
+        dlg = wx.SingleChoiceDialog(self, 
+                'What type of annotation column would you like to add?\nThis can not be changed.',
+                'Add Annotation Column', coltypes.keys(), wx.CHOICEDLG_STYLE)
+        if dlg.ShowModal() != wx.ID_OK:
+            return
+        usertype = dlg.GetStringSelection()
+        db.AppendColumn(p.image_table, new_column, coltypes[usertype][0])
+        self.annotation_cols[new_column] = coltypes[usertype][1]
+        self.annotationCol.Items += [new_column]
+        self.annotationCol.SetSelection(len(self.annotation_cols) - 1)
+        self.measurementsChoice.SetItems(self.measurementsChoice.Strings + [new_column])
+        if self.annotationShowVals.IsChecked():
+            column = self.annotationCol.Value
+            self.sourceChoice.SetStringSelection(p.image_table)
+            self.measurementsChoice.SetStringSelection(column)
+            self.UpdatePlateMaps()
+        self.OnSelectWell()
+        
+    def OnSelectAnnotationCol(self, evt=None):
+        '''Handles selection of an annotation column.
+        '''
+        col = self.annotationCol.GetStringSelection()
+        if col == '':
+            return
+        coltype = self.annotation_cols[col]
+        self.OnSelectWell()
+        self.OnOutlineMarked()
+        if self.annotationShowVals.IsChecked():
+            column = self.annotationCol.Value
+            self.sourceChoice.SetStringSelection(p.image_table)
+            self.measurementsChoice.SetStringSelection(column)
+            self.UpdatePlateMaps()
+        
+    def OnEnterAnnotation(self, evt=None):
+        '''Store the annotation value in the annotation column of the db.
+        '''
+        column = self.annotationCol.Value
+        value = self.annotationLabel.Value
+        wellkeys = []
+        for pm in self.plateMaps:
+            wellkeys += pm.get_selected_well_keys()
+        if value == '':
+            value = None
+        elif self.annotation_cols[column] == float:
+            try:
+                value = float(value)
+                self.annotationLabel.SetForegroundColour(wx.BLACK)
+            except:
+                self.annotationLabel.SetForegroundColour(wx.Color(255,0,0))
+                return
+        db.UpdateWells(p.image_table, column, value, wellkeys)
+        if self.outlineMarked.IsChecked():
+            for pm in self.plateMaps:
+                if value is None:
+                    pm.UnOutlineWells(wellkeys)
+                else:
+                    pm.OutlineWells(wellkeys)
+        if (self.sourceChoice.GetStringSelection() == p.image_table and 
+            self.measurementsChoice.GetStringSelection() == column):
+            self.UpdatePlateMaps()
 
+    def OnOutlineMarked(self, evt=None):
+        '''Outlines all non-NULL values of the current annotation
+        '''
+        for pm in self.plateMaps:
+            if self.outlineMarked.IsChecked():
+                column = self.annotationCol.Value
+                res = db.execute('SELECT %s, %s FROM %s WHERE %s=%s'%(
+                    ','.join(well_key_columns()), column, p.image_table, 
+                    p.plate_id, pm.plate))
+                keys = [tuple(r[:-1]) for r in res if r[-1] is not None]
+                pm.SetOutlinedWells(keys)
+            else:
+                pm.SetOutlinedWells([])
+                
+    def OnShowAnotationValues(self, evt=None):
+        '''Handler for the show values checkbox.
+        '''
+        if self.annotationShowVals.IsChecked():
+            column = self.annotationCol.Value
+            self.sourceChoice.SetStringSelection(p.image_table)
+            self.measurementsChoice.SetStringSelection(column)
+            self.sourceChoice.Disable()
+            self.measurementsChoice.Disable()
+        else:
+            self.sourceChoice.Enable()
+            self.measurementsChoice.Enable()
+        self.UpdatePlateMaps()
+        
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
         
@@ -477,6 +638,7 @@ class PlateViewer(wx.Frame, CPATool):
             self.wellDisplayChoice.SetStringSelection(settings['well display'])
             self.OnSelectWellDisplay()
 
+            
 def FormatPlateMapData(keys_and_vals, categorical=False):
     '''
     wellsAndVals: a list of lists of plates, wells and values
@@ -484,32 +646,9 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
        -an array in the shape of the plate containing the given values with NaNs filling empty slots.  
        -an array in the shape of the plate containing the given keys with (unknownplate, unknownwell) filling empty slots
     '''
-    #TODO: well naming format (A##/123..) may have to go in props file
-    formats = ['A01', '123', 'Unknown']
 
-    # A01 format also matches A1 below.
-
-    # Make an educated guess at the well naming format
-    res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
-    formatA01 = format123 = formatUnknown = 0
-    for r in res:
-        if re.match(r'^[A-Za-z]\d+$', str(r[0])):
-            formatA01 += 1
-        elif re.match(r'^\d+$', str(r[0])):
-            format123 += 1
-        else:
-            formatUnknown += 1
-
-    if formatA01 >= format123:
-        format = 'A01'
-    else:
-        format = '123'
-
-    if (formatUnknown > 0) or (formatA01 and format123):
-        logging.warn('Could not determine well naming format from the database.  Using "%s", but some wells may be missing.'%(format))
-
-    if p.plate_type == '96': shape = P96
-    elif p.plate_type == '384': shape = P384
+    if   p.plate_type == '96':   shape = P96
+    elif p.plate_type == '384':  shape = P384
     elif p.plate_type == '1536': shape = P1536
     elif p.plate_type == '5600': 
         shape = P5600
@@ -530,28 +669,13 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     data = np.ones(shape) * np.nan
     if categorical:
         data = data.astype('object')
-    well_keys = np.array([('UnknownPlate', 'UnknownWell')] * np.prod(shape), dtype=object).reshape(shape + (2,))
+    well_keys = np.array([('UnknownPlate', 'UnknownWell')] * np.prod(shape), 
+                         dtype=object).reshape(shape + (2,))
     for plate, well, val in keys_and_vals:
-        if format == 'A01':
-            if re.match('^[a-zA-Z][0-9]+[0-9]?$', well):
-                if shape[0] < 26:
-                    row = 'abcdefghijklmnopqrstuvwxyz'.index(well[0].lower())
-                else:
-                    row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.index(well[0])
-                col = int(well[1:])-1
-                if not categorical:
-                    data[row,col] = float(val)
-                else:
-                    data[row,col] = val
-                well_keys[row, col] = (plate, well)
-        elif format == '123':
-            row = (int(well) - 1) / shape[1]
-            col = (int(well) - 1) % shape[1]
-            if not categorical:
-                data[row,col] = float(val)
-            else:
-                data[row,col] = val
-            well_keys[row,col] = well
+        dm = DataModel.getInstance()
+        (row, col) = dm.get_well_position_from_name(well)
+        data[(row, col)] = val
+        well_keys[row, col] = (plate, well)
     return data, well_keys
 
 def meander(a):
