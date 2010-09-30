@@ -308,7 +308,7 @@ class DataModel(Singleton):
         if self.plate_map == {}:
             self.populate_plate_maps()
         if (row, col) in self.rev_plate_map.keys():
-            return self.plate_map[(row, col)]
+            return self.rev_plate_map[(row, col)]
         else:
             raise 'Plate position "%s" could not be mapped to a well key.'%(str((row,col)))
 
