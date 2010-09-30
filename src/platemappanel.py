@@ -30,9 +30,8 @@ class PlateMapPanel(wx.Panel):
     color mapping, setting row & column labels, and reshaping the layout.
     '''
 
-    def __init__(self, parent, data, shape=None, well_keys=None,
-                 colormap='jet', well_disp=ROUNDED, row_label_format=None,
-                 data_range=None, **kwargs):
+    def __init__(self, parent, data, well_keys, shape=None,
+                 colormap='jet', well_disp=ROUNDED, data_range=None, **kwargs):
         '''
         ARGUMENTS:
         parent -- wx parent window
@@ -43,7 +42,6 @@ class PlateMapPanel(wx.Panel):
         well_keys -- list of keys for each well (plate, well)
         colormap -- a colormap name from matplotlib.cm
         well_disp -- ROUNDED, CIRCLE, SQUARE, THUMBNAIL or IMAGE
-        row_label_format -- 'ABC' or '123'
         data_range -- 2-tuple containing the min and max values that the data 
            should be normalized to. Otherwise the min and max will be taken 
            from the data (ignoring NaNs).
@@ -52,44 +50,33 @@ class PlateMapPanel(wx.Panel):
         wx.Panel.__init__(self, parent, **kwargs)
         
         self.chMap = p.image_channel_colors
-
         self.plate = None
         self.tip = wx.ToolTip('')
         self.tip.Enable(False)
         self.SetToolTip(self.tip)
-        
         self.hideLabels = False
         self.selection = set([])
         self.outlined = []
+        self.repaint = False
         self.outline_style = wx.SHORT_DASH
-        self.well_selection_handlers = []
+        self.well_selection_handlers = []   # funcs to call when a well is selected        
         self.SetColorMap(colormap)
         self.well_disp = well_disp
         self.SetData(data, shape, data_range=data_range)
-        if row_label_format is None:
-            if self.data.shape[0] <= len(abc):
-                self.row_label_format = 'ABC'
-            else:
-                self.row_label_format = '123'
-        else:
-            self.row_label_format = row_label_format
+        
+        self.well_keys = []
+        for x, val in enumerate(well_keys):
+            if x % self.data.shape[1] == 0:
+                self.well_keys += [[]]	
+            self.well_keys[-1] += [val]
 
-        self.well_keys = None
-        if well_keys:
-            self.well_keys = []
-            for x, val in enumerate(well_keys):
-                if x % self.data.shape[1] == 0:
-                    self.well_keys += [[]]	
-                self.well_keys[-1] += [val]
-
-        if self.row_label_format == 'ABC':
+        if self.data.shape[0] <= len(abc):
             self.row_labels = ['%2s'%c for c in abc[:self.data.shape[0]]]
-        elif self.row_label_format == '123':
+        else:
             self.row_labels = ['%02d'%(i+1) for i in range(self.data.shape[0])]
         self.col_labels = ['%02d'%i for i in range(1,self.data.shape[1]+1)]
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.repaint = False
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLClick)
@@ -176,7 +163,7 @@ class PlateMapPanel(wx.Panel):
         
     def SetOutlinedWells(self, well_keys):
         '''well_keys: list of the well keys to flag'''
-        self.outlined = well_keys
+        self.outlined = list(set(well_keys))
         self.repaint = True
         
     def OutlineWells(self, well_keys):
