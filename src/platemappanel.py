@@ -359,7 +359,12 @@ class PlateMapPanel(wx.Panel):
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     # Draw text data
                     if self.text_data is not None:
-                        dc.DrawText(str(self.text_data[y-1][x-1]), px+3, py+r)
+                        if type(self.text_data[y-1][x-1]) == str:
+                            dc.DrawText(str(self.text_data[y-1][x-1]), px+3, py+r)
+                        else:
+                            dc.SetPen(wx.Pen("GRAY",1))
+                            dc.DrawLine(px+3, py+3, px+r*2-2, py+r*2-2)
+                            dc.DrawLine(px+3, py+r*2-2, px+r*2-2, py+3)                            
                     # Draw X
                     elif np.isnan(self.data[y-1][x-1]):
                         dc.SetPen(wx.Pen("GRAY",1))
