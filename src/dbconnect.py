@@ -212,6 +212,15 @@ def UniqueImageClause(table_name=None):
     '''
     return ','.join(image_key_columns(table_name))
 
+def UniqueWellClause(table_name=None):
+    '''
+    Returns a clause for specifying a unique image in MySQL.
+    Example: "SELECT <UniqueObjectClause()> FROM <mydb>;" would return all image keys 
+    '''
+    return ','.join(well_key_columns(table_name))
+
+
+
 def get_csv_filenames_from_sql_file():
     '''
     Get the image and object CSVs specified in the .SQL file
@@ -835,14 +844,16 @@ class DBConnect(Singleton):
         return colTypes
     
     def GetLinkingColumnsForTable(self, table):
-        ''' Returns the column(s) that link the given table to the per_image table. '''
+        '''
+        Returns column(s) that can be used to link the given table to the 
+        per_image table.
+        '''
         if table not in self.link_cols.keys():
             cols = self.GetColumnNames(table)
-            imkey = image_key_columns()
-            if all([kcol in cols for kcol in imkey]):
-                self.link_cols[table] = imkey
-            elif p.well_id in cols and p.plate_id in cols:
-                self.link_cols[table] = (p.well_id, p.plate_id)
+            if all([kcol in cols for kcol in image_key_columns()]):
+                self.link_cols[table] = image_key_columns()
+            elif all([kcol in cols for kcol in well_key_columns()]):
+                self.link_cols[table] = well_key_columns()
             else:
                 return None
         return self.link_cols[table]
@@ -1303,6 +1314,9 @@ class Entity(object):
         self.filters = []
         self._offset = None
         self._limit = None
+        self._ordering = None
+        self._columns = None
+        self.group_columns = []
 
     def offset(self, offset):
         new = copy.deepcopy(self)
@@ -1320,6 +1334,16 @@ class Entity(object):
         new.filters.append(name)
         return new
 
+    def group_by(self, group_columns):
+        new = copy.deepcopy(self)
+        if type(group_columns) == str:
+            new.group_columns += [group_columns]
+        elif type(group_columns) in [list, tuple]:
+            new.group_columns += group_columns
+        else:
+            raise
+        return new
+
     def where(self, predicate):
         new = copy.deepcopy(self)
         new._where.append(predicate)
@@ -1330,6 +1354,13 @@ class Entity(object):
             " and ".join(self._where)
     where_clause = property(_get_where_clause)
 
+    def _get_group_by_clause(self):
+        if self.group_columns == []:
+            return ''
+        else:
+            return "group by " + ",".join(self.group_columns)
+    group_by_clause = property(_get_group_by_clause)
+    
     def count(self):
         c = DBConnect.getInstance().execute(self.all_query(columns=["count(*)"]))[0][0]
         c = max(0, c - (self._offset or 0))
@@ -1340,14 +1371,37 @@ class Entity(object):
         return self.dbiter(self, DBConnect.getInstance())
 
     def all_query(self, columns=None):
-        return "select %s from %s %s %s %s" % (
+        return "select %s from %s %s %s %s %s" % (
             ",".join(columns or self.columns()),
             self.from_clause,
             self.where_clause,
+            self.group_by_clause,
             self.ordering_clause,
             self.offset_limit_clause)
 
+    def _get_ordering_clause(self):
+        if self._ordering is None:
+            return ""
+        else:
+            return "order by " + ", ".join(self._ordering)
+    ordering_clause = property(_get_ordering_clause)
 
+    def _get_offset_limit_clause(self):
+        return " ".join((self._limit and ["limit %d" % self._limit] or []) +
+                        (self._offset and ["offset %d" % self._offset] or []))
+    offset_limit_clause = property(_get_offset_limit_clause)
+
+    def ordering(self, ordering):
+        new = copy.deepcopy(self)
+        new._ordering = ordering
+        return new
+
+    def project(self, columns):
+        new = copy.deepcopy(self)
+        new._columns = columns
+        return new
+
+    
 class Union(Entity):
     def __init__(self, *args):
         super(Union, self).__init__()
@@ -1385,7 +1439,10 @@ class Images(Entity):
                 "offset/limit."
         return Objects(images=self)
 
+    def columns(self):
+        return self._columns or DBConnect.getInstance().GetColumnNames(Properties.getInstance().image_table)
 
+    
 class Objects(Entity):
     '''
     Easy access to objects.
@@ -1396,24 +1453,12 @@ class Objects(Entity):
 
     def __init__(self, images=None):
         super(Objects, self).__init__()
-        self._columns = None
-        self._ordering = None
         if images is None:
             self._images = None
         else:
             self._images = images
             self._where = images._where
             self.filters = images.filters
-
-    def ordering(self, ordering):
-        new = copy.deepcopy(self)
-        new._ordering = ordering
-        return new
-
-    def project(self, columns):
-        new = copy.deepcopy(self)
-        new._columns = columns
-        return new
 
     def _get_from_clause(self):
         from_clause = [Properties.getInstance().object_table]
@@ -1428,18 +1473,6 @@ class Objects(Entity):
                                 ", ".join(image_key_columns())))
         return " ".join(from_clause)
     from_clause = property(_get_from_clause)
-
-    def _get_offset_limit_clause(self):
-        return " ".join((self._limit and ["limit %d" % self._limit] or []) +
-                        (self._offset and ["offset %d" % self._offset] or []))
-    offset_limit_clause = property(_get_offset_limit_clause)
-
-    def _get_ordering_clause(self):
-        if self._ordering is None:
-            return ""
-        else:
-            return "order by " + ", ".join(self._ordering)
-    ordering_clause = property(_get_ordering_clause)
 
     def columns(self):
         return self._columns or list(object_key_columns()) + \
@@ -1460,17 +1493,23 @@ class Objects(Entity):
 
 if __name__ == "__main__":
     ''' For debugging only... '''
-    from trainingset import TrainingSet
-    import fastgentleboostingmulticlass
-    import multiclasssql
-    from cStringIO import StringIO
     from datamodel import DataModel
+    import dbconnect
+    import wx
+    app = wx.PySimpleApp()
     
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     
+    
     p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    dm = DataModel.getInstance()   
+    p.LoadFile('/Users/afraser/cpa_example/example.properties')
+    
+    print 'hi'
+    
+    app.MainLoop()
+    
+#    platesWellsAndVals = dbconnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
 
 #    p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
 #    p.LoadFile('../properties/nirht_test.properties')
