@@ -147,7 +147,10 @@ class PlateViewer(wx.Frame, CPATool):
         annotationSizer.AddSpacer((-1,10))
         self.annotationShowVals = wx.CheckBox(self, -1, label='Show values on plate')
         annotationSizer.Add(self.annotationShowVals)
-
+        if len(db.GetUserColumnNames(p.image_table)) == 0:
+            self.outlineMarked.Disable()
+            self.annotationShowVals.Disable()
+            
         controlSizer = wx.BoxSizer(wx.VERTICAL)
         controlSizer.Add(dataSourceSizer, 0, wx.EXPAND)
         controlSizer.AddSpacer((-1,10))
@@ -242,8 +245,6 @@ class PlateViewer(wx.Frame, CPATool):
         plate_col_type = db.GetColumnType(p.image_table, p.plate_id)
         plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
         well_keys = [(plate_id, r[0]) for r in res]
-        if len(well_keys) != len(data):
-            raise 'Number of unique well keys did not match the shape of the data'
 
         platemap = pmp.PlateMapPanel(self, data, well_keys, shape,
                                      colormap = self.colorMapsChoice.Value,
@@ -265,7 +266,7 @@ class PlateViewer(wx.Frame, CPATool):
         measurement = self.measurementsChoice.Value
         table       = self.sourceChoice.Value
         aggMethod   = self.aggregationMethodsChoice.Value
-        table       = self.sourceChoice.Value
+
         categorical = measurement not in get_numeric_columns_from_table(table)
         fltr        = self.filterChoice.Value
         self.colorBar.ClearNotifyWindows()
@@ -291,6 +292,8 @@ class PlateViewer(wx.Frame, CPATool):
                 expression = "MAX(%s.%s)"%(table, measurement)
             elif aggMethod == 'median':
                 expression = "MEDIAN(%s.%s)"%(table, measurement)
+            elif aggMethod == 'none':
+                expression = "(%s.%s)"%(table, measurement)
 
             if table == p.image_table:
                 group = True
@@ -457,7 +460,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.measurementsChoice.Select(0)
         if db.GetLinkingColumnsForTable(table) == well_key_columns():
             self.aggregationMethodsChoice.Disable()
-            self.aggregationMethodsChoice.SetValue('None')
+            self.aggregationMethodsChoice.SetValue('none')
         else:
             self.aggregationMethodsChoice.Enable()
             self.aggregationMethodsChoice.SetSelection(0)
@@ -474,12 +477,13 @@ class PlateViewer(wx.Frame, CPATool):
         selected_measurement = self.measurementsChoice.Value 
         table = self.sourceChoice.Value
         numeric_measurements = get_numeric_columns_from_table(table)
-        if selected_measurement not in numeric_measurements:
+        if (selected_measurement in numeric_measurements):
+            if (set(well_key_columns()) != set(db.GetLinkingColumnsForTable(self.sourceChoice.Value))):
+                self.aggregationMethodsChoice.Enable()
+            self.colorMapsChoice.Enable()
+        else:
             self.aggregationMethodsChoice.Disable()
             self.colorMapsChoice.Disable()
-        else:
-            self.aggregationMethodsChoice.Enable()
-            self.colorMapsChoice.Enable()
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
 
@@ -570,7 +574,12 @@ class PlateViewer(wx.Frame, CPATool):
                 else:
                     self.annotationLabel.SetValue(str(annotations[0]))
             else:
-                self.annotationLabel.SetValue(str(annotations))
+                self.annotationLabel.SetValue(','.join([a for a in annotations if a is not None]))
+        else:
+            self.annotationLabel.Disable()
+            self.annotationLabel.SetForegroundColour(wx.Color(80,80,80))
+            self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
+            self.annotationLabel.SetValue('Select wells')
                 
     def OnAddAnnotationCol(self, evt):
         '''Add a new user annotation column to the database.
@@ -598,6 +607,8 @@ class PlateViewer(wx.Frame, CPATool):
             self.sourceChoice.SetStringSelection(p.image_table)
             self.measurementsChoice.SetStringSelection(column)
             self.UpdatePlateMaps()
+        self.annotationShowVals.Enable()
+        self.outlineMarked.Enable()
         self.OnSelectWell()
         
     def OnSelectAnnotationCol(self, evt=None):
@@ -610,13 +621,18 @@ class PlateViewer(wx.Frame, CPATool):
         self.OnSelectWell()
         self.OnOutlineMarked()
         if self.annotationShowVals.IsChecked():
-            column = self.annotationCol.Value
-            self.measurementsChoice.SetStringSelection(column)
+            if coltype != str:
+                self.colorMapsChoice.Enable()
+            else:
+                self.colorMapsChoice.Disable()
+            self.measurementsChoice.SetStringSelection(col)
             self.UpdatePlateMaps()
         
     def OnEnterAnnotation(self, evt=None):
         '''Store the annotation value in the annotation column of the db.
         '''
+        if evt.KeyCode < 32 or evt.KeyCode > 127:
+            return
         column = self.annotationCol.Value
         value = self.annotationLabel.Value
         wellkeys = []
@@ -677,11 +693,16 @@ class PlateViewer(wx.Frame, CPATool):
             self.sourceChoice.Disable()
             self.measurementsChoice.Disable()
             self.filterChoice.Disable()
+            self.aggregationMethodsChoice.Disable()
+            self.aggregationMethodsChoice.SetValue('none')
         else:
             self.sourceChoice.Enable()
             self.measurementsChoice.Enable()
             if not self.outlineMarked.IsChecked():
                 self.filterChoice.Enable()
+            if db.GetColumnType(self.sourceChoice.Value, self.measurementsChoice.Value) != str:
+                self.aggregationMethodsChoice.Enable()
+                self.aggregationMethodsChoice.SetSelection(0)
         self.UpdatePlateMaps()
         
     def OnSelectFilter(self, evt):
@@ -712,12 +733,12 @@ class PlateViewer(wx.Frame, CPATool):
         returns a dictionary mapping setting names to values encoded as strings
         '''
         settings = {'table' : self.sourceChoice.Value,
-                'measurement' : self.measurementsChoice.Value,
-                'aggregation' : self.aggregationMethodsChoice.Value,
-                'colormap' : self.colorMapsChoice.Value,
-                'well display' : self.wellDisplayChoice.Value,
-                'number of plates' : self.numberOfPlatesTE.GetValue(),
-                }
+                    'measurement' : self.measurementsChoice.Value,
+                    'aggregation' : self.aggregationMethodsChoice.Value,
+                    'colormap' : self.colorMapsChoice.Value,
+                    'well display' : self.wellDisplayChoice.Value,
+                    'number of plates' : self.numberOfPlatesTE.GetValue(),
+                    }
         for i, choice in enumerate(self.plateMapChoices):
             settings['plate %d'%(i+1)] = choice.Value
         return settings

@@ -64,11 +64,16 @@ class PlateMapPanel(wx.Panel):
         self.well_disp = well_disp
         self.SetData(data, shape, data_range=data_range)
         
-        self.well_keys = []
-        for x, val in enumerate(well_keys):
-            if x % self.data.shape[1] == 0:
-                self.well_keys += [[]]	
-            self.well_keys[-1] += [val]
+        self.well_keys = np.ones(np.prod(self.data.shape), dtype=np.object)
+        for i in xrange(len(self.well_keys)):
+            self.well_keys[i] = ('Unknown Plate','Unknown Well')
+        self.well_keys = self.well_keys.reshape(self.data.shape)
+        for key in well_keys:
+            self.well_keys[DataModel.getInstance().get_well_position_from_name(key[-1])] = key
+##        for i, key in enumerate(well_keys):
+##            if i % self.data.shape[1] == 0:
+##                self.well_keys += [[]]	
+##            self.well_keys[-1] += [key]
 
         if self.data.shape[0] <= len(abc):
             self.row_labels = ['%2s'%c for c in abc[:self.data.shape[0]]]
@@ -409,6 +414,8 @@ class PlateMapPanel(wx.Panel):
         images = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
                             (','.join(p.image_thumbnail_cols), p.image_table,
                              p.plate_id, plate, p.well_id, well))
+        if images == []:
+            return
         imsets = []
         for row in images:
             pngs = [Image.open(StringIO(im), 'r') for im in row]
