@@ -125,10 +125,15 @@ class TileLoader(threading.Thread):
                 if not self.tile_collection.tileData.get(obKey, None):
                     continue
 
-#                try:
-                new_data = imagetools.FetchTile(obKey)
-#                except Exception, e:
-#                    logging.error('ERROR FETCHING TILE!: %s\n'%(e))
+                try:
+                    new_data = imagetools.FetchTile(obKey)
+                except Exception, e:
+                    try:
+                        wx.MessageDialog('ERROR FETCHING %s!: %s\n'%(p.object_name[0].upper(), e), 
+                                         'Error fetching %s'%(p.object_name)).ShowModal()
+                    except:
+                        logging.error('ERROR FETCHING %s!: %s\n'%(p.object_name[0].upper(), e))
+                    continue
                 tile_data = self.tile_collection.tileData.get(obKey, None)
                 
                 # Make sure tile hasn't been deleted outside this thread
