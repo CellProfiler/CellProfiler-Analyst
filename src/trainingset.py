@@ -84,9 +84,13 @@ class TrainingSet:
                 if l.startswith('#'):
                     self.cache.load_from_string(l[2:])
                     continue
-
+                
                 label = l.strip().split(' ')[0]
-                if (label == "label"): continue
+                if (label == "label"):
+                    for labelname in l.strip().split(' ')[1:]:
+                        if labelname not in labelDict.keys():
+                            labelDict[labelname] = []
+                    continue
                 
                 obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:len(object_key_columns())+1]])
                 labelDict[label] = labelDict.get(label, []) + [obKey]
