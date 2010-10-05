@@ -650,15 +650,18 @@ class Classifier(wx.Frame):
         self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
         self.PostMessage(statusMsg)
     
-
     def OnTileUpdated(self, evt):
+        '''
+        When the tile loader returns the tile image update the tile.
+        '''
         self.unclassifiedBin.UpdateTile(evt.data)
         for bin in self.classBins:
             bin.UpdateTile(evt.data)
-        
-        
+            
     def OnLoadTrainingSet(self, evt):
-        ''' Present user with file select dialog, then load selected training set. '''
+        '''
+        Present user with file select dialog, then load selected training set.
+        '''
         dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
@@ -666,8 +669,9 @@ class Classifier(wx.Frame):
             self.LoadTrainingSet(filename)
         
     def LoadTrainingSet(self, filename):
-        ''' Loads the selected file, parses out object keys, and fetches the tiles. '''        
-        
+        '''
+        Loads the selected file, parses out object keys, and fetches the tiles.
+        '''                
         # pause tile loading
         with tilecollection.load_lock():
             self.PostMessage('Loading training set from: %s'%filename)
@@ -1320,10 +1324,7 @@ class Classifier(wx.Frame):
             self.scoreAllBtn.Enable(True if self.weaklearners else False)
             self.scoreImageBtn.Enable(True if self.weaklearners else False)
             for bin in self.classBins:
-                if not bin.empty:
-                    bin.trained = True
-                else:
-                    bin.trained = False
+                bin.trained = True
             self.UpdateClassChoices()
 
         
@@ -1451,3 +1452,14 @@ if __name__ == "__main__":
     classifier = Classifier()
     classifier.Show(True)
     app.MainLoop()
+
+    #
+    # Kill the Java VM
+    #
+    try:
+        import cellprofiler.utilities.jutil as jutil
+        jutil.kill_vm()
+    except:
+        import traceback
+        traceback.print_exc()
+        print "Caught exception while killing VM"
