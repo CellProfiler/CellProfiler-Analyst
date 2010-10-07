@@ -1,5 +1,5 @@
 from dbconnect import DBConnect
-from tilecollection import TileCollection
+import tilecollection
 from imagetile import ImageTile
 from imagetilesizer import ImageTileSizer
 from properties import Properties
@@ -70,6 +70,7 @@ class SortBin(wx.ScrolledWindow):
         # stop focus events from propagating to the evil
         # wx.ScrollWindow class which otherwise causes scroll jumping.
         self.Bind(wx.EVT_SET_FOCUS, (lambda(evt):None))
+        tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
     
         self.CreatePopupMenu()
 
@@ -82,7 +83,7 @@ class SortBin(wx.ScrolledWindow):
                           'Deselect all\tCtrl+D',
                           'Invert selection\tCtrl+I',
                           'Remove selected\tDelete']
-        if self.label != 'unclassified':
+        if self.label != 'unclassified' and self.classifier is not None:
             popupMenuItems += ['Rename class', 'Delete bin']
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
@@ -114,9 +115,15 @@ class SortBin(wx.ScrolledWindow):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for key in self.SelectedKeys():
-                imViewer = imagetools.ShowImage(key[:-1], self.chMap[:], parent=self.classifier,
-                                        brightness=self.classifier.brightness, scale=self.classifier.scale,
-                                        contrast=self.classifier.contrast)
+                if self.classifier:
+                    imViewer = imagetools.ShowImage(key[:-1], self.chMap[:], 
+                                    parent=self.classifier, 
+                                    brightness=self.classifier.brightness, 
+                                    scale=self.classifier.scale,
+                                    contrast=self.classifier.contrast)
+                else:
+                    imViewer = imagetools.ShowImage(key[:-1], self.chMap[:], parent=self)
+
                 imViewer.imagePanel.SelectPoint(db.GetObjectCoords(key))
         elif choice == 1:
             self.SelectAll()
@@ -131,18 +138,24 @@ class SortBin(wx.ScrolledWindow):
         elif choice == 6:
             self.classifier.RemoveSortClass(self.label)
     
-    def AddObject(self, obKey, chMap, priority=1, pos='first'):
+    def AddObject(self, obKey, chMap=None, priority=1, pos='first'):
         self.AddObjects([obKey], chMap, priority, pos)
                         
-    def AddObjects(self, obKeys, chMap, priority=1, pos='first'):
+    def AddObjects(self, obKeys, chMap=None, priority=1, pos='first'):
+        if chMap is None:
+            chMap = p.image_channel_colors
         if self.tile_collection == None:
-            self.tile_collection = TileCollection.getInstance()
-        imgSet = self.tile_collection.GetTiles(obKeys, self.classifier, priority)
+            self.tile_collection = tilecollection.TileCollection.getInstance()
+        imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority)
         for i, obKey, imgs in zip(range(len(obKeys)), obKeys, imgSet):
-            newTile = ImageTile(self, obKey, imgs, chMap, False,
-                                scale=self.classifier.scale, 
-                                brightness=self.classifier.brightness,
-                                contrast=self.classifier.contrast)
+            if self.classifier:
+                newTile = ImageTile(self, obKey, imgs, chMap, False,
+                                    scale=self.classifier.scale, 
+                                    brightness=self.classifier.brightness,
+                                    contrast=self.classifier.contrast)
+            else:
+                newTile = ImageTile(self, obKey, imgs, chMap, False)
+                
             if pos == 'first':
                 self.tiles.insert(i, newTile)
                 self.sizer.Insert(i, newTile, 0, wx.ALL|wx.EXPAND, 1 )
@@ -230,7 +243,9 @@ class SortBin(wx.ScrolledWindow):
             tile.Deselect()
             
     def InvertSelection(self):
-        [t.ToggleSelect() for t in self.tiles]
+        ''' Inverts the selection. '''
+        for t in self.tiles:
+            t.ToggleSelect()
         
     def OnLeftDown(self, evt):
         ''' Deselect all tiles unless shift is held. '''
@@ -238,6 +253,10 @@ class SortBin(wx.ScrolledWindow):
         if not evt.ShiftDown():
             self.DeselectAll()
 
+    def OnTileUpdated(self, evt):
+        ''' When the tile loader returns the cropped image update the tile. '''
+        self.UpdateTile(evt.data)
+            
     def UpdateTile(self, obKey):
         ''' Called when image data is available for a specific tile. '''
         for t in self.tiles:
@@ -263,4 +282,20 @@ class SortBin(wx.ScrolledWindow):
             self.parentSizer.GetStaticBox().SetLabel('%s (%d)'%(self.label,len(self.tiles)))
         except:
             pass
-        
+
+
+
+if __name__ == '__main__':
+    app = wx.PySimpleApp()
+ 
+    p.show_load_dialog()    
+    import datamodel
+    dm = datamodel.DataModel.getInstance()
+    
+    f = wx.Frame(None)
+    sb = SortBin(f)
+    f.Show()
+    
+    sb.AddObjects([dm.GetRandomObject() for i in range(50)])
+
+    app.MainLoop()
