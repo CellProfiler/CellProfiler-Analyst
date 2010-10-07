@@ -1,6 +1,7 @@
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from multiclasssql import filter_table_prefix
 from properties import Properties
+import datamodel
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import logging
@@ -19,6 +20,7 @@ p = Properties.getInstance()
 db = DBConnect.getInstance()
 
 NO_FILTER = 'No filter'
+NO_GROUP = "Whole column"
 CREATE_NEW_FILTER = '*create new filter*'
 ID_EXIT = wx.NewId()
 SELECT_MULTIPLE = '<MULTIPLE SELECTED>'
@@ -47,7 +49,8 @@ class DataSourcePanel(wx.Panel):
             logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.x_multiple = wx.Button(self, -1, 'select multiple', size=(150,-1))
-        
+        self.group_choice = ComboBox(self, -1, choices=[NO_GROUP]+p._groups_ordered, style=wx.CB_READONLY)
+        self.group_choice.Select(0)
         self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
         self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
@@ -62,7 +65,7 @@ class DataSourcePanel(wx.Panel):
         sizer.AddSpacer((-1,5))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "x-axis:"))
+        sz.Add(wx.StaticText(self, -1, "measurement:"))
         sz.AddSpacer((5,-1))
         sz.Add(self.x_choice, 1, wx.EXPAND)
         sz.AddSpacer((5,-1))
@@ -70,6 +73,13 @@ class DataSourcePanel(wx.Panel):
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.Add(wx.StaticText(self, -1, "group x-axis by:"))
+        sz.AddSpacer((5,-1))
+        sz.Add(self.group_choice, 1, wx.EXPAND)
+        sizer.Add(sz, 1, wx.EXPAND)
+        sizer.AddSpacer((-1,5))
+
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"))
         sz.AddSpacer((5,-1))
@@ -81,6 +91,7 @@ class DataSourcePanel(wx.Panel):
         
         wx.EVT_BUTTON(self.x_multiple, -1, self.on_select_multiple)
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
+        wx.EVT_COMBOBOX(self.x_choice, -1, self.on_column_selected)
         wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
         
@@ -97,13 +108,19 @@ class DataSourcePanel(wx.Panel):
         if (dlg.ShowModal() == wx.ID_OK):
             self.x_choice.SetValue(SELECT_MULTIPLE)
             self.x_columns = [column_names[i] for i in dlg.GetSelections()]
-            print self.x_columns
+            self.group_choice.Disable()
+            self.group_choice.SetStringSelection(NO_GROUP)
         
     def on_table_selected(self, evt):
+        self.group_choice.Enable()
+        self.x_columns = []
         self.update_column_fields()
+        
+    def on_column_selected(self, evt):
+        self.group_choice.Enable()        
     
     def on_filter_selected(self, evt):
-        filter = self.filter_choice.GetStringSelection()
+        filter = self.filter_choice.Value
         if filter == CREATE_NEW_FILTER:
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
@@ -119,6 +136,8 @@ class DataSourcePanel(wx.Panel):
                 logging.info('Creating filter table...')
                 CreateFilterTable(fname)
                 logging.info('Done creating filter.')
+            else:
+                self.filter_choice.SetSelection(0)
             cff.Destroy()
             
     def update_column_fields(self):
@@ -134,54 +153,79 @@ class DataSourcePanel(wx.Panel):
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
-    def update_figpanel(self, evt=None):    
-        filter = self.filter_choice.GetStringSelection()
+    def update_figpanel(self, evt=None):
+        table = self.table_choice.Value
+        filter = self.filter_choice.Value
+        grouping = self.group_choice.Value
         if self.x_choice.Value == SELECT_MULTIPLE:
-            cols = self.x_columns
+            points_dict = {}
+            for col in self.x_columns:
+                pts = self.loadpoints(table, col, filter, NO_GROUP)
+                for k in pts.keys(): assert k not in points_dict.keys()
+                points_dict.update(pts)
         else:
-            cols = [self.x_choice.GetStringSelection()]
-        points = []
-        for col in cols:
-            pts = self.loadpoints(self.table_choice.GetStringSelection(),
-                                  col, filter)
-            pts = np.array(pts[0]).T[0]
-            points += [pts]
-            
-        if self.x_choice.Value == SELECT_MULTIPLE:
-            self.figpanel.set_x_labels(self.x_columns)
-        else:
-            self.figpanel.set_x_labels([self.x_choice.GetStringSelection()])
-        self.figpanel.setpoints(points)
+            col = self.x_choice.Value
+            points_dict = self.loadpoints(table, col, filter, grouping)
+        
+        # Check if the user is creating a plethora of plots by accident
+        if len(points_dict) > 25:
+            res = wx.MessageBox('Are you sure you want to show %s box plots?'
+                                %(len(points_dict)), 'Warning', 
+                                style=wx.YES_NO|wx.NO_DEFAULT)
+            if res != wx.ID_YES:
+                return
+
+        self.figpanel.setpoints(points_dict)
+        if self.group_choice.Value != NO_GROUP:
+            self.figpanel.set_x_axis_label(grouping)
+            self.figpanel.set_y_axis_label(self.x_choice.Value)
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, xpoints, filter=NO_FILTER):
-        ''' Returns a list of rows containing:
-        (TableNumber), ImageNumber, X measurement
+    def loadpoints(self, tablename, col, filter=NO_FILTER, grouping=NO_GROUP):
         '''
-        fields = '%s.%s'%(tablename, xpoints)
-        tables = tablename
-        where_clause = ''
+        Returns a dict mapping x label values to lists of values from col
+        '''
+        fields = '%s.%s'%(tablename, col)
+        from_clause = tablename
         if filter != NO_FILTER:
-            # If a filter is applied we must compute a WHERE clause and add the 
-            # filter table to the FROM clause
-            tables += ', %s'%(filter_table_prefix+filter) 
-            filter_clause = ' AND '.join(['%s.%s=%s.%s'%(tablename, id, filter_table_prefix+filter, id) 
-                                          for id in db.GetLinkingColumnsForTable(tablename)])
-            where_clause = 'WHERE %s'%(filter_clause)
-        return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
+            from_clause += ' JOIN (%s) AS filter_SQL_%s USING (%s)' % \
+                               (p._filters[filter], filter,
+                                ', '.join(image_key_columns()))
+        if grouping != NO_GROUP:
+            dm = datamodel.DataModel.getInstance()
+            group_cols = dm.GetGroupColumnNames(grouping)
+            fields += ', ' + ', '.join(group_cols)
+            
+        res = db.execute('SELECT %s FROM %s'%(fields, from_clause))
+        
+        points_dict = {}
+        if self.group_choice.Value != NO_GROUP:
+            for row in res:
+                groupkey = row[1:]
+                if points_dict.get(groupkey, None) is None:
+                    points_dict[groupkey] = [row[0]]
+                else:
+                    points_dict[groupkey] += [row[0]]
+        else:
+            points_dict = {col : [r[0] for r in res]}
+        return points_dict
 
     def save_settings(self):
-        '''save_settings is called when saving a workspace to file.
-        
+        '''
+        Called when saving a workspace to file.
         returns a dictionary mapping setting names to values encoded as strings
         '''
         if self.x_choice.Value == SELECT_MULTIPLE:
             cols = self.x_columns
         else:
             cols = [self.x_choice.GetStringSelection()]
-        return {'table' : self.table_choice.GetStringSelection(),
+        return {'table'  : self.table_choice.Value,
                 'x-axis' : ','.join(cols),
-                'filter' : self.filter_choice.GetStringSelection()
+                'filter' : self.filter_choice.Value,
+                'x-lim'  : self.figpanel.subplot.get_xlim(),
+                'y-lim'  : self.figpanel.subplot.get_ylim(),
+##                'grouping': self.group_choice.Value,
+##                'version': '1',
                 }
     
     def load_settings(self, settings):
@@ -190,6 +234,9 @@ class DataSourcePanel(wx.Panel):
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
+##        if 'version' not in settings:
+##            settings['grouping'] = NO_GROUP
+##            settings['version'] = '1'
         if 'table' in settings:
             self.table_choice.SetStringSelection(settings['table'])
             self.update_column_fields()
@@ -203,10 +250,18 @@ class DataSourcePanel(wx.Panel):
         if 'filter' in settings:
             self.filter_choice.SetStringSelection(settings['filter'])
         self.update_figpanel()
-        
+        if 'x-lim' in settings:
+            self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
+        if 'y-lim' in settings:
+            self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        self.figpanel.draw()
+
 
 class BoxPlotPanel(FigureCanvasWxAgg):
-    def __init__(self, parent, points, bins=100, **kwargs):
+    def __init__(self, parent, points, **kwargs):
+        '''
+        points -- a dictionary mapping x axis values to lists of values to plot
+        '''
         self.figure = Figure()
         FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
@@ -216,38 +271,44 @@ class BoxPlotPanel(FigureCanvasWxAgg):
         self.canvas.SetBackgroundColour('white')
         
         self.navtoolbar = None
-        self.x_labels = ['']
         self.setpoints(points)
         
     def setpoints(self, points):
-        ''' Updates the data to be plotted and redraws the plot.
-        points - array of samples
         '''
-        self.points = [np.array(pts).astype('f')[~ np.isnan(pts)] 
-                       for pts in points]        
-        points = self.points
+        Updates the data to be plotted and redraws the plot.
+        points - list of array samples, where each sample will be plotted as a 
+                 separate box plot against the same y axis
+        '''
+        self.xlabels = []
+        self.points = []
+        for label, values in sorted(points.items()):
+            self.xlabels += [label]
+            self.points += [np.array(values).astype('f')[~ np.isnan(values)]]
         
-        x_labels = self.x_labels
         if not hasattr(self, 'subplot'):
             self.subplot = self.figure.add_subplot(111)
         self.subplot.clear()
         # nothing to plot?
-        if len(points)==0:
+        if len(self.points)==0:
             logging.warn('No data to plot.')
             return
-        
-        self.subplot.boxplot(points)
-        if len(points) > 1:
+        self.subplot.boxplot(self.points)
+        if len(self.points) > 1:
             self.figure.autofmt_xdate()
-        self.subplot.set_xticklabels(x_labels)
-        
+        self.subplot.set_xticklabels(self.xlabels)
         self.reset_toolbar()
-    
-    def set_x_labels(self, labels):
-        self.x_labels = labels
         
-    def getpointslists(self):
+    def set_x_axis_label(self, label):
+        self.subplot.set_xlabel(label)
+    
+    def set_y_axis_label(self, label):
+        self.subplot.set_ylabel(label)
+    
+    def get_point_lists(self):
         return self.points
+    
+    def get_xlabels(self):
+        return self.xlabels
     
     def get_toolbar(self):
         if not self.navtoolbar:
@@ -271,7 +332,7 @@ class BoxPlot(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='BoxPlot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        points = []
+        points = {}
         figpanel = BoxPlotPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
         self.SetToolBar(figpanel.get_toolbar())
@@ -309,3 +370,14 @@ if __name__ == "__main__":
     boxplot.Show()
     
     app.MainLoop()
+
+    #
+    # Kill the Java VM
+    #
+    try:
+        import cellprofiler.utilities.jutil as jutil
+        jutil.kill_vm()
+    except:
+        import traceback
+        traceback.print_exc()
+        print "Caught exception while killing VM"
