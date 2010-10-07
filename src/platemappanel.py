@@ -502,7 +502,7 @@ if __name__ == "__main__":
 ##    data = np.arange(384).reshape(16,24)
 ##    data[100:102] = np.nan
     frame = wx.Frame(None, size=(900.,800.))
-    pmp = PlateMapPanel(frame, a, well_disp='square')
+    pmp = PlateMapPanel(frame, a, well_keys=[], well_disp='square')
 ##    p.SetTextData(data)
     frame.Show()
 
