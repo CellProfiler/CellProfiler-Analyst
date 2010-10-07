@@ -144,11 +144,8 @@ class DataModel(Singleton):
             
     def GetObjectsFromImage(self, imKey):
         self._if_empty_populate()
-        obKeys=[]
-        for i in xrange(1,self.GetObjectCountFromImage(imKey)+1):
-            obKey = db.GetObjectIDAtIndex(imKey, i)
-            obKeys.append(obKey)
-        return obKeys
+        return [tuple(list(imKey) + [i]) 
+                for i in xrange(1, self.GetObjectCountFromImage(imKey) + 1)]
     
     def GetAllImageKeys(self, filter=None):
         ''' Returns all object keys. If a filter is passed in, only the image
