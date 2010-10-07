@@ -38,6 +38,13 @@ LINEAR_SCALE = 'linear'
 SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
+def get_numeric_columns_from_table(table):
+    ''' Fetches names of numeric columns for the given table. '''
+    measurements = db.GetColumnNames(table)
+    types = db.GetColumnTypes(table)
+    return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+
+
 class Datum:
     def __init__(self, (x, y), color):
         self.x = x
@@ -184,23 +191,19 @@ class ScatterControlPanel(wx.Panel):
                 logging.info('Creating filter table...')
                 CreateFilterTable(fname)
                 logging.info('Done creating filter.')
+            else:
+                self.filter_choice.SetSelection(0)
             cff.Destroy()
         
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
-        fieldnames = db.GetColumnNames(tablename)#self.get_numeric_columns_from_table(tablename)
+        fieldnames = db.GetColumnNames(tablename)#get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
         self.x_choice.SetSelection(0)
         self.y_choice.Clear()
         self.y_choice.AppendItems(fieldnames)
         self.y_choice.SetSelection(0)
-
-    def get_numeric_columns_from_table(self, table):
-        ''' Fetches names of numeric columns for the given table. '''
-        measurements = db.GetColumnNames(table)
-        types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
     def update_figpanel(self, evt=None):        
         filter = self.filter_choice.GetStringSelection()
@@ -275,7 +278,9 @@ class ScatterControlPanel(wx.Panel):
                 'y-axis' : self.y_choice.GetStringSelection(),
                 'x-scale' : self.x_scale_choice.GetStringSelection(),
                 'y-scale' : self.y_scale_choice.GetStringSelection(),
-                'filter' : self.filter_choice.GetStringSelection()
+                'filter' : self.filter_choice.GetStringSelection(),
+                'x-lim': self.figpanel.subplot.get_xlim(),
+                'y-lim': self.figpanel.subplot.get_ylim(),
                 }
     
     def load_settings(self, settings):
@@ -298,6 +303,11 @@ class ScatterControlPanel(wx.Panel):
         if 'filter' in settings:
             self.filter_choice.SetStringSelection(settings['filter'])
         self.update_figpanel()
+        if 'x-lim' in settings:
+            self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
+        if 'y-lim' in settings:
+            self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        self.figpanel.draw()
 
 
 class ScatterPanel(FigureCanvasWxAgg):
@@ -417,6 +427,26 @@ class ScatterPanel(FigureCanvasWxAgg):
                 del self.lasso
         else:
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
+            
+    def show_objects_from_selection(self, evt=None):
+        '''Callback for "Show objects from selection" popup item.'''
+        show_keys = []
+        for i, sel in self.selection.items():
+            keys = self.key_lists[i][sel]
+            show_keys += list(set([tuple(k) for k in keys]))
+        if len(show_keys[0]) == len(image_key_columns()):
+            import datamodel
+            dm = datamodel.DataModel.getInstance()
+            obkeys = []
+            for key in show_keys:
+                obkeys += dm.GetObjectsFromImage(key)
+            show_keys = obkeys
+
+        import sortbin
+        f = wx.Frame(None)
+        sb = sortbin.SortBin(f)
+        f.Show()
+        sb.AddObjects(show_keys)
 
     def show_images_from_selection(self, evt=None):
         '''Callback for "Show images from selection" popup item.'''
@@ -425,14 +455,22 @@ class ScatterPanel(FigureCanvasWxAgg):
             keys = self.key_lists[i][sel]
             show_keys += list(set([tuple(k) for k in keys]))
         if len(show_keys)>10:
-            dlg = wx.MessageDialog(self, 'You are about to open %s images. This may take some time depending on your settings.'%(len(show_keys)),
+            dlg = wx.MessageDialog(self, 'You are about to open %s images. '
+                                   'This may take some time depending on your '
+                                   'settings.'%(len(show_keys)),
                                    'Warning', wx.YES_NO|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response != wx.ID_YES:
                 return
         logging.info('Opening %s images.'%(len(show_keys)))
         for key in show_keys:
-            imagetools.ShowImage(key, p.image_channel_colors, parent=self)
+            if len(key) == len(image_key_columns()):
+                imagetools.ShowImage(key, p.image_channel_colors, parent=self)
+            else:
+                imview = imagetools.ShowImage(key[:-1], p.image_channel_colors, parent=self)
+                imview.SelectObject(key)
+
+                
             
     def show_image_list_from_selection(self, evt=None):
         '''Callback for "Show image list from selection" popup item.'''
@@ -600,6 +638,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         if self.selection_is_empty():
             show_images_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.show_images_from_selection, show_images_item)
+        
+        show_objects_item = popup.Append(-1, 'Show %s from selection'%(p.object_name[1]))
+        if self.selection_is_empty():
+            show_objects_item.Enable(False)
+        self.Bind(wx.EVT_MENU, self.show_objects_from_selection, show_objects_item)
         
         show_imagelist_item = popup.Append(-1, 'Show image list from selection')
         if self.selection_is_empty():
@@ -891,10 +934,36 @@ if __name__ == "__main__":
     import multiclasssql
     multiclasssql.CreateFilterTables()
     
+    
+##    import calc_tsne
+##    import tsne
+##    data = db.execute('SELECT %s FROM %s'%
+##                      (','.join(get_numeric_columns_from_table(p.image_table)), 
+##                       p.image_table))
+##    data = np.array(data)
+##    from time import time
+##
+##    t = time()
+##    res = calc_tsne.calc_tsne(data, INITIAL_DIMS=data.shape[1])
+##    print 'Time to calculate tSNE: %s seconds'%(str(time() - t))
+##
+##    t = time()
+##    res2 = np.real(tsne.pca(data, 2))
+##    print 'Time to calculate tSNE: %s seconds'%(str(time() - t))
+##    
+##    db.execute('DROP TABLE IF EXISTS tSNE')
+##    db.execute('CREATE TABLE tSNE(ImageNumber int, a FLOAT, b FLOAT)')
+##    i = 1
+##    for a,b in res2:
+##        db.execute('INSERT INTO tSNE (ImageNumber, a, b) VALUES(%s, %s, %s)'%(i,a,b),
+##                   silent=True)
+##        i += 1
+##    wx.GetApp().user_tables = ['tSNE']
+    
+    
     xpoints = []
     ypoints = []
     clrs = None
-
 #    clrs = [(0., 0.62, 1., 0.75),
 #            (0.1, 0.2, 0.3, 0.75),
 #            (0,0,0,1),
