@@ -442,6 +442,19 @@ class ScatterPanel(FigureCanvasWxAgg):
                 obkeys += dm.GetObjectsFromImage(key)
             show_keys = obkeys
 
+        if len(show_keys) > 100:
+            te = wx.TextEntryDialog(self, 'You have selected %s %s. How many '
+                            'would you like to show at random?'%(len(show_keys), 
+                            p.object_name[1]), 'Choose # of %s'%
+                            (p.object_name[1]), defaultValue='100')
+            te.ShowModal()
+            try:
+                res = int(te.Value)
+                np.random.shuffle(show_keys)
+                show_keys = show_keys[:res]
+            except ValueError:
+                wx.MessageDialog('You have entered an invalid number', 'Error').ShowModal()
+                return
         import sortbin
         f = wx.Frame(None)
         sb = sortbin.SortBin(f)
@@ -976,3 +989,14 @@ if __name__ == "__main__":
 #    scatter.figpanel.set_y_label('test')
     
     app.MainLoop()
+    
+    #
+    # Kill the Java VM
+    #
+    try:
+        import cellprofiler.utilities.jutil as jutil
+        jutil.kill_vm()
+    except:
+        import traceback
+        traceback.print_exc()
+        print "Caught exception while killing VM"
