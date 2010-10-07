@@ -145,6 +145,8 @@ class DataSourcePanel(wx.Panel):
                 logging.info('Creating filter table...')
                 CreateFilterTable(fname)
                 logging.info('Done creating filter.')
+            else:
+                self.filter_choice.SetSelection(0)
             cff.Destroy()
             
     def on_cmap_selected(self, evt):
@@ -209,7 +211,9 @@ class DataSourcePanel(wx.Panel):
                 'grid size' : self.gridsize_input.GetValue(),
                 'colormap' : self.colormap_choice.GetStringSelection(),
                 'color scale' : self.color_scale_choice.GetStringSelection(),
-                'filter' : self.filter_choice.GetStringSelection()
+                'filter' : self.filter_choice.GetStringSelection(),
+                'x-lim': self.figpanel.subplot.get_xlim(),
+                'y-lim': self.figpanel.subplot.get_ylim(),
                 }
     
     def load_settings(self, settings):
@@ -238,6 +242,11 @@ class DataSourcePanel(wx.Panel):
         if 'filter' in settings:
             self.filter_choice.SetStringSelection(settings['filter'])
         self.update_figpanel()
+        if 'x-lim' in settings:
+            self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
+        if 'y-lim' in settings:
+            self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        self.figpanel.draw()
 
 class DensityPanel(FigureCanvasWxAgg):
     def __init__(self, parent, **kwargs):

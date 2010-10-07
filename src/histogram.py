@@ -122,6 +122,8 @@ class DataSourcePanel(wx.Panel):
                 logging.info('Creating filter table...')
                 CreateFilterTable(fname)
                 logging.info('Done creating filter.')
+            else:
+                self.filter_choice.SetSelection(0)
             cff.Destroy()
             
     def update_column_fields(self):
@@ -177,7 +179,9 @@ class DataSourcePanel(wx.Panel):
                 'bins' : self.bins_input.GetValue(),
                 'x-scale' : self.x_scale_choice.GetStringSelection(),
                 'y-scale' : self.y_scale_choice.GetStringSelection(),
-                'filter' : self.filter_choice.GetStringSelection()
+                'filter' : self.filter_choice.GetStringSelection(),
+                'x-lim': self.figpanel.subplot.get_xlim(),
+                'y-lim': self.figpanel.subplot.get_ylim(),
                 }
     
     def load_settings(self, settings):
@@ -200,6 +204,11 @@ class DataSourcePanel(wx.Panel):
         if 'filter' in settings:
             self.filter_choice.SetStringSelection(settings['filter'])
         self.update_figpanel()
+        if 'x-lim' in settings:
+            self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
+        if 'y-lim' in settings:
+            self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        self.figpanel.draw()
         
 
 class HistogramPanel(FigureCanvasWxAgg):
