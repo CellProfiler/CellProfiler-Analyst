@@ -267,8 +267,6 @@ class Classifier(wx.Frame):
         self.BindMouseOverHelpText()
 
         # do event binding
-##        self.Bind(wx.EVT_TEXT, self.OnRulesInput, self.rules_text)
-        
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
         self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
@@ -334,28 +332,6 @@ class Classifier(wx.Frame):
         else:
             evt.Skip()
             
-    # TODO: Make rules text box editable so custom rules can be used.
-##    def OnRulesInput(self, evt):
-##        import re
-##        weaklearners = []
-##        self.rules_text.SetForegroundColour('#000001')
-##        print 'checking rules'
-##        m = 'IF *\( *(?P<colname>.+) *> *(?P<thresh>.+) *, *(?P<a>\[.+\]) *, *(?P<b>\[.+\]) *\)[ \n]*'
-##        for match in re.finditer(m, self.rules_text.Value):
-##            try:
-##                d = match.groupdict()
-##                colname = d['colname']
-##                thresh = d['thresh']
-##                a = eval(d['a'])
-##                b = eval(d['b'])
-##                weaklearners += [(colname, thresh, a, b, 0)]
-##            except:
-##                print 'failed'
-##                self.rules_text.SetForegroundColour('Red')
-##                return
-##        print 'setting learners'
-##        self.weaklearners = weaklearners
-            
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
             for (idx, color, item, menu) in self.chMapById.values():
@@ -370,7 +346,6 @@ class Classifier(wx.Frame):
             self.chMap[chIdx] = 'None'
             self.MapChannels(self.chMap)
                     
-
     def CreateMenus(self):
         ''' Create file menu and menu items '''
         self.fileMenu = wx.Menu()
@@ -397,7 +372,6 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
-        
         
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
