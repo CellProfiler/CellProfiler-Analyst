@@ -25,9 +25,9 @@ class DataModel(Singleton):
                                  # eg: groupMaps['Wells'][(0,4)]  ==>  (3,'A01')
         self.revGroupMaps = {}   # { groupName:{groupKey:imKey, }, ... }
                                  # eg: groupMaps['Wells'][(3,'A01')]  ==>  [(0,1),(0,2),(0,3),(0,4)]
-        self.groupColNames = {}  # {groupName:[col_names], ...}
-                                 # eg: {'Gene': ['gene'], ...}
-        self.groupColTypes = {}  # {groupName:[col_types], ...}
+        self.groupColNames = {}  # {groupName:[col_names,...], ...}
+                                 # eg: {'Plate+Well': ['plate','well'], ...}
+        self.groupColTypes = {}  # {groupName:[col_types,...], ...}
         self.cumSums = []        # cumSum[i]: sum of objects in images 1..i (inclusive) 
         self.obCount = 0
         self.keylist = []
