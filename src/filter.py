@@ -3,52 +3,44 @@ from properties import Properties
 
 p = Properties.getInstance() 
 
-def merge_filters(filters):
-    ''' Takes a list of filters, returns a single filter with all the where 
-    clauses combined'''
-    wc = []
-    for filter in filters:
-        wc += filter.get_where_clauses()
-    return Filter()
-
 class Filter:
     '''
     Represents a method for filtering results from the database.
-    Filters are comprised of one or more WhereClause classes.
+    Filters are comprised of one or more WhereClause classes and conjunctions
+    between each WhereClause.
     '''
     def __init__(self, table=None, column=None, comparator=None, value=None):
-        self.where_clauses = set([])
+        self.where_clauses = []
+        self.conjunctions = []
         if None not in [table, column, comparator, value]:
             self.where_clauses = [WhereClause(table, column, comparator, value)]
-        elif not table==column==comparator==value==None:
+        elif not table == column == comparator == value == None:
             raise Exception, 'All Filter fields are required.'
     
     def __str__(self):
+        if self.where_clauses == [] or self.conjunctions == []:
+            raise 'Filter has no where clause'
         tables = set([cl.table for cl in self.where_clauses])
         # currently expect table to be the per image table
+        where = str(self.where_clauses[0])
+        for i, conj in enumerate(self.conjunctions):
+            where += ' %s %s'%(conj, self.where_clauses[i+1])
         return ('SELECT %s FROM %s WHERE %s'%(UniqueImageClause(p.image_table), 
-                ', '.join(tables),
-                ' AND '.join(map(str, self.where_clauses))))
+                ', '.join(tables), where))
     
     def get_where_clauses(self):
         return self.where_clauses
     
-    def add_column(self, table, column, comparator, value):
+    def add_column(self, table, column, comparator, value, conjunction='AND'):
+        self.conjunctions += [conjunction]
         self.where_clauses += [WhereClause(table, column, comparator, value)]
         
     def add_where_clause(self, wc):
-        self.where_clauses.add(wc)
+        self.where_clauses += [wc]
         
-    def add_filter(self, filter):
-        self.where_clauses.add(filter.get_where_clauses())
-        
-    def __add__(self, filter):
-        if isinstance(filter, Filter):
-            copy = Filter()
-            copy.where_clauses = set(self.where_clauses).union(filter.get_where_clauses())
-            return copy
-        else:
-            raise Exception, 'Cannot add type %s to a Filter'%(type(filter))
+    def add_filter(self, filter, conjunction='AND'):
+        self.where_clauses += filter.get_where_clauses()
+        self.conjunctions += [conjunction] + filter.conjunctions
 
 
 class WhereClause:
@@ -88,9 +80,9 @@ if __name__ == "__main__":
     f2 = Filter('A','a','=','1')
     f3 = Filter('B','b','=','1')
     
-    g = f + f2
-    g = g + f3
-    print g
+    f.add_filter(f2, 'OR')
+    f.add_filter(f3, 'OR')
+    print f
      
     assert WhereClause('a','a','=','1') == WhereClause('a','a','=','1') 
     assert not(WhereClause('a','a','=','1') != WhereClause('a','a','=','1')) 
