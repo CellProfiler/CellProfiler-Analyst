@@ -359,14 +359,18 @@ class ScatterPanel(FigureCanvasWxAgg):
         return str(self.configpanel.y_choice.GetStringSelection())
     
     def is_per_object_table(self):
-        all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
-        object_key_col_names = list(object_key_columns())
-        return all([c in all_col_names for c in object_key_col_names])
+        return self.configpanel.table_choice.GetStringSelection() == p.object_table
+        # More general case if table is not in props file
+        #all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
+        #object_key_col_names = list(object_key_columns())
+        #return all([c in all_col_names for c in object_key_col_names])
     
     def is_per_image_table(self):
-        all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
-        image_key_col_names = list(image_key_columns())
-        return all([c in all_col_names for c in image_key_col_names]) and not self.is_per_object_table()
+        return self.configpanel.table_choice.GetStringSelection() == p.image_table
+        # More general case if table is not in props file
+        #all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
+        #image_key_col_names = list(image_key_columns())
+        #return all([c in all_col_names for c in image_key_col_names]) and not self.is_per_object_table()
         
     def selection_is_empty(self):
         return self.selection == {} or all([len(s)==0 for s in self.selection.values()])
