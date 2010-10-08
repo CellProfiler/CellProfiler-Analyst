@@ -294,11 +294,6 @@ class CPAnalyst(wx.App):
     '''The CPAnalyst application.
     This launches the main UI, and keeps track of the session.
     '''
-    def __init__(self, *args, **kwargs):
-        ''' '''
-        super(CPAnalyst, self).__init__(*args, **kwargs)
-
-
     def OnInit(self):
         '''Initialize CPA
         '''
