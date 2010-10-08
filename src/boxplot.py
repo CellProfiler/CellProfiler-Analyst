@@ -352,20 +352,12 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
 
-    # Load a properties file if passed in args
-    if len(sys.argv) > 1:
-        propsFile = sys.argv[1]
-        p.LoadFile(propsFile)
-    else:
-        if not p.show_load_dialog():
-            print 'BoxPlot requires a properties file.  Exiting.'
-            # necessary in case other modal dialogs are up
-            wx.GetApp().Exit()
-            sys.exit()
-
-    import multiclasssql
-    multiclasssql.CreateFilterTables()
-    
+    if not p.show_load_dialog():
+        print 'BoxPlot requires a properties file.  Exiting.'
+        # necessary in case other modal dialogs are up
+        wx.GetApp().Exit()
+        sys.exit()
+        afraser
     boxplot = BoxPlot(None)
     boxplot.Show()
     
