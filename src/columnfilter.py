@@ -192,6 +192,9 @@ class ColumnFilterDialog(wx.Dialog):
         self.conjunctions += [wx.Choice(self.sw, -1, choices=['AND', 'OR'])]
         self.sw.Sizer.Add(self.conjunctions[-1], 0, wx.CENTER|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         self.sw.Sizer.Add(self.panels[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
+        new_height = self.Size[1] + 58
+        if new_height + self.Position[1] < wx.GetDisplaySize()[1]:
+            self.SetSize((-1, new_height))
         self.sw.SetVirtualSize(self.sw.Sizer.CalcMin())
         self.Layout()
 
@@ -200,7 +203,6 @@ if __name__ == "__main__":
     import sys
     import logging
     logging.basicConfig(level=logging.DEBUG)
-    
     app = wx.PySimpleApp()
     
     # Load a properties file if passed in args
@@ -210,8 +212,7 @@ if __name__ == "__main__":
     else:
         p.LoadFile('/Users/afraser/cpa_example/example.properties')
 
-
-    cff = ColumnFilterDialog(None, tables=[p.image_table], size=(600,200))
+    cff = ColumnFilterDialog(None, tables=[p.image_table], size=(600,165))
     if cff.ShowModal()==wx.OK:
         print cff.get_filter()
         print cff.get_filter_name()
