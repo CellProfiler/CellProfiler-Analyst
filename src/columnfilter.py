@@ -190,6 +190,7 @@ class ColumnFilterDialog(wx.Dialog):
         self.panels += [ColumnFilterPanel(self.sw, self.tables)]
         pos = len(self.panels) + len(self.conjunctions)
         self.conjunctions += [wx.Choice(self.sw, -1, choices=['AND', 'OR'])]
+        self.conjunctions[-1].Select(0)
         self.sw.Sizer.Add(self.conjunctions[-1], 0, wx.CENTER|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         self.sw.Sizer.Add(self.panels[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         new_height = self.Size[1] + 58
