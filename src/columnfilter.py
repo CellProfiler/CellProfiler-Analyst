@@ -47,6 +47,7 @@ class ColumnFilterPanel(wx.Panel):
       self.colChoice.Bind(wx.EVT_COMBOBOX, self.on_select_col)
       if allow_delete:
          self.x_btn.Bind(wx.EVT_BUTTON, self.on_remove)
+      self.Fit()
 
    def on_remove(self, evt):
       self.GrandParent.remove(self)
@@ -124,7 +125,6 @@ class ColumnFilterDialog(wx.Dialog):
 
       self.sw = wx.ScrolledWindow(self)
       self.panels = [ColumnFilterPanel(self.sw, tables, False)]
-      self.sw.EnableScrolling(x_scrolling=False, y_scrolling=True)
       self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
       (w,h) = self.sw.Sizer.GetSize()
       self.sw.SetScrollbars(20,20,w/20,h/20,0,0)
@@ -150,6 +150,8 @@ class ColumnFilterDialog(wx.Dialog):
       self.ok.Bind(wx.EVT_BUTTON, self.on_ok)
       self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
       self.filter_name.Bind(wx.EVT_TEXT, self.validate_filter_name)
+
+      self.resize_to_fit()
 
    def on_ok(self, evt):
       self.EndModal(wx.OK)
@@ -182,9 +184,8 @@ class ColumnFilterDialog(wx.Dialog):
          self.conjunctions.pop(i-1).Destroy()
       self.panels.remove(panel)
       self.Sizer.Remove(panel)
-      self.sw.SetVirtualSize(self.sw.Sizer.CalcMin())
-      self.sw.Layout()
-      self.Layout()
+      self.sw.FitInside()
+      self.resize_to_fit()
 
    def add_column(self, evt):
       self.panels += [ColumnFilterPanel(self.sw, self.tables)]
@@ -192,11 +193,16 @@ class ColumnFilterDialog(wx.Dialog):
       self.conjunctions[-1].Select(0)
       self.sw.Sizer.Add(self.conjunctions[-1], 0, wx.CENTER|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
       self.sw.Sizer.Add(self.panels[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
-      new_height = self.Size[1] + 58
-      if new_height + self.Position[1] < wx.GetDisplaySize()[1]:
-         self.SetSize((-1, new_height))
-      self.sw.SetVirtualSize(self.sw.Sizer.CalcMin())
-      self.Layout()
+      self.sw.FitInside()
+      self.resize_to_fit()
+      
+   def resize_to_fit(self):
+      w = min(self.sw.Sizer.MinSize[0] + self.Sizer.MinSize[0], 
+              wx.GetDisplaySize()[0] - self.Position[0])
+      h = min(self.sw.Sizer.MinSize[1] + self.Sizer.MinSize[1],
+              wx.GetDisplaySize()[1] - self.Position[1])
+      self.SetSize((w,h+7))
+
 
 
 if __name__ == "__main__":
@@ -212,7 +218,7 @@ if __name__ == "__main__":
    else:
       p.LoadFile('/Users/afraser/cpa_example/example.properties')
 
-   cff = ColumnFilterDialog(None, tables=[p.image_table], size=(600,165))
+   cff = ColumnFilterDialog(None, tables=[p.image_table])
    if cff.ShowModal()==wx.OK:
       print cff.get_filter()
       print cff.get_filter_name()
