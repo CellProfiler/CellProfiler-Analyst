@@ -596,7 +596,7 @@ class PlateViewer(wx.Frame, CPATool):
                 'Add Annotation Column', coltypes.keys(), wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() != wx.ID_OK:
             return
-        usertype = dlg.Value
+        usertype = dlg.GetStringSelection()
         db.AppendColumn(p.image_table, new_column, coltypes[usertype][0])
         self.annotation_cols[new_column] = coltypes[usertype][1]
         self.annotationCol.Items += [new_column]
