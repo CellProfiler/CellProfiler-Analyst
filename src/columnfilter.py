@@ -95,7 +95,7 @@ class ColumnFilterPanel(wx.Panel):
       column = self.colChoice.Value
       comparator = self.comparatorChoice.GetValue()
       value = self.valueField.GetValue()
-      return Filter(table, column, comparator, value)
+      return Filter((table, column), comparator, '"%s"'%(value))
 
 
 class ColumnFilterDialog(wx.Dialog):
@@ -220,7 +220,7 @@ if __name__ == "__main__":
 
    cff = ColumnFilterDialog(None, tables=[p.image_table])
    if cff.ShowModal()==wx.OK:
-      print cff.get_filter()
+      db.execute( str(cff.get_filter()) )
       print cff.get_filter_name()
 
    cff.Destroy()
