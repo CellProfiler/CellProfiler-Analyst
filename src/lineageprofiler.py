@@ -156,7 +156,6 @@ class Timeline(object):
                          self.get_unique_timepoints()[0])
       return build_tree(root)
    
-   
    def get_unique_timepoints(self):
       '''returns an ascending ordered list of UNIQUE timepoints on this timeline
       '''
@@ -225,7 +224,6 @@ class LineageNode(object):
       self.wells = wells
       self.timepoint = timepoint
       self.children = []
-      print str(self)
    
    def get_parent(self):
       return self.parent
@@ -314,12 +312,12 @@ if __name__ == '__main__':
    t.add_event(3, NO_EVENT, 'fred', untreated_wells)
    t.add_event(4, 'imaging', 'fred', PlateDesign.get_well_ids(P6))
 
-   for p in t.get_well_permutations(2, P6 ):
-      print [str(x) for x in p]
+##   for p in t.get_well_permutations(2, P6 ):
+##      print [str(x) for x in p]
 
 ##   for p in t.get_event_permutations(2):
 ##      print [str(x) for x in p]
-##
+
 ##   for p in t.get_event_permutations(3):
 ##      print [str(x) for x in p]
 
