@@ -82,20 +82,21 @@ class Timeline(object):
             well_ids += evt.get_well_ids()
       return list(set(well_ids))
    
-   def get_event_permutations(self, timepoint):
-      '''returns a list of unique permutations of events at a given timepoint.
-      Each permutation is a tuple of events that occurred.
-      '''
-      d = {}
-      for event in self.get_events_at_timepoint(timepoint):
-         # build a hash, mapping well_ids to lists of events that occurred
-         for well in PlateDesign.get_well_ids(PlateDesign.get_plate_format(event.get_plate_id())):
-            if well in event.get_well_ids():
-               if d.get(well, None) is None:
-                  d[well] = [event]
-               else:
-                  d[well] += [event]
-      return set([tuple(set(d[k])) for k in d.keys()])
+   # CURRENTLY UNUSED
+##   def get_event_permutations(self, timepoint):
+##      '''returns a list of unique permutations of events at a given timepoint.
+##      Each permutation is a tuple of events that occurred.
+##      '''
+##      d = {}
+##      for event in self.get_events_at_timepoint(timepoint):
+##         # build a hash, mapping well_ids to lists of events that occurred
+##         for well in PlateDesign.get_well_ids(PlateDesign.get_plate_format(event.get_plate_id())):
+##            if well in event.get_well_ids():
+##               if d.get(well, None) is None:
+##                  d[well] = [event]
+##               else:
+##                  d[well] += [event]
+##      return set([tuple(set(d[k])) for k in d.keys()])
    
    def get_well_permutations(self, timepoint, plate_format):
       '''returns a list of well-permutations
@@ -115,37 +116,45 @@ class Timeline(object):
       return set([tuple(set(d[k])) for k in d.keys()])
    
    def get_lineage_tree(self):
-      '''Returns a tree that maps the lineage of well states through all timepoints
+      '''Returns a tree that traces the lineage of unique well states through 
+      all timepoints in the timeline. The root of this tree will b
       '''
       def attach_child_nodes(parent, tp_idx):
+         '''For a particular timepoint index and parent node, this function will
+         calculate the subsets of wells that will represent each child node. It
+         then creates the children and links them into the parent.
+         parent -- the parent node to add children to
+         tp_idx -- the index of the current timepoint in the timeline
+                   (== the depth of the current node in the tree)
+         '''
          subwells = []
-         if len(self.get_unique_timepoints()) <= tp_idx:
-            return None
          timepoint = self.get_unique_timepoints()[tp_idx]
          for wells in self.get_well_permutations(timepoint, P6):
             wellset = sorted(set(parent.get_well_ids()).intersection(wells))
             if len(wellset) > 0:
                subwells += [wellset]
-         nodes = []
          for i, wells in enumerate(subwells):
-            nodes += [LineageNode(parent, 
-                                  id = '%s:%s'%(parent.id, i),
-                                  wells = wells,
-                                  timepoint = timepoint)]
-            parent.add_child(nodes[-1])
-         return nodes
+            parent.add_child(id = '%s:%s'%(parent.id, i),
+                             wells = wells,
+                             timepoint = timepoint)
       
-      def build_tree(parent, tp_idx):
-         if attach_child_nodes(parent, tp_idx+1) is not None:
+      def build_tree(parent, tp_idx=0):
+         '''Creates a lineage tree by calling the attach_child_nodes to compute
+         the children for a given node and attaches them. The function then 
+         recurses into each childnode.
+         parent -- the current root node for this branch of the tree.
+         tp_idx -- the index of the current timepoint in the timeline
+                   (== the depth of the current node in the tree)
+         '''
+         if tp_idx < len(self.get_unique_timepoints()):
+            attach_child_nodes(parent, tp_idx)
             for child in parent.get_children():
                build_tree(child, tp_idx+1)
          return parent
       
       root = LineageNode(None, self.stock, self.get_well_ids(),
                          self.get_unique_timepoints()[0])
-      tree = build_tree(root, 0)
-      
-      return tree
+      return build_tree(root)
    
    
    def get_unique_timepoints(self):
@@ -206,7 +215,9 @@ class Event(object):
 
    
 class LineageNode(object):
-   '''
+   '''A lineage node represents a unique state in a subset of wells at a given
+   timepoint. For example: the set of wells that were seeded at density X at t0,
+   treated with reagent Y at t1, and imaged at t2.
    '''
    def __init__(self, parent, id, wells, timepoint):
       self.parent = parent
@@ -225,8 +236,10 @@ class LineageNode(object):
    def get_well_ids(self):
       return self.wells
    
-   def add_child(self, childnode):
-      self.children += [childnode]
+   def add_child(self, id, wells, timepoint):
+      '''create a child node and link child -> parent and parent -> child
+      '''
+      self.children += [LineageNode(self, id, wells, timepoint)]
       
    def __str__(self):
       if self.parent:
