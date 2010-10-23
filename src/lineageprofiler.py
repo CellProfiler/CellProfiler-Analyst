@@ -10,15 +10,18 @@ P5600 = (40, 140)
 NO_EVENT = 'no event'
 
 class PlateDesign:
-   
+   '''Maps plate_ids to plate formats'''
    plates = {}
-   
    @classmethod
    def add_plate(self, plate_id, plate_format):
+      '''Add a new plate with the specified format
+      '''
       self.plates[plate_id] = plate_format
    
    @classmethod
    def get_plate_format(self, plate_id):
+      '''returns the plate_format for a given plate_id
+      '''
       return self.plates[plate_id]
    
    @classmethod
@@ -44,8 +47,8 @@ class PlateDesign:
 class Timeline(object):
    '''Represents a timeline.
    '''
-   def __init__(self):
-      self.stock = ''
+   def __init__(self, stock):
+      self.stock = stock
       # events : a chronologically ordered list of events
       self.events = []
       # plates : a list of plates included in the experiment
@@ -93,15 +96,14 @@ class Timeline(object):
                else:
                   d[well] += [event]
       return set([tuple(set(d[k])) for k in d.keys()])
-                  
-
+   
    def get_well_permutations(self, timepoint, plate_format):
       '''returns a list of well-permutations
       Each permutation is a tuple of wells that have a common state.
-      d = {(e1,)   :  [A01,A03 ],
-           (e1,e2) :  [A02, B3],
-           (e2, )  :  [B2]
-           (noop)  :  [B1]... }
+      d = {(e1,)   :  (A01, A03),
+           (e1,e2) :  (A02, B03),
+           (e2, )  :  (B02)
+           (noop)  :  (B01)... }
       '''
       d = {}
       for well in PlateDesign.get_well_ids(plate_format):
@@ -112,6 +114,39 @@ class Timeline(object):
             d[events_in_well] += [well]
       return set([tuple(set(d[k])) for k in d.keys()])
    
+   def get_lineage_tree(self):
+      '''XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      '''
+      def attach_child_nodes(parent, tp_idx):
+         subwells = []
+         if len(self.get_unique_timepoints()) <= tp_idx:
+            return None
+         timepoint = self.get_unique_timepoints()[tp_idx]
+         for wells in self.get_well_permutations(timepoint, P6):
+            wellset = sorted(set(parent.get_well_ids()).intersection(wells))
+            if len(wellset) > 0:
+               subwells += [wellset]
+         nodes = []
+         for i, wells in enumerate(subwells):
+            nodes += [LineageNode(parent, 
+                                  id = '%s:%s'%(parent.id, i),
+                                  wells = wells,
+                                  timepoint = timepoint)]
+            if 'U2OS:0:1' == '%s:%s'%(parent.id, i):
+               pass
+         return nodes
+      
+      def build_tree(parent, tp_idx):
+         if attach_child_nodes(parent, tp_idx+1) is not None:
+            for child in parent.get_children():
+               build_tree(child, tp_idx+1)
+         return parent
+      
+      root = LineageNode(None, self.stock, self.get_well_ids(),
+                         self.get_unique_timepoints()[0])
+      tree = build_tree(root, 0)
+      
+      return tree
    
    
    def get_unique_timepoints(self):
@@ -181,13 +216,15 @@ class Stock(object):
 class LineageNode(object):
    '''
    '''
-   def __init__(self, parent, id, events, wells, timepoint):
+   def __init__(self, parent, id, wells, timepoint):
       self.parent = parent
+      if parent is not None:
+         self.parent.add_child(self)
       self.id = id
-      self.events = events
       self.wells = wells
       self.timepoint = timepoint
       self.children = []
+      print str(self)
    
    def get_parent(self):
       return self.parent
@@ -201,9 +238,19 @@ class LineageNode(object):
    def add_child(self, childnode):
       self.children += [childnode]
       
+   def __str__(self):
+      if self.parent:
+         return 'p:%s; id:%s; wells:%s'%(self.parent.id, self.id, sorted(self.wells))
+      else:
+         return 'ROOT; id:%s; wells:%s'%(self.id, sorted(self.wells))
 
-      
-      
+
+
+
+
+
+
+
 # 
 # UNDER CONSTRUCTION
 # 
@@ -211,14 +258,14 @@ def build_lineage_tree(timeline):
    nodelist = []
    for timepoint in reversed(timeline.get_unique_timepoints()):
       for i, wells in enumerate(t.get_well_permutations(timepoint, P6)):
-         nodelist += [LineageNode(None, id = None,
-                                  events = None,
-                                  wells = wells,
-                                  timepoint = timepoint)]
+         node = LineageNode(None, id = None,
+                            events = None,
+                            wells = wells,
+                            timepoint = timepoint)
    
    parent = None
    for i, node in enumerate(reversed(nodelist)):
-      while nodelist[j].timepoint 
+      while nodelist[j].timepoint :
          node.parent = parent
          node.id = str(i)
          
@@ -226,7 +273,6 @@ def build_lineage_tree(timeline):
       parent = node
       
          
-   
 
       
       
@@ -264,41 +310,59 @@ if __name__ == '__main__':
    
 ##   print PlateDesign.get_well_ids(P384)
 
-   t = Timeline()
+   t = Timeline('U2OS')
    
    PlateDesign.add_plate('fred', P6)
    
    t.add_event(1, 'seed', 'fred', PlateDesign.get_well_ids(P6))
 
-   t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 'B03'])
-   t.add_event(2, 'treatment2', 'fred', ['A02', 'B02', 'B03'])
+   t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 
+                                                       'B03'])
+   t.add_event(2, 'treatment2', 'fred', [       'A02', 
+                                                'B02', 'B03'])
+##   t.add_event(2, 'treatment3', 'fred', ['A01'
+##                                         'B01', 'B02'])
    untreated_wells = set(PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))) - set(t.get_well_ids(2))
    t.add_event(2, NO_EVENT,     'fred', untreated_wells)
 
    t.add_event(3, 'treat', 'fred', ['A02'])
    t.add_event(3, 'wash', 'fred', ['A01'])
    untreated_wells = set(PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))) - set(t.get_well_ids(3))
-   
+   t.add_event(3, NO_EVENT, 'fred', untreated_wells)
    t.add_event(4, 'imaging', 'fred', PlateDesign.get_well_ids(P6))
 
    for p in t.get_well_permutations(2, P6 ):
       print [str(x) for x in p]
-
-   for p in t.get_event_permutations(2):
-      print [str(x) for x in p]
-
-   for p in t.get_event_permutations(3):
-      print [str(x) for x in p]
+##
+##   for p in t.get_event_permutations(2):
+##      print [str(x) for x in p]
+##
+##   for p in t.get_event_permutations(3):
+##      print [str(x) for x in p]
       
 ##   tree = build_lineage_tree(t)
+
+   tree = t.get_lineage_tree()
    
-##   def print_tree(tnode):
-##      print tnode.id
-##      for child in tnode.children:
-##         print_tree(child)
-##         
+   import wx
+   app = wx.PySimpleApp()
+   f = wx.Frame(None)
+   tc = wx.TreeCtrl(f)
+   tcroot = tc.AddRoot("ROOT")
+   def populate_wx_tree(wxparent, tnode):
+      for child in tnode.children:
+         subtree = tc.AppendItem(wxparent, ', '.join(child.get_well_ids()))
+         populate_wx_tree(subtree, child)
+         tc.Expand(subtree)
+   populate_wx_tree(tcroot, tree)    
+   tc.Expand(tcroot)
+   
+   f.Show()
+   app.MainLoop()
+   
+
+   
+
 ##   print_tree(tree)
-##         
-##   
-      
+
       
