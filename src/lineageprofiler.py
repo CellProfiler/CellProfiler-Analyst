@@ -115,7 +115,7 @@ class Timeline(object):
       return set([tuple(set(d[k])) for k in d.keys()])
    
    def get_lineage_tree(self):
-      '''XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      '''Returns a tree that maps the lineage of well states through all timepoints
       '''
       def attach_child_nodes(parent, tp_idx):
          subwells = []
@@ -132,8 +132,7 @@ class Timeline(object):
                                   id = '%s:%s'%(parent.id, i),
                                   wells = wells,
                                   timepoint = timepoint)]
-            if 'U2OS:0:1' == '%s:%s'%(parent.id, i):
-               pass
+            parent.add_child(nodes[-1])
          return nodes
       
       def build_tree(parent, tp_idx):
@@ -205,21 +204,12 @@ class Event(object):
    def __str__(self):
       return '%s event'%(self.action)
 
-
-   
-   
-class Stock(object):
-   def __init__(self, plate_list):
-      self.plates = plate_list
-
    
 class LineageNode(object):
    '''
    '''
    def __init__(self, parent, id, wells, timepoint):
       self.parent = parent
-      if parent is not None:
-         self.parent.add_child(self)
       self.id = id
       self.wells = wells
       self.timepoint = timepoint
@@ -245,61 +235,45 @@ class LineageNode(object):
          return 'ROOT; id:%s; wells:%s'%(self.id, sorted(self.wells))
 
 
-
-
-
-
-
-
-# 
-# UNDER CONSTRUCTION
-# 
-def build_lineage_tree(timeline):
-   nodelist = []
-   for timepoint in reversed(timeline.get_unique_timepoints()):
-      for i, wells in enumerate(t.get_well_permutations(timepoint, P6)):
-         node = LineageNode(None, id = None,
-                            events = None,
-                            wells = wells,
-                            timepoint = timepoint)
-   
-   parent = None
-   for i, node in enumerate(reversed(nodelist)):
-      while nodelist[j].timepoint :
-         node.parent = parent
-         node.id = str(i)
-         
-         
-      parent = node
-      
-         
-
-      
-      
-def build_lineage_tree(t, parent_node=None, timepoint_index=0):
-   '''t - timeline
-   '''
-   if timepoint_index >= len(t.get_unique_timepoints()):
-      return 
-   
-   tp = t.get_unique_timepoints()[timepoint_index]
-   if parent_node is None:
-      parent_node = LineageNode(None, ','.join(sorted(t.get_well_ids())), None, t.get_well_ids())
-      
-   for i, events in enumerate(t.get_event_permutations(tp)):
-      # Calculate the subset of wells associated with this node
-      wells = set(parent_node.get_well_ids())
-      for event in events:
-         wells.intersection_update(event.get_well_ids())
-      
-      node = LineageNode(parent_node,
-                         id = '%s : %s'%(parent_node.id, (','.join(sorted(wells)) or 'empty')),
-                         events = events,
-                         wells = wells)
-      parent_node.add_child(node)
-      build_lineage_tree(t, node, timepoint_index+1)
-      
-   return parent_node
+##def build_lineage_tree(timeline):
+##   nodelist = []
+##   for timepoint in reversed(timeline.get_unique_timepoints()):
+##      for i, wells in enumerate(t.get_well_permutations(timepoint, P6)):
+##         node = LineageNode(None, id = None,
+##                            events = None,
+##                            wells = wells,
+##                            timepoint = timepoint)
+##   parent = None
+##   for i, node in enumerate(reversed(nodelist)):
+##      while nodelist[j].timepoint :
+##         node.parent = parent
+##         node.id = str(i)
+##      parent = node
+##      
+##def build_lineage_tree(t, parent_node=None, timepoint_index=0):
+##   '''t - timeline
+##   '''
+##   if timepoint_index >= len(t.get_unique_timepoints()):
+##      return 
+##   
+##   tp = t.get_unique_timepoints()[timepoint_index]
+##   if parent_node is None:
+##      parent_node = LineageNode(None, ','.join(sorted(t.get_well_ids())), None, t.get_well_ids())
+##      
+##   for i, events in enumerate(t.get_event_permutations(tp)):
+##      # Calculate the subset of wells associated with this node
+##      wells = set(parent_node.get_well_ids())
+##      for event in events:
+##         wells.intersection_update(event.get_well_ids())
+##      
+##      node = LineageNode(parent_node,
+##                         id = '%s : %s'%(parent_node.id, (','.join(sorted(wells)) or 'empty')),
+##                         events = events,
+##                         wells = wells)
+##      parent_node.add_child(node)
+##      build_lineage_tree(t, node, timepoint_index+1)
+##      
+##   return parent_node
 
 
 
@@ -307,40 +281,34 @@ def build_lineage_tree(t, parent_node=None, timepoint_index=0):
 # Test code here
 #
 if __name__ == '__main__':
-   
-##   print PlateDesign.get_well_ids(P384)
-
    t = Timeline('U2OS')
    
    PlateDesign.add_plate('fred', P6)
+   all_wells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))
    
-   t.add_event(1, 'seed', 'fred', PlateDesign.get_well_ids(P6))
-
+   t.add_event(1, 'seed', 'fred', all_wells)
+   
    t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 
                                                        'B03'])
    t.add_event(2, 'treatment2', 'fred', [       'A02', 
                                                 'B02', 'B03'])
-##   t.add_event(2, 'treatment3', 'fred', ['A01'
-##                                         'B01', 'B02'])
-   untreated_wells = set(PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))) - set(t.get_well_ids(2))
+   untreated_wells = set(all_wells) - set(t.get_well_ids(2))
    t.add_event(2, NO_EVENT,     'fred', untreated_wells)
 
    t.add_event(3, 'treat', 'fred', ['A02'])
    t.add_event(3, 'wash', 'fred', ['A01'])
-   untreated_wells = set(PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))) - set(t.get_well_ids(3))
+   untreated_wells = set(all_wells) - set(t.get_well_ids(3))
    t.add_event(3, NO_EVENT, 'fred', untreated_wells)
    t.add_event(4, 'imaging', 'fred', PlateDesign.get_well_ids(P6))
 
    for p in t.get_well_permutations(2, P6 ):
       print [str(x) for x in p]
-##
+
 ##   for p in t.get_event_permutations(2):
 ##      print [str(x) for x in p]
 ##
 ##   for p in t.get_event_permutations(3):
 ##      print [str(x) for x in p]
-      
-##   tree = build_lineage_tree(t)
 
    tree = t.get_lineage_tree()
    
@@ -359,10 +327,4 @@ if __name__ == '__main__':
    
    f.Show()
    app.MainLoop()
-   
-
-   
-
-##   print_tree(tree)
-
       
