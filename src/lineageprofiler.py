@@ -117,7 +117,8 @@ class Timeline(object):
    
    def get_lineage_tree(self):
       '''Returns a tree that traces the lineage of unique well states through 
-      all timepoints in the timeline. The root of this tree will b
+      all timepoints in the timeline. The root of this tree will be the timeline
+      stock.
       '''
       def attach_child_nodes(parent, tp_idx):
          '''For a particular timepoint index and parent node, this function will
@@ -127,14 +128,14 @@ class Timeline(object):
          tp_idx -- the index of the current timepoint in the timeline
                    (== the depth of the current node in the tree)
          '''
-         subwells = []
          timepoint = self.get_unique_timepoints()[tp_idx]
+         subwells = []
          for wells in self.get_well_permutations(timepoint, P6):
             wellset = sorted(set(parent.get_well_ids()).intersection(wells))
             if len(wellset) > 0:
                subwells += [wellset]
-         for i, wells in enumerate(subwells):
-            parent.add_child(id = '%s:%s'%(parent.id, i),
+         for childnum, wells in enumerate(subwells):
+            parent.add_child(id = '%s:%s'%(parent.id, childnum),
                              wells = wells,
                              timepoint = timepoint)
       
@@ -244,48 +245,6 @@ class LineageNode(object):
          return 'p:%s; id:%s; wells:%s'%(self.parent.id, self.id, sorted(self.wells))
       else:
          return 'ROOT; id:%s; wells:%s'%(self.id, sorted(self.wells))
-
-
-##def build_lineage_tree(timeline):
-##   nodelist = []
-##   for timepoint in reversed(timeline.get_unique_timepoints()):
-##      for i, wells in enumerate(t.get_well_permutations(timepoint, P6)):
-##         node = LineageNode(None, id = None,
-##                            events = None,
-##                            wells = wells,
-##                            timepoint = timepoint)
-##   parent = None
-##   for i, node in enumerate(reversed(nodelist)):
-##      while nodelist[j].timepoint :
-##         node.parent = parent
-##         node.id = str(i)
-##      parent = node
-##      
-##def build_lineage_tree(t, parent_node=None, timepoint_index=0):
-##   '''t - timeline
-##   '''
-##   if timepoint_index >= len(t.get_unique_timepoints()):
-##      return 
-##   
-##   tp = t.get_unique_timepoints()[timepoint_index]
-##   if parent_node is None:
-##      parent_node = LineageNode(None, ','.join(sorted(t.get_well_ids())), None, t.get_well_ids())
-##      
-##   for i, events in enumerate(t.get_event_permutations(tp)):
-##      # Calculate the subset of wells associated with this node
-##      wells = set(parent_node.get_well_ids())
-##      for event in events:
-##         wells.intersection_update(event.get_well_ids())
-##      
-##      node = LineageNode(parent_node,
-##                         id = '%s : %s'%(parent_node.id, (','.join(sorted(wells)) or 'empty')),
-##                         events = events,
-##                         wells = wells)
-##      parent_node.add_child(node)
-##      build_lineage_tree(t, node, timepoint_index+1)
-##      
-##   return parent_node
-
 
 
 #
