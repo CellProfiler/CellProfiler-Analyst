@@ -586,7 +586,11 @@ class Classifier(wx.Frame):
                 self.PostMessage('Gathering random %s.'%(p.object_name[1]))
                 if filter == 'experiment':
                     if p.db_sqlite_file:
-                        obKeysToTry = 'RANDOM() < %d'%(dm.GetRandomFraction(100))
+                        # This is incredibly slow in SQLite
+                        #obKeysToTry = dm.GetRandomObjects(100)
+                        # HACK: tack this query onto the where clause so we try
+                        #       100 randomly distributed obkeys to try.
+                        obKeysToTry = 'abs(RANDOM()) %% %s BETWEEN 1 AND 100'%(dm.get_total_object_count())
                     else:
                         obKeysToTry = dm.GetRandomObjects(100)
                     loopMsg = ' from whole experiment'
