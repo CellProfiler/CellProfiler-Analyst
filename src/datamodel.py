@@ -87,12 +87,11 @@ class DataModel(Singleton):
     def _if_empty_populate(self):
         if self.IsEmpty:
             self.PopulateModel()
-        
-    def GetRandomFraction(self, num):
+            
+    def get_total_object_count(self):
         self._if_empty_populate()
-        logging.debug("RAND %s %s %s"%(num, self.obCount, int(-2**63 + 2**64 * float(num) / self.obCount)))
-        return int(2**64 * float(num) / self.obCount - 2**63)
-
+        return self.obCount
+        
     def GetRandomObject(self):
         '''
         Returns a random object key
