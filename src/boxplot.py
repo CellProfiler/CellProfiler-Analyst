@@ -189,8 +189,7 @@ class DataSourcePanel(wx.Panel):
         from_clause = tablename
         if filter != NO_FILTER:
             from_clause += ' JOIN (%s) AS filter_SQL_%s USING (%s)' % \
-                               (p._filters[filter], filter,
-                                ', '.join(image_key_columns()))
+                               (p._filters[filter], filter, UniqueImageClause())
         if grouping != NO_GROUP:
             dm = datamodel.DataModel.getInstance()
             group_cols = dm.GetGroupColumnNames(grouping)
