@@ -985,7 +985,7 @@ class TableViewer(wx.Frame):
                             'Save table to database', self.Title)
             if dlg.ShowModal() != wx.ID_OK:
                 return
-            tablename = dlg.GetStringSelection()
+            tablename = dlg.GetValue()
             if not re.match('^[A-Za-z]\w*$', tablename):
                 wx.MessageDialog(self, 'Table name must begin with a letter and may'
                                  'only contain letters, digits and "_"',
