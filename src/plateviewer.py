@@ -297,14 +297,11 @@ class PlateViewer(wx.Frame, CPATool):
 
             if table == p.image_table:
                 group = True
-##                if fltr != 'None':
-##                    platesWellsAndVals = list(dbconnect.Images().filter(fltr).project([p.plate_id, p.well_id, expression]).group_by([p.plate_id, p.well_id]).all())
-##                else:
                 if fltr == NO_FILTER:
                     from_clause = table
                 else:
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
-                        table, p._filters[fltr], fltr, UniqueImageClause())
+                    from_clause = '%s join _filter_%s using (%s)'%(
+                        table, fltr, UniqueImageClause())
                 platesWellsAndVals = db.execute(
                     'SELECT %s, %s FROM %s GROUP BY %s'%
                     (UniqueWellClause(), expression, from_clause, UniqueWellClause()))
