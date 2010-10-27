@@ -157,27 +157,17 @@ class Timeline(object):
       return build_tree(root)
       
    def get_nodes_by_timepoint(self):
+      '''
+      '''
+      def get_dict(node, d):
+         if not node.children:
+            return d
+         d.setdefault(node.children[0].timepoint, []).extend(node.children)
+         for child in node.children:
+            d.update(get_dict(child, d))
+         return d
       tree = self.get_lineage_tree()
-      d = {}
-      def build_dictionary(node):
-         if node.get_children() == []:
-            return
-         time = node.get_children()[0].get_timepoint()
-         if d.get(time, None) == None:
-            d[time] = node.get_children()
-            if time == 3:
-               print d[time][0], [c.id for c in d[time][0].children]
-         else:
-            d[time] += node.get_children()
-            if time == 3:
-               print d[time][0], [c.id for c in d[time][0].children]
-         for child in node.get_children():
-            build_dictionary(child)
-      d[tree.get_timepoint()] = [tree]
-      build_dictionary(tree)
-      return d
-      #d[t] ==> [node,...]
-      #d[t][i] ==> ith child at timepoint t
+      return get_dict(tree, {tree.timepoint:[tree]})
    
    def get_unique_timepoints(self):
       '''returns an ascending ordered list of UNIQUE timepoints on this timeline

@@ -45,49 +45,46 @@ class LineagePanel(wx.Panel):
         timepoints = self.timeline.get_unique_timepoints()
         timepoints.reverse()
         #timepoints.append(-1)
-
+        
         # get the time dictonary  where the structure is #d[t] ==> [node,...]    #d[t][i] ==> ith child at timepoint t
-        time_dictoniary = self.timeline.get_nodes_by_timepoint()
-        
-        for k, v in time_dictoniary.items():
-            print k, [c.id for c in v]
-        
+##        time_dictoniary = self.timeline.get_nodes_by_timepoint()
+
         nodeY = {}
         Y = 10
         
-        for t in timepoints:
+        nodes_by_timepoint = self.timeline.get_nodes_by_timepoint()
+        for t, nodes in nodes_by_timepoint.items():
             print t
-            for n in time_dictoniary[t]:
+            for n in nodes:
                 print n.id
                 print '\t', [c.id for c in n.children]
-            print '\n'
         
-        
-        #dc.SetPen(wx.Pen("BLACK",1))
-        #for i, time in enumerate(timepoints): 
-            #print time,"\t"
-            #X = timepoints[i]*50
-            #if i == 0: #ensure that it is the last timepoint
-                #for node in time_dictoniary[time]:
-                    #dc.DrawCircle(X, Y, 5)
-                    #nodeY[node.id] = Y
-                    #Y += 20
-            #else:
-                #for node in time_dictoniary[time]:
-                    #ycoord = []  #reset to empty list
-                    #print node.id
-                    #for child in node.get_children():
-                        #print child.id, child.get_well_ids()
-                        #ycoord.append(nodeY[child.id])
-                    #print "\n"    
-                    #Y = int((min(ycoord)+max(ycoord))/2)
-                    #dc.DrawCircle(X, Y, 5)
-                    #nodeY[node.id] = Y
-                    
+
+        dc.SetPen(wx.Pen("BLACK",1))
+        for i, time in enumerate(timepoints): 
+            print time,"\t"
+            X = timepoints[i]*50
+            if i == 0: #ensure that it is the last timepoint
+                for node in nodes_by_timepoint[time]:
+                    dc.DrawCircle(X, Y, 5)
+                    nodeY[node.id] = Y
+                    Y += 20
+            else:
+                for node in nodes_by_timepoint[time]:
+                    ycoord = []  #reset to empty list
+                    print node.id
+                    for child in node.get_children():
+                        print child.id, child.get_well_ids()
+                        ycoord.append(nodeY[child.id])
+                    print "\n"    
+                    Y = int((min(ycoord)+max(ycoord))/2)
+                    dc.DrawCircle(X, Y, 5)
+                    nodeY[node.id] = Y
+
         #Create the pen for drawing the lineage
-        
-        
-        #dc.EndDrawing()
+
+
+        dc.EndDrawing()
         #Drawing the lineage from Right --> Left
         # for the latest time point get all the nodes and draw them with fixed point distance start from Y =10 and then increase by 20 pxl
         # for the previous generation, start from the top node, get the number of childeren it has  if 3 chidren then the topmost nodes of this generation will be (20*3/2)+10
@@ -105,7 +102,7 @@ class LineagePanel(wx.Panel):
         #d[t][i] ==> ith child at timepoint t
         #for time in timepoint:
         #for time in reverse(timepoints) + [-1]:         # add the stock time point -1 to the reverse timepoint
-         #  print time
+            #  print time
         #td[time][0].parent ==
 
 
