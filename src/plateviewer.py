@@ -303,7 +303,8 @@ class PlateViewer(wx.Frame, CPATool):
                 if fltr == NO_FILTER:
                     from_clause = table
                 else:
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, p._filters[fltr], fltr, UniqueImageClause())
+                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
+                        table, p._filters[fltr], fltr, UniqueImageClause())
                 platesWellsAndVals = db.execute(
                     'SELECT %s, %s FROM %s GROUP BY %s'%
                     (UniqueWellClause(), expression, from_clause, UniqueWellClause()))
@@ -318,7 +319,8 @@ class PlateViewer(wx.Frame, CPATool):
                     f = p._filters[fltr]
                     ins = f.upper().index('FROM')
                     f = '%s, %s %s'%(f[:ins], UniqueWellClause(), f[ins:])
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, f, fltr, UniqueWellClause())
+                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
+                        table, f, fltr, UniqueWellClause())
                 platesWellsAndVals = db.execute(
                     'SELECT %s, %s FROM %s GROUP BY %s'%
                     (UniqueWellClause(), measurement, from_clause, UniqueWellClause()))
@@ -330,13 +332,15 @@ class PlateViewer(wx.Frame, CPATool):
                 if fltr == NO_FILTER:
                     from_clause = table
                 else:
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, p._filters[fltr], fltr, UniqueImageClause())
+                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
+                        table, p._filters[fltr], fltr, UniqueImageClause())
                 platesWellsAndVals = db.execute(
                     'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%
                     (UniqueWellClause(p.image_table), expression, 
                      p.image_table, from_clause, 
-                     ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in db.GetLinkingColumnsForTable(table)]),
-                     UniqueWellClause()))
+                     ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) 
+                                for id in db.GetLinkingColumnsForTable(table)]),
+                     UniqueWellClause(p.image_table)))
             platesWellsAndVals = np.array(platesWellsAndVals, dtype=object)
 
             # Replace None's with nan
