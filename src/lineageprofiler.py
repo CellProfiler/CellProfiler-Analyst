@@ -153,9 +153,31 @@ class Timeline(object):
                build_tree(child, tp_idx+1)
          return parent
       
-      root = LineageNode(None, self.stock, self.get_well_ids(),
-                         self.get_unique_timepoints()[0])
+      root = LineageNode(None, self.stock, self.get_well_ids(), -1)
       return build_tree(root)
+      
+   def get_nodes_by_timepoint(self):
+      tree = self.get_lineage_tree()
+      d = {}
+      def build_dictionary(node):
+         if node.get_children() == []:
+            return
+         time = node.get_children()[0].get_timepoint()
+         if d.get(time, None) == None:
+            d[time] = node.get_children()
+            if time == 3:
+               print d[time][0], [c.id for c in d[time][0].children]
+         else:
+            d[time] += node.get_children()
+            if time == 3:
+               print d[time][0], [c.id for c in d[time][0].children]
+         for child in node.get_children():
+            build_dictionary(child)
+      d[tree.get_timepoint()] = [tree]
+      build_dictionary(tree)
+      return d
+      #d[t] ==> [node,...]
+      #d[t][i] ==> ith child at timepoint t
    
    def get_unique_timepoints(self):
       '''returns an ascending ordered list of UNIQUE timepoints on this timeline
@@ -235,6 +257,15 @@ class LineageNode(object):
    def get_well_ids(self):
       return self.wells
    
+   def get_timepoint(self):
+      return self.timepoint
+      
+   def __eq__(self, node):
+      return self is node
+      
+   def __neq__(self, node):
+      return node is not self
+   
    def add_child(self, id, wells, timepoint):
       '''create a child node and link child -> parent and parent -> child
       '''
@@ -253,24 +284,61 @@ class LineageNode(object):
 if __name__ == '__main__':
    t = Timeline('U2OS')
    
+   #PlateDesign.add_plate('fred', P6)
+   #all_wells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))
+   
+   #t.add_event(1, 'seed', 'fred', all_wells)
+   
+   #t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 'B03'])
+   #t.add_event(2, 'treatment2', 'fred', [ 'A02', 'B02', 'B03'])
+   #untreated_wells = set(all_wells) - set(t.get_well_ids(2))
+   #t.add_event(2, NO_EVENT,     'fred', untreated_wells)
+
+   #t.add_event(3, 'treat', 'fred', ['A02'])
+   #t.add_event(3, 'wash', 'fred', ['A01'])
+   #untreated_wells = set(all_wells) - set(t.get_well_ids(3))
+   #t.add_event(3, NO_EVENT, 'fred', untreated_wells)
+   
+   #t.add_event(4, 'imaging', 'fred', PlateDesign.get_well_ids(P6))
+   
+   
    PlateDesign.add_plate('fred', P6)
    all_wells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))
    
    t.add_event(1, 'seed', 'fred', all_wells)
    
-   t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 
-                                                       'B03'])
-   t.add_event(2, 'treatment2', 'fred', [       'A02', 
-                                                'B02', 'B03'])
+   t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 'B03'])
+   t.add_event(2, 'treatment2', 'fred', [ 'A02', 'B02', 'B03'])
    untreated_wells = set(all_wells) - set(t.get_well_ids(2))
-   t.add_event(2, NO_EVENT,     'fred', untreated_wells)
+   t.add_event(2, NO_EVENT,     'fred', untreated_wells)  
 
-   t.add_event(3, 'treat', 'fred', ['A02'])
-   t.add_event(3, 'wash', 'fred', ['A01'])
+   t.add_event(3, 'treat', 'fred', ['A01', 'A03', 'B02'])
+   t.add_event(3, 'wash', 'fred', ['B02', 'B03'])
    untreated_wells = set(all_wells) - set(t.get_well_ids(3))
    t.add_event(3, NO_EVENT, 'fred', untreated_wells)
-   t.add_event(4, 'imaging', 'fred', PlateDesign.get_well_ids(P6))
+   
+   t.add_event(4, 'spin', 'fred', ['B01', 'A02', 'A03'])
+   untreated_wells = set(all_wells) - set(t.get_well_ids(4))
+   t.add_event(4, NO_EVENT, 'fred', untreated_wells)
+   
+   d = t.get_nodes_by_timepoint()
+   
+   for time in d.keys():
+      print str(time)+"\t"+str([node.id for node in d[time]])
+      
+   #t.add_event(1, 'seed', 'fred', all_wells)
+   
+   #t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 'B03'])
+   #t.add_event(2, 'treatment2', 'fred', [ 'A02', 'B02', 'B03'])
+   #untreated_wells = set(all_wells) - set(t.get_well_ids(2))
+   #t.add_event(2, NO_EVENT,     'fred', untreated_wells)
 
+   #t.add_event(3, 'treat', 'fred', ['A02'])
+   #t.add_event(3, 'wash', 'fred', ['A01'])
+   #untreated_wells = set(all_wells) - set(t.get_well_ids(3))
+   #t.add_event(3, NO_EVENT, 'fred', untreated_wells)
+   
+   #t.add_event(4, 'imaging', 'fred', PlateDesign.get_well_ids(P6))
 ##   for p in t.get_well_permutations(2, P6 ):
 ##      print [str(x) for x in p]
 
@@ -288,7 +356,7 @@ if __name__ == '__main__':
    tc = wx.TreeCtrl(f)
    tcroot = tc.AddRoot("ROOT")
    def populate_wx_tree(wxparent, tnode):
-      for child in tnode.children:
+      for child in tnode.children:    
          subtree = tc.AppendItem(wxparent, ', '.join(child.get_well_ids()))
          populate_wx_tree(subtree, child)
          tc.Expand(subtree)
