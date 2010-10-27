@@ -384,6 +384,11 @@ class DBConnect(Singleton):
                     std = np.sqrt(b/len(self.values))
                     return std
             self.connections[connID].create_aggregate('stddev', 1, stddev)
+            # Create REGEXP function
+            def regexp(expr, item):
+                reg = re.compile(expr)
+                return reg.match(item) is not None
+            self.connections[connID].create_function("REGEXP", 2, regexp)
             self.connections[connID].create_function('classifier', -1, self.sqlite_classifier.classify)
             
             try:
