@@ -976,7 +976,6 @@ class TableViewer(wx.Frame):
                         for col in range(self.grid.Table.GetNumberCols())])
         f.close()
         logging.info('Table saved to %s'%filename)
-##        self.file = filename
 
     def on_save_table_to_db(self, evt):
         valid = False
