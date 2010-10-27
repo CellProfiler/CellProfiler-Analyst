@@ -563,7 +563,7 @@ class PlateViewer(wx.Frame, CPATool):
             self.annotationLabel.Enable()
             self.annotationLabel.SetForegroundColour(wx.BLACK)
             self.annotationLabel.SetBackgroundColour(wx.WHITE)
-            annotations = db.execute('SELECT %s FROM %s WHERE %s'%(
+            annotations = db.execute('SELECT %s FROM %s WHERE "%s"'%(
                                 self.annotationCol.Value, 
                                 p.image_table, 
                                 GetWhereClauseForWells(wellkeys)))
