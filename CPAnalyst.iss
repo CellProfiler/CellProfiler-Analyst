@@ -5,7 +5,7 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{9FA2FD8D-AEFC-4EFB-B26A-370F34591E05}
+AppId={{7199ACFC-2F00-4F4A-AD83-738CE71F2CF8}
 AppName=CellProfiler Analyst
 AppVersion=2.0
 ;AppVerName=CellProfiler Analyst 2
@@ -17,7 +17,7 @@ DefaultDirName={pf}\CellProfiler Analyst
 DefaultGroupName=CellProfiler Analyst
 AllowNoIcons=yes
 LicenseFile=LICENSE.txt
-OutputDir=CPAnalyst_2.0r10633
+OutputDir=CPAnalyst_2.0r10646
 OutputBaseFilename=setup
 SetupIconFile=src\icons\cpa.ico
 Compression=lzma
