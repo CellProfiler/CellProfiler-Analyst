@@ -193,9 +193,9 @@ def GetWhereClauseForWells(keys, table_name=None):
         table_name += '.'
     keys.sort()
     if not p.plate_id:
-        return '%s%s IN (%s)'%(table_name, p.well_id, ','.join([str(k[0]) for k in keys]))
+        return '%s%s IN (%s)'%(table_name, p.well_id, ','.join(['"%s"'%(k[0]) for k in keys]))
     else:
-        wheres = ['%s%s=%s AND %s%s=%s'%(table_name, p.plate_id, plate, table_name, p.well_id, well) for plate, well in keys]
+        wheres = ['%s%s="%s" AND %s%s="%s"'%(table_name, p.plate_id, plate, table_name, p.well_id, well) for plate, well in keys]
         return ' OR '.join(wheres)
 
 def UniqueObjectClause(table_name=None):
