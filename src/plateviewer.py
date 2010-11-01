@@ -564,7 +564,7 @@ class PlateViewer(wx.Frame, CPATool):
             self.annotationLabel.Enable()
             self.annotationLabel.SetForegroundColour(wx.BLACK)
             self.annotationLabel.SetBackgroundColour(wx.WHITE)
-            annotations = db.execute('SELECT %s FROM %s WHERE "%s"'%(
+            annotations = db.execute('SELECT %s FROM %s WHERE %s'%(
                                 self.annotationCol.Value, 
                                 p.image_table, 
                                 GetWhereClauseForWells(wellkeys)))
@@ -602,12 +602,15 @@ class PlateViewer(wx.Frame, CPATool):
         self.annotation_cols[new_column] = coltypes[usertype][1]
         self.annotationCol.Items += [new_column]
         self.annotationCol.SetSelection(len(self.annotation_cols) - 1)
+        current_selection = self.measurementsChoice.Selection
         self.measurementsChoice.SetItems(self.measurementsChoice.Strings + [new_column])
         if self.annotationShowVals.IsChecked():
             column = self.annotationCol.Value
             self.sourceChoice.SetStringSelection(p.image_table)
             self.measurementsChoice.SetStringSelection(column)
             self.UpdatePlateMaps()
+        else:
+            self.measurementsChoice.SetSelection(current_selection)
         self.annotationShowVals.Enable()
         self.outlineMarked.Enable()
         self.OnSelectWell()
