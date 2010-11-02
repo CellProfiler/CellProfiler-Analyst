@@ -3,6 +3,7 @@ from multiclasssql import filter_table_prefix
 from properties import Properties
 import datamodel
 from wx.combo import OwnerDrawnComboBox as ComboBox
+import sqltools as sql
 import imagetools
 import logging
 import numpy as np
@@ -168,12 +169,19 @@ class DataSourcePanel(wx.Panel):
             points_dict = self.loadpoints(table, col, filter, grouping)
         
         # Check if the user is creating a plethora of plots by accident
-        if len(points_dict) > 25:
-            res = wx.MessageBox('Are you sure you want to show %s box plots?'
-                                %(len(points_dict)), 'Warning', 
-                                style=wx.YES_NO|wx.NO_DEFAULT)
+        if 100 >= len(points_dict) > 25:
+            res = wx.MessageDialog(self, 'Are you sure you want to show %s box '
+                                   'plots on one axis?'%(len(points_dict)), 
+                                   'Warning', style=wx.YES_NO|wx.NO_DEFAULT
+                                   ).ShowModal()
             if res != wx.ID_YES:
                 return
+        elif len(points_dict) > 100:
+            wx.MessageBox('Sorry, boxplot can not show more than 100 plots on\n'
+                          'a single axis. Your current settings would plot %d.\n'
+                          'Try using a filter to narrow your query.'
+                          %(len(points_dict)), 'Too many groups to plot')
+            return
 
         self.figpanel.setpoints(points_dict)
         if self.group_choice.Value != NO_GROUP:
@@ -185,17 +193,34 @@ class DataSourcePanel(wx.Panel):
         '''
         Returns a dict mapping x label values to lists of values from col
         '''
-        fields = '%s.%s'%(tablename, col)
-        from_clause = tablename
-        if filter != NO_FILTER:
-            from_clause += ' JOIN (%s) AS filter_SQL_%s USING (%s)' % \
-                               (p._filters[filter], filter, UniqueImageClause())
+        
+        q = sql.QueryBuilder()
+        columns = [(tablename, col)]
         if grouping != NO_GROUP:
             dm = datamodel.DataModel.getInstance()
-            group_cols = dm.GetGroupColumnNames(grouping)
-            fields += ', ' + ', '.join(group_cols)
-            
-        res = db.execute('SELECT %s FROM %s'%(fields, from_clause))
+            group_cols = dm.GetGroupColumnNames(grouping, include_table_name=True)
+            columns += [col.split('.') for col in group_cols]
+        q.set_columns(columns)
+        if filter != NO_FILTER:
+            #
+            # This is a bit annoying... We need to parse the filter query and
+            # 1) mash the tables into the query builder 
+            # 2) plop the where clause at the end of the resultant query
+            #
+            fq = p._filters[filter]
+            f_where = fq[fq.upper().index(' WHERE ')+7:]
+            f_from = fq[fq.upper().index(' FROM ')+6 : fq.upper().index(' WHERE ')]
+            f_tables = [t.strip() for t in f_from.split(',')]
+            for t in f_tables:
+                if ' ' in t:
+                    res = wx.MessageBox('Unable to parse properties filter "%s".'%(filter), 'Error')
+            q.add_table_dependencies(f_tables)
+            if q.get_where_clause():
+                q = str(q) + ' AND ' + f_where
+            else:
+                q = str(q) + ' WHERE ' + f_where        
+
+        res = db.execute(str(q))
         
         points_dict = {}
         if self.group_choice.Value != NO_GROUP:

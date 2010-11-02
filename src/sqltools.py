@@ -124,7 +124,7 @@ class QueryBuilder(object):
             ob = True
             tables.remove(p.object_table)
         res = ''
-        if ob or (im and ob):
+        if (im and ob):
             res = ' AND '.join(['%s.%s=%s.%s'%(p.image_table, col, 
                                                p.object_table, col)
                                 for col in image_key_columns()])
