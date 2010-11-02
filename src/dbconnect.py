@@ -661,8 +661,27 @@ class DBConnect(Singleton):
         try:
             res = self.execute(query)
         except DBException, e:
-            raise DBException, 'Group query failed for group "%s". Check the MySQL syntax in your properties file.\nError was: "%s"'%(group, e)
+            raise DBException('Group query failed for group "%s". Check the SQL'
+                              ' syntax in your properties file.\n'
+                              'Error was: "%s"'%(group, e))
         col_names = self.GetResultColumnNames()[key_size:]
+        from_idx = query.upper().index(' FROM ')
+        try:
+            where_idx = query.upper().index(' WHERE ')
+        except ValueError:
+            where_idx = len(query)
+        from_clause = query[from_idx+6 : where_idx].strip()
+        if ',' not in from_clause and ' ' not in from_clause:
+            col_names = ['%s.%s'%(from_clause, col) for col in col_names]
+        else:
+            for table in from_clause.split(','):
+                if ' AS ' in table.upper() or ' ' in table.strip():
+                    raise Exception('Unable to parse group query for group named "%s". '
+                                    'This could be because you are using table aliases '
+                                    'in your FROM clause. Please try rewriting your '
+                                    'query without aliases and try again.'%(group))
+            col_names = [col.strip() for col in query[7 : query.upper().index(' FROM ')].split(',')][len(image_key_columns()):]
+                    
         d = {}
         for row in res:
             if reverse:

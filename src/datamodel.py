@@ -168,10 +168,14 @@ class DataModel(Singleton):
         else:
             return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter)]
     
-    def GetGroupColumnNames(self, group):
+    def GetGroupColumnNames(self, group, include_table_name=False):
         ''' Returns the key column names associated with the specified group. '''
         self._if_empty_populate()
-        return list(self.groupColNames[group])   # return a copy of this list so it can't be modified
+        if include_table_name:
+            # return a copy of this list so it can't be modified
+            return list(self.groupColNames[group])
+        else:
+            return [col.split('.')[-1] for col in self.groupColNames[group]]
 
     def GetGroupColumnTypes(self, group):
         ''' Returns the key column types associated with the specified group. '''
