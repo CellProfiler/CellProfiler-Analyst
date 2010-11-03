@@ -572,6 +572,9 @@ class DBConnect(Singleton):
         The counts returned correspond to images that are present in BOTH the 
         per_image and per_object table.
         '''
+        if p.object_table is None or p.object_id is None:
+            return []
+                
         select = 'SELECT '+UniqueImageClause(p.object_table)+', COUNT('+p.object_table+'.'+p.object_id + ') FROM '+p.object_table + ' GROUP BY '+UniqueImageClause(p.object_table)
         result1 = self.execute(select)
         select = 'SELECT '+UniqueImageClause(p.image_table)+' FROM '+p.image_table
