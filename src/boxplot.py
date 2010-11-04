@@ -49,7 +49,7 @@ class DataSourcePanel(wx.Panel):
         else:
             logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
-        self.x_multiple = wx.Button(self, -1, 'select multiple', size=(150,-1))
+        self.x_multiple = wx.Button(self, -1, 'select multiple')
         self.group_choice = ComboBox(self, -1, choices=[NO_GROUP]+p._groups_ordered, style=wx.CB_READONLY)
         self.group_choice.Select(0)
         self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
@@ -59,34 +59,31 @@ class DataSourcePanel(wx.Panel):
         self.update_column_fields()
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "table:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "table:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.table_choice, 1, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(wx.StaticText(self, -1, "measurement:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.x_choice, 2, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.x_multiple, 0, wx.EXPAND|wx.TOP, 2)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,3))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "measurement:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.x_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
-        sz.Add(self.x_multiple, 0, wx.EXPAND)
-        sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
-        
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "group x-axis by:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "group x-axis by:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.group_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,3))
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "filter:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.filter_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,3))
         
         sizer.Add(self.update_chart_btn)    
         
@@ -208,8 +205,10 @@ class DataSourcePanel(wx.Panel):
             # 2) plop the where clause at the end of the resultant query
             #
             fq = p._filters[filter]
-            f_where = fq[fq.upper().index(' WHERE ')+7:]
-            f_from = fq[fq.upper().index(' FROM ')+6 : fq.upper().index(' WHERE ')]
+            from_idx = re.search('\sFROM\s', fq.upper()).start()
+            where_idx = re.search('\sWHERE\s', fq.upper()).start()
+            f_where = fq[where_idx+7:]
+            f_from = fq[from_idx+6 : where_idx]
             f_tables = [t.strip() for t in f_from.split(',')]
             for t in f_tables:
                 if ' ' in t:
