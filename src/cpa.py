@@ -238,11 +238,18 @@ class MainGUI(wx.Frame):
 
     def on_show_about(self, evt):
         ''' Shows a message box with the version number etc.'''
-        message = ('CellProfiler Analyst was developed at The Broad Institute '
-                   'Imaging Platform and is distributed under the GNU General '
+        message = ('CellProfiler Analyst was developed at The Broad Institute\n'
+                   'Imaging Platform and is distributed under the GNU General\n'
                    'Public License version 2.')
-        dlg = wx.MessageDialog(self, message, 'CellProfiler Analyst 2.0 %s'%(__version__ or 'unknown revision'), style=wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
+        info = wx.AboutDialogInfo()
+        info.SetIcon(icons.get_cpa_icon())
+        info.SetName('CellProfiler Analyst 2.0 %s'%(__version__ or 'unknown revision'))
+        info.SetDescription(message)
+        info.AddDeveloper('Adam Fraser')
+        info.AddDeveloper('Thouis (Ray) Jones')
+        info.AddDeveloper('Vebjorn Ljosa')
+        info.SetWebSite('www.CellProfiler.org')
+        wx.AboutBox(info)
 
     def on_close(self, evt=None):
         # Classifier needs to be told to close so it can clean up it's threads
