@@ -29,7 +29,7 @@ P5600 = (40, 140)
 NO_FILTER = 'No filter'
 CREATE_NEW_FILTER = '*create new filter*'
 
-required_fields = ['plate_type', 'plate_id', 'well_id']
+required_fields = ['plate_type', 'well_id']
 
 ID_EXIT = wx.NewId()
 
@@ -48,9 +48,6 @@ class PlateViewer(wx.Frame, CPATool):
         if fail:    
             self.Destroy()
             return
-
-        assert (p.well_id is not None and p.plate_id is not None), \
-               'Plate Viewer requires the well_id and plate_id columns to be defined in your properties file.'
 
         self.chMap = p.image_channel_colors[:]
 
@@ -120,6 +117,8 @@ class PlateViewer(wx.Frame, CPATool):
         viewSizer.Add(wx.StaticText(self, label='Number of plates:'))
         self.numberOfPlatesTE = wx.TextCtrl(self, -1, '1', style=wx.TE_PROCESS_ENTER)
         viewSizer.Add(self.numberOfPlatesTE)
+        if not p.plate_id:
+            self.numberOfPlatesTE.Disable()
 
         annotationSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Annotation:'), wx.VERTICAL)
         annotationSizer.Add(wx.StaticText(self, label='Annotation column:'))
@@ -235,16 +234,21 @@ class PlateViewer(wx.Frame, CPATool):
 
         # Try to get explicit labels for all wells.
         res = db.execute('SELECT DISTINCT %s FROM %s WHERE %s != "" and %s IS NOT NULL'%
-                         (p.well_id, p.image_table, p.well_id, p.well_id))
+                         (dbconnect.UniqueWellClause(), p.image_table, p.well_id, p.well_id))
 
-        self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), 
-                                          style=wx.CB_READONLY, size=(100,-1))]
-        self.plateMapChoices[-1].Select(plateIndex)
-        self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
-
-        plate_col_type = db.GetColumnType(p.image_table, p.plate_id)
-        plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
-        well_keys = [(plate_id, r[0]) for r in res]
+        if p.plate_id:
+            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), 
+                                              style=wx.CB_READONLY, size=(100,-1))]
+            self.plateMapChoices[-1].Select(plateIndex)
+            self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
+    
+            plate_col_type = db.GetColumnType(p.image_table, p.plate_id)
+            plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
+            
+            plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
+            plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), 0, wx.EXPAND)
+            plateMapChoiceSizer.Add(self.plateMapChoices[-1])
+        well_keys = res
 
         platemap = pmp.PlateMapPanel(self, data, well_keys, shape,
                                      colormap = self.colorMapsChoice.Value,
@@ -252,12 +256,10 @@ class PlateViewer(wx.Frame, CPATool):
         platemap.add_well_selection_handler(self.OnSelectWell)
         self.plateMaps += [platemap]
 
-        plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
-        plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), 0, wx.EXPAND)
-        plateMapChoiceSizer.Add(self.plateMapChoices[-1])
 
         singlePlateMapSizer = wx.BoxSizer(wx.VERTICAL)
-        singlePlateMapSizer.Add(plateMapChoiceSizer, 0, wx.ALIGN_CENTER)
+        if p.plate_id:
+            singlePlateMapSizer.Add(plateMapChoiceSizer, 0, wx.ALIGN_CENTER)
         singlePlateMapSizer.Add(platemap, 1, wx.EXPAND|wx.ALIGN_CENTER)
 
         self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
@@ -302,7 +304,7 @@ class PlateViewer(wx.Frame, CPATool):
                 else:
                     from_clause = '%s join _filter_%s using (%s)'%(
                         table, fltr, UniqueImageClause())
-                platesWellsAndVals = db.execute(
+                wellkeys_and_values = db.execute(
                     'SELECT %s, %s FROM %s GROUP BY %s'%
                     (UniqueWellClause(), expression, from_clause, UniqueWellClause()))
             elif set(well_key_columns()) == set(db.GetLinkingColumnsForTable(table)):
@@ -318,7 +320,7 @@ class PlateViewer(wx.Frame, CPATool):
                     f = '%s, %s %s'%(f[:ins], UniqueWellClause(), f[ins:])
                     from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
                         table, f, fltr, UniqueWellClause())
-                platesWellsAndVals = db.execute(
+                wellkeys_and_values = db.execute(
                     'SELECT %s, %s FROM %s GROUP BY %s'%
                     (UniqueWellClause(), measurement, from_clause, UniqueWellClause()))
             else:
@@ -331,37 +333,44 @@ class PlateViewer(wx.Frame, CPATool):
                 else:
                     from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
                         table, p._filters[fltr], fltr, UniqueImageClause())
-                platesWellsAndVals = db.execute(
+                wellkeys_and_values = db.execute(
                     'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%
                     (UniqueWellClause(p.image_table), expression, 
                      p.image_table, from_clause, 
                      ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) 
                                 for id in db.GetLinkingColumnsForTable(table)]),
                      UniqueWellClause(p.image_table)))
-            platesWellsAndVals = np.array(platesWellsAndVals, dtype=object)
+            wellkeys_and_values = np.array(wellkeys_and_values, dtype=object)
 
-            # Replace None's with nan
-            for row in platesWellsAndVals:
-                if row[2] is None:
-                    row[2] = np.nan
+            # Replace measurement None's with nan
+            for row in wellkeys_and_values:
+                if row[-1] is None:
+                    row[-1] = np.nan
 
             data = []
             dmax = -np.inf
             dmin = np.inf
-            for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
-                plate = plateChoice.Value
-                plateMap.SetPlate(plate)
-                self.colorBar.AddNotifyWindow(plateMap)
-                keys_and_vals = [v for v in platesWellsAndVals if str(v[0])==plate]
-                platedata, platelabels = FormatPlateMapData(keys_and_vals)
+            if p.plate_id:
+                for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
+                    plate = plateChoice.Value
+                    plateMap.SetPlate(plate)
+                    self.colorBar.AddNotifyWindow(plateMap)
+                    keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
+                    platedata, platelabels = FormatPlateMapData(keys_and_vals)
+                    data += [platedata]
+                    dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
+                    dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
+            else:
+                self.colorBar.AddNotifyWindow(self.plateMaps[0])
+                platedata, platelabels = FormatPlateMapData(wellkeys_and_values)
                 data += [platedata]
-                dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
-                dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
-
+                dmin = np.nanmin([float(kv[-1]) for kv in wellkeys_and_values])
+                dmax = np.nanmax([float(kv[-1]) for kv in wellkeys_and_values])
+                
             # Compute the global extents if there is any data whatsoever
-            if len(platesWellsAndVals) > 0:
-                gmin = np.nanmin([float(val) for _,_,val in platesWellsAndVals])
-                gmax = np.nanmax([float(val) for _,_,val in platesWellsAndVals])
+            if len(wellkeys_and_values) > 0:
+                gmin = np.nanmin([float(vals[-1]) for vals in wellkeys_and_values])
+                gmax = np.nanmax([float(vals[-1]) for vals in wellkeys_and_values])
                 # Warn if there was no data for this plate
                 if np.isinf(dmin) or np.isinf(dmax):
                     wx.MessageDialog(self, 'No numeric data was found in this '
@@ -397,7 +406,7 @@ class PlateViewer(wx.Frame, CPATool):
                     from_clause = table
                 else:
                     from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, p._filters[fltr], fltr, UniqueImageClause())
-                platesWellsAndVals = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%
+                wellkeys_and_values = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%
                                                 (UniqueWellClause(), measurement, 
                                                  from_clause, UniqueWellClause()))
             elif set(well_key_columns()) == set(db.GetLinkingColumnsForTable(table)):
@@ -411,7 +420,7 @@ class PlateViewer(wx.Frame, CPATool):
                     ins = f.upper().index('FROM')
                     f = '%s, %s %s'%(f[:ins], UniqueWellClause(), f[ins:])
                     from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, f, fltr, UniqueWellClause())
-                platesWellsAndVals = db.execute(
+                wellkeys_and_values = db.execute(
                     'SELECT %s, %s FROM %s GROUP BY %s'%
                     (UniqueWellClause(), measurement, from_clause, UniqueWellClause()))
             else:
@@ -422,7 +431,7 @@ class PlateViewer(wx.Frame, CPATool):
                     from_clause = table
                 else:
                     from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, p._filters[fltr], fltr, UniqueImageClause())
-                platesWellsAndVals = db.execute(
+                wellkeys_and_values = db.execute(
                     'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%
                     (UniqueWellClause(p.image_table), measurement, 
                      p.image_table, from_clause, 
@@ -430,14 +439,19 @@ class PlateViewer(wx.Frame, CPATool):
                      UniqueWellClause()))
 
             data = []
-            for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
-                plate = plateChoice.Value
-                plateMap.SetPlate(plate)
-                self.colorBar.AddNotifyWindow(plateMap)
-                keys_and_vals = [v for v in platesWellsAndVals if str(v[0])==plate]
-                platedata, platelabels = FormatPlateMapData(keys_and_vals, categorical=True)
+            if p.plate_id:
+                for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
+                    plate = plateChoice.Value
+                    plateMap.SetPlate(plate)
+                    self.colorBar.AddNotifyWindow(plateMap)
+                    keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
+                    platedata, platelabels = FormatPlateMapData(keys_and_vals, categorical=True)
+                    data += [platedata]
+            else:
+                self.colorBar.AddNotifyWindow(self.plateMaps[0])
+                platedata, platelabels = FormatPlateMapData(wellkeys_and_values, categorical=True)
                 data += [platedata]
-
+                
             self.colorBar.SetLocalExtents([0,1])
             self.colorBar.SetGlobalExtents([0,1])
 
@@ -676,9 +690,15 @@ class PlateViewer(wx.Frame, CPATool):
         for pm in self.plateMaps:
             if self.outlineMarked.IsChecked():
                 column = self.annotationCol.Value
-                res = db.execute('SELECT %s, %s FROM %s WHERE %s=%s'%(
-                    ','.join(well_key_columns()), column, p.image_table, 
-                    p.plate_id, pm.plate))
+                if p.plate_id:
+                    res = db.execute('SELECT %s, %s FROM %s WHERE %s=%s'%(
+                        dbconnect.UniqueWellClause(), column, p.image_table, 
+                        p.plate_id, pm.plate))
+                else:
+                    # if there's no plate_id, we assume there is only 1 plate
+                    # and fetch all the data
+                    res = db.execute('SELECT %s, %s FROM %s'%(
+                        dbconnect.UniqueWellClause(), column, p.image_table))
                 keys = [tuple(r[:-1]) for r in res if r[-1] is not None]
                 pm.SetOutlinedWells(keys)
             else:
@@ -785,7 +805,8 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
        -an array in the shape of the plate containing the given values with NaNs filling empty slots.  
        -an array in the shape of the plate containing the given keys with (unknownplate, unknownwell) filling empty slots
     '''
-
+    nkeycols = len(dbconnect.well_key_columns())
+    
     if   p.plate_type == '96':   shape = P96
     elif p.plate_type == '384':  shape = P384
     elif p.plate_type == '1536': shape = P1536
@@ -802,19 +823,23 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
             some of your wells.''')
         assert len(data) == 5600
         data = np.array(list(meander(data.reshape(shape)))).reshape(shape)
-        well_keys = np.array(list(meander(well_keys.reshape(shape + (2,))))).reshape(shape + (2,))
+        well_keys = np.array(list(meander(well_keys.reshape(shape + (nkeycols,) )))).reshape(shape + (nkeycols,))
         return data, well_keys
 
     data = np.ones(shape) * np.nan
     if categorical:
         data = data.astype('object')
-    well_keys = np.array([('UnknownPlate', 'UnknownWell')] * np.prod(shape), 
-                         dtype=object).reshape(shape + (2,))
-    for plate, well, val in keys_and_vals:
+    if p.plate_id:
+        dummy_key = ('UnknownPlate', 'UnknownWell')
+    else:
+        dummy_key = ('UnknownWell',)
+    well_keys = np.array([dummy_key] * np.prod(shape), 
+                         dtype=object).reshape(shape + (nkeycols,))
+    for kv in keys_and_vals:
         dm = DataModel.getInstance()
-        (row, col) = dm.get_well_position_from_name(well)
-        data[(row, col)] = val
-        well_keys[row, col] = (plate, well)
+        (row, col) = dm.get_well_position_from_name(kv[-2])
+        data[(row, col)] = kv[-1]
+        well_keys[row, col] = kv[:-1]
     return data, well_keys
 
 def meander(a):

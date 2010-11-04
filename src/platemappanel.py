@@ -227,6 +227,8 @@ class PlateMapPanel(wx.Panel):
         if self.well_keys is not None and loc is not None:
             row, col = loc
             return self.well_keys[row][col]
+        else:
+            return None
         
     def GetWellKeys(self):
         return [tuple(wk) for wk in self.well_keys]
@@ -395,49 +397,7 @@ class PlateMapPanel(wx.Panel):
         for handler in self.well_selection_handlers:
             handler()
                 
-        if not p.image_thumbnail_cols:
-            evt.Skip()
-            return
-
-        try:
-            self.tipwin.Destroy()
-        except:
-            pass
-        tip = STT.SuperToolTip('')
-        
-        try:
-            plate, well = self.GetWellKeyAtCoord(evt.X, evt.Y)
-        except:
-            return
-        if plate == 'UnknownPlate' or well == 'UnknownWell':
-            return
-        images = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
-                            (','.join(p.image_thumbnail_cols), p.image_table,
-                             p.plate_id, plate, p.well_id, well))
-        if images == []:
-            return
-        imsets = []
-        for row in images:
-            pngs = [Image.open(StringIO(im), 'r') for im in row]
-            imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
-                    for png in pngs]]
-        
-        n_channels = len(imsets[0])
-        composite = []
-        for i in xrange(n_channels):
-            # composite each channel separately
-            composite += [imagetools.tile_images([imset[i] for imset in imsets])]
-        bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)
-        
-        tip.SetEndDelay(1)
-        tip.SetBodyImage(bmp)
-        tip.SetHeader('Plate: %s, Well: %s'%(plate, well))
-        tip.ApplyStyle("Silver")
-        self.tipwin = STT.ToolTipWindow(self, tip)
-        self.tipwin.SetPosition((self.Parent.GetPosition()[0] + evt.X, 
-                                 self.Parent.GetPosition()[1] + evt.Y))
-        self.tipwin.SetSize((bmp.Width+10, bmp.Height+10))
-        self.tipwin.Show()
+        evt.Skip()
 
     def SetPlate(self, plate):
         self.plate = plate
@@ -463,27 +423,61 @@ class PlateMapPanel(wx.Panel):
                     logging.error('Could not open image: %s'%(e))
 
     def OnRClick(self, evt):
-        if self.plate is not None:
-            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
-            imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
-                                (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate))
-            self.ShowPopupMenu(imKeys, (evt.X,evt.Y))
-
-    def ShowPopupMenu(self, items, pos):
-        self.popupItemById = {}
+        well_label = self.GetWellLabelAtCoord(evt.X, evt.Y)
+        wellkey = self.GetWellKeyAtCoord(evt.X, evt.Y)
+        if wellkey is None:
+            return 
+        imkeys = db.execute('SELECT %s FROM %s WHERE %s'%
+                            (UniqueImageClause(), p.image_table, 
+                             dbconnect.GetWhereClauseForWells([wellkey])))
+        
         popupMenu = wx.Menu()
-        popupMenu.SetTitle('Show Image')
-        for item in items:
-            id = wx.NewId()
-            self.popupItemById[id] = item
-            popupMenu.Append(id,str(item))
-        popupMenu.Bind(wx.EVT_MENU, self.OnSelectFromPopupMenu)
-        self.PopupMenu(popupMenu, pos)
-
-    def OnSelectFromPopupMenu(self, evt):
-        """Handles selections from the popup menu."""
-        imKey = self.popupItemById[evt.GetId()]
-        imagetools.ShowImage(imKey, self.chMap, parent=self)
+        popupMenu.SetTitle('well: %s'%(well_label))
+        if p.image_thumbnail_cols:
+            item = popupMenu.Append(-1, 'Show thumbnail montage')
+            show_montage = lambda(e): self.show_thumbnail_montage(wellkey, (evt.X, evt.Y))
+            popupMenu.Bind(wx.EVT_MENU, show_montage, item)
+        for key in imkeys:
+            item = popupMenu.Append(-1, str(key))
+            def handler(evt):
+                imagetools.ShowImage(key, self.chMap, parent=self)
+            popupMenu.Bind(wx.EVT_MENU, handler, item)
+        self.PopupMenu(popupMenu, (evt.X, evt.Y))
+        
+    def show_thumbnail_montage(self, wellkey, pos):
+        try:
+            self.tipwin.Destroy()
+        except:
+            pass
+        tip = STT.SuperToolTip('')
+        
+        images = db.execute('SELECT %s FROM %s WHERE %s'%
+                            (','.join(p.image_thumbnail_cols), p.image_table,
+                             dbconnect.GetWhereClauseForWells([wellkey])))
+        if images == []:
+            return
+        imsets = []
+        for row in images:
+            pngs = [Image.open(StringIO(im), 'r') for im in row]
+            imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
+                    for png in pngs]]
+        
+        n_channels = len(imsets[0])
+        composite = []
+        for i in xrange(n_channels):
+            # composite each channel separately
+            composite += [imagetools.tile_images([imset[i] for imset in imsets])]
+        bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)
+        
+        tip.SetEndDelay(1)
+        tip.SetBodyImage(bmp)
+        tip.SetHeader('Well: %s'%(wellkey[-1]))
+        tip.ApplyStyle("Silver")
+        self.tipwin = STT.ToolTipWindow(self, tip)
+        self.tipwin.SetPosition((self.Parent.GetPosition()[0] + pos[0], 
+                                 self.Parent.GetPosition()[1] + pos[1]))
+        self.tipwin.SetSize((bmp.Width+10, bmp.Height+10))
+        self.tipwin.Show()
 
         
 if __name__ == "__main__":
