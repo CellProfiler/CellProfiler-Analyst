@@ -39,7 +39,7 @@ class PlateMapPanel(wx.Panel):
 
         KEYWORD ARGUMENTS:
         shape -- a 2-tuple to reshape the data to (must fit the data)
-        well_keys -- list of keys for each well (plate, well)
+        well_keys -- list of keys for each well eg: (plate, well)
         colormap -- a colormap name from matplotlib.cm
         well_disp -- ROUNDED, CIRCLE, SQUARE, THUMBNAIL or IMAGE
         data_range -- 2-tuple containing the min and max values that the data 
@@ -271,16 +271,26 @@ class PlateMapPanel(wx.Panel):
         bmp = {}
         imgs = {}
         if self.well_disp == IMAGE:
-            wells_and_images = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" GROUP BY %s'%(
-                p.well_id, p.image_id, p.image_table, p.plate_id, self.plate, 
-                p.well_id))
+            if p.plate_id:
+                wells_and_images = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" GROUP BY %s'%(
+                    p.well_id, p.image_id, p.image_table, p.plate_id, self.plate, 
+                    p.well_id))
+            else:
+                wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(
+                    p.well_id, p.image_id, p.image_table, p.well_id))
+                
             for well, im in wells_and_images:
                 imgs[well] = (im, )
         elif self.well_disp == THUMBNAIL:
             assert p.image_thumbnail_cols, 'No thumbnail columns are defined in the database. Platemap cannot be drawn.'
-            wells_and_images = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" GROUP BY %s'%(
-                p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, 
-                p.plate_id, self.plate, p.well_id))
+            if p.plate_id:
+                wells_and_images = db.execute('SELECT %s, %s FROM %s WHERE %s="%s" GROUP BY %s'%(
+                    p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, 
+                    p.plate_id, self.plate, p.well_id))
+            else:
+                wells_and_images = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%(
+                    p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, p.well_id))
+
             for wims in wells_and_images:
                 ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
                 ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
@@ -336,7 +346,8 @@ class PlateMapPanel(wx.Panel):
                         dc.DrawRectangle(px+1, py+1, r*2, r*2)
                     elif self.well_disp == THUMBNAIL:
                         p.image_buffer_size = int(p.plate_type)
-                        plate, well = self.GetWellKeyAtCoord(px+r, py+r)
+                        wellkey = self.GetWellKeyAtCoord(px+r, py+r)
+                        well = wellkey[-1]
                         if imgs.has_key(well):
                             size = imgs[well][0].shape
                             scale = r*2./max(size)
@@ -344,7 +355,8 @@ class PlateMapPanel(wx.Panel):
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     elif self.well_disp == IMAGE:
                         p.image_buffer_size = int(p.plate_type)
-                        plate, well = self.GetWellKeyAtCoord(px+r, py+r)
+                        wellkey = self.GetWellKeyAtCoord(px+r, py+r)
+                        well = wellkey[-1]
                         if imgs.has_key(well):
                             ims = imagetools.FetchImage(imgs[well])
                             size = ims[0].shape

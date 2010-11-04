@@ -348,6 +348,7 @@ class PlateViewer(wx.Frame, CPATool):
                     row[-1] = np.nan
 
             data = []
+            key_lists = []
             dmax = -np.inf
             dmin = np.inf
             if p.plate_id:
@@ -356,14 +357,16 @@ class PlateViewer(wx.Frame, CPATool):
                     plateMap.SetPlate(plate)
                     self.colorBar.AddNotifyWindow(plateMap)
                     keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
-                    platedata, platelabels = FormatPlateMapData(keys_and_vals)
+                    platedata, wellkeys = FormatPlateMapData(keys_and_vals)
                     data += [platedata]
+                    key_lists += [wellkeys]
                     dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
                     dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
             else:
                 self.colorBar.AddNotifyWindow(self.plateMaps[0])
-                platedata, platelabels = FormatPlateMapData(wellkeys_and_values)
+                platedata, wellkeys = FormatPlateMapData(wellkeys_and_values)
                 data += [platedata]
+                key_lists += [wellkeys]
                 dmin = np.nanmin([float(kv[-1]) for kv in wellkeys_and_values])
                 dmax = np.nanmax([float(kv[-1]) for kv in wellkeys_and_values])
                 
@@ -439,23 +442,27 @@ class PlateViewer(wx.Frame, CPATool):
                      UniqueWellClause()))
 
             data = []
+            key_lists = []
             if p.plate_id:
                 for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
                     plate = plateChoice.Value
                     plateMap.SetPlate(plate)
                     self.colorBar.AddNotifyWindow(plateMap)
                     keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
-                    platedata, platelabels = FormatPlateMapData(keys_and_vals, categorical=True)
+                    platedata, wellkeys = FormatPlateMapData(keys_and_vals, categorical=True)
                     data += [platedata]
+                    key_lists += [wellkeys]
             else:
                 self.colorBar.AddNotifyWindow(self.plateMaps[0])
-                platedata, platelabels = FormatPlateMapData(wellkeys_and_values, categorical=True)
+                platedata, wellkeys = FormatPlateMapData(wellkeys_and_values, categorical=True)
                 data += [platedata]
+                key_lists += [wellkeys]
                 
             self.colorBar.SetLocalExtents([0,1])
             self.colorBar.SetGlobalExtents([0,1])
 
-        for d, plateMap in zip(data, self.plateMaps):
+        for keys, d, plateMap in zip(key_lists, data, self.plateMaps):
+            plateMap.SetWellKeys(keys)
             if categorical:
                 plateMap.SetData(np.ones(d.shape) * np.nan)
                 plateMap.SetTextData(d)
