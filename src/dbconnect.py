@@ -911,7 +911,7 @@ class DBConnect(Singleton):
                 raise 'No quotes are allowed in values written to the database.'
         if value is None:
             value = 'NULL'
-        self.execute('UPDATE %s SET %s=%s WHERE "%s"'%(table, colname, value,
+        self.execute('UPDATE %s SET %s=%s WHERE %s'%(table, colname, value,
                                                 GetWhereClauseForWells(wellkeys)))
         # for some reason non string columns need to be committed or they will not be saved
         self.Commit()
