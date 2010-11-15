@@ -8,8 +8,8 @@ class ExperimentSettings(Singleton):
     def set_field(self, field, value):
         self.global_settings[field] = value
 
-    def get_field(self, field):
-        return self.global_settings[field]
+    def get_field(self, field, default=None):
+        return self.global_settings.get(field, default)
     
     def clear(self):
         self.global_settings = {}
