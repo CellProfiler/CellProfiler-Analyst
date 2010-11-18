@@ -5,11 +5,19 @@ class ExperimentSettings(Singleton):
         self.global_settings = {}
         self.timeline = None
         
-    def set_field(self, field, value):
-        self.global_settings[field] = value
+    def set_field(self, tag, value):
+        self.global_settings[tag] = value
 
-    def get_field(self, field, default=None):
-        return self.global_settings.get(field, default)
+    def get_field(self, tag, default=None):
+        return self.global_settings.get(tag, default)
+    
+    def get_field_instances(self, tag_prefix):
+        '''returns a list of unique instance ids for each tag beginning with 
+        tag_prefix'''
+        ids = set([tag.rsplit('|', 1)[-1] for tag in self.global_settings
+                   if tag.startswith(field_prefix)])
+        return list(ids)
+        
     
     def clear(self):
         self.global_settings = {}
