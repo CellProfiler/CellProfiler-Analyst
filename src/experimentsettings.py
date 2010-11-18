@@ -15,9 +15,8 @@ class ExperimentSettings(Singleton):
         '''returns a list of unique instance ids for each tag beginning with 
         tag_prefix'''
         ids = set([tag.rsplit('|', 1)[-1] for tag in self.global_settings
-                   if tag.startswith(field_prefix)])
+                   if tag.startswith(tag_prefix)])
         return list(ids)
-        
     
     def clear(self):
         self.global_settings = {}
