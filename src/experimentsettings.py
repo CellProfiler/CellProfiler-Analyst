@@ -4,17 +4,17 @@ class ExperimentSettings(Singleton):
     def __init__(self):
         self.global_settings = {}
         self.timeline = None
-        
+
     def set_field(self, tag, value):
         self.global_settings[tag] = value
 
     def get_field(self, tag, default=None):
         return self.global_settings.get(tag, default)
-    
+
     def remove_field(self, tag):
         if self.get_field(tag) is not None:
             self.global_settings.pop(tag)
-    
+
     def get_field_instances(self, tag_prefix):
         '''returns a list of unique instance ids for each tag beginning with 
         tag_prefix'''
@@ -27,7 +27,7 @@ class ExperimentSettings(Singleton):
         is passed in, only tags of the given instance will be returned'''
         return [tag for tag in self.global_settings 
                 if tag.startswith(tag_prefix) and tag.endswith(instance)]
-    
+
     def clear(self):
         self.global_settings = {}
         self.timeline = None        
@@ -46,3 +46,4 @@ class ExperimentSettings(Singleton):
             field = field.strip()
             self.set_field(field, eval(value))
         f.close()
+        
