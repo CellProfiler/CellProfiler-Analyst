@@ -31,7 +31,8 @@ class PlateMapPanel(wx.Panel):
     '''
 
     def __init__(self, parent, data, well_keys, shape=None,
-                 colormap='jet', well_disp=ROUNDED, data_range=None, **kwargs):
+                 colormap='jet', well_disp=ROUNDED, data_range=None, 
+                 toggle_selection_mode=False, **kwargs):
         '''
         ARGUMENTS:
         parent -- wx parent window
@@ -62,6 +63,7 @@ class PlateMapPanel(wx.Panel):
         self.well_selection_handlers = []   # funcs to call when a well is selected        
         self.SetColorMap(colormap)
         self.well_disp = well_disp
+        self.toggle_selection_mode = toggle_selection_mode
         self.SetData(data, shape, data_range=data_range)
         
         self.well_keys = np.ones(np.prod(self.data.shape), dtype=np.object)
@@ -80,6 +82,9 @@ class PlateMapPanel(wx.Panel):
         else:
             self.row_labels = ['%02d'%(i+1) for i in range(self.data.shape[0])]
         self.col_labels = ['%02d'%i for i in range(1,self.data.shape[1]+1)]
+        
+        # minimum 5 sq. pixels per cell
+        self.SetMinSize((self.data.shape[1] * 10.0, self.data.shape[0] * 10.0))
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
@@ -401,7 +406,7 @@ class PlateMapPanel(wx.Panel):
         if well is None:
             return        
         
-        if evt.ShiftDown():
+        if evt.ShiftDown() or self.toggle_selection_mode:
             self.ToggleSelected(well)
         else:
             self.SelectWell(well)
