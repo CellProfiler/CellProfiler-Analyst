@@ -9,11 +9,11 @@ from experimentsettings import ExperimentSettings
 class ExperimentSettingsWindow(wx.SplitterWindow):
     def __init__(self, parent, id=-1, **kwargs):
         wx.SplitterWindow.__init__(self, parent, id, **kwargs)
-        
+
         self.tree = wx.TreeCtrl(self, 1, wx.DefaultPosition, (-1,-1), wx.TR_HAS_BUTTONS)
-        
+
         root = self.tree.AddRoot('Experiment Name')
-        
+
         stc = self.tree.AppendItem(root, 'STATIC')
         ovr = self.tree.AppendItem(stc, 'Overview')
         ins = self.tree.AppendItem(stc, 'Instrument Settings')
@@ -22,7 +22,7 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
 	
         #self.tree.AppendItem(exv, 'Plate')
         #self.tree.AppendItem(exv, 'Flask')
-        
+
         stc = self.tree.AppendItem(root, 'TEMPORAL')
         cld = self.tree.AppendItem(stc, 'Cell Transfer')
         ptb = self.tree.AppendItem(stc, 'Perturbation')
@@ -39,11 +39,11 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
         #self.tree.AppendItem(hvr, 'Skew')
         self.tree.Expand(root)
         self.tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnSelChanged)
-        
+
         self.settings_container = wx.Panel(self)#MicroscopePanel(self)
         self.settings_container.SetSizer(wx.BoxSizer())
         self.settings_panel = wx.Panel(self)
-        
+
         self.SetMinimumPaneSize(20)
         self.SplitVertically(self.tree, self.settings_container, self.tree.MinWidth)
         self.SetSashPosition(180)
@@ -52,86 +52,56 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
     def OnSelChanged(self, event):
         item =  event.GetItem()
 
+	self.settings_panel.Destroy()
+	self.settings_container.Sizer.Clear()
         if self.tree.GetItemText(item) == 'Overview':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = OverviewPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)
         elif self.tree.GetItemText(item) == 'Instrument Settings':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = InstrumentSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)
         elif self.tree.GetItemText(item) == 'Experimental Vessel':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = ExpVessSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)
         elif self.tree.GetItemText(item) == 'Flask':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = FlaskPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)    
         elif self.tree.GetItemText(item) == 'Stock Culture':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = StockCultureSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)    
         elif self.tree.GetItemText(item) == 'Cell Transfer':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = CellTransferSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)    
         elif self.tree.GetItemText(item) == 'Perturbation':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = PerturbationSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)
         elif self.tree.GetItemText(item) == 'Staining':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = StainingAgentSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND) 
 	elif self.tree.GetItemText(item) == 'Spin':
-	    self.settings_panel.Destroy()
-	    self.settings_container.Sizer.Clear()
 	    self.settings_panel =  SpinningSettingPanel(self.settings_container)
-	    self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)    
 	elif self.tree.GetItemText(item) == 'Wash':
-	    self.settings_panel.Destroy()
-	    self.settings_container.Sizer.Clear()
 	    self.settings_panel =  WashSettingPanel(self.settings_container)
-	    self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)     
 	elif self.tree.GetItemText(item) == 'Timelapse Image':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = TLMSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)    
 	elif self.tree.GetItemText(item) == 'Static Image':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = HCSSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)
         elif self.tree.GetItemText(item) == 'FCS files':
-            self.settings_panel.Destroy()
-            self.settings_container.Sizer.Clear()
             self.settings_panel = FCSSettingPanel(self.settings_container)
-            self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)
-        
+	else:
+            self.settings_panel = wx.Panel(self.settings_container)
+	self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)        
         self.settings_container.Layout()
+	# Annoying: not sure why, but the notebook tabs reappear on other 
+	# settings panels even after the panel that owend them (and the notebook
+	# itself) is destroyed. This seems to happen on Mac only.
+	self.settings_panel.ClearBackground()
+	self.settings_panel.Refresh()
 
 class OverviewPanel(wx.Panel):
     def __init__(self, parent, id=-1, **kwargs):
+        wx.Panel.__init__(self, parent, id, **kwargs)
         
 	self.settings_controls = {}
 	meta = ExperimentSettings.getInstance()
         
-        wx.Panel.__init__(self, parent, id, **kwargs)
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
-	# Attach a flexi sizer for the text controler and labels
+        # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=12, cols=2, hgap=5, vgap=5)
-        
+
         # Experiment Title
 	titleTAG = 'Overview|Project|Title'
 	self.settings_controls[titleTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(titleTAG, default=''), style=wx.TE_MULTILINE)
@@ -145,17 +115,17 @@ class OverviewPanel(wx.Panel):
         self.settings_controls[aimTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(aimTAG, default=''), style=wx.TE_MULTILINE)
 	self.settings_controls[aimTAG].SetInitialSize((300, 50))
 	self.settings_controls[aimTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[aimTAG].SetToolTipString('Describe here the aim of the experiment')
-	fgs.Add(wx.StaticText(self.sw, -1, 'Project Aim'), 0)
-	fgs.Add(self.settings_controls[aimTAG], 0, wx.EXPAND)
+        self.settings_controls[aimTAG].SetToolTipString('Describe here the aim of the experiment')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Project Aim'), 0)
+        fgs.Add(self.settings_controls[aimTAG], 0, wx.EXPAND)
         # Keywords
-	keyTAG = 'Overview|Project|Keywords'
+        keyTAG = 'Overview|Project|Keywords'
         self.settings_controls[keyTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(keyTAG, default=''), style=wx.TE_MULTILINE)
 	self.settings_controls[keyTAG].SetInitialSize((300, 50))
 	self.settings_controls[keyTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[keyTAG].SetToolTipString('Keywords that indicates the experiment')
-	fgs.Add(wx.StaticText(self.sw, -1, 'Keywords'), 0)
-	fgs.Add(self.settings_controls[keyTAG], 0, wx.EXPAND)
+        self.settings_controls[keyTAG].SetToolTipString('Keywords that indicates the experiment')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Keywords'), 0)
+        fgs.Add(self.settings_controls[keyTAG], 0, wx.EXPAND)
         # Experiment Number
 	exnumTAG = 'Overview|Project|ExptNum'
 	self.settings_controls[exnumTAG] = wx.Choice(self.sw, -1,  choices=['1','2','3','4','5','6','7','8','9','10'])
@@ -187,33 +157,33 @@ class OverviewPanel(wx.Panel):
         self.settings_controls[expnameTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(expnameTAG, default=''), style=wx.TE_MULTILINE)
 	self.settings_controls[expnameTAG].SetInitialSize((300, 20))
 	self.settings_controls[expnameTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[expnameTAG].SetToolTipString('Name of experimenter(s)')
-	fgs.Add(wx.StaticText(self.sw, -1, 'Name of Experimenter(s)'), 0)
-	fgs.Add(self.settings_controls[expnameTAG], 0, wx.EXPAND)
-	# Institution Name
+        self.settings_controls[expnameTAG].SetToolTipString('Name of experimenter(s)')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Name of Experimenter(s)'), 0)
+        fgs.Add(self.settings_controls[expnameTAG], 0, wx.EXPAND)
+        # Institution Name
         instnameTAG = 'Overview|Project|Institution'
         self.settings_controls[instnameTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(instnameTAG, default=''))
 	self.settings_controls[instnameTAG].SetInitialSize((300, 20))
 	self.settings_controls[instnameTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[instnameTAG].SetToolTipString('Name of Institution')
-	fgs.Add(wx.StaticText(self.sw, -1, 'Name of Institution'), 0)
-	fgs.Add(self.settings_controls[instnameTAG], 0, wx.EXPAND)
+        self.settings_controls[instnameTAG].SetToolTipString('Name of Institution')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Name of Institution'), 0)
+        fgs.Add(self.settings_controls[instnameTAG], 0, wx.EXPAND)
         # Department Name
         deptnameTAG = 'Overview|Project|Department'
         self.settings_controls[deptnameTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(deptnameTAG, default=''), style=wx.TE_MULTILINE)
 	self.settings_controls[deptnameTAG].SetInitialSize((300, 20))
 	self.settings_controls[deptnameTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[deptnameTAG].SetToolTipString('Name of the Department')
-	fgs.Add(wx.StaticText(self.sw, -1, 'Department Name'), 0)
-	fgs.Add(self.settings_controls[deptnameTAG], 0, wx.EXPAND)
+        self.settings_controls[deptnameTAG].SetToolTipString('Name of the Department')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Department Name'), 0)
+        fgs.Add(self.settings_controls[deptnameTAG], 0, wx.EXPAND)
         # Address
         addressTAG = 'Overview|Project|Address'
         self.settings_controls[addressTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(addressTAG, default=''), style=wx.TE_MULTILINE)
 	self.settings_controls[addressTAG].SetInitialSize((300, 50))
 	self.settings_controls[addressTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[addressTAG].SetToolTipString('Postal address and other contact details')
-	fgs.Add(wx.StaticText(self.sw, -1, 'Address'), 0)
-	fgs.Add(self.settings_controls[addressTAG], 0, wx.EXPAND)
+        self.settings_controls[addressTAG].SetToolTipString('Postal address and other contact details')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Address'), 0)
+        fgs.Add(self.settings_controls[addressTAG], 0, wx.EXPAND)
         # Status
         statusTAG = 'Overview|Project|Status'
 	self.settings_controls[statusTAG] = wx.Choice(self.sw, -1,  choices=['Complete', 'Ongoing', 'Pending', 'Discarded'])
@@ -228,11 +198,11 @@ class OverviewPanel(wx.Panel):
 	    
         self.sw.SetSizer(fgs)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-	
+
         # Layout with sizers
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
-   
+
     #---- Savings the users defined parameters----------#
     def OnSavingData(self, event):
 	meta = ExperimentSettings.getInstance()
@@ -252,17 +222,7 @@ class OverviewPanel(wx.Panel):
 	for a, b in zip(sorted(before), sorted(after)):
 	    assert a == b, 'loaded data is not the same as the saved data.'
 
-	    
-###########################################################################
-## This FlatNotebook will be used accross all panels to produce notebooks##
-###########################################################################
-class FlatNotebookTemplate(fnb.FlatNotebook):
-    """
-    Flatnotebook class
-    """
-    def __init__(self, parent):
-        """Constructor"""
-        fnb.FlatNotebook.__init__(self, parent, wx.ID_ANY)	    
+	
 ########################################################################        
 ################## INSTRUMENT SETTING PANEL         ####################
 ########################################################################
@@ -272,17 +232,16 @@ class InstrumentSettingPanel(wx.Panel):
     """
     def __init__(self, parent, id=-1):
         """Constructor"""
-        
+	wx.Panel.__init__(self, parent, id)
+
 	self.settings_controls = {}
 	meta = ExperimentSettings.getInstance()
-	
-	wx.Panel.__init__(self, parent, id)
-        
+	        
         # create some widgets
 	self.first_type_page_counter = 0
 	self.second_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
+	self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
 	
 	
 	mic_list = meta.get_field_instances('Instrument|Microscope')
@@ -338,7 +297,7 @@ class InstrumentSettingPanel(wx.Panel):
         self.SetSizer(sizer)
         self.Layout()
         self.Show()
-
+	
     def onAddMicroscopePage(self, event):
 	self.first_type_page_counter += 1
         caption = "Microscope No. " + str(self.first_type_page_counter)
@@ -346,13 +305,14 @@ class InstrumentSettingPanel(wx.Panel):
         self.notebook.AddPage(panel, caption, True)
 
     def onDelMicroscopePage(self, event):
-	if self.first_type_page_counter >= 1:
-	    self.notebook.DeletePage(self.notebook.GetSelection())
+	if self.first_type_page_counter > 0:
+	    panel = self.notebook.GetPage(self.notebook.GetSelection())
 	    id = panel.first_type_page_counter
 	    meta = ExperimentSettings.getInstance()
 	    fields = meta.get_field_tags('Instrument|Microscope', instance=str(id))
 	    for field in fields:
 		meta.remove_field(field)
+	    self.notebook.DeletePage(self.notebook.GetSelection())
 		
     def onAddFlowcytometerPage(self, event):
 	self.second_type_page_counter += 1
@@ -364,12 +324,13 @@ class InstrumentSettingPanel(wx.Panel):
 	if self.second_type_page_counter >= 1:
 	    self.second_type_page_counter -= 1
 	    self.notebook.DeletePage(self.notebook.GetSelection())   
+	    panel = self.notebook.GetPage(self.notebook.GetSelection())
 	    id = panel.first_type_page_counter
 	    meta = ExperimentSettings.getInstance()
 	    fields = meta.get_field_tags('Instrument|FlowCytometer', instance=str(id))
 	    for field in fields:
 		meta.remove_field(field)
-	    
+		
 	    
 	        #---- Savings the users defined parameters----------#
 
@@ -388,7 +349,7 @@ class MicroscopePanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=25, cols=2, hgap=5, vgap=5)
-        
+
         #----------- Microscope Labels and Text Controler-------        
 	heading = 'Microscope Settings'
         text = wx.StaticText(self.sw, -1, heading)
@@ -573,10 +534,10 @@ class MicroscopePanel(wx.Panel):
         #---------------Layout with sizers---------------
         self.sw.SetSizer(fgs)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-     
+
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
-      
+
     #---- Savings the users defined parameters----------#
     def OnSavingData(self, event):
 	meta = ExperimentSettings.getInstance()
@@ -610,7 +571,7 @@ class FlowCytometerPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
-        
+
         #----------- Microscope Labels and Text Controler-------        
 	#-- Heading --#
 	heading = 'Flowcytometer Settings'
@@ -719,10 +680,10 @@ class FlowCytometerPanel(wx.Panel):
         #---------------Layout with sizers---------------
         self.sw.SetSizer(fgs)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-     
+
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
-      
+
     #---- Savings the users defined parameters----------#
     def OnSavingData(self, event):
 	meta = ExperimentSettings.getInstance()
@@ -760,7 +721,7 @@ class ExpVessSettingPanel(wx.Panel):
 	self.first_type_page_counter = 0
 	self.second_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
         
         addFirstTypePageBtn = wx.Button(self, label="Add Plate")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
@@ -893,10 +854,10 @@ class PlateWellPanel(wx.Panel):
         #---------------Layout with sizers---------------
         self.sw.SetSizer(fgs)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-     
+
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
-      
+
     #---- Savings the users defined parameters----------#
     def OnSavingData(self, event):
 	meta = ExperimentSettings.getInstance()
@@ -931,7 +892,7 @@ class FlaskPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=3, cols=2, hgap=5, vgap=5) 
-       
+
         #----------- Plate Labels and Text Controler-------        
 	##--Flask Number--#
 	#expFlknumTAG = 'ExptVessel|Flask|Number'
@@ -968,10 +929,10 @@ class FlaskPanel(wx.Panel):
         #---------------Layout with sizers---------------
         self.sw.SetSizer(fgs)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-     
+
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
-      
+
     #---- Savings the users defined parameters----------#
     def OnSavingData(self, event):
 	meta = ExperimentSettings.getInstance()
@@ -1008,7 +969,7 @@ class StockCultureSettingPanel(wx.Panel):
         # create some widgets
 	self.first_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
         
         addFirstTypePageBtn = wx.Button(self, label="Add Stock Culture")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
@@ -1059,6 +1020,8 @@ class StockCulturePanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5) 
+
+
 
         #----------- Labels and Text Controler-------        
 	# Cell Line Name
@@ -1184,13 +1147,13 @@ class CellTransferSettingPanel(wx.Panel):
 	meta = ExperimentSettings.getInstance()
         
         wx.Panel.__init__(self, parent, id)
-        
+
         # create some widgets
 	self.first_type_page_counter = 0
 	self.second_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
+
         addFirstTypePageBtn = wx.Button(self, label="Add Cell Loading Sequence")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
         addFirstTypePageBtn.Bind(wx.EVT_BUTTON, self.onFirstTypeAddPage)
@@ -1406,7 +1369,7 @@ class CellHarvestPanel(wx.Panel):
 	    
 	meta.save_to_file('test.txt')
 	before = meta.global_settings.items()
-    
+
 	meta.load_from_file('test.txt')    
 	after = meta.global_settings.items()
 	
@@ -1422,18 +1385,18 @@ class PerturbationSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        
+
         self.settings_controls = {}
 	meta = ExperimentSettings.getInstance()
 	
         wx.Panel.__init__(self, parent, id)
-        
+
         # create some widgets
 	self.first_type_page_counter = 0
 	self.second_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
+
         addFirstTypePageBtn = wx.Button(self, label="Add Chemical Agent")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
         addFirstTypePageBtn.Bind(wx.EVT_BUTTON, self.onFirstTypeAddPage)
@@ -1645,8 +1608,8 @@ class StainingAgentSettingPanel(wx.Panel):
         # create some widgets
 	self.first_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
+
         addFirstTypePageBtn = wx.Button(self, label="Add Staining Agent")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
         addFirstTypePageBtn.Bind(wx.EVT_BUTTON, self.onFirstTypeAddPage)
@@ -1737,7 +1700,7 @@ class StainPanel(wx.Panel):
 	    
 	meta.save_to_file('test.txt')
 	before = meta.global_settings.items()
-    
+
 	meta.load_from_file('test.txt')    
 	after = meta.global_settings.items()
 	
@@ -1753,16 +1716,16 @@ class SpinningSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        
+
         self.settings_controls = {}
 	meta = ExperimentSettings.getInstance()
-        
+
         wx.Panel.__init__(self, parent, id)
         # create some widgets
 	self.first_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
+
         addFirstTypePageBtn = wx.Button(self, label="Add Spinning Protocol")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
         addFirstTypePageBtn.Bind(wx.EVT_BUTTON, self.onFirstTypeAddPage)
@@ -1875,8 +1838,8 @@ class WashSettingPanel(wx.Panel):
         # create some widgets
 	self.first_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
+
         addFirstTypePageBtn = wx.Button(self, label="Add Washing Protocol")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
         addFirstTypePageBtn.Bind(wx.EVT_BUTTON, self.onFirstTypeAddPage)
@@ -1966,7 +1929,7 @@ class WashPanel(wx.Panel):
 	    
 	meta.save_to_file('test.txt')
 	before = meta.global_settings.items()
-    
+
 	meta.load_from_file('test.txt')    
 	after = meta.global_settings.items()
 	
@@ -1982,7 +1945,7 @@ class TLMSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        
+
         self.settings_controls = {}
 	meta = ExperimentSettings.getInstance()
         
@@ -1990,7 +1953,7 @@ class TLMSettingPanel(wx.Panel):
         # create some widgets
 	self.first_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
         
         addFirstTypePageBtn = wx.Button(self, label="Add Timelapse Image Settings")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
@@ -2156,8 +2119,8 @@ class HCSSettingPanel(wx.Panel):
         # create some widgets
 	self.first_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
+
         addFirstTypePageBtn = wx.Button(self, label="Add Static Image Settings")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
         addFirstTypePageBtn.Bind(wx.EVT_BUTTON, self.onFirstTypeAddPage)
@@ -2281,7 +2244,7 @@ class HCSPanel(wx.Panel):
 	    
 	meta.save_to_file('test.txt')
 	before = meta.global_settings.items()
-    
+
 	meta.load_from_file('test.txt')    
 	after = meta.global_settings.items()
 	
@@ -2297,16 +2260,16 @@ class FCSSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        
+
         self.settings_controls = {}
 	meta = ExperimentSettings.getInstance()
-        
+
         wx.Panel.__init__(self, parent, id)
         # create some widgets
 	self.first_type_page_counter = 0
 	
-        self.notebook = FlatNotebookTemplate(self)
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON)
+
         addFirstTypePageBtn = wx.Button(self, label="Add FCS file Settings")
 	addFirstTypePageBtn.SetBackgroundColour("#33FF33")
         addFirstTypePageBtn.Bind(wx.EVT_BUTTON, self.onFirstTypeAddPage)
@@ -2425,7 +2388,7 @@ class FCSPanel(wx.Panel):
 	for a, b in zip(sorted(before), sorted(after)):
 	    assert a == b, 'loaded data is not the same as the saved data.' 
 
-                                                                       
+
 
 if __name__ == '__main__':
     app = wx.App(False)
