@@ -1,54 +1,97 @@
 import lineageprofiler as LP
 import wx
 import numpy as np
-try:
-    from agw import supertooltip as STT
-except ImportError: # if it's not there locally, try the wxPython lib.
-    import wx.lib.agw.supertooltip as STT
 
 class LineagePanel(wx.Panel):
     '''
-    A Panel that displays...
+    A Panel that displays a lineage tree.
     '''
-##
+
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
+        scroll=wx.ScrolledWindow(self,-1)
+
+        self.timeline = None
+        self.tree = None
+        self.nodes_by_pos = {} # map node coords (in 0-1 space) to node data
+        self.repaint = False
 
         self.Bind(wx.EVT_PAINT, self._on_paint)
         self.Bind(wx.EVT_SIZE, self._on_size)
         self.Bind(wx.EVT_IDLE, self._on_idle)
 
-    def set_tree(self, tree):
-        '''tree -- a LineageNode object representing the tree to be drawn
+    def set_timeline(self, timeline):
         '''
-        # do stuff then refresh
+        '''
+        self.nodes_by_pos = {}
+        self.timeline = timeline
+        self.tree = timeline.get_lineage_tree()
         self.Refresh()
 
 
     def _on_paint(self, evt=None):
         '''Handler for paint events.
         '''
+        PADDING = 30
+        NODE_R = 10
+        MIN_X_GAP = NODE_R*2 + 2
+        MIN_Y_GAP = NODE_R*2 + 2
+
+        if self.timeline is None or self.tree is None:
+            return
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
 
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
 
-        r = 10
-        # get the unique timpoints from the Lineageprofiller file for this drawing X axis represents the timepoints
-        #t = LP.Timeline('U2OS')
-        #timepoint = t.get_unique_timepoints()
-        #for time in timepoint:
-        #	print time   
+        # get the unique timpoints from the timeline
+        timepoints = self.timeline.get_unique_timepoints()
+        timepoints.reverse()
+        timepoints.append(-1)
+        
+        nodes_by_timepoint = self.timeline.get_nodes_by_timepoint()
+        
+        self.SetMinSize((len(nodes_by_timepoint) * MIN_X_GAP + PADDING * 2,
+                         len(nodes_by_timepoint[timepoints[0]]) * MIN_Y_GAP + PADDING * 2))
 
-        # get the last timepoint and find how many nodes should be there and place them fixed pixel apart
-        # find the parents of these last timepoint nodes and place their mohter node in the middle Y axis of the children nodes i.e. 3 child nodes (Y1+Y2+Y3)/2 
-        # connect the parent and child nodes with line
-        # now the parents nodes become the child nodes and recursively find their parent and continue untill the ROOT node is placed and connected
-
+        width = float(self.Size[0])
+        height = float(self.Size[1])
+        # calculate the number of pixels to separate each generation timepoint
+        x_step = max(MIN_X_GAP, (width - PADDING * 2) / (len(nodes_by_timepoint) - 1))
+        # calcuate the minimum number of pixels to separate nodes on the y axis
+        y_gap = max(MIN_Y_GAP, (height - PADDING * 2) / (len(nodes_by_timepoint[timepoints[0]]) - 1))
+        
+        # Store y coords of children so we can calculate where to draw the parents
+        nodeY = {}
+        Y = PADDING
+        X = width - PADDING
         dc.SetPen(wx.Pen("BLACK",1))
-        dc.DrawLine(100, 100, 300, 100)
-        dc.DrawCircle(300, 100, r)
+        # Iterate from leaf nodes up to the root, and draw R->L, Top->Bottom
+        for i, time in enumerate(timepoints): 
+            if i == 0:
+                # Last timepoint (leaf nodes)
+                for node in nodes_by_timepoint[time]:
+                    dc.DrawCircle(X, Y, NODE_R)
+                    if self.nodes_by_pos == {}:
+                        self.nodes_by_pos[(X,Y)] = node
+                    nodeY[node.id] = Y
+                    Y += y_gap
+            else:
+                # Not the last timepoint
+                for node in nodes_by_timepoint[time]:
+                    ycoord = []
+                    for child in node.get_children():
+                        ycoord.append(nodeY[child.id])
+                    Y = int((min(ycoord) + max(ycoord))/2)
+                    dc.DrawCircle(X, Y, NODE_R)
+                    if self.nodes_by_pos == {}:
+                        self.nodes_by_pos[(X,Y)] = node
+                    for child in node.get_children():
+                        dc.DrawLine(X + NODE_R, Y, 
+                                    X + x_step - NODE_R ,nodeY[child.id])
+                    nodeY[node.id] = Y
+            X -= x_step
         dc.EndDrawing()
 
     def _on_size(self, evt):
@@ -56,56 +99,32 @@ class LineagePanel(wx.Panel):
 
     def _on_idle(self, evt):
         if self.repaint:
-            self.Refresh()
             self.repaint = False
+            self.Layout()
+
 
 
 if __name__ == "__main__":
+    t = LP.Timeline('U2OS')
+    LP.PlateDesign.add_plate('fred', LP.P96)
+    #t.set_plate_ids(['fred'])
+    allwells = LP.PlateDesign.get_well_ids(LP.PlateDesign.get_plate_format('fred'))
+    print LP.PlateDesign.get_plate_format('fred')
+    for i in range(1,5):
+        #np.random.shuffle(
+        np.random.shuffle(allwells)
+        well_ids = [('fred', well) for well in allwells[:np.random.randint(0, len(allwells))]]
+        t.add_event(i, 'spin%d'%(i), well_ids)
+        
     app = wx.PySimpleApp()
     frame = wx.Frame(None, size=(600,400))
-    p = LineagePanel(frame)
+    sw = wx.ScrolledWindow(frame)
+    p = LineagePanel(sw)
+    sw.Sizer = wx.BoxSizer()
+    sw.Sizer.Add(p, 1 ,wx.EXPAND)
 
-    t = LP.Timeline('U2OS')
-
-    LP.PlateDesign.add_plate('fred', LP.P6)
-    all_wells = LP.PlateDesign.get_well_ids(LP.PlateDesign.get_plate_format('fred'))
-
-
-    tree = t.get_lineage_tree()
-    p.set_tree(tree)
-
-    tc = wx.TreeCtrl(frame)
-    tcroot = tc.AddRoot("ROOT")
-
-    def populate_wx_tree(wxparent, tnode):
-        for child in tnode.children:  
-            print child
-            subtree = tc.AppendItem(wxparent, ', '.join(child.get_well_ids()))
-            populate_wx_tree(subtree, child)
-            tc.Expand(subtree)
-    populate_wx_tree(tcroot, tree)    
-    tc.Expand(tcroot) 
-
-
-#  
-#    t.add_event(1, 'seed', 'fred', all_wells)
-#    
-#   t.add_event(2, 'treatment1', 'fred', ['A01', 'A02', 'A03', 
-#                                                        'B03'])
-#    t.add_event(2, 'treatment2', 'fred', [       'A02', 
-#                                                 'B02', 'B03'])
-#    untreated_wells = set(all_wells) - set(t.get_well_ids(2))
-#    t.add_event(2, LP.NO_EVENT,     'fred', untreated_wells)
-# 
-#    t.add_event(3, 'treat', 'fred', ['A02'])
-#    t.add_event(3, 'wash', 'fred', ['A01'])
-#    untreated_wells = set(all_wells) - set(t.get_well_ids(3))
-#    t.add_event(3, LP.NO_EVENT, 'fred', untreated_wells)
-#    t.add_event(4, 'imaging', 'fred', LP.PlateDesign.get_well_ids(LP.P6))
-# 
-    #   tree = t.get_lineage_tree()
-    # 
-    #  p.set_tree(tree)
+    p.set_timeline(t)
+    sw.SetScrollbars(20, 20, frame.Size[0]+20, frame.Size[1]+20, 0, 0)
     frame.Show()
 
     app.MainLoop()
