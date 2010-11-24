@@ -42,6 +42,9 @@ class VesselPanel(wx.Panel):
         self.Bind(wx.EVT_SIZE, self._on_size)
         self.Bind(wx.EVT_IDLE, self._on_idle)
         self.Bind(wx.EVT_LEFT_DOWN, self._on_click)
+        
+    def get_plate_id(self):
+        return self.plate_id
 
     def set_well_display(self, well_disp):
         '''
@@ -64,7 +67,7 @@ class VesselPanel(wx.Panel):
         '''selects the wells corresponding to the specified wellids or 
         platewell_ids
         '''
-        self.selection = set([get_pos_for_wellid(self.shape, wellid)
+        self.selection = set([PlateDesign.get_pos_for_wellid(self.shape, wellid)
                               for wellid in wellids])
         self.Refresh()
         
@@ -94,19 +97,16 @@ class VesselPanel(wx.Panel):
         if (row > self.shape[0] or row < 0 or
             col > self.shape[1] or col < 0):
             return None
-        print (int(row), int(col))
         return (int(row), int(col))
 
     def get_well_id_at_xy(self, px, py):
         '''returns the well_id at the pixel coord px,py
         '''
-        print PlateDesign.get_well_id_at_pos(self.shape, self.get_well_pos_at_xy(px,py))
         return PlateDesign.get_well_id_at_pos(self.shape, self.get_well_pos_at_xy(px,py))
 
     def get_platewell_id_at_xy(self, px, py):
         '''returns the platewell_id at the pixel coord px,py
         '''
-        print (self.plate_id, self.get_well_id_at_xy(px, py))
         return (self.plate_id, self.get_well_id_at_xy(px, py))
     
     def get_selected_well_ids(self):
@@ -183,7 +183,7 @@ class VesselPanel(wx.Panel):
 
     def add_well_selection_handler(self, handler):
         '''handler -- a function to call on well selection. 
-        The handler must be defined as follows: handler(platewell_id, selected)
+        The handler must be defined as follows: handler(WellUpdateEventplatewell_id, selected)
         where platewell_id is the clicked well's platewell_id and 
         selected is a boolean for whether the well is now selected.
         '''
