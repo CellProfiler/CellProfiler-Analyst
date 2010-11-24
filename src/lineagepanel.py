@@ -170,23 +170,23 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
 
     t = Timeline('U2OS')
-    PlateDesign.add_plate('fred', P24)
+    PlateDesign.add_plate('fred', P96)
     allwells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))
-    for i in range(1,8):
-        for j in range(np.random.randint(1,12)):
+    for i in range(1,4):
+        for j in range(np.random.randint(1,3)):
             np.random.shuffle(allwells)
             well_ids = [('fred', well) for well in allwells[:np.random.randint(0, len(allwells))]]
             t.add_event(i, 'spin%d'%(i), well_ids)
 
-    #frame = wx.Frame(None, size=(600,400))
-    #sw = wx.ScrolledWindow(frame)
-    #p = LineagePanel(sw)
-    #sw.Sizer = wx.BoxSizer()
-    #sw.Sizer.Add(p, 1 ,wx.EXPAND)
-    #p.set_timeline(t)
-    #sw.SetScrollbars(20, 20, frame.Size[0]+20, frame.Size[1]+20, 0, 0)
-    #sw.Fit()
-    #frame.Show()
+    frame = wx.Frame(None, size=(600,400))
+    sw = wx.ScrolledWindow(frame)
+    p = LineagePanel(sw)
+    sw.Sizer = wx.BoxSizer()
+    sw.Sizer.Add(p, 1 ,wx.EXPAND)
+    p.set_timeline(t)
+    sw.SetScrollbars(20, 20, frame.Size[0]+20, frame.Size[1]+20, 0, 0)
+    sw.Fit()
+    frame.Show()
     
     f = wx.Frame(None)
     sw = wx.ScrolledWindow(f)

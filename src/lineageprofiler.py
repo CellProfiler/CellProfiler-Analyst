@@ -3,8 +3,6 @@ from metadatainput import *
 from lineagepanel import *
 from experimentsettings import *
 
-
-
 class LineageProfiler(wx.App):
     '''The LineageProfiler Application
     This launches the main UI, and keeps track of the session.
@@ -35,6 +33,7 @@ class LineageProfiler(wx.App):
 
 if __name__ == '__main__':
     app = LineageProfiler()
+    ExperimentSettings.getInstance().load_from_file('/Users/afraser/Desktop/experiment_settings.txt')
     app.MainLoop()
 
     #
