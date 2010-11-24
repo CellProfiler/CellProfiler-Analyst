@@ -6,6 +6,7 @@ import wx.lib.agw.flatnotebook as fnb
 import wx.lib.mixins.listctrl  as  listmix
 from experimentsettings import ExperimentSettings
 import os
+import re
 
 class ExperimentSettingsWindow(wx.SplitterWindow):
     def __init__(self, parent, id=-1, **kwargs):
@@ -1679,11 +1680,11 @@ class WashSettingPanel(wx.Panel):
         for wash_id in wash_list:
             panel = WashPanel(self.notebook, int(wash_id))
             self.notebook.AddPage(panel, 'Washing Protocol No: %s'%(wash_id), True)
-
-        # Add the buttons
+        
+                # Add the buttons
         addWashingPageBtn = wx.Button(self, label="Add Washing Protocols")
         addWashingPageBtn.SetBackgroundColour("#33FF33")
-        addWashingPageBtn.Bind(wx.EVT_BUTTON, self.onAddWashingPage)
+        addWashingPageBtn.Bind(wx.EVT_BUTTON, self.onAddWashingPage)    
 
         # create some sizers
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1725,22 +1726,18 @@ class WashPanel(wx.Panel):
         self.settings_controls[washTAG] = wx.TextCtrl(self.sw, value=meta.get_field(washTAG, default=''))
         self.settings_controls[washTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[washTAG].SetToolTipString('Type an unique TAG for identifying the washning protocol')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Spinning Protocol Tag'), 0)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Washing Protocol Tag'), 0)
         fgs.Add(self.settings_controls[washTAG], 0, wx.EXPAND)
 
-        # Staining Protocol
+        # Washing Protocol
         washprotTAG = 'AddProcess|Wash|WashProtocol|'+str(self.page_counter)
         self.settings_controls[washprotTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(washprotTAG, default=''), style=wx.TE_MULTILINE)
         self.settings_controls[washprotTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[washprotTAG].SetInitialSize((300, 400))
-        self.settings_controls[washprotTAG].SetToolTipString('Cut and paste your washing Protocol here')
+        self.settings_controls[washprotTAG].SetToolTipString('Cut and paste your Washing Protocol here')
         fgs.Add(wx.StaticText(self.sw, -1, 'Paste Washing Protocol'), 0)
         fgs.Add(self.settings_controls[washprotTAG], 0, wx.EXPAND)
 
-        #--Create the Adding button--#
-        addBut = wx.Button(self.sw, -1, label="Record Washing Protocol")
-        addBut.Bind(wx.EVT_BUTTON, self.OnSavingData)
-        fgs.Add(addBut, 0, wx.ALL, 5)
 
         #---------------Layout with sizers---------------
         self.sw.SetSizer(fgs)
@@ -1823,10 +1820,18 @@ class TLMPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
+        
+        micro_instances = meta.get_field_instances('Instrument|Microscope|Manufacter|')
+        micro_choices = []
+        for micro_instant in micro_instances:
+            micro_choices.append(meta.get_field('Instrument|Microscope|Manufacter|'+micro_instant)+'_'+micro_instant)
+        #print micro_choices
+        
+   
 
         #-- Microscope selection ---#
         tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
-        self.settings_controls[tlmselctTAG] = wx.Choice(self.sw, -1,  choices=['Microscope 1', 'Microscope 2', 'Microscope 3'])
+        self.settings_controls[tlmselctTAG] = wx.Choice(self.sw, -1,  choices=micro_choices)
         if meta.get_field(tlmselctTAG) is not None:
             self.settings_controls[tlmselctTAG].SetStringSelection(meta.get_field(tlmselctTAG))
         self.settings_controls[tlmselctTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
@@ -1936,11 +1941,11 @@ class HCSSettingPanel(wx.Panel):
         for hcs_id in hcs_list:
             panel = HCSPanel(self.notebook, int(hcs_id))
             self.notebook.AddPage(panel, 'HCS Image Format No: %s'%(hcs_id), True)
-
+            
         # Add the buttons
-        addHCSPageBtn = wx.Button(self, label="Add HCS Image Format")
+        addHCSPageBtn = wx.Button(self, label="Add HCS File Format")
         addHCSPageBtn.SetBackgroundColour("#33FF33")
-        addHCSPageBtn.Bind(wx.EVT_BUTTON, self.onAddHCSPage)
+        addHCSPageBtn.Bind(wx.EVT_BUTTON, self.onAddHCSPage)    
 
         # create some sizers
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1962,14 +1967,14 @@ class HCSSettingPanel(wx.Panel):
 
 
 class HCSPanel(wx.Panel):
-    def __init__(self, parent, first_type_page_counter):
+    def __init__(self, parent, page_counter):
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
 
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
 
-        self.first_type_page_counter = first_type_page_counter
+        self.page_counter = page_counter
 
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
@@ -1977,7 +1982,7 @@ class HCSPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
 
         #-- Microscope selection ---#
-        hcsselctTAG = 'DataAcquis|Static|MicroscopeInstance'
+        hcsselctTAG = 'DataAcquis|HCS|MicroscopeInstance|'+str(self.page_counter)
         self.settings_controls[hcsselctTAG] = wx.Choice(self.sw, -1,  choices=['Microscope 1', 'Microscope 2', 'Microscope 3'])
         if meta.get_field(hcsselctTAG) is not None:
             self.settings_controls[hcsselctTAG].SetStringSelection(meta.get_field(hcsselctTAG))
@@ -1986,7 +1991,7 @@ class HCSPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Microscope'), 0)
         fgs.Add(self.settings_controls[hcsselctTAG], 0, wx.EXPAND)
         #-- Image Format ---#
-        hcsfrmtTAG = 'DataAcquis|Static|Format'
+        hcsfrmtTAG = 'DataAcquis|HCS|Format|'+str(self.page_counter)
         self.settings_controls[hcsfrmtTAG] = wx.Choice(self.sw, -1,  choices=['tiff', 'jpeg', 'stk'])
         if meta.get_field(hcsfrmtTAG) is not None:
             self.settings_controls[hcsfrmtTAG].SetStringSelection(meta.get_field(hcsfrmtTAG))
@@ -1995,7 +2000,7 @@ class HCSPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Image Format'), 0)
         fgs.Add(self.settings_controls[hcsfrmtTAG], 0, wx.EXPAND)
         #-- Channel ---#
-        hcschTAG = 'DataAcquis|Static|Channel'
+        hcschTAG = 'DataAcquis|HCS|Channel|'+str(self.page_counter)
         self.settings_controls[hcschTAG] = wx.Choice(self.sw, -1,  choices=['Red', 'Green', 'Blue'])
         if meta.get_field(hcschTAG) is not None:
             self.settings_controls[hcschTAG].SetStringSelection(meta.get_field(hcschTAG))
@@ -2004,29 +2009,26 @@ class HCSPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Channel'), 0)
         fgs.Add(self.settings_controls[hcschTAG], 0, wx.EXPAND)
         #  Pixel Size
-        hcspxlTAG = 'DataAcquis|Static|PixelSize'
+        hcspxlTAG = 'DataAcquis|HCS|PixelSize|'+str(self.page_counter)
         self.settings_controls[hcspxlTAG] = wx.TextCtrl(self.sw, value=meta.get_field(hcspxlTAG, default=''))
+        self.settings_controls[hcspxlTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[hcspxlTAG].SetToolTipString('Pixel Size')
         fgs.Add(wx.StaticText(self.sw, -1, 'Pixel Size'), 0)
         fgs.Add(self.settings_controls[hcspxlTAG], 0, wx.EXPAND)
         #  Pixel Conversion
-        hcspxcnvTAG = 'DataAcquis|Static|PixelConvert'
+        hcspxcnvTAG = 'DataAcquis|HCS|PixelConvert|'+str(self.page_counter)
         self.settings_controls[hcspxcnvTAG] = wx.TextCtrl(self.sw, value=meta.get_field(hcspxcnvTAG, default=''))
+        self.settings_controls[hcspxcnvTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[hcspxcnvTAG].SetToolTipString('Pixel Conversion')
         fgs.Add(wx.StaticText(self.sw, -1, 'Pixel Conversion'), 0)
         fgs.Add(self.settings_controls[hcspxcnvTAG], 0, wx.EXPAND)
         #  Software
-        hcssoftTAG = 'DataAcquis|Static|Software'
+        hcssoftTAG = 'DataAcquis|HCS|Software|'+str(self.page_counter)
         self.settings_controls[hcssoftTAG] = wx.TextCtrl(self.sw, value=meta.get_field(hcssoftTAG, default=''))
+        self.settings_controls[hcssoftTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[hcssoftTAG].SetToolTipString(' Software')
         fgs.Add(wx.StaticText(self.sw, -1, ' Software'), 0)
         fgs.Add(self.settings_controls[hcssoftTAG], 0, wx.EXPAND)
-
-
-        #--Create the Adding button--#
-        addBut = wx.Button(self.sw, -1, label="Record Image Acquistion Settings")
-        addBut.Bind(wx.EVT_BUTTON, self.OnSavingData)
-        fgs.Add(addBut, 0, wx.ALL, 5)
 
         #---------------Layout with sizers---------------
         self.sw.SetSizer(fgs)
@@ -2112,7 +2114,7 @@ class FCSPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
 
         #-- Flow  selection ---#
-        fcsselctTAG = 'DataAcquis|Flow|FlowcytInstance|'+str(self.page_counter)
+        fcsselctTAG = 'DataAcquis|FCS|FlowcytInstance|'+str(self.page_counter)
         self.settings_controls[fcsselctTAG] = wx.Choice(self.sw, -1,  choices=['Flowcytometer 1', 'Flowcytometer 2', 'Flowcytometer 3'])
         if meta.get_field(fcsselctTAG) is not None:
             self.settings_controls[fcsselctTAG].SetStringSelection(meta.get_field(fcsselctTAG))
@@ -2121,7 +2123,7 @@ class FCSPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Flowcytometer'), 0)
         fgs.Add(self.settings_controls[fcsselctTAG], 0, wx.EXPAND)
         #-- Image Format ---#
-        fcsfrmtTAG = 'DataAcquis|Flow|Format|'+str(self.page_counter)
+        fcsfrmtTAG = 'DataAcquis|FCS|Format|'+str(self.page_counter)
         self.settings_controls[fcsfrmtTAG] = wx.Choice(self.sw, -1,  choices=['fcs1.0', 'fcs2.0', 'fcs3.0'])
         self.settings_controls[fcsfrmtTAG].SetStringSelection('')
         if meta.get_field(fcsfrmtTAG) is not None:
@@ -2131,7 +2133,7 @@ class FCSPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Select FCS file Format'), 0)
         fgs.Add(self.settings_controls[fcsfrmtTAG], 0, wx.EXPAND)
         #-- Channel ---#
-        fcschTAG = 'DataAcquis|Flow|Channel|'+str(self.page_counter)
+        fcschTAG = 'DataAcquis|FCS|Channel|'+str(self.page_counter)
         self.settings_controls[fcschTAG] = wx.Choice(self.sw, -1,  choices=['FL8', 'FL6', 'FL2'])
         if meta.get_field(fcschTAG) is not None:
             self.settings_controls[fcschTAG].SetStringSelection(meta.get_field(fcschTAG))
@@ -2140,18 +2142,13 @@ class FCSPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Channel'), 0)
         fgs.Add(self.settings_controls[fcschTAG], 0, wx.EXPAND)
         #  Software
-        fcssoftTAG = 'DataAcquis|Flow|Software|'+str(self.page_counter)
+        fcssoftTAG = 'DataAcquis|FCS|Software|'+str(self.page_counter)
         self.settings_controls[fcssoftTAG] = wx.TextCtrl(self.sw, value=meta.get_field(fcssoftTAG, default=''))
+        self.settings_controls[fcssoftTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[fcssoftTAG].SetToolTipString(' Software')
         fgs.Add(wx.StaticText(self.sw, -1, ' Software'), 0)
         fgs.Add(self.settings_controls[fcssoftTAG], 0, wx.EXPAND)
         self.settings_controls[fcssoftTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        
-
-        #--Create the Adding button--#
-        addBut = wx.Button(self.sw, -1, label="Record FCS Acquistion Settings")
-        addBut.Bind(wx.EVT_BUTTON, self.OnSavingData)
-        fgs.Add(addBut, 0, wx.ALL, 5)
 
         #---------------Layout with sizers---------------
         self.sw.SetSizer(fgs)
@@ -2172,6 +2169,10 @@ class FCSPanel(wx.Panel):
 
 
 def on_save_settings(evt):
+    
+    # for saving the experimental file, the text file may have the following nomenclature
+    # Date(YYYY_MM_DD)_ExperimenterNumber_Experimenter Name_ first 20 words from the aim
+    
     dlg = wx.FileDialog(None, message="Save workspace as...", defaultDir=os.getcwd(), 
                         defaultFile='experiment_settings.txt', wildcard='txt', 
                         style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
