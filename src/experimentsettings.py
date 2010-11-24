@@ -1,9 +1,14 @@
 from singleton import Singleton
-
+import re
 #
 # TODO: Updating PlateDesign could be done entirely within 
 #       set_field and remove_field.
 #
+
+def get_matchstring_for_subtag(pos, subtag):
+    '''matches a subtag at a specific position.
+    '''
+    return '([^\|]+\|){%s}%s.*'%(pos, subtag)
 
 class ExperimentSettings(Singleton):
     def __init__(self):
@@ -13,9 +18,11 @@ class ExperimentSettings(Singleton):
 
     def set_field(self, tag, value):
         self.global_settings[tag] = value
-        for tag_prefix in self.subscribers:
-            if tag.startswith(tag_prefix):
-                self.subscribers[tag_prefix]()
+        
+        for matchstring, callback in self.subscribers.items():
+            if re.match(matchstring, tag):
+                print '%s modified, calling callback'%(tag)
+                callback()
                 break
 
     def get_field(self, tag, default=None):
@@ -71,11 +78,13 @@ class ExperimentSettings(Singleton):
             self.set_field(tag, eval(value))
         f.close()
         
-    def add_subscriber(self, func, tag_list):
+    def add_subscriber(self, callback, match_strings):
+        '''callback -- the function to be called
+        match_strings -- a list of regular expression strings matching the
+                         tags you want to subscribe to
         '''
-        '''
-        for tag_prefix in tag_list:
-            self.subscribers[tag_prefix] = func
+        for match_string in match_strings:
+            self.subscribers[match_string] = callback
 
 ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -134,6 +143,14 @@ class PlateDesign:
         '''returns the plate_format for a given plate_id
         '''
         return self.plates[plate_id]
+    
+    @classmethod
+    def get_all_platewell_ids(self):
+        '''returns a list of every platewell_id across all plates
+        '''
+        return [(plate_id, well_id) 
+                for well_id in self.get_well_ids(self.get_plate_format(plate_id))
+                for plate_id in self.plates]
 
     @classmethod
     def get_well_ids(self, plate_format):

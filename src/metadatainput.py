@@ -4,7 +4,7 @@ import wx
 import  wx.calendar
 import wx.lib.agw.flatnotebook as fnb
 import wx.lib.mixins.listctrl  as  listmix
-from experimentsettings import ExperimentSettings
+from experimentsettings import *
 import os
 import re
 
@@ -244,7 +244,7 @@ class InstrumentSettingPanel(wx.Panel):
         self.mic_next_page_num = 1
         # update the  number of existing microscope
         if mic_list:
-            print mic_list 
+            #print mic_list 
             self.mic_next_page_num =  int(mic_list[-1])+1
         for mic_id in mic_list:
             panel = MicroscopePanel(self.notebook, int(mic_id))
@@ -881,7 +881,7 @@ class ExpVessSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
 
-        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON|fnb.FNB_VC8)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         plate_list = meta.get_field_instances('ExptVessel|Plate|')
         self.plate_next_page_num = 1
@@ -952,7 +952,9 @@ class PlateWellPanel(wx.Panel):
 
         #--Design--#
         expPltdesTAG = 'ExptVessel|Plate|Design|'+str(self.page_counter)
-        self.settings_controls[expPltdesTAG] = wx.Choice(self.sw, -1,  choices=['6-Well-(2x3)', '96-Well-(8x12)', '384-Well-(16x24)', '1536-Well-(32x48)', '5600-Well-(40x140)'])
+        self.settings_controls[expPltdesTAG] = wx.Choice(self.sw, -1, choices=WELL_NAMES_ORDERED)
+        for i, format in enumerate([WELL_NAMES[name] for name in WELL_NAMES_ORDERED]):
+            self.settings_controls[expPltdesTAG].SetClientData(i, format)
         if meta.get_field(expPltdesTAG) is not None:
             self.settings_controls[expPltdesTAG].SetStringSelection(meta.get_field(expPltdesTAG))
         self.settings_controls[expPltdesTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
@@ -1001,7 +1003,20 @@ class PlateWellPanel(wx.Panel):
         ctrl = event.GetEventObject()
         tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
         if isinstance(ctrl, wx.Choice):
-            meta.set_field(tag, ctrl.GetStringSelection())
+            if ctrl.GetClientData(ctrl.GetSelection()):
+                #
+                # HACK: A control with ClientData attached are assumed to be
+                #       the Plate Design Choice control
+                #
+                plate_id = 'plate%s'%(tag.rsplit('|', 1)[-1])
+                plate_shape = ctrl.GetClientData(ctrl.GetSelection())
+                if plate_id not in PlateDesign.get_plate_ids():
+                    PlateDesign.add_plate(plate_id, plate_shape)
+                else:
+                    PlateDesign.set_plate_format(plate_id, plate_shape)
+                meta.set_field(tag, ctrl.GetStringSelection())
+            else:
+                meta.set_field(tag, ctrl.GetStringSelection())
         else:
             meta.set_field(tag, ctrl.GetValue())
 
