@@ -44,6 +44,7 @@ ID_SPIN = wx.NewId()
 ID_WASH = wx.NewId()
 ID_DRY = wx.NewId()
 ID_IMAGE = wx.NewId()
+ID_TIMELAPSE = wx.NewId()
 ID_FLOW = wx.NewId()
 
 
@@ -53,7 +54,8 @@ class Bench(wx.Frame):
 
         meta = ExperimentSettings.getInstance()
         
-        meta.add_subscriber(self.update_plate_window, ['ExptVessel'])
+        meta.add_subscriber(self.update_plate_window, ['ExptVessel.*'])
+        meta.add_subscriber(self.update_plate_window, [get_matchstring_for_subtag(2, 'Well')])
         
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
@@ -66,10 +68,11 @@ class Bench(wx.Frame):
         tb.AddRadioLabelTool(ID_WASH, 'Wash', icons.wash.ConvertToBitmap(), shortHelp='', longHelp='')
         tb.AddRadioLabelTool(ID_DRY, 'Dry', icons.dry.ConvertToBitmap(), shortHelp='', longHelp='')
         tb.AddRadioLabelTool(ID_IMAGE, 'Image', icons.imaging.ConvertToBitmap(), shortHelp='', longHelp='')
+        tb.AddRadioLabelTool(ID_TIMELAPSE, 'Timelapse', icons.timelapse.ConvertToBitmap(), shortHelp='', longHelp='')
         tb.AddRadioLabelTool(ID_FLOW, 'Flow', icons.flow.ConvertToBitmap(), shortHelp='', longHelp='')        
         tb.Realize()
         
-        self.mode_tag_prefixes = []
+        self.mode_tag_prefix = []
         self.mode_tag_instance = None
         
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
@@ -91,19 +94,27 @@ class Bench(wx.Frame):
         
         self.Bind(wx.EVT_TOOL, self.on_tool_clicked)
         
+    def get_selected_timepoint(self):
+        return self.time_slider.GetValue()
+        
     def on_adjust_timepoint(self, evt):
         self.update_well_selections()
         
     def update_well_selections(self):
-        if self.mode_tag_instance is None or self.mode_tag_prefixes == []:
+        meta = ExperimentSettings.getInstance()
+        if self.mode_tag_instance is None or self.mode_tag_prefix == []:
             for plate in self.vesselscroller.get_vessels():
                 plate.disable_selection()
                 plate.set_selected_well_ids([])
             return
         else:
+            wells_tag = '%s|Wells|%s|%s'%(self.mode_tag_prefix, 
+                                          self.mode_tag_instance, 
+                                          self.get_selected_timepoint())
+            platewell_ids = meta.get_field(wells_tag, [])
             for plate in self.vesselscroller.get_vessels():
                 plate.enable_selection()
-                #plate.set_selected_well_ids([])
+                plate.set_selected_well_ids([pw_id for pw_id in platewell_ids if pw_id[0]==plate.get_plate_id()])
         
         
     def update_plate_window(self):
@@ -136,22 +147,21 @@ class Bench(wx.Frame):
         eg: ExpNum|AddProcess|Spin|Wells|<instance>|<timepoint> = ['A01',...]
             ExpNum|AddProcess|Spin|EventTimepoint|<instance> = timepoint
         '''
-        if self.mode_tag_instance is None or self.mode_tag_prefixes == []:
+        if self.mode_tag_instance is None or self.mode_tag_prefix == []:
             return
-
         meta = ExperimentSettings.getInstance()
-        for prefix in self.mode_tag_prefixes:
-            wells_tag = '%s|Wells|%s|%s'%(prefix, self.mode_tag_instance, self.time_slider.GetSelStart())
-            platewell_ids = set(meta.get_field(wells_tag, []))
-            if selected:
-                platewell_ids.update([platewell_id])
-            else:
-                platewell_ids.remove(platewell_id)
-            meta.set_field(wells_tag, list(platewell_ids))
-            print platewell_ids
-            
-            timepoint_tag = '%s|EventTimepoint|%s'%(prefix, self.mode_tag_instance)
-            meta.set_field(timepoint_tag, self.time_slider.GetSelStart())
+        wells_tag = '%s|Wells|%s|%s'%(self.mode_tag_prefix, 
+                                      self.mode_tag_instance, 
+                                      self.get_selected_timepoint())
+        platewell_ids = set(meta.get_field(wells_tag, []))
+        if selected:
+            platewell_ids.update([platewell_id])
+        else:
+            platewell_ids.remove(platewell_id)
+        meta.set_field(wells_tag, list(platewell_ids))
+        
+        timepoint_tag = '%s|EventTimepoint|%s'%(self.mode_tag_prefix, self.mode_tag_instance)
+        meta.set_field(timepoint_tag, self.get_selected_timepoint())
             
     def on_tool_clicked(self, evt):
         meta = ExperimentSettings.getInstance()
@@ -182,41 +192,43 @@ class Bench(wx.Frame):
     
             if evt.Id == ID_SEED:
                 panel = create_setting_panel('Seeding settings: ', meta.get_field_instances('CellTransfer|Seed'))
-                self.mode_tag_prefixes = ['CellTransfer|Seed']
+                self.mode_tag_prefix = 'CellTransfer|Seed'
             elif evt.Id == ID_HARVEST:
                 panel = create_setting_panel('Harvesting settings: ', meta.get_field_instances('CellTransfer|Harvest'))
-                self.mode_tag_prefixes = ['CellTransfer|Harvest']
+                self.mode_tag_prefix = 'CellTransfer|Harvest'
             elif evt.Id == ID_CHEM:
                 panel = create_setting_panel('Chemical treatment settings: ', meta.get_field_instances('Perturbation|Chem'))
-                self.mode_tag_prefixes = ['Perturbation|Chem']
+                self.mode_tag_prefix = 'Perturbation|Chem'
             elif evt.Id == ID_BIO:
                 panel = create_setting_panel('Biological treatment settings: ', meta.get_field_instances('Perturbation|Bio'))
-                self.mode_tag_prefixes = ['Perturbation|Bio']
+                self.mode_tag_prefix = 'Perturbation|Bio'
             elif evt.Id == ID_STAIN:
                 panel = create_setting_panel('Stain settings: ', meta.get_field_instances('AddProcess|Stain'))
-                self.mode_tag_prefixes = ['AddProcess|Stain']
+                self.mode_tag_prefix = 'AddProcess|Stain'
             elif evt.Id == ID_SPIN:
                 panel = create_setting_panel('Spin settings: ', meta.get_field_instances('AddProcess|Spin'))
-                self.mode_tag_prefixes = ['AddProcess|Spin']
+                self.mode_tag_prefix = 'AddProcess|Spin'
             elif evt.Id == ID_WASH:
                 panel = create_setting_panel('Wash settings: ', meta.get_field_instances('AddProcess|Wash'))
-                self.mode_tag_prefixes = ['AddProcess|Wash']
+                self.mode_tag_prefix = 'AddProcess|Wash'
             elif evt.Id == ID_DRY:
                 panel = create_setting_panel('Dry settings: ', meta.get_field_instances('AddProcess|Dry'))
-                self.mode_tag_prefixes = ['AddProcess|Dry']
+                self.mode_tag_prefix = 'AddProcess|Dry'
             elif evt.Id == ID_IMAGE:
-                choices = meta.get_field_instances('DataAcquis|TLM') + meta.get_field_instances('DataAcquis|HCS')
-                panel = create_setting_panel('Image settings: ', choices)
-                self.mode_tag_prefixes = ['DataAcquis|TLM', 'DataAcquis|HCS']
+                panel = create_setting_panel('Image settings: ', meta.get_field_instances('DataAcquis|HCS'))
+                self.mode_tag_prefix = 'DataAcquis|HCS'
+            elif evt.Id == ID_TIMELAPSE:
+                panel = create_setting_panel('Image settings: ', meta.get_field_instances('DataAcquis|TLM'))
+                self.mode_tag_prefix = 'DataAcquis|TLM'
             elif evt.Id == ID_FLOW:
                 panel = create_setting_panel('Flow settings: ', meta.get_field_instances('DataAcquis|FCS'))
-                self.mode_tag_prefixes = ['DataAcquis|FCS']
+                self.mode_tag_prefix = 'DataAcquis|FCS'
             else:
                 raise Exception('Unknown tool clicked.')
             self.Sizer.Insert(0, panel, 0, wx.EXPAND)
             self.setting_shown = True
         else:
-            self.mode_tag_prefixes = []
+            self.mode_tag_prefix = []
             self.setting_shown = False
         self.update_well_selections()
         self.Layout()
