@@ -79,7 +79,7 @@ class Bench(wx.Frame):
         self.setting_shown = False
         self.vesselscroller = VesselScroller(self)
         self.Sizer.Add(self.vesselscroller, 1, wx.EXPAND)
-        self.update_plate_window()
+        self.update_plate_window(None)
         
         time_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.time_slider = wx.Slider(self, -1, style = wx.SL_LABELS|wx.SL_AUTOTICKS)
@@ -117,7 +117,7 @@ class Bench(wx.Frame):
                 plate.set_selected_well_ids([pw_id for pw_id in platewell_ids if pw_id[0]==plate.get_plate_id()])
         
         
-    def update_plate_window(self):
+    def update_plate_window(self, tag):
         '''Syncronizes the vessel panels with the vessel metadata.
         '''
         self.vesselscroller.clear()
@@ -175,24 +175,25 @@ class Bench(wx.Frame):
             def create_setting_panel(label, choices):
                 setting = wx.Panel(self)
                 setting.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-                setting.Sizer.Add(wx.StaticText(setting, -1, label), 0, wx.ALL, 10)
-                choice_control = wx.Choice(setting, -1, choices=choices)
-                choice_control.Select(0)
                 if choices != []:
+                    setting.Sizer.Add(wx.StaticText(setting, -1, label), 0, wx.ALL, 10)
+                    choice_control = wx.Choice(setting, -1, choices=choices)
+                    choice_control.Select(0)
+                    setting.Sizer.Add(choice_control, 0, wx.TOP, 8)
                     self.mode_tag_instance = choices[0]
-                else:
-                    self.mode_tag_instance = None
-                setting.Sizer.Add(choice_control, 0, wx.TOP, 8)
                 
-                def choice_handler(evt):
-                    self.mode_tag_instance = evt.GetEventObject().GetStringSelection()
-                    self.update_well_selections()
-                choice_control.Bind(wx.EVT_CHOICE, choice_handler)
+                    def choice_handler(evt):
+                        self.mode_tag_instance = evt.GetEventObject().GetStringSelection()
+                        self.update_well_selections()
+                    choice_control.Bind(wx.EVT_CHOICE, choice_handler)
+                else:
+                    label = 'No configurations available. Please configure presets first.'
+                    setting.Sizer.Add(wx.StaticText(setting, -1, label), 0, wx.ALL, 10)
                 return setting
     
             if evt.Id == ID_SEED:
-                panel = create_setting_panel('Seeding settings: ', meta.get_field_instances('CellTransfer|Seed'))
-                self.mode_tag_prefix = 'CellTransfer|Seed'
+                panel = create_setting_panel('Seeding settings: ', meta.get_field_instances('CellTransfer|Load'))
+                self.mode_tag_prefix = 'CellTransfer|Load'
             elif evt.Id == ID_HARVEST:
                 panel = create_setting_panel('Harvesting settings: ', meta.get_field_instances('CellTransfer|Harvest'))
                 self.mode_tag_prefix = 'CellTransfer|Harvest'

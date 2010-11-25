@@ -21,7 +21,12 @@ class TimelinePanel(wx.Panel):
         
     def set_timeline(self, timeline):
         self.timeline = timeline
+        meta.add_subscriber(self.update_timeline, [get_matchstring_for_subtag(2, 'Well')])
         self.repaint = True
+        
+    #def update_timeline(self):
+        #self.timeline.update_timeline()
+        #self.repaint = True
 
     def set_max_time(self, max_time):
         self.max_time = max_time
@@ -81,21 +86,49 @@ class LineagePanel(wx.Panel):
         self.Bind(wx.EVT_IDLE, self._on_idle)
 
     def set_timeline(self, timeline):
+        meta = ExperimentSettings.getInstance()
         self.nodes_by_pos = {}
         self.timeline = timeline
         t0 = time()
         self.nodes_by_timepoint = self.timeline.get_nodes_by_timepoint()
         n = sum(map(len, self.nodes_by_timepoint.values()))
         print 'Built tree with %s nodes in %.2f seconds'%(n, time()-t0)
-        self.tree = timeline.get_lineage_tree()
+        self.tree = self.timeline.get_lineage_tree()
+        meta.add_subscriber(self.update_timeline, 
+                            [get_matchstring_for_subtag(2, 'Well')])
+        self.repaint = True
+     
+    #
+    # TODO: events probably shouldn't be added to the timeline here
+    #
+    def update_timeline(self, tag):
+        '''called to add events to the timeline and update the lineage
+        '''
+        meta = ExperimentSettings.getInstance()
+        action = (get_tag_stump(tag), get_tag_instance(tag))
+        timepoint = get_tag_timepoint(tag)
+        platewell_ids = meta.get_field(tag, [])
+        if platewell_ids == []:
+            self.timeline.delete_event(timepoint, action)
+        else:
+            event = self.timeline.get_event(action, timepoint)
+            if event is not None:
+                event.set_well_ids(platewell_ids)
+            else:
+                self.timeline.add_event(timepoint, action, platewell_ids)
+        t0 = time()
+        self.nodes_by_timepoint = self.timeline.get_nodes_by_timepoint()
+        n = sum(map(len, self.nodes_by_timepoint.values()))
+        print 'Built tree with %s nodes in %.2f seconds'%(n, time()-t0)
+        self.tree = self.timeline.get_lineage_tree()
         self.repaint = True
 
     def _on_paint(self, evt=None):
         '''Handler for paint events.
-        '''
+        '''        
         t0 = time()
         PADDING = 30
-        NODE_R = 5
+        NODE_R = 10
         MIN_X_GAP = NODE_R*2 + 2
         MIN_Y_GAP = NODE_R*2 + 2
 
@@ -112,16 +145,22 @@ class LineagePanel(wx.Panel):
         timepoints.reverse()
         timepoints.append(-1)
         
-        
         self.SetMinSize((len(self.nodes_by_timepoint) * MIN_X_GAP + PADDING * 2,
                          len(self.nodes_by_timepoint[timepoints[0]]) * MIN_Y_GAP + PADDING * 2))
 
         width = float(self.Size[0])
         height = float(self.Size[1])
-        # calculate the number of pixels to separate each generation timepoint
-        x_step = max(MIN_X_GAP, (width - PADDING * 2) / (len(self.nodes_by_timepoint) - 1))
-        # calcuate the minimum number of pixels to separate nodes on the y axis
-        y_gap = max(MIN_Y_GAP, (height - PADDING * 2) / (len(self.nodes_by_timepoint[timepoints[0]]) - 1))
+        if len(self.nodes_by_timepoint) == 1:
+            x_step = MIN_X_GAP
+        else:
+            # calculate the number of pixels to separate each generation timepoint
+            x_step = max(MIN_X_GAP, (width - PADDING * 2) / (len(self.nodes_by_timepoint) - 1))
+            
+        if len(self.nodes_by_timepoint[timepoints[0]]) == 1:
+            y_gap = MIN_Y_GAP
+        else:
+            # calcuate the minimum number of pixels to separate nodes on the y axis
+            y_gap = max(MIN_Y_GAP, (height - PADDING * 2) / (len(self.nodes_by_timepoint[timepoints[0]]) - 1))
         
         # Store y coords of children so we can calculate where to draw the parents
         nodeY = {}
@@ -129,11 +168,17 @@ class LineagePanel(wx.Panel):
         X = width - PADDING
         dc.SetPen(wx.Pen("BLACK",1))
         # Iterate from leaf nodes up to the root, and draw R->L, Top->Bottom
-        for i, t in enumerate(timepoints): 
-            if i == 0:
+        for i, t in enumerate(timepoints):
+            if len(self.nodes_by_timepoint) == 1:
+                X = width / 2
+                Y = height / 2
+                dc.DrawCircle(X, Y, NODE_R)
+                dc.DrawText(','.join(sorted([x[1] for x in self.nodes_by_timepoint[t][0].get_well_ids()])), X-x_step/4., Y+NODE_R)
+            elif i == 0:
                 # Last timepoint (leaf nodes)
                 for node in self.nodes_by_timepoint[t]:
                     dc.DrawCircle(X, Y, NODE_R)
+                    dc.DrawText(','.join(sorted([x[1] for x in node.get_well_ids()])), X-x_step/4., Y+NODE_R)
                     if self.nodes_by_pos == {}:
                         self.nodes_by_pos[(X,Y)] = node
                     nodeY[node.id] = Y
@@ -146,6 +191,7 @@ class LineagePanel(wx.Panel):
                         ycoord.append(nodeY[child.id])
                     Y = int((min(ycoord) + max(ycoord))/2)
                     dc.DrawCircle(X, Y, NODE_R)
+                    dc.DrawText(','.join(sorted([x[1] for x in node.get_well_ids()])), X, Y+NODE_R)
                     if self.nodes_by_pos == {}:
                         self.nodes_by_pos[(X,Y)] = node
                     for child in node.get_children():
@@ -162,27 +208,26 @@ class LineagePanel(wx.Panel):
     def _on_idle(self, evt):
         if self.repaint:
             self.repaint = False
-            self.Layout()
-
+            self.Refresh()
 
 
 if __name__ == "__main__":        
     app = wx.PySimpleApp()
 
     t = Timeline('U2OS')
-    PlateDesign.add_plate('fred', P96)
-    allwells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('fred'))
-    for i in range(1,4):
+    PlateDesign.add_plate('test', P6)
+    allwells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('test'))
+    for i in range(1,1):
         for j in range(np.random.randint(1,3)):
             np.random.shuffle(allwells)
-            well_ids = [('fred', well) for well in allwells[:np.random.randint(0, len(allwells))]]
-            t.add_event(i, 'spin%d'%(i), well_ids)
+            well_ids = [('test', well) for well in allwells[:np.random.randint(0, len(allwells))]]
+            t.add_event(i, 'event%d'%(i), well_ids)
 
     frame = wx.Frame(None, size=(600,400))
     sw = wx.ScrolledWindow(frame)
     p = LineagePanel(sw)
     sw.Sizer = wx.BoxSizer()
-    sw.Sizer.Add(p, 1 ,wx.EXPAND)
+    sw.Sizer.Add(p, 1, wx.EXPAND)
     p.set_timeline(t)
     sw.SetScrollbars(20, 20, frame.Size[0]+20, frame.Size[1]+20, 0, 0)
     sw.Fit()
@@ -199,6 +244,4 @@ if __name__ == "__main__":
     #f.Show()
     
     app.MainLoop()
-
-
 

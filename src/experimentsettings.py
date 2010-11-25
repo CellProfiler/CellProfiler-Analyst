@@ -10,6 +10,15 @@ def get_matchstring_for_subtag(pos, subtag):
     '''
     return '([^\|]+\|){%s}%s.*'%(pos, subtag)
 
+def get_tag_stump(tag):
+    return '|'.join(tag.split('|')[:3])
+
+def get_tag_instance(tag):
+    return tag.split('|')[3]
+
+def get_tag_timepoint(tag):
+    return tag.split('|')[4]
+
 class ExperimentSettings(Singleton):
     def __init__(self):
         self.global_settings = {}
@@ -21,8 +30,7 @@ class ExperimentSettings(Singleton):
         
         for matchstring, callback in self.subscribers.items():
             if re.match(matchstring, tag):
-                print '%s modified, calling callback'%(tag)
-                callback()
+                callback(tag)
                 break
 
     def get_field(self, tag, default=None):
@@ -43,14 +51,8 @@ class ExperimentSettings(Singleton):
         '''returns a list of all tags beginning with tag_prefix. If instance
         is passed in, only tags of the given instance will be returned'''
         return [tag for tag in self.global_settings 
-                if tag.startswith(tag_prefix) and self.get_tag_instance(tag) == instance]
+                if tag.startswith(tag_prefix) and get_tag_instance(tag) == instance]
     
-    def get_tag_instance(self, tag):
-        return tag.split('|')[3]
-    
-    def get_tag_timepoint(self, tag):
-        return tag.split('|')[4]
-
     def clear(self):
         self.global_settings = {}
         self.timeline = None        
@@ -69,11 +71,11 @@ class ExperimentSettings(Singleton):
             tag, value = line.split('=')
             tag = tag.strip()
             if tag.startswith('ExptVessel|Plate|Design'):
-                plate_id = 'plate%s'%(self.get_tag_instance(tag))
+                plate_id = 'plate%s'%(get_tag_instance(tag))
                 PlateDesign.add_plate(plate_id, WELL_NAMES[eval(value)])
             elif tag.startswith('ExptVessel|Flask|Size'):
                 # add 1x1 plate for each flask instance
-                plate_id = 'flask%s'%(self.get_tag_instance(tag))
+                plate_id = 'flask%s'%(get_tag_instance(tag))
                 PlateDesign.add_plate(plate_id, FLASK)
             self.set_field(tag, eval(value))
         f.close()
@@ -149,8 +151,9 @@ class PlateDesign:
         '''returns a list of every platewell_id across all plates
         '''
         return [(plate_id, well_id) 
+                for plate_id in self.plates 
                 for well_id in self.get_well_ids(self.get_plate_format(plate_id))
-                for plate_id in self.plates]
+                ]
 
     @classmethod
     def get_well_ids(self, plate_format):

@@ -2184,11 +2184,10 @@ class FCSPanel(wx.Panel):
 
 
 def on_save_settings(evt):
-    
     # for saving the experimental file, the text file may have the following nomenclature
     # Date(YYYY_MM_DD)_ExperimenterNumber_Experimenter Name_ first 20 words from the aim
     
-    dlg = wx.FileDialog(None, message="Save workspace as...", defaultDir=os.getcwd(), 
+    dlg = wx.FileDialog(None, message="Save experiment settings", defaultDir=os.getcwd(), 
                         defaultFile='experiment_settings.txt', wildcard='txt', 
                         style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
     if dlg.ShowModal() == wx.ID_OK:

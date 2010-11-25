@@ -2,6 +2,7 @@ from bench import *
 from metadatainput import *
 from lineagepanel import *
 from experimentsettings import *
+from timeline import *
 
 class LineageProfiler(wx.App):
     '''The LineageProfiler Application
@@ -27,12 +28,21 @@ class LineageProfiler(wx.App):
                             pos=(0,settings_frame.Position[1]+410))
         bench_frame.Show()
         
-        return True
+        lineage_frame = wx.Frame(None, size=(600,400), pos=(610,-1))
+        sw = wx.ScrolledWindow(lineage_frame)
+        p = LineagePanel(sw)
+        sw.Sizer = wx.BoxSizer()
+        sw.Sizer.Add(p, 1 ,wx.EXPAND)
+        p.set_timeline(Timeline('U2OS'))
+        sw.SetScrollbars(20, 20, lineage_frame.Size[0]+20, lineage_frame.Size[1]+20, 0, 0)
+        sw.Fit()
+        lineage_frame.Show()
         
+        return True
 
 
 if __name__ == '__main__':
-    app = LineageProfiler()
+    app = LineageProfiler(redirect=False)
     ExperimentSettings.getInstance().load_from_file('/Users/afraser/Desktop/experiment_settings.txt')
     app.MainLoop()
 
