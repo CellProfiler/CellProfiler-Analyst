@@ -1000,7 +1000,7 @@ class TableViewer(wx.Frame):
                 
         dlg = wx.SingleChoiceDialog(self, 'Do you want to be able to access\n'
                 'this table after you close CPA?', 'Save table to database',
-                ['Store for this session only.', 'Store permanantly.'], 
+                ['Store for this session only.', 'Store permanently.'], 
                 wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() != wx.ID_OK:
             return
