@@ -24,35 +24,12 @@ class LineageProfiler(wx.App):
         settings_frame.GetMenuBar().Append(fileMenu, 'File')
 
         
-        bench_frame = Bench(None, size=(600,-1), 
+        bench_frame = Bench(None, size=(600,300), 
                             pos=(0,settings_frame.Position[1]+410))
         bench_frame.Show()
         
-        lineage_frame = wx.Frame(None, size=(600,400), pos=(610,-1))
-
-        sw = wx.ScrolledWindow(lineage_frame)
-        tp = TimelinePanel(sw)
-        tp.set_style(padding=30)
-        p = LineagePanel(sw)
-        #p.set_time_x_spacing()
-        p.set_style(padding=30, flask_gap=40)
-        sw.SetSizer(wx.BoxSizer(wx.VERTICAL))
-        sw.Sizer.Add(tp, 0, wx.EXPAND|wx.LEFT, 40)
-        sw.Sizer.Add(p, 1, wx.EXPAND)
-        sw.SetScrollbars(20, 20, lineage_frame.Size[0]+20, 
-                         lineage_frame.Size[1]+20, 0, 0)
-        sw.Fit()
-        lineage_frame.Show()
-
-        
-        #sw = wx.ScrolledWindow(lineage_frame)
-        #p = LineagePanel(sw)
-        #sw.Sizer = wx.BoxSizer()
-        #sw.Sizer.Add(p, 1 ,wx.EXPAND)
-        #p.set_timeline(Timeline('U2OS'))
-        #sw.SetScrollbars(20, 20, lineage_frame.Size[0]+20, lineage_frame.Size[1]+20, 0, 0)
-        #sw.Fit()
-        #lineage_frame.Show()
+        f = LineageFrame(None, size=(600, 700), pos=(610, -1))
+        f.Show()
         
         return True
 

@@ -350,9 +350,9 @@ class LineagePanel(wx.Panel):
 if __name__ == "__main__":
     
     N_FURCATIONS = 3
-    N_TIMEPOINTS = 8
-    MAX_TIMEPOINT = 24
-    PLATE_TYPE = P6
+    N_TIMEPOINTS = 5
+    MAX_TIMEPOINT = 10
+    PLATE_TYPE = P24
     
     app = wx.PySimpleApp()
     
