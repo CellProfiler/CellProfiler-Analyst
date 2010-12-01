@@ -1,5 +1,3 @@
-from experimentsettings import *   
-
 class Timeline(object):
     '''Represents a timeline.
     '''
@@ -10,7 +8,6 @@ class Timeline(object):
         # plate_ids : a list of plate ids included in the experiment
         #             (all events will take place on these plates)
         self.plate_ids = set([])
-        meta = ExperimentSettings.getInstance()
 
     def add_event(self, timepoint, action, well_ids):
         '''Creates and inserts an event into the timeline.
@@ -76,6 +73,7 @@ class Timeline(object):
         '''returns a list of unique permutations of events at a given timepoint.
         Each permutation is a tuple of events that occurred.
         '''
+        from experimentsettings import PlateDesign
         d = {}
         for event in self.get_events_at_timepoint(timepoint):
             # build a hash, mapping well_ids to lists of events that occurred
@@ -96,6 +94,7 @@ class Timeline(object):
              (noop)  :  ((p1, B01)) }
         '''
         # TODO: improve performance (tree building explodes with larger plates)
+        from experimentsettings import PlateDesign
         d = {}
         for wellid in PlateDesign.get_all_platewell_ids():
             events_in_well = self.get_events_in_well(wellid, timepoint)

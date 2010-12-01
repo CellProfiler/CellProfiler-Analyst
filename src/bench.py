@@ -12,7 +12,7 @@ class VesselScroller(wx.ScrolledWindow):
         (w,h) = self.Sizer.GetSize()
         self.SetScrollbars(20,20,w/20,h/20,0,0)
         self.plates = []
-        
+
     def add_vessel_panel(self, panel, plate_id):
         if len(self.Sizer.GetChildren()) > 0:
             self.Sizer.AddSpacer((10,-1))
@@ -21,16 +21,16 @@ class VesselScroller(wx.ScrolledWindow):
         sz.Add(panel, 1, wx.EXPAND)
         self.Sizer.Add(sz, 1, wx.EXPAND)
         self.plates += [panel]
-    
+
     def get_vessels(self):
         return self.plates
-    
+
     def get_selected_well_ids(self):
         wells = []
         for plate in self.plates:
             wells += plate.get_selected_well_keys()
         return wells
-    
+
     def clear(self):
         self.plates = []
         self.Sizer.Clear(deleteWindows=True)
@@ -53,10 +53,10 @@ class Bench(wx.Frame):
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
 
         meta = ExperimentSettings.getInstance()
-        
-        meta.add_subscriber(self.update_plate_window, ['ExptVessel.*'])
-        meta.add_subscriber(self.update_plate_window, [get_matchstring_for_subtag(2, 'Well')])
-        
+
+        meta.add_subscriber(self.update_plate_window, 'ExptVessel.*')
+        meta.add_subscriber(self.update_plate_window, get_matchstring_for_subtag(2, 'Well'))
+
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.AddRadioLabelTool(ID_SEED, 'Seed', icons.seed.ConvertToBitmap(), shortHelp='', longHelp='')
@@ -71,35 +71,50 @@ class Bench(wx.Frame):
         tb.AddRadioLabelTool(ID_TIMELAPSE, 'Timelapse', icons.timelapse.ConvertToBitmap(), shortHelp='', longHelp='')
         tb.AddRadioLabelTool(ID_FLOW, 'Flow', icons.flow.ConvertToBitmap(), shortHelp='', longHelp='')        
         tb.Realize()
-        
+
         self.mode_tag_prefix = []
         self.mode_tag_instance = None
-        
+
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         self.setting_shown = False
         self.vesselscroller = VesselScroller(self)
         self.Sizer.Add(self.vesselscroller, 1, wx.EXPAND)
         self.update_plate_window(None)
-        
+
         time_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.time_slider = wx.Slider(self, -1, style = wx.SL_LABELS|wx.SL_AUTOTICKS)
+
+        self.time_slider = wx.Slider(self, -1)
+        self.time_slider.SetTickFreq(6)
+
         self.time_slider.Bind(wx.EVT_SLIDER, self.on_adjust_timepoint)
-        self.time_slider.SetRange(0, 24)
+        self.time_slider.SetRange(0, 1440)
         #clock = TimeCtrl(self, -1, display_seconds=False)
+        self.tlabel1 = wx.StaticText(self, -1, "0")
+        self.tlabel2 = wx.StaticText(self, self.time_slider.GetMax())
         self.add24_button = wx.Button(self, -1, "Add 24h")
-        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.time_slider.SetRange(0, self.time_slider.GetMax()+24))
+        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.time_slider.SetRange(0, self.time_slider.GetMax()+1440))
+
+        time_sizer.Add(self.tlabel1,0, wx.EXPAND)
         time_sizer.Add(self.time_slider, 1, wx.EXPAND)
+        time_sizer.Add(self.tlabel2,0, wx.EXPAND)
         time_sizer.Add(self.add24_button, 0, wx.EXPAND)
         self.Sizer.Add(time_sizer, 0, wx.EXPAND)
-        
+
         self.Bind(wx.EVT_TOOL, self.on_tool_clicked)
-        
+
     def get_selected_timepoint(self):
         return self.time_slider.GetValue()
-        
+
     def on_adjust_timepoint(self, evt):
+        self.curr_time = self.time_slider.GetValue()
+        hours = self.curr_time / 60
+        self.curr_time -= 60*hours
+        minutes = self.curr_time 
+        self.time_slider.SetToolTipString("%02d hrs %02d min " % (hours, minutes))
+
+
         self.update_well_selections()
-        
+
     def update_well_selections(self):
         meta = ExperimentSettings.getInstance()
         if self.mode_tag_instance is None or self.mode_tag_prefix == []:
@@ -115,8 +130,8 @@ class Bench(wx.Frame):
             for plate in self.vesselscroller.get_vessels():
                 plate.enable_selection()
                 plate.set_selected_well_ids([pw_id for pw_id in platewell_ids if pw_id[0]==plate.get_plate_id()])
-        
-        
+
+
     def update_plate_window(self, tag):
         '''Syncronizes the vessel panels with the vessel metadata.
         '''
@@ -140,12 +155,12 @@ class Bench(wx.Frame):
             plate.add_well_selection_handler(self.on_update_well)
         self.update_well_selections()
         self.vesselscroller.FitInside()
-        
+
     def on_update_well(self, platewell_id, selected):
         '''Called when a well is clicked.
         Populate all action tags with the set of wells the were effected.
         eg: ExpNum|AddProcess|Spin|Wells|<instance>|<timepoint> = ['A01',...]
-            ExpNum|AddProcess|Spin|EventTimepoint|<instance> = timepoint
+            ExpNum|AddProcess|Spin|EventTimepoint|<instance> = [timepoint, ...]
         '''
         if self.mode_tag_instance is None or self.mode_tag_prefix == []:
             return
@@ -156,13 +171,27 @@ class Bench(wx.Frame):
         platewell_ids = set(meta.get_field(wells_tag, []))
         if selected:
             platewell_ids.update([platewell_id])
+            meta.set_field(wells_tag, list(platewell_ids))
         else:
             platewell_ids.remove(platewell_id)
-        meta.set_field(wells_tag, list(platewell_ids))
-        
+            if len(platewell_ids) > 0:
+                meta.set_field(wells_tag, list(platewell_ids))
+            else:
+                meta.remove_field(wells_tag)
+        #
+        # XXX: This tag is redundant with the wells tags
+        #
         timepoint_tag = '%s|EventTimepoint|%s'%(self.mode_tag_prefix, self.mode_tag_instance)
-        meta.set_field(timepoint_tag, self.get_selected_timepoint())
+        timepoints = set(meta.get_field(timepoint_tag, []))
+        if len(platewell_ids) > 0:
+            timepoints.update([self.get_selected_timepoint()])
+            meta.set_field(timepoint_tag, list(timepoints))
+        else:
+            meta.remove_field(timepoint_tag)
             
+        #print wells_tag, list(platewell_ids)
+        #print timepoint_tag, list(timepoints)
+
     def on_tool_clicked(self, evt):
         meta = ExperimentSettings.getInstance()
         self.mode_tag_instance = None
@@ -170,9 +199,28 @@ class Bench(wx.Frame):
             control = self.Sizer.GetItem(0).GetWindow()
             self.Sizer.Remove(0)
             control.Destroy()
-            
+
         if evt.Checked():
             def create_setting_panel(label, choices):
+
+
+                ##create popup and put a textcontrol and a button on it
+                #popwindow = wx.PopupWindow(self, wx.RAISED_BORDER)
+                #popwindow.SetSizer(wx.BoxSizer(wx.VERTICAL))
+                #popwindow.button = wx.Button(popwindow, -1, "Hide me!")
+                ##popwindow.Bind(wx.EVT_BUTTON, self.OnPopupHide, popwindow.button)
+                #popwindow.Sizer.Add(popwindow.button)
+
+
+                ##def OnPopupDisplay(self, evt):
+                    ##self.popup.Show(True)
+                    ##evt.Skip()
+
+                ##def OnPopupHide(self, evt):
+                    ##self.popup.Show(False)
+                    ##evt.Skip()
+
+
                 setting = wx.Panel(self)
                 setting.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
                 if choices != []:
@@ -181,7 +229,7 @@ class Bench(wx.Frame):
                     choice_control.Select(0)
                     setting.Sizer.Add(choice_control, 0, wx.TOP, 8)
                     self.mode_tag_instance = choices[0]
-                
+
                     def choice_handler(evt):
                         self.mode_tag_instance = evt.GetEventObject().GetStringSelection()
                         self.update_well_selections()
@@ -190,10 +238,10 @@ class Bench(wx.Frame):
                     label = 'No configurations available. Please configure presets first.'
                     setting.Sizer.Add(wx.StaticText(setting, -1, label), 0, wx.ALL, 10)
                 return setting
-    
+
             if evt.Id == ID_SEED:
-                panel = create_setting_panel('Seeding settings: ', meta.get_field_instances('CellTransfer|Load'))
-                self.mode_tag_prefix = 'CellTransfer|Load'
+                panel = create_setting_panel('Seeding settings: ', meta.get_field_instances('CellTransfer|Seed'))
+                self.mode_tag_prefix = 'CellTransfer|Seed'
             elif evt.Id == ID_HARVEST:
                 panel = create_setting_panel('Harvesting settings: ', meta.get_field_instances('CellTransfer|Harvest'))
                 self.mode_tag_prefix = 'CellTransfer|Harvest'
@@ -234,14 +282,14 @@ class Bench(wx.Frame):
         self.update_well_selections()
         self.Layout()
 
-        
-        
+
+
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-    
+
     f = Bench(None, size=(800,-1))
     f.Show()
-    
+
     app.MainLoop()
 
     #

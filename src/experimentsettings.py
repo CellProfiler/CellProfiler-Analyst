@@ -1,5 +1,6 @@
 from singleton import Singleton
 import re
+from timeline import Timeline
 #
 # TODO: Updating PlateDesign could be done entirely within 
 #       set_field and remove_field.
@@ -17,33 +18,37 @@ def get_tag_instance(tag):
     return tag.split('|')[3]
 
 def get_tag_timepoint(tag):
-    return tag.split('|')[4]
+    return int(tag.split('|')[4])
 
 class ExperimentSettings(Singleton):
+    
+    global_settings = {}
+    timeline        = Timeline('TEST_STOCK')
+    subscribers     = {}
+    
     def __init__(self):
-        self.global_settings = {}
-        self.timeline = None
-        self.subscribers = {}
-
+        pass
+    
     def set_field(self, tag, value):
         self.global_settings[tag] = value
+        if re.match(get_matchstring_for_subtag(2, 'Well'), tag):
+            self.update_timeline(tag)
+        self.notify_subscribers(tag)
         
-        for matchstring, callback in self.subscribers.items():
-            if re.match(matchstring, tag):
-                callback(tag)
-                break
-
     def get_field(self, tag, default=None):
         return self.global_settings.get(tag, default)
 
     def remove_field(self, tag):
         if self.get_field(tag) is not None:
             self.global_settings.pop(tag)
+            if re.match(get_matchstring_for_subtag(2, 'Well'), tag):
+                self.update_timeline(tag)
+            self.notify_subscribers(tag)
 
     def get_field_instances(self, tag_prefix):
         '''returns a list of unique instance ids for each tag beginning with 
         tag_prefix'''
-        ids = set([tag.rsplit('|', 1)[-1] for tag in self.global_settings
+        ids = set([tag.split('|')[3] for tag in self.global_settings
                    if tag.startswith(tag_prefix)])
         return list(ids)
 
@@ -55,7 +60,30 @@ class ExperimentSettings(Singleton):
     
     def clear(self):
         self.global_settings = {}
-        self.timeline = None        
+        #
+        # TODO:
+        #
+        self.timeline = Timeline('TEST_STOCK')
+
+        
+    def get_timeline(self):
+        return self.timeline
+
+    def update_timeline(self, welltag):
+        '''Updates the experiment metadata timeline event associated with the
+        action and wells in welltag (eg: 'ExpNum|AddProcess|Spin|Wells|1|1')
+        '''
+        action = (get_tag_stump(welltag), get_tag_instance(welltag))
+        timepoint = get_tag_timepoint(welltag)
+        platewell_ids = self.get_field(welltag, [])
+        if platewell_ids == []:
+            self.timeline.delete_event(timepoint, action)
+        else:
+            event = self.timeline.get_event(action, timepoint)
+            if event is not None:
+                event.set_well_ids(platewell_ids)
+            else:
+                self.timeline.add_event(timepoint, action, platewell_ids)
 
     def save_to_file(self, file):
         f = open(file, 'w')
@@ -80,13 +108,19 @@ class ExperimentSettings(Singleton):
             self.set_field(tag, eval(value))
         f.close()
         
-    def add_subscriber(self, callback, match_strings):
+    def add_subscriber(self, callback, match_string):
         '''callback -- the function to be called
-        match_strings -- a list of regular expression strings matching the
-                         tags you want to subscribe to
+        match_string -- a regular expression string matching the tags you want 
+                        to be notified of changes to
         '''
-        for match_string in match_strings:
-            self.subscribers[match_string] = callback
+        self.subscribers[match_string] = self.subscribers.get(match_string, []) + [callback]
+            
+    def notify_subscribers(self, tag):
+        for matchstring, callbacks in self.subscribers.items():
+            if re.match(matchstring, tag):
+                for callback in callbacks:
+                    callback(tag)
+
 
 ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
