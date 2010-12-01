@@ -261,7 +261,7 @@ class InstrumentSettingPanel(wx.Panel):
             self.notebook.AddPage(panel, 'Flow Cytometer: %s'%(flow_id), True)
 
         addMicroscopePageBtn = wx.Button(self, label="Add Microscope")
-        addMicroscopePageBtn.SetBackgroundColour("#33FF33")
+        #addMicroscopePageBtn.SetBackgroundColour("#33FF33")
         addMicroscopePageBtn.Bind(wx.EVT_BUTTON, self.onAddMicroscopePage)
         #rmvMicroscopePageBtn = wx.Button(self, label="Delete Microscope")
         #rmvMicroscopePageBtn.SetBackgroundColour("#FF3300")
@@ -270,7 +270,7 @@ class InstrumentSettingPanel(wx.Panel):
         #self.notebook.SetRightClickMenu(self._rmenu)
 
         addFlowcytometerPageBtn = wx.Button(self, label="Add Flowcytometer")
-        addFlowcytometerPageBtn.SetBackgroundColour("#33FF33")
+        #addFlowcytometerPageBtn.SetBackgroundColour("#33FF33")
         addFlowcytometerPageBtn.Bind(wx.EVT_BUTTON, self.onAddFlowcytometerPage)
         #rmvFlowcytometerPageBtn = wx.Button(self, label="Delete Flowcyotometer")
         #rmvFlowcytometerPageBtn.SetBackgroundColour("#FF3300")
@@ -715,7 +715,7 @@ class StockCultureSettingPanel(wx.Panel):
             self.notebook.AddPage(panel, 'StockCulture: %s'%(stock_id), True)
 
         addStockCulturePageBtn = wx.Button(self, label="Add Stock Culture")
-        addStockCulturePageBtn.SetBackgroundColour("#33FF33")
+        #addStockCulturePageBtn.SetBackgroundColour("#33FF33")
         addStockCulturePageBtn.Bind(wx.EVT_BUTTON, self.onAddStockCulturePage)
         #rmvStockCulturePageBtn = wx.Button(self, label="Delete Stock Culture")
         #rmvStockCulturePageBtn.SetBackgroundColour("#FF3300")
@@ -903,11 +903,11 @@ class ExpVessSettingPanel(wx.Panel):
             self.notebook.AddPage(panel, 'Flask no: %s'%(flask_id), True)
 
         addPlatePageBtn = wx.Button(self, label="Add Plate")
-        addPlatePageBtn.SetBackgroundColour("#33FF33")
+        #addPlatePageBtn.SetBackgroundColour("#33FF33")
         addPlatePageBtn.Bind(wx.EVT_BUTTON, self.onAddPlatePage)
 
         addFlaskPageBtn = wx.Button(self, label="Add Flask")
-        addFlaskPageBtn.SetBackgroundColour("#33FF33")
+        #addFlaskPageBtn.SetBackgroundColour("#33FF33")
         addFlaskPageBtn.Bind(wx.EVT_BUTTON, self.onAddFlaskPage)
 
         # create some sizers
@@ -952,7 +952,7 @@ class PlateWellPanel(wx.Panel):
 
         #--Design--#
         expPltdesTAG = 'ExptVessel|Plate|Design|'+str(self.page_counter)
-        self.settings_controls[expPltdesTAG] = wx.Choice(self.sw, -1, choices=WELL_NAMES_ORDERED)
+        self.settings_controls[expPltdesTAG] = wx.Choice(self.sw, -1, choices=WELL_NAMES_ORDERED, name='PlateDesign')
         for i, format in enumerate([WELL_NAMES[name] for name in WELL_NAMES_ORDERED]):
             self.settings_controls[expPltdesTAG].SetClientData(i, format)
         if meta.get_field(expPltdesTAG) is not None:
@@ -1003,11 +1003,7 @@ class PlateWellPanel(wx.Panel):
         ctrl = event.GetEventObject()
         tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
         if isinstance(ctrl, wx.Choice):
-            if ctrl.GetClientData(ctrl.GetSelection()):
-                #
-                # HACK: A control with ClientData attached are assumed to be
-                #       the Plate Design Choice control
-                #
+            if ctrl.GetName() == 'PlateDesign':
                 plate_id = 'plate%s'%(tag.rsplit('|', 1)[-1])
                 plate_shape = ctrl.GetClientData(ctrl.GetSelection())
                 if plate_id not in PlateDesign.get_plate_ids():
@@ -1067,6 +1063,14 @@ class FlaskPanel(wx.Panel):
 
         ctrl = event.GetEventObject()
         tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+        
+        flask_id = 'flask%s'%(tag.rsplit('|', 1)[-1])
+        plate_shape = (1,1)
+        if flask_id not in PlateDesign.get_plate_ids():
+            PlateDesign.add_plate(flask_id, plate_shape)
+        else:
+            PlateDesign.set_plate_format(flask_id, plate_shape)
+        
         if isinstance(ctrl, wx.Choice):
             meta.set_field(tag, ctrl.GetStringSelection())
         else:
@@ -1109,11 +1113,11 @@ class CellTransferSettingPanel(wx.Panel):
             self.notebook.AddPage(panel, 'Cell Harvest Specification No: %s'%(cellharv_id), True)
 
         addCellSeedPageBtn = wx.Button(self, label="Add Cell Seeding Specification")
-        addCellSeedPageBtn.SetBackgroundColour("#33FF33")
+        #addCellSeedPageBtn.SetBackgroundColour("#33FF33")
         addCellSeedPageBtn.Bind(wx.EVT_BUTTON, self.onAddCellSeedPage)
 
         addCellHarvestPageBtn = wx.Button(self, label="Add Cell Harvest Specification")
-        addCellHarvestPageBtn.SetBackgroundColour("#33FF33")
+        #addCellHarvestPageBtn.SetBackgroundColour("#33FF33")
         addCellHarvestPageBtn.Bind(wx.EVT_BUTTON, self.onAddCellHarvestPage)
 
         # create some sizers
@@ -1352,11 +1356,11 @@ class PerturbationSettingPanel(wx.Panel):
 
         # Add the buttons
         addChemAgentPageBtn = wx.Button(self, label="Add Chemical Agent")
-        addChemAgentPageBtn.SetBackgroundColour("#33FF33")
+        #addChemAgentPageBtn.SetBackgroundColour("#33FF33")
         addChemAgentPageBtn.Bind(wx.EVT_BUTTON, self.onAddChemAgentPage)
 
         addBioAgentPageBtn = wx.Button(self, label="Add Biological Agent")
-        addBioAgentPageBtn.SetBackgroundColour("#33FF33")
+        #addBioAgentPageBtn.SetBackgroundColour("#33FF33")
         addBioAgentPageBtn.Bind(wx.EVT_BUTTON, self.onAddBioAgentPage)
 
         # create some sizers
@@ -1528,7 +1532,7 @@ class StainingAgentSettingPanel(wx.Panel):
 
         # Add the buttons
         addStainingPageBtn = wx.Button(self, label="Add Staining Protocols")
-        addStainingPageBtn.SetBackgroundColour("#33FF33")
+        #addStainingPageBtn.SetBackgroundColour("#33FF33")
         addStainingPageBtn.Bind(wx.EVT_BUTTON, self.onAddStainingPage)
 
         # create some sizers
@@ -1628,7 +1632,7 @@ class SpinningSettingPanel(wx.Panel):
 
         # Add the buttons
         addSpinningPageBtn = wx.Button(self, label="Add Spinning Protocols")
-        addSpinningPageBtn.SetBackgroundColour("#33FF33")
+        #addSpinningPageBtn.SetBackgroundColour("#33FF33")
         addSpinningPageBtn.Bind(wx.EVT_BUTTON, self.onAddSpinningPage)
 
         # create some sizers
@@ -1729,7 +1733,7 @@ class WashSettingPanel(wx.Panel):
         
                 # Add the buttons
         addWashingPageBtn = wx.Button(self, label="Add Washing Protocols")
-        addWashingPageBtn.SetBackgroundColour("#33FF33")
+        #addWashingPageBtn.SetBackgroundColour("#33FF33")
         addWashingPageBtn.Bind(wx.EVT_BUTTON, self.onAddWashingPage)    
 
         # create some sizers
@@ -1831,7 +1835,7 @@ class TLMSettingPanel(wx.Panel):
 
         # Add the buttons
         addTLMPageBtn = wx.Button(self, label="Add Timelapse Image Format")
-        addTLMPageBtn.SetBackgroundColour("#33FF33")
+        #addTLMPageBtn.SetBackgroundColour("#33FF33")
         addTLMPageBtn.Bind(wx.EVT_BUTTON, self.onAddTLMPage)
 
         # create some sizers
@@ -1987,7 +1991,7 @@ class HCSSettingPanel(wx.Panel):
             
         # Add the buttons
         addHCSPageBtn = wx.Button(self, label="Add HCS File Format")
-        addHCSPageBtn.SetBackgroundColour("#33FF33")
+        #addHCSPageBtn.SetBackgroundColour("#33FF33")
         addHCSPageBtn.Bind(wx.EVT_BUTTON, self.onAddHCSPage)    
 
         # create some sizers
@@ -2125,7 +2129,7 @@ class FCSSettingPanel(wx.Panel):
 
         # Add the buttons
         addFlowPageBtn = wx.Button(self, label="Add FCS File Format")
-        addFlowPageBtn.SetBackgroundColour("#33FF33")
+        #addFlowPageBtn.SetBackgroundColour("#33FF33")
         addFlowPageBtn.Bind(wx.EVT_BUTTON, self.onAddFlowPage)
 
         # create some sizers
@@ -2234,11 +2238,14 @@ def on_save_settings(evt):
     exp_date = meta.get_field('Overview|Project|ExptDate')
     exp_num = meta.get_field('Overview|Project|ExptNum')
     exp_title = meta.get_field('Overview|Project|Title')
-    
-    day, month, year =  exp_date.split('/')
+    if None not in [exp_date, exp_num, exp_title]:
+        day, month, year = exp_date.split('/')
+        filename = '%s%s%s_%s_%s.txt'%(year, month, day , exp_num, exp_title)
+    else:
+        filename = 'new_experiment.txt'
     
     dlg = wx.FileDialog(None, message='Saving Experimental metadata...', defaultDir=os.getcwd(), 
-                        defaultFile=year+month+day+'_'+exp_num+'_'+exp_title, wildcard='txt', 
+                        defaultFile=filename, wildcard='txt', 
                         style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
     if dlg.ShowModal() == wx.ID_OK:
         ExperimentSettings.getInstance().save_to_file(dlg.GetPath())
