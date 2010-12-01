@@ -11,7 +11,7 @@ import re
 class ExperimentSettingsWindow(wx.SplitterWindow):
     def __init__(self, parent, id=-1, **kwargs):
         wx.SplitterWindow.__init__(self, parent, id, **kwargs)
-
+        
         self.tree = wx.TreeCtrl(self, 1, wx.DefaultPosition, (-1,-1), wx.TR_HAS_BUTTONS)
 
         root = self.tree.AddRoot('Experiment Name')
@@ -1089,14 +1089,14 @@ class CellTransferSettingPanel(wx.Panel):
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
         # Get all the previously encoded Microscope pages and re-Add them as pages
-        cellload_list = meta.get_field_instances('CellTransfer|Load|')
+        cellload_list = meta.get_field_instances('CellTransfer|Seed|')
         self.cellload_next_page_num = 1
         # update the  number of existing cell loading
         if cellload_list: 
             self.cellload_next_page_num  =  int(cellload_list[-1])+1
         for cellload_id in cellload_list:
-            panel = CellLoadPanel(self.notebook, int(cellload_id))
-            self.notebook.AddPage(panel, 'Cell Loading Specification No: %s'%(cellload_id), True)
+            panel = CellSeedPanel(self.notebook, int(cellload_id))
+            self.notebook.AddPage(panel, 'Cell Seeding Specification No: %s'%(cellload_id), True)
 
         # Get all the previously encoded Flowcytometer pages and re-Add them as pages
         cellharv_list = meta.get_field_instances('CellTransfer|Harvest|')
@@ -1108,9 +1108,9 @@ class CellTransferSettingPanel(wx.Panel):
             panel = CellHarvestPanel(self.notebook, int(cellharv_id))
             self.notebook.AddPage(panel, 'Cell Harvest Specification No: %s'%(cellharv_id), True)
 
-        addCellLoadPageBtn = wx.Button(self, label="Add Cell Loading Specification")
-        addCellLoadPageBtn.SetBackgroundColour("#33FF33")
-        addCellLoadPageBtn.Bind(wx.EVT_BUTTON, self.onAddCellLoadPage)
+        addCellSeedPageBtn = wx.Button(self, label="Add Cell Seeding Specification")
+        addCellSeedPageBtn.SetBackgroundColour("#33FF33")
+        addCellSeedPageBtn.Bind(wx.EVT_BUTTON, self.onAddCellSeedPage)
 
         addCellHarvestPageBtn = wx.Button(self, label="Add Cell Harvest Specification")
         addCellHarvestPageBtn.SetBackgroundColour("#33FF33")
@@ -1122,7 +1122,7 @@ class CellTransferSettingPanel(wx.Panel):
 
         # layout the widgets
         sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addCellLoadPageBtn  , 0, wx.ALL, 5)
+        btnSizer.Add(addCellSeedPageBtn  , 0, wx.ALL, 5)
         btnSizer.Add(addCellHarvestPageBtn , 0, wx.ALL, 5)
 
         sizer.Add(btnSizer)
@@ -1130,9 +1130,9 @@ class CellTransferSettingPanel(wx.Panel):
         self.Layout()
         self.Show()
 
-    def onAddCellLoadPage(self, event):
-        panel = CellLoadPanel(self.notebook, self.cellload_next_page_num)
-        self.notebook.AddPage(panel, 'Cell Loading Specification No: %s'%(self.cellload_next_page_num), True)
+    def onAddCellSeedPage(self, event):
+        panel = CellSeedPanel(self.notebook, self.cellload_next_page_num)
+        self.notebook.AddPage(panel, 'Cell Seeding Specification No: %s'%(self.cellload_next_page_num), True)
         self.cellload_next_page_num += 1
 
     def onAddCellHarvestPage(self, event):
@@ -1142,7 +1142,7 @@ class CellTransferSettingPanel(wx.Panel):
 
 
 
-class CellLoadPanel(wx.Panel):
+class CellSeedPanel(wx.Panel):
     def __init__(self, parent, page_counter):
 
         self.settings_controls = {}
@@ -1156,9 +1156,25 @@ class CellLoadPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5) 
+        
+        
+        cell_Line_instances = meta.get_field_instances('StockCulture|Sample|CellLine|')
+        cell_Line_choices = []
+        for cell_Line_instance in cell_Line_instances:
+            cell_Line_choices.append(meta.get_field('StockCulture|Sample|CellLine|'+cell_Line_instance)+'_'+cell_Line_instance)
+  
+        #-- Cell Line selection ---#
+        celllineselcTAG = 'CellTransfer|Seed|CellLineInstance|'+str(self.page_counter)
+        self.settings_controls[celllineselcTAG] = wx.Choice(self.sw, -1,  choices=cell_Line_choices)
+        if meta.get_field(celllineselcTAG) is not None:
+            self.settings_controls[celllineselcTAG].SetStringSelection(meta.get_field(celllineselcTAG))
+        self.settings_controls[celllineselcTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
+        self.settings_controls[celllineselcTAG].SetToolTipString('Cell Line used for seeding')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Select Cell Line'), 0)
+        fgs.Add(self.settings_controls[celllineselcTAG], 0, wx.EXPAND)
 
         # Seeding Density
-        seedTAG = 'CellTransfer|Load|SeedingDensity|'+str(self.page_counter)
+        seedTAG = 'CellTransfer|Seed|SeedingDensity|'+str(self.page_counter)
         self.settings_controls[seedTAG] = wx.TextCtrl(self.sw, value=meta.get_field(seedTAG, default=''))
         self.settings_controls[seedTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[seedTAG].SetToolTipString('Number of cells seeded in each well or flask')
@@ -1166,7 +1182,7 @@ class CellLoadPanel(wx.Panel):
         fgs.Add(self.settings_controls[seedTAG], 0, wx.EXPAND)
 
         # Medium Used
-        medmTAG = 'CellTransfer|Load|MediumUsed|'+str(self.page_counter)
+        medmTAG = 'CellTransfer|Seed|MediumUsed|'+str(self.page_counter)
         self.settings_controls[medmTAG] = wx.Choice(self.sw, -1,  choices=['Typical', 'Atypical'])
         if meta.get_field(medmTAG) is not None:
             self.settings_controls[medmTAG].SetStringSelection(meta.get_field(medmTAG))
@@ -1176,7 +1192,7 @@ class CellLoadPanel(wx.Panel):
         fgs.Add(self.settings_controls[medmTAG], 0, wx.EXPAND) 
 
         #  Medium Addatives
-        medaddTAG = 'CellTransfer|Load|MediumAddatives|'+str(self.page_counter)
+        medaddTAG = 'CellTransfer|Seed|MediumAddatives|'+str(self.page_counter)
         self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''))
         self.settings_controls[medaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[medaddTAG].SetToolTipString('Any medium addatives used with concentration, Glutamine')
@@ -1184,7 +1200,7 @@ class CellLoadPanel(wx.Panel):
         fgs.Add(self.settings_controls[medaddTAG], 0, wx.EXPAND)
 
         # Trypsinization
-        trypsTAG = 'CellTransfer|Load|Trypsinizatiton|'+str(self.page_counter)
+        trypsTAG = 'CellTransfer|Seed|Trypsinizatiton|'+str(self.page_counter)
         self.settings_controls[trypsTAG] = wx.Choice(self.sw, -1,  choices=['Yes', 'No'])
         if meta.get_field(trypsTAG) is not None:
             self.settings_controls[trypsTAG].SetStringSelection(meta.get_field(trypsTAG))
@@ -1228,6 +1244,21 @@ class CellHarvestPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
+
+        cell_Line_instances = meta.get_field_instances('StockCulture|Sample|CellLine|')
+        cell_Line_choices = []
+        for cell_Line_instance in cell_Line_instances:
+            cell_Line_choices.append(meta.get_field('StockCulture|Sample|CellLine|'+cell_Line_instance)+'_'+cell_Line_instance)
+  
+        #-- Cell Line selection ---#
+        celllineselcTAG = 'CellTransfer|Harvest|CellLineInstance|'+str(self.page_counter)
+        self.settings_controls[celllineselcTAG] = wx.Choice(self.sw, -1,  choices=cell_Line_choices)
+        if meta.get_field(celllineselcTAG) is not None:
+            self.settings_controls[celllineselcTAG].SetStringSelection(meta.get_field(celllineselcTAG))
+        self.settings_controls[celllineselcTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
+        self.settings_controls[celllineselcTAG].SetToolTipString('Cell Line used for harvesting')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Select Cell Line'), 0)
+        fgs.Add(self.settings_controls[celllineselcTAG], 0, wx.EXPAND)
 
         # Seeding Density
         harvestTAG = 'CellTransfer|Harvest|HarvestingDensity|'+str(self.page_counter)
@@ -1838,12 +1869,9 @@ class TLMPanel(wx.Panel):
         
         micro_instances = meta.get_field_instances('Instrument|Microscope|Manufacter|')
         micro_choices = []
-        for micro_instant in micro_instances:
-            micro_choices.append(meta.get_field('Instrument|Microscope|Manufacter|'+micro_instant)+'_'+micro_instant)
-        #print micro_choices
-        
-   
-
+        for micro_instance in micro_instances:
+            micro_choices.append(meta.get_field('Instrument|Microscope|Manufacter|'+micro_instance)+'_'+micro_instance)
+ 
         #-- Microscope selection ---#
         tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
         self.settings_controls[tlmselctTAG] = wx.Choice(self.sw, -1,  choices=micro_choices)
@@ -1997,14 +2025,20 @@ class HCSPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
 
         #-- Microscope selection ---#
-        hcsselctTAG = 'DataAcquis|HCS|MicroscopeInstance|'+str(self.page_counter)
-        self.settings_controls[hcsselctTAG] = wx.Choice(self.sw, -1,  choices=['Microscope 1', 'Microscope 2', 'Microscope 3'])
-        if meta.get_field(hcsselctTAG) is not None:
-            self.settings_controls[hcsselctTAG].SetStringSelection(meta.get_field(hcsselctTAG))
-        self.settings_controls[hcsselctTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[hcsselctTAG].SetToolTipString('Microscope used for data acquisition')
+        micro_instances = meta.get_field_instances('Instrument|Microscope|Manufacter|')
+        micro_choices = []
+        for micro_instance in micro_instances:
+            micro_choices.append(meta.get_field('Instrument|Microscope|Manufacter|'+micro_instance)+'_'+micro_instance)
+ 
+        tlmselctTAG = 'DataAcquis|HCS|MicroscopeInstance|'+str(self.page_counter)
+        self.settings_controls[tlmselctTAG] = wx.Choice(self.sw, -1,  choices=micro_choices)
+        if meta.get_field(tlmselctTAG) is not None:
+            self.settings_controls[tlmselctTAG].SetStringSelection(meta.get_field(tlmselctTAG))
+        self.settings_controls[tlmselctTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
+        self.settings_controls[tlmselctTAG].SetToolTipString('Microscope used for data acquisition')
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Microscope'), 0)
-        fgs.Add(self.settings_controls[hcsselctTAG], 0, wx.EXPAND)
+        fgs.Add(self.settings_controls[tlmselctTAG], 0, wx.EXPAND)
+ 
         #-- Image Format ---#
         hcsfrmtTAG = 'DataAcquis|HCS|Format|'+str(self.page_counter)
         self.settings_controls[hcsfrmtTAG] = wx.Choice(self.sw, -1,  choices=['tiff', 'jpeg', 'stk'])
@@ -2128,15 +2162,22 @@ class FCSPanel(wx.Panel):
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
 
-        #-- Flow  selection ---#
+        #-- FlowCytometer selection ---#
+        flow_instances = meta.get_field_instances('Instrument|Flowcytometer|Manufacter|')
+        flow_choices = []
+        for flow_instance in flow_instances:
+            flow_choices.append(meta.get_field('Instrument|Flowcytometer|Manufacter|'+flow_instance)+'_'+flow_instance)
+ 
         fcsselctTAG = 'DataAcquis|FCS|FlowcytInstance|'+str(self.page_counter)
-        self.settings_controls[fcsselctTAG] = wx.Choice(self.sw, -1,  choices=['Flowcytometer 1', 'Flowcytometer 2', 'Flowcytometer 3'])
+        self.settings_controls[fcsselctTAG] = wx.Choice(self.sw, -1,  choices=flow_choices)
         if meta.get_field(fcsselctTAG) is not None:
             self.settings_controls[fcsselctTAG].SetStringSelection(meta.get_field(fcsselctTAG))
         self.settings_controls[fcsselctTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[fcsselctTAG].SetToolTipString('Flowcytometer used for data acquisition')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Select Flowcytometer'), 0)
+        self.settings_controls[fcsselctTAG].SetToolTipString('Microscope used for data acquisition')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Select Microscope'), 0)
         fgs.Add(self.settings_controls[fcsselctTAG], 0, wx.EXPAND)
+        
+
         #-- Image Format ---#
         fcsfrmtTAG = 'DataAcquis|FCS|Format|'+str(self.page_counter)
         self.settings_controls[fcsfrmtTAG] = wx.Choice(self.sw, -1,  choices=['fcs1.0', 'fcs2.0', 'fcs3.0'])
@@ -2186,9 +2227,18 @@ class FCSPanel(wx.Panel):
 def on_save_settings(evt):
     # for saving the experimental file, the text file may have the following nomenclature
     # Date(YYYY_MM_DD)_ExperimenterNumber_Experimenter Name_ first 20 words from the aim
+
+    meta = ExperimentSettings.getInstance()
     
-    dlg = wx.FileDialog(None, message="Save experiment settings", defaultDir=os.getcwd(), 
-                        defaultFile='experiment_settings.txt', wildcard='txt', 
+    #-- Get Experimental Date/number ---#
+    exp_date = meta.get_field('Overview|Project|ExptDate')
+    exp_num = meta.get_field('Overview|Project|ExptNum')
+    exp_title = meta.get_field('Overview|Project|Title')
+    
+    day, month, year =  exp_date.split('/')
+    
+    dlg = wx.FileDialog(None, message='Saving Experimental metadata...', defaultDir=os.getcwd(), 
+                        defaultFile=year+month+day+'_'+exp_num+'_'+exp_title, wildcard='txt', 
                         style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
     if dlg.ShowModal() == wx.ID_OK:
         ExperimentSettings.getInstance().save_to_file(dlg.GetPath())
