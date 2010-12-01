@@ -8,6 +8,7 @@ class LineageFrame(wx.Frame):
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
         
         sw = wx.ScrolledWindow(self)
+        self.sw = sw
         timeline_panel = TimelinePanel(sw)
         self.timeline_panel = timeline_panel
         lineage_panel = LineagePanel(sw)
@@ -17,7 +18,7 @@ class LineageFrame(wx.Frame):
         sw.SetSizer(wx.BoxSizer(wx.VERTICAL))
         sw.Sizer.Add(timeline_panel, 0, wx.EXPAND|wx.LEFT, 40)
         sw.Sizer.Add(lineage_panel, 1, wx.EXPAND)
-        sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+        sw.SetScrollbars(20, 20, self.Size[0]/20, self.Size[1]/20, 0, 0)
         sw.Fit()
         
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
@@ -27,18 +28,21 @@ class LineageFrame(wx.Frame):
         self.zoom.SetValue(10)
         x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Even x spacing'))
         x_spacing.GetControl().SetValue(1)
+        generate = tb.AddControl(wx.Button(tb, -1, '+data'))
         tb.Realize()
-        
+
         self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
         self.Bind(wx.EVT_CHECKBOX, self.on_change_spacing, x_spacing)
+        self.Bind(wx.EVT_BUTTON, self.generate_random_data, generate)
         
     def on_zoom(self, evt):
         self.lineage_panel.set_style(node_radius=self.zoom.GetValue(),
-                                     xgap=self.lineage_panel.NODE_R*2+2,
-                                     ygap=self.lineage_panel.NODE_R*2+2)
+                                     xgap=self.lineage_panel.NODE_R*2+1,
+                                     ygap=self.lineage_panel.NODE_R*2+1)
         self.timeline_panel.set_style(box_width=self.zoom.GetValue(),
                                       box_height=self.zoom.GetValue(),
                                       xgap=self.timeline_panel.BOX_W+2)
+        
     def on_change_spacing(self, evt):
         if evt.Checked():
             self.lineage_panel.set_even_x_spacing()
@@ -46,11 +50,24 @@ class LineageFrame(wx.Frame):
         else:
             self.lineage_panel.set_time_x_spacing()
             self.timeline_panel.set_time_x_spacing()
+    
+    def generate_random_data(self, evt):
+        meta = ExperimentSettings.getInstance()
+        PlateDesign.add_plate('test', PLATE_TYPE)
+        allwells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('test'))
+        # GENERATE RANDOM EVENTS ON RANDOM WELLS
+        for t in [0] + list(np.random.random_integers(1, MAX_TIMEPOINT, N_TIMEPOINTS)):
+            for j in range(np.random.randint(1, N_FURCATIONS)):
+                np.random.shuffle(allwells)
+                well_ids = [('test', well) for well in allwells[:np.random.randint(1, len(allwells)+1)]]
+                #timeline.add_event(t, 'event%d'%(t), well_ids)
+                meta.set_field('AddProcess|Stain|Wells|0|%s'%(t), well_ids)
 
 
 class TimelinePanel(wx.Panel):
     '''An interactive timeline panel
     '''
+    # Drawing parameters
     PAD = 30.0
     BOX_W = 10.0
     BOX_H = 10.0
@@ -61,7 +78,6 @@ class TimelinePanel(wx.Panel):
 
         meta = ExperimentSettings.getInstance()
         meta.add_subscriber(self.on_timeline_updated, get_matchstring_for_subtag(2, 'Well'))
-        self.timeline = None
         self.timepoints = None
         self.cursor_pos = None
         self.show_time_flag = False
@@ -83,16 +99,26 @@ class TimelinePanel(wx.Panel):
         if box_height is not None:
             self.BOX_H = box_height
         self.Refresh()
+        self.Parent.FitInside()
         
     def set_time_x_spacing(self):
         self.time_x = True
+        self._recalculate_min_size()
         self.Refresh()
+        self.Parent.FitInside()
 
     def set_even_x_spacing(self):
         self.time_x = False
+        self._recalculate_min_size()
         self.Refresh()
+        self.Parent.FitInside()
 
     def on_timeline_updated(self, tag):
+        self._recalculate_min_size()
+        self.Refresh()
+        self.Parent.FitInside()
+        
+    def _recalculate_min_size(self):
         meta = ExperimentSettings.getInstance()
         timeline = meta.get_timeline()
         self.timepoints = timeline.get_unique_timepoints()
@@ -102,8 +128,7 @@ class TimelinePanel(wx.Panel):
                                  self.PAD * 2 + self.BOX_W * 3))
             else:
                 self.SetMinSize((len(self.timepoints) * self.MIN_X_GAP + self.PAD * 2,
-                                 self.PAD * 2 + self.BOX_W * 3))            
-        self.Refresh()
+                                 self.PAD * 2 + self.BOX_W * 3))        
 
     def _on_paint(self, evt=None):
         '''Handler for paint events.
@@ -122,15 +147,17 @@ class TimelinePanel(wx.Panel):
         dc.BeginDrawing()
 
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
-        px_per_time = max((w_win - PAD * 2) / MAX_TIMEPOINT,
-                          MIN_X_GAP)
+        if MAX_TIMEPOINT == 0:
+            px_per_time = 1
+        else:
+            px_per_time = max((w_win - PAD * 2.0) / MAX_TIMEPOINT,
+                              MIN_X_GAP)
         
         if len(self.timepoints) == 1:
-            x_step = 1
+            x_gap = 1
         else:
-            x_step = max(MIN_X_GAP, 
+            x_gap = max(MIN_X_GAP, 
                          (w_win - PAD * 2) / (len(self.timepoints) - 1))
-
 
         # draw the timeline
         if self.time_x:
@@ -138,7 +165,7 @@ class TimelinePanel(wx.Panel):
                         px_per_time * MAX_TIMEPOINT + PAD, h_win - PAD)
         else:            
             dc.DrawLine(PAD, h_win - PAD, 
-                        x_step * (len(self.timepoints) - 1) + PAD, h_win - PAD)
+                        x_gap * (len(self.timepoints) - 1) + PAD, h_win - PAD)
         
         # y pos to draw event boxes at
         y = h_win - PAD - (BOX_H - 1) / 2
@@ -151,13 +178,17 @@ class TimelinePanel(wx.Panel):
             dc.DrawRectangle(self.cursor_pos, y-BOX_W - 2, 
                              BOX_W * 4, BOX_W)
 
+        font = dc.Font
+        font.SetPixelSize((5, 10))
+        dc.SetFont(font)
+
         # draw event boxes
         dc.SetBrush(wx.Brush('#FFFFFF'))
         for i, timepoint in enumerate(self.timepoints):
             if self.time_x:
                 x = timepoint * px_per_time + PAD - BOX_W / 2
             else:
-                x = i * x_step + PAD - BOX_W / 2
+                x = i * x_gap + PAD - BOX_W / 2
             if self.cursor_pos is not None and x < self.cursor_pos < x + BOX_W:
                 dc.SetBrush(wx.Brush('#FFFFCC'))
                 dc.SetPen(wx.Pen(wx.BLACK, 2))
@@ -167,6 +198,8 @@ class TimelinePanel(wx.Panel):
                 dc.SetPen(wx.Pen(wx.BLACK, 1))
                 self.hover_timepoint = None
             dc.DrawRectangle(x, y, BOX_W, BOX_H)
+            wtext = dc.Font.GetPixelSize()[0] * len(str(timepoint))
+            dc.DrawText(str(timepoint), x+BOX_W/2-wtext/2, y+BOX_H)
         
         dc.EndDrawing()
 
@@ -189,11 +222,13 @@ class TimelinePanel(wx.Panel):
 class LineagePanel(wx.Panel):
     '''A Panel that displays a lineage tree.
     '''
+    # Drawing parameters
     PAD = 30
     NODE_R = 10
     MIN_X_GAP = NODE_R*2 + 2
     MIN_Y_GAP = NODE_R*2 + 2
     FLASK_GAP = MIN_X_GAP
+    #X_SPACING = 'EVEN'
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
@@ -209,11 +244,15 @@ class LineagePanel(wx.Panel):
         
     def set_time_x_spacing(self):
         self.time_x = True
+        self._recalculate_min_size()
         self.Refresh()
+        self.Parent.FitInside()
 
     def set_even_x_spacing(self):
         self.time_x = False
+        self._recalculate_min_size()
         self.Refresh()
+        self.Parent.FitInside()
         
     def set_style(self, padding=None, xgap=None, ygap=None, node_radius=None,
                   flask_gap=None):
@@ -227,7 +266,9 @@ class LineagePanel(wx.Panel):
             self.NODE_R = node_radius
         if flask_gap is not None:
             self.FLASK_GAP = flask_gap
+        self._recalculate_min_size()
         self.Refresh()
+        self.Parent.FitInside()
      
     def on_timeline_updated(self, tag):
         '''called to add events to the timeline and update the lineage
@@ -236,7 +277,21 @@ class LineagePanel(wx.Panel):
         timeline = meta.get_timeline()
         self.nodes_by_timepoint = timeline.get_nodes_by_timepoint()
         self.tree = timeline.get_lineage_tree()
+        self._recalculate_min_size()
         self.Refresh()
+        self.Parent.FitInside()
+        
+    def _recalculate_min_size(self):
+        meta = ExperimentSettings.getInstance()
+        timepoints = meta.get_timeline().get_unique_timepoints()
+        if len(timepoints) > 0:
+            n_leaves = len(self.nodes_by_timepoint.get(timepoints[-1], []))
+            if self.time_x:
+                self.SetMinSize((self.PAD * 2 + self.MIN_X_GAP * timepoints[-1] + self.FLASK_GAP,
+                                 n_leaves * self.MIN_Y_GAP + self.PAD * 2))
+            else:
+                self.SetMinSize((len(self.nodes_by_timepoint) * self.MIN_X_GAP + self.PAD * 2,
+                                 n_leaves * self.MIN_Y_GAP + self.PAD * 2))
 
     def _on_paint(self, evt=None):
         '''Handler for paint events.
@@ -264,33 +319,28 @@ class LineagePanel(wx.Panel):
         timepoints.reverse()
         timepoints.append(-1)
         
-        if self.time_x:
-            self.SetMinSize((self.PAD * 2 + self.MIN_X_GAP * timepoints[0] + FLASK_GAP,
-                             len(self.nodes_by_timepoint[timepoints[0]]) * MIN_Y_GAP + PAD * 2))
-        else:
-            self.SetMinSize((len(self.nodes_by_timepoint) * MIN_X_GAP + PAD * 2,
-                             len(self.nodes_by_timepoint[timepoints[0]]) * MIN_Y_GAP + PAD * 2))
-
-        
         width = float(self.Size[0])
         height = float(self.Size[1])
-        if len(self.nodes_by_timepoint) == 1:
-            x_step = 1
+        if len(self.nodes_by_timepoint) == 2:
+            x_gap = 1
         else:
             # calculate the number of pixels to separate each generation timepoint
-            x_step = max(MIN_X_GAP, 
+            x_gap = max(MIN_X_GAP, 
                          (width - PAD * 2 - FLASK_GAP) / (len(self.nodes_by_timepoint) - 2))
             
         if len(self.nodes_by_timepoint[timepoints[0]]) == 1:
             y_gap = MIN_Y_GAP
         else:
             # calcuate the minimum number of pixels to separate nodes on the y axis
-            y_gap = max(MIN_Y_GAP, (height - PAD * 2) / (len(self.nodes_by_timepoint[timepoints[0]]) - 1))
+            y_gap = max(MIN_Y_GAP, 
+                        (height - PAD * 2) / (len(self.nodes_by_timepoint[timepoints[0]]) - 1))
             
-        px_per_time = max((w_win - PAD * 2 - FLASK_GAP) / timepoints[0],
-                          MIN_X_GAP)
-                
-        
+        if timepoints[0] == 0:
+            px_per_time = 1
+        else:
+            px_per_time = max((w_win - PAD * 2 - FLASK_GAP) / timepoints[0],
+                              MIN_X_GAP)
+            
         # Store y coords of children so we can calculate where to draw the parents
         nodeY = {}
         Y = PAD
@@ -299,13 +349,15 @@ class LineagePanel(wx.Panel):
 
         # Iterate from leaf nodes up to the root, and draw R->L, Top->Bottom
         for i, t in enumerate(timepoints):
+            #if i == len(timepoints) - 1:
+                #pass
             if t == -1:
                 X = PAD
             elif self.time_x:
                 X = PAD + FLASK_GAP + t * px_per_time
-                x_step = PAD + FLASK_GAP + timepoints[i-1] * px_per_time - X
+                x_gap = PAD + FLASK_GAP + timepoints[i-1] * px_per_time - X
             else:
-                X = PAD + FLASK_GAP + (len(timepoints) - i - 2) * x_step
+                X = PAD + FLASK_GAP + (len(timepoints) - i - 2) * x_gap
             
             if len(self.nodes_by_timepoint) == 1:
                 X = width / 2
@@ -324,10 +376,10 @@ class LineagePanel(wx.Panel):
             else:
                 # Internal nodes
                 for node in self.nodes_by_timepoint[t]:
-                    ycoord = []
+                    ys = []
                     for child in node.get_children():
-                        ycoord.append(nodeY[child.id])
-                    Y = int((min(ycoord) + max(ycoord))/2)
+                        ys.append(nodeY[child.id])
+                    Y = (min(ys) + max(ys)) / 2
                     if t == -1:
                         dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
                     else:
@@ -341,34 +393,34 @@ class LineagePanel(wx.Panel):
                                         X + FLASK_GAP - NODE_R ,nodeY[child.id])
                         else:
                             dc.DrawLine(X + NODE_R, Y, 
-                                        X + x_step - NODE_R ,nodeY[child.id])
+                                        X + x_gap - NODE_R ,nodeY[child.id])
                     nodeY[node.id] = Y
         dc.EndDrawing()
-        print 'rendered in %.2f seconds'%(time() - t0)        
+        print 'rendered lineage in %.2f seconds'%(time() - t0)        
         
         
 if __name__ == "__main__":
     
     N_FURCATIONS = 3
     N_TIMEPOINTS = 5
-    MAX_TIMEPOINT = 10
-    PLATE_TYPE = P24
+    MAX_TIMEPOINT = 100
+    PLATE_TYPE = P6
     
     app = wx.PySimpleApp()
     
-    f = LineageFrame(None, size=(600, 400))
+    f = LineageFrame(None, size=(600, 300))
     f.Show()
 
-    meta = ExperimentSettings.getInstance()
-    PlateDesign.add_plate('test', PLATE_TYPE)
-    allwells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('test'))
-    # GENERATE RANDOM EVENTS ON RANDOM WELLS
-    for t in [0] + list(np.random.random_integers(1, MAX_TIMEPOINT, N_TIMEPOINTS)):
-        for j in range(np.random.randint(1, N_FURCATIONS)):
-            np.random.shuffle(allwells)
-            well_ids = [('test', well) for well in allwells[:np.random.randint(0, len(allwells))]]
-            #timeline.add_event(t, 'event%d'%(t), well_ids)
-            meta.set_field('AddProcess|Stain|Wells|0|%s'%(t), well_ids)
+    #meta = ExperimentSettings.getInstance()
+    #PlateDesign.add_plate('test', PLATE_TYPE)
+    #allwells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('test'))
+    ## GENERATE RANDOM EVENTS ON RANDOM WELLS
+    #for t in [0] + list(np.random.random_integers(1, MAX_TIMEPOINT, N_TIMEPOINTS)):
+        #for j in range(np.random.randint(1, N_FURCATIONS)):
+            #np.random.shuffle(allwells)
+            #well_ids = [('test', well) for well in allwells[:np.random.randint(0, len(allwells))]]
+            ##timeline.add_event(t, 'event%d'%(t), well_ids)
+            #meta.set_field('AddProcess|Stain|Wells|0|%s'%(t), well_ids)
     
     app.MainLoop()
 
