@@ -29,11 +29,12 @@ class ExperimentSettings(Singleton):
     def __init__(self):
         pass
     
-    def set_field(self, tag, value):
+    def set_field(self, tag, value, notify_subscribers=True):
         self.global_settings[tag] = value
         if re.match(get_matchstring_for_subtag(2, 'Well'), tag):
             self.update_timeline(tag)
-        self.notify_subscribers(tag)
+        if notify_subscribers:
+            self.notify_subscribers(tag)
         
     def get_field(self, tag, default=None):
         return self.global_settings.get(tag, default)
@@ -52,11 +53,16 @@ class ExperimentSettings(Singleton):
                    if tag.startswith(tag_prefix)])
         return list(ids)
 
-    def get_field_tags(self, tag_prefix, instance=''):
+    def get_field_tags(self, tag_prefix=None, instance=None):
         '''returns a list of all tags beginning with tag_prefix. If instance
         is passed in, only tags of the given instance will be returned'''
-        return [tag for tag in self.global_settings 
-                if tag.startswith(tag_prefix) and get_tag_instance(tag) == instance]
+        tags = []
+        for tag in self.global_settings:
+            if ((tag_prefix is None or tag.startswith(tag_prefix)) and 
+                (instance is None or get_tag_instance(tag) == instance)):
+                tags += [tag]
+        return tags
+            
     
     def clear(self):
         self.global_settings = {}
@@ -94,10 +100,12 @@ class ExperimentSettings(Singleton):
     def load_from_file(self, file):
         self.clear()
         PlateDesign.clear()
+        tags = []
         f = open(file, 'r')
         for line in f:
             tag, value = line.split('=')
             tag = tag.strip()
+            tags += [tag]
             if tag.startswith('ExptVessel|Plate|Design'):
                 plate_id = 'plate%s'%(get_tag_instance(tag))
                 PlateDesign.add_plate(plate_id, WELL_NAMES[eval(value)])
@@ -105,7 +113,9 @@ class ExperimentSettings(Singleton):
                 # add 1x1 plate for each flask instance
                 plate_id = 'flask%s'%(get_tag_instance(tag))
                 PlateDesign.add_plate(plate_id, FLASK)
-            self.set_field(tag, eval(value))
+            self.set_field(tag, eval(value), notify_subscribers=False)
+        for tag in tags:
+            self.notify_subscribers(tag)
         f.close()
         
     def add_subscriber(self, callback, match_string):
