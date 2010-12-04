@@ -2,6 +2,9 @@ from experimentsettings import *
 import wx
 import numpy as np
 from time import time
+import icons
+from wx.lib.combotreebox import ComboTreeBox
+
 
 class LineageFrame(wx.Frame):
     def __init__(self, parent, id=-1, title='Experiment Lineage', **kwargs):
@@ -13,8 +16,8 @@ class LineageFrame(wx.Frame):
         self.timeline_panel = timeline_panel
         lineage_panel = LineagePanel(sw)
         self.lineage_panel = lineage_panel
-        timeline_panel.set_style(padding=30)
-        lineage_panel.set_style(padding=30, flask_gap = 40)
+        timeline_panel.set_style(padding=10)
+        lineage_panel.set_style(padding=10, flask_gap = 40)
         sw.SetSizer(wx.BoxSizer(wx.VERTICAL))
         sw.Sizer.Add(timeline_panel, 0, wx.EXPAND|wx.LEFT, 40)
         sw.Sizer.Add(lineage_panel, 1, wx.EXPAND)
@@ -25,23 +28,46 @@ class LineageFrame(wx.Frame):
         tb.AddControl(wx.StaticText(tb, -1, 'zoom'))
         self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS|wx.SL_LABELS)).GetControl()
         self.zoom.SetRange(1, 30)
-        self.zoom.SetValue(10)
+        self.zoom.SetValue(8)
         x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Even x spacing'))
         x_spacing.GetControl().SetValue(1)
-        generate = tb.AddControl(wx.Button(tb, -1, '+data'))
+        generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
         tb.Realize()
-
+        
+        from f import TreeCtrlComboPopup
+        cc = wx.combo.ComboCtrl(sw)
+        self.tcp = TreeCtrlComboPopup()
+        cc.SetPopupControl(self.tcp)
+        sw.Sizer.Add(cc)
+        
+        meta = ExperimentSettings.getInstance()        
+        meta.add_subscriber(self.on_metadata_changed, '')
+        
         self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
         self.Bind(wx.EVT_CHECKBOX, self.on_change_spacing, x_spacing)
         self.Bind(wx.EVT_BUTTON, self.generate_random_data, generate)
+        
+    def on_metadata_changed(self, tag):
+        self.tcp.Clear()
+        meta = ExperimentSettings.getInstance()
+        alltags = meta.get_field_tags()
+        t0 = set([tag.split('|')[0] for tag in alltags])
+        for t in t0:
+            item1 = self.tcp.AddItem(t)
+            t1 = set([tag.split('|')[1] for tag in meta.get_field_tags(t)])
+            for tt in t1:
+                item2 = self.tcp.AddItem(tt, item1)
+                t2 = set([tag.split('|')[2] for tag in meta.get_field_tags('%s|%s'%(t,tt))])
+                for ttt in t2:
+                    item3 = self.tcp.AddItem(ttt, item2)
+
         
     def on_zoom(self, evt):
         self.lineage_panel.set_style(node_radius=self.zoom.GetValue(),
                                      xgap=self.lineage_panel.NODE_R*2+1,
                                      ygap=self.lineage_panel.NODE_R*2+1)
-        self.timeline_panel.set_style(box_width=self.zoom.GetValue(),
-                                      box_height=self.zoom.GetValue(),
-                                      xgap=self.timeline_panel.BOX_W+2)
+        self.timeline_panel.set_style(icon_size=self.zoom.GetValue()*2,
+                                      xgap=self.timeline_panel.ICON_SIZE+2)
         
     def on_change_spacing(self, evt):
         if evt.Checked():
@@ -51,27 +77,40 @@ class LineageFrame(wx.Frame):
             self.lineage_panel.set_time_x_spacing()
             self.timeline_panel.set_time_x_spacing()
     
-    def generate_random_data(self, evt):
+    def generate_random_data(self, evt=None):
         meta = ExperimentSettings.getInstance()
         PlateDesign.add_plate('test', PLATE_TYPE)
         allwells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('test'))
+        event_types = ['AddProcess|Stain|Wells|0|',
+                       'AddProcess|Wash|Wells|0|',
+                       'AddProcess|Dry|Wells|0|',
+                       'AddProcess|Spin|Wells|0|',
+                       'Perturbation|Chem|Wells|0|',
+                       'Perturbation|Bio|Wells|0|',
+                       'DataAcquis|TLM|Wells|0|',
+                       'DataAcquis|FCS|Wells|0|',
+                       'DataAcquis|HCS|Wells|0|',
+                       'CellTransfer|Seed|Wells|0|',
+                       'CellTransfer|Harvest|Wells|0|']
         # GENERATE RANDOM EVENTS ON RANDOM WELLS
-        for t in [0] + list(np.random.random_integers(1, MAX_TIMEPOINT, N_TIMEPOINTS)):
+        for t in list(np.random.random_integers(0, MAX_TIMEPOINT, N_TIMEPOINTS)):
             for j in range(np.random.randint(1, N_FURCATIONS)):
                 np.random.shuffle(allwells)
                 well_ids = [('test', well) for well in allwells[:np.random.randint(1, len(allwells)+1)]]
                 #timeline.add_event(t, 'event%d'%(t), well_ids)
-                meta.set_field('AddProcess|Stain|Wells|0|%s'%(t), well_ids)
+                etype = event_types[np.random.randint(0,len(event_types))]
+                meta.set_field('%s%s'%(etype, t), well_ids)
 
 
 class TimelinePanel(wx.Panel):
     '''An interactive timeline panel
     '''
     # Drawing parameters
-    PAD = 30.0
-    BOX_W = 10.0
-    BOX_H = 10.0
-    MIN_X_GAP = BOX_W + 1
+    PAD = 0.0
+    ICON_SIZE = 16.0
+    MIN_X_GAP = ICON_SIZE + 1
+    TIC_SIZE = 2
+    FONT_SIZE = (5,10)
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
@@ -79,8 +118,8 @@ class TimelinePanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
         meta.add_subscriber(self.on_timeline_updated, get_matchstring_for_subtag(2, 'Well'))
         self.timepoints = None
+        self.events_by_timepoint = None
         self.cursor_pos = None
-        self.show_time_flag = False
         self.hover_timepoint = None
         self.selection = None
         self.time_x = False
@@ -89,15 +128,14 @@ class TimelinePanel(wx.Panel):
         self.Bind(wx.EVT_MOTION, self._on_mouse_motion)
         self.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_exit)
         
-    def set_style(self, padding=None, xgap=None, box_width=None, box_height=None):
+    def set_style(self, padding=None, xgap=None, icon_size=None):
         if padding is not None:
             self.PAD = padding
         if xgap is not None:
             self.MIN_X_GAP = xgap
-        if box_width is not None:
-            self.BOX_W = box_width
-        if box_height is not None:
-            self.BOX_H = box_height
+        if icon_size is not None:
+            self.ICON_SIZE = icon_size
+        self._recalculate_min_size()
         self.Refresh()
         self.Parent.FitInside()
         
@@ -114,21 +152,27 @@ class TimelinePanel(wx.Panel):
         self.Parent.FitInside()
 
     def on_timeline_updated(self, tag):
+        meta = ExperimentSettings.getInstance()
+        timeline = meta.get_timeline()
+        self.events_by_timepoint = timeline.get_events_by_timepoint()
+        self.timepoints = timeline.get_unique_timepoints()
         self._recalculate_min_size()
         self.Refresh()
         self.Parent.FitInside()
         
     def _recalculate_min_size(self):
-        meta = ExperimentSettings.getInstance()
-        timeline = meta.get_timeline()
-        self.timepoints = timeline.get_unique_timepoints()
-        if len(self.timepoints) > 0:
+        if self.timepoints is not None and len(self.timepoints) > 0:
+            timeline = ExperimentSettings.getInstance().get_timeline()
+            max_event_types_per_timepoint = \
+                    max([len(set([get_tag_stump(evt.get_action()[0]) for evt in evts]))
+                         for t, evts in self.events_by_timepoint.items()])
+            min_h = (max_event_types_per_timepoint+1) * self.ICON_SIZE + self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
             if self.time_x:
                 self.SetMinSize((self.PAD * 2 + self.MIN_X_GAP * self.timepoints[-1],
-                                 self.PAD * 2 + self.BOX_W * 3))
+                                 min_h))
             else:
                 self.SetMinSize((len(self.timepoints) * self.MIN_X_GAP + self.PAD * 2,
-                                 self.PAD * 2 + self.BOX_W * 3))        
+                                 min_h))
 
     def _on_paint(self, evt=None):
         '''Handler for paint events.
@@ -136,10 +180,11 @@ class TimelinePanel(wx.Panel):
         if self.timepoints is None:
             return
 
-        PAD = self.PAD
-        BOX_W = self.BOX_W
-        BOX_H = self.BOX_H
-        MIN_X_GAP = BOX_W + 2
+        PAD = self.PAD + self.ICON_SIZE / 2.0
+        ICON_SIZE = self.ICON_SIZE
+        MIN_X_GAP = self.ICON_SIZE + 2
+        TIC_SIZE = self.TIC_SIZE
+        FONT_SIZE = self.FONT_SIZE
         MAX_TIMEPOINT = self.timepoints[-1]
         
         dc = wx.PaintDC(self)
@@ -159,47 +204,79 @@ class TimelinePanel(wx.Panel):
             x_gap = max(MIN_X_GAP, 
                          (w_win - PAD * 2) / (len(self.timepoints) - 1))
 
+        # y pos of line
+        y = h_win - PAD - FONT_SIZE[1] - TIC_SIZE - 1
+
         # draw the timeline
         if self.time_x:
-            dc.DrawLine(PAD, h_win - PAD, 
-                        px_per_time * MAX_TIMEPOINT + PAD, h_win - PAD)
+            dc.DrawLine(PAD, y, 
+                        px_per_time * MAX_TIMEPOINT + PAD, y)
         else:            
-            dc.DrawLine(PAD, h_win - PAD, 
-                        x_gap * (len(self.timepoints) - 1) + PAD, h_win - PAD)
-        
-        # y pos to draw event boxes at
-        y = h_win - PAD - (BOX_H - 1) / 2
-        
-        # draw flag at cursor pos
-        if self.cursor_pos is not None and self.show_time_flag:
-            dc.SetBrush(wx.Brush('#FFFFCC'))
-            dc.DrawLine(self.cursor_pos, y + (BOX_W - 1) / 2, 
-                        self.cursor_pos, y - BOX_W - 2)
-            dc.DrawRectangle(self.cursor_pos, y-BOX_W - 2, 
-                             BOX_W * 4, BOX_W)
+            dc.DrawLine(PAD, y, 
+                        x_gap * (len(self.timepoints) - 1) + PAD, y)
 
         font = dc.Font
-        font.SetPixelSize((5, 10))
+        font.SetPixelSize(FONT_SIZE)
         dc.SetFont(font)
 
         # draw event boxes
-        dc.SetBrush(wx.Brush('#FFFFFF'))
         for i, timepoint in enumerate(self.timepoints):
+            # x position of timepoint on the line
             if self.time_x:
-                x = timepoint * px_per_time + PAD - BOX_W / 2
+                x = timepoint * px_per_time + PAD
             else:
-                x = i * x_gap + PAD - BOX_W / 2
-            if self.cursor_pos is not None and x < self.cursor_pos < x + BOX_W:
-                dc.SetBrush(wx.Brush('#FFFFCC'))
-                dc.SetPen(wx.Pen(wx.BLACK, 2))
+                x = i * x_gap + PAD
+                
+            if (self.cursor_pos is not None and 
+                x-ICON_SIZE/2 < self.cursor_pos < x + ICON_SIZE/2):
+                dc.SetPen(wx.Pen(wx.BLACK, 3))
                 self.hover_timepoint = timepoint
             else:
-                dc.SetBrush(wx.Brush('#FFFFFF'))
                 dc.SetPen(wx.Pen(wx.BLACK, 1))
                 self.hover_timepoint = None
-            dc.DrawRectangle(x, y, BOX_W, BOX_H)
-            wtext = dc.Font.GetPixelSize()[0] * len(str(timepoint))
-            dc.DrawText(str(timepoint), x+BOX_W/2-wtext/2, y+BOX_H)
+            # Draw tic marks
+            dc.DrawLine(x, y - TIC_SIZE, 
+                        x, y + TIC_SIZE)
+            #dc.DrawRectangle(x, y, ICON_SIZE, ICON_SIZE)
+            bmps = []
+            process_types = set([])
+            for i, ev in enumerate(self.events_by_timepoint[timepoint]):
+                tag, instance = ev.get_action()
+                stump = get_tag_stump(tag)
+                
+                #for subtag in taxonomy.get_unique_instance_tag_stumps((0,1)):
+                    #if stump.startswith(subtag) and stump not in process_types:
+                        #bmps += [icons.__dict__[subtag].Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                
+                if stump.startswith('CellTransfer|Seed') and stump not in process_types:
+                    bmps += [icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('CellTransfer|Harvest') and stump not in process_types:
+                    bmps += [icons.harvest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('Perturbation|Chem') and stump not in process_types:
+                    bmps += [icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('Perturbation|Bio') and stump not in process_types:
+                    bmps += [icons.treat_bio.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('AddProcess|Stain') and stump not in process_types:
+                    bmps += [icons.add_stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('AddProcess|Wash') and stump not in process_types:
+                    bmps += [icons.wash.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('AddProcess|Dry') and stump not in process_types:
+                    bmps += [icons.dry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('AddProcess|Spin') and stump not in process_types:
+                    bmps += [icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('DataAcquis|HCS') and stump not in process_types:
+                    bmps += [icons.imaging.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('DataAcquis|FCS') and stump not in process_types:
+                    bmps += [icons.flow.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('DataAcquis|TLM') and stump not in process_types:
+                    bmps += [icons.timelapse.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                process_types.add(stump)
+            for i, bmp in enumerate(bmps):
+                dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
+                              y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)
+            wtext = FONT_SIZE[0] * len(str(timepoint))
+            # draw the timepoint beneath the line
+            dc.DrawText(str(timepoint), x - wtext/2.0, y + TIC_SIZE + 1)
         
         dc.EndDrawing()
 
@@ -232,15 +309,17 @@ class LineagePanel(wx.Panel):
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
-        self.tree = None
         self.nodes_by_timepoint = {}
         self.time_x = False
+        self.cursor_pos = None
         
         meta = ExperimentSettings.getInstance()
         meta.add_subscriber(self.on_timeline_updated, 
                             get_matchstring_for_subtag(2, 'Well'))
 
         self.Bind(wx.EVT_PAINT, self._on_paint)
+        self.Bind(wx.EVT_MOTION, self._on_mouse_motion)
+        self.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_exit)
         
     def set_time_x_spacing(self):
         self.time_x = True
@@ -275,8 +354,9 @@ class LineagePanel(wx.Panel):
         '''
         meta = ExperimentSettings.getInstance()
         timeline = meta.get_timeline()
+        t0 = time()
         self.nodes_by_timepoint = timeline.get_nodes_by_timepoint()
-        self.tree = timeline.get_lineage_tree()
+        print 'built tree in %s seconds'%(time() - t0)
         self._recalculate_min_size()
         self.Refresh()
         self.Parent.FitInside()
@@ -296,15 +376,17 @@ class LineagePanel(wx.Panel):
     def _on_paint(self, evt=None):
         '''Handler for paint events.
         '''
-        if self.tree is None:
+        if self.nodes_by_timepoint == {}:
             return
 
         t0 = time()
-        PAD = self.PAD
+        PAD = self.PAD + self.NODE_R
         NODE_R = self.NODE_R
         MIN_X_GAP = self.MIN_X_GAP
         MIN_Y_GAP = self.MIN_Y_GAP
         FLASK_GAP = self.FLASK_GAP
+        
+        self.current_node = None
 
         meta = ExperimentSettings.getInstance()
 
@@ -362,11 +444,32 @@ class LineagePanel(wx.Panel):
             if len(self.nodes_by_timepoint) == 1:
                 X = width / 2
                 Y = height / 2
+                if (self.cursor_pos is not None and 
+                    X-NODE_R < self.cursor_pos[0] < X + NODE_R and
+                    Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
+                    dc.SetBrush(wx.Brush('#FFFFAA'))
+                    dc.SetPen(wx.Pen(wx.BLACK, 3))
+                    self.current_node = self.nodes_by_timepoint.values()[0]
+                else:
+                    dc.SetBrush(wx.Brush('#FFFFFF'))
+                    dc.SetPen(wx.Pen(wx.BLACK, 1))
+                    self.current_node = None
+                    
                 dc.DrawCircle(X, Y, NODE_R)
                 #dc.DrawText(str(self.nodes_by_timepoint[t][0].get_timepoint()), X, Y+NODE_R)
             elif i == 0:
                 # Leaf nodes
                 for node in self.nodes_by_timepoint[t]:
+                    if (self.cursor_pos is not None and 
+                        X-NODE_R < self.cursor_pos[0] < X + NODE_R and
+                        Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
+                        dc.SetBrush(wx.Brush('#FFFFAA'))
+                        dc.SetPen(wx.Pen(wx.BLACK, 3))
+                        self.current_node = node
+                    else:
+                        dc.SetBrush(wx.Brush('#FFFFFF'))
+                        dc.SetPen(wx.Pen(wx.BLACK, 1))
+                    
                     dc.DrawCircle(X, Y, NODE_R)
                     #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
                     #if self.nodes_by_pos == {}:
@@ -380,6 +483,17 @@ class LineagePanel(wx.Panel):
                     for child in node.get_children():
                         ys.append(nodeY[child.id])
                     Y = (min(ys) + max(ys)) / 2
+
+                    if (self.cursor_pos is not None and 
+                        X-NODE_R < self.cursor_pos[0] < X + NODE_R and
+                        Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
+                        dc.SetBrush(wx.Brush('#FFFFAA'))
+                        dc.SetPen(wx.Pen(wx.BLACK, 3))
+                        self.current_node = node
+                    else:
+                        dc.SetBrush(wx.Brush('#FFFFFF'))
+                        dc.SetPen(wx.Pen(wx.BLACK, 1))
+                    
                     if t == -1:
                         dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
                     else:
@@ -387,6 +501,10 @@ class LineagePanel(wx.Panel):
                     #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
                     #if self.nodes_by_pos == {}:
                         #self.nodes_by_pos[(X,Y)] = node
+                        
+                    dc.SetBrush(wx.Brush('#FFFFFF'))
+                    dc.SetPen(wx.Pen(wx.BLACK, 1))
+
                     for child in node.get_children():
                         if t == -1:
                             dc.DrawLine(X + NODE_R, Y, 
@@ -396,20 +514,31 @@ class LineagePanel(wx.Panel):
                                         X + x_gap - NODE_R ,nodeY[child.id])
                     nodeY[node.id] = Y
         dc.EndDrawing()
-        print 'rendered lineage in %.2f seconds'%(time() - t0)        
+        print 'rendered lineage in %.2f seconds'%(time() - t0)
+        if self.current_node:
+            print 'current node:', str(self.current_node.id)
         
+    def _on_mouse_motion(self, evt):
+        self.cursor_pos = (evt.X, evt.Y)
+        self.Refresh()
+
+    def _on_mouse_exit(self, evt):
+        self.cursor_pos = None
+        self.Refresh()
+
         
 if __name__ == "__main__":
     
-    N_FURCATIONS = 3
+    N_FURCATIONS = 2
     N_TIMEPOINTS = 5
     MAX_TIMEPOINT = 100
-    PLATE_TYPE = P6
+    PLATE_TYPE = P24
     
     app = wx.PySimpleApp()
     
     f = LineageFrame(None, size=(600, 300))
     f.Show()
+    f.generate_random_data()
 
     #meta = ExperimentSettings.getInstance()
     #PlateDesign.add_plate('test', PLATE_TYPE)
