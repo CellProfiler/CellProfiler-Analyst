@@ -83,16 +83,16 @@ class Bench(wx.Frame):
 
         time_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.time_slider = wx.Slider(self, -1)
+        self.time_slider = wx.Slider(self, -1, style=wx.SL_AUTOTICKS|wx.SL_LABELS)
         self.time_slider.SetTickFreq(6)
 
         self.time_slider.Bind(wx.EVT_SLIDER, self.on_adjust_timepoint)
-        self.time_slider.SetRange(0, 1440)
+        self.time_slider.SetRange(0, 24)
         #clock = TimeCtrl(self, -1, display_seconds=False)
         self.tlabel1 = wx.StaticText(self, -1, "0")
         self.tlabel2 = wx.StaticText(self, self.time_slider.GetMax())
         self.add24_button = wx.Button(self, -1, "Add 24h")
-        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.time_slider.SetRange(0, self.time_slider.GetMax()+1440))
+        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.time_slider.SetRange(0, self.time_slider.GetMax()+24))
 
         time_sizer.Add(self.tlabel1,0, wx.EXPAND)
         time_sizer.Add(self.time_slider, 1, wx.EXPAND)
@@ -188,9 +188,6 @@ class Bench(wx.Frame):
             meta.set_field(timepoint_tag, list(timepoints))
         else:
             meta.remove_field(timepoint_tag)
-            
-        #print wells_tag, list(platewell_ids)
-        #print timepoint_tag, list(timepoints)
 
     def on_tool_clicked(self, evt):
         meta = ExperimentSettings.getInstance()
@@ -202,25 +199,6 @@ class Bench(wx.Frame):
 
         if evt.Checked():
             def create_setting_panel(label, choices):
-
-
-                ##create popup and put a textcontrol and a button on it
-                #popwindow = wx.PopupWindow(self, wx.RAISED_BORDER)
-                #popwindow.SetSizer(wx.BoxSizer(wx.VERTICAL))
-                #popwindow.button = wx.Button(popwindow, -1, "Hide me!")
-                ##popwindow.Bind(wx.EVT_BUTTON, self.OnPopupHide, popwindow.button)
-                #popwindow.Sizer.Add(popwindow.button)
-
-
-                ##def OnPopupDisplay(self, evt):
-                    ##self.popup.Show(True)
-                    ##evt.Skip()
-
-                ##def OnPopupHide(self, evt):
-                    ##self.popup.Show(False)
-                    ##evt.Skip()
-
-
                 setting = wx.Panel(self)
                 setting.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
                 if choices != []:

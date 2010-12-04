@@ -3,7 +3,7 @@
 import wx
 import  wx.calendar
 import wx.lib.agw.flatnotebook as fnb
-import wx.lib.mixins.listctrl  as  listmix
+import wx.lib.mixins.listctrl as listmix
 from experimentsettings import *
 import os
 import re

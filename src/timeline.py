@@ -45,6 +45,18 @@ class Timeline(object):
         '''returns each event that occurred at the exact timepoint specified
         '''
         return [evn for evn in self.events if evn.get_timepoint() == timepoint]
+    
+    def get_events_by_timepoint(self):
+        '''return a dictionary of event lists keyed by timepoint
+        '''
+        d = {}
+        for event in self.events:
+            if d.get(event.timepoint, None) is None:
+                d[event.timepoint] = [event]
+            else:
+                d[event.timepoint] += [event]
+        return d
+        
 
     def get_event(self, action, timepoint):
         '''returns a specific event that occurred for a specific tag instance
@@ -109,6 +121,11 @@ class Timeline(object):
         all timepoints in the timeline. The root of this tree will be the timeline
         stock.
         '''
+        timepoints = self.get_unique_timepoints()
+        well_permutations_per_timepoint = {}
+        for t in timepoints:
+            well_permutations_per_timepoint[t] = self.get_well_permutations(t)
+        
         def attach_child_nodes(parent, tp_idx):
             '''For a particular timepoint index and parent node, this function will
             calculate the subsets of wells that will represent each child node. It
@@ -117,9 +134,9 @@ class Timeline(object):
             tp_idx -- the index of the current timepoint in the timeline
                       (== the depth of the current node in the tree)
             '''
-            timepoint = self.get_unique_timepoints()[tp_idx]
+            timepoint = timepoints[tp_idx]
             subwells = []
-            for wells in self.get_well_permutations(timepoint):
+            for wells in well_permutations_per_timepoint[timepoint]:
                 wellset = sorted(set(parent.get_well_ids()).intersection(wells))
                 if len(wellset) > 0:
                     subwells += [wellset]
@@ -136,7 +153,7 @@ class Timeline(object):
             tp_idx -- the index of the current timepoint in the timeline
                       (== the depth of the current node in the tree)
             '''
-            if tp_idx < len(self.get_unique_timepoints()):
+            if tp_idx < len(timepoints):
                 attach_child_nodes(parent, tp_idx)
                 for child in parent.get_children():
                     build_tree(child, tp_idx+1)
