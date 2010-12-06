@@ -29,19 +29,18 @@ class LineageFrame(wx.Frame):
         self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS|wx.SL_LABELS)).GetControl()
         self.zoom.SetRange(1, 30)
         self.zoom.SetValue(8)
-        x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Even x spacing'))
-        x_spacing.GetControl().SetValue(1)
+        x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
+        x_spacing.GetControl().SetValue(0)
         generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
         tb.Realize()
         
-        from f import TreeCtrlComboPopup
-        cc = wx.combo.ComboCtrl(sw)
-        self.tcp = TreeCtrlComboPopup()
-        cc.SetPopupControl(self.tcp)
-        sw.Sizer.Add(cc)
-        
-        meta = ExperimentSettings.getInstance()        
-        meta.add_subscriber(self.on_metadata_changed, '')
+        #from f import TreeCtrlComboPopup
+        #cc = wx.combo.ComboCtrl(sw)
+        #self.tcp = TreeCtrlComboPopup()
+        #cc.SetPopupControl(self.tcp)
+        #sw.Sizer.Add(cc)
+        #meta = ExperimentSettings.getInstance()        
+        #meta.add_subscriber(self.on_metadata_changed, '')
         
         self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
         self.Bind(wx.EVT_CHECKBOX, self.on_change_spacing, x_spacing)
@@ -71,11 +70,11 @@ class LineageFrame(wx.Frame):
         
     def on_change_spacing(self, evt):
         if evt.Checked():
-            self.lineage_panel.set_even_x_spacing()
-            self.timeline_panel.set_even_x_spacing()
-        else:
             self.lineage_panel.set_time_x_spacing()
             self.timeline_panel.set_time_x_spacing()
+        else:
+            self.lineage_panel.set_even_x_spacing()
+            self.timeline_panel.set_even_x_spacing()
     
     def generate_random_data(self, evt=None):
         meta = ExperimentSettings.getInstance()
