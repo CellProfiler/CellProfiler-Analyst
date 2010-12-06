@@ -564,10 +564,16 @@ class ScatterPanel(FigureCanvasWxAgg):
             sel_indices = []
             unsel_indices = []
             for i in xrange(len(self.key_lists[c])):
-                if self.key_lists[c][i] in keys:
-                    sel_indices += [i]
+                if self.is_per_object_table():
+                    if tuple(self.key_lists[c][i])[:-1] in keys:
+                        sel_indices += [i]
+                    else:
+                        unsel_indices += [i]                    
                 else:
-                    unsel_indices += [i]
+                    if self.key_lists[c][i] in keys:
+                        sel_indices += [i]
+                    else:
+                        unsel_indices += [i]
             # Build the new collections
             if len(sel_indices) > 0:
                 if self.key_lists:
