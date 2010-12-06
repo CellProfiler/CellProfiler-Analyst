@@ -188,13 +188,8 @@ class PlateViewer(wx.Frame, CPATool):
         self.annotationShowVals.Bind(wx.EVT_CHECKBOX, self.OnShowAnotationValues)
         self.filterChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectFilter)
         
-        global_extents = db.execute('SELECT MIN(%s), MAX(%s) FROM %s'%(
-            self.measurementsChoice.Value, 
-            self.measurementsChoice.Value, 
-            self.sourceChoice.Value))[0]
-        self.colorBar.SetGlobalExtents(global_extents)
         self.AddPlateMap()
-        self.UpdatePlateMaps()
+        self.OnSelectMeasurement()
 
     def OnLoadCSV(self, evt):
         dlg = wx.FileDialog(self, "Select a comma-separated-values file to load...",
@@ -255,7 +250,6 @@ class PlateViewer(wx.Frame, CPATool):
                                      well_disp = self.wellDisplayChoice.Value)
         platemap.add_well_selection_handler(self.OnSelectWell)
         self.plateMaps += [platemap]
-
 
         singlePlateMapSizer = wx.BoxSizer(wx.VERTICAL)
         if p.plate_id:
