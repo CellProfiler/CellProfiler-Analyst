@@ -11,7 +11,11 @@ except:
     svn_version = 10000
 
 
-from classifier import *
+from classifier import Classifier
+from properties import Properties
+from icons import get_cpa_icon
+import dbconnect
+import multiclasssql
 # ---
 import wx
 import sys
@@ -102,7 +106,7 @@ class MainGUI(wx.Frame):
         fileMenu.AppendSeparator()
         saveLogMenuItem = fileMenu.Append(-1, 'Save log', help='Save the contents of the log window.')
         fileMenu.AppendSeparator()
-        self.exitMenuItem = fileMenu.Append(ID_EXIT, 'Exit\tCtrl+Q', help='Exit classifier')
+        self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', help='Exit classifier')
         self.GetMenuBar().Append(fileMenu, 'File')
 
         toolsMenu = wx.Menu()

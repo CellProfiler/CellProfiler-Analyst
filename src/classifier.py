@@ -20,7 +20,7 @@ import tilecollection
 from trainingset import TrainingSet
 from cStringIO import StringIO
 from time import time
-from icons import get_cpa_icon
+import icons
 import dbconnect
 import dirichletintegrate
 import fastgentleboostingmulticlass     
@@ -67,7 +67,6 @@ def format_weak_learners(weaklearners):
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
 
-ID_EXIT = wx.NewId()
 ID_CLASSIFIER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
@@ -88,9 +87,9 @@ class Classifier(wx.Frame):
         wx.Frame.__init__(self, parent, id=id, title='CPA/Classifier - %s'%(os.path.basename(p._filename)), size=(800,600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
             self.tbicon = wx.TaskBarIcon()
-            self.tbicon.SetIcon(get_cpa_icon(), 'CPA/Classifier')
+            self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/Classifier')
         else:
-            self.SetIcon(get_cpa_icon())
+            self.SetIcon(icons.get_cpa_icon())
         self.SetName('Classifier')
 
         db.register_gui_parent(self)
@@ -352,7 +351,7 @@ class Classifier(wx.Frame):
         self.loadTSMenuItem = self.fileMenu.Append(-1, text='Load training set\tCtrl+O', help='Loads objects and classes specified in a training set file.')
         self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save training set\tCtrl+S', help='Save your training set to file so you can reload these classified cells again.')
         self.fileMenu.AppendSeparator()
-        self.exitMenuItem = self.fileMenu.Append(id=ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
         # View Menu
