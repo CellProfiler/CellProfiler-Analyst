@@ -10,6 +10,7 @@ import imagetools
 #from icons import lasso_tool
 import logging
 import numpy as np
+from bisect import bisect
 import os
 import sys
 import re
@@ -550,7 +551,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         '''Callback for "Collection from filter" popup menu options.'''
         assert self.key_lists, 'Can not create a collection from a filter since image keys have not been set for this plot.'
         filter = self.popup_menu_filters[evt.Id]   
-        keys = db.GetFilteredImages(filter)
+        keys = sorted(db.GetFilteredImages(filter))
         key_lists = []
         xpoints = []
         ypoints = []
@@ -558,22 +559,35 @@ class ScatterPanel(FigureCanvasWxAgg):
         sel_xs = []
         sel_ys = []
         for c, col in enumerate(self.subplot.collections):
-            # Find indices of keys that fall in the filter.
-            # Horribly inefficient (n^2), needs improvement
-            # (maybe sort keys and use searchsorted)
             sel_indices = []
             unsel_indices = []
-            for i in xrange(len(self.key_lists[c])):
-                if self.is_per_object_table():
-                    if tuple(self.key_lists[c][i])[:-1] in keys:
-                        sel_indices += [i]
-                    else:
-                        unsel_indices += [i]                    
+            # Find indices of keys that fall in the filter.
+            # Improved performance: |N|log(|F|) N = data points, F = filterd points
+            # Assumes that the filtered image keys are in order
+            if self.is_per_object_table():
+                collection_keys = [tuple(k[:-1]) for k in self.key_lists[c]]
+            else:
+                collection_keys = [tuple(k) for k in self.key_lists[c]]
+            for i, key in enumerate(collection_keys):
+                idx = bisect(keys, key) - 1
+                if keys[idx] == key:
+                    sel_indices += [i]
                 else:
-                    if self.key_lists[c][i] in keys:
-                        sel_indices += [i]
-                    else:
-                        unsel_indices += [i]
+                    unsel_indices += [i]
+                
+            # Old method: Horribly inefficient (|N|*|F|)
+            #for i in xrange(len(self.key_lists[c])):
+                #if self.is_per_object_table():
+                    #if tuple(self.key_lists[c][i])[:-1] in keys:
+                        #sel_indices += [i]
+                    #else:
+                        #unsel_indices += [i]                    
+                #else:
+                    #if self.key_lists[c][i] in keys:
+                        #sel_indices += [i]
+                    #else:
+                        #unsel_indices += [i]
+                        
             # Build the new collections
             if len(sel_indices) > 0:
                 if self.key_lists:
