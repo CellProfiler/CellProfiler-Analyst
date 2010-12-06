@@ -1,5 +1,6 @@
 import numpy as np
 import urllib2
+import logging
 from properties import Properties
 from cellprofiler.modules.loadimages import LoadImagesImageProvider
 
@@ -17,7 +18,7 @@ class ImageReader(object):
                 url = 'http://' + urllib2.quote(p.image_url_prepend[7:]) + urllib2.quote(fd)
             else:
                 url = fd
-            print 'loading image from ', url
+            logging.info('Loading image from "%s"'%(url))
             lip = LoadImagesImageProvider("dummy", "", url, True)
             image = lip.provide_image(None).pixel_data
             
