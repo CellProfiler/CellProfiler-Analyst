@@ -5,32 +5,42 @@ A collection of tools to modify images used in CPA.
 import Image
 import pilfix
 from properties import Properties
-from dbconnect import DBConnect
+import dbconnect
 from imagereader import ImageReader
+import logging
 import matplotlib.image
 import numpy as np
 import wx
 
 p = Properties.getInstance()
-db = DBConnect.getInstance()
+db = dbconnect.DBConnect.getInstance()
 
 cache = {}
 cachedkeys = []
 
 def FetchTile(obKey):
-    '''
-    returns a list of cropped image data 
-        and a list of intensity intervals of the original uncropped images
+    '''returns a list of image channel arrays cropped around the object
+    coordinates
     '''
     imKey = obKey[:-1]
     pos = list(db.GetObjectCoords(obKey))
-    size = (int(p.image_tile_size),int(p.image_tile_size))
+    if None in pos:
+        message = ('Failed to load coordinates for object key %s. This may '
+                   'indicate a problem with your per-object table.\n'
+                   'You can check your per-object table "%s" in TableViewer'
+                   %(', '.join(['%s:%s'%(col, val) for col, val in 
+                                zip(dbconnect.object_key_columns(), obKey)]), 
+                   p.object_table))
+        wx.MessageBox(message, 'Error')
+        logging.error(message)
+        return None
+    size = (int(p.image_tile_size), int(p.image_tile_size))
     # Could transform object coords here
     imgs = FetchImage(imKey)
     if p.rescale_object_coords:
         pos[0] *= p.image_rescale[0] / p.image_rescale_from[0]
         pos[1] *= p.image_rescale[1] / p.image_rescale_from[1]
-    return [Crop(im,size,pos) for im in imgs]
+    return [Crop(im, size, pos) for im in imgs]
 
 def FetchImage(imKey):
     global cachedkeys
