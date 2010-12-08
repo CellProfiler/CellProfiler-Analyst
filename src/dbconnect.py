@@ -1184,6 +1184,7 @@ class DBConnect(Singleton):
         idx_cols = [r[4] for r in res]
         for col in image_key_columns():
             if col not in idx_cols:
+                import wx
                 wx.MessageDialog(self, 'Column "%s" is not indexed in table '
                     '"%s" Without column indices, dabase performance will be '
                     'severly slowed.\n'
@@ -1205,6 +1206,7 @@ class DBConnect(Singleton):
         idx_cols = [r[4] for r in res]
         for col in object_key_columns():
             if col not in idx_cols:
+                import wx
                 wx.MessageDialog(self, 'Column "%s" is not indexed in table '
                     '"%s" Without column indices, dabase performance will be '
                     'severly slowed.\n'
