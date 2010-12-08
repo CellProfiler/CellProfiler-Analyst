@@ -453,6 +453,7 @@ app = CPAnalyst(redirect=False)
 # Install our own pretty exception handler unless one has already
 # been installed (e.g., a debugger)
 if sys.excepthook == sys.__excepthook__:
+    from classifier import show_exception_as_dialog
     sys.excepthook = show_exception_as_dialog
 
 app.MainLoop()
