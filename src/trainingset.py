@@ -183,11 +183,13 @@ class TrainingSet:
 
 class CellCache(Singleton):
     ''' caching front end for holding cell data '''
-    
     def __init__(self):
         self.data        = {}
         self.colnames    = db.GetColumnNames(p.object_table)
-        self.col_indices = [self.colnames.index(v) for v in db.GetColnamesForClassifier()]
+        if db.GetColnamesForClassifier() is not None:
+            self.col_indices = [self.colnames.index(v) for v in db.GetColnamesForClassifier()]
+        else:
+            self.col_indices = []
         self.last_update = db.get_objects_modify_date()
 
     def load_from_string(self, str):

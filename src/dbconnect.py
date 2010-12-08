@@ -768,6 +768,13 @@ class DBConnect(Singleton):
                 self.classifierColNames.remove(p.table_id)
             self.classifierColNames.remove(p.image_id)
             self.classifierColNames.remove(p.object_id)
+            if len(self.classifierColNames) == 0:
+                import wx
+                wx.MessageBox('No columns were found to use for classification '
+                              'Please check your per-object table, it may be '
+                              'empty or not contain any numeric columns.', 'Error')
+                self.classifierColNames = None
+                return None
             # treat each classifier_ignore_substring as a regular expression
             # for column names to ignore
             if p.classifier_ignore_columns:
@@ -775,6 +782,15 @@ class DBConnect(Singleton):
                                                 if not any([re.match('^'+user_exp+'$',col)
                                                        for user_exp in p.classifier_ignore_columns])]
             logging.info('Ignoring columns: %s'%([x for x in col_names if x not in self.classifierColNames]))
+            if len(self.classifierColNames) == 0 and p.classifier_ignore_columns:
+                import wx
+                wx.MessageBox('No columns were found to use for classification '
+                              'after filtering columns that matched your '
+                              'classifier_ignore_columns properties setting. '
+                              'Please check your properties and your per-object'
+                              ' table.', 'Error')
+                self.classifierColNames = None
+                return None
         return self.classifierColNames
     
     
@@ -783,21 +799,24 @@ class DBConnect(Singleton):
         connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
     
-    def GetCellDataForClassifier(self, obKey):
-        '''
-        Returns a list of measurements for the specified object excluding
-        those specified in Properties.classifier_ignore_columns
-        '''
-        if (self.classifierColNames == None):
-            self.GetColnamesForClassifier()
-        query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
-        data = self.execute(query, silent=True)
-        if len(data) == 0:
-            logging.error('No data for obKey: %s'%str(obKey))
-            return None
-        # This should be the case
-        assert all([type(x) in [int, long, float] for x in data[0]])
-        return np.array(data[0])
+    #
+    # no longer used
+    #
+    #def GetCellDataForClassifier(self, obKey):
+        #'''
+        #Returns a list of measurements for the specified object excluding
+        #those specified in Properties.classifier_ignore_columns
+        #'''
+        #if self.GetColnamesForClassifier() is None:
+            #return None
+        #query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
+        #data = self.execute(query, silent=True)
+        #if len(data) == 0:
+            #logging.error('No data for obKey: %s'%str(obKey))
+            #return None
+        ## This should be the case
+        #assert all([type(x) in [int, long, float] for x in data[0]])
+        #return np.array(data[0])
     
     def GetCellData(self, obKey):
         '''

@@ -777,10 +777,13 @@ class Classifier(wx.Frame):
 
         try:
             for i in range(10):
-                xvalid_50 += fastgentleboostingmulticlass.xvalidate(self.trainingSet.colnames,
-                                                                    nRules, self.trainingSet.label_matrix, 
-                                                                    self.trainingSet.values, 2,
-                                                                    groups, progress_callback)
+                res = fastgentleboostingmulticlass.xvalidate(self.trainingSet.colnames,
+                        nRules, self.trainingSet.label_matrix, 
+                        self.trainingSet.values, 2, groups, progress_callback)
+                if res is None:
+                    logging.error('Cross validation failed')
+                    raise StopXValidation
+                xvalid_50 += res
                 # each round makes one "scale" size step in progress
                 base += scale
 
@@ -792,6 +795,9 @@ class Classifier(wx.Frame):
                                                                 nRules, self.trainingSet.label_matrix, 
                                                                 self.trainingSet.values, 20,
                                                                 groups, progress_callback)
+            if xvalid_95 is None:
+                logging.error('Cross validation failed')
+                raise StopXValidation
 
             dlg.Destroy()
 
@@ -873,6 +879,10 @@ class Classifier(wx.Frame):
                                                                        nRules, self.trainingSet.label_matrix, 
                                                                        self.trainingSet.values, output,
                                                                        callback=cb)
+                if self.weaklearners is None:
+                    self.PostMessage('Unable to train classifier (no learners found).')
+                    dlg.Destroy()
+                    return
                 self.PostMessage('Classifier trained with %s rules in %.1fs.'%(nRules, time()-t1))
                 dlg.Destroy()
                 self.rules_text.Value = format_weak_learners(self.weaklearners)

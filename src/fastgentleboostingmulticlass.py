@@ -11,6 +11,9 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
     Return a list of learners.  Each learner is a tuple (column, thresh, a, b, average_margin),
     where column is an integer index into colnames
     '''
+    if 0 in values.shape:
+        # Nothing to train
+        return None
     assert label_matrix.shape[0] == values.shape[0] # Number of training examples.
     computed_labels = zeros(label_matrix.shape, float32)
     num_examples, num_classes = label_matrix.shape
@@ -121,6 +124,8 @@ def xvalidate(colnames, num_learners, label_matrix, values, folds, group_labels,
         holdin_values = values[holdin_idx, :]
         holdout_values = values[holdout_idx, :]
         holdout_results = train(colnames, num_learners, holdin_labels, holdin_values, test_values=holdout_values)
+        if holdout_results is None:
+            return None
         # pad the end of the holdout set with the last element
         if len(holdout_results) < num_learners:
             holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
