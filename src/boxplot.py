@@ -220,15 +220,17 @@ class DataSourcePanel(wx.Panel):
                 q = str(q) + ' WHERE ' + f_where        
 
         res = db.execute(str(q))
+        res = np.array(res)
+        # replaces Nones with NaNs
+        for row in res:
+            if row[0] is None:
+                row[0] = np.nan
         
         points_dict = {}
         if self.group_choice.Value != NO_GROUP:
             for row in res:
                 groupkey = row[1:]
-                if points_dict.get(groupkey, None) is None:
-                    points_dict[groupkey] = [row[0]]
-                else:
-                    points_dict[groupkey] += [row[0]]
+                points_dict[groupkey] = points_dict.get(groupkey, []) + [row[0]]
         else:
             points_dict = {col : [r[0] for r in res]}
         return points_dict
@@ -304,9 +306,11 @@ class BoxPlotPanel(FigureCanvasWxAgg):
         '''
         self.xlabels = []
         self.points = []
+        ignored = 0
         for label, values in sorted(points.items()):
             self.xlabels += [label]
             self.points += [np.array(values).astype('f')[~ np.isnan(values)]]
+            ignored += len(np.array(values)[np.isnan(values)])
         
         if not hasattr(self, 'subplot'):
             self.subplot = self.figure.add_subplot(111)
@@ -320,6 +324,11 @@ class BoxPlotPanel(FigureCanvasWxAgg):
             self.figure.autofmt_xdate()
         self.subplot.set_xticklabels(self.xlabels)
         self.reset_toolbar()
+        if ignored == 0:
+            logging.info('Boxplot: Plotted %s points.'%(sum(map(len, self.points))))
+        else:
+            logging.warn('Boxplot: Plotted %s points. Ignored %s NaNs.'
+                          %(sum(map(len, self.points)), ignored))
         
     def set_x_axis_label(self, label):
         self.subplot.set_xlabel(label)
@@ -375,7 +384,11 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
 
-    if not p.show_load_dialog():
+    if len(sys.argv) > 1:
+        # Load a properties file if passed in args
+        p = Properties.getInstance()
+        p.LoadFile(sys.argv[1])
+    elif not p.show_load_dialog():
         print 'BoxPlot requires a properties file.  Exiting.'
         # necessary in case other modal dialogs are up
         wx.GetApp().Exit()
