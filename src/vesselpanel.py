@@ -75,15 +75,17 @@ class VesselPanel(wx.Panel):
         self.selection = set([(wellx, welly)])
         self.Refresh()
 
+    def deselect_well_at_pos(self, (wellx, welly)):
+        self.selection.remove((wellx, welly))
+        self.Refresh()
+
     def toggle_selected(self, (wellx, welly)):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
         if (wellx, welly) in self.selection:
-            self.selection.remove((wellx, welly))
-            self.Refresh()
+            self.deselect_well_at_pos((wellx, welly))
             return False
         else:
-            self.selection.add((wellx, welly))
-            self.Refresh()
+            self.select_well_at_pos((wellx, welly))
             return True
 
     def get_well_pos_at_xy(self, px, py):

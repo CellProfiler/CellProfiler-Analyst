@@ -163,7 +163,7 @@ class TimelinePanel(wx.Panel):
         if self.timepoints is not None and len(self.timepoints) > 0:
             timeline = ExperimentSettings.getInstance().get_timeline()
             max_event_types_per_timepoint = \
-                    max([len(set([get_tag_stump(evt.get_action()[0]) for evt in evts]))
+                    max([len(set([get_tag_stump(evt.get_welltag()) for evt in evts]))
                          for t, evts in self.events_by_timepoint.items()])
             min_h = (max_event_types_per_timepoint+1) * self.ICON_SIZE + self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
             if self.time_x:
@@ -240,8 +240,7 @@ class TimelinePanel(wx.Panel):
             bmps = []
             process_types = set([])
             for i, ev in enumerate(self.events_by_timepoint[timepoint]):
-                tag, instance = ev.get_action()
-                stump = get_tag_stump(tag)
+                stump = get_tag_stump(ev.get_welltag())
                 
                 #for subtag in taxonomy.get_unique_instance_tag_stumps((0,1)):
                     #if stump.startswith(subtag) and stump not in process_types:
@@ -319,6 +318,7 @@ class LineagePanel(wx.Panel):
         self.Bind(wx.EVT_PAINT, self._on_paint)
         self.Bind(wx.EVT_MOTION, self._on_mouse_motion)
         self.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_exit)
+        self.Bind(wx.EVT_LEFT_DOWN, self._on_mouse_click)
         
     def set_time_x_spacing(self):
         self.time_x = True
@@ -466,7 +466,12 @@ class LineagePanel(wx.Panel):
                         dc.SetPen(wx.Pen(wx.BLACK, 3))
                         self.current_node = node
                     else:
-                        dc.SetBrush(wx.Brush('#FFFFFF'))
+                        if len(node.get_tags()) > 0:
+                            # If an event occurred
+                            dc.SetBrush(wx.Brush('#333333'))
+                        else:
+                            # no event
+                            dc.SetBrush(wx.Brush('#FFFFFF'))
                         dc.SetPen(wx.Pen(wx.BLACK, 1))
                     
                     dc.DrawCircle(X, Y, NODE_R)
@@ -490,7 +495,12 @@ class LineagePanel(wx.Panel):
                         dc.SetPen(wx.Pen(wx.BLACK, 3))
                         self.current_node = node
                     else:
-                        dc.SetBrush(wx.Brush('#FFFFFF'))
+                        if len(node.get_tags()) > 0:
+                            # If an event occurred
+                            dc.SetBrush(wx.Brush('#333333'))
+                        else:
+                            # no event
+                            dc.SetBrush(wx.Brush('#FFFFFF'))
                         dc.SetPen(wx.Pen(wx.BLACK, 1))
                     
                     if t == -1:
@@ -514,8 +524,6 @@ class LineagePanel(wx.Panel):
                     nodeY[node.id] = Y
         dc.EndDrawing()
         print 'rendered lineage in %.2f seconds'%(time() - t0)
-        if self.current_node:
-            print 'current node:', str(self.current_node.id)
         
     def _on_mouse_motion(self, evt):
         self.cursor_pos = (evt.X, evt.Y)
@@ -524,6 +532,32 @@ class LineagePanel(wx.Panel):
     def _on_mouse_exit(self, evt):
         self.cursor_pos = None
         self.Refresh()
+
+    def _on_mouse_click(self, evt):
+        if self.current_node is None:
+            return
+        from properties import Properties
+        import imagereader
+        from imagetools import npToPIL
+        Properties.getInstance().channels_per_image = '3'
+        meta = ExperimentSettings.getInstance()
+        for tag in (self.current_node.get_tags()):
+            if (tag.startswith('DataAcquis|TLM') or 
+                tag.startswith('DataAcquis|HCS')):
+                for well in self.current_node.get_well_ids():
+                    image_tag = '%s|Images|%s|%s|%s'%(get_tag_stump(tag, 2),
+                                                      get_tag_instance(tag),
+                                                      get_tag_timepoint(tag),
+                                                      well)
+                    urls = meta.get_field(image_tag, [])
+                    for url in urls:
+                        imdata = imagereader.ImageReader().ReadImages([url])
+                        pil_image = npToPIL(imdata)
+                        pil_image.show()
+            elif tag.startswith('DataAcquis|FCS'):
+                pass
+                                               
+
 
         
 if __name__ == "__main__":

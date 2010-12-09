@@ -2244,10 +2244,12 @@ def on_save_settings(evt):
     else:
         filename = 'new_experiment.txt'
     
-    dlg = wx.FileDialog(None, message='Saving Experimental metadata...', defaultDir=os.getcwd(), 
-                        defaultFile=filename, wildcard='txt', 
-                        style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+    dlg = wx.FileDialog(None, message='Saving experimental metadata...', 
+                        defaultDir=os.getcwd(), defaultFile=filename, 
+                        wildcard='.txt', 
+                        style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
     if dlg.ShowModal() == wx.ID_OK:
+        os.chdir(os.path.split(dlg.GetPath())[0])
         ExperimentSettings.getInstance().save_to_file(dlg.GetPath())
 
         

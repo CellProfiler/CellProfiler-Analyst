@@ -1,3 +1,5 @@
+import experimentsettings as exp
+
 class Timeline(object):
     '''Represents a timeline.
     '''
@@ -9,10 +11,10 @@ class Timeline(object):
         #             (all events will take place on these plates)
         self.plate_ids = set([])
 
-    def add_event(self, timepoint, action, well_ids):
+    def add_event(self, welltag, well_ids):
         '''Creates and inserts an event into the timeline.
         '''
-        evt = Event(timepoint, action, well_ids)
+        evt = Event(welltag, well_ids)
         self.plate_ids.update(set([well_id[0] for well_id in well_ids]))
         if len(self.events) == 0:
             self.events = [evt]
@@ -24,9 +26,9 @@ class Timeline(object):
                     break
         return evt
 
-    def delete_event(self, timepoint, action):
+    def delete_event(self, welltag):
         for i, e in enumerate(self.events):
-            if (e.get_timepoint() == timepoint and e.get_action() == action):
+            if (e.get_welltag() == welltag):
                 self.events = self.events[:i] + self.events[i+1:]
                 break
             
@@ -38,7 +40,7 @@ class Timeline(object):
     def get_event_list(self):
         '''returns a list of events in chronological order
         '''
-        # return a copy of the event list
+        # return a copy
         return list(self.events)
 
     def get_events_at_timepoint(self, timepoint):
@@ -51,19 +53,18 @@ class Timeline(object):
         '''
         d = {}
         for event in self.events:
-            if d.get(event.timepoint, None) is None:
-                d[event.timepoint] = [event]
+            if d.get(event.get_timepoint(), None) is None:
+                d[event.get_timepoint()] = [event]
             else:
-                d[event.timepoint] += [event]
+                d[event.get_timepoint()] += [event]
         return d
-        
 
-    def get_event(self, action, timepoint):
+    def get_event(self, welltag):
         '''returns a specific event that occurred for a specific tag instance
         at the given timepoint
         '''
         for e in self.events:
-            if (e.get_timepoint() == timepoint and e.get_action() == action):
+            if (e.get_welltag() == welltag):
                 return e
         return None
 
@@ -85,11 +86,11 @@ class Timeline(object):
         '''returns a list of unique permutations of events at a given timepoint.
         Each permutation is a tuple of events that occurred.
         '''
-        from experimentsettings import PlateDesign
         d = {}
         for event in self.get_events_at_timepoint(timepoint):
             # build a hash, mapping well_ids to lists of events that occurred
-            for well in PlateDesign.get_well_ids(PlateDesign.get_plate_format(event.get_plate_id())):
+            for well in exp.PlateDesign.get_well_ids(
+                           exp.PlateDesign.get_plate_format(event.get_plate_id())):
                 if well in event.get_well_ids():
                     if d.get(well, None) is None:
                         d[well] = [event]
@@ -98,23 +99,19 @@ class Timeline(object):
         return set([tuple(set(d[k])) for k in d.keys()])
 
     def get_well_permutations(self, timepoint):
-        '''returns a list of well-permutations
-        Each permutation is a tuple of wells that have a common state.
-        d = {(e1,)   :  ((p1 A01), (p1, A03)),
-             (e1,e2) :  ((p1, A02), (p1, B03)),
-             (e2, )  :  ((p1, B02))
-             (noop)  :  ((p1, B01)) }
+        '''returns a dict mapping unique sets of events to well lists
+        d = {(e1,)   : [(p1 A01), (p1, A03)],
+             (e1,e2) : [(p1, A02), (p1, B03)],
+             (e2, )  : [(p1, B02)]
+             ()      : [(p1, B01)]            # no event
+             }
         '''
         # TODO: improve performance (tree building explodes with larger plates)
-        from experimentsettings import PlateDesign
         d = {}
-        for wellid in PlateDesign.get_all_platewell_ids():
-            events_in_well = self.get_events_in_well(wellid, timepoint)
-            if d.get(events_in_well, None) is None:
-                d[events_in_well] = [wellid]
-            else:
-                d[events_in_well] += [wellid]
-        return set([tuple(set(d[k])) for k in d.keys()])
+        for pwid in exp.PlateDesign.get_all_platewell_ids():
+            events_in_well = self.get_events_in_well(pwid, timepoint)
+            d[events_in_well] = d.get(events_in_well, []) + [pwid]
+        return d
 
     def get_lineage_tree(self):
         '''Returns a tree that traces the lineage of unique well states through 
@@ -122,26 +119,27 @@ class Timeline(object):
         stock.
         '''
         timepoints = self.get_unique_timepoints()
-        well_permutations_per_timepoint = {}
+        permutations_per_timepoint = {}
         for t in timepoints:
-            well_permutations_per_timepoint[t] = self.get_well_permutations(t)
+            permutations_per_timepoint[t] = self.get_well_permutations(t)
         
         def attach_child_nodes(parent, tp_idx):
-            '''For a particular timepoint index and parent node, this function will
-            calculate the subsets of wells that will represent each child node. It
-            then creates the children and links them into the parent.
+            '''For a particular timepoint index and parent node, this function 
+            will calculate the subsets of wells that will represent each child 
+            node. It then creates the children and links them into the parent.
             parent -- the parent node to add children to
             tp_idx -- the index of the current timepoint in the timeline
                       (== the depth of the current node in the tree)
             '''
             timepoint = timepoints[tp_idx]
-            subwells = []
-            for wells in well_permutations_per_timepoint[timepoint]:
-                wellset = sorted(set(parent.get_well_ids()).intersection(wells))
+            node_data = []
+            for events, wells in permutations_per_timepoint[timepoint].items():
+                wellset = set(parent.get_well_ids()).intersection(wells)
                 if len(wellset) > 0:
-                    subwells += [wellset]
-            for childnum, wells in enumerate(subwells):
+                    node_data += [(events, wellset)]
+            for childnum, (events, wells) in enumerate(node_data):
                 parent.add_child(id = '%s:%s'%(parent.id, childnum),
+                                 tags = [e.get_welltag() for e in events],
                                  wells = wells,
                                  timepoint = timepoint)
 
@@ -159,7 +157,7 @@ class Timeline(object):
                     build_tree(child, tp_idx+1)
             return parent
 
-        root = LineageNode(None, self.stock, self.get_well_ids(), -1)
+        root = LineageNode(None, self.stock, [], self.get_well_ids(), -1)
         return build_tree(root)
 
     def get_nodes_by_timepoint(self):
@@ -190,29 +188,27 @@ class Event(object):
     '''An Event is an action that was taken at some timepoint that is associated
     with a list of well_ids.
     '''
-    def __init__(self, timepoint, action, well_ids):
-        '''timepoint : the timepoint that this event occurred at
-        action : the action that took place
+    def __init__(self, welltag, well_ids):
+        '''welltag : the well tag from the experiement metadata
         wells_ids : the list of well_ids that this event effects
         '''
-        self.action = action
+        self.welltag = welltag
         self.wells = well_ids
-        self.timepoint = timepoint
 
     def get_timepoint(self):
-        return self.timepoint
+        return exp.get_tag_timepoint(self.welltag)
 
     def get_well_ids(self):
         return self.wells
 
-    def get_action(self):
-        return self.action
+    def get_welltag(self):
+        return self.welltag
 
     def set_well_ids(self, well_ids):
         self.wells = well_ids
 
     def __str__(self):
-        return '%s event'%(self.action)
+        return '%s event'%(self.welltag)
 
 
 class LineageNode(object):
@@ -220,9 +216,10 @@ class LineageNode(object):
     timepoint. For example: the set of wells that were seeded at density X at t0,
     treated with reagent Y at t1, and imaged at t2.
     '''
-    def __init__(self, parent, id, wells, timepoint):
+    def __init__(self, parent, id, tags, wells, timepoint):
         self.parent = parent
         self.id = id
+        self.tags = tags
         self.wells = wells
         self.timepoint = timepoint
         self.children = []
@@ -233,6 +230,9 @@ class LineageNode(object):
     def get_children(self):
         return self.children
 
+    def get_tags(self):
+        return self.tags
+    
     def get_well_ids(self):
         return self.wells
 
@@ -245,69 +245,56 @@ class LineageNode(object):
     def __neq__(self, node):
         return node is not self
 
-    def add_child(self, id, wells, timepoint):
+    def add_child(self, id, tags, wells, timepoint):
         '''create a child node and link child -> parent and parent -> child
         '''
-        self.children += [LineageNode(self, id, wells, timepoint)]
+        self.children += [LineageNode(self, id, tags, wells, timepoint)]
 
     def __str__(self):
-        if self.parent:
-            return 'p:%s; id:%s; wells:%s'%(self.parent.id, self.id, sorted(self.wells))
-        else:
-            return 'ROOT; id:%s; wells:%s'%(self.id, sorted(self.wells))
+        return ', '.join(self.tags)
+        #if self.parent:
+            #return 'p:%s; id:%s; wells:%s'%(self.parent.id, self.id, sorted(self.wells))
+        #else:
+            #return 'ROOT; id:%s; wells:%s'%(self.id, sorted(self.wells))
 
 
 #
 # Test code here
 #
 if __name__ == '__main__':
-    t = Timeline('U2OS')
-    PlateDesign.add_plate('plate1', P6)
-    PlateDesign.add_plate('plate2', P6)
-    all_wells = PlateDesign.get_well_ids(PlateDesign.get_plate_format('plate1'))
+    import numpy as np
+    
+    N_FURCATIONS = 2
+    N_TIMEPOINTS = 5
+    MAX_TIMEPOINT = 10
+    PLATE_TYPE = exp.P6
 
-    t.add_event(1, 'seed', [('plate1', well) for well in all_wells]+[('plate2', well) for well in all_wells])
+    def generate_random_data():
+        meta = exp.ExperimentSettings.getInstance()
+        exp.PlateDesign.add_plate('test', PLATE_TYPE)
+        allwells = exp.PlateDesign.get_well_ids(exp.PlateDesign.get_plate_format('test'))
+        event_types = ['AddProcess|Stain|Wells|0|',
+                       'AddProcess|Wash|Wells|0|',
+                       'AddProcess|Dry|Wells|0|',
+                       'AddProcess|Spin|Wells|0|',
+                       'Perturbation|Chem|Wells|0|',
+                       'Perturbation|Bio|Wells|0|',
+                       'DataAcquis|TLM|Wells|0|',
+                       'DataAcquis|FCS|Wells|0|',
+                       'DataAcquis|HCS|Wells|0|',
+                       'CellTransfer|Seed|Wells|0|',
+                       'CellTransfer|Harvest|Wells|0|']
+        # GENERATE RANDOM EVENTS ON RANDOM WELLS
+        for t in list(np.random.random_integers(0, MAX_TIMEPOINT, N_TIMEPOINTS)):
+            for j in range(np.random.randint(1, N_FURCATIONS)):
+                np.random.shuffle(allwells)
+                well_ids = [('test', well) for well in allwells[:np.random.randint(1, len(allwells)+1)]]
+                #timeline.add_event(t, 'event%d'%(t), well_ids)
+                etype = event_types[np.random.randint(0,len(event_types))]
+                meta.set_field('%s%s'%(etype, t), well_ids)
 
-    t.add_event(2, 'treatment1', [('plate1', 'A01'), ('plate1', 'A02'), ('plate1', 'A03'), 
-                                  ('plate1', 'B03')])
-    t.add_event(2, 'treatment2', [                   ('plate1', 'A02'), 
-                                                     ('plate1', 'B02'), ('plate1', 'B03'), 
-                                                     ('plate2', 'A01')])
-    #untreated_wells = set(all_wells) - set(t.get_well_ids(2))
-    #t.add_event(2, NO_EVENT,     'plate1', untreated_wells)  
-
-    t.add_event(3, 'treat', [('plate1', 'A01'),                         ('plate1', 'A03'), 
-                             ('plate1', 'B02')])
-    t.add_event(3, 'wash', [                       ('plate1', 'B02'), ('plate1', 'B03')])
-    #untreated_wells = set(all_wells) - set(t.get_well_ids(3))
-    #t.add_event(3, NO_EVENT, 'plate1', untreated_wells)
-
-    t.add_event(4, 'spin', [('plate1', 'A01'), ('plate1', 'A02'), ('plate1', 'A03')])
-    #untreated_wells = set(all_wells) - set(t.get_well_ids(4))
-    #t.add_event(4, NO_EVENT, 'plate1', untreated_wells)
-
-    d = t.get_nodes_by_timepoint()
-
-    for time in d.keys():
-        print str(time)+"\t"+str([node.id for node in d[time]])
-
-    for p in t.get_well_permutations(2):
-        print [x for x in p]
-
+    generate_random_data()
+    meta = exp.ExperimentSettings.getInstance()
+    t = meta.get_timeline()
     tree = t.get_lineage_tree()
-
-    import wx
-    app = wx.PySimpleApp()
-    f = wx.Frame(None)
-    tc = wx.TreeCtrl(f)
-    tcroot = tc.AddRoot("ROOT")
-    def populate_wx_tree(wxparent, tnode):
-        for child in tnode.children:    
-            subtree = tc.AppendItem(wxparent, ', '.join([str(id) for id in child.get_well_ids()]))
-            populate_wx_tree(subtree, child)
-            tc.Expand(subtree)
-    populate_wx_tree(tcroot, tree)    
-    tc.Expand(tcroot)
-
-    f.Show()
-    app.MainLoop()
+    

@@ -11,14 +11,20 @@ def get_matchstring_for_subtag(pos, subtag):
     '''
     return '([^\|]+\|){%s}%s.*'%(pos, subtag)
 
-def get_tag_stump(tag):
-    return '|'.join(tag.split('|')[:3])
+def get_tag_stump(tag, n_subtags=3):
+    return '|'.join(tag.split('|')[:n_subtags])
 
 def get_tag_instance(tag):
     return tag.split('|')[3]
 
 def get_tag_timepoint(tag):
     return int(tag.split('|')[4])
+
+def get_tag_well(tag):
+    '''Returns the well subtag from image tags of the form:
+    DataAcquis|<type>|Images|<inst>|<timepoint>|<well> = [channel_urls, ...]
+    '''
+    return int(tag.split('|')[5])
 
 class ExperimentSettings(Singleton):
     
@@ -40,6 +46,8 @@ class ExperimentSettings(Singleton):
         return self.global_settings.get(tag, default)
 
     def remove_field(self, tag):
+        '''completely removes the specified tag from the metadata (if it exists)
+        '''
         if self.get_field(tag) is not None:
             self.global_settings.pop(tag)
             if re.match(get_matchstring_for_subtag(2, 'Well'), tag):
@@ -63,7 +71,6 @@ class ExperimentSettings(Singleton):
                 tags += [tag]
         return tags
             
-    
     def clear(self):
         self.global_settings = {}
         #
@@ -71,7 +78,6 @@ class ExperimentSettings(Singleton):
         #
         self.timeline = Timeline('TEST_STOCK')
 
-        
     def get_timeline(self):
         return self.timeline
 
@@ -79,17 +85,15 @@ class ExperimentSettings(Singleton):
         '''Updates the experiment metadata timeline event associated with the
         action and wells in welltag (eg: 'ExpNum|AddProcess|Spin|Wells|1|1')
         '''
-        action = (get_tag_stump(welltag), get_tag_instance(welltag))
-        timepoint = get_tag_timepoint(welltag)
         platewell_ids = self.get_field(welltag, [])
         if platewell_ids == []:
-            self.timeline.delete_event(timepoint, action)
+            self.timeline.delete_event(welltag)
         else:
-            event = self.timeline.get_event(action, timepoint)
+            event = self.timeline.get_event(welltag)
             if event is not None:
                 event.set_well_ids(platewell_ids)
             else:
-                self.timeline.add_event(timepoint, action, platewell_ids)
+                self.timeline.add_event(welltag, platewell_ids)
 
     def save_to_file(self, file):
         f = open(file, 'w')
@@ -158,9 +162,6 @@ WELL_NAMES_ORDERED = ['6-Well-(2x3)',
                       '1536-Well-(32x48)',
                       '5600-Well-(40x140)']
 
-NO_EVENT = 'no event'  # Deprecated
-
-
 class PlateDesign:
     '''Maps plate_ids to plate formats.
     Provides methods for getting well information for different plate formats.
@@ -182,6 +183,7 @@ class PlateDesign:
         
     @classmethod
     def get_plate_ids(self):
+        
         return self.plates.keys()
 
     @classmethod

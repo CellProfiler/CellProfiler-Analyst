@@ -1,6 +1,7 @@
 from experimentsettings import *
 from vesselpanel import *
 import wx
+import os
 from wx.lib.masked import TimeCtrl
 import numpy as np
 import icons
@@ -165,6 +166,52 @@ class Bench(wx.Frame):
         if self.mode_tag_instance is None or self.mode_tag_prefix == []:
             return
         meta = ExperimentSettings.getInstance()
+
+        #
+        # Update the images tags
+        #
+        images_tag = '%s|Images|%s|%s|%s'%(self.mode_tag_prefix, 
+                                           self.mode_tag_instance, 
+                                           self.get_selected_timepoint(),
+                                           repr(platewell_id))
+        if selected and self.mode_tag_prefix.startswith('DataAcquis'):
+            if self.mode_tag_prefix == 'DataAcquis|HCS':
+                dlg = wx.FileDialog(self,message='Select the images for Plate %s, '
+                                    'Well %s'%(platewell_id[0], platewell_id[1]),
+                                    defaultDir=os.getcwd(), defaultFile='', 
+                                    style=wx.OPEN|wx.MULTIPLE)
+            elif self.mode_tag_prefix == 'DataAcquis|FCS':
+                dlg = wx.FileDialog(self,message='Select the FCS files for flask %s'%(platewell_id[0]),
+                                    defaultDir=os.getcwd(), defaultFile='', 
+                                    style=wx.OPEN|wx.MULTIPLE)
+            elif self.mode_tag_prefix == 'DataAcquis|TLM':
+                dlg = wx.FileDialog(self,message='Select the images for Plate %s, '
+                                    'Well %s'%(platewell_id[0], platewell_id[1]),
+                                    defaultDir=os.getcwd(), defaultFile='', 
+                                    style=wx.OPEN|wx.MULTIPLE)
+            else:
+                raise 'unrecognized tag prefix'
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                meta.set_field(images_tag, dlg.GetPaths())
+                os.chdir(os.path.split(dlg.GetPath())[0])
+                dlg.Destroy()
+            else:
+                dlg.Destroy()
+                meta.remove_field(images_tag)
+                for vessel in self.vesselscroller.get_vessels():
+                    if vessel.get_plate_id() == platewell_id[0]:
+                        vessel.deselect_well_at_pos(
+                            PlateDesign.get_pos_for_wellid(
+                                PlateDesign.get_plate_format(platewell_id[0]), 
+                                platewell_id[1]))
+                        return
+        else:
+            meta.remove_field(images_tag)
+        
+        #
+        # Update the wells tags
+        #
         wells_tag = '%s|Wells|%s|%s'%(self.mode_tag_prefix, 
                                       self.mode_tag_instance, 
                                       self.get_selected_timepoint())
@@ -178,9 +225,11 @@ class Bench(wx.Frame):
                 meta.set_field(wells_tag, list(platewell_ids))
             else:
                 meta.remove_field(wells_tag)
+
+        #
+        # Update the timepoints tag
         #
         # XXX: This tag is redundant with the wells tags
-        #
         timepoint_tag = '%s|EventTimepoint|%s'%(self.mode_tag_prefix, self.mode_tag_instance)
         timepoints = set(meta.get_field(timepoint_tag, []))
         if len(platewell_ids) > 0:
