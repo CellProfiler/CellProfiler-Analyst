@@ -2,8 +2,10 @@ from cpatool import CPATool
 from colorbarpanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
 import dbconnect
+import sqltools as sql
 import platemappanel as pmp
 from datamodel import DataModel
+from guiutils import TableComboBox, get_other_table_from_user
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import properties
@@ -14,7 +16,6 @@ import os
 import sys
 import re
 import wx
-
 
 p = properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
@@ -30,8 +31,6 @@ NO_FILTER = 'No filter'
 CREATE_NEW_FILTER = '*create new filter*'
 
 required_fields = ['plate_type', 'well_id']
-
-ID_EXIT = wx.NewId()
 
 class PlateViewer(wx.Frame, CPATool):
     def __init__(self, parent, size=(800,-1), **kwargs):
@@ -54,29 +53,16 @@ class PlateViewer(wx.Frame, CPATool):
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
-        self.loadCSVMenuItem = self.fileMenu.Append(-1, text='Load CSV\tCtrl+O', help='Load a CSV file storing per-image data')
-        self.fileMenu.AppendSeparator()
-        self.exitMenuItem = self.fileMenu.Append(id=ID_EXIT, text='Exit\tCtrl+Q',help='Close Plate Viewer')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
-
-        self.Bind(wx.EVT_MENU, self.OnLoadCSV, self.loadCSVMenuItem)
-        wx.EVT_MENU(self, ID_EXIT, lambda(_):self.Close())
+        
+        wx.EVT_MENU(self, wx.ID_EXIT, lambda(_):self.Close())
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
-        src_choices = [p.image_table]
-        if p.object_table:
-            src_choices += [p.object_table]
-        self.sourceChoice = ComboBox(self, choices=src_choices, style=wx.CB_READONLY)
-        try:
-            for table in wx.GetApp().user_tables:
-                self.AddTableChoice(table)
-        except AttributeError:
-            # running outside the main UI
-            wx.GetApp().user_tables = []
-        self.sourceChoice.Select(0)
+        self.sourceChoice = TableComboBox(self, -1, style=wx.CB_READONLY)
         dataSourceSizer.Add(self.sourceChoice)
-        dataSourceSizer.AddSpacer((-1,10))
+        dataSourceSizer.AddSpacer((-1,3))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = get_non_blob_types_from_table(p.image_table)
         self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY)
@@ -102,7 +88,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
 
-        viewSizer.AddSpacer((-1,10))
+        viewSizer.AddSpacer((-1,3))
         viewSizer.Add(wx.StaticText(self, label='Well display:'))
         if p.image_thumbnail_cols:
             choices = pmp.all_well_shapes
@@ -113,7 +99,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.wellDisplayChoice.Select(0)
         viewSizer.Add(self.wellDisplayChoice)
 
-        viewSizer.AddSpacer((-1,10))
+        viewSizer.AddSpacer((-1,3))
         viewSizer.Add(wx.StaticText(self, label='Number of plates:'))
         self.numberOfPlatesTE = wx.TextCtrl(self, -1, '1', style=wx.TE_PROCESS_ENTER)
         viewSizer.Add(self.numberOfPlatesTE)
@@ -129,21 +115,21 @@ class PlateViewer(wx.Frame, CPATool):
         if len(self.annotation_cols) > 0:
             self.annotationCol.SetSelection(0)
         annotationColSizer.Add(self.annotationCol)
-        annotationColSizer.AddSpacer((10,-1))
+        annotationColSizer.AddSpacer((3,-1))
         self.addAnnotationColBtn = wx.Button(self, -1, 'Add', size=(44,-1))
-        annotationColSizer.Add(self.addAnnotationColBtn)
+        annotationColSizer.Add(self.addAnnotationColBtn, 0, wx.TOP, 3)
         annotationSizer.Add(annotationColSizer)
-        annotationSizer.AddSpacer((-1,10))
+        annotationSizer.AddSpacer((-1,3))
         annotationSizer.Add(wx.StaticText(self, label='Label:'))
         self.annotationLabel = wx.TextCtrl(self, -1, 'Select wells')#, style=wx.TE_PROCESS_ENTER)
         self.annotationLabel.Disable()
         self.annotationLabel.SetForegroundColour(wx.Color(80,80,80))
         self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
         annotationSizer.Add(self.annotationLabel)
-        annotationSizer.AddSpacer((-1,10))
+        annotationSizer.AddSpacer((-1,3))
         self.outlineMarked = wx.CheckBox(self, -1, label='Outline annotated wells')
         annotationSizer.Add(self.outlineMarked)
-        annotationSizer.AddSpacer((-1,10))
+        annotationSizer.AddSpacer((-1,3))
         self.annotationShowVals = wx.CheckBox(self, -1, label='Show values on plate')
         annotationSizer.Add(self.annotationShowVals)
         if len(db.GetUserColumnNames(p.image_table)) == 0:
@@ -152,11 +138,11 @@ class PlateViewer(wx.Frame, CPATool):
             
         controlSizer = wx.BoxSizer(wx.VERTICAL)
         controlSizer.Add(dataSourceSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,10))
+        controlSizer.AddSpacer((-1,3))
         controlSizer.Add(groupingSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,10))
+        controlSizer.AddSpacer((-1,3))
         controlSizer.Add(viewSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,10))
+        controlSizer.AddSpacer((-1,3))
         controlSizer.Add(annotationSizer, 0 , wx.EXPAND)
 
         self.plateMapSizer = wx.GridSizer(1,1,5,5)
@@ -190,32 +176,6 @@ class PlateViewer(wx.Frame, CPATool):
         
         self.AddPlateMap()
         self.OnSelectMeasurement()
-
-    def OnLoadCSV(self, evt):
-        dlg = wx.FileDialog(self, "Select a comma-separated-values file to load...",
-                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-        if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetPath()
-            self.LoadCSV(filename)
-
-    def LoadCSV(self, filename):
-        countsTable = os.path.splitext(os.path.split(filename)[1])[0]
-        if db.CreateTempTableFromCSV(filename, countsTable):
-            self.AddTableChoice(countsTable)
-            self.sourceChoice.SetStringSelection(countsTable)
-            self.UpdateMeasurementChoice()
-
-    def AddTableChoice(self, table):
-        if table in self.sourceChoice.Strings:
-            return
-        if db.GetLinkingColumnsForTable(table) is None:
-            wx.MessageDialog(self, 'Could not add table "%s" to PlateViewer '
-                             'since it could not be linked to the per_image '
-                             'table.'%(table), "Couldn't load table").ShowModal()
-            return
-        sel = self.sourceChoice.GetSelection()
-        self.sourceChoice.SetItems(self.sourceChoice.GetItems()+[table])
-        self.sourceChoice.Select(sel)
 
     def AddPlateMap(self, plateIndex=0):
         '''
@@ -262,198 +222,127 @@ class PlateViewer(wx.Frame, CPATool):
         measurement = self.measurementsChoice.Value
         table       = self.sourceChoice.Value
         aggMethod   = self.aggregationMethodsChoice.Value
-
         categorical = measurement not in get_numeric_columns_from_table(table)
         fltr        = self.filterChoice.Value
         self.colorBar.ClearNotifyWindows()
-        
-        assert (db.GetLinkingColumnsForTable(table) is not None, 
-            'Table "%s" could not be linked to the per_image table.'%(table))
 
+        q = sql.QueryBuilder()
+        well_key_cols = [sql.Column(p.image_table, col) for col in well_key_columns()]
+        select = list(well_key_cols)
         if not categorical:
+            if aggMethod=='mean': 
+                select += [sql.Column(table, measurement, 'AVG')]
+            elif aggMethod=='stdev': 
+                select += [sql.Column(table, measurement, 'STDDEV')]
+            elif aggMethod=='cv%':
+                # stddev(col) / avg(col) * 100
+                select += [sql.Expression(
+                              sql.Column(table, measurement, 'STDDEV'), ' / ', 
+                              sql.Column(table, measurement, 'AVG'), ' * 100')]
+            elif aggMethod=='sum':    
+                select += [sql.Column(table, measurement, 'SUM')]
+            elif aggMethod=='min':    
+                select += [sql.Column(table, measurement, 'MIN')]
+            elif aggMethod=='max':    
+                select += [sql.Column(table, measurement, 'MAX')]
+            elif aggMethod=='median': 
+                select += [sql.Column(table, measurement, 'MEDIAN')]
+            elif aggMethod=='none':   
+                select += [sql.Column(table, measurement)]
+        else:
+            select += [sql.Column(table, measurement)]
+        
+        q.set_select_clause(select)
+        q.set_group_columns(well_key_cols)
+        query = str(q)
+        if fltr != NO_FILTER:
             #
-            # NUMERICAL DATA
+            # Annoying... We need to parse the filter query and mash
+            # the tables and where clause into the query builder 
             #
-            if aggMethod == 'mean':
-                expression = "AVG(%s.%s)"%(table, measurement)
-            elif aggMethod == 'stdev':
-                expression = "STDDEV(%s.%s)"%(table, measurement)
-            elif aggMethod == 'cv%':
-                expression = "STDDEV(%s.%s)/AVG(%s.%s)*100"%(table, measurement, table, measurement)
-            elif aggMethod == 'sum':
-                expression = "SUM(%s.%s)"%(table, measurement)
-            elif aggMethod == 'min':
-                expression = "MIN(%s.%s)"%(table, measurement)
-            elif aggMethod == 'max':
-                expression = "MAX(%s.%s)"%(table, measurement)
-            elif aggMethod == 'median':
-                expression = "MEDIAN(%s.%s)"%(table, measurement)
-            elif aggMethod == 'none':
-                expression = "(%s.%s)"%(table, measurement)
-
-            if table == p.image_table:
-                group = True
-                if fltr == NO_FILTER:
-                    from_clause = table
-                else:
-                    from_clause = '%s join _filter_%s using (%s)'%(
-                        table, fltr, UniqueImageClause())
-                wellkeys_and_values = db.execute(
-                    'SELECT %s, %s FROM %s GROUP BY %s'%
-                    (UniqueWellClause(), expression, from_clause, UniqueWellClause()))
-            elif set(well_key_columns()) == set(db.GetLinkingColumnsForTable(table)):
-                # For data from tables with well and plate columns, we simply
-                # fetch the measurement without aggregating
-                group = True
-                if fltr == NO_FILTER:
-                    from_clause = table
-                else:
-                    # HACK: splice the well key columns into the filter SELECT
-                    f = p._filters[fltr]
-                    ins = f.upper().index('FROM')
-                    f = '%s, %s %s'%(f[:ins], UniqueWellClause(), f[ins:])
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
-                        table, f, fltr, UniqueWellClause())
-                wellkeys_and_values = db.execute(
-                    'SELECT %s, %s FROM %s GROUP BY %s'%
-                    (UniqueWellClause(), measurement, from_clause, UniqueWellClause()))
+            fq = p._filters[fltr]
+            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
+            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
+            f_tables = [t.strip() for t in f_from.split(',')]
+            for t in f_tables:
+                if ' ' in t:
+                    wx.MessageBox('Unable to parse properties filter "%s".'%(fltr), 'Error')
+            q.add_table_dependencies(f_tables)
+            if q.get_where_clause():
+                q_groupby_idx = re.search('^SELECT\s+.*\s+FROM\s+.*\s+WHERE\s+.*\s+GROUP BY', query, re.IGNORECASE).end() - len('GROUP BY')
+                query = query[:q_groupby_idx] + 'AND ' + f_where + '\n\t' + query[q_groupby_idx:]
             else:
-                # For data from other tables without well and plate columns, we 
-                # need to link the table to the per image table via the 
-                # ImageNumber column
-                group = True
-                if fltr == NO_FILTER:
-                    from_clause = table
-                else:
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(
-                        table, p._filters[fltr], fltr, UniqueImageClause())
-                wellkeys_and_values = db.execute(
-                    'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%
-                    (UniqueWellClause(p.image_table), expression, 
-                     p.image_table, from_clause, 
-                     ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) 
-                                for id in db.GetLinkingColumnsForTable(table)]),
-                     UniqueWellClause(p.image_table)))
-            wellkeys_and_values = np.array(wellkeys_and_values, dtype=object)
+                q_groupby_idx = re.search('^SELECT\s+.*\s+FROM\s+.*\s+GROUP BY', query, re.IGNORECASE).end() - len('GROUP BY')
+                query = query[:q_groupby_idx] + 'WHERE ' + f_where + '\n\t' + query[q_groupby_idx:]
 
-            # Replace measurement None's with nan
-            for row in wellkeys_and_values:
-                if row[-1] is None:
-                    row[-1] = np.nan
+        # EXECUTE the query
+        wellkeys_and_values = db.execute(query)
+        wellkeys_and_values = np.array(wellkeys_and_values, dtype=object)
 
-            data = []
-            key_lists = []
-            dmax = -np.inf
-            dmin = np.inf
-            if p.plate_id:
-                for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
-                    plate = plateChoice.Value
-                    plateMap.SetPlate(plate)
-                    self.colorBar.AddNotifyWindow(plateMap)
-                    keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
-                    platedata, wellkeys = FormatPlateMapData(keys_and_vals)
-                    data += [platedata]
-                    key_lists += [wellkeys]
-                    dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
-                    dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
-            else:
-                self.colorBar.AddNotifyWindow(self.plateMaps[0])
-                platedata, wellkeys = FormatPlateMapData(wellkeys_and_values)
+        # Replace measurement None's with nan
+        for row in wellkeys_and_values:
+            if row[-1] is None:
+                row[-1] = np.nan
+
+        data = []
+        key_lists = []
+        dmax = -np.inf
+        dmin = np.inf
+        if p.plate_id:
+            for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
+                plate = plateChoice.Value
+                plateMap.SetPlate(plate)
+                self.colorBar.AddNotifyWindow(plateMap)
+                keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
+                platedata, wellkeys = FormatPlateMapData(keys_and_vals, categorical)
                 data += [platedata]
                 key_lists += [wellkeys]
+                if not categorical:
+                    dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
+                    dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
+        else:
+            self.colorBar.AddNotifyWindow(self.plateMaps[0])
+            platedata, wellkeys = FormatPlateMapData(wellkeys_and_values, categorical)
+            data += [platedata]
+            key_lists += [wellkeys]
+            if not categorical:
                 dmin = np.nanmin([float(kv[-1]) for kv in wellkeys_and_values])
                 dmax = np.nanmax([float(kv[-1]) for kv in wellkeys_and_values])
-                
-            # Compute the global extents if there is any data whatsoever
+            
+        if not categorical:
             if len(wellkeys_and_values) > 0:
+                # Compute the global extents if there is any data whatsoever
                 gmin = np.nanmin([float(vals[-1]) for vals in wellkeys_and_values])
                 gmax = np.nanmax([float(vals[-1]) for vals in wellkeys_and_values])
-                # Warn if there was no data for this plate
                 if np.isinf(dmin) or np.isinf(dmax):
-                    wx.MessageDialog(self, 'No numeric data was found in this '
-                                     'column (%s.%s) for the selected plate (%s)%s'
-                                     %(table, measurement, plate, 
-                                       '.' if fltr == NO_FILTER else ' using filter "%s".'%(fltr)), 
-                                     'No data!', style=wx.OK).ShowModal()
                     gmin = gmax = dmin = dmax = 1.
+                    # Warn if there was no data for this plate (and no filter was used)
+                    if fltr == NO_FILTER:
+                        wx.MessageBox('No numeric data was found in "%s.%s" for plate "%s"'
+                                      %(table, measurement, plate), 'Warning')
             else:
                 gmin = gmax = 1.
                 if fltr == NO_FILTER:
-                    wx.MessageDialog(self, 'No numeric data was found in the '
-                                     'database for this column (%s.%s).'
-                                     %(table, measurement), 
-                                     'No data!', style=wx.OK).ShowModal()
-                else:
-                    wx.MessageDialog(self, 'No numeric data was found in the '
-                                     'database for this column (%s.%s) when '
-                                     'using filter "%s".'
-                                     %(table, measurement, fltr), 
-                                     'No data!', style=wx.OK).ShowModal()
+                    wx.MessageBox('No numeric data was found in %s.%s'
+                                  %(table, measurement), 'Warning')
 
-
+        if categorical:
+            self.colorBar.Hide()
+        else:
+            self.colorBar.Show()
             self.colorBar.SetLocalExtents([dmin,dmax])
             self.colorBar.SetGlobalExtents([gmin,gmax])
+        self.rightSizer.Layout()
 
-        else:
-            #
-            # CATEGORICAL data
-            #
-            if table == p.image_table:
-                if fltr == NO_FILTER:
-                    from_clause = table
-                else:
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, p._filters[fltr], fltr, UniqueImageClause())
-                wellkeys_and_values = db.execute('SELECT %s, %s FROM %s GROUP BY %s'%
-                                                (UniqueWellClause(), measurement, 
-                                                 from_clause, UniqueWellClause()))
-            elif set(well_key_columns()) == set(db.GetLinkingColumnsForTable(table)):
-                # For data from tables with well data
-                group = True
-                if fltr == NO_FILTER:
-                    from_clause = table
-                else:
-                    # HACK: splice the well key columns into the filter SELECT
-                    f = p._filters[fltr]
-                    ins = f.upper().index('FROM')
-                    f = '%s, %s %s'%(f[:ins], UniqueWellClause(), f[ins:])
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, f, fltr, UniqueWellClause())
-                wellkeys_and_values = db.execute(
-                    'SELECT %s, %s FROM %s GROUP BY %s'%
-                    (UniqueWellClause(), measurement, from_clause, UniqueWellClause()))
+        for keys, d, plateMap in zip(key_lists, data, self.plateMaps):
+            plateMap.SetWellKeys(keys)
+            if categorical:
+                plateMap.SetData(np.ones(d.shape) * np.nan)
+                plateMap.SetTextData(d)
             else:
-                # For data from other tables without well and plate columns, we 
-                # need to link the table to the per image table via the 
-                # ImageNumber column
-                if fltr == NO_FILTER:
-                    from_clause = table
-                else:
-                    from_clause = '%s join (%s) as filter_SQL_%s using (%s)'%(table, p._filters[fltr], fltr, UniqueImageClause())
-                wellkeys_and_values = db.execute(
-                    'SELECT %s, %s FROM %s, %s WHERE %s GROUP BY %s'%
-                    (UniqueWellClause(p.image_table), measurement, 
-                     p.image_table, from_clause, 
-                     ' AND '.join(['%s.%s=%s.%s'%(table, id, p.image_table, id) for id in db.GetLinkingColumnsForTable(table)]),
-                     UniqueWellClause()))
-
-            data = []
-            key_lists = []
-            if p.plate_id:
-                for plateChoice, plateMap in zip(self.plateMapChoices, self.plateMaps):
-                    plate = plateChoice.Value
-                    plateMap.SetPlate(plate)
-                    self.colorBar.AddNotifyWindow(plateMap)
-                    keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
-                    platedata, wellkeys = FormatPlateMapData(keys_and_vals, categorical=True)
-                    data += [platedata]
-                    key_lists += [wellkeys]
-            else:
-                self.colorBar.AddNotifyWindow(self.plateMaps[0])
-                platedata, wellkeys = FormatPlateMapData(wellkeys_and_values, categorical=True)
-                data += [platedata]
-                key_lists += [wellkeys]
-                
-            self.colorBar.SetLocalExtents([0,1])
-            self.colorBar.SetGlobalExtents([0,1])
+                plateMap.SetData(d, data_range=self.colorBar.GetLocalExtents(), 
+                                 clip_interval=self.colorBar.GetLocalInterval(), 
+                                 clip_mode=self.colorBar.GetClipMode())
 
         for keys, d, plateMap in zip(key_lists, data, self.plateMaps):
             plateMap.SetWellKeys(keys)
@@ -472,15 +361,16 @@ class PlateViewer(wx.Frame, CPATool):
         of numeric columns from the selected table.
         '''
         table = self.sourceChoice.Value
+        if table == TableComboBox.OTHER_TABLE:
+            t = get_other_table_from_user(self)
+            if t is not None:
+                self.sourceChoice.Items = self.sourceChoice.Items[:-1] + [t] + self.sourceChoice.Items[-1:]
+                self.sourceChoice.Select(self.sourceChoice.Items.index(t))
+            else:
+                self.sourceChoice.Select(0)
+                return
         self.measurementsChoice.SetItems(get_non_blob_types_from_table(table))
         self.measurementsChoice.Select(0)
-        if db.GetLinkingColumnsForTable(table) == well_key_columns():
-            self.aggregationMethodsChoice.Disable()
-            self.aggregationMethodsChoice.SetValue('none')
-        else:
-            self.aggregationMethodsChoice.Enable()
-            self.aggregationMethodsChoice.SetSelection(0)
-
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
 
@@ -494,8 +384,7 @@ class PlateViewer(wx.Frame, CPATool):
         table = self.sourceChoice.Value
         numeric_measurements = get_numeric_columns_from_table(table)
         if (selected_measurement in numeric_measurements):
-            if (set(well_key_columns()) != set(db.GetLinkingColumnsForTable(self.sourceChoice.Value))):
-                self.aggregationMethodsChoice.Enable()
+            self.aggregationMethodsChoice.Enable()
             self.colorMapsChoice.Enable()
         else:
             self.aggregationMethodsChoice.Disable()
@@ -512,7 +401,6 @@ class PlateViewer(wx.Frame, CPATool):
         ''' Handles the selection of a color map from a choice box. '''
         map = self.colorMapsChoice.Value
         cm = matplotlib.cm.get_cmap(map)
-
         self.colorBar.SetMap(map)
         for plateMap in self.plateMaps:
             plateMap.SetColorMap(map)
@@ -530,6 +418,10 @@ class PlateViewer(wx.Frame, CPATool):
             if dlg.ShowModal() != wx.ID_OK:
                 self.wellDisplayChoice.SetSelection(0)
                 return
+        if sel.lower() in ['image', 'thumbnail']:
+            self.colorBar.Hide()
+        else:
+            self.colorBar.Show()
         for platemap in self.plateMaps:
             platemap.SetWellDisplay(sel)
 

@@ -129,6 +129,10 @@ class MainGUI(wx.Frame):
         infoMenuItem.Check()
         self.GetMenuBar().Append(logMenu, 'Logging')
 
+        advancedMenu = wx.Menu()
+        clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables "_link_tables_" and "_link_columns" from your database.')
+        self.GetMenuBar().Append(advancedMenu, 'Advanced')
+
         helpMenu = wx.Menu()
         aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
         self.GetMenuBar().Append(helpMenu, 'Help')
@@ -160,6 +164,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
         self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)        
         self.Bind(wx.EVT_MENU, self.save_log, saveLogMenuItem)
+        self.Bind(wx.EVT_MENU, self.clear_link_tables, clearTableLinksMenuItem)
         self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
@@ -239,6 +244,21 @@ class MainGUI(wx.Frame):
         self.logr.setLevel(level)
         # cheat the logger so these always get displayed
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
+        
+    def clear_link_tables(self, evt=None):
+        dlg = wx.MessageDialog(self, 'This will delete the tables '
+                    '"_link_tables_" and "_link_columns" from your database. '
+                    'CPA will automatically recreate these tables as it '
+                    'discovers how your database is linked. Are you sure you '
+                    'want to proceed?', 'Clear table linking information?', 
+                    wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
+        response = dlg.ShowModal()
+        if response != wx.ID_YES:
+            return
+        db = dbconnect.DBConnect.getInstance()
+        db.execute('DROP TABLE IF EXISTS _link_tables_')
+        db.execute('DROP TABLE IF EXISTS _link_columns_')
+        db.Commit()
 
     def on_show_about(self, evt):
         ''' Shows a message box with the version number etc.'''

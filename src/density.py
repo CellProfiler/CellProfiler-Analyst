@@ -1,7 +1,9 @@
 from cpatool import CPATool
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
+import sqltools as sql
 from multiclasssql import filter_table_prefix
 from properties import Properties
+from guiutils import TableComboBox, get_other_table_from_user
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import logging
@@ -37,14 +39,8 @@ class DataSourcePanel(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        tables = [p.image_table] #db.GetTableNames()
-        if p.object_table:
-            tables += [p.object_table]
-        self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
-        if p.image_table in tables:
-            self.table_choice.Select(tables.index(p.image_table))
-        else:
-            logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
+        self.x_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.y_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.gridsize_input = wx.TextCtrl(self, -1, '50')
@@ -62,36 +58,34 @@ class DataSourcePanel(wx.Panel):
         self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
-        self.update_column_fields()
+        self.update_x_choices()
+        self.update_y_choices()
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "table:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.table_choice, 1, wx.EXPAND)
-        sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        
-        sz.Add(wx.StaticText(self, -1, "x-axis:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.x_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, -1, "x-scale:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.x_table_choice, 1, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.x_choice, 2, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.x_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "y-axis:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.y_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, -1, "y-scale:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.y_table_choice, 1, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.y_choice, 2, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.y_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)        
         sz.Add(wx.StaticText(self, -1, "grid size:"))
@@ -117,7 +111,8 @@ class DataSourcePanel(wx.Panel):
         
         sizer.Add(self.update_chart_btn)    
         
-        wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
+        wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
+        wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
         wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
         wx.EVT_COMBOBOX(self.colormap_choice, -1, self.on_cmap_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
@@ -125,9 +120,36 @@ class DataSourcePanel(wx.Panel):
         self.SetSizer(sizer)
         self.Show(1)
 
-    def on_table_selected(self, evt):
-        self.update_column_fields()
-    
+    def on_x_table_selected(self, evt):
+        table = self.x_table_choice.Value
+        if table == TableComboBox.OTHER_TABLE:
+            t = get_other_table_from_user(self)
+            if t is not None:
+                self.x_table_choice.Items = self.x_table_choice.Items[:-1] + [t] + self.x_table_choice.Items[-1:]
+                self.x_table_choice.Select(self.x_table_choice.Items.index(t))
+                sel = self.y_table_choice.GetSelection()
+                self.y_table_choice.Items = self.y_table_choice.Items[:-1] + [t] + self.y_table_choice.Items[-1:]
+                self.y_table_choice.SetSelection(sel)
+            else:
+                self.x_table_choice.Select(0)
+                return
+        self.update_x_choices()
+        
+    def on_y_table_selected(self, evt):
+        table = self.y_table_choice.Value
+        if table == TableComboBox.OTHER_TABLE:
+            t = get_other_table_from_user(self)
+            if t is not None:
+                self.y_table_choice.Items = self.y_table_choice.Items[:-1] + [t] + self.y_table_choice.Items[-1:]
+                self.y_table_choice.Select(self.y_table_choice.Items.index(t))
+                sel = self.x_table_choice.GetSelection()
+                self.x_table_choice.Items = self.x_table_choice.Items[:-1] + [t] + self.x_table_choice.Items[-1:]
+                self.x_table_choice.SetSelection(sel)
+            else:
+                self.y_table_choice.Select(0)
+                return
+        self.update_y_choices()
+        
     def on_filter_selected(self, evt):
         filter = self.filter_choice.GetStringSelection()
         if filter == CREATE_NEW_FILTER:
@@ -152,12 +174,16 @@ class DataSourcePanel(wx.Panel):
     def on_cmap_selected(self, evt):
         self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
         
-    def update_column_fields(self):
-        tablename = self.table_choice.GetStringSelection()
-        fieldnames = self.get_numeric_columns_from_table(tablename)
+    def update_x_choices(self):
+        tablename = self.x_table_choice.Value
+        fieldnames = db.GetColumnNames(tablename)#get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
         self.x_choice.SetSelection(0)
+            
+    def update_y_choices(self):
+        tablename = self.y_table_choice.Value
+        fieldnames = db.GetColumnNames(tablename)#get_numeric_columns_from_table(tablename)
         self.y_choice.Clear()
         self.y_choice.AppendItems(fieldnames)
         self.y_choice.SetSelection(0)
@@ -170,7 +196,8 @@ class DataSourcePanel(wx.Panel):
         
     def update_figpanel(self, evt=None):
         filter = self.filter_choice.GetStringSelection()
-        points = self.loadpoints(self.table_choice.GetStringSelection(),
+        points = self.loadpoints(self.x_table_choice.GetStringSelection(),
+                                 self.y_table_choice.GetStringSelection(),
                                  self.x_choice.GetStringSelection(),
                                  self.y_choice.GetStringSelection(),
                                  filter)
@@ -184,18 +211,31 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.setpointslists(points)
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, xpoints, ypoints, filter=NO_FILTER):
-        fields = '%s.%s, %s.%s'%(tablename, xpoints, tablename, ypoints)
-        tables = tablename
-        where_clause = ''
+    def loadpoints(self, xtable, ytable, xcol, ycol, filter=NO_FILTER):
+        ''' Returns a list of tuples (X measurement, Y measurement)
+        '''
+        q = sql.QueryBuilder()
+        q.set_select_clause([sql.Column(xtable, xcol), 
+                             sql.Column(ytable, ycol)])
         if filter != NO_FILTER:
-            # If a filter is applied we must compute a WHERE clause and add the 
-            # filter table to the FROM clause
-            tables += ', %s'%(filter_table_prefix+filter) 
-            filter_clause = ' AND '.join(['%s.%s=%s.%s'%(tablename, id, filter_table_prefix+filter, id) 
-                                          for id in db.GetLinkingColumnsForTable(tablename)])
-            where_clause = 'WHERE %s'%(filter_clause)
-        return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
+            #
+            # This is a bit annoying... We need to parse the filter query and
+            # 1) mash the tables into the query builder 
+            # 2) plop the where clause at the end of the resultant query
+            #
+            fq = p._filters[filter]
+            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
+            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
+            f_tables = [t.strip() for t in f_from.split(',')]
+            for t in f_tables:
+                if ' ' in t:
+                    wx.MessageBox('Unable to parse properties filter "%s".'%(filter), 'Error')
+            q.add_table_dependencies(f_tables)
+            if q.get_where_clause():
+                q = str(q) + ' AND ' + f_where
+            else:
+                q = str(q) + ' WHERE ' + f_where
+        return db.execute(str(q))
         
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
@@ -259,7 +299,7 @@ class DensityPanel(FigureCanvasWxAgg):
         self.canvas.SetBackgroundColour('white')
         
         self.navtoolbar = None
-        self.point_lists = []
+        self.point_list = []
         self.gridsize = 50
         self.cb = None
         self.x_scale = LINEAR_SCALE
@@ -270,64 +310,63 @@ class DensityPanel(FigureCanvasWxAgg):
         self.cmap ='jet'
     
     def setpointslists(self, points):
-        self.point_lists = points
+        self.point_list = points
         
         self.figure.clear()
         self.subplot = self.figure.add_subplot(111)
             
-        for i, pt_list in enumerate(self.point_lists):
-            plot_pts = np.array(pt_list).astype(float)
+        plot_pts = np.array(points).astype(float)
+        
+        if self.x_scale == LOG_SCALE:
+            plot_pts = plot_pts[(plot_pts[:,0]>0)]
+        if self.y_scale == LOG_SCALE:
+            plot_pts = plot_pts[(plot_pts[:,1]>0)]
+        
+        hb = self.subplot.hexbin(plot_pts[:, 0], plot_pts[:, 1], 
+                                 gridsize=self.gridsize,
+                                 xscale=self.x_scale,
+                                 yscale=self.y_scale,
+                                 bins=self.color_scale,
+                                 cmap=matplotlib.cm.get_cmap(self.cmap))
             
-            if self.x_scale == LOG_SCALE:
-                plot_pts = plot_pts[(plot_pts[:,0]>0)]
-            if self.y_scale == LOG_SCALE:
-                plot_pts = plot_pts[(plot_pts[:,1]>0)]
+        #h, xedges, yedges = np.histogram2d(plot_pts[:, 0], plot_pts[:, 1],
+                                           #bins=self.gridsize)
+        #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        #hb = self.subplot.imshow(h, extent=extent, interpolation='nearest')
             
-            hb = self.subplot.hexbin(plot_pts[:, 0], plot_pts[:, 1], 
-                                     gridsize=self.gridsize,
-                                     xscale=self.x_scale,
-                                     yscale=self.y_scale,
-                                     bins=self.color_scale,
-                                     cmap=matplotlib.cm.get_cmap(self.cmap))
-            
-#            h, xedges, yedges = np.histogram2d(plot_pts[:, 0], plot_pts[:, 1],
-#                                               bins=self.gridsize)
-#            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-#            hb = self.subplot.imshow(h, extent=extent, interpolation='nearest')
-            
-            self.cb = self.figure.colorbar(hb)
-            if self.color_scale==LOG_SCALE:
-                self.cb.set_label('log10(N)')
-            
-            self.subplot.set_xlabel(self.x_label)
-            self.subplot.set_ylabel(self.y_label)
-            
-            xmin = np.nanmin(plot_pts[:,0])
-            xmax = np.nanmax(plot_pts[:,0])
-            ymin = np.nanmin(plot_pts[:,1])
-            ymax = np.nanmax(plot_pts[:,1])
+        self.cb = self.figure.colorbar(hb)
+        if self.color_scale==LOG_SCALE:
+            self.cb.set_label('log10(N)')
+        
+        self.subplot.set_xlabel(self.x_label)
+        self.subplot.set_ylabel(self.y_label)
+        
+        xmin = np.nanmin(plot_pts[:,0])
+        xmax = np.nanmax(plot_pts[:,0])
+        ymin = np.nanmin(plot_pts[:,1])
+        ymax = np.nanmax(plot_pts[:,1])
 
-            # Pad all sides
-            if self.x_scale==LOG_SCALE:
-                xmin = xmin/1.5
-                xmax = xmax*1.5
-            else:
-                xmin = xmin-(xmax-xmin)/20.
-                xmax = xmax+(xmax-xmin)/20.
-                
-            if self.y_scale==LOG_SCALE:
-                ymin = ymin/1.5
-                ymax = ymax*1.5
-            else:
-                ymin = ymin-(ymax-ymin)/20.
-                ymax = ymax+(ymax-ymin)/20.
+        # Pad all sides
+        if self.x_scale==LOG_SCALE:
+            xmin = xmin/1.5
+            xmax = xmax*1.5
+        else:
+            xmin = xmin-(xmax-xmin)/20.
+            xmax = xmax+(xmax-xmin)/20.
+            
+        if self.y_scale==LOG_SCALE:
+            ymin = ymin/1.5
+            ymax = ymax*1.5
+        else:
+            ymin = ymin-(ymax-ymin)/20.
+            ymax = ymax+(ymax-ymin)/20.
 
-            self.subplot.axis([xmin, xmax, ymin, ymax])
+        self.subplot.axis([xmin, xmax, ymin, ymax])
     
         self.reset_toolbar()
     
     def getpointslists(self):
-        return self.point_lists
+        return self.point_list
     
     def setgridsize(self, gridsize):
         self.gridsize = gridsize

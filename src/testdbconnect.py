@@ -235,16 +235,7 @@ class TestDBConnect(unittest.TestCase):
         cols = self.db.GetColnamesForClassifier()
         for c in ['TableNumber', 'ImageNumber', 'ObjectNumber', 'Nuclei_Location_CenterX', 'Nuclei_Location_CenterY']:
             assert c not in cols
-             
-    def test_GetCellDataForClassifier(self):
-        self.setup_mysql()
-        cellData = self.db.GetCellDataForClassifier((1,1))
-        assert len(cellData) == 615
-        
-        self.setup_sqlite()
-        cellData = self.db.GetCellDataForClassifier((0,1,1))
-        assert len(cellData) == 615
-        
+                     
     def test_ReadExportToDB(self):
         '''Test reading data from Export to Database.'''
         self.setup_sqlite2()

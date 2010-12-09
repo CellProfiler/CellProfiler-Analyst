@@ -1,6 +1,8 @@
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
+import sqltools as sql
 from multiclasssql import filter_table_prefix
 from properties import Properties
+from guiutils import TableComboBox, get_other_table_from_user
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import logging
@@ -37,16 +39,10 @@ class DataSourcePanel(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        tables = [p.image_table] #db.GetTableNames()
-        if p.object_table:
-            tables += [p.object_table]
-        self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
-        if p.image_table in tables:
-            self.table_choice.Select(tables.index(p.image_table))
-        else:
-            logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
+        self.table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
-        self.bins_input = wx.TextCtrl(self, -1, '100')
+        self.bins_input = wx.SpinCtrl(self, -1, '100')
+        self.bins_input.SetRange(1,400)
         self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE, LOG2_SCALE], style=wx.CB_READONLY)
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
@@ -58,40 +54,35 @@ class DataSourcePanel(wx.Panel):
         self.update_column_fields()
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "table:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer((2,-1))
         sz.Add(self.table_choice, 1, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.x_choice, 2, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
-        
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "x-axis:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.x_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, -1, "bins:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.bins_input)
-        sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "x-scale:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "x-scale:"), 0, wx.TOP, 4)
+        sz.AddSpacer((2,-1))
         sz.Add(self.x_scale_choice, 1, wx.EXPAND)
         sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, -1, "y-scale:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "y-scale:"), 0, wx.TOP, 4)
+        sz.AddSpacer((2,-1))
         sz.Add(self.y_scale_choice, 1, wx.EXPAND)
+        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "bins:"), 0, wx.TOP, 4)
+        sz.AddSpacer((2,-1))
+        sz.Add(self.bins_input)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "filter:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
+        sz.AddSpacer((2,-1))
         sz.Add(self.filter_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
         
         sizer.Add(self.update_chart_btn)    
         
@@ -103,8 +94,17 @@ class DataSourcePanel(wx.Panel):
         self.Show(1)
 
     def on_table_selected(self, evt):
+        table = self.table_choice.Value
+        if table == TableComboBox.OTHER_TABLE:
+            t = get_other_table_from_user(self)
+            if t is not None:
+                self.table_choice.Items = self.table_choice.Items[:-1] + [t] + self.table_choice.Items[-1:]
+                self.table_choice.Select(self.table_choice.Items.index(t))
+            else:
+                self.table_choice.Select(0)
+                return
         self.update_column_fields()
-    
+        
     def on_filter_selected(self, evt):
         filter = self.filter_choice.GetStringSelection()
         if filter == CREATE_NEW_FILTER:
@@ -156,17 +156,27 @@ class DataSourcePanel(wx.Panel):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, X measurement
         '''
-        fields = '%s.%s'%(tablename, xpoints)
-        tables = tablename
-        where_clause = ''
+        q = sql.QueryBuilder()
+        q.set_select_clause([sql.Column(tablename, xpoints)])
         if filter != NO_FILTER:
-            # If a filter is applied we must compute a WHERE clause and add the 
-            # filter table to the FROM clause
-            tables += ', %s'%(filter_table_prefix+filter) 
-            filter_clause = ' AND '.join(['%s.%s=%s.%s'%(tablename, id, filter_table_prefix+filter, id) 
-                                          for id in db.GetLinkingColumnsForTable(tablename)])
-            where_clause = 'WHERE %s'%(filter_clause)
-        return [db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))]
+            #
+            # This is a bit annoying... We need to parse the filter query and
+            # 1) mash the tables into the query builder 
+            # 2) plop the where clause at the end of the resultant query
+            #
+            fq = p._filters[filter]
+            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
+            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
+            f_tables = [t.strip() for t in f_from.split(',')]
+            for t in f_tables:
+                if ' ' in t:
+                    wx.MessageBox('Unable to parse properties filter "%s"'%(filter), 'Error')
+            q.add_table_dependencies(f_tables)
+            if q.get_where_clause():
+                q = str(q) + ' AND ' + f_where
+            else:
+                q = str(q) + ' WHERE ' + f_where
+        return [db.execute(str(q))]
 
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.

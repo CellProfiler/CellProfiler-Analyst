@@ -2,9 +2,11 @@
 from cpatool import CPATool
 import tableviewer
 from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
-from multiclasssql import filter_table_prefix
+import sqltools as sql
+import multiclasssql
 from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
+from guiutils import TableComboBox, get_other_table_from_user
 import imagelist
 import imagetools
 #from icons import lasso_tool
@@ -106,77 +108,96 @@ class ScatterControlPanel(wx.Panel):
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
-        
-        tables = [p.image_table] #db.GetTableNames()
-        if p.object_table:
-            tables += [p.object_table]
-        self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
-        if p.image_table in tables:
-            self.table_choice.Select(tables.index(p.image_table))
-        else:
-            logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
+        self.x_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.y_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
-        self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
+        self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], size=(90,-1), style=wx.CB_READONLY)
         self.x_scale_choice.Select(0)
-        self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
+        self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], size=(90,-1), style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
         self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
         self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
-        self.update_column_fields()
-        
+        self.update_x_choices()
+        self.update_y_choices()
+                
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "table:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.table_choice, 1, wx.EXPAND)
-        sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
-        
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "x-axis:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.x_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, -1, "x-scale:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.x_table_choice, 1, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.x_choice, 2, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.x_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "y-axis:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.y_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, -1, "y-scale:"))
-        sz.AddSpacer((5,-1))
-        sz.Add(self.y_scale_choice,)
+        sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.y_table_choice, 1, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.y_choice, 2, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.y_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "filter:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.filter_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.AddSpacer((-1,2))
         
         sizer.Add(self.update_chart_btn)
         
-        wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
+        wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
+        wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
         wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
         
         self.SetSizer(sizer)
         self.Show(1)
         
-    def on_table_selected(self, evt):
-        self.update_column_fields()
+    def on_x_table_selected(self, evt):
+        table = self.x_table_choice.Value
+        if table == TableComboBox.OTHER_TABLE:
+            t = get_other_table_from_user(self)
+            if t is not None:
+                self.x_table_choice.Items = self.x_table_choice.Items[:-1] + [t] + self.x_table_choice.Items[-1:]
+                self.x_table_choice.Select(self.x_table_choice.Items.index(t))
+                sel = self.y_table_choice.GetSelection()
+                self.y_table_choice.Items = self.y_table_choice.Items[:-1] + [t] + self.y_table_choice.Items[-1:]
+                self.y_table_choice.SetSelection(sel)
+            else:
+                self.x_table_choice.Select(0)
+                return
+        self.update_x_choices()
+        
+    def on_y_table_selected(self, evt):
+        table = self.y_table_choice.Value
+        if table == TableComboBox.OTHER_TABLE:
+            t = get_other_table_from_user(self)
+            if t is not None:
+                self.y_table_choice.Items = self.y_table_choice.Items[:-1] + [t] + self.y_table_choice.Items[-1:]
+                self.y_table_choice.Select(self.y_table_choice.Items.index(t))
+                sel = self.x_table_choice.GetSelection()
+                self.x_table_choice.Items = self.x_table_choice.Items[:-1] + [t] + self.x_table_choice.Items[-1:]
+                self.x_table_choice.SetSelection(sel)
+            else:
+                self.y_table_choice.Select(0)
+                return
+        self.update_y_choices()
         
     def on_filter_selected(self, evt):
-        filter = self.filter_choice.GetStringSelection()
+        filter = self.filter_choice.Value
         if filter == CREATE_NEW_FILTER:
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
@@ -188,36 +209,49 @@ class ScatterControlPanel(wx.Panel):
                 items = self.filter_choice.GetItems()
                 self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filter_choice.SetSelection(len(items)-1)
-                from multiclasssql import CreateFilterTable
                 logging.info('Creating filter table...')
-                CreateFilterTable(fname)
+                # TODO: get rid of all filter tables
+                multiclasssql.CreateFilterTable(fname)
                 logging.info('Done creating filter.')
             else:
                 self.filter_choice.SetSelection(0)
             cff.Destroy()
         
-    def update_column_fields(self):
-        tablename = self.table_choice.GetStringSelection()
+
+    def update_x_choices(self):
+        tablename = self.x_table_choice.Value
         fieldnames = db.GetColumnNames(tablename)#get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
         self.x_choice.SetSelection(0)
+            
+    def update_y_choices(self):
+        tablename = self.y_table_choice.Value
+        fieldnames = db.GetColumnNames(tablename)#get_numeric_columns_from_table(tablename)
         self.y_choice.Clear()
         self.y_choice.AppendItems(fieldnames)
         self.y_choice.SetSelection(0)
         
-    def update_figpanel(self, evt=None):        
-        filter = self.filter_choice.GetStringSelection()
-        keys_and_points = self.loadpoints(self.table_choice.GetStringSelection(),
-                                 self.x_choice.GetStringSelection(),
-                                 self.y_choice.GetStringSelection(),
-                                 filter)
+    def update_figpanel(self, evt=None):
+        keys_and_points = self.loadpoints(self.x_table_choice.Value,
+                                          self.y_table_choice.Value,
+                                          self.x_choice.Value,
+                                          self.y_choice.Value,
+                                          self.filter_choice.Value)
         col_types = self.get_selected_column_types()
+        plot_per_object_data = p.object_table in [self.x_table_choice.Value,
+                                                  self.y_table_choice.Value]
                 
         # Convert keys and points into a np array
-        kps = np.array(keys_and_points)
+        # NOTE: We must set dtype "object" on creation or values like 0.34567e-9
+        #       may be truncated to 0.34567e (error) or 0.345 (no error) when
+        #       the array contains strings.
+        kps = np.array(keys_and_points, dtype='object')
         # Strip out keys
-        key_indices = list(xrange(len(image_key_columns() if self.figpanel.is_per_image_table() else object_key_columns())))
+        if plot_per_object_data:
+            key_indices = list(xrange(len(object_key_columns())))
+        else:
+            key_indices = list(xrange(len(image_key_columns())))
         keys = kps.take(key_indices,axis=1).astype(int)
         # Strip out x coords
         if col_types[0] in [float, int, long]:
@@ -233,55 +267,70 @@ class ScatterControlPanel(wx.Panel):
         # plot the points
         self.figpanel.set_points(xpoints, ypoints)
         self.figpanel.set_keys(keys)
-        self.figpanel.set_x_label(self.x_choice.GetStringSelection())
-        self.figpanel.set_y_label(self.y_choice.GetStringSelection())
-        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
-        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.set_x_label(self.x_choice.Value)
+        self.figpanel.set_y_label(self.y_choice.Value)
+        self.figpanel.set_x_scale(self.x_scale_choice.Value)
+        self.figpanel.set_y_scale(self.y_scale_choice.Value)
         self.figpanel.redraw()
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, xcol, ycol, filter=NO_FILTER):
+    def loadpoints(self, xtable, ytable, xcol, ycol, filter=NO_FILTER):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, (ObjectNumber), X measurement, Y measurement
         '''
-        if self.figpanel.is_per_object_table():
-            fields = UniqueObjectClause(tablename)
-        elif self.figpanel.is_per_image_table():
-            fields = UniqueImageClause(tablename)
-        fields += ', %s.%s, %s.%s'%(tablename, xcol, tablename, ycol)
-        tables = tablename
-        where_clause = ''
+        q = sql.QueryBuilder()
+        select = []
+        #
+        # If there's an object table fetch object keys. Else fetch image keys.
+        #
+        if p.object_table in [xtable, ytable]:
+            select += [sql.Column(p.object_table, col) for col in object_key_columns()]
+        else:
+            select += [sql.Column(p.image_table, col) for col in image_key_columns()]
+        select += [sql.Column(xtable, xcol), 
+                   sql.Column(ytable, ycol)]
+        q.set_select_clause(select)
         if filter != NO_FILTER:
-            # If a filter is applied we must compute a WHERE clause and add the 
-            # filter table to the FROM clause
-            tables += ', %s'%(filter_table_prefix+filter) 
-            filter_clause = ' AND '.join(['%s.%s=%s.%s'%(tablename, id, filter_table_prefix+filter, id) 
-                                          for id in db.GetLinkingColumnsForTable(tablename)])
-            where_clause = 'WHERE %s'%(filter_clause)
+            #
+            # This is a bit annoying... We need to parse the filter query and
+            # 1) mash the tables into the query builder 
+            # 2) plop the where clause at the end of the resultant query
+            #
+            fq = p._filters[filter]
+            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
+            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
             
-        return db.execute('SELECT %s FROM %s %s'%(fields, tables, where_clause))
+            f_tables = [t.strip() for t in f_from.split(',')]
+            for t in f_tables:
+                if ' ' in t:
+                    wx.MessageBox('Unable to parse properties filter "%s".'%(filter), 'Error')
+            q.add_table_dependencies(f_tables)
+            if q.get_where_clause():
+                q = str(q) + ' AND ' + f_where
+            else:
+                q = str(q) + ' WHERE ' + f_where
+        return db.execute(str(q))
     
     def get_selected_column_types(self):
         ''' Returns a tuple containing the x and y column types. '''
-        table = self.table_choice.GetStringSelection()
-        xcol = self.x_choice.GetStringSelection()
-        ycol = self.y_choice.GetStringSelection()
-        return (db.GetColumnType(table, xcol), db.GetColumnType(table, ycol))
+        return (db.GetColumnType(self.x_table_choice.Value, self.x_choice.Value),
+                db.GetColumnType(self.y_table_choice.Value, self.y_choice.Value))
 
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        #TODO: Add axis bounds 
-        return {'table' : self.table_choice.GetStringSelection(),
-                'x-axis' : self.x_choice.GetStringSelection(),
-                'y-axis' : self.y_choice.GetStringSelection(),
-                'x-scale' : self.x_scale_choice.GetStringSelection(),
-                'y-scale' : self.y_scale_choice.GetStringSelection(),
-                'filter' : self.filter_choice.GetStringSelection(),
+        return {'x-table' : self.x_table_choice.Value,
+                'y-table' : self.y_table_choice.Value,
+                'x-axis' : self.x_choice.Value,
+                'y-axis' : self.y_choice.Value,
+                'x-scale' : self.x_scale_choice.Value,
+                'y-scale' : self.y_scale_choice.Value,
+                'filter' : self.filter_choice.Value,
                 'x-lim': self.figpanel.subplot.get_xlim(),
                 'y-lim': self.figpanel.subplot.get_ylim(),
+                'version' : '1',
                 }
     
     def load_settings(self, settings):
@@ -290,8 +339,15 @@ class ScatterControlPanel(wx.Panel):
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
-        if 'table' in settings:
-            self.table_choice.SetStringSelection(settings['table'])
+        if 'version' not in settings:
+            settings['x-table'] = settings['table']
+            settings['y-table'] = settings['table']
+            settings['version'] = '1'
+        if 'x-table' in settings:
+            self.x_table_choice.SetStringSelection(settings['table'])
+            self.update_column_fields()
+        if 'y-table' in settings:
+            self.y_table_choice.SetStringSelection(settings['table'])
             self.update_column_fields()
         if 'x-axis' in settings:
             self.x_choice.SetStringSelection(settings['x-axis'])
@@ -348,30 +404,36 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.canvas.mpl_connect('button_release_event', self.on_release)
     
     def set_configpanel(self,configpanel):
-        # Allow access of the control panel from the plotting panel
+        '''Allow access of the control panel from the plotting panel'''
         self.configpanel = configpanel
         
     def get_current_x_measurement_name(self):
-        # Return the x measurement column currently selected in the UI panel
-        return str(self.configpanel.x_choice.GetStringSelection())
+        '''Return the x measurement column currently selected in the UI panel'''
+        return str(self.configpanel.x_choice.Value)
     
     def get_current_y_measurement_name(self):
-        # Return the x measurement column currently selected in the UI panel
-        return str(self.configpanel.y_choice.GetStringSelection())
+        '''Return the x measurement column currently selected in the UI panel'''
+        return str(self.configpanel.y_choice.Value)
     
-    def is_per_object_table(self):
-        return self.configpanel.table_choice.GetStringSelection() == p.object_table
-        # More general case if table is not in props file
-        #all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
-        #object_key_col_names = list(object_key_columns())
-        #return all([c in all_col_names for c in object_key_col_names])
+    def is_per_object_data(self):
+        '''return whether points in the current plot represent objects'''
+        for kl in self.key_lists:
+            try:
+                if len(kl[0]) == len(object_key_columns()):
+                    return True
+            except KeyError:
+                pass
+        return False
     
-    def is_per_image_table(self):
-        return self.configpanel.table_choice.GetStringSelection() == p.image_table
-        # More general case if table is not in props file
-        #all_col_names = db.GetColumnNames(self.configpanel.table_choice.GetStringSelection())
-        #image_key_col_names = list(image_key_columns())
-        #return all([c in all_col_names for c in image_key_col_names]) and not self.is_per_object_table()
+    def is_per_image_data(self):
+        '''return whether points in the current plot represent images'''
+        for kl in self.key_lists:
+            try:
+                if len(kl[0]) == len(object_key_columns()):
+                    return False
+            except KeyError:
+                pass
+        return True
         
     def selection_is_empty(self):
         return self.selection == {} or all([len(s)==0 for s in self.selection.values()])
@@ -380,8 +442,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         # Note: If the mouse is released outside of the canvas, (None,None) is
         #   returned as the last coordinate pair.
         # Cancel selection if user releases outside the canvas.
-        for v in verts:
-            if None in v: return
+        if None in verts[-1]: return
         
         for c, collection in enumerate(self.subplot.collections):
             # Build the selection
@@ -396,7 +457,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             elif self.selection_key == 'alt':
                 self.selection[c] = list(set(self.selection.get(c,[])).difference(new_sel))
             
-            # Color the points
+            # outline the points
             edgecolors = collection.get_edgecolors()
             for i in range(len(self.xys[c])):
                 if i in self.selection[c]:
@@ -468,10 +529,10 @@ class ScatterPanel(FigureCanvasWxAgg):
 
     def show_images_from_selection(self, evt=None):
         '''Callback for "Show images from selection" popup item.'''
-        show_keys = []
+        show_keys = set()
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
-            show_keys += list(set([tuple(k) for k in keys]))
+            show_keys.update([tuple(k) for k in keys])
         if len(show_keys)>10:
             dlg = wx.MessageDialog(self, 'You are about to open %s images. '
                                    'This may take some time depending on your '
@@ -481,68 +542,34 @@ class ScatterPanel(FigureCanvasWxAgg):
             if response != wx.ID_YES:
                 return
         logging.info('Opening %s images.'%(len(show_keys)))
-        for key in show_keys:
+        for key in sorted(show_keys):
             if len(key) == len(image_key_columns()):
                 imagetools.ShowImage(key, p.image_channel_colors, parent=self)
             else:
                 imview = imagetools.ShowImage(key[:-1], p.image_channel_colors, parent=self)
                 imview.SelectObject(key)
-
-                
             
-    def show_image_list_from_selection(self, evt=None):
-        '''Callback for "Show image list from selection" popup item.'''
+    def show_selection_in_table(self, evt=None):
+        '''Callback for "Show selection in a table" popup item.'''
         for i, sel in self.selection.items():
-            keys = self.key_lists[i][sel]
-            keys = list(set([tuple(k) for k in keys]))
+            keys = self.key_lists[i][sel].T.astype('object')
             if len(keys) > 0:
-                if self.is_per_image_table():
-                    key_column_names = image_key_columns()
-                    unique_key_clause = UniqueImageClause(p.image_table)
-                    table_of_interest = p.image_table
-                    column_labels = list(key_column_names)
-                    where_clause_for_query = GetWhereClauseForImages(keys)
+                xpoints = self.x_points[i][sel]
+                ypoints = self.y_points[i][sel]
+                table_data = np.vstack((keys, xpoints, ypoints)).T
+                column_labels = []
+                if self.is_per_image_data():
+                    column_labels = list(image_key_columns())
                     group = 'Image'
-                elif self.is_per_object_table():
-                    key_column_names = object_key_columns()
-                    column_labels = list(key_column_names)
-                    # If the plate and/or well id exist, the query needs to have the per-image id prepended to the object part of the key clause
-                    if p.plate_id or p.well_id:
-                        unique_key_clause = UniqueObjectClause(p.object_table)
-                        table_of_interest = ','.join([p.object_table,p.image_table])
-                    else:
-                        unique_key_clause = UniqueObjectClause()
-                        table_of_interest = p.object_table
-                    where_clause_for_query = image_key_columns(p.image_table)[0] + ' = ' + image_key_columns(p.object_table)[0] + ' AND '
-                    where_clause_for_query += GetWhereClauseForObjects(keys,p.object_table)
+                elif self.is_per_object_data():
+                    column_labels = list(object_key_columns())
                     group = 'Object'
-                    
-                columns_of_interest = []
-                if p.plate_id:
-                    columns_of_interest += [(p.image_table + '.' if self.is_per_object_table() else '') + p.plate_id]
-                    column_labels += [p.plate_id]
-                if p.well_id:
-                    columns_of_interest += [(p.image_table + '.' if self.is_per_object_table() else '') + p.well_id]
-                    column_labels += [p.well_id]
-                columns_of_interest += [self.get_current_x_measurement_name(), self.get_current_y_measurement_name()]
-                # If using per-object data and columns_of_interest includes a key column, need to prepend per-object table name to avoid ambiguity
-                if self.is_per_object_table():
-                    columns_of_interest = ['.'.join([p.object_table,c]) if c in object_key_columns() else c for c in columns_of_interest]
-
-                column_labels += [self.get_current_x_measurement_name(), self.get_current_y_measurement_name()]
-                key_col_indices = list(xrange(len(key_column_names)))
-                columns_of_interest = ','+','.join(columns_of_interest)
-                
-                query = 'SELECT %s%s FROM %s WHERE %s'%(
-                                unique_key_clause, 
-                                columns_of_interest,
-                                table_of_interest,
-                                where_clause_for_query)
-                tableData = db.execute(query)
-                tableData = np.array(tableData, dtype=object)
+                key_col_indices = list(xrange(len(column_labels)))
+                column_labels += [self.get_current_x_measurement_name(), 
+                                  self.get_current_y_measurement_name()]
                 grid = tableviewer.TableViewer(self, title='Selection from collection %d in scatter'%(i))
-                grid.table_from_array(tableData, column_labels, group, key_col_indices)
-                grid.on_set_fitted_col_widths(None)
+                grid.table_from_array(table_data, column_labels, group, key_col_indices)
+                grid.set_fitted_col_widths()
                 grid.Show()
             else:
                 logging.info('No points were selected in collection %d'%(i))
@@ -564,7 +591,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             # Find indices of keys that fall in the filter.
             # Improved performance: |N|log(|F|) N = data points, F = filterd points
             # Assumes that the filtered image keys are in order
-            if self.is_per_object_table():
+            if self.is_per_object_data():
                 collection_keys = [tuple(k[:-1]) for k in self.key_lists[c]]
             else:
                 collection_keys = [tuple(k) for k in self.key_lists[c]]
@@ -681,10 +708,10 @@ class ScatterPanel(FigureCanvasWxAgg):
             show_objects_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.show_objects_from_selection, show_objects_item)
         
-        show_imagelist_item = popup.Append(-1, 'Show image list from selection')
+        show_imagelist_item = popup.Append(-1, 'Show selection in table')
         if self.selection_is_empty():
             show_imagelist_item.Enable(False)
-        self.Bind(wx.EVT_MENU, self.show_image_list_from_selection, show_imagelist_item)
+        self.Bind(wx.EVT_MENU, self.show_selection_in_table, show_imagelist_item)
         
         scatter_from_sel_item = popup.Append(-1, 'Open selected points in new plot')
         if self.selection_is_empty():
@@ -968,7 +995,6 @@ if __name__ == "__main__":
             wx.GetApp().Exit()
             sys.exit()
 
-    import multiclasssql
     multiclasssql.CreateFilterTables()
     
     

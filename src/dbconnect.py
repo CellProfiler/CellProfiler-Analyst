@@ -105,8 +105,10 @@ def well_key_columns(table_name=''):
         table_name += '.'
     if p.plate_id and p.well_id:
         return (table_name+p.plate_id, table_name+p.well_id)
+    elif p.well_id:
+        return (table_name+p.well_id, )
     else:
-        return tuple()
+        return None
 
 def image_key_columns(table_name=''):
     '''Return, as a tuple, the names of the columns that make up the
@@ -219,8 +221,6 @@ def UniqueWellClause(table_name=None):
     '''
     return ','.join(well_key_columns(table_name))
 
-
-
 def get_csv_filenames_from_sql_file():
     '''
     Get the image and object CSVs specified in the .SQL file
@@ -256,7 +256,7 @@ class SqliteClassifier():
         #          be found. This only appears to be a problem on Windows 64bit
         return int(class_num)
 
-
+    
 class DBConnect(Singleton):
     '''
     DBConnect abstracts calls to MySQLdb. It is a singleton that maintains 
@@ -269,10 +269,26 @@ class DBConnect(Singleton):
         self.connections = {}
         self.cursors = {}
         self.connectionInfo = {}
-        # link_cols['table'] = columns that link 'table' to the per-image table
-        self.link_cols = {}
+        #self.link_cols = {}  # link_cols['table'] = columns that link 'table' to the per-image table
         self.sqlite_classifier = SqliteClassifier()
         self.gui_parent = None
+        
+        '''Store information on all user tables.
+        Valid keys are:
+        "link_cols" -- column names that link this table to the per_image table
+        "key_cols" -- column names that represent a unique key in the table
+        '''
+        self.table_data = {}
+##                          {'well_table' : {'aggregation' : 'per_well',
+##                                           'key_cols' : ['plate', 'well'],
+##                                           'link_cols' : [('plate', 'plate_id'), 
+##                                                          ('well', 'well_id')],
+##                                           },
+##                           'speckles' : {'aggregation' : 'per_object',
+##                                         'key_cols' : ['ImageNumber', 'ObjectNumber'],
+##                                         'link_cols' : [('ImageNumber', 'ImageNumber')],
+##                                         },
+##                           }
 
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
@@ -389,6 +405,7 @@ class DBConnect(Singleton):
                 reg = re.compile(expr)
                 return reg.match(item) is not None
             self.connections[connID].create_function("REGEXP", 2, regexp)
+            # Create classifier function
             self.connections[connID].create_function('classifier', -1, self.sqlite_classifier.classify)
             
             try:
@@ -594,14 +611,11 @@ class DBConnect(Singleton):
         return self.execute('SELECT %s FROM %s WHERE %s'%(UniqueObjectClause(), p.object_table, GetWhereClauseForImages([imKey])))
     
     def GetObjectCoords(self, obKey, none_ok=False, silent=False):
-        ''' Returns the specified object's x, y coordinates in an image. '''
-        select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForObjects([obKey])
-        res = self.execute(select, silent=silent)
-        if none_ok and len(res) == 0:
-            return None
-        assert len(res)>0, "Couldn't find object coordinates for object key %s." %(obKey,) 
-        assert len(res)==1, "Database unexpectedly returned %s sets of object coordinates instead of 1." % len(res)
-        return res[0]
+        '''Returns the specified object's x, y coordinates in an image.
+        '''
+        return self.execute('SELECT %s, %s FROM %s WHERE %s'%(
+                        p.cell_x_loc, p.cell_y_loc, p.object_table, 
+                        GetWhereClauseForObjects([obKey])), silent=silent)[0]
     
     def GetAllObjectCoordsFromImage(self, imKey):
         ''' Returns a list of lists x, y coordinates for all objects in the given image. '''
@@ -706,6 +720,9 @@ class DBConnect(Singleton):
             raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
     
     def GetTableNames(self):
+        '''
+        returns all table names in the database
+        '''
         if p.db_type.lower()=='mysql':
             res = self.execute('SHOW TABLES')
             return [t[0] for t in res]
@@ -713,11 +730,249 @@ class DBConnect(Singleton):
             res = self.execute('SELECT name FROM sqlite_master WHERE type="table" ORDER BY name')
             return [t[0] for t in res]
 
+    def get_user_table_names(self):
+        '''
+        returns a list of table names in the database that CPA has accessed
+        '''
+        return self.table_data.keys()
+        
+    def get_other_table_names(self):
+        '''
+        returns a list of table names in the database that CPA hasn't accessed.
+        '''
+        tables = list(set(self.GetTableNames()) - 
+                      set([p.image_table, p.object_table] + 
+                          self.table_data.keys()))
+        return sorted(tables)
+        
     def GetColumnNames(self, table):
         '''Returns a list of the column names for the specified table. '''
         # NOTE: SQLite doesn't like DESCRIBE or SHOW statements so we do it this way.
         self.execute('SELECT * FROM %s LIMIT 1'%(table))
         return self.GetResultColumnNames()   # return the column names
+    
+
+    
+    
+    #
+    # Methods used for linking database tables
+    #
+    #
+    #             _link_tables_
+    # +-------------------------------------+
+    # | src     | dest     | link   | ord   |
+    # +-------------------------------------+
+    # | obj     | treat    | img    | 1     |
+    # | obj     | treat    | well   | 2     |
+    # | obj     | treat    | treat  | 3     |
+    #
+    #           _link_columns_
+    # +-----------------------------------+
+    # | table1 | table2   | col1  | col2  |
+    # +-----------------------------------+
+    # | per_im | per_well | plate | plate |
+    # | per_im | per_well | well  | well  |
+    # 
+    
+    def _add_link_tables_row(self, src, dest, link, order):
+        '''adds src, dest, link, order to the _link_tables_ table.
+        '''
+        self.execute('INSERT INTO _link_tables_ (src, dest, link, ord) '
+                     'VALUES ("%s", "%s", "%s", "%d")'%(src, dest, link, order))
+        
+    def _add_link_columns_row(self, src, dest, col1, col2):
+        '''adds src, dest, col1, col2 to the _link_columns_ table.
+        '''
+        self.execute('INSERT INTO _link_columns_ (table1, table2, col1, '
+                     'col2) VALUES ("%s", "%s", "%s", "%s")'
+                     %(src, dest, col1, col2))
+
+    def connected_tables(self, table):
+        '''return tables connected (directly or indirectly) to the given table
+        '''
+        return [r[0] for r in self.execute('SELECT DISTINCT dest FROM '
+                                        '_link_tables_ WHERE src="%s"'%(table))]
+        
+    def do_link_tables(self, src, dest, src_cols, dest_cols):
+        '''Inserts table linking information into the database so src can 
+        be linked to dest through the columns specified.
+        src - table to be linked in
+        dest - table to link src to
+        src_cols - foreign key column names in src
+        dest_cols - foreign key column names in dest
+        '''
+        assert len(src_cols) == len(dest_cols), 'Column lists were not the same length.'
+        
+        # create the tables if they don't exist
+        if '_link_tables_' not in self.GetTableNames():
+            self.execute('CREATE TABLE _link_tables_ (src VARCHAR(100), '
+                         'dest VARCHAR(100), link VARCHAR(100), ord INTEGER)')
+        if '_link_columns_' not in self.GetTableNames():
+            self.execute('CREATE TABLE _link_columns_ (table1 VARCHAR(100), '
+                    'table2 VARCHAR(100), col1 VARCHAR(200), col2 VARCHAR(200))')
+            
+        if self.get_linking_tables(src, dest) is not None:
+            raise Exception('Tables are already linked')
+        
+        # Connect src directly to dest
+        self._add_link_tables_row(src, dest, dest, 0)
+        for col1, col2 in zip(src_cols, dest_cols):
+            self._add_link_columns_row(src, dest, col1, col2)
+
+        # Connect src to everything dest is connected to through dest
+        for t in self.connected_tables(dest):
+            self._add_link_tables_row(src, t, dest, 0)
+            res = self.execute('SELECT * FROM _link_tables_ WHERE src="%s" '
+                               'AND dest="%s"'%(dest, t))
+            for row in res:
+                link = row[2]
+                order = int(row[3]) + 1
+                self._add_link_tables_row(src, t, link, order)
+        
+        # Connect dest back to src
+        self._add_link_tables_row(dest, src, src, 0)
+        for col1, col2 in zip(src_cols, dest_cols):
+            self._add_link_columns_row(dest, src, col2, col1)
+
+        self.Commit()
+            
+    def get_linking_conditions(self, tables):
+        '''returns: A list of WhereConditions linking the tables given. These 
+        conditions may link through some intermediate table if a path exists.
+        
+        Use when constructing a where clause for a multi-table query.
+                 
+        An exception is raised if a path linking the tables doesn't exist. Call
+        DBConnect.get_linking_tables first to check that all tables are linked.
+                 
+        usage: 
+        >>> get_linking_conditions(['per_well', 'per_image', 'per_object'])
+        [WhereCondition(('per_well', 'Plate'), '=', ('per_image', 'Plate')),
+         WhereCondition(('per_well', 'Well'),  '=', ('per_image', 'Well')),
+         WhereCondition(('per_image', 'ImageNumber'),  '=', ('per_object', 'ImageNumber'))]
+        '''
+        import sqltools as sql
+        for t in tables[1:]:
+            if self.get_linking_table_pairs(tables[0], t) is None:
+                raise Exception('Tables "%s" and "%s" are not linked.'%(tables[0], t))
+            
+        def get_linking_clauses(table1, table2):
+            #helper function returns conditions that link 2 tables
+            return [sql.WhereCondition((ta, cola), '=', (tb, colb))
+                    for ta, tb in self.get_linking_table_pairs(table1, table2)
+                    for cola, colb in self.get_linking_columns(ta, tb)]
+        
+        conditions = set()
+        for table in tables[1:]:
+            conditions.update(get_linking_clauses(tables[0], table))
+        return conditions
+    
+    def get_linking_tables(self, table_from, table_to):
+        '''returns: an ordered list of tables that must be used to join
+        table_from to table_to. If the tables aren't linked in the _link_tables_
+        table then None is returned.
+        
+        usage:
+        >>> get_linking_tables(per_well, per_object)
+        [per_image, per_object]
+        '''
+        if '_link_tables_' not in self.GetTableNames():
+            return None
+        res = self.execute('SELECT link FROM _link_tables_ WHERE src="%s" AND '
+                           'dest="%s" ORDER BY ord'%(table_from, table_to))
+        return [row[0] for row in res] or None
+    
+    def get_linking_table_pairs(self, table_from, table_to):
+        '''returns: an ordered list of table pairs that must be used to join 
+        table_from to table_to. If the tables aren't linked in the _link_tables_
+        table then None is returned.
+        
+        usage:
+        >>> get_linking_table_pairs(per_well, per_object)
+        [(per_well, per_image), (per_image, per_object)]        
+        '''
+        ltables = self.get_linking_tables(table_from, table_to)
+        if ltables is None:
+            return None
+        from_tables = [table_from] + [t for t in ltables[:-1]]
+        to_tables = ltables
+        return [(tfrom, tto) for tfrom, tto in zip(from_tables, to_tables)]
+    
+    def get_linking_columns(self, table_from, table_to):
+        '''returns: a list of column pairs that can be used to join table_from 
+                 to table_to. An exception is raised if table_from is not 
+                 DIRECTLY linked to table_to in the _link_tables_ table or if 
+                 the _link_columns_ table is not found.
+
+        usage: >>> get_linking_columns(per_well, per_image)
+               [(plateid, plate), (wellid, well)]        
+        '''
+        if '_link_columns_' not in self.GetTableNames():
+            raise Exception('Could not find _link_columns_ table.')
+        col_pairs = self.execute('SELECT col1, col2 FROM _link_columns_ WHERE '
+                           'table1="%s" AND table2="%s"'%(table_from, table_to))
+        if len(col_pairs[0]) == 0:
+            raise Exception('Tables "%s" and "%s" are not directly linked in '
+                            'the database'%(table_from, table_to))
+        return col_pairs
+        
+    def get_linkable_tables(self):
+        '''returns the list of tables that CPA can link together.
+        '''
+        tables = []
+        if '_link_tables_' in self.GetTableNames():
+            tables = [row[0] for row in self.execute('SELECT DISTINCT src FROM _link_tables_')]
+        if len(tables) == 0:
+            if p.object_table:
+                self.do_link_tables(p.image_table, p.object_table, 
+                                    image_key_columns(), image_key_columns())
+                return [p.image_table, p.object_table]
+            else:
+                return [p.image_table]
+        return tables
+    
+    #---------------------------------------------------------------------------
+    
+        
+        
+        
+
+    
+    #def get_object_table_linking_clause(self, table):
+        #'''
+        #Returns a clause linking the given table to the object table.
+        #eg: get_object_table_linking_clause("per_well")
+            #=> "per_well.well=per_image.well AND per_well.plate=per_image.plate 
+                #AND per_image.ImageNumber=per_object.ImageNumber "
+        #'''      
+        #im_table_link = self.get_image_table_linking_clause(table)
+        #if im_table_link is None:
+            #return None
+        #else:
+            #return (im_table_link + ' AND ' +
+                    #' AND '.join(['%s.%s=%s.%s'%(p.image_table, col, p.object_table, col)
+                                  #for col in image_key_columns()]))
+    
+    #def get_image_table_linking_clause(self, table):
+        #'''
+        #Returns a clause linking the given table to the image table.
+        #eg: get_image_table_linking_clause("per_well")
+            #=> "per_well.well=per_image.well AND per_well.plate=per_image.plate"
+        #'''
+        #if self.table_data.get(table, None) is None:
+            #self.table_data[table] = {}
+        #if 'link_cols' not in self.table_data[table].keys():
+            #import guiutils
+            #import wx
+            #dlg = guiutils.LinkTablesDialog(None, p.image_table, table, size=(700,-1))
+            #if (dlg.ShowModal() == wx.ID_OK):
+                #self.table_data[table]['link_cols'] = dlg.get_column_pairs()
+            #else:
+                #return None
+        #elif self.table_data[table]['link_cols'] is None:
+            #return None
+        #return ' AND '.join(['%s.%s=%s.%s'%(table, col, p.image_table, imcol)
+                             #for col, imcol in self.table_data[table]['link_cols']])
 
     def GetUserColumnNames(self, table):
         '''Returns a list of the column names that start with "User_" for the 
@@ -727,10 +982,7 @@ class DBConnect(Singleton):
     def GetColumnTypes(self, table):
         '''Returns python types for each column of the given table. '''
         sqltypes = self.GetColumnTypeStrings(table)
-        return [sqltype_to_pythontype(t) for t in sqltypes]        
-        # This method will return Nonetype for columns that begin with a NULL
-        # res = self.execute('SELECT * FROM %s LIMIT 1'%(table), silent=True)
-        # return [type(x) for x in res[0]]
+        return [sqltype_to_pythontype(t) for t in sqltypes]
     
     def GetColumnType(self, table, colname):
         '''Returns the python type for a given table column. '''
@@ -793,31 +1045,11 @@ class DBConnect(Singleton):
                 return None
         return self.classifierColNames
     
-    
     def GetResultColumnNames(self):
         ''' Returns the column names of the last query on this connection. '''
         connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
-    
-    #
-    # no longer used
-    #
-    #def GetCellDataForClassifier(self, obKey):
-        #'''
-        #Returns a list of measurements for the specified object excluding
-        #those specified in Properties.classifier_ignore_columns
-        #'''
-        #if self.GetColnamesForClassifier() is None:
-            #return None
-        #query = 'SELECT %s FROM %s WHERE %s' %(','.join(self.classifierColNames), p.object_table, GetWhereClauseForObjects([obKey]))
-        #data = self.execute(query, silent=True)
-        #if len(data) == 0:
-            #logging.error('No data for obKey: %s'%str(obKey))
-            #return None
-        ## This should be the case
-        #assert all([type(x) in [int, long, float] for x in data[0]])
-        #return np.array(data[0])
-    
+        
     def GetCellData(self, obKey):
         '''
         Returns a list of measurements for the specified object.
@@ -889,20 +1121,20 @@ class DBConnect(Singleton):
                     raise Exception, 'Value in table could not be converted to string!'
         return colTypes
     
-    def GetLinkingColumnsForTable(self, table):
-        '''
-        Returns column(s) that can be used to link the given table to the 
-        per_image table.
-        '''
-        if table not in self.link_cols.keys():
-            cols = self.GetColumnNames(table)
-            if all([kcol in cols for kcol in image_key_columns()]):
-                self.link_cols[table] = image_key_columns()
-            elif all([kcol in cols for kcol in well_key_columns()]):
-                self.link_cols[table] = well_key_columns()
-            else:
-                return None
-        return self.link_cols[table]
+    #def GetLinkingColumnsForTable(self, table):
+        #'''
+        #Returns column(s) that can be used to link the given table to the 
+        #per_image table.
+        #'''
+        #if table not in self.link_cols.keys():
+            #cols = self.GetColumnNames(table)
+            #if all([kcol in cols for kcol in image_key_columns()]):
+                #self.link_cols[table] = image_key_columns()
+            #elif all([kcol in cols for kcol in well_key_columns()]):
+                #self.link_cols[table] = well_key_columns()
+            #else:
+                #return None
+        #return self.link_cols[table]
     
     def AppendColumn(self, table, colname, coltype):
         '''
@@ -923,7 +1155,7 @@ class DBConnect(Singleton):
         # TODO: handle other tables
         assert table == p.image_table
         if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
-            raise 'Can only edit columns beginning with "User_" in the image and object tables.'            
+            raise 'Can only edit columns beginning with "User_" in the image table.'            
         if type(value) in (str, unicode):
             value = '"'+value+'"'
             if re.match('\"\'\`', value):
@@ -1087,6 +1319,14 @@ class DBConnect(Singleton):
             if dlg:
                 c, s = dlg.Update(pct, '%d%% Complete'%(pct))
                 if not c:
+                    try:
+                        os.remove(p.db_sqlite_file)
+                    except OSError:
+                        wx.MessageBox('Could not remove incomplete database'
+                                      ' at "%s". This file must be removed '
+                                      'manually or CPAnalyst will load it '
+                                      'the next time use use the current '
+                                      'database settings.', 'Error')
                     raise Exception, 'cancelled load'
             logging.info("... loaded %d%% of CSV data"%(pct))
 
@@ -1112,6 +1352,14 @@ class DBConnect(Singleton):
                 if dlg:
                     c, s = dlg.Update(pct, '%d%% Complete'%(pct))
                     if not c:
+                        try:
+                            os.remove(p.db_sqlite_file)
+                        except OSError:
+                            wx.MessageBox('Could not remove incomplete database'
+                                          ' at "%s". This file must be removed '
+                                          'manually or CPAnalyst will load it '
+                                          'the next time use use the current '
+                                          'database settings.', 'Error')
                         raise Exception, 'cancelled load'
                 logging.info("... loaded %d%% of CSV data"%(pct))
             f.close()
@@ -1130,7 +1378,15 @@ class DBConnect(Singleton):
             res = self.execute("SELECT name FROM sqlite_master WHERE type='table' and name='%s'"%(name))
             res += self.execute("SELECT name FROM sqlite_temp_master WHERE type='table' and name='%s'"%(name))            
         return len(res) > 0
-
+    
+    def set_table_link_cols(self, table, cols):
+        '''
+        cols -- a list of pairs of column names from table and the image table
+        '''
+        if self.table_data.get(table, None) is None:
+            self. table_data[table] = {}
+        self.table_data[table]['link_cols'] = cols
+    
     def CreateTempTableFromCSV(self, filename, tablename):
         '''
         Reads a csv file into a temporary table in the database.
@@ -1313,12 +1569,12 @@ class DBConnect(Singleton):
     def register_gui_parent(self, parent):
         self.gui_parent = parent
 
+        
 class Entity(object):
     """Abstract class containing code that is common to Images and
     Objects.  Do not instantiate directly."""
 
     class dbiter(object):
-
         def __init__(self, objects, db):
             self.length = objects.count()
             self.db = db
@@ -1355,7 +1611,6 @@ class Entity(object):
             except GeneratorExit:
                 print "GeneratorExit"
                 self.db.cursors[connID].fetchall()
-                
 
     def __init__(self):
         self._where = []
@@ -1398,19 +1653,19 @@ class Entity(object):
         return new
 
     def _get_where_clause(self):
-        return "" if self._where == [] else "where " + \
-            " and ".join(self._where)
+        return "" if self._where == [] else "WHERE " + \
+            " AND ".join(self._where)
     where_clause = property(_get_where_clause)
 
     def _get_group_by_clause(self):
         if self.group_columns == []:
             return ''
         else:
-            return "group by " + ",".join(self.group_columns)
+            return "GROUP BY " + ",".join(self.group_columns)
     group_by_clause = property(_get_group_by_clause)
     
     def count(self):
-        c = DBConnect.getInstance().execute(self.all_query(columns=["count(*)"]))[0][0]
+        c = DBConnect.getInstance().execute(self.all_query(columns=["COUNT(*)"]))[0][0]
         c = max(0, c - (self._offset or 0))
         c = max(c, self._limit or 0)
         return c
@@ -1419,7 +1674,7 @@ class Entity(object):
         return self.dbiter(self, DBConnect.getInstance())
 
     def all_query(self, columns=None):
-        return "select %s from %s %s %s %s %s" % (
+        return "SELECT %s FROM %s %s %s %s %s" % (
             ",".join(columns or self.columns()),
             self.from_clause,
             self.where_clause,
@@ -1431,12 +1686,12 @@ class Entity(object):
         if self._ordering is None:
             return ""
         else:
-            return "order by " + ", ".join(self._ordering)
+            return "ORDER BY " + ", ".join(self._ordering)
     ordering_clause = property(_get_ordering_clause)
 
     def _get_offset_limit_clause(self):
-        return " ".join((self._limit and ["limit %d" % self._limit] or []) +
-                        (self._offset and ["offset %d" % self._offset] or []))
+        return " ".join((self._limit and ["LIMIT %d" % self._limit] or []) +
+                        (self._offset and ["OFFSET %d" % self._offset] or []))
     offset_limit_clause = property(_get_offset_limit_clause)
 
     def ordering(self, ordering):
@@ -1448,7 +1703,7 @@ class Entity(object):
         new = copy.deepcopy(self)
         new._columns = columns
         return new
-
+    
     
 class Union(Entity):
     def __init__(self, *args):
@@ -1472,9 +1727,11 @@ class Images(Entity):
         super(Images, self).__init__()
 
     def _get_from_clause(self):
-        from_clause = [Properties.getInstance().image_table]
+        t = set([col[:col.index('.')] for col in self.columns() if '.' in col])
+        t = t - set(Properties.getInstance().image_table)
+        from_clause = [Properties.getInstance().image_table] + list(t)
         for filter in self.filters:
-            from_clause.append("join (%s) as %s using (%s)" %
+            from_clause.append("JOIN (%s) AS %s USING (%s)" %
                                (Properties.getInstance()._filters[filter],
                                 'filter_SQL_' + filter,
                                 ", ".join(image_key_columns())))
@@ -1511,11 +1768,11 @@ class Objects(Entity):
     def _get_from_clause(self):
         from_clause = [Properties.getInstance().object_table]
         if self._images is not None:
-            from_clause.append("join %s using (%s)"%
+            from_clause.append("JOIN %s USING (%s)"%
                                (Properties.getInstance().image_table,
                                 ", ".join(image_key_columns())))
         for filter in self.filters:
-            from_clause.append("join (%s) as %s using (%s)" %
+            from_clause.append("JOIN (%s) AS %s USING (%s)" %
                                (Properties.getInstance()._filters[filter],
                                 'filter_SQL_' + filter,
                                 ", ".join(image_key_columns())))
@@ -1530,8 +1787,8 @@ class Objects(Entity):
         """Returns a list of the standard deviations of the non-key columns.
         Offsets and limits are ignored here, not sure if they should be."""
         db = DBConnect.getInstance()
-        return db.execute("select %s from %s %s"%(
-                ",".join(["std(%s)" % c 
+        return db.execute("SELECT %s FROM %s %s"%(
+                ",".join(["STD(%s)" % c 
                           for c in db.GetColnamesForClassifier()]),
                 self.from_clause, self.where_clause))[0]
 
@@ -1542,24 +1799,23 @@ class Objects(Entity):
 if __name__ == "__main__":
     ''' For debugging only... '''
     from datamodel import DataModel
-    import dbconnect
     import wx
     app = wx.PySimpleApp()
-    
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    
     
     p = Properties.getInstance()
     dm = DataModel.getInstance()   
+    db = DBConnect.getInstance()
     p.LoadFile('/Users/afraser/cpa_example/example.properties')
     
-    print 'hi'
+
+    conditions = db.get_linking_conditions(['class_table', 'per_image'])
+    print ' AND '.join([str(c) for c in conditions])
+        
+    #print db.get_linking_tables('class_table', 'per_object')
+    
+    #print db.get_linking_table_pairs('class_table', 'per_object')
+##    print db.get_linking_columns('class_table', 'per_object')
+
     
     app.MainLoop()
-    
-#    platesWellsAndVals = dbconnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
-
-#    p.LoadFile('../properties/Gilliland_LeukemiaScreens_Validation.properties')
-#    p.LoadFile('../properties/nirht_test.properties')
-#    p.LoadFile('../test_data/export_to_db_test.properties')
-#    p.LoadFile('../test_data/nirht_local.properties')

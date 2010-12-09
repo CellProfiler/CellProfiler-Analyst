@@ -4,6 +4,7 @@ from properties import Properties
 import datamodel
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import sqltools as sql
+from guiutils import TableComboBox, get_other_table_from_user
 import imagetools
 import logging
 import numpy as np
@@ -40,14 +41,7 @@ class DataSourcePanel(wx.Panel):
         
         self.x_columns = [] # column names to plot if selecting multiple columns
 
-        tables = [p.image_table] #db.GetTableNames()
-        if p.object_table:
-            tables += [p.object_table]
-        self.table_choice = ComboBox(self, -1, choices=tables, style=wx.CB_READONLY)
-        if p.image_table in tables:
-            self.table_choice.Select(tables.index(p.image_table))
-        else:
-            logging.error('Could not find your image table "%s" among the database tables found: %s'%(p.image_table, tables))
+        self.table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.x_multiple = wx.Button(self, -1, 'select multiple')
         self.group_choice = ComboBox(self, -1, choices=[NO_GROUP]+p._groups_ordered, style=wx.CB_READONLY)
@@ -110,6 +104,15 @@ class DataSourcePanel(wx.Panel):
             self.group_choice.SetStringSelection(NO_GROUP)
         
     def on_table_selected(self, evt):
+        table = self.table_choice.Value
+        if table == TableComboBox.OTHER_TABLE:
+            t = get_other_table_from_user(self)
+            if t is not None:
+                self.table_choice.Items = self.table_choice.Items[:-1] + [t] + self.table_choice.Items[-1:]
+                self.table_choice.Select(self.table_choice.Items.index(t))
+            else:
+                self.table_choice.Select(0)
+                return
         self.group_choice.Enable()
         self.x_columns = []
         self.update_column_fields()
@@ -192,12 +195,12 @@ class DataSourcePanel(wx.Panel):
         '''
         
         q = sql.QueryBuilder()
-        columns = [(tablename, col)]
+        select = [sql.Column(tablename, col)]
         if grouping != NO_GROUP:
             dm = datamodel.DataModel.getInstance()
             group_cols = dm.GetGroupColumnNames(grouping, include_table_name=True)
-            columns += [col.split('.') for col in group_cols]
-        q.set_columns(columns)
+            select += [sql.Column(*col.split('.')) for col in group_cols]
+        q.set_select_clause(select)
         if filter != NO_FILTER:
             #
             # This is a bit annoying... We need to parse the filter query and
@@ -220,7 +223,7 @@ class DataSourcePanel(wx.Panel):
                 q = str(q) + ' WHERE ' + f_where        
 
         res = db.execute(str(q))
-        res = np.array(res)
+        res = np.array(res, dtype=object)
         # replaces Nones with NaNs
         for row in res:
             if row[0] is None:
@@ -229,7 +232,7 @@ class DataSourcePanel(wx.Panel):
         points_dict = {}
         if self.group_choice.Value != NO_GROUP:
             for row in res:
-                groupkey = row[1:]
+                groupkey = tuple(row[1:])
                 points_dict[groupkey] = points_dict.get(groupkey, []) + [row[0]]
         else:
             points_dict = {col : [r[0] for r in res]}
@@ -308,7 +311,10 @@ class BoxPlotPanel(FigureCanvasWxAgg):
         self.points = []
         ignored = 0
         for label, values in sorted(points.items()):
-            self.xlabels += [label]
+            if type(label) in [tuple, list]:
+                self.xlabels += [','.join([str(l) for l in label])]
+            else:
+                self.xlabels += [label]
             self.points += [np.array(values).astype('f')[~ np.isnan(values)]]
             ignored += len(np.array(values)[np.isnan(values)])
         

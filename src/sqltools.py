@@ -10,22 +10,22 @@ class QueryBuilder(object):
     This class will auto-generate your from clause and link tables in the
     where clause.
     q = Query()
-    q.set_columns([(p.image_table, p.image_id), 
-                   ('per_well', 'gene'), 
-                   ('per_object', 'intensity', 'AVG')])
+    q.set_select_clause([Column(p.image_table, p.image_id), 
+                         Column('per_well', 'gene'), 
+                         Column('per_object', 'intensity', 'AVG')])
     q.add_where_condition(('asdf', 'x'), '<', '100')
     q.add_where_condition(('asdf', 'y'), '<', '10', 'OR')
     q.set_group_columns([('per_well', 'gene')])
     '''
     def __init__(self):
-        self.columns = []
+        self.select_clause = []
         self.where_clause = WhereClause()
         self.group_cols = []
         self.other_tables = []
         
     def __str__(self):
-        col_clause = ', '.join([str(col) for col in self.columns])
-        from_clause = self.from_clause
+        select_clause = self.get_select_clause_string()
+        from_clause = self.get_from_clause()
         where_clause = self.get_where_clause()
         if where_clause:
             where_clause = '\n\tWHERE '+where_clause
@@ -33,13 +33,23 @@ class QueryBuilder(object):
         if self.group_cols != []:
             group_clause = '\n\tGROUP BY ' + ', '.join([str(col) for col in self.group_cols])
             
-        return 'SELECT %s \n\tFROM %s %s %s'%(col_clause, from_clause, 
+        return 'SELECT %s \n\tFROM %s %s %s'%(select_clause, from_clause, 
                                           where_clause, group_clause)
         
-    def set_columns(self, cols):
-        '''cols - a list of tuples of the form (table, col) or (table, col, agg)
+    def set_select_clause(self, sel_list):
+        '''sel_list - a list of Expressions and/or Columns.        
+        eg: 
+        >>> col = Column('t','a','AVG')
+        >>> qb.set_select_clause([col, Expression([col, '/', col])
+        >>> qb.get_select_clause_string()
+        "AVG(t.a), AVG(t.a)/AVG(t.a)"
         '''
-        self.columns = [Column(*col) for col in cols]
+        self.select_clause = sel_list
+        
+    def get_select_clause_string(self):
+        '''returns the select clause as a string
+        '''
+        return ', '.join([str(t) for t in self.select_clause])
             
     def add_table_dependencies(self, tables):
         '''tables - a list of table names to add to the from clause
@@ -79,63 +89,59 @@ class QueryBuilder(object):
             self.where_clause.add_where_clause(wc)
 
     def set_group_columns(self, cols):
-        '''cols - a list of tuples of the form (table, col) or (table, col, agg)
+        '''cols - a list of either Columns or column tuples: (table, col, [agg])
         '''
-        self.group_cols = [Column(*col) for col in cols]
+        self.group_cols = []
+        for col in cols:
+            if isinstance(col, Column):
+                self.group_cols += [col]
+            elif isinstance(col, tuple):
+                self.group_cols += [Column(*col)]
+            else:
+                raise 'Invalid parameter type'
         
-    def get_tables(self):
+    def get_queried_tables(self):
+        '''returns all tables referenced in the "select", "where", and 
+        "group by" clauses.
+        '''
         tables = self.other_tables
-        # add the tables from all the columns 
-        tables += [col.table for col in self.columns]
+        # add the tables from the select clause
+        for exp in self.select_clause:
+            tables += exp.get_tables()
         # add the tables from the where clause
         tables += self.where_clause.get_tables()
         # add the tables from the group columns
         tables += [col.table for col in self.group_cols]
         return list(set(tables))
+        
+    def get_tables(self):
+        '''returns all tables required in the from clause for this query.
+        '''
+        tables = self.get_queried_tables()
+        # add the tables required to link the above tables together
+        db = DBConnect.getInstance()
+        conditions = db.get_linking_conditions(tables)
+        for c in conditions:
+            tables += c.get_tables()
+        return list(set(tables))
     
     def get_from_clause(self):
         return ', '.join(self.get_tables())
-    from_clause = property(get_from_clause)
     
     def get_where_clause(self):
         '''Build the where clause from conditions given by the user and 
         conditions that link all the tables together.
         '''
+        db = DBConnect.getInstance()
         conditions = []
         if self.where_clause.is_not_empty():
             conditions += [str(self.where_clause)]
-        link_clause = self._get_table_linking_clause()
-        if link_clause:
-            conditions += [str(link_clause)]
+        queried_tables = self.get_queried_tables()
+        if len(queried_tables) > 1:
+            link_conditions = db.get_linking_conditions(queried_tables)
+            if link_conditions:
+                conditions += [' AND '.join([str(c) for c in link_conditions])]
         return ' AND '.join(conditions)
-             
-    def _get_table_linking_clause(self):
-        '''
-        returns a clause linking the tables this query depends on through the
-        image table.
-        '''
-        db = DBConnect.getInstance()
-        tables = self.get_tables()
-        im = ob = False
-        if p.image_table in tables:
-            im = True
-            tables.remove(p.image_table)
-        if p.object_table in tables:
-            ob = True
-            tables.remove(p.object_table)
-        res = ''
-        if (im and ob):
-            res = ' AND '.join(['%s.%s=%s.%s'%(p.image_table, col, 
-                                               p.object_table, col)
-                                for col in image_key_columns()])
-            if tables:
-                res += ' AND '
-                res += ' AND '.join([db.get_image_table_linking_clause(t) 
-                                     for t in tables])
-        elif im:
-            res = ' AND '.join([db.get_image_table_linking_clause(t) 
-                                for t in tables])            
-        return res
 
 
 class Column:
@@ -153,7 +159,9 @@ class Column:
             return '%s(%s.%s)'%(self.agg.upper(), self.table, self.col)
         else:
             return '%s.%s'%(self.table, self.col)
-    __hash__ = __str__        
+        
+    def __hash__(self):
+        return hash(str(self))
     
     def __eq__(self, col):
         return (self.table == col.table and 
@@ -162,6 +170,9 @@ class Column:
             
     def __ne__(self, col):
         return not self.__eq__(col)
+    
+    def get_tables(self):
+        return [self.table]
 
     
 ## {{{ http://code.activestate.com/recipes/511480/ (r1)
@@ -173,6 +184,35 @@ def interleave(*args):
             except IndexError:
                 continue
 ## end of http://code.activestate.com/recipes/511480/ }}}
+
+
+class Expression(object):
+    def __init__(exp_list):
+        '''exp_list -- a list of string tokens and columns comprising a valid 
+                       SQL expression when joined into a single string.
+           eg:
+           >>>col1 = Column('imtbl', 'PosCount', 'AVG')
+           >>>col2 = Column('imtbl', 'NegCount', 'AVG')
+           >>>exp = Expression([col1, '/ (', col1, '+', col2, ')'
+           >>>str(exp)
+           "AVG(imtbl.PosCount)/ (AVG(imtbl.PosCount) + AVG(imtbl.NegCount))"
+        '''
+        self.exp = exp_list
+        
+    def __str__(self):
+        return ''.join([str(token) for token in self.exp])
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, exp):
+        return isinstance(exp, Expression) and (str(self) == str(exp))
+            
+    def __ne__(self, exp):
+        return not self.__eq__(exp)
+
+    def get_tables(self):
+        return [token.table for token in self.exp if isinstance(token, Column)]
 
     
 class WhereClause(object):
@@ -273,7 +313,9 @@ class WhereCondition:
     
     def __str__(self):
         return '%s %s %s'%(self.column, self.comparator, self.value)
-    __hash__ = __str__        
+
+    def __hash__(self):
+        return hash(str(self))
     
     def get_tables(self):
         tables = [self.column.table]
@@ -288,9 +330,9 @@ if __name__ == "__main__":
     p.LoadFile('/Users/afraser/cpa_example/example.properties')
 
     q = QueryBuilder()
-    q.set_columns([('per_image', 'ImageNumber'), 
-                   ('per_well', 'gene'), 
-                   ('per_object', 'intensity', 'AVG')])
+    q.set_select_clause([Column('per_image', 'ImageNumber'), 
+                         Column('per_well', 'gene'), 
+                         Column('per_object', 'intensity', 'AVG')])
     q.add_where_condition(('asdf', 'x'), '<', '100')
     q.add_where_condition(('asdf', 'y'), '<', '10', 'OR')
     q.set_group_columns([('per_well', 'gene')])
