@@ -9,6 +9,8 @@ p = Properties.getInstance()
 db = DBConnect.getInstance()
 
 # Plate formats
+P6    = (2, 3)
+P24   = (4, 6)
 P96   = (8, 12)
 P384  = (16, 24)
 P1536 = (32, 48)
@@ -259,10 +261,12 @@ class DataModel(Singleton):
         else:
             raise 'Unknown well format'
         
-        if   p.plate_type == '96':   pshape = P96
-        elif p.plate_type == '384':  pshape = P384
-        elif p.plate_type == '1536': pshape = P1536
-        elif p.plate_type == '5600': pshape = P5600
+        if   p.plate_type == '6'    : pshape = P6
+        elif p.plate_type == '24'   : pshape = P24
+        elif p.plate_type == '96'   : pshape = P96
+        elif p.plate_type == '384'  : pshape = P384
+        elif p.plate_type == '1536' : pshape = P1536
+        elif p.plate_type == '5600' : pshape = P5600
 
         res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
         for r in res:
