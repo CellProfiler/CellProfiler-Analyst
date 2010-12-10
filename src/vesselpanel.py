@@ -15,7 +15,7 @@ class VesselPanel(wx.Panel):
         plate_id -- a plate_id registered in the PlateDesign class
         well_disp -- ROUNDED, CIRCLE, SQUARE, THUMBNAIL or IMAGE
         '''
-        Panel.__init__(self, parent, **kwargs)
+        wx.Panel.__init__(self, parent, **kwargs)
         
         self.plate_id = plate_id
         self.well_disp = well_disp
@@ -200,13 +200,43 @@ class VesselPanel(wx.Panel):
         for handler in self.well_selection_handlers:
             handler(self.get_platewell_id_at_xy(evt.X, evt.Y), selected)
         
+            
+class VesselScroller(wx.ScrolledWindow):
+    def __init__(self, parent, id=-1, **kwargs):
+        wx.ScrolledWindow.__init__(self, parent, id, **kwargs)
+        self.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
+        (w,h) = self.Sizer.GetSize()
+        self.SetScrollbars(20,20,w/20,h/20,0,0)
+        self.plates = []
+
+    def add_vessel_panel(self, panel, plate_id):
+        if len(self.Sizer.GetChildren()) > 0:
+            self.Sizer.AddSpacer((10,-1))
+        sz = wx.BoxSizer(wx.VERTICAL)
+        sz.Add(wx.StaticText(self, -1, plate_id), 0, wx.EXPAND|wx.TOP|wx.LEFT, 10)
+        sz.Add(panel, 1, wx.EXPAND)
+        self.Sizer.Add(sz, 1, wx.EXPAND)
+        self.plates += [panel]
+
+    def get_vessels(self):
+        return self.plates
+
+    def get_selected_well_ids(self):
+        wells = []
+        for plate in self.plates:
+            wells += plate.get_selected_well_keys()
+        return wells
+
+    def clear(self):
+        self.plates = []
+        self.Sizer.Clear(deleteWindows=True)
+
         
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     
     f = wx.Frame(None, size=(900.,800.))
     
-    from bench import VesselScroller
     from experimentsettings import P1536, P96
     ps = VesselScroller(f)
     
