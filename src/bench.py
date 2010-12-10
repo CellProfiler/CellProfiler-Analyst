@@ -113,15 +113,22 @@ class Bench(wx.Frame):
             for plate in self.vesselscroller.get_vessels():
                 plate.disable_selection()
                 plate.set_selected_well_ids([])
+                plate.set_marked_well_ids([])
             return
         else:
             wells_tag = '%s|Wells|%s|%s'%(self.mode_tag_prefix, 
                                           self.mode_tag_instance, 
                                           self.get_selected_timepoint())
-            platewell_ids = meta.get_field(wells_tag, [])
+            selected_ids = meta.get_field(wells_tag, [])
+            marked_ids = []
+            for inst in meta.get_field_instances(get_tag_stump(wells_tag)):
+                marked_ids += meta.get_field('%s|%s|%s'%(get_tag_stump(wells_tag), inst, self.get_selected_timepoint()), [])
             for plate in self.vesselscroller.get_vessels():
                 plate.enable_selection()
-                plate.set_selected_well_ids([pw_id for pw_id in platewell_ids if pw_id[0]==plate.get_plate_id()])
+                plate.set_selected_well_ids([pw_id for pw_id in selected_ids 
+                                             if pw_id[0]==plate.get_plate_id()])
+                plate.set_marked_well_ids([pw_id for pw_id in marked_ids 
+                                           if pw_id[0]==plate.get_plate_id()])
 
 
     def update_plate_window(self, tag):
