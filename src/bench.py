@@ -66,9 +66,11 @@ class Bench(wx.Frame):
 
         time_sizer.AddSpacer((10,-1))
         time_sizer.Add(self.tlabel1,0, wx.EXPAND)
+        time_sizer.AddSpacer((2,-1))
         time_sizer.Add(self.time_slider, 1, wx.EXPAND)
         time_sizer.AddSpacer((5,-1))
         time_sizer.Add(self.time_text_box, 0, wx.BOTTOM, 15)
+        time_sizer.AddSpacer((2,-1))
         time_sizer.Add(self.time_spin, 0, wx.BOTTOM, 15)
         time_sizer.AddSpacer((5,-1))
         time_sizer.Add(self.add24_button, 0, wx.EXPAND, wx.TOP|wx.BOTTOM, 5)
@@ -82,28 +84,33 @@ class Bench(wx.Frame):
 
     def get_selected_timepoint(self):
         return self.time_slider.GetValue()
-
-    def on_adjust_timepoint(self, evt):
-        time_string = format_time_string(self.time_slider.GetValue())
-        self.time_text_box.SetValue(time_string)
+    
+    def set_timepoint(self, timepoint):
+        '''Sets the slider timepoint and updates the plate display.
+        '''
+        self.time_slider.Value = timepoint
+        self.time_text_box.Value = format_time_string(timepoint)
         self.update_well_selections()
-        
+
     def on_increment_time(self, evt):
-        self.time_slider.Value += 1
-        self.on_adjust_timepoint(None)
+        self.set_timepoint(self.time_slider.Value + 1)
         
     def on_decrement_time(self, evt):
-        self.time_slider.Value -= 1
-        self.on_adjust_timepoint(None)
+        self.set_timepoint(self.time_slider.Value - 1)
+
+    def on_adjust_timepoint(self, evt):
+        self.set_timepoint(self.time_slider.Value)
         
     def on_edit_time_text_box(self, evt):
         time_string = self.time_text_box.GetValue()
+        if not re.match('^\d*:\d\d$', time_string):
+            self.time_text_box.SetForegroundColour(wx.RED)
+            return
         try:
             hours, mins = map(int, time_string.split(':'))
             minutes = hours * 60 + mins
+            self.set_timepoint(minutes)
             self.time_text_box.SetForegroundColour(wx.BLACK)
-            self.time_slider.SetValue(minutes)
-            self.update_well_selections()
         except:
             self.time_text_box.SetForegroundColour(wx.RED)
 

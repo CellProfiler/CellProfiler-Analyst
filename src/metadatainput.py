@@ -2227,38 +2227,6 @@ class FCSPanel(wx.Panel):
         else:
             meta.set_field(tag, ctrl.GetValue())
 
-
-def on_save_settings(evt):
-    # for saving the experimental file, the text file may have the following nomenclature
-    # Date(YYYY_MM_DD)_ExperimenterNumber_Experimenter Name_ first 20 words from the aim
-
-    meta = ExperimentSettings.getInstance()
-    
-    #-- Get Experimental Date/number ---#
-    exp_date = meta.get_field('Overview|Project|ExptDate')
-    exp_num = meta.get_field('Overview|Project|ExptNum')
-    exp_title = meta.get_field('Overview|Project|Title')
-    if None not in [exp_date, exp_num, exp_title]:
-        day, month, year = exp_date.split('/')
-        filename = '%s%s%s_%s_%s.txt'%(year, month, day , exp_num, exp_title)
-    else:
-        filename = 'new_experiment.txt'
-    
-    dlg = wx.FileDialog(None, message='Saving experimental metadata...', 
-                        defaultDir=os.getcwd(), defaultFile=filename, 
-                        wildcard='.txt', 
-                        style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
-    if dlg.ShowModal() == wx.ID_OK:
-        os.chdir(os.path.split(dlg.GetPath())[0])
-        ExperimentSettings.getInstance().save_to_file(dlg.GetPath())
-
-        
-def on_load_settings(evt):
-    dlg = wx.FileDialog(None, "Select the file containing your CPAnalyst workspace...",
-                        defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        ExperimentSettings.getInstance().load_from_file(dlg.GetPath())
-
         
 if __name__ == '__main__':
     app = wx.App(False)

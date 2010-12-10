@@ -127,12 +127,12 @@ class TimelinePanel(wx.Panel):
         self.events_by_timepoint = None
         self.cursor_pos = None
         self.hover_timepoint = None
-        self.selection = None
         self.time_x = False
         
         self.Bind(wx.EVT_PAINT, self._on_paint)
         self.Bind(wx.EVT_MOTION, self._on_mouse_motion)
         self.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_exit)
+        self.Bind(wx.EVT_LEFT_UP, self._on_click)
         
     def set_style(self, padding=None, xgap=None, icon_size=None):
         if padding is not None:
@@ -194,7 +194,8 @@ class TimelinePanel(wx.Panel):
         TIC_SIZE = self.TIC_SIZE
         FONT_SIZE = self.FONT_SIZE
         MAX_TIMEPOINT = self.timepoints[-1]
-        
+        self.hover_timepoint = None
+
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
@@ -242,7 +243,6 @@ class TimelinePanel(wx.Panel):
                 self.hover_timepoint = timepoint
             else:
                 dc.SetPen(wx.Pen(wx.BLACK, 1))
-                self.hover_timepoint = None
             # Draw tic marks
             dc.DrawLine(x, y - TIC_SIZE, 
                         x, y + TIC_SIZE)
@@ -294,10 +294,12 @@ class TimelinePanel(wx.Panel):
         self.Refresh()
         
     def _on_click(self, evt):
-        timeline = meta.get_timeline()
         if self.hover_timepoint is not None:
-            self.selection = (self.hover_timepoint, 
-                              timeline.get_events_at_timepoint())
+            try:
+                bench = wx.GetApp().get_bench()
+            except: return
+            bench.set_timepoint(self.hover_timepoint)
+            
 
 
 class LineagePanel(wx.Panel):
@@ -323,7 +325,7 @@ class LineagePanel(wx.Panel):
         self.Bind(wx.EVT_PAINT, self._on_paint)
         self.Bind(wx.EVT_MOTION, self._on_mouse_motion)
         self.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_exit)
-        self.Bind(wx.EVT_LEFT_DOWN, self._on_mouse_click)
+        self.Bind(wx.EVT_LEFT_UP, self._on_mouse_click)
         
     def set_x_spacing(self, mode):
         if mode == SPACE_TIME:
