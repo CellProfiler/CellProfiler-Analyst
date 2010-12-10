@@ -1,6 +1,5 @@
 import wx
-import numpy as np
-from experimentsettings import *
+from experimentsettings import PlateDesign
 
 # Well Displays
 ROUNDED   = 'rounded'
@@ -16,7 +15,7 @@ class VesselPanel(wx.Panel):
         plate_id -- a plate_id registered in the PlateDesign class
         well_disp -- ROUNDED, CIRCLE, SQUARE, THUMBNAIL or IMAGE
         '''
-        wx.Panel.__init__(self, parent, **kwargs)
+        Panel.__init__(self, parent, **kwargs)
         
         self.plate_id = plate_id
         self.well_disp = well_disp
@@ -207,8 +206,9 @@ if __name__ == "__main__":
     
     f = wx.Frame(None, size=(900.,800.))
     
-    from bench import PlateScroller
-    ps = PlateScroller(f)
+    from bench import VesselScroller
+    from experimentsettings import P1536, P96
+    ps = VesselScroller(f)
     
     PlateDesign.add_plate('1', P1536)
     vp = VesselPanel(ps, '1')
