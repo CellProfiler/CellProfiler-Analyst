@@ -22,7 +22,6 @@ class LineageProfiler(wx.App):
         settings_frame.Bind(wx.EVT_MENU, on_save_settings, saveSettingsMenuItem)
         settings_frame.Bind(wx.EVT_MENU, on_load_settings, loadSettingsMenuItem) 
         settings_frame.GetMenuBar().Append(fileMenu, 'File')
-
         
         bench_frame = Bench(None, size=(600,300), 
                             pos=(0,settings_frame.Position[1]+410))
