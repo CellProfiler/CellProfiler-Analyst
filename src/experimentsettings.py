@@ -6,6 +6,13 @@ from timeline import Timeline
 #       set_field and remove_field.
 #
 
+def format_time_string(timepoint):
+    '''formats the given time as a string
+    '''
+    hours = int(timepoint) / 60
+    mins = timepoint - 60 * hours
+    return '%s:%02d'%(hours, mins)
+
 def get_matchstring_for_subtag(pos, subtag):
     '''matches a subtag at a specific position.
     '''
