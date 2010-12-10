@@ -1,40 +1,10 @@
 from experimentsettings import *
-from vesselpanel import *
+from vesselpanel import VesselPanel, VesselScroller
 import wx
 import os
 from wx.lib.masked import TimeCtrl
 import numpy as np
 import icons
-
-class VesselScroller(wx.ScrolledWindow):
-    def __init__(self, parent, id=-1, **kwargs):
-        wx.ScrolledWindow.__init__(self, parent, id, **kwargs)
-        self.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        (w,h) = self.Sizer.GetSize()
-        self.SetScrollbars(20,20,w/20,h/20,0,0)
-        self.plates = []
-
-    def add_vessel_panel(self, panel, plate_id):
-        if len(self.Sizer.GetChildren()) > 0:
-            self.Sizer.AddSpacer((10,-1))
-        sz = wx.BoxSizer(wx.VERTICAL)
-        sz.Add(wx.StaticText(self, -1, plate_id), 0, wx.EXPAND|wx.TOP|wx.LEFT, 10)
-        sz.Add(panel, 1, wx.EXPAND)
-        self.Sizer.Add(sz, 1, wx.EXPAND)
-        self.plates += [panel]
-
-    def get_vessels(self):
-        return self.plates
-
-    def get_selected_well_ids(self):
-        wells = []
-        for plate in self.plates:
-            wells += plate.get_selected_well_keys()
-        return wells
-
-    def clear(self):
-        self.plates = []
-        self.Sizer.Clear(deleteWindows=True)
 
 ID_SEED = wx.NewId()
 ID_HARVEST = wx.NewId()
@@ -48,12 +18,12 @@ ID_IMAGE = wx.NewId()
 ID_TIMELAPSE = wx.NewId()
 ID_FLOW = wx.NewId()
 
+meta = ExperimentSettings.getInstance()
+
 
 class Bench(wx.Frame):
     def __init__(self, parent, id=-1, title='Bench', **kwargs):
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
-
-        meta = ExperimentSettings.getInstance()
 
         meta.add_subscriber(self.update_plate_window, 'ExptVessel.*')
         meta.add_subscriber(self.update_plate_window, get_matchstring_for_subtag(2, 'Well'))
@@ -83,38 +53,59 @@ class Bench(wx.Frame):
         self.update_plate_window(None)
 
         time_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.time_slider = wx.Slider(self, -1, style=wx.SL_AUTOTICKS|wx.SL_LABELS)
-        self.time_slider.SetTickFreq(6)
-
+        self.time_slider = wx.Slider(self, -1)
         self.time_slider.Bind(wx.EVT_SLIDER, self.on_adjust_timepoint)
-        self.time_slider.SetRange(0, 24)
-        #clock = TimeCtrl(self, -1, display_seconds=False)
-        self.tlabel1 = wx.StaticText(self, -1, "0")
-        self.tlabel2 = wx.StaticText(self, self.time_slider.GetMax())
-        self.add24_button = wx.Button(self, -1, "Add 24h")
-        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.time_slider.SetRange(0, self.time_slider.GetMax()+24))
+        self.time_slider.SetRange(0, 1440)
+        self.tlabel1 = wx.StaticText(self, -1, "Time:")
+        self.time_text_box = wx.TextCtrl(self, -1, '0:00', size=(50, -1))
+        self.time_spin = wx.SpinButton(self, -1, style=wx.SP_VERTICAL)
+        self.time_spin.Max = 1000000
 
+        self.add24_button = wx.Button(self, -1, "Add 24h")
+        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.time_slider.SetRange(0, self.time_slider.GetMax()+1440))
+
+        time_sizer.AddSpacer((10,-1))
         time_sizer.Add(self.tlabel1,0, wx.EXPAND)
         time_sizer.Add(self.time_slider, 1, wx.EXPAND)
-        time_sizer.Add(self.tlabel2,0, wx.EXPAND)
-        time_sizer.Add(self.add24_button, 0, wx.EXPAND)
+        time_sizer.AddSpacer((5,-1))
+        time_sizer.Add(self.time_text_box, 0, wx.BOTTOM, 15)
+        time_sizer.Add(self.time_spin, 0, wx.BOTTOM, 15)
+        time_sizer.AddSpacer((5,-1))
+        time_sizer.Add(self.add24_button, 0, wx.EXPAND, wx.TOP|wx.BOTTOM, 5)
+        time_sizer.AddSpacer((10,-1))
         self.Sizer.Add(time_sizer, 0, wx.EXPAND)
 
         self.Bind(wx.EVT_TOOL, self.on_tool_clicked)
+        self.time_spin.Bind(wx.EVT_SPIN_UP, self.on_increment_time)
+        self.time_spin.Bind(wx.EVT_SPIN_DOWN, self.on_decrement_time)
+        self.time_text_box.Bind(wx.EVT_TEXT, self.on_edit_time_text_box)
 
     def get_selected_timepoint(self):
         return self.time_slider.GetValue()
 
     def on_adjust_timepoint(self, evt):
-        self.curr_time = self.time_slider.GetValue()
-        hours = self.curr_time / 60
-        self.curr_time -= 60*hours
-        minutes = self.curr_time 
-        self.time_slider.SetToolTipString("%02d hrs %02d min " % (hours, minutes))
-
-
+        time_string = format_time_string(self.time_slider.GetValue())
+        self.time_text_box.SetValue(time_string)
         self.update_well_selections()
+        
+    def on_increment_time(self, evt):
+        self.time_slider.Value += 1
+        self.on_adjust_timepoint(None)
+        
+    def on_decrement_time(self, evt):
+        self.time_slider.Value -= 1
+        self.on_adjust_timepoint(None)
+        
+    def on_edit_time_text_box(self, evt):
+        time_string = self.time_text_box.GetValue()
+        try:
+            hours, mins = map(int, time_string.split(':'))
+            minutes = hours * 60 + mins
+            self.time_text_box.SetForegroundColour(wx.BLACK)
+            self.time_slider.SetValue(minutes)
+            self.update_well_selections()
+        except:
+            self.time_text_box.SetForegroundColour(wx.RED)
 
     def update_well_selections(self):
         meta = ExperimentSettings.getInstance()
