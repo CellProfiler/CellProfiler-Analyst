@@ -19,7 +19,8 @@ class VesselPanel(wx.Panel):
         
         self.plate_id = plate_id
         self.well_disp = well_disp
-        self.selection = set([])           # list of (row,col) tuples 
+        self.selection = set()           # list of (row,col) tuples 
+        self.marked = set()
         self.selection_enabled = True
         self.repaint = False
         self.well_selection_handlers = []  # funcs to call when a well is selected        
@@ -46,10 +47,9 @@ class VesselPanel(wx.Panel):
         return self.plate_id
 
     def set_well_display(self, well_disp):
-        '''
-        well_disp in PlatMapPanel.ROUNDED,
-                     PlatMapPanel.CIRCLE,
-                     PlatMapPanel.SQUARE
+        '''well_disp in PlatMapPanel.ROUNDED,
+                        PlatMapPanel.CIRCLE,
+                        PlatMapPanel.SQUARE
         '''
         self.well_disp = well_disp
         self.Refresh()
@@ -70,6 +70,14 @@ class VesselPanel(wx.Panel):
                               for wellid in wellids])
         self.Refresh()
         
+    def set_marked_well_ids(self, wellids):
+        '''selects the wells corresponding to the specified wellids or 
+        platewell_ids
+        '''
+        self.marked = set([PlateDesign.get_pos_for_wellid(self.shape, wellid)
+                           for wellid in wellids])
+        self.Refresh()
+
     def select_well_at_pos(self, (wellx, welly)):
         self.selection = set([(wellx, welly)])
         self.Refresh()
@@ -152,9 +160,14 @@ class VesselPanel(wx.Panel):
                 
                 if (y-1, x-1) in self.selection:
                     if self.selection_enabled:
-                        dc.SetPen(wx.Pen("BLACK",4))
+                        dc.SetPen(wx.Pen("BLACK", 4))
                     else:
-                        dc.SetPen(wx.Pen("GRAY",4))
+                        dc.SetPen(wx.Pen("GRAY", 4))
+                elif (y-1, x-1) in self.marked:
+                    if self.selection_enabled:
+                        dc.SetPen(wx.Pen("BLACK", 2, style=wx.SHORT_DASH))
+                    else:
+                        dc.SetPen(wx.Pen("GRAY", 2, style=wx.SHORT_DASH))                    
                 else:
                     dc.SetPen(wx.Pen((210,210,210),1))
 
