@@ -19,6 +19,7 @@ import multiclasssql
 # ---
 import wx
 import sys
+import os
 import logging
 import threading
 from tableviewer import TableViewer
