@@ -218,7 +218,7 @@ class ColorBarPanel(wx.Panel):
         self.PopupMenu(popupMenu, (evt.X, evt.Y))
         
     def OnSaveIntervalAsFilter(self, evt):
-        import DBConnect
+        import dbconnect
         import os.path
         colname = self.Parent.measurementsChoice.GetStringSelection()
         
