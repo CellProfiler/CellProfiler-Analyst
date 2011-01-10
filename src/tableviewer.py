@@ -203,9 +203,9 @@ class PlainTable(TableData):
             return None
         else:
             if self.grouping.lower() == 'image':     
-                return [tuple(self.ordered_data[row, self.key_indices])]
+                return [tuple(self.data[self.row_order,:][row, self.key_indices])]
             elif self.grouping.lower() == 'object': 
-                return [tuple([self.ordered_data[row, self.key_indices[:-1]]])]
+                return [tuple(self.data[self.row_order,:][row, self.key_indices[:-1]])]
             else:
                 dm = DataModel.getInstance()
                 return dm.GetImagesInGroup(self.grouping, self.get_row_key(row))
@@ -220,7 +220,7 @@ class PlainTable(TableData):
             dm = DataModel.getInstance()
             # If the key index for the row is an object key, just return that key
             if self.grouping.lower() == 'object': 
-                return [tuple(self.ordered_data[row, self.key_indices])]
+                return [tuple(self.data[self.row_order,:][row, self.key_indices])]
             else: # Otherwise, return all object keys in the image
                 imkeys = self.get_image_keys_at_row(row) 
                 obkeys = []
