@@ -192,7 +192,7 @@ class PlainTable(TableData):
         eg: to relate a unique (Table, Well, Replicate) to a unique image key.
         '''
         for i in indices: 
-            assert 0 < i < len(sortcols), 'Key column index (%s) was outside the relm of possible indices (0-%d).'%(i, len(self.sortcols)-1)
+            assert 0 < i < len(sortcols), 'Key column index (%s) was outside the realm of possible indices (0-%d).'%(i, len(self.sortcols)-1)
         self.key_indices = indices
         
     def get_image_keys_at_row(self, row):
