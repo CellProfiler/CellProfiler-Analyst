@@ -345,10 +345,10 @@ class ScatterControlPanel(wx.Panel):
             settings['version'] = '1'
         if 'x-table' in settings:
             self.x_table_choice.SetStringSelection(settings['table'])
-            self.update_column_fields()
+            self.update_x_choices()
         if 'y-table' in settings:
             self.y_table_choice.SetStringSelection(settings['table'])
-            self.update_column_fields()
+            self.update_y_choices()
         if 'x-axis' in settings:
             self.x_choice.SetStringSelection(settings['x-axis'])
         if 'y-axis' in settings:
