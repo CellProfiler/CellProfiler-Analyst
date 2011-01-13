@@ -455,8 +455,8 @@ class PlateMapPanel(wx.Panel):
             show_montage = lambda(e): self.show_thumbnail_montage(wellkey, (evt.X, evt.Y))
             popupMenu.Bind(wx.EVT_MENU, show_montage, item)
         for key in imkeys:
-            item = popupMenu.Append(-1, str(key))
-            def handler(evt):
+            item = popupMenu.Append(-1, ','.join([str(k) for k in key]))
+            def handler(evt, key=key):
                 imagetools.ShowImage(key, self.chMap, parent=self)
             popupMenu.Bind(wx.EVT_MENU, handler, item)
         self.PopupMenu(popupMenu, (evt.X, evt.Y))
@@ -468,9 +468,10 @@ class PlateMapPanel(wx.Panel):
             pass
         tip = STT.SuperToolTip('')
         
-        images = db.execute('SELECT %s FROM %s WHERE %s'%
+        images = db.execute('SELECT %s FROM %s WHERE %s ORDER BY %s'%
                             (','.join(p.image_thumbnail_cols), p.image_table,
-                             dbconnect.GetWhereClauseForWells([wellkey])))
+                             dbconnect.GetWhereClauseForWells([wellkey]),
+                             p.image_id))
         if images == []:
             return
         imsets = []
