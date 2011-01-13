@@ -242,8 +242,8 @@ class DataSourcePanel(wx.Panel):
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        #TODO: Add axis bounds 
-        return {'table' : self.table_choice.GetStringSelection(),
+        return {'x-table' : self.x_table_choice.GetStringSelection(),
+                'y-table' : self.x_table_choice.GetStringSelection(),
                 'x-axis' : self.x_choice.GetStringSelection(),
                 'y-axis' : self.y_choice.GetStringSelection(),
                 'x-scale' : self.x_scale_choice.GetStringSelection(),
@@ -254,6 +254,7 @@ class DataSourcePanel(wx.Panel):
                 'filter' : self.filter_choice.GetStringSelection(),
                 'x-lim': self.figpanel.subplot.get_xlim(),
                 'y-lim': self.figpanel.subplot.get_ylim(),
+                'version' : '1',
                 }
     
     def load_settings(self, settings):
@@ -262,9 +263,16 @@ class DataSourcePanel(wx.Panel):
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
-        if 'table' in settings:
-            self.table_choice.SetStringSelection(settings['table'])
-            self.update_column_fields()
+        if 'version' not in settings:
+            settings['x-table'] = settings['table']
+            settings['y-table'] = settings['table']
+            settings['version'] = '1'
+        if 'x-table' in settings:
+            self.x_table_choice.SetStringSelection(settings['table'])
+            self.update_x_choices()
+        if 'y-table' in settings:
+            self.y_table_choice.SetStringSelection(settings['table'])
+            self.update_y_choices()
         if 'x-axis' in settings:
             self.x_choice.SetStringSelection(settings['x-axis'])
         if 'y-axis' in settings:
