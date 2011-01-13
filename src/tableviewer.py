@@ -682,10 +682,10 @@ class TableViewer(wx.Frame):
             return
         res = calc_tsne.calc_tsne(data)
         #XXX: add key cols to results
-        db.CreateTempTableFromData(res, 
-                                   self.grid.Table.get_key_cols()+['a','b'], 
-                                   'tSNE', 
-                                   temporary=True)
+        db.CreateTableFromData(res, 
+                               self.grid.Table.get_key_cols()+['a','b'], 
+                               'tSNE', 
+                               temporary=True)
 ##        db.execute('DROP TABLE IF EXISTS tSNE')
 ##        db.execute('CREATE TABLE tSNE(ImageNumber int, a FLOAT, b FLOAT)')
 ##        i = 1
@@ -1011,8 +1011,8 @@ class TableViewer(wx.Frame):
         data = [[self.grid.Table.GetValue(row, col) 
                 for col in range(self.grid.Table.GetNumberCols())]
                 for row in range(self.grid.Table.GetNumberRows())]
-        db.CreateTempTableFromData(data, dbconnect.clean_up_colnames(colnames), 
-                                   tablename, temporary=temporary)
+        db.CreateTableFromData(data, dbconnect.clean_up_colnames(colnames), 
+                               tablename, temporary=temporary)
         self.Title = tablename
         try:
             wx.GetApp().user_tables += [tablename]
