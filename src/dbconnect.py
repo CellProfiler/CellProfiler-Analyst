@@ -1412,10 +1412,17 @@ class DBConnect(Singleton):
         return self.CreateTempTableFromData(typed_table, colnames, tablename)
     
     def CreateTempTableFromData(self, dtable, colnames, tablename, temporary=True):
+        '''Creates and populates a temporary table in the database.
         '''
-        Creates and populates a temporary table in the database.
-        Column names are taken from the first row.
-        Column types are inferred from the data.
+        return CreateTableFromData(dtable, colnames, tablename, temporary=temporary)
+    
+    def CreateTableFromData(self, dtable, colnames, tablename, temporary=False):
+        '''Creates and populates a table in the database.
+        dtable -- array of the data to populate the table with (SQL data types 
+                  are inferred from the array data)
+        colnames -- the column names to use
+        tablename -- the name of the table
+        temporary -- whether the table should be created as temporary
         '''
         self.execute('DROP TABLE IF EXISTS %s'%(tablename))
         # Clean up column names
