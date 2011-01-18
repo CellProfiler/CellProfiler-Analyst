@@ -556,9 +556,17 @@ class LineagePanel(wx.Panel):
                     urls = meta.get_field(image_tag, [])
                     for url in urls:
                         os.startfile(url)
+        
+        message = ''
+        for well in sorted(self.current_node.get_well_ids()):
+            message += ', '.join(well)
+            message += '\n'
+        msg = wx.MessageDialog(self, message, caption='Info', style=wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP, pos=(200,200))
+        msg.ShowModal()
+        msg.Destroy()
 
 
-        print self.current_node.get_tags()                                     
+        #print self.current_node.get_tags()                                     
 
 
         
