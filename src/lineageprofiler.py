@@ -3,6 +3,7 @@ from metadatainput import ExperimentSettingsWindow
 from lineagepanel import LineageFrame
 from experimentsettings import ExperimentSettings
 import wx
+import os
 
 class LineageProfiler(wx.App):
     '''The LineageProfiler Application
@@ -76,14 +77,3 @@ if __name__ == '__main__':
     app = LineageProfiler(redirect=False)
     #ExperimentSettings.getInstance().load_from_file('/Users/afraser/Desktop/experiment_settings.txt')
     app.MainLoop()
-
-    #
-    # Kill the Java VM
-    #
-    try:
-        import cellprofiler.utilities.jutil as jutil
-        jutil.kill_vm()
-    except:
-        import traceback
-        traceback.print_exc()
-        print "Caught exception while killing VM"

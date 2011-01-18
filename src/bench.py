@@ -187,7 +187,7 @@ class Bench(wx.Frame):
                                     style=wx.OPEN|wx.MULTIPLE)
             elif self.mode_tag_prefix == 'DataAcquis|FCS':
                 dlg = wx.FileDialog(self,message='Select the FCS files for flask %s'%(platewell_id[0]),
-                                    defaultDir=os.getcwd(), defaultFile='', 
+                                    defaultDir=os.getcwd(), defaultFile='', wildcard = "Adobe PDF files (*.pdf)|*.pdf|",
                                     style=wx.OPEN|wx.MULTIPLE)
             elif self.mode_tag_prefix == 'DataAcquis|TLM':
                 dlg = wx.FileDialog(self,message='Select the images for Plate %s, '
@@ -323,14 +323,3 @@ if __name__ == "__main__":
     f.Show()
 
     app.MainLoop()
-
-    #
-    # Kill the Java VM
-    #
-    try:
-        import cellprofiler.utilities.jutil as jutil
-        jutil.kill_vm()
-    except:
-        import traceback
-        traceback.print_exc()
-        print "Caught exception while killing VM"

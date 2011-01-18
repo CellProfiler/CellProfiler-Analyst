@@ -26,14 +26,14 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
         cld = self.tree.AppendItem(stc, 'Cell Transfer')
         ptb = self.tree.AppendItem(stc, 'Perturbation')
         adp = self.tree.AppendItem(stc, 'Additional Processes')
-        self.tree.AppendItem(adp, 'Staining')
+        self.tree.AppendItem(adp, 'Stain')
         self.tree.AppendItem(adp, 'Spin')
         self.tree.AppendItem(adp, 'Wash')
-        #self.tree.AppendItem(adp, 'Dry')
+        self.tree.AppendItem(adp, 'Dry')
         dta = self.tree.AppendItem(stc, 'Data Acquisition')
         self.tree.AppendItem(dta, 'Timelapse Image')
         self.tree.AppendItem(dta, 'Static Image')
-        self.tree.AppendItem(dta, 'FCS files')
+        self.tree.AppendItem(dta, 'Flow Cytometer Files')
         self.tree.Expand(root)
         self.tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnSelChanged)
 
@@ -68,17 +68,19 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
             self.settings_panel = CellTransferSettingPanel(self.settings_container)
         elif self.tree.GetItemText(item) == 'Perturbation':
             self.settings_panel = PerturbationSettingPanel(self.settings_container)
-        elif self.tree.GetItemText(item) == 'Staining':
+        elif self.tree.GetItemText(item) == 'Stain':
             self.settings_panel = StainingAgentSettingPanel(self.settings_container)
         elif self.tree.GetItemText(item) == 'Spin':
             self.settings_panel =  SpinningSettingPanel(self.settings_container)
         elif self.tree.GetItemText(item) == 'Wash':
             self.settings_panel =  WashSettingPanel(self.settings_container)
+        elif self.tree.GetItemText(item) == 'Dry':
+            self.settings_panel =  DrySettingPanel(self.settings_container)    
         elif self.tree.GetItemText(item) == 'Timelapse Image':
             self.settings_panel = TLMSettingPanel(self.settings_container)
         elif self.tree.GetItemText(item) == 'Static Image':
             self.settings_panel = HCSSettingPanel(self.settings_container)
-        elif self.tree.GetItemText(item) == 'FCS files':
+        elif self.tree.GetItemText(item) == 'Flow Cytometer Files':
             self.settings_panel = FCSSettingPanel(self.settings_container)
         else:
             self.settings_panel = wx.Panel(self.settings_container)
@@ -269,7 +271,7 @@ class InstrumentSettingPanel(wx.Panel):
         #self.createRightClickMenu()
         #self.notebook.SetRightClickMenu(self._rmenu)
 
-        addFlowcytometerPageBtn = wx.Button(self, label="Add Flowcytometer")
+        addFlowcytometerPageBtn = wx.Button(self, label="Add Flow Cytometer")
         #addFlowcytometerPageBtn.SetBackgroundColour("#33FF33")
         addFlowcytometerPageBtn.Bind(wx.EVT_BUTTON, self.onAddFlowcytometerPage)
         #rmvFlowcytometerPageBtn = wx.Button(self, label="Delete Flowcyotometer")
@@ -383,11 +385,11 @@ class MicroscopePanel(wx.Panel):
         fgs.Add(self.settings_controls[microtypTAG], 0, wx.EXPAND)
         #--Light source--#
         microlgtTAG = 'Instrument|Microscope|LightSource|'+str(self.page_counter)
-        self.settings_controls[microlgtTAG] = wx.Choice(self.sw, -1,  choices=['Laser', 'Filament', 'Arc', 'LightEmitingDiode'])
+        self.settings_controls[microlgtTAG] = wx.Choice(self.sw, -1,  choices=['Laser', 'Filament', 'Arc', 'LightEmittingDiode'])
         if meta.get_field(microlgtTAG) is not None:
             self.settings_controls[microlgtTAG].SetStringSelection(meta.get_field(microlgtTAG))
         self.settings_controls[microlgtTAG].Bind(wx.EVT_CHOICE, self.OnSavingData) 
-        self.settings_controls[microlgtTAG].SetToolTipString('e.g. Laser, Filament, Arc, Light Emiting Diode')
+        self.settings_controls[microlgtTAG].SetToolTipString('e.g. Laser, Filament, Arc, Light Emitting Diode')
         fgs.Add(wx.StaticText(self.sw, -1, 'Light Source'), 0)
         fgs.Add(self.settings_controls[microlgtTAG], 0, wx.EXPAND)
         #--Detector--#
@@ -396,15 +398,15 @@ class MicroscopePanel(wx.Panel):
         if meta.get_field(microdctTAG) is not None:
             self.settings_controls[microdctTAG].SetStringSelection(meta.get_field(microdctTAG))
         self.settings_controls[microdctTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[microdctTAG].SetToolTipString('Type of dectector used')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Dectector'), 0)
+        self.settings_controls[microdctTAG].SetToolTipString('Type of detector used')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Detector'), 0)
         fgs.Add(self.settings_controls[microdctTAG], 0, wx.EXPAND)
         #--Lense Aperture--#
         microlnsappTAG = 'Instrument|Microscope|LensApprture|'+str(self.page_counter)
         self.settings_controls[microlnsappTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(microlnsappTAG, default=''))
         self.settings_controls[micromdlTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[microlnsappTAG].SetToolTipString('A floating value of lens numerical aperture')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Lense Apparture'), 0)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Lens Apperature'), 0)
         fgs.Add(self.settings_controls[microlnsappTAG], 0, wx.EXPAND)
         # Lense Correction
         microlnscorrTAG = 'Instrument|Microscope|LensCorr|'+str(self.page_counter)
@@ -413,7 +415,7 @@ class MicroscopePanel(wx.Panel):
             self.settings_controls[microlnscorrTAG].SetStringSelection(meta.get_field(microlnscorrTAG))
         self.settings_controls[microlnscorrTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
         self.settings_controls[microlnscorrTAG].SetToolTipString('Yes/No')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Lense Correction'), 0)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Lens Correction'), 0)
         fgs.Add(self.settings_controls[microlnscorrTAG], 0, wx.EXPAND)
         #--Illumination Type--#
         microIllTAG = 'Instrument|Microscope|IllumType|'+str(self.page_counter)
@@ -612,8 +614,8 @@ class FlowCytometerPanel(wx.Panel):
         if meta.get_field(flowdctTAG) is not None:
             self.settings_controls[flowdctTAG].SetStringSelection(meta.get_field(flowdctTAG))
         self.settings_controls[flowdctTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[flowdctTAG].SetToolTipString('Type of dectector used')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Dectector'), 0)
+        self.settings_controls[flowdctTAG].SetToolTipString('Type of detector used')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Detector'), 0)
         fgs.Add(self.settings_controls[flowdctTAG], 0, wx.EXPAND)
         #--Filter used--#
         flowFltTAG = 'Instrument|Flowcytometer|Filter|'+str(self.page_counter)
@@ -1199,8 +1201,8 @@ class CellSeedPanel(wx.Panel):
         medaddTAG = 'CellTransfer|Seed|MediumAddatives|'+str(self.page_counter)
         self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''))
         self.settings_controls[medaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[medaddTAG].SetToolTipString('Any medium addatives used with concentration, Glutamine')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Medium Addatives'), 0)
+        self.settings_controls[medaddTAG].SetToolTipString('Any medium additives used with concentration, Glutamine')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Medium Additives'), 0)
         fgs.Add(self.settings_controls[medaddTAG], 0, wx.EXPAND)
 
         # Trypsinization
@@ -1413,9 +1415,10 @@ class ChemicalAgentPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         #  Chem Concentration and Unit
         concTAG = 'Perturbation|Chem|Conc|'+str(self.page_counter)
-        self.settings_controls[concTAG] = wx.TextCtrl(self.sw, -1)
+        self.settings_controls[concTAG] = wx.TextCtrl(self.sw, value=meta.get_field(concTAG, default='')) 
         self.settings_controls[concTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[concTAG].SetToolTipString('Concetration of the Chemical agent used')
+        
         unitTAG = 'Perturbation|Chem|Unit|'+str(self.page_counter)
         self.settings_controls[unitTAG] = wx.Choice(self.sw, -1,  choices=['uM', 'nM', 'mM', 'mg/L'])
         if meta.get_field(unitTAG) is not None:
@@ -1806,6 +1809,103 @@ class WashPanel(wx.Panel):
         else:
             meta.set_field(tag, ctrl.GetValue())
         
+########################################################################        
+################## DRY SETTING PANEL    ###########################
+########################################################################
+class DrySettingPanel(wx.Panel):
+    """
+    Panel that holds parameter input panel and the buttons for more additional panel
+    """
+    def __init__(self, parent, id=-1):
+        """Constructor"""
+        wx.Panel.__init__(self, parent, id)
+
+        self.settings_controls = {}
+        meta = ExperimentSettings.getInstance()
+
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+        # Get all the previously encoded Microscope pages and re-Add them as pages
+        dry_list = meta.get_field_instances('AddProcess|Dry|')
+        self.dry_next_page_num = 1
+        # update the  number of existing Drying protocols
+        if dry_list: 
+            self.dry_next_page_num  =  int(dry_list[-1])+1
+        for dry_id in dry_list:
+            panel = DryPanel(self.notebook, int(dry_id))
+            self.notebook.AddPage(panel, 'Drying Protocol No: %s'%(dry_id), True)
+
+        # Add the buttons
+        addDryingPageBtn = wx.Button(self, label="Add Drying Protocols")
+        #addDryingPageBtn.SetBackgroundColour("#33FF33")
+        addDryingPageBtn.Bind(wx.EVT_BUTTON, self.onAddDryingPage)
+
+        # create some sizers
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        # layout the widgets
+        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+        btnSizer.Add(addDryingPageBtn  , 0, wx.ALL, 5)
+
+        sizer.Add(btnSizer)
+        self.SetSizer(sizer)
+        self.Layout()
+        self.Show()
+
+    def onAddDryingPage(self, event):
+        panel = DryPanel(self.notebook, self.dry_next_page_num)
+        self.notebook.AddPage(panel, 'Drying Protocol No: %s'%(self.dry_next_page_num), True)
+        self.dry_next_page_num += 1
+
+class DryPanel(wx.Panel):
+    def __init__(self, parent, page_counter):
+
+        self.settings_controls = {}
+        meta = ExperimentSettings.getInstance()
+
+        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+
+        self.page_counter = page_counter
+
+        # Attach the scrolling option with the panel
+        self.sw = wx.ScrolledWindow(self)
+        # Attach a flexi sizer for the text controler and labels
+        fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
+
+
+        #  Drying Agent Name
+        drynamTAG = 'AddProcess|Dry|DryProtocolTag|'+str(self.page_counter)
+        self.settings_controls[drynamTAG] = wx.TextCtrl(self.sw, value=meta.get_field(drynamTAG, default=''))
+        self.settings_controls[drynamTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+        self.settings_controls[drynamTAG].SetToolTipString('Drying Agent Name')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Drying Agent Name'), 0)
+        fgs.Add(self.settings_controls[drynamTAG], 0, wx.EXPAND)
+
+        # Drying Protocol
+        protTAG = 'AddProcess|Dry|Protocol|'+str(self.page_counter)
+        self.settings_controls[protTAG] = wx.TextCtrl(self.sw,  value=meta.get_field(protTAG, default=''), style=wx.TE_MULTILINE)
+        self.settings_controls[protTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+        self.settings_controls[protTAG].SetInitialSize((300, 400))
+        self.settings_controls[protTAG].SetToolTipString('Cut and paste your Drying Protocol here')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Paste Drying Protocol'), 0)
+        fgs.Add(self.settings_controls[protTAG], 0, wx.EXPAND)
+
+        #---------------Layout with sizers---------------
+        self.sw.SetSizer(fgs)
+        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+
+    def OnSavingData(self, event):
+        meta = ExperimentSettings.getInstance()
+
+        ctrl = event.GetEventObject()
+        tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+        if isinstance(ctrl, wx.Choice):
+            meta.set_field(tag, ctrl.GetStringSelection())
+        else:
+            meta.set_field(tag, ctrl.GetValue())
 
 
 ########################################################################        

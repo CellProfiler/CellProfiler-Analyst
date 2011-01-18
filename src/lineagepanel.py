@@ -1,15 +1,11 @@
 import experimentsettings as exp
 import wx
+import os
 import numpy as np
 from time import time
 import icons
 from wx.lib.combotreebox import ComboTreeBox
-# Make image reader work ----
-import imagereader
-from imagetools import npToPIL
-from properties import Properties
-Properties.getInstance().channels_per_image = '3'
-# ----
+from PIL import Image
 
 # x-spacing modes for timeline and lineage panels
 SPACE_EVEN = 0
@@ -38,7 +34,7 @@ class LineageFrame(wx.Frame):
         
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.AddControl(wx.StaticText(tb, -1, 'zoom'))
-        self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS|wx.SL_LABELS)).GetControl()
+        self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS)).GetControl()
         self.zoom.SetRange(1, 30)
         self.zoom.SetValue(8)
         x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
@@ -549,13 +545,20 @@ class LineagePanel(wx.Panel):
                                                       well)
                     urls = meta.get_field(image_tag, [])
                     for url in urls:
-                        imdata = imagereader.ImageReader().ReadImages([url])
-                        pil_image = npToPIL(imdata)
-                        pil_image.show()
+                        im = Image.open(url)
+                        im.show()
             elif tag.startswith('DataAcquis|FCS'):
-                pass
-        print self.current_node.get_tags()
-                                               
+                for well in self.current_node.get_well_ids():
+                    image_tag = '%s|Images|%s|%s|%s'%(exp.get_tag_stump(tag, 2),
+                                                  exp.get_tag_instance(tag),
+                                                  exp.get_tag_timepoint(tag),
+                                                  well)
+                    urls = meta.get_field(image_tag, [])
+                    for url in urls:
+                        os.startfile(url)
+
+
+        print self.current_node.get_tags()                                     
 
 
         
@@ -584,4 +587,3 @@ if __name__ == "__main__":
             #meta.set_field('AddProcess|Stain|Wells|0|%s'%(t), well_ids)
     
     app.MainLoop()
-
