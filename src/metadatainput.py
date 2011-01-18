@@ -1420,7 +1420,7 @@ class ChemicalAgentPanel(wx.Panel):
         self.settings_controls[concTAG].SetToolTipString('Concetration of the Chemical agent used')
         
         unitTAG = 'Perturbation|Chem|Unit|'+str(self.page_counter)
-        self.settings_controls[unitTAG] = wx.Choice(self.sw, -1,  choices=['uM', 'nM', 'mM', 'mg/L'])
+        self.settings_controls[unitTAG] = wx.Choice(self.sw, -1,  choices=['uM', 'nM', 'mM', 'mg/L', 'uL/L', '%w/v', '%v/v'])
         if meta.get_field(unitTAG) is not None:
             self.settings_controls[unitTAG].SetStringSelection(meta.get_field(unitTAG))
         self.settings_controls[unitTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
