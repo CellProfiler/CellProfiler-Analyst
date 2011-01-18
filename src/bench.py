@@ -87,7 +87,11 @@ class Bench(wx.Frame):
     
     def set_timepoint(self, timepoint):
         '''Sets the slider timepoint and updates the plate display.
+        If a timepoint is set that is greater than time_slider's max, then the
+        time_slider interval is increased to include the timepoint.
         '''
+        if timepoint > self.time_slider.Max:
+            self.time_slider.SetRange(0, timepoint)
         self.time_slider.Value = timepoint
         self.time_text_box.Value = format_time_string(timepoint)
         self.update_well_selections()
