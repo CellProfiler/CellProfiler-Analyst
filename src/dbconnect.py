@@ -272,23 +272,6 @@ class DBConnect(Singleton):
         #self.link_cols = {}  # link_cols['table'] = columns that link 'table' to the per-image table
         self.sqlite_classifier = SqliteClassifier()
         self.gui_parent = None
-        
-        '''Store information on all user tables.
-        Valid keys are:
-        "link_cols" -- column names that link this table to the per_image table
-        "key_cols" -- column names that represent a unique key in the table
-        '''
-        self.table_data = {}
-##                          {'well_table' : {'aggregation' : 'per_well',
-##                                           'key_cols' : ['plate', 'well'],
-##                                           'link_cols' : [('plate', 'plate_id'), 
-##                                                          ('well', 'well_id')],
-##                                           },
-##                           'speckles' : {'aggregation' : 'per_object',
-##                                         'key_cols' : ['ImageNumber', 'ObjectNumber'],
-##                                         'link_cols' : [('ImageNumber', 'ImageNumber')],
-##                                         },
-##                           }
 
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
@@ -730,19 +713,12 @@ class DBConnect(Singleton):
             res = self.execute('SELECT name FROM sqlite_master WHERE type="table" ORDER BY name')
             return [t[0] for t in res]
 
-    def get_user_table_names(self):
-        '''
-        returns a list of table names in the database that CPA has accessed
-        '''
-        return self.table_data.keys()
-        
     def get_other_table_names(self):
         '''
         returns a list of table names in the database that CPA hasn't accessed.
         '''
         tables = list(set(self.GetTableNames()) - 
-                      set([p.image_table, p.object_table] + 
-                          self.table_data.keys()))
+                      set([p.image_table, p.object_table]))
         return sorted(tables)
         
     def GetColumnNames(self, table):
@@ -758,7 +734,7 @@ class DBConnect(Singleton):
     # Methods used for linking database tables
     #
     #
-    #             _link_tables_
+    #           link_tables_table
     # +-------------------------------------+
     # | src     | dest     | link   | ord   |
     # +-------------------------------------+
@@ -766,7 +742,7 @@ class DBConnect(Singleton):
     # | obj     | treat    | well   | 2     |
     # | obj     | treat    | treat  | 3     |
     #
-    #           _link_columns_
+    #          link_columns_table
     # +-----------------------------------+
     # | table1 | table2   | col1  | col2  |
     # +-----------------------------------+
@@ -775,23 +751,25 @@ class DBConnect(Singleton):
     # 
     
     def _add_link_tables_row(self, src, dest, link, order):
-        '''adds src, dest, link, order to the _link_tables_ table.
+        '''adds src, dest, link, order to link_tables_table.
         '''
-        self.execute('INSERT INTO _link_tables_ (src, dest, link, ord) '
-                     'VALUES ("%s", "%s", "%s", "%d")'%(src, dest, link, order))
+        self.execute('INSERT INTO %s (src, dest, link, ord) '
+                     'VALUES ("%s", "%s", "%s", "%d")'
+                     %(p.link_tables_table, src, dest, link, order))
         
     def _add_link_columns_row(self, src, dest, col1, col2):
-        '''adds src, dest, col1, col2 to the _link_columns_ table.
+        '''adds src, dest, col1, col2 to link_columns_table
         '''
-        self.execute('INSERT INTO _link_columns_ (table1, table2, col1, '
+        self.execute('INSERT INTO %s (table1, table2, col1, '
                      'col2) VALUES ("%s", "%s", "%s", "%s")'
-                     %(src, dest, col1, col2))
+                     %(p.link_columns_table, src, dest, col1, col2))
 
     def connected_tables(self, table):
         '''return tables connected (directly or indirectly) to the given table
         '''
-        return [r[0] for r in self.execute('SELECT DISTINCT dest FROM '
-                                        '_link_tables_ WHERE src="%s"'%(table))]
+        return [r[0] for r in self.execute('SELECT DISTINCT dest FROM %s '
+                                           'WHERE src="%s"'
+                                           %(p.link_tables_table, table))]
         
     def do_link_tables(self, src, dest, src_cols, dest_cols):
         '''Inserts table linking information into the database so src can 
@@ -804,12 +782,14 @@ class DBConnect(Singleton):
         assert len(src_cols) == len(dest_cols), 'Column lists were not the same length.'
         
         # create the tables if they don't exist
-        if '_link_tables_' not in self.GetTableNames():
-            self.execute('CREATE TABLE _link_tables_ (src VARCHAR(100), '
-                         'dest VARCHAR(100), link VARCHAR(100), ord INTEGER)')
-        if '_link_columns_' not in self.GetTableNames():
-            self.execute('CREATE TABLE _link_columns_ (table1 VARCHAR(100), '
-                    'table2 VARCHAR(100), col1 VARCHAR(200), col2 VARCHAR(200))')
+        if p.link_tables_table not in self.GetTableNames():
+            self.execute('CREATE TABLE %s (src VARCHAR(100), '
+                         'dest VARCHAR(100), link VARCHAR(100), ord INTEGER)'
+                         %(p.link_tables_table))
+        if p.link_columns_table not in self.GetTableNames():
+            self.execute('CREATE TABLE %s (table1 VARCHAR(100), '
+                    'table2 VARCHAR(100), col1 VARCHAR(200), col2 VARCHAR(200))'
+                    %(p.link_columns_table))
             
         if self.get_linking_tables(src, dest) is not None:
             raise Exception('Tables are already linked')
@@ -822,8 +802,8 @@ class DBConnect(Singleton):
         # Connect src to everything dest is connected to through dest
         for t in self.connected_tables(dest):
             self._add_link_tables_row(src, t, dest, 0)
-            res = self.execute('SELECT * FROM _link_tables_ WHERE src="%s" '
-                               'AND dest="%s"'%(dest, t))
+            res = self.execute('SELECT * FROM %s WHERE src="%s" AND dest="%s"'
+                               %(p.link_tables_table, dest, t))
             for row in res:
                 link = row[2]
                 order = int(row[3]) + 1
@@ -869,23 +849,24 @@ class DBConnect(Singleton):
     
     def get_linking_tables(self, table_from, table_to):
         '''returns: an ordered list of tables that must be used to join
-        table_from to table_to. If the tables aren't linked in the _link_tables_
-        table then None is returned.
+        table_from to table_to. If the tables aren't linked in link_tables_table
+        then None is returned.
         
         usage:
         >>> get_linking_tables(per_well, per_object)
         [per_image, per_object]
         '''
-        if '_link_tables_' not in self.GetTableNames():
+        if p.link_tables_table not in self.GetTableNames():
             return None
-        res = self.execute('SELECT link FROM _link_tables_ WHERE src="%s" AND '
-                           'dest="%s" ORDER BY ord'%(table_from, table_to))
+        res = self.execute('SELECT link FROM %s '
+                           'WHERE src="%s" AND dest="%s" ORDER BY ord'
+                           %(p.link_tables_table, table_from, table_to))
         return [row[0] for row in res] or None
     
     def get_linking_table_pairs(self, table_from, table_to):
         '''returns: an ordered list of table pairs that must be used to join 
-        table_from to table_to. If the tables aren't linked in the _link_tables_
-        table then None is returned.
+        table_from to table_to. If the tables aren't linked in link_tables_table
+        then None is returned.
         
         usage:
         >>> get_linking_table_pairs(per_well, per_object)
@@ -901,16 +882,16 @@ class DBConnect(Singleton):
     def get_linking_columns(self, table_from, table_to):
         '''returns: a list of column pairs that can be used to join table_from 
                  to table_to. An exception is raised if table_from is not 
-                 DIRECTLY linked to table_to in the _link_tables_ table or if 
-                 the _link_columns_ table is not found.
+                 DIRECTLY linked to table_to in link_tables_table or if the
+                 link_columns_table is not found.
 
         usage: >>> get_linking_columns(per_well, per_image)
                [(plateid, plate), (wellid, well)]        
         '''
-        if '_link_columns_' not in self.GetTableNames():
-            raise Exception('Could not find _link_columns_ table.')
-        col_pairs = self.execute('SELECT col1, col2 FROM _link_columns_ WHERE '
-                           'table1="%s" AND table2="%s"'%(table_from, table_to))
+        if p.link_columns_table not in self.GetTableNames():
+            raise Exception('Could not find link_columns table "%s".'%(p.link_columns_table))
+        col_pairs = self.execute('SELECT col1, col2 FROM %s WHERE table1="%s" '
+                                 'AND table2="%s"'%(p.link_columns_table, table_from, table_to))
         if len(col_pairs[0]) == 0:
             raise Exception('Tables "%s" and "%s" are not directly linked in '
                             'the database'%(table_from, table_to))
@@ -920,8 +901,10 @@ class DBConnect(Singleton):
         '''returns the list of tables that CPA can link together.
         '''
         tables = []
-        if '_link_tables_' in self.GetTableNames():
-            tables = [row[0] for row in self.execute('SELECT DISTINCT src FROM _link_tables_')]
+        if p.link_tables_table in self.GetTableNames():
+            tables = [row[0] for row in 
+                      self.execute('SELECT DISTINCT src FROM %s'
+                                   %(p.link_tables_table))]
         if len(tables) == 0:
             if p.object_table:
                 self.do_link_tables(p.image_table, p.object_table, 
@@ -930,49 +913,6 @@ class DBConnect(Singleton):
             else:
                 return [p.image_table]
         return tables
-    
-    #---------------------------------------------------------------------------
-    
-        
-        
-        
-
-    
-    #def get_object_table_linking_clause(self, table):
-        #'''
-        #Returns a clause linking the given table to the object table.
-        #eg: get_object_table_linking_clause("per_well")
-            #=> "per_well.well=per_image.well AND per_well.plate=per_image.plate 
-                #AND per_image.ImageNumber=per_object.ImageNumber "
-        #'''      
-        #im_table_link = self.get_image_table_linking_clause(table)
-        #if im_table_link is None:
-            #return None
-        #else:
-            #return (im_table_link + ' AND ' +
-                    #' AND '.join(['%s.%s=%s.%s'%(p.image_table, col, p.object_table, col)
-                                  #for col in image_key_columns()]))
-    
-    #def get_image_table_linking_clause(self, table):
-        #'''
-        #Returns a clause linking the given table to the image table.
-        #eg: get_image_table_linking_clause("per_well")
-            #=> "per_well.well=per_image.well AND per_well.plate=per_image.plate"
-        #'''
-        #if self.table_data.get(table, None) is None:
-            #self.table_data[table] = {}
-        #if 'link_cols' not in self.table_data[table].keys():
-            #import guiutils
-            #import wx
-            #dlg = guiutils.LinkTablesDialog(None, p.image_table, table, size=(700,-1))
-            #if (dlg.ShowModal() == wx.ID_OK):
-                #self.table_data[table]['link_cols'] = dlg.get_column_pairs()
-            #else:
-                #return None
-        #elif self.table_data[table]['link_cols'] is None:
-            #return None
-        #return ' AND '.join(['%s.%s=%s.%s'%(table, col, p.image_table, imcol)
-                             #for col, imcol in self.table_data[table]['link_cols']])
 
     def GetUserColumnNames(self, table):
         '''Returns a list of the column names that start with "User_" for the 
@@ -1120,21 +1060,6 @@ class DBConnect(Singleton):
                 except ValueError: 
                     raise Exception, 'Value in table could not be converted to string!'
         return colTypes
-    
-    #def GetLinkingColumnsForTable(self, table):
-        #'''
-        #Returns column(s) that can be used to link the given table to the 
-        #per_image table.
-        #'''
-        #if table not in self.link_cols.keys():
-            #cols = self.GetColumnNames(table)
-            #if all([kcol in cols for kcol in image_key_columns()]):
-                #self.link_cols[table] = image_key_columns()
-            #elif all([kcol in cols for kcol in well_key_columns()]):
-                #self.link_cols[table] = well_key_columns()
-            #else:
-                #return None
-        #return self.link_cols[table]
     
     def AppendColumn(self, table, colname, coltype):
         '''
@@ -1379,14 +1304,6 @@ class DBConnect(Singleton):
             res += self.execute("SELECT name FROM sqlite_temp_master WHERE type='table' and name='%s'"%(name))            
         return len(res) > 0
     
-    def set_table_link_cols(self, table, cols):
-        '''
-        cols -- a list of pairs of column names from table and the image table
-        '''
-        if self.table_data.get(table, None) is None:
-            self. table_data[table] = {}
-        self.table_data[table]['link_cols'] = cols
-    
     def CreateTempTableFromCSV(self, filename, tablename):
         '''
         Reads a csv file into a temporary table in the database.
@@ -1434,7 +1351,7 @@ class DBConnect(Singleton):
             self.execute('CREATE TABLE %s (%s)'%(tablename, coldefs))
         else:
             self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
-        for key in list(well_key_columns()) + list(image_key_columns()):
+        for key in list(well_key_columns() or []) + list(image_key_columns()):
             if key in colnames:
                 self.execute('CREATE INDEX %s ON %s (%s)'%('%s_%s'%(tablename,key), tablename, key))
         logging.info('Populating %stable %s...'%((temporary and 'temporary ' or ''), tablename))
