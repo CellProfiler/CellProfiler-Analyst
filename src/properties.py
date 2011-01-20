@@ -40,7 +40,9 @@ string_vars = ['db_type',
                'db_sqlite_file',
                'use_larger_image_scale', 
                'rescale_object_coords',
-               'well_format',]
+               'well_format',
+               'link_tables_table',
+               'link_columns_table']
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
              'image_file_cols', 'image_channel_files', 
@@ -86,7 +88,10 @@ optional_vars = ['db_port',
                  'use_larger_image_scale', 
                  'rescale_object_coords',
                  'image_thumbnail_cols',
-                 'well_format',]
+                 'well_format',
+                 'link_tables_table',
+                 'link_columns_table',
+                 ]
 
 # map deprecated fields to new fields
 field_mappings = {'classifier_ignore_substrings' : 'classifier_ignore_columns',
@@ -463,6 +468,12 @@ class Properties(Singleton):
         if not self.field_defined('well_format'):
             self.well_format = 'A01'
             logging.warn('PROPERTIES WARNING (well_format): Field was not defined, using default format of "A01".')
+            
+        if not self.field_defined('link_tables_table'):
+            self.link_tables_table = '_link_tables_%s_'%(self.image_table)
+            
+        if not self.field_defined('link_columns_table'):
+            self.link_columns_table = '_link_columns_%s_'%(self.image_table)
         
         
 if __name__ == "__main__":
