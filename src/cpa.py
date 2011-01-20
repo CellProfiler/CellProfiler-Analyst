@@ -131,7 +131,7 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(logMenu, 'Logging')
 
         advancedMenu = wx.Menu()
-        clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables "_link_tables_" and "_link_columns" from your database.')
+        clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         helpMenu = wx.Menu()
@@ -248,17 +248,18 @@ class MainGUI(wx.Frame):
         
     def clear_link_tables(self, evt=None):
         dlg = wx.MessageDialog(self, 'This will delete the tables '
-                    '"_link_tables_" and "_link_columns" from your database. '
+                    '"%s" and "%s" from your database. '
                     'CPA will automatically recreate these tables as it '
                     'discovers how your database is linked. Are you sure you '
-                    'want to proceed?', 'Clear table linking information?', 
+                    'want to proceed?', 'Clear table linking information?'
+                    %(p.link_tables_table, p.link_columns_table), 
                     wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
         response = dlg.ShowModal()
         if response != wx.ID_YES:
             return
         db = dbconnect.DBConnect.getInstance()
-        db.execute('DROP TABLE IF EXISTS _link_tables_')
-        db.execute('DROP TABLE IF EXISTS _link_columns_')
+        db.execute('DROP TABLE IF EXISTS %s'%(p.link_tables_table))
+        db.execute('DROP TABLE IF EXISTS %s'%(p.link_columns_table))
         db.Commit()
 
     def on_show_about(self, evt):
