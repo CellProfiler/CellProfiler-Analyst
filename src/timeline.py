@@ -36,6 +36,12 @@ class Timeline(object):
         '''returns an ascending ordered list of UNIQUE timepoints on this timeline
         '''
         return sorted(set([e.get_timepoint() for e in self.events]))
+    
+    def get_max_timepoint(self):
+        '''returns the last timepoint in the timeline
+        '''
+        #TODO: make this fast
+        return self.get_unique_timepoints()[-1]
 
     def get_event_list(self):
         '''returns a list of events in chronological order
