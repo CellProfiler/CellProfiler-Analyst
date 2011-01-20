@@ -126,8 +126,15 @@ class ExperimentSettings(Singleton):
                 PlateDesign.add_plate(plate_id, FLASK)
             self.set_field(tag, eval(value), notify_subscribers=False)
         for tag in tags:
-            self.notify_subscribers(tag)
+            self.notify_subscribers(tag)            
         f.close()
+        # Update the bench time-slider
+        try:
+            import wx
+            bench = wx.GetApp().get_bench()
+            bench.set_time_interval(0, self.get_timeline().get_max_timepoint())
+        except:return
+
         
     def add_subscriber(self, callback, match_string):
         '''callback -- the function to be called

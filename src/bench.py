@@ -62,7 +62,7 @@ class Bench(wx.Frame):
         self.time_spin.Max = 1000000
 
         self.add24_button = wx.Button(self, -1, "Add 24h")
-        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.time_slider.SetRange(0, self.time_slider.GetMax()+1440))
+        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.set_time_interval(0, self.time_slider.GetMax()+1440))
 
         time_sizer.AddSpacer((10,-1))
         time_sizer.Add(self.tlabel1,0, wx.EXPAND)
@@ -84,6 +84,12 @@ class Bench(wx.Frame):
 
     def get_selected_timepoint(self):
         return self.time_slider.GetValue()
+    
+    def set_time_interval(self, tmin, tmax):
+        '''Sets the time slider interval.
+        tmin, tmax -- min and max timepoint values
+        '''
+        self.time_slider.SetRange(tmin, tmax)
     
     def set_timepoint(self, timepoint):
         '''Sets the slider timepoint and updates the plate display.
