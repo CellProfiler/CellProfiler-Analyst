@@ -147,6 +147,7 @@ class LinkTablesDialog(wx.Dialog):
 def get_other_table_from_user(parent):
     '''Prompts the user to select a table from a list of tables that they haven't 
     yet accessed in the database.
+    returns the table name or None if the user cancels
     '''
     other_tables = db.get_other_table_names()
     if len(other_tables) == 0:
@@ -157,9 +158,16 @@ def get_other_table_from_user(parent):
     if dlg.ShowModal() != wx.ID_OK:
         dlg.Destroy()
         return None
-
     table = dlg.GetStringSelection()
     dlg.Destroy()
+    return prompt_user_to_link_table(parent, table)
+    
+
+def prompt_user_to_link_table(parent, table):
+    '''Prompts the user for information about the given table so it may be
+    linked into the tables that CPA already accesses.
+    returns the given table name or None if the user cancels
+    '''
     dlg = wx.SingleChoiceDialog(parent, 'What kind of data is in this table (%s)?'%(table),
                                 'Select table type', ['per-well', 'per-image', 'per-object', 'other'], 
                                 wx.CHOICEDLG_STYLE)
@@ -247,7 +255,6 @@ class TableComboBox(ComboBox):
             #choices = [p.image_table]
             #if p.object_table: 
                 #choices += [p.object_table]
-            #choices += db.table_data.keys()
             choices = db.get_linkable_tables()
             choices += [TableComboBox.OTHER_TABLE]
         else:
