@@ -496,7 +496,6 @@ class DBTable(TableData):
     def GetValue(self, row, col):
         row += self.rmin
         if not row in self.cache:
-            print "query", row
             lo = max(row - 25, 0)
             hi = row + 25
             cols = ','.join(self.col_labels[self.shown_columns])
