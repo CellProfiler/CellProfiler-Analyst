@@ -68,7 +68,7 @@ class ImageViewerPanel(ImagePanel):
         dc.SetTextForeground('WHITE')
 
         # Draw object numbers
-        if self.show_object_numbers:
+        if self.show_object_numbers and p.object_table:
             dc.SetLogicalFunction(wx.XOR)
             dc.BeginDrawing()
             for i, (x,y) in enumerate(self.ob_coords):
@@ -267,7 +267,9 @@ class ImageViewer(wx.Frame):
         # View Menu
         self.viewMenu = wx.Menu()
         self.objectNumberMenuItem = self.viewMenu.Append(-1, text='Show %s numbers\tCtrl+`'%p.object_name[0])
+        self.objectNumberMenuItem.Enable(p.object_table is not None)
         self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
+        self.classViewMenuItem.Enable(p.object_table is not None)
         self.GetMenuBar().Append(self.viewMenu, 'View')
     
     def CreateChannelMenus(self):
