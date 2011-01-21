@@ -247,12 +247,14 @@ class MainGUI(wx.Frame):
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
         
     def clear_link_tables(self, evt=None):
+        p = Properties.getInstance()
         dlg = wx.MessageDialog(self, 'This will delete the tables '
                     '"%s" and "%s" from your database. '
                     'CPA will automatically recreate these tables as it '
                     'discovers how your database is linked. Are you sure you '
-                    'want to proceed?', 'Clear table linking information?'
-                    %(p.link_tables_table, p.link_columns_table), 
+                    'want to proceed?'
+                    %(p.link_tables_table, p.link_columns_table),
+                    'Clear table linking information?', 
                     wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
         response = dlg.ShowModal()
         if response != wx.ID_YES:
