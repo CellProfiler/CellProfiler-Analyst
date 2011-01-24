@@ -43,7 +43,7 @@ class PlateViewer(wx.Frame, CPATool):
         for field in required_fields:
             if not p.field_defined(field):
                 fail = True
-                raise 'Properties field "%s" is required for PlateViewer.'%(field)
+                raise Exception('Properties field "%s" is required for PlateViewer.'%(field))
         if fail:    
             self.Destroy()
             return
