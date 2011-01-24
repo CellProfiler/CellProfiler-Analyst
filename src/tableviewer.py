@@ -661,6 +661,10 @@ class TableViewer(wx.Frame):
     def on_set_fitted_col_widths(self, evt):
         self.set_fitted_col_widths()
     def set_fitted_col_widths(self):
+        # Note: I disconnect EVT_SIZE before binding in case it's already bound.
+        # Otherwise it will get bound twice and set_fixed_col_widths won't work 
+        # unles called twice.
+        self.Disconnect(-1, -1, wx.wxEVT_SIZE)
         wx.EVT_SIZE(self, self.on_size)
         self.RescaleGrid()
         
