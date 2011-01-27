@@ -11,44 +11,11 @@ except:
     svn_version = 10000
 
 
-from classifier import Classifier
-from properties import Properties
-from icons import get_cpa_icon
-import dbconnect
-import multiclasssql
-# ---
-import wx
 import sys
 import os
 import logging
-import threading
-from tableviewer import TableViewer
-from plateviewer import PlateViewer
-from imageviewer import ImageViewer
-from boxplot import BoxPlot
-from scatter import Scatter
-from histogram import Histogram
-from density import Density
-import icons
-import cpaprefs
-from cpatool import CPATool
 
-ID_CLASSIFIER = wx.NewId()
-ID_PLATE_VIEWER = wx.NewId()
-ID_TABLE_VIEWER = wx.NewId()
-ID_IMAGE_VIEWER = wx.NewId()
-ID_SCATTER = wx.NewId()
-ID_HISTOGRAM = wx.NewId()
-ID_DENSITY = wx.NewId()
-ID_BOXPLOT = wx.NewId()
-
-PLOTS = {'scatter'     : Scatter, 
-         'histogram'   : Histogram,
-         'density'     : Density, 
-         'plateviewer' : PlateViewer,
-         'datatable'   : TableViewer, 
-         'classifier'  : Classifier,
-         'boxplot'     : BoxPlot}
+from properties import Properties
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -60,6 +27,83 @@ class FuncLog(logging.Handler):
     def emit(self, record):
         self.update(self.format(record))
 
+
+def setup_frozen_logging():
+    # py2exe has a version of this in boot_common.py, but it causes an
+    # error window to appear if any messages are actually written.
+    class Stderr(object):
+        softspace = 0 # python uses this for printing
+        _file = None
+        _error = None
+        def write(self, text, fname=sys.executable + '.log'):
+            if self._file is None and self._error is None:
+                try:
+                    self._file = open(fname, 'w')
+                except Exception, details:
+                    self._error = details
+            if self._file is not None:
+                self._file.write(text)
+                self._file.flush()
+        def flush(self):
+            if self._file is not None:
+                self._file.flush()
+    # send everything to logfile
+    sys.stderr = Stderr()
+    sys.stdout = sys.stderr
+
+if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
+    # on windows, log to a file (Mac goes to console)
+    setup_frozen_logging()
+logging.basicConfig(level=logging.DEBUG)
+
+# Handles args to MacOS "Apps"
+if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
+    del sys.argv[1]
+
+if len(sys.argv) > 1:
+    # Load a properties file if passed in args
+    p = Properties.getInstance()
+    if sys.argv[1] == '--incell':
+        # GE Incell xml wrapper
+        p.LoadIncellFile(sys.argv[2])
+    else:
+        p.LoadFile(sys.argv[1])
+
+import threading
+from classifier import Classifier
+from tableviewer import TableViewer
+from plateviewer import PlateViewer
+from imageviewer import ImageViewer
+from boxplot import BoxPlot
+from scatter import Scatter
+from histogram import Histogram
+from density import Density
+import icons
+import cpaprefs
+from cpatool import CPATool
+
+PLOTS = {'scatter'     : Scatter, 
+         'histogram'   : Histogram,
+         'density'     : Density, 
+         'plateviewer' : PlateViewer,
+         'datatable'   : TableViewer, 
+         'classifier'  : Classifier,
+         'boxplot'     : BoxPlot}
+
+from icons import get_cpa_icon
+import dbconnect
+import multiclasssql
+# ---
+import wx
+
+ID_CLASSIFIER = wx.NewId()
+ID_PLATE_VIEWER = wx.NewId()
+ID_TABLE_VIEWER = wx.NewId()
+ID_IMAGE_VIEWER = wx.NewId()
+ID_SCATTER = wx.NewId()
+ID_HISTOGRAM = wx.NewId()
+ID_DENSITY = wx.NewId()
+ID_BOXPLOT = wx.NewId()
 
 class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
@@ -324,7 +368,6 @@ def new_version_cb(new_version, new_version_info):
 
     wx.CallAfter(cb2)
 
-
 class CPAnalyst(wx.App):
     '''The CPAnalyst application.
     This launches the main UI, and keeps track of the session.
@@ -433,42 +476,6 @@ class CPAnalyst(wx.App):
         return '%s %d'%(prefix, plot_num)
 
 
-def setup_frozen_logging():
-    # py2exe has a version of this in boot_common.py, but it causes an
-    # error window to appear if any messages are actually written.
-    class Stderr(object):
-        softspace = 0 # python uses this for printing
-        _file = None
-        _error = None
-        def write(self, text, fname=sys.executable + '.log'):
-            if self._file is None and self._error is None:
-                try:
-                    self._file = open(fname, 'w')
-                except Exception, details:
-                    self._error = details
-            if self._file is not None:
-                self._file.write(text)
-                self._file.flush()
-        def flush(self):
-            if self._file is not None:
-                self._file.flush()
-    # send everything to logfile
-    sys.stderr = Stderr()
-    sys.stdout = sys.stderr
-
-if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
-    # on windows, log to a file (Mac goes to console)
-    setup_frozen_logging()
-logging.basicConfig(level=logging.DEBUG)
-
-# Handles args to MacOS "Apps"
-if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
-    del sys.argv[1]
-
-if len(sys.argv) > 1:
-    # Load a properties file if passed in args
-    p = Properties.getInstance()
-    p.LoadFile(sys.argv[1])
 
 # Initialize the app early because the fancy exception handler
 # depends on it in order to show a dialog.

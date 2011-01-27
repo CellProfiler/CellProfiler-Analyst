@@ -5,6 +5,7 @@ from StringIO import StringIO
 import re
 import os
 import logging
+import incell
 
 #
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
@@ -108,6 +109,11 @@ class Properties(Singleton):
     Loads and stores properties files.
     '''
     def __init__(self):
+        self._groups = {}
+        self._groups_ordered = []
+        self._filters = {}
+        self._filters_ordered = []
+
         super(Properties, self).__init__()        
     
     def __str__(self):
@@ -151,11 +157,6 @@ class Properties(Singleton):
         # replace CRs with LFs
 #        lines = lines.replace('\r', '\n')
         lines = lines.split('\n')
-
-        self._groups = {}
-        self._groups_ordered = []
-        self._filters = {}
-        self._filters_ordered = []
 
         for idx, line in enumerate(lines):
             # skip commented and empty lines
@@ -475,6 +476,16 @@ class Properties(Singleton):
         if not self.field_defined('link_columns_table'):
             self.link_columns_table = '_link_columns_%s_'%(self.image_table)
         
+
+    def LoadIncellFile(self, filename):
+        self.incell_filename = filename
+        self._filename = filename + '.cpa_properties'
+        incell.parse_incell(filename, self)
+
+        # some reasonable defaults
+        
+
+        self.Validate()
         
 if __name__ == "__main__":
     import sys
