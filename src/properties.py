@@ -266,6 +266,10 @@ class Properties(Singleton):
         
     def Clear(self):
         del self.__dict__
+        self._groups = {}
+        self._groups_ordered = []
+        self._filters = {}
+        self._filters_ordered = []
         
     def IsEmpty(self):
         return self.__dict__ == {}
