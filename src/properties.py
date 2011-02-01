@@ -109,11 +109,6 @@ class Properties(Singleton):
     Loads and stores properties files.
     '''
     def __init__(self):
-        self._groups = {}
-        self._groups_ordered = []
-        self._filters = {}
-        self._filters_ordered = []
-
         super(Properties, self).__init__()        
     
     def __str__(self):
@@ -149,6 +144,10 @@ class Properties(Singleton):
     def LoadFile(self, filename):
         ''' Loads variables in from a properties file. '''
         self.Clear()
+        self._groups = {}
+        self._groups_ordered = []
+        self._filters = {}
+        self._filters_ordered = []
         self._filename = filename
         f = open(filename, 'U')
         
@@ -266,10 +265,6 @@ class Properties(Singleton):
         
     def Clear(self):
         del self.__dict__
-        self._groups = {}
-        self._groups_ordered = []
-        self._filters = {}
-        self._filters_ordered = []
         
     def IsEmpty(self):
         return self.__dict__ == {}
