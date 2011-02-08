@@ -324,7 +324,7 @@ class DBConnect(Singleton):
                 except OSError:
                     os.mkdir(dbpath)
                 if p.db_sql_file:
-                    csv_dir = os.path.split(p.db_sql_file)[0]
+                    csv_dir = os.path.split(p.db_sql_file)[0] or '.'
                     imcsvs, obcsvs = get_csv_filenames_from_sql_file()
                     files = imcsvs + obcsvs + [os.path.split(p.db_sql_file)[1]]
                     hash = md5.new()
@@ -1177,7 +1177,7 @@ class DBConnect(Singleton):
         imcsvs, obcsvs = get_csv_filenames_from_sql_file()
                 
         # Verify that the CSVs exist
-        csv_dir = os.path.split(p.db_sql_file)[0]
+        csv_dir = os.path.split(p.db_sql_file)[0] or '.'
         dir_files = os.listdir(csv_dir)
         print dir_files
         for file in imcsvs + obcsvs:
