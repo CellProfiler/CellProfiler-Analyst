@@ -116,7 +116,7 @@ class Properties(Singleton):
         self._groups_ordered = []
         self._filters = {}
         self._filters_ordered = []
-        self._initialized = True
+        self._initialized = False
     
     def __str__(self):
         s=''
