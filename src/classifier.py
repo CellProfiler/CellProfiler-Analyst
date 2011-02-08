@@ -106,7 +106,7 @@ class Classifier(wx.Frame):
             multiclasssql.CreateFilterTables()
             logging.info('Done creating temporary filter tables.')
             
-        if p.IsEmpty():
+        if not p.is_initialized():
             logging.critical('Classifier requires a properties file. Exiting.')
             raise Exception('Classifier requires a properties file. Exiting.')
 

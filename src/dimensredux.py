@@ -512,7 +512,7 @@ class PlotMain(wx.Frame):
             global p
             p = properties
 
-            if p.IsEmpty():
+            if not p.is_initialized():
                 logging.critical('Classifier requires a properties file. Exiting.')
                 raise Exception('Classifier requires a properties file. Exiting.')
             global db

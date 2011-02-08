@@ -395,7 +395,7 @@ class CPAnalyst(wx.App):
                                  wx.SPLASH_TIMEOUT, 2000, None, -1)
 
         p = Properties.getInstance()
-        if p.IsEmpty():
+        if not p.is_initialized():
             if not p.show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False

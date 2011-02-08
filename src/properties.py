@@ -293,8 +293,8 @@ class Properties(Singleton):
         self._filters_ordered = []
         self._initialized = True
         
-    def IsEmpty(self):
-        return not self._initialized
+    def is_initialized(self):
+        return self._initialized
 
     def field_defined(self, name):
         # field name exists and has a non-empty value.
