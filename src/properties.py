@@ -262,18 +262,22 @@ class Properties(Singleton):
                 (name, oldval) = line.split('=', 1)    # split each side of the first eq sign
                 name = name.strip()
                 oldval = oldval.strip()
-                val = self.__getattr__(name)
-                if (name in string_vars and val == oldval) or \
-                   (name in list_vars and val == [v.strip() for v in oldval.split(',') if v.strip() is not '']) or \
-                   name.startswith('group') or name.startswith('filter'):
+                if name.startswith('group') or name.startswith('filter'):
                     f.write(line)
                 else:
-                    if type(val)==list:
+                    val = self.__getattr__(name)
+                    if (name in string_vars and val == oldval) or \
+                       (name in list_vars and val == [v.strip() for v in oldval.split(',') if v.strip() is not '']):
+                        f.write(line)
+                    elif type(val)==list:
                         f.write('%s  =  %s\n'%(name, ', '.join([str(v) for v in val if v])))
                     else:
                         f.write('%s  =  %s\n'%(name, val))
                 if not '_SQL_' in name:
-                    fields_to_write.remove(name)
+                    if name in field_mappings.keys():
+                        fields_to_write.remove(field_mappings[name])
+                    else:
+                        fields_to_write.remove(name)
         
         f.write('\n')
         # Write out fields that weren't present in the file
