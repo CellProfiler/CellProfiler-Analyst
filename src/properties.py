@@ -104,12 +104,19 @@ field_mappings = {'classifier_ignore_substrings' : 'classifier_ignore_columns',
 required_vars = list(set(list_vars + string_vars) - set(optional_vars) 
                      - set(field_mappings.keys()))
 
+valid_vars = set(list_vars + string_vars)
+
 class Properties(Singleton):
     '''
     Loads and stores properties files.
     '''
     def __init__(self):
         super(Properties, self).__init__()        
+        self._groups = {}
+        self._groups_ordered = []
+        self._filters = {}
+        self._filters_ordered = []
+        self._initialized = True
     
     def __str__(self):
         s=''
@@ -120,7 +127,7 @@ class Properties(Singleton):
         
     def __getattr__(self, field):
         # The name may not be loaded for optional fields.
-        if not self.__dict__.has_key(field):
+        if (not self.__dict__.has_key(field)) and (field in valid_vars):
             return None
         else:
             return self.__dict__[field]
@@ -144,11 +151,8 @@ class Properties(Singleton):
     def LoadFile(self, filename):
         ''' Loads variables in from a properties file. '''
         self.Clear()
-        self._groups = {}
-        self._groups_ordered = []
-        self._filters = {}
-        self._filters_ordered = []
         self._filename = filename
+
         f = open(filename, 'U')
         
         lines = f.read()
@@ -220,6 +224,22 @@ class Properties(Singleton):
                 
         f.close()
         self.Validate()
+        self._initialized = True
+
+    def LoadIncellFiles(self, properties_filename, sqlite_filename, incell_filenames):
+        if os.path.exists(properties_filename):
+            self.LoadFile(properties_filename)
+        else:
+            self._filename = properties_filename
+            self._textfile = ""
+
+        for incell_filename in incell_filenames:
+            incell.parse_incell(sqlite_filename, incell_filename, self)
+            self.Validate()
+        self._initialized = True
+
+        if not os.path.exists(properties_filename):
+            self.SaveFile(properties_filename)
         
     def SaveFile(self, filename):
         '''
@@ -264,14 +284,21 @@ class Properties(Singleton):
         f.close()
         
     def Clear(self):
-        del self.__dict__
+        # only clear known variables
+        for k in valid_vars & set(self.__dict__.keys()):
+            del self.__dict__[k]
+        self._groups = {}
+        self._groups_ordered = []
+        self._filters = {}
+        self._filters_ordered = []
+        self._initialized = True
         
     def IsEmpty(self):
-        return self.__dict__ == {}
+        return not self._initialized
 
     def field_defined(self, name):
         # field name exists and has a non-empty value.
-        return name in self.__dict__.keys() and self.__dict__[name] not in ['', None]
+        return self.__dict__.get(name, None) not in ['', None]
     
     def backwards_compatiblize(self):
         ''' Update any old fields to new ones in field_mappings.
@@ -480,18 +507,6 @@ class Properties(Singleton):
             self.link_columns_table = '_link_columns_%s_'%(self.image_table)
         
 
-    def LoadIncellFiles(self, properties_filename, sqlite_filename, incell_filenames):
-        if os.path.exists(properties_filename):
-            self.LoadFile(properties_filename)
-        else:
-            self._filename = properties_filename
-            self._textfile = ""
-        for incell_filename in incell_filenames:
-            incell.parse_incell(sqlite_filename, incell_filename, self)
-            self.Validate()
-        if not os.path.exists(properties_filename):
-            self.SaveFile(properties_filename)
-        
 if __name__ == "__main__":
     import sys
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
