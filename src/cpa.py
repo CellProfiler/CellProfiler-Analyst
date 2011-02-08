@@ -65,7 +65,8 @@ if len(sys.argv) > 1:
     p = Properties.getInstance()
     if sys.argv[1] == '--incell':
         # GE Incell xml wrapper
-        p.LoadIncellFile(sys.argv[2])
+        # LOOP
+        p.LoadIncellFiles(sys.argv[2], sys.argv[3], sys.argv[4:])
     else:
         p.LoadFile(sys.argv[1])
 

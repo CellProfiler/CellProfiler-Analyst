@@ -449,7 +449,9 @@ class Properties(Singleton):
             logging.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables))
             self.check_tables = 'yes'
             
-        if not self.field_defined('use_larger_image_scale') or self.use_larger_image_scale.lower() in ['false', 'no', 'off', 'f', 'n']:
+        if self.use_larger_image_scale in [True, False]:
+            pass
+        elif not self.field_defined('use_larger_image_scale') or self.use_larger_image_scale.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.use_larger_image_scale = False
         elif self.field_defined('use_larger_image_scale') and self.use_larger_image_scale.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.use_larger_image_scale = True
@@ -457,7 +459,9 @@ class Properties(Singleton):
             logging.warn('PROPERTIES WARNING (use_larger_image_scale): Field value "%s" is invalid. Replacing with "false".'%(self.use_larger_image_scale))
             self.use_larger_image_scale = False
             
-        if not self.field_defined('rescale_object_coords') or self.rescale_object_coords.lower() in ['false', 'no', 'off', 'f', 'n']:
+        if self.rescale_object_coords in [True, False]:
+            pass
+        elif not self.field_defined('rescale_object_coords') or self.rescale_object_coords.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.rescale_object_coords = False
         elif self.field_defined('rescale_object_coords') and self.rescale_object_coords.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.rescale_object_coords = True
@@ -476,15 +480,17 @@ class Properties(Singleton):
             self.link_columns_table = '_link_columns_%s_'%(self.image_table)
         
 
-    def LoadIncellFile(self, filename):
-        self.incell_filename = filename
-        self._filename = filename + '.cpa_properties'
-        incell.parse_incell(filename, self)
-
-        # some reasonable defaults
-        
-
-        self.Validate()
+    def LoadIncellFiles(self, properties_filename, sqlite_filename, incell_filenames):
+        if os.path.exists(properties_filename):
+            self.LoadFile(properties_filename)
+        else:
+            self._filename = properties_filename
+            self._textfile = ""
+        for incell_filename in incell_filenames:
+            incell.parse_incell(sqlite_filename, incell_filename, self)
+            self.Validate()
+        if not os.path.exists(properties_filename):
+            self.SaveFile(properties_filename)
         
 if __name__ == "__main__":
     import sys
