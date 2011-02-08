@@ -43,7 +43,9 @@ string_vars = ['db_type',
                'rescale_object_coords',
                'well_format',
                'link_tables_table',
-               'link_columns_table']
+               'link_columns_table',
+               'image_rescale',
+               ]
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
              'image_file_cols', 'image_channel_files', 
