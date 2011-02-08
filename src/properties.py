@@ -94,6 +94,7 @@ optional_vars = ['db_port',
                  'well_format',
                  'link_tables_table',
                  'link_columns_table',
+                 'image_rescale',
                  ]
 
 # map deprecated fields to new fields
