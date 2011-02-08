@@ -218,16 +218,19 @@ class ColorBarPanel(wx.Panel):
         self.PopupMenu(popupMenu, (evt.X, evt.Y))
         
     def OnSaveIntervalAsFilter(self, evt):
+        #
+        # TODO: Need to save this as new style filter and remove SQL restrictions on filter names
+        #
         import dbconnect
         import os.path
         colname = self.Parent.measurementsChoice.GetStringSelection()
         
-        lb = ub = ''
+        lb = ub = 'inf'
         if self.interval[0] != self.global_extents[0]:
-            lb = ('%.3f<'%self.interval[0]).replace('.',',')
+            lb = ('%.3f'%self.interval[0]).replace('.',',')
         if self.interval[1] != self.global_extents[1]:
-            ub = ('<%.3f'%self.interval[1]).replace('.',',')
-        filtername = 'filter_SQL_%s%s%s'%(lb, colname, ub)
+            ub = ('%.3f'%self.interval[1]).replace('.',',')
+        filtername = 'filter_SQL_%s_between_%s_and_%s'%(colname, lb, ub)
         
         if lb and ub:
             where = '%s>%s AND %s<%s'%(colname, self.interval[0], colname, self.interval[1])
