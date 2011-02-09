@@ -16,10 +16,7 @@ from threading import Thread
 from traceback import print_exception
 
 # Import all functions to interface with the libsvm library
-import os
-os.chdir('/Users/afraser/libsvm-3.0/python')
 import svmutil
-
 #from scikits.learn.svm import BaseLibSVM
 
 
