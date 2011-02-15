@@ -81,21 +81,26 @@ if __name__ == "__main__":
                 ] 
 
     for i, test in enumerate(testdata):
-        props  = test['props']
-        ts     = test['ts']
-        nRules = test['nRules']
-        filter = test['filter']
-        group  = test['group']
-        vals   = numpy.array(test['vals'])
+        props_file  = test['props']
+        ts_file     = test['ts']
+        nRules      = test['nRules']
+        filter_name = test['filter']
+        group       = test['group']
+        vals        = numpy.array(test['vals'])
         
-        trainingSet, grid = score(props, ts, nRules, filter, group)
+        logging.info('Loading properties file...')
+        p.load_file(props_file)
+        logging.info('Loading training set...')
+        ts = TrainingSet(p)
+        ts.Load(ts_file)
         
-        data = grid.GetData()
+        data = score(p, ts, nRules, filter_name, group)
         
-        nClasses = len(trainingSet.labels)
+        nClasses = len(ts.labels)
         nKeyCols = len(image_key_columns())
                 
-        assert base64.b64encode(zlib.compress(str(data))) == vals, 'Test %d failed'%(i)
+        if base64.b64encode(zlib.compress(str(list(data)))) != vals:
+            logging.error('Test %d failed'%(i))
 
     app.MainLoop()
     
