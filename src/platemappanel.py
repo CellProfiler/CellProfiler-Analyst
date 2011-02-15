@@ -447,7 +447,7 @@ class PlateMapPanel(wx.Panel):
         imkeys = db.execute('SELECT %s FROM %s WHERE %s'%
                             (UniqueImageClause(), p.image_table, 
                              dbconnect.GetWhereClauseForWells([wellkey])))
-        
+
         popupMenu = wx.Menu()
         popupMenu.SetTitle('well: %s'%(well_label))
         if p.image_thumbnail_cols:
@@ -475,8 +475,8 @@ class PlateMapPanel(wx.Panel):
         if images == []:
             return
         imsets = []
-        for row in images:
-            pngs = [Image.open(StringIO(im), 'r') for im in row]
+        for channels in images:
+            pngs = [Image.open(StringIO(im), 'r') for im in channels]
             imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
                     for png in pngs]]
         
