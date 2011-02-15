@@ -1,6 +1,5 @@
 from dbconnect import *
 from properties import Properties
-
 p = Properties.getInstance()
 
 
@@ -142,9 +141,15 @@ class QueryBuilder(object):
             if link_conditions:
                 conditions += [' AND '.join([str(c) for c in link_conditions])]
         return ' AND '.join(conditions)
+    
+    def add_filter(self, filter):
+        '''Adds a filter to the where clause
+        filter -- a Filter or OldFilter object
+        '''
+        self.where_clause.add_filter(filter)
 
 
-class Column:
+class Column(object):
     def __init__(self, table, col, agg=None):
         '''table - the table name
         col - the column name
@@ -186,6 +191,7 @@ def interleave(*args):
 ## end of http://code.activestate.com/recipes/511480/ }}}
 
 
+# TODO: replace WhereConditions with Expressions
 class Expression(object):
     def __init__(exp_list):
         '''exp_list -- a list of string tokens and columns comprising a valid 
@@ -213,12 +219,21 @@ class Expression(object):
 
     def get_tables(self):
         return [token.table for token in self.exp if isinstance(token, Column)]
-
     
+    def get_columns(self):
+        return [token for token in self.exp if isinstance(token, Column)]
+
+
+class Gate(Expression):
+    def __init__(col, comparator, value):
+        float(value)
+        assert comparator in ('<=', '>=')
+        super(Expression, self).__init__([col, comparator, value])
+
+
 class WhereClause(object):
-    '''
-    A WhereClause is a list of WhereConditions strung together by conjunctions
-    "AND" or "OR"
+    '''A WhereClause is a list of WhereConditions strung together by 
+    conjunctions (eg: "AND" or "OR")
     '''
     def __init__(self, column=None, comparator=None, value=None):
         '''
@@ -242,47 +257,51 @@ class WhereClause(object):
         return not self.is_empty()
 
     def get_tables(self):
+        '''get the tables this subquery requires
+        '''
         tables = []
         for c in self.conditions:
             tables += c.get_tables()
         return list(set(tables))
     
+    def get_columns(self):
+        '''get the columns referenced in this subquery
+        '''
+        cols = []
+        for c in self.conditions:
+            cols += c.get_columns()
+        return list(set(cols))
+    
     def add_condition(self, column, comparator, value, conjunction='AND'):
+        '''Add another condition to the whereclause
+        '''
         if not self.is_empty():
             self.conjunctions += [conjunction]
         self.conditions += [WhereCondition(column, comparator, value)]
         assert len(self.conjunctions) == len(self.conditions) - 1
         
     def add_where_clause(self, where, conjunction='AND'):
+        '''combine this and another WhereClause
+        '''
         if not (self.is_empty() or where.is_empty()):
             self.conjunctions += [conjunction]
         self.conditions += where.conditions
         self.conjunctions += where.conjunctions
         assert len(self.conjunctions) == len(self.conditions) - 1
         
-    def add_filter(self, filter, conjunction='AND'):
-        if not (self.is_empty() or filter.is_empty()):
-            self.conjunctions += [conjunction]
-        self.conditions += filter.conditions
-        self.conjunctions += filter.conjunctions
-        assert len(self.conjunctions) == len(self.conditions) - 1
-
+    def add_filter(self, filter):
+        '''Adds a filter to the where clause
+        filter -- a Filter or OldFilter object
+        '''
+        if isinstance(filter, Filter):
+            self.add_where_clause(filter)
+        elif isinstance(filter, OldFilter):
+            self.conditions += [filter]
+        else:
+            raise 'add_filter requires a Filter or OldFilter object'
         
-class Filter(WhereClause):
-    '''
-    A Filter is basically a WhereClause with a different string representation
-    '''
-    def __str__(self):
-        if self.is_empty():
-            raise 'Filter has no where clause'
-        tables = super(Filter, self).get_tables()
-        where = super(Filter, self).__str__()
-        # currently expect table to be the per image table
-        return 'SELECT %s FROM %s WHERE %s'%(UniqueImageClause(p.image_table), 
-                                             ', '.join(tables), where)
-
     
-class WhereCondition:
+class WhereCondition(object):
     '''
     Conditional statement in the form of "Column <comparator> value/Column"
     '''
@@ -321,39 +340,85 @@ class WhereCondition:
         tables = [self.column.table]
         if isinstance(self.value, Column):
             tables += [self.value.table]
-        return list(set(tables))                
+        return list(set(tables))
     
+    def get_columns(self):
+        cols = [self.column]
+        if isinstance(self.value, Column):
+            cols += [self.value]
+        return list(set(cols))
+        
+
+
+class Filter(WhereClause):
+    '''A Filter is a WhereClause with a different string representation
+    '''
+    def __init__(self, column, comparator, value):
+        WhereClause.__init__(self, column, comparator, value)
+
+
+class OldFilter(WhereCondition):
+    '''Wrapper class for backwards compatibility with the old style of defining
+    filters. 
+    '''
+    def __init__(self, filter_name, filter_query):
+        fq = filter_query
+        self.query = filter_query
+        parseable = re.match('^SELECT\s+(?P<select>.+)\s+'
+                             'FROM\s+(?P<from>.+)\s+'
+                             '(WHERE\s+(?P<where>.+)\s+)?'
+                             '(GROUP BY\s+(?P<group>.+))?', 
+                             fq, re.IGNORECASE) is not None
+        self.where_clause = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
+        self.from_clause = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]    
+        self.tables = [t.strip() for t in self.from_clause.split(',')]
+        for t in self.tables:
+            if ' ' in t:
+                wx.MessageBox('Unable to parse properties filter "%s" because '
+                              'it appears to use table aliases. Please remove '
+                              'aliases and try again.\n\tQuery was: "%s".'%(filter_name, fq), 'Error')
+        if not parseable:
+            import wx
+            wx.MessageBox('Unable to parse properties filter query.\n\t"%s".'%(fq), 'Error')
     
+    def __str__(self):
+        return self.where_clause
+    
+    def get_tables(self):
+        return self.tables
+
+    
+def parse_old_group_query(group_query):
+    '''
+    '''
+    gq = group_query
+    match = re.match('^SELECT\s+(?P<select>.+)\s+FROM\s+(?P<from>.+)\s*$', 
+                     gq, re.IGNORECASE)
+    if match == None:
+        import wx
+        wx.MessageBox('Unable to parse properties group query:\n\t"%s".'%(gq), 'Error')
+    col_strings = [t.strip() for t in match.groupdict('select').split(',')]
+    tables = set([t.strip() for t in match.groupdict('from').split(',')])
+
+    columns = []
+    for col_string in col_strings:
+        tablecol = col_string.split('.')
+        if len(tablecol) == 1 and len(tables) == 1:
+            columns += [Column(tables[0], tablecol[0])]
+        elif len(tablecol) == 2 and tablecol[0] in tables:
+            columns += [Column(tablecol[0], tablecol[1])]
+        else:
+            import wx
+            wx.MessageBox('Unable to parse properties group query:\n\t"%s".'%(gq), 'Error')
+            
+
+
 if __name__ == "__main__":
     import wx
     app = wx.PySimpleApp()
     p.LoadFile('/Users/afraser/cpa_example/example.properties')
-
-    q = QueryBuilder()
-    q.set_select_clause([Column('per_image', 'ImageNumber'), 
-                         Column('per_well', 'gene'), 
-                         Column('per_object', 'intensity', 'AVG')])
-    q.add_where_condition(('asdf', 'x'), '<', '100')
-    q.add_where_condition(('asdf', 'y'), '<', '10', 'OR')
-    q.set_group_columns([('per_well', 'gene')])
-    print q
-
     
-    f = Filter(('A', 'a'), '=', '1')
-    print f
-    f.add_condition(('C', 'c'), '=', '1')
-    print f
-    f.add_condition(('C', 'cc'), '=', '3')
-    print f
-    
-    f.add_filter(Filter(('A','a'),'=','1'), 'OR')
-    f.add_filter(Filter(('B','b'),'=','1'), 'OR')
-    print f
-     
-    assert str(WhereCondition(('T', 'a'), '<=', ('TT', 'b'))) == 'T.a <= TT.b'
-    assert WhereCondition(('a','a'),'=','1') == WhereCondition(('a','a'),'=','1') 
-    assert not(WhereCondition(('a','a'),'=','1') != WhereCondition(('a','a'),'=','1')) 
-    assert not(WhereCondition(('a','a'),'=','1') == WhereCondition(('b','a'),'=','1')) 
-    assert WhereCondition(('a','a'),'=','1') != WhereCondition(('b','a'),'=','1') 
-     
+    for f in p._filters:
+        print parse_filter_string(f)
+
     app.MainLoop()

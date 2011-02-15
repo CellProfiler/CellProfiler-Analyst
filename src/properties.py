@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from singleton import *
+from singleton import Singleton
 from StringIO import StringIO
 import re
 import os
@@ -123,7 +123,7 @@ class Properties(Singleton):
     
     def __str__(self):
         s=''
-        for k, v in self.__dict__.items():
+        for k, v in sorted(self.__dict__.items()):
             if not str(k).startswith('_'):
                 s += k+" = "+str(v)+"\n"
         return s
@@ -150,21 +150,30 @@ class Properties(Singleton):
             return True
         else:
             return False
-            
-    def LoadFile(self, filename):
+        
+    def parse_list_value(self, list_str):
+        '''parses a list property given as a string and returns it as a list
+        '''
+        return [v.strip() for v in list_str.split(',') if v.strip() is not '']
+        
+    def load_file(self, filename):
         ''' Loads variables in from a properties file. '''
-        self.Clear()
+        self.clear()
+        self._groups = {}
+        self._groups_ordered = []
+        self._filters = {}
+        self._filters_ordered = []
         self._filename = filename
 
-        f = open(filename, 'U')
-        
+        f = open(filename, 'U')        
         lines = f.read()
         self._textfile = lines
         # replace CRs with LFs
-#        lines = lines.replace('\r', '\n')
+        #lines = lines.replace('\r', '\n')
         lines = lines.split('\n')
 
-        for idx, line in enumerate(lines):
+        for idx in xrange(len(lines)):
+            line = lines[idx]
             # skip commented and empty lines
             if not line.strip().startswith('#') and line.strip() != '':
                 try:
@@ -180,7 +189,7 @@ class Properties(Singleton):
                     self.__dict__[name] = val or None
                 
                 elif name in list_vars:
-                    self.__dict__[name] = [v.strip() for v in val.split(',') if v.strip() is not ''] or None
+                    self.__dict__[name] = self.parse_list_value(val) or None
                     
                 elif name.startswith('group_SQL_'):
                     group_name = name[10:]
@@ -200,6 +209,7 @@ class Properties(Singleton):
                     self._groups_ordered += [group_name]
                     
                 elif name.startswith('filter_SQL_'):
+                    # Handle old-style filters:
                     filter_name = name[11:]
                     if filter_name == '':
                         raise Exception, ('PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
@@ -214,13 +224,30 @@ class Properties(Singleton):
                     if not val:
                         logging.warn('PROPERTIES WARNING (%s): Undefined filter'%(name))
                         continue
-                    # TODO: test query
-                    self._filters[filter_name] = val
+                    import sqltools
+                    self._filters[filter_name] = sqltools.OldFilter(filter_name, val)
                     self._filters_ordered += [filter_name]
                 
                 elif name in ['groups', 'filters']:
                     logging.warn('PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\n'
                               'Only the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name))
+                    
+                #elif name == 'gates':
+                    ## gates are the new filters
+                    ## gates are all the rage
+                    ## gates are the new black
+                    #not_parsed = True
+                    #gates = ''
+                    #while not_parsed:
+                        #gates += val.strip()
+                        #try:
+                            #self.__dict__[name] = eval(gates)
+                            #not_parsed = False
+                        #except SyntaxError:
+                            #idx += 1
+                            #if idx >= len(lines):
+                                #raise Exception, 'PROPERTIES ERROR: Error parsing gates. Could not find end of definition.'
+                            #val = lines[idx]
                     
                 else:
                     logging.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
@@ -228,6 +255,7 @@ class Properties(Singleton):
         f.close()
         self.Validate()
         self._initialized = True
+    LoadFile = load_file
 
     def LoadIncellFiles(self, properties_filename, sqlite_filename, incell_filenames):
         if os.path.exists(properties_filename):
@@ -244,7 +272,7 @@ class Properties(Singleton):
         if not os.path.exists(properties_filename):
             self.SaveFile(properties_filename)
         
-    def SaveFile(self, filename):
+    def save_file(self, filename):
         '''
         Saves the file including original comments and whitespace. 
         This function skips vars that start with _ (underscore)
@@ -262,22 +290,23 @@ class Properties(Singleton):
                 (name, oldval) = line.split('=', 1)    # split each side of the first eq sign
                 name = name.strip()
                 oldval = oldval.strip()
-                if name.startswith('group') or name.startswith('filter'):
+                val = self.__getattr__(name)
+                if name in string_vars and str(val) == oldval:
+                    # write string fields back if they're the same
+                    f.write(line)
+                elif name in list_vars and val == parse_list_value(oldval):
+                    # write list vars back if they're the same
+                    f.write(line)
+                elif name.startswith('group') or name.startswith('filter'):
+                    # write old groups and filters back as they were
                     f.write(line)
                 else:
-                    val = self.__getattr__(name)
-                    if (name in string_vars and val == oldval) or \
-                       (name in list_vars and val == [v.strip() for v in oldval.split(',') if v.strip() is not '']):
-                        f.write(line)
-                    elif type(val)==list:
+                    # the field value has changed
+                    if type(val)==list:
                         f.write('%s  =  %s\n'%(name, ', '.join([str(v) for v in val if v])))
                     else:
                         f.write('%s  =  %s\n'%(name, val))
-                if not '_SQL_' in name:
-                    if name in field_mappings.keys():
-                        fields_to_write.remove(field_mappings[name])
-                    else:
-                        fields_to_write.remove(name)
+                fields_to_write.remove(name)
         
         f.write('\n')
         # Write out fields that weren't present in the file
@@ -290,7 +319,7 @@ class Properties(Singleton):
         
         f.close()
         
-    def Clear(self):
+    def clear(self):
         # only clear known variables
         for k in valid_vars & set(self.__dict__.keys()):
             del self.__dict__[k]
@@ -522,41 +551,9 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-        filename = "../properties/nirht_test.properties"
-#        filename = '/Users/afraser/Desktop/cpa_example/example.properties'
+        #filename = "../properties/nirht_test.properties"
+        filename = '/Users/afraser/cpa_example/example.properties'
 
-    p.LoadFile(filename)
+    p.load_file(filename)
+    
     print p
-#    p.newfield = 'chickenpox' # will be appended
-#    p.newlistfield = ['','asdf','',1243,None]
-#    p._hiddenfield = 'asdf'   # won't be written
-#    p.training_set = ''
-#    p.db_type   = ''
-#    p.db_port   = ''
-#    p.db_host   = ''
-#    p.db_name   = ''
-#    p.db_user   = ''
-#    p.db_passwd = ''
-#    p.image_table  = ''
-#    p.object_table = ''
-#    p.table_id   = ''
-#    p.image_id   = ''
-#    p.object_id  = ''
-#    p.plate_id   = ''
-#    p.well_id    = ''
-#    p.cell_x_loc = ''
-#    p.cell_y_loc = ''
-#    p.image_url_prepend = ''
-#    p.image_path_cols = ['../...','qierubvalerb']
-#    p.image_file_cols = ['']
-#    p.image_names = ['','']
-#    p.image_channel_colors = ['yellow', 'magenta']
-
-#    p.filter_SQL_AFRASER = 'TESTESTESTESTESTEST' 
-#    print p
-#    p.SaveFile('/Users/afraser/Desktop/output.txt')
-#    p.filter_SQL_AFRASER2 = 'TESTESTEST' 
-#    p.SaveFile('/Users/afraser/Desktop/output.txt')
-#    p.filter_SQL_AFRASER3 = 'TEST' 
-#    p.SaveFile('/Users/afraser/Desktop/output.txt')
-
