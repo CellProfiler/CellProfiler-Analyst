@@ -254,29 +254,9 @@ class PlateViewer(wx.Frame, CPATool):
         
         q.set_select_clause(select)
         q.set_group_columns(well_key_cols)
-        query = str(q)
         if fltr != NO_FILTER:
-            #
-            # Annoying... We need to parse the filter query and mash
-            # the tables and where clause into the query builder 
-            #
-            fq = p._filters[fltr]
-            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
-            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
-            f_tables = [t.strip() for t in f_from.split(',')]
-            for t in f_tables:
-                if ' ' in t:
-                    wx.MessageBox('Unable to parse properties filter "%s".'%(fltr), 'Error')
-            q.add_table_dependencies(f_tables)
-            if q.get_where_clause():
-                q_groupby_idx = re.search('^SELECT\s+.*\s+FROM\s+.*\s+WHERE\s+.*\s+GROUP BY', query, re.IGNORECASE).end() - len('GROUP BY')
-                query = query[:q_groupby_idx] + 'AND ' + f_where + '\n\t' + query[q_groupby_idx:]
-            else:
-                q_groupby_idx = re.search('^SELECT\s+.*\s+FROM\s+.*\s+GROUP BY', query, re.IGNORECASE).end() - len('GROUP BY')
-                query = query[:q_groupby_idx] + 'WHERE ' + f_where + '\n\t' + query[q_groupby_idx:]
-
-        # EXECUTE the query
-        wellkeys_and_values = db.execute(query)
+            q.add_filter(p._filters[fltr])
+        wellkeys_and_values = db.execute(str(q))
         wellkeys_and_values = np.array(wellkeys_and_values, dtype=object)
 
         # Replace measurement None's with nan
@@ -628,17 +608,13 @@ class PlateViewer(wx.Frame, CPATool):
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
-                fltr = str(cff.get_filter())
+                fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
                 p._filters_ordered += [fname]
                 p._filters[fname] = fltr
                 items = self.filterChoice.GetItems()
                 self.filterChoice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filterChoice.SetSelection(len(items)-1)
-                from multiclasssql import CreateFilterTable
-                logging.info('Creating filter table...')
-                CreateFilterTable(fname)
-                logging.info('Done creating filter.')
             else:
                 self.filterChoice.SetStringSelection(NO_FILTER)
             cff.Destroy()
