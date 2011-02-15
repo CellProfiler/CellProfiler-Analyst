@@ -24,71 +24,59 @@ USAGE:
 python ScoreAll.py <propertiesfile> <trainingset>
 '''
 
-
-def score(props, ts, nRules, filter=None, group='Image'):
+def score(properties, ts, nRules, filter_name=None, group='Image', show_results=False):
     '''
     Trains a Classifier on a training set and scores the experiment
     returns the loaded training set and a DataGrid of scores 
         
-    props -- properties file
-    ts -- training set
-    nRules -- number of rules 
-    filter -- name of a filter to use from the properties file
-    group -- name of a group to use from the properties file 
+    properties -- Properties instance
+    ts         -- TrainingSet instance
+    nRules     -- number of rules to use
+    filter     -- name of a filter to use from the properties file
+    group      -- name of a group to use from the properties file 
     '''
     
     if group == None:
         group = 'Image'
 
     print ''
-    print 'properties:  ', props
+    print 'properties:  ', properties
     print 'training set:', ts
     print '# rules:     ', nRules
-    print 'filter:      ', filter
+    print 'filter:      ', filter_name
     print 'grouping by: ', group
     print ''
         
-    p = Properties.getInstance()
+    p = properties
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
-
-    logging.info('Loading properties file...')
-    p.LoadFile(props)
     
-    logging.info('Loading training set...')
-    trainingSet = TrainingSet(p)
-    trainingSet.Load(ts)
-    
-    nClasses = len(trainingSet.labels)
+    nClasses = len(ts.labels)
     nKeyCols = len(image_key_columns())
     
-    
     assert 200 > nRules > 0, '# of rules must be between 1 and 200.  Value was %s'%(nRules,)
-    assert filter in p._filters.keys()+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter, p._filters.keys(),)
-    assert group in p._groups.keys()+['Image'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, p._groups.keys(),)
-    
-    logging.info('Creating tables for filters...')
-    multiclasssql.CreateFilterTables()
+    assert filter_name in p._filters.keys()+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter_name, ','.join(p._filters.keys()),)
+    assert group in p._groups.keys()+['Image'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, ','.join(p._groups.keys()),)
     
     output = StringIO()
     logging.info('Training classifier with %s rules...'%nRules)
     t0 = time()
-    weaklearners = fastgentleboostingmulticlass.train(trainingSet.colnames,
-                                                      nRules, trainingSet.label_matrix, 
-                                                      trainingSet.values, output)
+    weaklearners = fastgentleboostingmulticlass.train(ts.colnames,
+                                                      nRules, ts.label_matrix, 
+                                                      ts.values, output)
     logging.info('Training done in %f seconds'%(time()-t0))
     
     logging.info('Computing per-image class counts...')
     t0 = time()
     def update(frac): 
         logging.info('%d%% '%(frac*100.,))
-    keysAndCounts = multiclasssql.PerImageCounts(weaklearners, filter=(filter or None), cb=update)
+    keysAndCounts = multiclasssql.PerImageCounts(weaklearners, filter_name=(filter_name or None), cb=update)
     keysAndCounts.sort()
     logging.info('Counts found in %f seconds'%(time()-t0))
         
     if not keysAndCounts:
-        logging.error('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter))
-        raise Exception('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter))
+        logging.error('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter_name))
+        raise Exception('No images are in filter "%s". Please check the filter definition in your properties file.'%(filter_name))
         
     # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
     if group != 'Image':
@@ -163,28 +151,31 @@ def score(props, ts, nRules, filter=None, group='Image'):
         labels += ['# Images']
     labels += ['Total %s Count'%(p.object_name[0].capitalize())]
     for i in xrange(nClasses):
-        labels += ['%s %s Count'%(trainingSet.labels[i].capitalize(), p.object_name[0].capitalize())]
+        labels += ['%s %s Count'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
     if p.area_scoring_column is not None:
         labels += ['Total %s Area'%(p.object_name[0].capitalize())]
         for i in xrange(nClasses):
-            labels += ['%s %s Area'%(trainingSet.labels[i].capitalize(), p.object_name[0].capitalize())]
+            labels += ['%s %s Area'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
     for i in xrange(nClasses):
-        labels += ['p(Enriched)\n'+trainingSet.labels[i]]
+        labels += ['p(Enriched)\n'+ts.labels[i]]
     if nClasses==2:
-        labels += ['Enriched Score\n'+trainingSet.labels[0]]
+        labels += ['Enriched Score\n'+ts.labels[0]]
     else:
         for i in xrange(nClasses):
-            labels += ['Enriched Score\n'+trainingSet.labels[i]]
+            labels += ['Enriched Score\n'+ts.labels[i]]
 
     title = "Enrichments grouped by %s"%(group,)
-    if filter:
-        title += " filtered by %s"%(filter,)
+    if filter_name:
+        title += " filtered by %s"%(filter_name,)
     title += ' (%s)'%(os.path.split(p._filename)[1])
     
-    return (
-            trainingSet,
-            DataGrid(tableData, labels, grouping=group, key_col_indices=key_col_indices, title=title)
-            )
+    if show_results:
+        import tableviewer
+        grid = tableviewer.TableViewer(None, title=title)
+        grid.table_from_array(tableData, labels, group, key_col_indices)
+        grid.set_fitted_col_widths()
+        grid.Show()
+    return tableData
 
 
 
@@ -198,24 +189,29 @@ if __name__ == "__main__":
         print USAGE
         sys.exit()
 
-    props  = sys.argv[1]
-    ts     = sys.argv[2]
+    props_file = sys.argv[1]
+    ts_file    = sys.argv[2]
     
     app = wx.PySimpleApp()
     
     nRules = int(raw_input('# of rules: '))
     
-    filter = raw_input('Filter name (return for none): ')
-    if filter == '':
-        filter = None
+    filter_name = raw_input('Filter name (return for none): ')
+    if filter_name == '':
+        filter_name = None
     
     group  = raw_input('Group name (return for none): ')
     if group=='':
         group = 'Image'
-    
-    grid = score(props, ts, nRules, filter, group)[1]
-    grid.Show()
+
+    logging.info('Loading properties file...')
+    p = Properties.getInstance()
+    p.LoadFile(props_file)
+    logging.info('Loading training set...')
+    ts = TrainingSet(p)
+    ts.Load(ts_file)
+
+    score(p, ts, nRules, filter_name, group, show_results=True)
     
     app.MainLoop()
     
-
