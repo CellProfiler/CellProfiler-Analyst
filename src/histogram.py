@@ -1,4 +1,5 @@
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
+from icons import lasso_tool
 import sqltools as sql
 from multiclasssql import filter_table_prefix
 from properties import Properties
@@ -12,6 +13,7 @@ import sys
 import re
 import wx
 from matplotlib.figure import Figure
+from matplotlib.widgets import SpanSelector
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
@@ -111,17 +113,13 @@ class DataSourcePanel(wx.Panel):
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
-                fltr = str(cff.get_filter())
+                fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
                 p._filters_ordered += [fname]
                 p._filters[fname] = fltr
                 items = self.filter_choice.GetItems()
                 self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filter_choice.SetSelection(len(items)-1)
-                from multiclasssql import CreateFilterTable
-                logging.info('Creating filter table...')
-                CreateFilterTable(fname)
-                logging.info('Done creating filter.')
             else:
                 self.filter_choice.SetSelection(0)
             cff.Destroy()
@@ -159,23 +157,7 @@ class DataSourcePanel(wx.Panel):
         q = sql.QueryBuilder()
         q.set_select_clause([sql.Column(tablename, xpoints)])
         if filter != NO_FILTER:
-            #
-            # This is a bit annoying... We need to parse the filter query and
-            # 1) mash the tables into the query builder 
-            # 2) plop the where clause at the end of the resultant query
-            #
-            fq = p._filters[filter]
-            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
-            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
-            f_tables = [t.strip() for t in f_from.split(',')]
-            for t in f_tables:
-                if ' ' in t:
-                    wx.MessageBox('Unable to parse properties filter "%s"'%(filter), 'Error')
-            q.add_table_dependencies(f_tables)
-            if q.get_where_clause():
-                q = str(q) + ' AND ' + f_where
-            else:
-                q = str(q) + ' WHERE ' + f_where
+            q.add_filter(p._filters[filter])
         return [db.execute(str(q))]
 
     def save_settings(self):
@@ -183,7 +165,6 @@ class DataSourcePanel(wx.Panel):
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        #TODO: Add axis bounds 
         return {'table' : self.table_choice.GetStringSelection(),
                 'x-axis' : self.x_choice.GetStringSelection(),
                 'bins' : self.bins_input.GetValue(),
@@ -206,7 +187,7 @@ class DataSourcePanel(wx.Panel):
         if 'x-axis' in settings:
             self.x_choice.SetStringSelection(settings['x-axis'])
         if 'bins' in settings:
-            self.bins_input.SetValue(settings['bins'])
+            self.bins_input.SetValue(int(settings['bins']))
         if 'x-scale' in settings:
             self.x_scale_choice.SetStringSelection(settings['x-scale'])
         if 'y-scale' in settings:
@@ -231,11 +212,31 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.figure.set_edgecolor((1,1,1))
         self.canvas.SetBackgroundColour('white')
         
-        self.navtoolbar = None
+        self.navtoolbar = NavigationToolbar(self.canvas)
+        self.navtoolbar.DeleteToolByPos(6)
+        #self.span_tool = self.navtoolbar.InsertSimpleTool(5, -1, lasso_tool.ConvertToBitmap(), 
+                                                          #shortHelpString='Draw gate', 
+                                                          #isToggle=True)
+        self.span = None
+        self.navtoolbar.Realize()
+        #self.navtoolbar.Bind(wx.EVT_TOOL, self.on_span_tool_clicked, self.span_tool)
+            
         self.x_label = ''
         self.log_y = False
         self.x_scale = LINEAR_SCALE
         self.setpoints(points, bins)
+        
+        #self.canvas.mpl_connect('button_press_event', self.on_press)
+        #self.canvas.mpl_connect('button_release_event', self.on_release)
+        
+    #def on_press(self, evt):
+        #if self.span_tool.IsToggled():
+            #import matplotlib as mpl
+
+            #mpl.lines.Line2D([evt.x, evt.x], [0, 1], transform=self.figure.transFigure, figure=self.figure)
+
+    #def selection_callback(self, xmin, xmax):
+        #print xmin, xmax
         
     def setpoints(self, points, bins):
         ''' Updates the data to be plotted and redraws the plot.
@@ -250,6 +251,10 @@ class HistogramPanel(FigureCanvasWxAgg):
         #Draw data.
         if not hasattr(self, 'subplot'):
             self.subplot = self.figure.add_subplot(111)
+            #self.span = SpanSelector(self.subplot, self.selection_callback, 
+                                     #'horizontal', useblit=True,
+                                     #rectprops=dict(alpha=0.3, facecolor='red'))
+
         self.subplot.clear()
         # log xform the data, ignoring non-positives
         # XXX: This will not work for selection since the data is changed
@@ -279,7 +284,8 @@ class HistogramPanel(FigureCanvasWxAgg):
                           log=self.log_y,
                           alpha=0.75)
         self.subplot.set_xlabel(x_label)
-        
+        #self.span.visible = self.span_tool.IsToggled()
+
         self.reset_toolbar()
     
     def set_x_label(self, label):
@@ -300,9 +306,6 @@ class HistogramPanel(FigureCanvasWxAgg):
         return self.points
     
     def get_toolbar(self):
-        if not self.navtoolbar:
-            self.navtoolbar = NavigationToolbar(self.canvas)
-            self.navtoolbar.DeleteToolByPos(6)
         return self.navtoolbar
 
     def reset_toolbar(self):
@@ -311,6 +314,10 @@ class HistogramPanel(FigureCanvasWxAgg):
             self.navtoolbar._views.clear()
             self.navtoolbar._positions.clear()
             self.navtoolbar.push_current()
+            
+    #def on_span_tool_clicked(self, evt):
+        #if self.span:
+            #self.span.visible = evt.IsChecked()
 
 
 class Histogram(wx.Frame, CPATool):
@@ -352,10 +359,18 @@ if __name__ == "__main__":
             wx.GetApp().Exit()
             sys.exit()
 
-    import multiclasssql
-    multiclasssql.CreateFilterTables()
-    
     histogram = Histogram(None)
     histogram.Show()
     
     app.MainLoop()
+
+    #
+    # Kill the Java VM
+    #
+    try:
+        import cellprofiler.utilities.jutil as jutil
+        jutil.kill_vm()
+    except:
+        import traceback
+        traceback.print_exc()
+        print "Caught exception while killing VM"
