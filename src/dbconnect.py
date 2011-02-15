@@ -696,7 +696,9 @@ class DBConnect(Singleton):
     def GetFilteredImages(self, filter):
         ''' Returns a list of imKeys from the given filter. '''
         try:
-            return self.execute(p._filters[filter])
+            f = p._filters[filter]
+            query = 'SELECT %s FROM %s WHERE %s'%(UniqueImageClause(), ','.join(f.get_tables()), str(f))
+            return self.execute(query)
         except Exception, e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter))
             logging.error(e)
@@ -989,7 +991,27 @@ class DBConnect(Singleton):
         ''' Returns the column names of the last query on this connection. '''
         connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
-        
+
+    def GetCellDataForClassifier(self, obKey):
+        '''
+        Returns a list of measurements for the specified object excluding
+        those specified in Properties.classifier_ignore_columns
+        '''
+        if (self.classifierColNames == None):
+            self.GetColnamesForClassifier()
+        if isinstance(obKey, str):
+            whereclause = obKey
+        else:
+            whereclause = GetWhereClauseForObjects([obKey])
+        query = 'SELECT `%s` FROM %s WHERE %s' %('`, `'.join(self.classifierColNames), p.object_table, whereclause)
+        data = self.execute(query, silent=False)
+        if len(data) == 0:
+            logging.error('No data for obKey: %s'%str(obKey))
+            return None
+        # This should be the case
+        assert all([type(x) in [int, long, float] for x in data[0]])
+        return np.array(data[0])
+
     def GetCellData(self, obKey):
         '''
         Returns a list of measurements for the specified object.
