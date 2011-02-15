@@ -7,9 +7,8 @@ import multiclasssql
 from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
 from guiutils import TableComboBox, get_other_table_from_user
-import imagelist
 import imagetools
-#from icons import lasso_tool
+import icons
 import logging
 import numpy as np
 from bisect import bisect
@@ -19,14 +18,14 @@ import re
 from time import time
 import wx
 import wx.combo
-from matplotlib.widgets import Lasso, RectangleSelector
+from matplotlib.patches import Rectangle
+from matplotlib.widgets import Lasso
 from matplotlib.nxutils import points_inside_poly
 from matplotlib.colors import colorConverter
-from matplotlib.collections import RegularPolyCollection
 from matplotlib.pyplot import cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
-from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
+from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -64,9 +63,8 @@ class DraggableLegend:
         self.legend = legend
         self.dragging = False
         self.cids = [legend.figure.canvas.mpl_connect('motion_notify_event', self.on_motion),
-                     legend.figure.canvas.mpl_connect('pick_event', self.on_pick),
+                     legend.figure.canvas.mpl_connect('button_press_event', self.on_press),
                      legend.figure.canvas.mpl_connect('button_release_event', self.on_release)]
-        legend.set_picker(self.legend_picker)
         
     def on_motion(self, evt):
         if self.dragging:
@@ -77,17 +75,14 @@ class DraggableLegend:
             self.legend._loc = tuple(loc_in_norm_axes)
             self.legend.figure.canvas.draw()
     
-    def legend_picker(self, legend, evt): 
-        return legend.legendPatch.contains(evt)
-
-    def on_pick(self, evt):
-        if evt.artist == self.legend:
+    def on_press(self, evt):
+        if evt.button == 1 and self.legend.get_window_extent().contains(evt.x, evt.y):
             bbox = self.legend.get_window_extent()
-            self.mouse_x = evt.mouseevent.x
-            self.mouse_y = evt.mouseevent.y
+            self.mouse_x = evt.x
+            self.mouse_y = evt.y
             self.legend_x = bbox.xmin
             self.legend_y = bbox.ymin 
-            self.dragging = 1
+            self.dragging = True
             
     def on_release(self, evt):
         self.dragging = False
@@ -161,8 +156,8 @@ class ScatterControlPanel(wx.Panel):
         wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
         wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
         wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
-        
+        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
+
         self.SetSizer(sizer)
         self.Show(1)
         
@@ -202,17 +197,13 @@ class ScatterControlPanel(wx.Panel):
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
-                fltr = str(cff.get_filter())
+                fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
                 p._filters_ordered += [fname]
                 p._filters[fname] = fltr
                 items = self.filter_choice.GetItems()
                 self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filter_choice.SetSelection(len(items)-1)
-                logging.info('Creating filter table...')
-                # TODO: get rid of all filter tables
-                multiclasssql.CreateFilterTable(fname)
-                logging.info('Done creating filter.')
             else:
                 self.filter_choice.SetSelection(0)
             cff.Destroy()
@@ -291,24 +282,7 @@ class ScatterControlPanel(wx.Panel):
                    sql.Column(ytable, ycol)]
         q.set_select_clause(select)
         if filter != NO_FILTER:
-            #
-            # This is a bit annoying... We need to parse the filter query and
-            # 1) mash the tables into the query builder 
-            # 2) plop the where clause at the end of the resultant query
-            #
-            fq = p._filters[filter]
-            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
-            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
-            
-            f_tables = [t.strip() for t in f_from.split(',')]
-            for t in f_tables:
-                if ' ' in t:
-                    wx.MessageBox('Unable to parse properties filter "%s".'%(filter), 'Error')
-            q.add_table_dependencies(f_tables)
-            if q.get_where_clause():
-                q = str(q) + ' AND ' + f_where
-            else:
-                q = str(q) + ' WHERE ' + f_where
+            q.add_filter(p._filters[filter])
         return db.execute(str(q))
     
     def get_selected_column_types(self):
@@ -391,9 +365,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.x_label = ''
         self.y_label = ''
         self.selection = {}
-        self.mouse_mode = 'lasso'
+        self.mouse_mode = 'gate'
         self.legend = None
         self.set_points(xpoints, ypoints)
+        self.lasso = None
+        self.dragging = False
         if keys is not None:
             self.set_keys(keys)
         if clr_list is not None:
@@ -401,6 +377,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.redraw()
         
         self.canvas.mpl_connect('button_press_event', self.on_press)
+        self.canvas.mpl_connect('motion_notify_event', self.on_motion)
         self.canvas.mpl_connect('button_release_event', self.on_release)
     
     def set_configpanel(self,configpanel):
@@ -475,22 +452,48 @@ class ScatterPanel(FigureCanvasWxAgg):
             if self.canvas.widgetlock.locked(): return
             if evt.inaxes is None: return
             
-            if self.mouse_mode == 'lasso':
+            if self.navtoolbar.get_mode() == 'gate':
+                self.dragging = True
+                self.mouse_x = evt.xdata
+                self.mouse_y = evt.ydata
+            elif self.navtoolbar.get_mode() == 'lasso':
                 self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.lasso_callback)
                 # acquire a lock on the widget drawing
                 self.canvas.widgetlock(self.lasso)
-                
-            if self.mouse_mode == 'marquee':
-                pass
+    
+    def on_motion(self, evt):
+        if self.navtoolbar and self.navtoolbar.get_mode() == 'gate':
+            # evt.xdata, evt.ydata return None when the cursor exits the axes
+            # since we want to snap the rectangle to the edge(s) where the mouse is
+            # we use evt.x and evt.y and transform them into the data space.
+            x, y = self.subplot.transData.inverted().transform((evt.x,evt.y))
+            x = min(x, self.subplot.get_xlim()[1])
+            x = max(x, self.subplot.get_xlim()[0])
+            y = min(y, self.subplot.get_ylim()[1])
+            y = max(y, self.subplot.get_ylim()[0])
+            if self.dragging:
+                dx = self.mouse_x - x
+                dy = self.mouse_y - y
+                if len(self.subplot.patches) == 0:
+                    rect = Rectangle((x, y), dx, dy)
+                    rect.set_fill(False)
+                    rect.set_linestyle('dashed')
+                    self.subplot.add_patch(rect)
+                else:
+                    self.subplot.patches[-1].set_xy((x, y))
+                    self.subplot.patches[-1].set_width(dx)
+                    self.subplot.patches[-1].set_height(dy)
+                self.draw()
         
     def on_release(self, evt):
+        self.dragging = False
         # Note: lasso_callback is not called on click without drag so we release
         #   the lock here to handle this case as well.
         if evt.button == 1:
-            if self.__dict__.has_key('lasso') and self.lasso:
+            if self.lasso:
                 self.canvas.draw_idle()
                 self.canvas.widgetlock.release(self.lasso)
-                del self.lasso
+                self.lasso = None
         else:
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
@@ -602,19 +605,6 @@ class ScatterPanel(FigureCanvasWxAgg):
                 else:
                     unsel_indices += [i]
                 
-            # Old method: Horribly inefficient (|N|*|F|)
-            #for i in xrange(len(self.key_lists[c])):
-                #if self.is_per_object_table():
-                    #if tuple(self.key_lists[c][i])[:-1] in keys:
-                        #sel_indices += [i]
-                    #else:
-                        #unsel_indices += [i]                    
-                #else:
-                    #if self.key_lists[c][i] in keys:
-                        #sel_indices += [i]
-                    #else:
-                        #unsel_indices += [i]
-                        
             # Build the new collections
             if len(sel_indices) > 0:
                 if self.key_lists:
@@ -765,7 +755,6 @@ class ScatterPanel(FigureCanvasWxAgg):
             for ks, xs in zip(keys, self.x_points):
                 assert len(ks) == len(xs)
             self.key_lists = keys
-
         
     def set_points(self, xpoints, ypoints):
         ''' 
@@ -807,7 +796,8 @@ class ScatterPanel(FigureCanvasWxAgg):
         # Stop if there is no data in any of the point lists
         if len(xpoints) == 0:
             logging.warn('No data to plot.')
-            self.reset_toolbar()
+            if self.navtoolbar:
+                self.navtoolbar.reset_history()
             return
 
         # Gather all categorical data to be plotted so we can populate
@@ -864,7 +854,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         if len(self.x_points) > 1:
             if self.legend:
                 self.legend.disconnect_bindings()
-            self.legend = DraggableLegend(self.subplot.legend(fancybox=True))
+            self.legend = self.subplot.legend(fancybox=True)
+            try:
+                self.legend.draggable(True)
+            except:
+                self.legend = DraggableLegend(self.legend)
             
         # Set axis scales
         if self.x_scale == LOG_SCALE:
@@ -898,27 +892,26 @@ class ScatterPanel(FigureCanvasWxAgg):
 
         logging.debug('Scatter: Plotted %s points in %.3f seconds.'
                       %(sum(map(len, self.x_points)), time() - t0))
-        self.reset_toolbar()
-    
-    def toggle_lasso_tool(self):
-        print ':',self.navtoolbar.mode
-    
+        
+        
+        # XXXXXXXXXXXXXXXXXXXXX
+        #for f in p._filters.values():
+            
+            #rect = Rectangle((x, y), dx, dy)
+            #rect.set_fill(False)
+            #rect.set_linestyle('dashed')
+            #self.subplot.add_patch(rect)
+        
+        
+        
+        if self.navtoolbar:
+            self.navtoolbar.reset_history()
+        
     def get_toolbar(self):
         if not self.navtoolbar:
-            self.navtoolbar = NavigationToolbar(self.canvas)
-            self.navtoolbar.DeleteToolByPos(6)
-#            ID_LASSO_TOOL = wx.NewId()
-#            lasso = self.navtoolbar.InsertSimpleTool(5, ID_LASSO_TOOL, lasso_tool.ConvertToBitmap(), '', '', isToggle=True)
-#            self.navtoolbar.Realize()
-#            self.Bind(wx.EVT_TOOL, self.toggle_lasso_tool, id=ID_LASSO_TOOL)
+            self.navtoolbar = CustomNavToolbar(self.canvas)
+            self.navtoolbar.Realize()
         return self.navtoolbar
-
-    def reset_toolbar(self):
-        # Cheat since there is no way reset
-        if self.navtoolbar:
-            self.navtoolbar._views.clear()
-            self.navtoolbar._positions.clear()
-            self.navtoolbar.push_current()
     
     def set_x_scale(self, scale):
         self.x_scale = scale
@@ -979,7 +972,96 @@ class Scatter(wx.Frame, CPATool):
         self.load_settings = configpanel.load_settings
 
 
+class CustomNavToolbar(NavigationToolbar2WxAgg):
+    '''wx/mpl NavToolbar hack with an additional tools user interaction.
+    This class is necessary because simply adding a new togglable tool to the
+    toolbar won't (1) radio-toggle between the new tool and the pan/zoom tools.
+    (2) disable the pan/zoom tool modes in the associated subplot(s).
+    '''
+    def __init__(self, canvas):
+        super(NavigationToolbar2WxAgg, self).__init__(canvas)
+        self.pan_tool  = self.FindById(self._NTB2_PAN)
+        self.zoom_tool = self.FindById(self._NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
+        self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.pan_tool)
 
+        self.user_tools = {}   # user_tools['tool_mode'] : wx.ToolBarToolBase
+
+        self.InsertSeparator(5)
+        self.add_user_tool('lasso', 6, icons.lasso_tool.ConvertToBitmap(), True, 'Lasso')
+        #self.add_user_tool('gate', 7, icons.gate_tool.ConvertToBitmap(), True, 'Gate')
+        
+    def add_user_tool(self, mode, pos, bmp, istoggle=True, shortHelp=''):
+        '''Adds a new user-defined tool to the toolbar.
+        mode -- the value that CustomNavToolbar.get_mode() will return if this  
+                tool is toggled on
+        pos -- the position in the toolbar to add the icon
+        bmp -- a wx.Bitmap of the icon to use in the toolbar
+        isToggle -- whether or not the new tool toggles on/off with the other 
+                    togglable tools
+        shortHelp -- the tooltip shown to the user for the new tool
+        '''
+        tool_id = wx.NewId()
+        self.user_tools[mode] = self.InsertSimpleTool(pos, tool_id, bmp,
+                            isToggle=istoggle, shortHelpString=shortHelp)
+        self.Bind(wx.EVT_TOOL, self.on_toggle_user_tool, self.user_tools[mode])
+
+    def get_mode(self):
+        '''Use this rather than navtoolbar.mode
+        '''
+        for mode, tool in self.user_tools.items():
+            if tool.IsToggled():
+                return mode
+        return self.mode
+        
+    def untoggle_mpl_tools(self):
+        '''Hack city: Since I can't figure out how to change the way the 
+        associated subplot(s) handles mouse events: I generate events to turn
+        off whichever tool mode is enabled (if any). 
+        This function needs to be called whenever any user-defined tool 
+        (eg: lasso) is clicked.
+        '''
+        if self.pan_tool.IsToggled():
+            wx.PostEvent(
+                self.GetEventHandler(), 
+                wx.CommandEvent(wx.EVT_TOOL.typeId, self._NTB2_PAN)
+            )
+            self.ToggleTool(self._NTB2_PAN, False)
+        elif self.zoom_tool.IsToggled():
+            wx.PostEvent(
+                self.GetEventHandler(),
+                wx.CommandEvent(wx.EVT_TOOL.typeId, self._NTB2_ZOOM)
+            )
+            self.ToggleTool(self._NTB2_ZOOM, False)
+    
+    def on_toggle_user_tool(self, evt):
+        '''User tool click handler.
+        '''
+        if evt.Checked():
+            self.untoggle_mpl_tools()
+            #untoggle other user tools
+            for tool in self.user_tools.values():
+                if tool.Id != evt.Id:
+                    self.ToggleTool(tool.Id, False)
+            
+    def on_toggle_pan_zoom(self, evt):
+        '''Called when pan or zoom is toggled. 
+        We need to manually untoggle user-defined tools.
+        '''
+        if evt.Checked():
+            for tool in self.user_tools.values():
+                self.ToggleTool(tool.Id, False)
+        # Make sure the regular pan/zoom handlers get the event
+        evt.Skip()
+        
+    def reset_history(self):
+        '''More hacky junk to clear/reset the toolbar history.
+        '''
+        self._views.clear()
+        self._positions.clear()
+        self.push_current()
+    
+    
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
@@ -994,9 +1076,7 @@ if __name__ == "__main__":
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
-
-    multiclasssql.CreateFilterTables()
-    
+   
     
 ##    import calc_tsne
 ##    import tsne
