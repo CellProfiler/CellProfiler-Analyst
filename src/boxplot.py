@@ -126,17 +126,13 @@ class DataSourcePanel(wx.Panel):
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
-                fltr = str(cff.get_filter())
+                fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
                 p._filters_ordered += [fname]
                 p._filters[fname] = fltr
                 items = self.filter_choice.GetItems()
                 self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filter_choice.SetSelection(len(items)-1)
-                from multiclasssql import CreateFilterTable
-                logging.info('Creating filter table...')
-                CreateFilterTable(fname)
-                logging.info('Done creating filter.')
             else:
                 self.filter_choice.SetSelection(0)
             cff.Destroy()
@@ -193,7 +189,6 @@ class DataSourcePanel(wx.Panel):
         '''
         Returns a dict mapping x label values to lists of values from col
         '''
-        
         q = sql.QueryBuilder()
         select = [sql.Column(tablename, col)]
         if grouping != NO_GROUP:
@@ -202,25 +197,7 @@ class DataSourcePanel(wx.Panel):
             select += [sql.Column(*col.split('.')) for col in group_cols]
         q.set_select_clause(select)
         if filter != NO_FILTER:
-            #
-            # This is a bit annoying... We need to parse the filter query and
-            # 1) mash the tables into the query builder 
-            # 2) plop the where clause at the end of the resultant query
-            #
-            fq = p._filters[filter]
-            from_idx = re.search('\sFROM\s', fq.upper()).start()
-            where_idx = re.search('\sWHERE\s', fq.upper()).start()
-            f_where = fq[where_idx+7:]
-            f_from = fq[from_idx+6 : where_idx]
-            f_tables = [t.strip() for t in f_from.split(',')]
-            for t in f_tables:
-                if ' ' in t:
-                    res = wx.MessageBox('Unable to parse properties filter "%s".'%(filter), 'Error')
-            q.add_table_dependencies(f_tables)
-            if q.get_where_clause():
-                q = str(q) + ' AND ' + f_where
-            else:
-                q = str(q) + ' WHERE ' + f_where        
+            q.add_filter(p._filters[filter])
 
         res = db.execute(str(q))
         res = np.array(res, dtype=object)
