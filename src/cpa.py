@@ -79,6 +79,7 @@ from boxplot import BoxPlot
 from scatter import Scatter
 from histogram import Histogram
 from density import Density
+from querymaker import QueryMaker
 import icons
 import cpaprefs
 from cpatool import CPATool
@@ -176,6 +177,7 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(logMenu, 'Logging')
 
         advancedMenu = wx.Menu()
+        queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', help='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
         clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
@@ -211,6 +213,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)        
         self.Bind(wx.EVT_MENU, self.save_log, saveLogMenuItem)
         self.Bind(wx.EVT_MENU, self.clear_link_tables, clearTableLinksMenuItem)
+        self.Bind(wx.EVT_MENU, self.launch_query_maker, queryMenuItem)
         self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
@@ -262,6 +265,10 @@ class MainGUI(wx.Frame):
     def launch_box_plot(self, evt=None):
         boxplot = BoxPlot(parent=self)
         boxplot.Show(True)
+        
+    def launch_query_maker(self, evt=None):
+        querymaker = QueryMaker(parent=self)
+        querymaker.Show(True)
 
     def on_save_workspace(self, evt):
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(), 
@@ -403,9 +410,6 @@ class CPAnalyst(wx.App):
         self.frame.Show(True)
         db = dbconnect.DBConnect.getInstance()
         db.register_gui_parent(self.frame)
-        logging.info('Creating filter tables...')
-        multiclasssql.CreateFilterTables(wx.Yield)
-        logging.info('Done.')
 
         try:
             import cellprofiler.utilities.check_for_updates as cfu
