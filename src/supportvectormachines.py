@@ -251,6 +251,10 @@ class SupportVectorMachines(object):
             #from multiprocessing import cpu_count
             #n_workers = cpu_count()
         #except:
+            #n_workers = 1
+        # 
+        # TODO: program crashes with >1 worker
+        #
         n_workers = 1
 
         # Define the parameter ranges for C and gamma and perform a grid search for the optimal setting

@@ -12,15 +12,9 @@ from time import time
 class FastGentleBoosting(object):
     def __init__(self, classifier = None):
         logging.info('Initialized New Fast Gentle Boosting Classifier')
-        self.weak_learners = None
+        self.model = None
         self.classBins = []
         self.classifier = classifier
-
-    def FilterObjectsFromClassN(self, obClass, obKeysToTry):
-        return multiclasssql.FilterObjectsFromClassN(obClass, self.weak_learners, obKeysToTry)
-
-    def IsTrained(self):
-        return self.weak_learners is not None
 
     def CheckProgress(self):
         ''' Called when the CheckProgress Button is pressed. '''
@@ -103,16 +97,35 @@ class FastGentleBoosting(object):
 
     def ClearModel(self):
         self.classBins = []
-        self.weak_learners = None
+        self.model = None
 
     def ComplexityTxt(self):
-        return 'Maximum number of rules: '
+        return 'Max # of rules: '
 
     def CreatePerObjectClassTable(self, labels):
-        multiclasssql.create_perobject_class_table(labels, self.weak_learners)
+        multiclasssql.create_perobject_class_table(labels, self.model)
+
+    def FilterObjectsFromClassN(self, obClass, obKeysToTry):
+        return multiclasssql.FilterObjectsFromClassN(obClass, self.model, obKeysToTry)
+
+    def IsTrained(self):
+        return self.model is not None
+
+    def LoadModel(self, model_filename):
+        import cPickle
+        fh = open(model_filename, 'r')
+        try:
+            self.model, self.bin_labels = cPickle.load(fh)
+        except:
+            self.model = None
+            self.bin_labels = None
+            logging.error('The loaded model was not a fast gentle boosting model')
+            raise TypeError
+        finally:
+            fh.close()
 
     def ParseModel(self, string):
-        self.weak_learners = []
+        self.model = []
         string = string.replace('\r\n', '\n')
         for line in string.split('\n'):
             if line.strip() == '':
@@ -127,41 +140,34 @@ class FastGentleBoosting(object):
             b = map(float, b.split(','))
             if len(a) != len(b):
                 raise ValueError, 'Alpha and beta must have the same cardinality in "IF (column > threshold, alpha, beta)"'
-            self.weak_learners.append((colname, thresh, a, b, None))
-        n_classes = len(self.weak_learners[0][2])
-        for wl in self.weak_learners:
+            self.model.append((colname, thresh, a, b, None))
+        n_classes = len(self.model[0][2])
+        for wl in self.model:
             if len(wl[2]) != n_classes:
                 raise ValueError, 'Number of classes must remain the same between rules.'
-        return self.weak_learners
+        return self.model
 
     def PerImageCounts(self, filter_name=None, cb=None):
-        return multiclasssql.PerImageCounts(self.weak_learners, filter_name=filter_name, cb=cb)
+        return multiclasssql.PerImageCounts(self.model, filter_name=filter_name, cb=cb)
 
     def SaveModel(self, model_filename, bin_labels):
-        # Open model file
-        f = open(model_filename, 'w')
-
-        # Save bin labels
-        f.write('#bins:' + ','.join(bin_labels) + '\n')
-
-        # Save weak learners
-        [f.write(line) for line in '\n'.join('\"%s\":\"%s\":\"%s\":\"%s\"' % (colname, repr(thresh),
-                         '[' + ','.join([repr(v) for v in a]) + ']',
-                         '[' + ','.join([repr(v) for v in b]) + ']')
-                    for colname, thresh, a, b, e_m in self.weak_learners)]
-
-        # Close the file pointer
-        f.close()
+        import cPickle
+        fh = open(model_filename, 'w')
+        cPickle.dump((self.model, bin_labels), fh)
+        fh.close()
 
     def ShowModel(self):
         '''
         Transforms the weak learners of the algorithm into a human readable
         representation
         '''
-        return '\n'.join("IF (%s > %s, %s, %s)" %(colname, repr(thresh),
-                         "[" + ", ".join([repr(v) for v in a]) + "]",
-                         "[" + ", ".join([repr(v) for v in b]) + "]")
-                    for colname, thresh, a, b, e_m in self.weak_learners)
+        if self.model is not None and self.model is not []:
+            return '\n'.join("IF (%s > %s, %s, %s)" %(colname, repr(thresh),
+                             "[" + ", ".join([repr(v) for v in a]) + "]",
+                             "[" + ", ".join([repr(v) for v in b]) + "]")
+                        for colname, thresh, a, b, e_m in self.model)
+        else:
+            return ''
 
     def Train(self, colnames, num_learners, label_matrix, values, fout=None, do_prof=False, test_values=None, callback=None):
         '''
@@ -218,7 +224,7 @@ class FastGentleBoosting(object):
 
             return (err, colnames[int(column)], thresh, a, b, reweights, recomputed_labels, adjustment)
 
-        self.weak_learners = []
+        self.model = []
         for weak_count in range(num_learners):
             if do_tests:
                 err, colname, thresh, a, b, reweight, recomputed_labels, adjustment = GetOneWeakLearner(ctl=computed_test_labels, tlbi=test_labels_by_iteration)
@@ -234,13 +240,13 @@ class FastGentleBoosting(object):
             expected_worst_margin = sum(balancing[:,0] * (margin_correct / (margin_correct + margin_incorrect)).min(axis=1)) / sum(balancing[:,0])
 
             computed_labels = recomputed_labels
-            self.weak_learners += [(colname, thresh, a, b, expected_worst_margin)]
+            self.model += [(colname, thresh, a, b, expected_worst_margin)]
 
             if callback is not None:
                 callback(weak_count / float(num_learners))
 
             if fout:
-                colname, thresh, a, b, e_m = self.weak_learners[-1]
+                colname, thresh, a, b, e_m = self.model[-1]
                 fout.write("IF (%s > %s, %s, %s)\n" %
                            (colname, repr(thresh),
                             "[" + ", ".join([repr(v) for v in a]) + "]",
@@ -250,7 +256,6 @@ class FastGentleBoosting(object):
             weights = reweight
         if do_tests:
             return test_labels_by_iteration
-        self.model = self.weak_learners
 
     def TrainWeakLearner(self, labels, weights, values):
         ''' For a multiclass training set, with C classes and N examples,

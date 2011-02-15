@@ -44,37 +44,8 @@ def translate(weaklearners):
             weights = ",".join([",".join([str(base[k])] + [str(wl[2][k]-wl[3][k]) for wl in weaklearners]) for k in range(nClasses)])
             return "(classifier(%d, %s, %s, %s)+1)"%(num_stumps + 1, featurenames, thresholds, weights)
         else:
-            class_scores = ['+'.join(['IF(%s > %f, %f, %f)'%(feature, threshold, a[i], b[i]) for (feature, threshold, a, b, ignore) in weaklearners]) for i in range(nClasses)]
+            class_scores = ['+'.join(['IF(`%s` > %f, %f, %f)'%(feature, threshold, a[i], b[i]) for (feature, threshold, a, b, ignore) in weaklearners]) for i in range(nClasses)]
             return "CASE GREATEST(%s) %s END"%(",".join(class_scores), "\n".join(["WHEN %s THEN %d"%(score, idx+1) for idx, score in enumerate(class_scores)]))
-
-
-def CreateFilterTables(cb=None):
-    ''' Creates a temporary table with image keys for each filter. '''
-    
-    key_col_defs = ",".join([col + " INT" for col in image_key_columns()])
-    index_cols = ",".join(image_key_columns())
-
-    for name, query in p._filters.items():
-        db.execute('DROP TABLE IF EXISTS %s'%(filter_table_prefix+name))
-        db.execute('CREATE TEMPORARY TABLE %s (%s)'%(filter_table_prefix+name, key_col_defs))
-        db.execute('CREATE INDEX idx_%s ON %s (%s)'%(filter_table_prefix+name, filter_table_prefix+name, index_cols))
-        db.execute('INSERT INTO %s (%s) %s'%(filter_table_prefix+name, index_cols, query))
-        # these queries can take a while, so allow a callback to run (wx.Yield being a good example)
-        if cb is not None:
-            cb()
-            
-def CreateFilterTable(filter, cb=None):
-    '''Creates a temporary table with image keys for the given filter. '''
-    key_col_defs = ",".join([col + " INT" for col in image_key_columns()])
-    index_cols = ",".join(image_key_columns())
-    query = p._filters[filter]
-    db.execute('DROP TABLE IF EXISTS %s'%(filter_table_prefix+filter))
-    db.execute('CREATE TEMPORARY TABLE %s (%s)'%(filter_table_prefix+filter, key_col_defs))
-    db.execute('CREATE INDEX idx_%s ON %s (%s)'%(filter_table_prefix+filter, filter_table_prefix+filter, index_cols))
-    db.execute('INSERT INTO %s (%s) %s'%(filter_table_prefix+filter, index_cols, query))
-    # these queries can take a while, so allow a callback to run (wx.Yield being a good example)
-    if cb is not None:
-        cb()
     
 
 def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
@@ -149,7 +120,7 @@ def create_perobject_class_table(classnames, rules):
     db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, case_expr2, p.object_table))
     db.Commit()
     
-def PerImageCounts(weaklearners, filter=None, cb=None):
+def PerImageCounts(weaklearners, filter_name=None, cb=None):
     '''
     weaklearners: Weak learners from fastgentleboostingmulticlass.train
     filter: name of filter, or None.
@@ -166,7 +137,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         return "%s.%s"%(p.object_table, field)
 
     def where_clauses():
-        imkeys = dm.GetAllImageKeys(filter)
+        imkeys = dm.GetAllImageKeys(filter_name)
         imkeys.sort()
         stepsize = max(len(imkeys) / 100, 50)
         key_thresholds = imkeys[-1:1:-stepsize]
@@ -197,46 +168,50 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
                                                             
     # I'm pretty sure this would be even faster if we were to run two
     # or more parallel threads and split the work between them.
-    def do_by_steps(imkeys, class_query, tables, filter_clause, result_clauses):
+    def do_by_steps(class_query, tables, filter_name, result_clauses):
+        if filter_name is not None:
+            filter_clause = str(p._filters[filter_name])
+            filter_clause += ' AND ' + ' AND '.join(
+                ['%s=%s'%(im_col, ob_col) 
+                 for im_col, ob_col in zip(image_key_columns(p.image_table), 
+                                           image_key_columns(p.object_table))])
+            tables += ', ' + ', '.join(p._filters[filter_name].get_tables())
         if cb:
             result =  []
             wheres = where_clauses()
             num_clauses = len(wheres)
+            
             for idx, wc in enumerate(wheres):
-                if filter_clause is '':
+                if filter_name is None:
                     where_clause = wc
                 else:
                     where_clause = '%s AND %s'%(wc, filter_clause)
-                result += [db.execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
-                                      (imkeys, class_query, result_clauses, tables, where_clause, imkeys),
+                    
+                result += [db.execute('SELECT %s, %s as class, %s FROM %s '
+                                      'WHERE %s GROUP BY %s, class'
+                                      %(UniqueImageClause(p.object_table), 
+                                        class_query, result_clauses, tables, 
+                                        where_clause, 
+                                        UniqueImageClause(p.object_table)),
                                       silent=(idx > 10))]
                 cb(min(1, idx/float(num_clauses)))
             return sum(result, [])
         else:
-            if filter_clause is '':
+            if filter_name is None:
                 return db.execute('SELECT %s, %s as class, %s FROM %s GROUP BY %s, class'%
                                   (imkeys, class_query, result_clauses, tables, imkeys))
             else:
+                tables += ', ' + ', '.join(filter.get_tables())
                 return db.execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
                                   (imkeys, class_query, result_clauses, tables, filter_clause, imkeys))
     
-    imkeys = ",".join(objectify(id) for id in image_key_columns())
-
     if p.area_scoring_column is None:
         result_clauses = 'COUNT(*)'
     else:
         result_clauses = 'COUNT(*), SUM(%s)'%(objectify(p.area_scoring_column))
 
-    filter_clause = ''
-    tables = p.object_table
-    if filter is not None:
-        tables += ', ' + filter_table_prefix+filter + '' 
-        filter_clause = " AND ".join(["%s=%s.%s "%(objectify(id), filter_table_prefix+filter, id) for id in image_key_columns()])
-
     class_query = translate(weaklearners)
-
-
-    results = do_by_steps(imkeys, class_query, tables, filter_clause, result_clauses)
+    results = do_by_steps(class_query, p.object_table, filter_name, result_clauses)
 
     # convert to dictionary
     counts = {}
@@ -254,7 +229,7 @@ def PerImageCounts(weaklearners, filter=None, cb=None):
         return counts.get(tuple(list(im_key) + [classnum]), [0, 0])[1]
 
     def get_results():
-        for imkey in dm.GetImageKeysAndObjectCounts(filter):
+        for imkey in dm.GetImageKeysAndObjectCounts(filter_name):
             if p.area_scoring_column is None:
                 yield list(imkey[0]) + [get_count(imkey[0], cl) for cl in range(1, num_classes+1)]
             else:
@@ -298,7 +273,6 @@ if __name__ == "__main__":
 #    filter = 'afraser_test'
     
     p.LoadFile(props)
-    CreateFilterTables()
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
     output = StringIO()
@@ -306,7 +280,7 @@ if __name__ == "__main__":
     weaklearners = fastgentleboostingmulticlass.train(trainingSet.colnames,
                                                       nRules, trainingSet.label_matrix, 
                                                       trainingSet.values, output)
-    table = PerImageCounts(weaklearners, filter=filter)
+    table = PerImageCounts(weaklearners, filter_name=filter)
     table.sort()
 
     labels = ['table', 'image'] + list(trainingSet.labels) + list(trainingSet.labels)
