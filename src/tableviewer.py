@@ -162,7 +162,7 @@ class PlainTable(TableData):
         '''
         if col_labels is None:
             col_labels = ABC[:data.shape[1]]
-        
+
         assert len(col_labels) == data.shape[1], "Number of column labels does not match the number of columns in data."
         self.sortdir       =  1    # sort direction (1=descending, -1=descending)
         self.sortcols      =  []   # column indices being sorted (in order)
@@ -170,6 +170,7 @@ class PlainTable(TableData):
         self.data          =  data
         self.ordered_data  =  self.data
         self.col_labels    =  np.array(col_labels)
+        self.row_labels    =  None
         self.shown_columns =  np.arange(len(self.col_labels))
         self.row_order     =  np.arange(self.data.shape[0])
         self.col_order     =  np.arange(self.data.shape[1])
@@ -271,9 +272,6 @@ class PlainTable(TableData):
         '''
         return self.col_labels.tolist()
 
-    def GetRowLabelValue(self, row):
-        return '>'
-
     def IsEmptyCell(self, row, col):
         return False
 
@@ -315,8 +313,11 @@ class PlainTable(TableData):
         self.ordered_data = self.data[self.row_order,:][:,self.col_order]
          
     def GetRowLabelValue(self, row):
-        return '*'
-    
+        if self.row_labels is not None:
+            return self.row_labels[row]
+        else:
+            return '*'
+
 class DBTable(TableData):
     '''
     Interface connecting the table grid GUI to the database tables.
@@ -451,7 +452,7 @@ class DBTable(TableData):
     def get_total_number_of_rows(self):
         '''Returns the total number of rows in the database
         '''
-        return int(db.execute('SELECT COUNT(*) FROM %s %s'%(self.table_name, self.filter))[0][0])
+        return int(db.execute('SELECT COUNT(*) FROM %s %s' % (self.table_name, self.filter))[0][0])
     
     def GetNumberRows(self):
         '''Returns the number of rows on the current page (between rmin,rmax)
@@ -1025,6 +1026,12 @@ class TableViewer(wx.Frame):
         except AttributeError:
             # running without main UI
             user_tables = wx.GetApp().user_tables = []
+            
+    def get_table_data(self):
+        data = [[self.grid.Table.GetValue(row, col) 
+                 for col in range(self.grid.Table.GetNumberCols())]
+                for row in range(self.grid.Table.GetNumberRows())]
+        return data
 
     def on_size(self, evt):
         if not self.grid:
