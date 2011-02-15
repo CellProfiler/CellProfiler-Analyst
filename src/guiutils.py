@@ -252,9 +252,6 @@ class TableComboBox(ComboBox):
     OTHER_TABLE = '*OTHER TABLE*'
     def __init__(self, parent, id=-1, **kwargs):
         if kwargs.get('choices', None) is None:
-            #choices = [p.image_table]
-            #if p.object_table: 
-                #choices += [p.object_table]
             choices = db.get_linkable_tables()
             choices += [TableComboBox.OTHER_TABLE]
         else:
@@ -264,6 +261,15 @@ class TableComboBox(ComboBox):
             self.SetStringSelection(p.image_table)
         else:
             self.Select(0)
+
+class GateComboBox(ComboBox):
+    def __init__(self, parent, id=-1, **kwargs):
+        if kwargs.get('choices', None) is None:
+            choices = p.gates
+        else:
+            choices = kwargs['choices']
+        ComboBox.__init__(self, parent, id, choices=choices, **kwargs)
+        self.Select(0)
 
 
 if __name__ == "__main__":
