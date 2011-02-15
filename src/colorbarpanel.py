@@ -248,7 +248,7 @@ class ColorBarPanel(wx.Panel):
         if saveDialog.ShowModal()==wx.ID_OK:
             logging.info('Saving filter to %s'%(saveDialog.GetPath()))
             logging.debug('   '+filtername+' = '+p.__dict__[filtername])
-            p.SaveFile(saveDialog.GetPath())
+            p.save_file(saveDialog.GetPath())
         saveDialog.Destroy()
 
         
