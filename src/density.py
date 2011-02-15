@@ -156,17 +156,13 @@ class DataSourcePanel(wx.Panel):
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
-                fltr = str(cff.get_filter())
+                fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
                 p._filters_ordered += [fname]
                 p._filters[fname] = fltr
                 items = self.filter_choice.GetItems()
                 self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
                 self.filter_choice.SetSelection(len(items)-1)
-                from multiclasssql import CreateFilterTable
-                logging.info('Creating filter table...')
-                CreateFilterTable(fname)
-                logging.info('Done creating filter.')
             else:
                 self.filter_choice.SetSelection(0)
             cff.Destroy()
@@ -218,23 +214,7 @@ class DataSourcePanel(wx.Panel):
         q.set_select_clause([sql.Column(xtable, xcol), 
                              sql.Column(ytable, ycol)])
         if filter != NO_FILTER:
-            #
-            # This is a bit annoying... We need to parse the filter query and
-            # 1) mash the tables into the query builder 
-            # 2) plop the where clause at the end of the resultant query
-            #
-            fq = p._filters[filter]
-            f_where = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
-            f_from = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]
-            f_tables = [t.strip() for t in f_from.split(',')]
-            for t in f_tables:
-                if ' ' in t:
-                    wx.MessageBox('Unable to parse properties filter "%s".'%(filter), 'Error')
-            q.add_table_dependencies(f_tables)
-            if q.get_where_clause():
-                q = str(q) + ' AND ' + f_where
-            else:
-                q = str(q) + ' WHERE ' + f_where
+            q.add_filter(p._filters[filter])
         return db.execute(str(q))
         
     def save_settings(self):
@@ -452,9 +432,6 @@ if __name__ == "__main__":
             wx.GetApp().Exit()
             sys.exit()
 
-    import multiclasssql
-    multiclasssql.CreateFilterTables()
-    
     density = Density(None)
     density.Show()
     
