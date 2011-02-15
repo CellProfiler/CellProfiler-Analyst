@@ -145,30 +145,37 @@ class DataModel(Singleton):
             
     def GetObjectsFromImage(self, imKey):
         self._if_empty_populate()
-        return [tuple(list(imKey) + [i]) 
-                for i in xrange(1, self.GetObjectCountFromImage(imKey) + 1)]
+        obKeys=[]
+        for i in xrange(1,self.GetObjectCountFromImage(imKey)+1):
+            obKeys.append(db.GetObjectIDAtIndex(imKey, i))
+        return obKeys
+        # JK - The above code was previously removed in favor of the code below.
+        # However the new code is sensitive to objects not having consecutive IDs 
+        # in an image, whereas the above code is not making it more robust
+#        return [tuple(list(imKey) + [i]) 
+#                for i in xrange(1, self.GetObjectCountFromImage(imKey) + 1)]
     
-    def GetAllImageKeys(self, filter=None):
+    def GetAllImageKeys(self, filter_name=None):
         ''' Returns all object keys. If a filter is passed in, only the image
         keys that fall within the filter will be returned.'''
         self._if_empty_populate()
-        if filter is None:
+        if filter_name is None:
             return list(self.data.keys())
         else:
-            return list(db.GetFilteredImages(filter))
+            return list(db.GetFilteredImages(filter_name))
 
     def GetObjectCountFromImage(self, imKey):
         ''' Returns the number of objects in the specified image. '''
         self._if_empty_populate()
         return self.data[imKey]
     
-    def GetImageKeysAndObjectCounts(self, filter=None):
+    def GetImageKeysAndObjectCounts(self, filter_name=None):
         ''' Returns pairs of imageKeys and object counts. '''
         self._if_empty_populate()
-        if filter is None:
+        if filter_name is None:
             return self.data.items()
         else:
-            return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter)]
+            return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter_name)]
     
     def GetGroupColumnNames(self, group, include_table_name=False):
         ''' Returns the key column names associated with the specified group. '''
@@ -204,7 +211,7 @@ class DataModel(Singleton):
         
         return groupData
     
-    def GetImagesInGroupWithWildcards(self, group, groupKey, filter=None):
+    def GetImagesInGroupWithWildcards(self, group, groupKey, filter_name=None):
         '''
         Returns all imKeys in a particular group. 
         '__ANY__' in the groupKey matches anything.
@@ -222,9 +229,9 @@ class DataModel(Singleton):
             return imkeys
         else:
             # if there are no wildcards simply lookup the imkeys
-            return self.GetImagesInGroup(group, groupKey, filter)
+            return self.GetImagesInGroup(group, groupKey, filter_name)
     
-    def GetImagesInGroup(self, group, groupKey, filter=None):
+    def GetImagesInGroup(self, group, groupKey, filter_name=None):
         ''' Returns all imKeys in a particular group. '''
         self._if_empty_populate()
         try:
@@ -233,10 +240,10 @@ class DataModel(Singleton):
             return []
             
         # apply filter if supplied
-        if filter is not None:
-            if filter not in self.filterkeys.keys():
-                self.filterkeys[filter] = set(db.execute(p._filters[filter]))
-            imkeys = set(imkeys).intersection(self.filterkeys[filter])    
+        if filter_name is not None:
+            if filter_name not in self.filterkeys.keys():
+                self.filterkeys[filter_name] = set(db.execute(p._filters[filter_name]))
+            imkeys = set(imkeys).intersection(self.filterkeys[filter_name])    
         
         return imkeys
     
