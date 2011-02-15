@@ -1,3 +1,5 @@
+#require "matrix"
+#require "thread"
 #!/usr/bin/env python
 
 # TODO:
@@ -15,9 +17,10 @@ from sys import hexversion, exc_info
 from threading import Thread
 from traceback import print_exception
 
-# Import all functions to interface with the libsvm library
-import svmutil
-#from scikits.learn.svm import BaseLibSVM
+# Import support vector classifier, feature selection and Pipeline from scikits.learn 
+from scikits.learn.svm import SVC
+from scikits.learn import feature_selection
+from scikits.learn.pipeline import Pipeline
 
 
 def combinations(iterable, r):
@@ -40,57 +43,11 @@ def combinations(iterable, r):
             indices[j] = indices[j-1] + 1
         yield tuple(pool[i] for i in indices)
 
-
 # Since the Queue module has been renamed in Python 3 import it appropriately
 if(hexversion < 0x03000000):
     import Queue
 else:
     import queue as Queue
-
-class Worker(Thread):
-    '''
-    Worker for the execution of each calculation thread.
-    '''
-    def __init__(self, name, job_queue, result_queue, labels, values, nValidation):
-        Thread.__init__(self)
-        self.name = name
-        self.job_queue = job_queue
-        self.result_queue = result_queue
-        self.labels, self.values = labels, values
-        self.nValidation = nValidation
-        self.classifierParameters = []
-
-    def run(self):
-        while True:
-            (cexp,gexp) = self.job_queue.get()
-            if cexp is WorkerStopToken:
-                self.job_queue.put((cexp,gexp))
-                break
-            try:
-                rate = self.run_one(2**cexp, 2**gexp, self.labels, self.values)
-                if rate is None: raise "get no rate"
-            except:
-                print_exception(exc_info()[0], exc_info()[1], exc_info()[2])
-                self.job_queue.put((cexp,gexp))
-                logging.info('Worker %s quit.' % self.name)
-                break
-            else:
-                self.result_queue.put((self.name,cexp,gexp,rate))
-
-class WorkerStopToken:
-    '''
-    Notify a worker to stop.
-    '''
-    pass
-
-class LocalWorker(Worker):
-    '''
-    Thread in the local computer.
-    '''
-    def run_one(self, c, g, y, x):
-        options = '-t 2 -c %s -g %s -v %s -e 0.1 -q' % (c, g, self.nValidation)
-        result = svmutil.svm_train(y, x, options)
-        return float(result)
 
 class StopCalculating(Exception):
     pass
@@ -104,100 +61,12 @@ class SupportVectorMachines(object):
         self.model = None 
         self.classBins = []
         self.classifier = classifier
+        self.percentile = 90
 
         # Initialize the total object storage
         self.perClassObjects = {}
         self.feat_min, self.feat_max = None, None
         self.svm_train_labels, self.svm_train_values = None, None
-
-    def CalculateCGamma(self, callback = None, nValidation = 5):
-        '''
-    	Grid search of the best C and gamma parameters for the RBF Kernel.
-    	The efficiency of the parameters is evaluated using nValidation-fold
-        cross-validation of the training data.
-    
-    	As this process is time consuming and parallelizable, a number of
-        threads equal to the number of cores in the computer is used for the
-        calculations
-    	'''
-        jobs = self.CalculateJobs()
-        job_queue = Queue.Queue(0)
-        result_queue = Queue.Queue(0)
-
-        jobs_flat_list = [(c,g) for line in jobs for (c,g) in line]
-        map(job_queue.put, jobs_flat_list)
-        job_queue._put = job_queue.queue.appendleft
-
-        # Start local workers
-        try:
-            from multiprocessing import cpu_count
-            nr_local_worker = cpu_count()
-        except:
-            nr_local_worker = 1
-
-        for i in xrange(nr_local_worker):
-            LocalWorker('local %s' % (i+1), job_queue, result_queue,
-                        self.svm_train_labels, self.svm_train_values,
-                        nValidation).start()
-
-        # Initialize result containers
-        done_jobs = {}
-        db = []
-        best_rate = -1
-        best_c1, best_g1 = None, None
-
-        for index, (c,g) in enumerate(jobs_flat_list):
-            if callback is not None:
-                callback(index / float(len(jobs_flat_list)))
-            while (c, g) not in done_jobs:
-                (worker,c1,g1,rate) = result_queue.get()
-                done_jobs[(c1,g1)] = rate
-                if (rate > best_rate) or (rate == best_rate and g1 == best_g1 and c1 < best_c1):
-                    best_rate = rate
-                    best_c1, best_g1 = c1, g1
-                    best_c = 2.0**c1
-                    best_g = 2.0**g1
-                logging.info("[%s] C=%s g=%s rate=%s (Best values C=%s, g=%s, rate=%s)" %
-                             (worker, c1, g1, rate, best_c, best_g, best_rate))
-            db.append((c,g,done_jobs[(c,g)]))
-
-        job_queue.put((WorkerStopToken, None))
-        logging.info("Optimal values: C=%s g=%s rate=%s" % (best_c, best_g, best_rate))
-        self.classifierParameters = (best_c, best_g, best_rate)
-
-        return best_c, best_g
-
-    def CalculateJobs(self):
-        '''
-    	Calculate the C and Gamma parameters tuples for the grid search in CalculateCGamma()
-    	'''
-        c_begin, c_end, c_step = -5,  11, 2
-        g_begin, g_end, g_step =  3, -11, -2
-        c_seq = self.PermuteSequence(list(np.arange(c_begin,c_end,c_step)))
-        g_seq = self.PermuteSequence(list(np.arange(g_begin,g_end,g_step)))
-
-        nr_c = float(len(c_seq))
-        nr_g = float(len(g_seq))
-        i = 0
-        j = 0
-        jobs = []
-
-        while i < nr_c or j < nr_g:
-            if i/nr_c < j/nr_g:
-                # increase C resolution
-                line = []
-                for k in xrange(0,j):
-                    line.append((c_seq[i],g_seq[k]))
-                i = i + 1
-                jobs.append(line)
-            else:
-                # increase g resolution
-                line = []
-                for k in xrange(0,i):
-                    line.append((c_seq[k],g_seq[j]))
-                j = j + 1
-                jobs.append(line)
-        return jobs
 
     def CheckProgress(self):
         # Calculate cross-validation data
@@ -239,7 +108,7 @@ class SupportVectorMachines(object):
         self.svm_train_labels, self.svm_train_values = None, None
 
     def ComplexityTxt(self):
-        return 'Number of cross-validations: '
+        return '# of cross-validations: '
 
     def ConfusionMatrix(self, actual = None, predicted = None):
         # Retrieve the number of classes, their labels and initialize
@@ -275,18 +144,8 @@ class SupportVectorMachines(object):
         Convert the training set data to SVM format
         Format: label feature_1:value feature_2:value feature_3:value ...
         '''
-        prob_y = []
-        prob_x = []
-
-        for label, value_row in zip(labels, values):
-            xi = {}
-            for ind, val in enumerate(value_row):
-                xi[int(ind)+1] = float(val)
-            prob_x += [xi]
-            for ind, lab in enumerate(label):
-                if lab == 1: true_label = ind+1
-            prob_y += [float(true_label)]
-        return prob_y, prob_x
+        labels = np.array([np.nonzero(target > 0) for target in labels]).squeeze()
+        return labels, values
 
     def CreatePerObjectClassTable(self, classes):
         '''
@@ -310,9 +169,10 @@ class SupportVectorMachines(object):
                 query = ''.join(['INSERT INTO ',p.class_table,' (',class_cols,') VALUES (',str(obj[0]),', ',str(obj[1]),', "',clName,'", ',str(clNum+1),')'])
                 db.execute(query)
 
-        query = ''.join(['ALTER TABLE ',p.class_table,' ORDER BY ',p.image_id,' ASC, ',p.object_id,' ASC'])
-        db.execute(query)
-        db.Commit()
+        if p.db_type.lower() == 'mysql':
+            query = ''.join(['ALTER TABLE ',p.class_table,' ORDER BY ',p.image_id,' ASC, ',p.object_id,' ASC'])
+            db.execute(query)
+            db.Commit()
 
     def FilterObjectsFromClassN(self, classN = None, keys = None):
         '''
@@ -322,7 +182,9 @@ class SupportVectorMachines(object):
         # Retrieve instance of the database connection
         db = dbconnect.DBConnect.getInstance()
         object_data = {}
-        if keys != []:
+        if isinstance(keys, str):
+            object_data[0] = db.GetCellDataForClassifier(keys)
+        elif keys != []:
             if len(keys) == len(dbconnect.image_key_columns()):
                 # Retrieve instance of the data model and retrieve objects in the requested image
                 dm = DataModel.getInstance()
@@ -334,17 +196,15 @@ class SupportVectorMachines(object):
 
         sorted_keys = sorted(object_data.keys())
         values_array = np.array([object_data[key] for key in sorted_keys])
-        scaled_values = list(self.ScaleData(values_array))
-        labels = [(1,-1)]*len(scaled_values) # Toy labels, input data is not yet labelled.
-        svm_labels, svm_values = self.ConvertToSVMFormat(labels, scaled_values)
-        pred_labels = svmutil.svm_predict(svm_labels, svm_values, self.model)
+        scaled_values = self.ScaleData(values_array)
+        pred_labels = self.model.predict(scaled_values)
 
         # Group the object keys per class
         classObjects = {}
         for index in range(1, len(self.classBins)+1):
             classObjects[float(index)] = []
-        for index, label in enumerate(pred_labels[0]):
-            classObjects[label].append(sorted_keys[index])
+        for index, label in enumerate(pred_labels):
+            classObjects[np.int(label)+1].append(sorted_keys[index])
 
         # Return either a summary of all classes and their corresponding objects
         # or just the objects for a specific class
@@ -360,20 +220,53 @@ class SupportVectorMachines(object):
         return low_lim + (up_lim-low_lim)*(value-feat_min) / (feat_max-feat_min)
 
     def LoadModel(self, model_file_name):
-        self.model = svmutil.svm_load_model(model_file_name)
-        f = open(model_file_name, 'r')
+        import cPickle
+        fh = open(model_file_name, 'r')
+        try:
+            self.model, self.bin_labels, self.feat_min, self.feat_max = cPickle.load(fh)
+        except:
+            self.model = None
+            self.bin_labels = None
+            self.feat_min = None
+            self.feat_max = None
+            logging.error('The loaded model was not a support vector machines model')
+            raise TypeError
+        finally:
+            fh.close()
 
-        # Load bin labels, feat_max, feat_min
-        for line in f:
-            heading = line.split(':')
-            if heading[0] == '#bins':
-                self.bin_labels = [str(elem) for elem in heading[1].strip().split(',')]
-            elif heading[0] == '#feat_min':
-                self.feat_min = np.array([float(elem) for elem in heading[1].strip().split(',')])
-            elif heading[0] == '#feat_max':
-                self.feat_max = np.array([float(elem) for elem in heading[1].strip().split(',')])
+    def ParameterGridSearch(self, callback = None, nValidation = 5):
+        '''
+        Grid search for the best C and gamma parameters for the RBF Kernel.
+        The efficiency of the parameters is evaluated using nValidation-fold
+        cross-validation of the training data.
+    
+        As this process is time consuming and parallelizable, a number of
+        threads equal to the number of cores in the computer is used for the
+        calculations
+        '''
+        from scikits.learn.grid_search import GridSearchCV
+        from scikits.learn.metrics import precision_score
+        from scikits.learn.cross_val import StratifiedKFold
+        #try:
+            #from multiprocessing import cpu_count
+            #n_workers = cpu_count()
+        #except:
+        n_workers = 1
 
-        f.close()
+        # Define the parameter ranges for C and gamma and perform a grid search for the optimal setting
+        parameters = {'C': 2**np.arange(-5,11,2, dtype=float),
+                      'gamma': 2**np.arange(3,-11,-2, dtype=float)}                
+        clf = GridSearchCV(SVC(kernel='rbf'), parameters, n_jobs=n_workers, score_func=precision_score)
+        clf.fit(self.svm_train_values, self.svm_train_labels, 
+                cv=StratifiedKFold(self.svm_train_labels, nValidation))
+
+        # Pick the best parameters as the ones with the maximum cross-validation rate
+        bestParameters = max(clf.grid_points_scores_, key=lambda a: clf.grid_points_scores_.get(a))
+        bestC = bestParameters[0][1]
+        bestGamma = bestParameters[1][1]
+        logging.info('Optimal values: C=%s g=%s rate=%s' % (bestC, bestGamma, 
+                                                            clf.grid_points_scores_[bestParameters]))
+        return bestC, bestGamma
 
     def PerImageCounts(self, filter_name=None, cb=None):
         # Clear the current perClassObjects storage
@@ -426,30 +319,11 @@ class SupportVectorMachines(object):
 
         return perImageData
 
-    def PermuteSequence(self, seq):
-        n = len(seq)
-        if n <= 1: return seq
-
-        mid = int(n/2)
-        left = self.PermuteSequence(seq[:mid])
-        right = self.PermuteSequence(seq[mid+1:])
-
-        ret = [seq[mid]]
-        while left or right:
-            if left: ret.append(left.pop(0))
-            if right: ret.append(right.pop(0))
-        return ret
-
-    def SaveModel(self, model_file_name, bin_labels):
-        svmutil.svm_save_model(model_file_name, self.model)
-        # Save feat_max, feat_min
-        f = open(model_file_name, 'a')
-        feat_min_str = [str(elem) for elem in self.feat_min]
-        feat_max_str = [str(elem) for elem in self.feat_max]
-        f.write('\n#bins:' + ','.join(bin_labels))
-        f.write('\n#feat_min:' + ','.join(feat_min_str))
-        f.write('\n#feat_max:' + ','.join(feat_max_str))
-        f.close()
+    def SaveModel(self, model_file_name, bin_labels):       
+        import cPickle
+        fh = open(model_file_name, 'w')
+        cPickle.dump((self.model, bin_labels, self.feat_min, self.feat_max), fh)
+        fh.close()
 
     def ScaleData(self, values, low_lim=0.0, up_lim=1.0):
         '''
@@ -463,29 +337,30 @@ class SupportVectorMachines(object):
         return scaled_data
 
     def ShowModel(self):
-        return 'Trained a SVM Classifier using a radial basis function with ' \
-               'parameters:\nC: %s\nGamma: %s\nCross-validation rate: %s' \
-               % self.classifierParameters
+        if self.model is not None:
+            return 'Trained the following support vector machines classifier:\n%s' % self.model.named_steps['svc']
+        else:
+            return ''
 
     def Train(self, colNames, nValidation, labels, values, fout=None, callback = None):
         '''
     	Train a SVM model using optimized C and Gamma parameters and a training set.
     	'''
         # First make sure the supplied problem is in SVM format
-        # TODO: Add Check for compatibility
         self.TranslateTrainingSet(labels, values)
 
         # Perform a grid-search to obtain the C and gamma parameters for C-SVM
         # classification
         if nValidation > 1:
-            c, g = self.CalculateCGamma(callback, nValidation)
+            C, gamma = self.ParameterGridSearch(callback, nValidation)
         else:
-            c, g = self.CalculateCGamma(callback)
+            C, gamma = self.ParameterGridSearch(callback)
 
-        # Retrain the model using the obtained C and gamma parameters to obtain
-        # the final SVM model
-        options = '-g %f -c %f -e 0.1 -t 2 -q' % (g, c)
-        self.model = svmutil.svm_train(self.svm_train_labels, self.svm_train_values, options)
+        # Train the model using the obtained C and gamma parameters to obtain the final classifier
+        self.model = Pipeline([('anova', feature_selection.SelectPercentile(feature_selection.f_classif,
+                                                                            percentile=self.percentile)),
+                               ('svc', SVC(kernel='rbf', C=C, gamma=gamma, eps=0.1))])
+        self.model.fit(self.svm_train_values, self.svm_train_labels)
 
     def TranslateTrainingSet(self, labels, values):
         '''
@@ -527,20 +402,22 @@ class SupportVectorMachines(object):
         totalGroups = 5
         trainingGroups = 4
 
-        # Convert the trainingset into SVM format and search for optimal parameters
+        # Convert the training set into SVM format and search for optimal parameters
         # C and gamma using 5-fold cross-validation
         logging.info('Performing grid search for parameters C and gamma on entire training set...')
         self.TranslateTrainingSet(self.classifier.trainingSet.label_matrix, 
                                   self.classifier.trainingSet.values)
-        C, gamma = self.CalculateCGamma(callback=cb)
+        C, gamma = self.ParameterGridSearch(callback=cb)
         dlg.Destroy()
         logging.info('Grid search completed. Found optimal C=%d and gamma=%f.' % (C, gamma))
 
-        # Define the options for the SVM training and initialize misclassification storage
+        # Create the classifier and initialize misclassification storage
+        classifier = Pipeline([('anova', feature_selection.SelectPercentile(feature_selection.f_classif,
+                                                                            percentile=self.percentile)),
+                               ('svc', SVC(kernel='rbf', C=C, gamma=gamma, eps=0.1))])
         nObjects = self.classifier.trainingSet.label_matrix.shape[0]
         subsetSize = np.ceil(nObjects / float(totalGroups))
         indices = np.arange(nObjects)
-        options = '-g %f -c %f -e 0.1 -t 2 -q' % (gamma, C)
         misclassifications = [[] for i in range(nObjects)]
 
         # Create group combinations and arrays of all labels and values
@@ -573,18 +450,16 @@ class SupportVectorMachines(object):
                 trainingSet = np.hstack([subsets[i] for i in range(totalGroups) if i in group])
 
                 # Train a classifier on the subset
-                model = svmutil.svm_train(allLabels[trainingSet].tolist(),
-                                          allValues[trainingSet].tolist(), options)
+                classifier.fit(allValues[trainingSet], allLabels[trainingSet])
 
                 # Predict the test set using the trained classifier
                 testSet = np.hstack([subsets[i] for i in range(totalGroups) if i not in group])
-                testLabels = svmutil.svm_predict(allLabels[testSet].tolist(),
-                                                 allValues[testSet].tolist(), model)
+                testLabels = classifier.predict(allValues[testSet])
 
                 # Store all misclassifications
-                [misclassifications[testSet[i]].append(testLabels[0][i]) \
-                    for i in range(len(testLabels[0])) \
-                    if testLabels[0][i] != allLabels[testSet][i]]
+                [misclassifications[testSet[i]].append(testLabels[i]) \
+                    for i in range(len(testLabels)) \
+                    if testLabels[i] != allLabels[testSet][i]]
 
                 # Update progress dialog
                 cb((nTrainingTotalGroups * per + index) / nOperations)
