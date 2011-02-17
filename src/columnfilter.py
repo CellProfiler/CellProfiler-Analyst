@@ -66,16 +66,19 @@ class ColumnFilterPanel(wx.Panel):
         table = self.tableChoice.Value
         self.colChoice.SetItems(db.GetColumnNames(table))
         self.colChoice.Select(0)
+        
+    def _get_col_type(self):
+        return db.GetColumnTypes(table)[colidx]
 
     def update_comparator_choice(self):
         table = self.tableChoice.Value
         colidx = self.colChoice.GetSelection()
-        coltype = db.GetColumnTypes(table)[colidx]
+        coltype = self._get_col_type()
         comparators = []
         if coltype in [str, unicode]:
-            comparators = ['=', '!=', 'REGEXP']
+            comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT']
         if coltype in [int, float, long]:
-            comparators = ['=', '!=', '<', '>', '<=', '>=']
+            comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT']
         self.comparatorChoice.SetItems(comparators)
         self.comparatorChoice.Select(0)
 
@@ -95,6 +98,12 @@ class ColumnFilterPanel(wx.Panel):
         column = self.colChoice.Value
         comparator = self.comparatorChoice.GetValue()
         value = self.valueField.GetValue()
+        if self._get_col_type() in [int, float, long]:
+            # Don't quote numbers
+            return Filter((table, column), comparator, '%s'%(value))
+        if comparator.upper() in ['IS', 'IS NOT'] and value.upper() == 'NULL':
+            # Don't comparisons to NULL
+            return Filter((table, column), comparator, '%s'%(value))
         return Filter((table, column), comparator, '"%s"'%(value))
 
 
