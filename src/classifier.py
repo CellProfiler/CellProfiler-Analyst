@@ -29,7 +29,11 @@ import os
 import sys
 import wx
 import re
-from supportvectormachines import SupportVectorMachines # JK - Added
+try:
+    from supportvectormachines import SupportVectorMachines # JK - Added
+    svm_support = True
+except:
+    svm_support = False
 from fastgentleboosting import FastGentleBoosting # JK - Added
 from dimensredux import PlotMain # JEN - Added
 
@@ -401,7 +405,8 @@ class Classifier(wx.Frame):
         # Classifier Type chooser
         self.classifierMenu = wx.Menu();
         fgbMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
-        svmMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Support Vector Machines', help='User Support Vector Machines to find classifier rules.')
+        if svm_support:
+            svmMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Support Vector Machines', help='User Support Vector Machines to find classifier rules.')
         self.GetMenuBar().Append(self.classifierMenu, 'Classifier')
         # JK - End Add
 
