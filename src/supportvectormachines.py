@@ -17,11 +17,14 @@ from sys import hexversion, exc_info
 from threading import Thread
 from traceback import print_exception
 
-# Import support vector classifier, feature selection and Pipeline from scikits.learn 
-from scikits.learn.svm import SVC
-from scikits.learn import feature_selection
-from scikits.learn.pipeline import Pipeline
-
+# Import support vector classifier, feature selection and Pipeline from scikits.learn
+try:
+    from scikits.learn.svm import SVC
+    from scikits.learn import feature_selection
+    from scikits.learn.pipeline import Pipeline
+except:
+    # classifier.py checks this so developers don't have to install it if they don't want it.
+    scikits_loaded = False
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
@@ -55,7 +58,7 @@ class StopCalculating(Exception):
 class SupportVectorMachines(object):
     '''
     Class to define a complete support vector machine classifier calculation problem. 
-    '''
+    '''    
     def __init__(self, classifier = None):
         logging.info('Initialized New Support Vector Machines Classifier')
         self.model = None 

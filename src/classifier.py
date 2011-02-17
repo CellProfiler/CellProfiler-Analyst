@@ -29,13 +29,9 @@ import os
 import sys
 import wx
 import re
-try:
-    from supportvectormachines import SupportVectorMachines # JK - Added
-    svm_support = True
-except:
-    svm_support = False
-from fastgentleboosting import FastGentleBoosting # JK - Added
-from dimensredux import PlotMain # JEN - Added
+from supportvectormachines import SupportVectorMachines, scikits_loaded
+from fastgentleboosting import FastGentleBoosting
+from dimensredux import PlotMain
 
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
@@ -405,7 +401,7 @@ class Classifier(wx.Frame):
         # Classifier Type chooser
         self.classifierMenu = wx.Menu();
         fgbMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
-        if svm_support:
+        if scikits_loaded:
             svmMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Support Vector Machines', help='User Support Vector Machines to find classifier rules.')
         self.GetMenuBar().Append(self.classifierMenu, 'Classifier')
         # JK - End Add
@@ -418,7 +414,8 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         self.Bind(wx.EVT_MENU, self.AlgorithmSelect, fgbMenuItem) # JK - Added
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, svmMenuItem) # JK - Added
+        if scikits_loaded:
+            self.Bind(wx.EVT_MENU, self.AlgorithmSelect, svmMenuItem) # JK - Added
 
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
