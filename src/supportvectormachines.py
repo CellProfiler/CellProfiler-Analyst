@@ -22,6 +22,7 @@ try:
     from scikits.learn.svm import SVC
     from scikits.learn import feature_selection
     from scikits.learn.pipeline import Pipeline
+    scikits_loaded = True
 except:
     # classifier.py checks this so developers don't have to install it if they don't want it.
     scikits_loaded = False
