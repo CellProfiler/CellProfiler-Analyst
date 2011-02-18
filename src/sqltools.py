@@ -272,6 +272,9 @@ class WhereClause(object):
             cols += c.get_columns()
         return list(set(cols))
     
+    def get_conditions(self):
+        return self.conditions
+    
     def add_condition(self, column, comparator, value, conjunction='AND'):
         '''Add another condition to the whereclause
         '''
@@ -289,12 +292,12 @@ class WhereClause(object):
         self.conjunctions += where.conjunctions
         assert len(self.conjunctions) == len(self.conditions) - 1
         
-    def add_filter(self, filter):
+    def add_filter(self, filter, conjunction='AND'):
         '''Adds a filter to the where clause
         filter -- a Filter or OldFilter object
         '''
         if isinstance(filter, Filter):
-            self.add_where_clause(filter)
+            self.add_where_clause(filter, conjunction=conjunction)
         elif isinstance(filter, OldFilter):
             self.conditions += [filter]
         else:
