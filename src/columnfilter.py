@@ -68,11 +68,11 @@ class ColumnFilterPanel(wx.Panel):
         self.colChoice.Select(0)
         
     def _get_col_type(self):
+        table = self.tableChoice.Value
+        colidx = self.colChoice.GetSelection()
         return db.GetColumnTypes(table)[colidx]
 
     def update_comparator_choice(self):
-        table = self.tableChoice.Value
-        colidx = self.colChoice.GetSelection()
         coltype = self._get_col_type()
         comparators = []
         if coltype in [str, unicode]:
