@@ -193,7 +193,7 @@ def interleave(*args):
 
 # TODO: replace WhereConditions with Expressions
 class Expression(object):
-    def __init__(exp_list):
+    def __init__(self, exp_list):
         '''exp_list -- a list of string tokens and columns comprising a valid 
                        SQL expression when joined into a single string.
            eg:
