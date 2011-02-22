@@ -236,9 +236,9 @@ class PlateViewer(wx.Frame, CPATool):
                 select += [sql.Column(table, measurement, 'STDDEV')]
             elif aggMethod=='cv%':
                 # stddev(col) / avg(col) * 100
-                select += [sql.Expression(
+                select += [sql.Expression([
                               sql.Column(table, measurement, 'STDDEV'), ' / ', 
-                              sql.Column(table, measurement, 'AVG'), ' * 100')]
+                              sql.Column(table, measurement, 'AVG'), ' * 100'])]
             elif aggMethod=='sum':    
                 select += [sql.Column(table, measurement, 'SUM')]
             elif aggMethod=='min':    
@@ -553,12 +553,12 @@ class PlateViewer(wx.Frame, CPATool):
         '''Outlines all non-NULL values of the current annotation
         '''
         # Disable filters when outlining marked wells
-        if self.outlineMarked.IsChecked():
-            self.filterChoice.SetStringSelection(NO_FILTER)
-            self.filterChoice.Disable()
-        else:
-            if not self.annotationShowVals.IsChecked():
-                self.filterChoice.Enable()
+        #if self.outlineMarked.IsChecked():
+            #self.filterChoice.SetStringSelection(NO_FILTER)
+            #self.filterChoice.Disable()
+        #else:
+            #if not self.annotationShowVals.IsChecked():
+                #self.filterChoice.Enable()
         # Update outlined wells in PlateMapPanels
         for pm in self.plateMaps:
             if self.outlineMarked.IsChecked():
