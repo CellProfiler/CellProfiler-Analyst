@@ -462,7 +462,7 @@ class PlateViewer(wx.Frame, CPATool):
                 else:
                     self.annotationLabel.SetValue(str(annotations[0]))
             else:
-                self.annotationLabel.SetValue(','.join([a for a in annotations if a is not None]))
+                self.annotationLabel.SetValue(','.join([str(a) for a in annotations if a is not None]))
         else:
             self.annotationLabel.Disable()
             self.annotationLabel.SetForegroundColour(wx.Color(80,80,80))
