@@ -1,4 +1,11 @@
 # -*- Encoding: utf-8 -*-
+
+#
+# TODO: make use of new table linking
+# Add link_to_images() function to subclasses of TableData and call it lazily
+# when user requests images.
+#
+
 import csv
 import os
 import re
