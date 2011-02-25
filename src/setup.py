@@ -16,7 +16,7 @@ import pilfix
 if sys.platform == "darwin":
     os.system(''' svnversion | sed -e's/^/VERSION = \"/' -e 's/[0-9]*://' -e 's/M//' -e 's/$/\"/' > cpa_version.py ''')
 
-APPNAME = 'CellProfiler Analyst'
+APPNAME = 'CPAnalyst'
 APP = ['cpa.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': True,
@@ -30,6 +30,6 @@ setup(
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
-    name = "CellProfiler Analyst",
+    name = "CPAnalyst",
 )
 
