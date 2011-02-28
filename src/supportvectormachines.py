@@ -135,11 +135,11 @@ class SupportVectorMachines(object):
             for i, actualClass in enumerate(actual):
                 # Count the number of correct classifications and store them in the
                 # confusion matrix
-                actualClass = np.int(actualClass)-1
+                actualClass = np.int(actualClass)
 
                 # Count all misclassifications
                 for j in predicted[i]:
-                    confusionMatrix[np.int(j)-1, actualClass] += 1
+                    confusionMatrix[np.int(j), actualClass] += 1
 
         return confusionMatrix, classLabels
 
