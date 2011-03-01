@@ -290,12 +290,12 @@ class PlotPanel(wx.Panel):
         for i in xrange(len(self.class_names)):
             cell_count = np.shape(np.nonzero(self.masked_X[:, i]))
             for j in xrange(nOpacity):
-                    showObjects = np.where(self.object_opacity == opacities[j])
-                    subHandle = self.subplot.scatter(self.masked_X[showObjects, i], self.masked_Y[showObjects, i], 8, c=self.color_set[i, :], linewidth="0.25", alpha=0.25+0.75*opacities[j])
-                    # The highest opacity objects are added to the legend
-                    if opacities[j] == np.max(opacities):
-                        handles.append(subHandle)
-                        labels.append(self.class_names[i] + ': ' + str(cell_count[1]))
+                showObjects = np.where(self.object_opacity == opacities[j])
+                subHandle = self.subplot.scatter(self.masked_X[showObjects, i], self.masked_Y[showObjects, i], 8, c=self.color_set[i, :], linewidth="0.25", alpha=0.25+0.75*opacities[j])
+                # The highest opacity objects are added to the legend
+                if opacities[j] == np.max(opacities):
+                    handles.append(subHandle)
+                    labels.append(self.class_names[i] + ': ' + str(cell_count[1]))
         self.leg = self.subplot.legend(handles, labels, loc=4, fancybox=True, handlelength=1)
         self.leg.get_frame().set_alpha(0.25)
         self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
@@ -331,7 +331,8 @@ class PlotPanel(wx.Panel):
         mean_data = raw_data.mean(axis=0)
         for i in xrange(row):
             centered_data[i] -= mean_data
-
+        centered_data = centered_data[:,np.var(centered_data, axis=0) != 0]
+        
         return centered_data
 
     def pca_svd(self, data, PCs=100, standardize=True):
@@ -644,8 +645,9 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     except:
-        raise Exception("DimensRedux.py needs a CPAnalyst properties file passed as args. Exiting...")     
-        sys.exit()
+        if not p.show_load_dialog():
+            raise Exception("DimensRedux.py needs a CPAnalyst properties file passed as args. Exiting...")     
+            sys.exit()
 
     pca_main = PlotMain(None)
     pca_main.Show()
