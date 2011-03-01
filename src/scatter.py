@@ -314,14 +314,15 @@ class ScatterControlPanel(wx.Panel):
                    strings.
         '''
         if 'version' not in settings:
-            settings['x-table'] = settings['table']
-            settings['y-table'] = settings['table']
+            if 'table' in settings:
+                settings['x-table'] = settings['table']
+                settings['y-table'] = settings['table']
             settings['version'] = '1'
         if 'x-table' in settings:
-            self.x_table_choice.SetStringSelection(settings['table'])
+            self.x_table_choice.SetStringSelection(settings['x-table'])
             self.update_x_choices()
         if 'y-table' in settings:
-            self.y_table_choice.SetStringSelection(settings['table'])
+            self.y_table_choice.SetStringSelection(settings['y-table'])
             self.update_y_choices()
         if 'x-axis' in settings:
             self.x_choice.SetStringSelection(settings['x-axis'])
