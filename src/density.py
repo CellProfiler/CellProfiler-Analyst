@@ -244,8 +244,9 @@ class DataSourcePanel(wx.Panel):
                    strings.
         '''
         if 'version' not in settings:
-            settings['x-table'] = settings['table']
-            settings['y-table'] = settings['table']
+            if 'table' in settings:
+                settings['x-table'] = settings['table']
+                settings['y-table'] = settings['table']
             settings['version'] = '1'
         if 'x-table' in settings:
             self.x_table_choice.SetStringSelection(settings['table'])
