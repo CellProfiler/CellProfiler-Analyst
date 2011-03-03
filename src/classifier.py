@@ -753,8 +753,7 @@ class Classifier(wx.Frame):
         with tilecollection.load_lock():
             self.PostMessage('Loading training set from: %s'%filename)
             # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-            os.chdir(os.path.split(filename)[0])
-            self.defaultTSFileName = os.path.split(filename)[1]
+            self.defaultTSFileName = os.path.basename(filename)
 
             self.trainingSet = TrainingSet(p, filename, labels_only=True)
 
@@ -1468,7 +1467,7 @@ if __name__ == "__main__":
     db = dbconnect.DBConnect.getInstance()
     dm = DataModel.getInstance()
 
-    # Load a properties file if passed in args
+    # Load a properties file if passed as the first argument
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
@@ -1476,9 +1475,15 @@ if __name__ == "__main__":
         if not p.show_load_dialog():
             logging.error('Classifier requires a properties file.  Exiting.')
             wx.GetApp().Exit()
-        
+
     classifier = Classifier()
     classifier.Show(True)
+
+    # Load a training set if passed as the second argument
+    if len(sys.argv) > 2:
+        training_set_filename = sys.argv[2]
+        classifier.LoadTrainingSet(training_set_filename)
+        
     app.MainLoop()
 
     #
