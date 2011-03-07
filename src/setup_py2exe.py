@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../../CellProfiler/pyCellProfiler')
+sys.path.append('../../CellProfiler')
 from distutils.core import setup, Extension
 import py2exe
 import matplotlib
