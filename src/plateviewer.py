@@ -564,7 +564,7 @@ class PlateViewer(wx.Frame, CPATool):
             if self.outlineMarked.IsChecked():
                 column = self.annotationCol.Value
                 if p.plate_id:
-                    res = db.execute('SELECT %s, %s FROM %s WHERE %s=%s'%(
+                    res = db.execute('SELECT %s, %s FROM %s WHERE %s="%s"'%(
                         dbconnect.UniqueWellClause(), column, p.image_table, 
                         p.plate_id, pm.plate))
                 else:
