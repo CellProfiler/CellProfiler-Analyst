@@ -271,8 +271,9 @@ class MainGUI(wx.Frame):
         querymaker.Show(True)
 
     def on_save_workspace(self, evt):
+        p = Properties.getInstance()
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(), 
-                            defaultFile='workspace.txt', wildcard='txt', 
+                            defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table), 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().save_workspace(dlg.GetPath())
