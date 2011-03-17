@@ -130,10 +130,11 @@ def object_key_columns(table_name=''):
         table_name = ''
     if table_name != '':
         table_name += '.'
+    object_id = '' if not (p.object_id and p.object_table) else p.object_id
     if p.table_id:
-        return (table_name+p.table_id, table_name+p.image_id, table_name+p.object_id)
+        return (table_name+p.table_id, table_name+p.image_id, table_name+object_id)
     else:
-        return (table_name+p.image_id, table_name+p.object_id)
+        return (table_name+p.image_id, table_name+object_id)
 
 def object_key_defs():
     return ', '.join(['%s INT'%(id) for id in object_key_columns()])
