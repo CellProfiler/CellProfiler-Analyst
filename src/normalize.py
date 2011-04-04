@@ -45,6 +45,10 @@ def get_all_normalization_steps(self):
     '''Returns list of selected normalization steps'''
     return all_normalization_steps
 
+def get_output_format(self):
+    '''Returns list of requested output formats'''
+    return output_formats
+
 def get_measurements_from_columns(self):
     '''Construct query and obtain measurements'''
     query = "SELECT %s,"%("ImageNumber" if not p.table_id else "TableNumber, ImageNumber")
@@ -96,7 +100,10 @@ def do_all_normalization_steps(self, measurement_column):
         norm_values /= np.min(norm_values)
         # TODO: Re-arrange the data back the way it was for the final normalization
         input_data /= norm_values
-
+        
+        # TODO: Write to new table/column and link to original table (if needed)
+        self.output_normalization()
+            
 def do_normalization_step(self, input_data, normalization_values, normalization_type):
     '''Aply a single normalization step'''
     
@@ -191,4 +198,11 @@ def do_normalization(self, data, normalization_values, normalization_type, aggre
         val = np.min(data) + float(index)*(np.max(data) - np.min(data))
     
     return data/val, normalization_values*val
-    
+
+def output_normalization(self):
+    output_formats = self.get_output_format()
+    if output_formats == WRITE_TO_TABLE:
+        # Write to table
+        pass
+    if output_formats == WRITE_TO_CSV:
+        pass
