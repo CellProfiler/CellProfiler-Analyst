@@ -14,10 +14,10 @@ class NormalizationStepPanel(wx.Panel):
         self.agg_type = wx.Choice(self, -1, choices=AGG_CHOICES)
         self.agg_type.Select(0)
         self.compute_from_neighbors_checkbox = wx.CheckBox(self, -1, 'Compute the value from spatial neighbors?')
-        self.window_type = wx.RadioBox(self, -1, 'Window type', choices=['linear', 'sqare'])
+        self.window_type = wx.RadioBox(self, -1, 'Window type', choices=['linear', 'square'])
         self.window_size = wx.lib.intctrl.IntCtrl(self, value=3, min=1, max=100)
         self.compute_from_neighbors_checkbox.Set3StateValue(True)
-        self.specify_constant_check = wx.CheckBox(self, -1, 'Divide by constant value')
+        self.specify_constant_check = wx.CheckBox(self, -1, 'Divide by constant value') # TODO: Specify either a single numeric value or a per-image measurement
         self.constant_float = FS.FloatSpin(self, -1, increment=1, value=1.0)
         self.constant_float.Disable()
                 
