@@ -60,64 +60,25 @@ def get_measurements_from_columns(self):
         query += " ORDER BY %s, %s ASC"%(p.plate_id, p.well_id)
     cursor.execute(query)
     return np.array(cursor.fetchall())
-
-def do_all_normalization_steps(self, measurement_column):
-    ''' For each column of measurements, perform all the specified normalization steps'''
-    # Get the data from the db
-    input_data = self.get_measurements_from_columns()
-    # Initialize the normalization values to an array of NaNs, same size as data (minus the keys)
-    shape = input_data.shape if p.plate_id else [input_data.shape[0], input_data.shape[1]-KEY_INDEX_OFFSET]
-    normalization_values = np.ones(shape)*np.NaN
-    
-    # Normalize each measurement column
-    for index, measurement_column in enumerate(self.get_selected_measurement_columns()):
-        # Create an index for the actual data for each column, plus keys (if any)
-        if p.plate_id:
-            # Reference the cols for the keys ([TableNum,ImageNum], Plate, Well) plus the data col
-            idx = list(np.arange(KEY_INDEX_OFFSET)) + [KEY_INDEX_OFFSET + index]
-        else:
-            # Otherwise, just reference the data column itself
-            idx = [index]
-        
-        # Apply all the requested nornalization steps for each column
-        # First, arrange the data appropriately
-        if not p.plate_id: # No plate layout: Keep data as-is
-            data = input_data[:,np.ix_(idx)]
-            norm_values = normalization_values[:,index]
-        else:
-            from plateviewer import FormatPlateMapData # Plate layour exists: Format accordingly
-            # Format the data
-            keys_and_vals = [input_data[i,idx][0] for i in range(input_data.shape[0])]
-            data, well_keys = FormatPlateMapData(keys_and_vals)
-            # Format the normalization vals
-            keys_and_vals = [normalization_values[i,idx][0] for i in range(normalization_values.shape[0])]
-            norm_values, well_keys = FormatPlateMapData(keys_and_vals)
-        
-        for normalization_step in self.get_all_normalization_steps():
-            normalization_type = self.get_normalization_option()
-            data, norm_values = self.do_normalization_step(data, norm_values, normalization_type)
             
-        norm_values /= np.min(norm_values)
-        # TODO: Re-arrange the data back the way it was for the final normalization
-        input_data /= norm_values
-        
-        # TODO: Write to new table/column and link to original table (if needed)
-        self.output_normalization()
-            
-def do_normalization_step(self, input_data, normalization_values, normalization_type):
-    '''Aply a single normalization step'''
+def do_normalization_step(self, input_data, normalization_values, normalization_type, aggregate_type, win_size, win_type):
+    '''Aply a single normalization step
+    input_data -- a numpy array of raw data to normalize. This array MUST be in the same
+                  shape as your plate data if you are applying a spacially dependent
+                  normalization_type.
+    '''
+    assert input_data.ndim==2 or normalization_type in (N_CONSTANT, N_EXPERIMENT)
     
-    aggregate_type = self.get_aggregate_function()
     if normalization_type == N_EXPERIMENT:
-        plate_data, normalization_values = self.do_normalization(plate_data, normalization_values, aggregate_type)
+        plate_data, normalization_values = do_normalization(plate_data, normalization_values, aggregate_type)
     elif normalization_type == N_PLATE:
         all_plates = set(input_data[:,PLATE_COLUMN_INDEX])
         for plate in all_plates:
             index = plate_data[:,PLATE_COLUMN_INDEX] == plate
-            output_data, output_norms = self.do_normalization(plate_data[index],
-                                                              normalization_values[index],
-                                                              normalization_type,
-                                                              aggregate_type)
+            output_data, output_norms = do_normalization(plate_data[index],
+                                                         normalization_values[index],
+                                                         normalization_type,
+                                                         aggregate_type)
             plate_data[index] = output_data
             normalization_values[index] = output_norms
         
@@ -132,22 +93,25 @@ def do_normalization_step(self, input_data, normalization_values, normalization_
             # lower right
             (np.arange(plate_data.shape[0]) % 2 != 0, np.arange(plate_data.shape[1]) % 2 != 0) ]
         for quadrant in all_quadrants:
-            output_data, output_norms = self.do_normalization(plate_data[quadrant[0],:][:,quadrant[1]], 
-                                                              normalization_values[quadrant[0],:][:,quadrant[1]], 
-                                                              normalization_type, aggregate_type)
+            output_data, output_norms = do_normalization(plate_data[quadrant[0],:][:,quadrant[1]], 
+                                                         normalization_values[quadrant[0],:][:,quadrant[1]], 
+                                                         normalization_type, aggregate_type)
             plate_data[quadrant[0],:][:,quadrant[1]] = output_data
             normalization_values[quadrant[0],:][:,quadrant[1]] = output_norms
             
     elif normalization_type == N_WELL_NEIGHBORS:
         if neighbor_type == W_SQUARE:
-            plate_data, normalization_values = self.square_filter_normalization(plate_data, normalization_values, 
-                                                                                normalization_type, aggregate_type)
+            plate_data, normalization_values = square_filter_normalization(plate_data, normalization_values, 
+                                                                           normalization_type, aggregate_type)
         elif neighbor_type == W_LINEAR:
-            plate_data, normalization_values = self.linear_filter_normalization(plate_data, normalization_values, 
-                                                                                normalization_type, aggregate_type)
+            plate_data, normalization_values = linear_filter_normalization(plate_data, normalization_values, 
+                                                                           normalization_type, aggregate_type)
     elif normalization_type == N_CONSTANT:
-        input_data, normalization_values = self.do_normalization(input_data, normalization_values, 
-                                                                normalization_type, aggregate_type)
+        input_data, normalization_values = do_normalization(input_data, normalization_values, 
+                                                            normalization_type, aggregate_type )
+    else:
+        raise 'Programming Error: Unknown normalization type supplied.'
+        
     if not p.plate_id: # No plate layout: Keep data as-is
         output_data = plate_data
     else:
@@ -182,7 +146,7 @@ def linear_filter_normalization(self, data, normalization_values):
     # Return the result
     return data/normalization_values, normalization_values
 
-def do_normalization(self, data, normalization_values, normalization_type, aggregate_type):
+def do_normalization(self, data, normalization_values, normalization_type, aggregate_type_or_const):
     if aggregate_type == M_MEDIAN:
         val = np.median(data)
     elif aggregate_type == M_MEAN:
@@ -196,7 +160,8 @@ def do_normalization(self, data, normalization_values, normalization_type, aggre
         h = scipy.ndimage.histogram(data.flatten(), robust_min, robust_max, nbins)
         index = np.argmax(h)
         val = np.min(data) + float(index)*(np.max(data) - np.min(data))
-    
+    elif type(aggregate_type_or_const) in (float, int, long):
+        val = aggregate_type_or_const
     return data/val, normalization_values*val
 
 def output_normalization(self):
