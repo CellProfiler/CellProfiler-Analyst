@@ -1,6 +1,8 @@
 import wx
 import  wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
+import normalize as norm
+import dbconnect
 
 GROUP_CHOICES = ['experiment', 'plate', 'quad', 'neighbors', 'constant']
 AGG_CHOICES = ['mean', 'median', 'mode']
@@ -68,11 +70,16 @@ class NormalizationStepPanel(wx.Panel):
         self.GrandParent.remove_norm_step(self)
         
     def get_configuration_dict(self):
-        return {'group'       : self.window_group.GetStringSelection(), 
-                'aggregation' : self.agg_type.GetStringSelection(), 
-                'constant'    : self.constant_float.GetValue() if self.window_group.GetStringSelection()=='constant' else None, 
-                'window_type' : self.window_type.GetStringSelection() if self.window_group.GetStringSelection()=='neighbors' else None, 
-                'window_size' : self.window_size.Value if self.window_group.GetStringSelection()=='neighbors' else None
+        '''returns a dictionary of configuration settings to be used by 
+        normalize.do_normalization_step.
+        IMPORTANT: these key names must match the parameter names of
+            do_normalization_step
+        '''
+        return {norm.P_GROUPING : self.window_group.GetStringSelection(), 
+                norm.P_AGG_TYPE : self.agg_type.GetStringSelection(), 
+                norm.P_CONSTANT : self.constant_float.GetValue() if self.window_group.GetStringSelection()=='constant' else None, 
+                norm.P_WIN_TYPE : self.window_type.GetStringSelection() if self.window_group.GetStringSelection()=='neighbors' else None, 
+                norm.P_WIN_SIZE : self.window_size.Value if self.window_group.GetStringSelection()=='neighbors' else None
                 }
 
 class NormalizationUI(wx.Frame):
@@ -173,48 +180,35 @@ class NormalizationUI(wx.Frame):
         self.do_normalization()
         
     def do_normalization(self):
-        import normalize as norm
-        
+        '''
+        '''
         # Get the data from the db
-        input_data = norm.get_measurements_from_columns()
-        # Initialize the normalization values to an array of NaNs, same size as data (minus the keys)
-        shape = input_data.shape if p.plate_id else [input_data.shape[0], input_data.shape[1]-KEY_INDEX_OFFSET]
-        normalization_values = np.ones(shape)*np.NaN
+        db = dbconnect.DBConnect.getInstance()
+        FIRST_MEAS_INDEX = len(dbconnect.image_key_columns() + dbconnect.well_key_columns())
+        WELL_KEY_INDEX = len(dbconnect.image_key_columns())
+        query = "SELECT %s, %s FROM %s"%(dbconnect.UniqueImageClause(), dbconnect.UniqueWellClause(), p.image_table)
+        input_data = db.execute(query)
         
-        # Normalize each measurement column
-        for index, measurement_column in enumerate(self.get_selected_measurement_columns()):
-            # Create an index for the actual data for each column, plus keys (if any)
-            if p.plate_id:
-                # Reference the cols for the keys ([TableNum,ImageNum], Plate, Well) plus the data col
-                idx = list(np.arange(KEY_INDEX_OFFSET)) + [KEY_INDEX_OFFSET + index]
-            else:
-                # Otherwise, just reference the data column itself
-                idx = [index]
-            
-            # Apply all the requested nornalization steps for each column
-            # First, arrange the data appropriately
-            if not p.plate_id: # No plate layout: Keep data as-is
-                data = input_data[:,np.ix_(idx)]
-                norm_values = normalization_values[:,index]
-            else:
-                from plateviewer import FormatPlateMapData # Plate layour exists: Format accordingly
-                # Format the data
-                keys_and_vals = [input_data[i,idx][0] for i in range(input_data.shape[0])]
-                data, well_keys = FormatPlateMapData(keys_and_vals)
-                # Format the normalization vals
-                keys_and_vals = [normalization_values[i,idx][0] for i in range(normalization_values.shape[0])]
-                norm_values, well_keys = FormatPlateMapData(keys_and_vals)
-            
+        for col in input_data[:,FIRST_MEAS_INDEX:].T:
+            # Iterate over each measurement column
+            norm_data = col.copy()
             for step_panel in self.norm_steps:
+                # Iterate over each normalization step
                 d = step_panel.get_configuration_dict()
-                data, norm_values = norm.do_normalization_step(data, norm_values, **d)
-                
-            norm_values /= np.min(norm_values)
-            # TODO: Re-arrange the data back the way it was for the final normalization
-            input_data /= norm_values
+                if d[norm.P_GROUPING] in (norm.G_PLATE, norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
+                    #Format data in plate format
+                    assert p.plate_id and p.well_id
+                    from plateviewer import FormatPlateMapData
+                    keys_and_vals = [input_data[i,idx][0] for i in range(input_data.shape[0])]
+                    data, well_keys = FormatPlateMapData(keys_and_vals)
+                    
+                norm_data, norm_values = norm.do_normalization_step(norm_data, **d)
+
             
+            output_data = data.copy()
+            
+            # TODO: Re-arrange the data back the way it was for the final normalization
             # TODO: Write to new table/column and link to original table (if needed)
-            self.output_normalization()
         
 
 if __name__ == "__main__":

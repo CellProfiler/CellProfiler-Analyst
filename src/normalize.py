@@ -1,157 +1,109 @@
 from scipy.ndimage import median_filter
 import numpy as np
 
-# Normalization options
-N_EXPERIMENT = "Experiment"
-N_PLATE = "Plate"
-N_QUADRANT = "Quadrant"
-N_WELL_NEIGHBORS = "Well neighbors"
-N_CONSTANT = "Constant"
+# Parameter names for do_normalization_step
+P_GROUPING = 'grouping'
+P_AGG_TYPE = 'aggregate_type'
+P_WIN_SIZE = 'win_size'
+P_WIN_TYPE = 'win_type'
+P_CONSTANT = 'constant'
 
-# Spatial neighbor options
-W_SQUARE = "Square"
-W_LINEAR = "Linear"
+# Grouping options
+G_EXPERIMENT = "Experiment"
+G_PLATE = "Plate"
+G_QUADRANT = "Quadrant"
+G_WELL_NEIGHBORS = "Well neighbors"
+G_CONSTANT = "Constant"
 
 # Aggregation options
 M_MEDIAN = "Median"
 M_MEAN = "Mean"
 M_MODE = "Mode"
 
+# Spatial neighbor options (window_type)
+W_SQUARE = "Square"
+W_LINEAR = "Linear"
+
 p = Properties.getInstance()
 
-# Other constants
-IMKEY_COLUMN_INDEX = 0 if not p.table_id else 1
-PLATE_COLUMN_INDEX = IMKEY_COLUMN_INDEX + 1
-WELL_COLUMN_INDEX = PLATE_COLUMN_INDEX + 1
-KEY_INDEX_OFFSET = WELL_COLUMN_INDEX + 1
-
-def get_normalization_option(self):
-    '''Returns normalization options that the user selected'''
-    return normalization_option
-
-def get_aggregate_function(self):
-    '''Returns filter settings that the user selected'''
-    return aggregate_function
-
-def get_filter_parameters(self):
-    '''Returns filter settings that the user selected'''
-    return filter_type, filter_size
-
-def get_selected_measurement_columns(self):
-    '''Returns the list of measurement columns that the user selected'''
-    return selected_columns
-
-def get_all_normalization_steps(self):    
-    '''Returns list of selected normalization steps'''
-    return all_normalization_steps
-
-def get_output_format(self):
-    '''Returns list of requested output formats'''
-    return output_formats
-
-def get_measurements_from_columns(self):
-    '''Construct query and obtain measurements'''
-    query = "SELECT %s,"%("ImageNumber" if not p.table_id else "TableNumber, ImageNumber")
-    if p.plate_id:
-        query += ", %s, %s "%(p.plate_id, p.well_id)
-    query += ",".join([measurement_column for measurement_column in self.get_selected_measurement_columns()])
-    query += " FROM %s"%p.image_table
-    if p.plate_id:
-        query += " ORDER BY %s, %s ASC"%(p.plate_id, p.well_id)
-    cursor.execute(query)
-    return np.array(cursor.fetchall())
-            
-def do_normalization_step(self, input_data, normalization_values, normalization_type, aggregate_type, win_size, win_type):
+def do_normalization_step(self, input_data, grouping, aggregate_type, win_size, win_type, constant):
     '''Aply a single normalization step
     input_data -- a numpy array of raw data to normalize. This array MUST be in the same
                   shape as your plate data if you are applying a spacially dependent
-                  normalization_type.
+                  grouping.
     '''
-    assert input_data.ndim==2 or normalization_type in (N_CONSTANT, N_EXPERIMENT)
+    assert input_data.ndim==2 or grouping in (G_CONSTANT, G_EXPERIMENT)
     
-    if normalization_type == N_EXPERIMENT:
-        plate_data, normalization_values = do_normalization(plate_data, normalization_values, aggregate_type)
-    elif normalization_type == N_PLATE:
-        all_plates = set(input_data[:,PLATE_COLUMN_INDEX])
-        for plate in all_plates:
-            index = plate_data[:,PLATE_COLUMN_INDEX] == plate
-            output_data, output_norms = do_normalization(plate_data[index],
-                                                         normalization_values[index],
-                                                         normalization_type,
-                                                         aggregate_type)
-            plate_data[index] = output_data
-            normalization_values[index] = output_norms
+    if grouping == G_EXPERIMENT:
+        output_data = do_normalization(input_data, aggregate_type)
         
-    elif normalization_type == N_QUADRANT:
+    elif grouping == G_PLATE:
+        output_data = do_normalization(input_data, aggregate_type)
+    
+    elif grouping == G_QUADRANT:
         all_quadrants = [
             # upper left
-            (np.arange(plate_data.shape[0]) % 2 == 0, np.arange(plate_data.shape[1]) % 2 == 0),
+            (np.arange(input_data.shape[0]) % 2 == 0, np.arange(input_data.shape[1]) % 2 == 0),
             # upper right
-            (np.arange(plate_data.shape[0]) % 2 == 0, np.arange(plate_data.shape[1]) % 2 != 0),
+            (np.arange(input_data.shape[0]) % 2 == 0, np.arange(input_data.shape[1]) % 2 != 0),
             # lower left
-            (np.arange(plate_data.shape[0]) % 2 != 0, np.arange(plate_data.shape[1]) % 2 == 0),
+            (np.arange(input_data.shape[0]) % 2 != 0, np.arange(input_data.shape[1]) % 2 == 0),
             # lower right
-            (np.arange(plate_data.shape[0]) % 2 != 0, np.arange(plate_data.shape[1]) % 2 != 0) ]
-        for quadrant in all_quadrants:
-            output_data, output_norms = do_normalization(plate_data[quadrant[0],:][:,quadrant[1]], 
-                                                         normalization_values[quadrant[0],:][:,quadrant[1]], 
-                                                         normalization_type, aggregate_type)
-            plate_data[quadrant[0],:][:,quadrant[1]] = output_data
-            normalization_values[quadrant[0],:][:,quadrant[1]] = output_norms
+            (np.arange(input_data.shape[0]) % 2 != 0, np.arange(input_data.shape[1]) % 2 != 0) ]
+        output_data = input_data.copy()
+        for quad in all_quadrants:
+            output_data[quad[0],:][:,quad[1]] = do_normalization(input_data[quad[0],:][:,quad[1]], aggregate_type)
             
-    elif normalization_type == N_WELL_NEIGHBORS:
+    elif grouping == G_WELL_NEIGHBORS:
         if neighbor_type == W_SQUARE:
-            plate_data, normalization_values = square_filter_normalization(plate_data, normalization_values, 
-                                                                           normalization_type, aggregate_type)
+            output_data = square_filter_normalization(input_data, aggregate_type, win_size)
         elif neighbor_type == W_LINEAR:
-            plate_data, normalization_values = linear_filter_normalization(plate_data, normalization_values, 
-                                                                           normalization_type, aggregate_type)
-    elif normalization_type == N_CONSTANT:
-        input_data, normalization_values = do_normalization(input_data, normalization_values, 
-                                                            normalization_type, aggregate_type )
+            output_data = linear_filter_normalization(input_data, aggregate_type, win_size)
+            
+    elif grouping == G_CONSTANT:
+        input_data = do_normalization(input_data, constant)
     else:
         raise 'Programming Error: Unknown normalization type supplied.'
         
-    if not p.plate_id: # No plate layout: Keep data as-is
-        output_data = plate_data
-    else:
-        output_data # Rearrange plate_data and normalization values
-        normalization_values
-        
-    return output_data, normalization_values
+    return output_data, input_data / output_data
 
-def square_filter_normalization(self, data, normalization_values):
-    
-    filter_type, filter_size = self.get_filter_parameters()
-    
+def square_filter_normalization(self, data, aggregate_type, win_size):
+    '''
+    '''
     # Filter locally, for staining variation
-    if self.get_aggregate_function()  == M_MEDIAN:
-        normalization_values = median_filter(data, filter_size)
-    elif self.get_aggregate_function()  == M_MEAN:
-        normalization_values = uniform_filter(data, filter_size)
+    if aggregate_type  == M_MEDIAN:
+        normalization_values = median_filter(data, (win_size, win_size))
+    elif aggregate_type  == M_MEAN:
+        normalization_values = uniform_filter(data, (win_size, win_size))
+    else:
+        raise
     
-    # Return the result
-    return ata/normalization_values, normalization_values
+    return data / normalization_values
 
-def linear_filter_normalization(self, data, normalization_values):
-    
-    filter_type, filter_size = self.get_filter_parameters()
-    
+def linear_filter_normalization(self, data, aggregate_type, win_size):
+    '''
+    '''
     # Filter linearly (assumes meandering pattern)
-    if self.get_aggregate_function()  == M_MEDIAN:
-        normalization_values = median_filter(data.flatten(), filter_size).reshape(data.shape)
-    elif self.get_aggregate_function()  == M_MEAN:
-        normalization_values = uniform_filter(data.flatten(), filter_size).reshape(data.shape)
+    if aggregate_type  == M_MEDIAN:
+        normalization_values = median_filter(data.flatten(), win_size).reshape(data.shape)
+    elif aggregate_type  == M_MEAN:
+        normalization_values = uniform_filter(data.flatten(), win_size).reshape(data.shape)
+    else:
+        raise
     
-    # Return the result
-    return data/normalization_values, normalization_values
+    return data / normalization_values
 
-def do_normalization(self, data, normalization_values, normalization_type, aggregate_type_or_const):
-    if aggregate_type == M_MEDIAN:
+def do_normalization(self, data, aggregate_type_or_const):
+    '''
+    data -- meat and potatoes
+    aggregate_type_or_const -- specify an aggregation type or a numeric constant
+       to divide by
+    '''
+    if aggregate_type_or_const == M_MEDIAN:
         val = np.median(data)
-    elif aggregate_type == M_MEAN:
+    elif aggregate_type_or_const == M_MEAN:
         val = np.mean(data)
-    elif aggregate_type == M_MODE:
+    elif aggregate_type_or_const == M_MODE:
         import scipy.ndimage
         # Use histogram function with values a bit removed from saturation
         robust_min = 0.02 * (np.max(data) - np.min(data)) + np.min(data)
@@ -162,12 +114,4 @@ def do_normalization(self, data, normalization_values, normalization_type, aggre
         val = np.min(data) + float(index)*(np.max(data) - np.min(data))
     elif type(aggregate_type_or_const) in (float, int, long):
         val = aggregate_type_or_const
-    return data/val, normalization_values*val
-
-def output_normalization(self):
-    output_formats = self.get_output_format()
-    if output_formats == WRITE_TO_TABLE:
-        # Write to table
-        pass
-    if output_formats == WRITE_TO_CSV:
-        pass
+    return data/val
