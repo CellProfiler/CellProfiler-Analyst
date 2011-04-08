@@ -377,6 +377,7 @@ class OldFilter(WhereCondition):
         self.tables = [t.strip() for t in self.from_clause.split(',')]
         for t in self.tables:
             if ' ' in t:
+                import wx
                 wx.MessageBox('Unable to parse properties filter "%s" because '
                               'it appears to use table aliases. Please remove '
                               'aliases and try again.\n\tQuery was: "%s".'%(filter_name, fq), 'Error')
