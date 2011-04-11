@@ -1,6 +1,6 @@
 from scipy.ndimage import median_filter
 import numpy as np
-
+import properties
 # Parameter names for do_normalization_step
 P_GROUPING = 'grouping'
 P_AGG_TYPE = 'aggregate_type'
@@ -24,13 +24,15 @@ M_MODE = "Mode"
 W_SQUARE = "Square"
 W_LINEAR = "Linear"
 
-p = Properties.getInstance()
+p = properties.Properties.getInstance()
 
 def do_normalization_step(self, input_data, grouping, aggregate_type, win_size, win_type, constant):
     '''Aply a single normalization step
     input_data -- a numpy array of raw data to normalize. This array MUST be in the same
                   shape as your plate data if you are applying a spacially dependent
                   grouping.
+    returns a 2-tuple containing an array of normalized values and an array of
+       the normalization factors
     '''
     assert input_data.ndim==2 or grouping in (G_CONSTANT, G_EXPERIMENT)
     

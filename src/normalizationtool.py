@@ -3,6 +3,9 @@ import  wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
 import normalize as norm
 import dbconnect
+import properties
+
+p = properties.Properties.getInstance()
 
 GROUP_CHOICES = ['experiment', 'plate', 'quad', 'neighbors', 'constant']
 AGG_CHOICES = ['mean', 'median', 'mode']
@@ -93,7 +96,11 @@ class NormalizationUI(wx.Frame):
         #
         # Define the controls
         #
-        self.col_choices = wx.CheckListBox(self, -1, choices=map(str, range(100)), size=(-1, 100))
+        db = dbconnect.DBConnect.getInstance()
+        measurements = db.GetColumnNames(p.image_table)
+        types = db.GetColumnTypes(p.image_table)
+        numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        self.col_choices = wx.CheckListBox(self, -1, choices=numeric_columns, size=(-1, 100))
         add_norm_step_btn = wx.Button(self, -1, 'Add normalization step')
         norm_meas_checkbox = wx.CheckBox(self, -1, 'Normalized measurement')
         norm_value_checkbox = wx.CheckBox(self, -1, 'Normalization value')
@@ -184,40 +191,54 @@ class NormalizationUI(wx.Frame):
         '''
         # Get the data from the db
         db = dbconnect.DBConnect.getInstance()
+        meas_col_names = self.col_choices.GetCheckedStrings()
         FIRST_MEAS_INDEX = len(dbconnect.image_key_columns() + dbconnect.well_key_columns())
         WELL_KEY_INDEX = len(dbconnect.image_key_columns())
-        query = "SELECT %s, %s FROM %s"%(dbconnect.UniqueImageClause(), dbconnect.UniqueWellClause(), p.image_table)
-        input_data = db.execute(query)
+        query = "SELECT %s, %s, %s FROM %s"%(dbconnect.UniqueImageClause(), 
+                                             dbconnect.UniqueWellClause(), 
+                                             ', '.join(meas_col_names),
+                                             p.image_table)
+        input_data = np.array(db.execute(query), dtype=object)
+        well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
         
-        for col in input_data[:,FIRST_MEAS_INDEX:].T:
-            # Iterate over each measurement column
+        output_normed = []
+        output_factors = []
+        for colnum, col in enumerate(input_data[:,FIRST_MEAS_INDEX:].T):
             norm_data = col.copy()
             for step_panel in self.norm_steps:
-                # Iterate over each normalization step
                 d = step_panel.get_configuration_dict()
                 if d[norm.P_GROUPING] in (norm.G_PLATE, norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
-                    #Format data in plate format
+                    # Reshape data if norm step is plate sensitive.
                     assert p.plate_id and p.well_id
-                    from plateviewer import FormatPlateMapData
-                    keys_and_vals = [input_data[i,idx][0] for i in range(input_data.shape[0])]
-                    data, well_keys = FormatPlateMapData(keys_and_vals)
+                    norm_data, wks = FormatPlateMapData(np.hstack((well_keys, np.array([norm_data]).T)))
                     
-                norm_data, norm_values = norm.do_normalization_step(norm_data, **d)
+                norm_data, norm_factors = norm.do_normalization_step(norm_data, **d)
+
+                if d[norm.P_GROUPING] in (norm.G_PLATE, norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
+                    norm_data.flatten()
+            output_columns += [norm_data]
+            output_factors += [norm_factors]
 
             
-            output_data = data.copy()
-            
-            # TODO: Re-arrange the data back the way it was for the final normalization
-            # TODO: Write to new table/column and link to original table (if needed)
+        
+        output_table = '2008_11_05_QualityControlForScreens'            
+        db.execute('DROP TABLE IF EXISTS %s'%(output_table))
+        col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(col))
+                              for col in dbconnect.image_key_columns() + dbconnect.well_key_columns()])
+        col_defs += ', '.join(['%s_Norm %s'%(col, db.GetColumnTypeString(col))
+                               for col in meas_col_names]) 
+        db.execute('CREATE TABLE %s (%s)'%(output_table, col_defs))
+        
+        for i, (val, factor) in enumerate(zip(norm_data, norm_factors)):
+            db.execute('INSERT INTO %s values (%s)'%(output_table, ','.join(input_data[i, :FIRST_MEAS_INDEX] + [val])))
         
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-
-    f = NormalizationUI(size=(700,500))
-    f.Show()
-    f.Center()
     
-    
+    if p.show_load_dialog():
+        f = NormalizationUI(size=(700,500))
+        f.Show()
+        f.Center()
     
     app.MainLoop()
