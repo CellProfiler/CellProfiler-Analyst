@@ -27,7 +27,7 @@ def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_ty
     returns a 2-tuple containing an array of normalized values and an array of
        the normalization factors
     '''
-    assert input_data.ndim==2 or grouping in (G_CONSTANT, G_EXPERIMENT)
+    #assert input_data.ndim==2 or grouping in (G_CONSTANT, G_EXPERIMENT)
     
     if grouping == G_EXPERIMENT:
         output_data = do_normalization(input_data, aggregate_type)

@@ -1,10 +1,13 @@
 import wx
-import  wx.lib.intctrl
+import wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
 import normalize as norm
 import numpy as np
 import dbconnect
+import logging
 import properties
+from itertools import groupby
+from plateviewer import FormatPlateMapData
 
 p = properties.Properties.getInstance()
 G_EXPERIMENT = "Experiment"
@@ -206,10 +209,11 @@ class NormalizationUI(wx.Frame):
         meas_col_names = self.col_choices.GetCheckedStrings()
         FIRST_MEAS_INDEX = len(dbconnect.image_key_columns() + dbconnect.well_key_columns())
         WELL_KEY_INDEX = len(dbconnect.image_key_columns())
-        query = "SELECT %s, %s, %s FROM %s"%(dbconnect.UniqueImageClause(), 
+        query = "SELECT %s, %s, %s FROM %s ORDER BY %s"%(dbconnect.UniqueImageClause(), 
                                              dbconnect.UniqueWellClause(), 
                                              ', '.join(meas_col_names),
-                                             p.image_table)
+                                             p.image_table,
+                                             dbconnect.UniqueWellClause())
         input_data = np.array(db.execute(query), dtype=object)
         well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
         
@@ -217,17 +221,23 @@ class NormalizationUI(wx.Frame):
         output_factors = []
         for colnum, col in enumerate(input_data[:,FIRST_MEAS_INDEX:].T):
             norm_data = col.copy()
-            for step_panel in self.norm_steps:
+            for step_num, step_panel in enumerate(self.norm_steps):
                 d = step_panel.get_configuration_dict()
                 if d[norm.P_GROUPING] in (norm.G_PLATE, norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
                     # Reshape data if norm step is plate sensitive.
                     assert p.plate_id and p.well_id
-                    norm_data, wks = FormatPlateMapData(np.hstack((well_keys, np.array([norm_data]).T)))
-                    
-                norm_data, norm_factors = norm.do_normalization_step(norm_data, **d)
-
-                if d[norm.P_GROUPING] in (norm.G_PLATE, norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
-                    norm_data.flatten()
+                    wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
+                    new_norm_data    = []
+                    new_norm_factors = []
+                    for k, plate_grp in groupby(wellkeys_and_vals, lambda(row): tuple(row[0])):
+                        plate_data, wks = FormatPlateMapData(list(plate_grp))
+                        pnorm_data, pnorm_factors = norm.do_normalization_step(plate_data, **d)
+                        new_norm_data    += pnorm_data.flatten().tolist()
+                        new_norm_factors += pnorm_factors.tolist()
+                    norm_data = new_norm_data
+                    norm_factors = new_norm_factors
+                else:
+                    norm_data, norm_factors = norm.do_normalization_step(norm_data, **d)
             output_columns += [norm_data]
             output_factors += [norm_factors]
 
@@ -251,6 +261,7 @@ class NormalizationUI(wx.Frame):
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()
+    logging.basicConfig(level=logging.DEBUG)
     
     if p.show_load_dialog():
         f = NormalizationUI(size=(700,500))
