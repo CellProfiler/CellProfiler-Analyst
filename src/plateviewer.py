@@ -666,36 +666,49 @@ class PlateViewer(wx.Frame, CPATool):
         if 'well display' in settings:
             self.wellDisplayChoice.SetStringSelection(settings['well display'])
             self.OnSelectWellDisplay()
-
+            
             
 def FormatPlateMapData(keys_and_vals, categorical=False):
     '''
-    wellsAndVals: a list of lists of plates, wells and values
+    wellsAndVals: a list of lists of well-keys and values
+       (eg. [['plate1', 'A01', 0.2], ...])
     returns a 2-tuple containing:
-       -an array in the shape of the plate containing the given values with NaNs filling empty slots.  
-       -an array in the shape of the plate containing the given keys with (unknownplate, unknownwell) filling empty slots
+       -an array in the shape of the plate containing the given values with 
+        NaNs filling empty slots. If multiple sites per-well are given, then
+        the array will be shaped (rows, cols, sites)
+       -an array in the shape of the plate containing the given keys with 
+        (UnknownPlate, UnknownWell) filling empty slots
     '''
+    from itertools import groupby
+    keys_and_vals = np.array(keys_and_vals)
     nkeycols = len(dbconnect.well_key_columns())
-    
     if   p.plate_type == '96':   shape = P96
     elif p.plate_type == '384':  shape = P384
     elif p.plate_type == '1536': shape = P1536
     elif p.plate_type == '5600': 
         shape = P5600
-        data = np.array(keys_and_vals)[:,-1]
-        well_keys = np.array(keys_and_vals)[:,:-1]
+        well_keys = keys_and_vals[:,:-1] # first column(s) are keys
+        data = keys_and_vals[:,-1]       # last column is data
         assert data.ndim == 1
         if len(data) < 5600: raise Exception(
-            '''The measurement you chose to plot was missing for some wells. 
+            '''The measurement you chose to plot was missing for some spots. 
             Because CPA doesn't know the well labelling convention used by this
             microarray, we can't be sure how to plot the data. If you are 
-            plotting an object measurement, you probably have no objects in 
-            some of your wells.''')
+            plotting an object measurement, you may have some spots with 0 
+            objects and therefore no entry in the table.''')
         assert len(data) == 5600
         data = np.array(list(meander(data.reshape(shape)))).reshape(shape)
         well_keys = np.array(list(meander(well_keys.reshape(shape + (nkeycols,) )))).reshape(shape + (nkeycols,))
         return data, well_keys
 
+    # compute the number of sites-per-well as the max number of rows with the same well-key
+    nsites = max([len(list(grp))
+                  for k, grp in groupby(keys_and_vals, 
+                                        lambda(row): tuple(row[:nkeycols]))
+                  ])
+    if nsites > 1:
+        # add a sites dimension to the array shape if there's >1 site per well
+        shape += (nsites,)        
     data = np.ones(shape) * np.nan
     if categorical:
         data = data.astype('object')
@@ -705,8 +718,8 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
         dummy_key = ('UnknownWell',)
     well_keys = np.array([dummy_key] * np.prod(shape), 
                          dtype=object).reshape(shape + (nkeycols,))
+    dm = DataModel.getInstance()
     for kv in keys_and_vals:
-        dm = DataModel.getInstance()
         (row, col) = dm.get_well_position_from_name(kv[-2])
         data[(row, col)] = kv[-1]
         well_keys[row, col] = kv[:-1]
