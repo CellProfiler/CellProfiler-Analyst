@@ -1,6 +1,11 @@
 from scipy.ndimage import median_filter
 import numpy as np
 import properties
+# Grouping options
+from normalizationtool import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
+# Aggregation options
+from normalizationtool import  M_MEDIAN, M_MEAN, M_MODE
+
 # Parameter names for do_normalization_step
 P_GROUPING = 'grouping'
 P_AGG_TYPE = 'aggregate_type'
@@ -8,25 +13,13 @@ P_WIN_SIZE = 'win_size'
 P_WIN_TYPE = 'win_type'
 P_CONSTANT = 'constant'
 
-# Grouping options
-G_EXPERIMENT = "Experiment"
-G_PLATE = "Plate"
-G_QUADRANT = "Quadrant"
-G_WELL_NEIGHBORS = "Well neighbors"
-G_CONSTANT = "Constant"
-
-# Aggregation options
-M_MEDIAN = "Median"
-M_MEAN = "Mean"
-M_MODE = "Mode"
-
 # Spatial neighbor options (window_type)
 W_SQUARE = "Square"
 W_LINEAR = "Linear"
 
 p = properties.Properties.getInstance()
 
-def do_normalization_step(self, input_data, grouping, aggregate_type, win_size, win_type, constant):
+def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_type, constant):
     '''Aply a single normalization step
     input_data -- a numpy array of raw data to normalize. This array MUST be in the same
                   shape as your plate data if you are applying a spacially dependent
@@ -63,13 +56,13 @@ def do_normalization_step(self, input_data, grouping, aggregate_type, win_size, 
             output_data = linear_filter_normalization(input_data, aggregate_type, win_size)
             
     elif grouping == G_CONSTANT:
-        input_data = do_normalization(input_data, constant)
+        output_data = do_normalization(input_data, constant)
     else:
         raise 'Programming Error: Unknown normalization type supplied.'
         
     return output_data, input_data / output_data
 
-def square_filter_normalization(self, data, aggregate_type, win_size):
+def square_filter_normalization(data, aggregate_type, win_size):
     '''
     '''
     # Filter locally, for staining variation
@@ -82,7 +75,7 @@ def square_filter_normalization(self, data, aggregate_type, win_size):
     
     return data / normalization_values
 
-def linear_filter_normalization(self, data, aggregate_type, win_size):
+def linear_filter_normalization(data, aggregate_type, win_size):
     '''
     '''
     # Filter linearly (assumes meandering pattern)
@@ -95,7 +88,7 @@ def linear_filter_normalization(self, data, aggregate_type, win_size):
     
     return data / normalization_values
 
-def do_normalization(self, data, aggregate_type_or_const):
+def do_normalization(data, aggregate_type_or_const):
     '''
     data -- meat and potatoes
     aggregate_type_or_const -- specify an aggregation type or a numeric constant
@@ -113,7 +106,7 @@ def do_normalization(self, data, aggregate_type_or_const):
         nbins = 256
         h = scipy.ndimage.histogram(data.flatten(), robust_min, robust_max, nbins)
         index = np.argmax(h)
-        val = np.min(data) + float(index)*(np.max(data) - np.min(data))
+        val = np.min(data) + float(index)/float(nbins-1)*(np.max(data) - np.min(data))
     elif type(aggregate_type_or_const) in (float, int, long):
         val = aggregate_type_or_const
     return data/val

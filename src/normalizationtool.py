@@ -2,13 +2,22 @@ import wx
 import  wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
 import normalize as norm
+import numpy as np
 import dbconnect
 import properties
 
 p = properties.Properties.getInstance()
+G_EXPERIMENT = "Experiment"
+G_PLATE = "Plate"
+G_QUADRANT = "Quadrant"
+G_WELL_NEIGHBORS = "Neighbors"
+G_CONSTANT = "Constant"
+GROUP_CHOICES = [ G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT ]
 
-GROUP_CHOICES = ['experiment', 'plate', 'quad', 'neighbors', 'constant']
-AGG_CHOICES = ['mean', 'median', 'mode']
+M_MEDIAN = "Median"
+M_MEAN = "Mean"
+M_MODE = "Mode"
+AGG_CHOICES = [ M_MEDIAN, M_MEAN, M_MODE ]
 
 class NormalizationStepPanel(wx.Panel):
     def __init__(self, parent, id=-1, allow_delete=True, **kwargs):
@@ -59,11 +68,11 @@ class NormalizationStepPanel(wx.Panel):
         self.window_size.SetForegroundColour(wx.LIGHT_GREY)
         self.agg_type.Show()
         self.constant_float.Hide()
-        if selected_string == 'neighbors':
+        if selected_string == G_WELL_NEIGHBORS:
             self.window_type.Enable()
             self.window_size.Enable()
             self.window_size.SetForegroundColour(wx.BLACK)
-        elif selected_string == 'constant':
+        elif selected_string == G_CONSTANT:
             self.agg_type.Hide()
             self.constant_float.Show()
         self.Refresh()
@@ -80,9 +89,9 @@ class NormalizationStepPanel(wx.Panel):
         '''
         return {norm.P_GROUPING : self.window_group.GetStringSelection(), 
                 norm.P_AGG_TYPE : self.agg_type.GetStringSelection(), 
-                norm.P_CONSTANT : self.constant_float.GetValue() if self.window_group.GetStringSelection()=='constant' else None, 
-                norm.P_WIN_TYPE : self.window_type.GetStringSelection() if self.window_group.GetStringSelection()=='neighbors' else None, 
-                norm.P_WIN_SIZE : self.window_size.Value if self.window_group.GetStringSelection()=='neighbors' else None
+                norm.P_CONSTANT : self.constant_float.GetValue() if self.window_group.GetStringSelection()==G_CONSTANT else None, 
+                norm.P_WIN_TYPE : self.window_type.GetStringSelection() if self.window_group.GetStringSelection()==G_WELL_NEIGHBORS else None, 
+                norm.P_WIN_SIZE : self.window_size.Value if self.window_group.GetStringSelection()==G_WELL_NEIGHBORS else None
                 }
 
 class NormalizationUI(wx.Frame):
@@ -108,7 +117,6 @@ class NormalizationUI(wx.Frame):
         
         self.do_norm_btn = wx.Button(self, wx.ID_OK, 'Perform Normalization')
                 
-        self.norm_steps = [ ]
         self.boxes = [ ]
         
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
@@ -123,7 +131,10 @@ class NormalizationUI(wx.Frame):
         self.Sizer.Add(wx.StaticText(self, -1, 'Specify the normalization steps you want to perform:'), 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
         self.sw = wx.ScrolledWindow(self)
         sbs = wx.StaticBoxSizer(wx.StaticBox(self.sw, label=''), wx.VERTICAL)
-        sbs.Add(NormalizationStepPanel(self.sw, allow_delete=False), 0, wx.EXPAND)
+        nsp = NormalizationStepPanel(self.sw, allow_delete=False)
+        self.norm_steps = [ nsp ]
+        self.boxes = [ sbs ]
+        sbs.Add(nsp, 0, wx.EXPAND)
         self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.sw.Sizer.Add(sbs, 0, wx.EXPAND)
         (w,h) = self.sw.Sizer.GetSize()
@@ -165,6 +176,7 @@ class NormalizationUI(wx.Frame):
         sz = wx.StaticBoxSizer(wx.StaticBox(self.sw, label=''), wx.VERTICAL)
         self.norm_steps += [NormalizationStepPanel(self.sw)]
         self.boxes += [sz]
+        # TODO: Add new boxes at bottom, rather than at top
         sz.Add(self.norm_steps[-1], 0, wx.EXPAND)
         self.sw.Sizer.InsertSizer(len(self.norm_steps), sz, 0, wx.EXPAND|wx.TOP, 15)
         self.sw.FitInside()
@@ -201,7 +213,7 @@ class NormalizationUI(wx.Frame):
         input_data = np.array(db.execute(query), dtype=object)
         well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
         
-        output_normed = []
+        output_columns = []
         output_factors = []
         for colnum, col in enumerate(input_data[:,FIRST_MEAS_INDEX:].T):
             norm_data = col.copy()
@@ -221,16 +233,20 @@ class NormalizationUI(wx.Frame):
 
             
         
-        output_table = '2008_11_05_QualityControlForScreens'            
+        output_table = 'NormTest'#'2008_11_05_QualityControlForScreens'            
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
-        col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(col))
+        col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                               for col in dbconnect.image_key_columns() + dbconnect.well_key_columns()])
-        col_defs += ', '.join(['%s_Norm %s'%(col, db.GetColumnTypeString(col))
-                               for col in meas_col_names]) 
+        col_defs += ', '+ ', '.join(['%s_Norm %s'%(col, db.GetColumnTypeString(p.image_table, col))
+                                    for col in meas_col_names]) 
         db.execute('CREATE TABLE %s (%s)'%(output_table, col_defs))
         
+        cmd = 'INSERT INTO %s values ('
+        cmd += '%d,'*len(dbconnect.image_key_columns())
+        cmd += '"%s",'*len(dbconnect.well_key_columns())
+        cmd += "%f)"
         for i, (val, factor) in enumerate(zip(norm_data, norm_factors)):
-            db.execute('INSERT INTO %s values (%s)'%(output_table, ','.join(input_data[i, :FIRST_MEAS_INDEX] + [val])))
+            db.execute(cmd%tuple([output_table] + list(input_data[i, :FIRST_MEAS_INDEX]) + [val]))
         
 
 if __name__ == "__main__":
