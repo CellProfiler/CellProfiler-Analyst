@@ -346,6 +346,7 @@ class PlateViewer(wx.Frame, CPATool):
             if t is not None:
                 self.sourceChoice.Items = self.sourceChoice.Items[:-1] + [t] + self.sourceChoice.Items[-1:]
                 self.sourceChoice.Select(self.sourceChoice.Items.index(t))
+                table = t
             else:
                 self.sourceChoice.Select(0)
                 return
