@@ -12,6 +12,7 @@ import properties
 import logging
 import matplotlib.cm
 import numpy as np
+from itertools import groupby
 import os
 import sys
 import re
@@ -123,7 +124,7 @@ class PlateViewer(wx.Frame, CPATool):
         annotationSizer.Add(wx.StaticText(self, label='Label:'))
         self.annotationLabel = wx.TextCtrl(self, -1, 'Select wells')#, style=wx.TE_PROCESS_ENTER)
         self.annotationLabel.Disable()
-        self.annotationLabel.SetForegroundColour(wx.Color(80,80,80))
+        self.annotationLabel.SetForegroundColour(wx.Colour(80,80,80))
         self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
         annotationSizer.Add(self.annotationLabel)
         annotationSizer.AddSpacer((-1,3))
@@ -466,7 +467,7 @@ class PlateViewer(wx.Frame, CPATool):
                 self.annotationLabel.SetValue(','.join([str(a) for a in annotations if a is not None]))
         else:
             self.annotationLabel.Disable()
-            self.annotationLabel.SetForegroundColour(wx.Color(80,80,80))
+            self.annotationLabel.SetForegroundColour(wx.Colour(80,80,80))
             self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
             self.annotationLabel.SetValue('Select wells')
                 
@@ -719,10 +720,16 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     well_keys = np.array([dummy_key] * np.prod(shape), 
                          dtype=object).reshape(shape + (nkeycols,))
     dm = DataModel.getInstance()
-    for kv in keys_and_vals:
-        (row, col) = dm.get_well_position_from_name(kv[-2])
-        data[(row, col)] = kv[-1]
-        well_keys[row, col] = kv[:-1]
+    keys_and_vals.sort()
+    for k, well_grp in groupby(keys_and_vals, lambda(row): tuple(row[:len(dummy_key)])):
+        (row, col) = dm.get_well_position_from_name(k[-1])
+        well_data = np.array(list(well_grp))[:,-1]
+        if len(well_data) == 1:
+            data[row, col] = well_data[0]
+        else:
+            data[row, col] = well_data
+        well_keys[row, col] = k
+        
     return data, well_keys
 
 def meander(a):
