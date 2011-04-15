@@ -545,13 +545,14 @@ class DBConnect(Singleton):
         #XXX: this doesn't work for SQLite
         col_names = self.GetResultColumnNames()
         connID = threading.currentThread().getName()
-        if n is None:
-            records = self.cursors[connID].fetchall()
-        else:
-            records = self.cursors[connID].fetchmany(n)
-            if len(records) == 0:
-                return None
-        return np.array(list(records), dtype=self.result_dtype())
+        records = []
+        while True:
+            r = self.cursors[connID].fetchmany(n)
+            print len(r)
+            if len(r) == 0:
+                break
+            records.extend(list(r))
+        return np.array(records, dtype=self.result_dtype())
     
     def GetObjectIDAtIndex(self, imKey, index):
         '''
