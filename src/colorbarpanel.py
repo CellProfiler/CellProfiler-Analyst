@@ -254,8 +254,12 @@ class ColorBarPanel(wx.Panel):
         
     def OnResize(self, evt):
         range = self.global_extents[1] - self.global_extents[0]
-        self.low_slider.SetPosition((self.Size[0] * (self.interval[0] - self.global_extents[0]) / range - s_off, -1))
-        self.high_slider.SetPosition((self.Size[0] * (self.interval[1] - self.global_extents[0]) / range - s_off, -1))
+        if range == 0:
+            self.low_slider.SetPosition((0,-1))
+            self.high_slider.SetPosition((self.Size[1],-1))
+        else:
+            self.low_slider.SetPosition((self.Size[0] * (self.interval[0] - self.global_extents[0]) / range - s_off, -1))
+            self.high_slider.SetPosition((self.Size[0] * (self.interval[1] - self.global_extents[0]) / range - s_off, -1))
         self.UpdateLabelFormat()
             
             

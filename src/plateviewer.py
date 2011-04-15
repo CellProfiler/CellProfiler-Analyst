@@ -720,8 +720,9 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     well_keys = np.array([dummy_key] * np.prod(shape), 
                          dtype=object).reshape(shape + (nkeycols,))
     dm = DataModel.getInstance()
-    keys_and_vals.sort()
-    for k, well_grp in groupby(keys_and_vals, lambda(row): tuple(row[:len(dummy_key)])):
+    ind = keys_and_vals.argsort(axis=0)
+    for k, well_grp in groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
+                               lambda(row): tuple(row[:len(dummy_key)])):
         (row, col) = dm.get_well_position_from_name(k[-1])
         well_data = np.array(list(well_grp))[:,-1]
         if len(well_data) == 1:
