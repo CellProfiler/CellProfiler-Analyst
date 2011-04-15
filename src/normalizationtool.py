@@ -20,6 +20,7 @@ GROUP_CHOICES = [ G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTAN
 M_MEDIAN = "Median"
 M_MEAN = "Mean"
 M_MODE = "Mode"
+M_ZSCORE = "Z score"
 AGG_CHOICES = [ M_MEDIAN, M_MEAN, M_MODE ]
 
 class NormalizationStepPanel(wx.Panel):
@@ -209,11 +210,12 @@ class NormalizationUI(wx.Frame):
         meas_col_names = self.col_choices.GetCheckedStrings()
         FIRST_MEAS_INDEX = len(dbconnect.image_key_columns() + dbconnect.well_key_columns())
         WELL_KEY_INDEX = len(dbconnect.image_key_columns())
-        query = "SELECT %s, %s, %s FROM %s ORDER BY %s"%(dbconnect.UniqueImageClause(), 
+        query = "SELECT %s, %s, %s FROM %s "%(dbconnect.UniqueImageClause(), 
                                              dbconnect.UniqueWellClause(), 
                                              ', '.join(meas_col_names),
-                                             p.image_table,
-                                             dbconnect.UniqueWellClause())
+                                             p.image_table)
+        if p.plate_id and p.well_id:
+            query += "ORDER BY %s"%dbconnect.UniqueWellClause()
         input_data = np.array(db.execute(query), dtype=object)
         well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
         
@@ -230,20 +232,20 @@ class NormalizationUI(wx.Frame):
                     new_norm_data    = []
                     new_norm_factors = []
                     for k, plate_grp in groupby(wellkeys_and_vals, lambda(row): tuple(row[0])):
-                        plate_data, wks = FormatPlateMapData(list(plate_grp))
+                        keys_and_vals = list(plate_grp)
+                        plate_data, wks, ind = FormatPlateMapData(keys_and_vals)
                         pnorm_data, pnorm_factors = norm.do_normalization_step(plate_data, **d)
-                        new_norm_data    += pnorm_data.flatten().tolist()
-                        new_norm_factors += pnorm_factors.tolist()
+                        new_norm_data    += pnorm_data.flatten()[ind.flatten().tolist()].tolist()
+                        new_norm_factors += pnorm_data.flatten()[ind.flatten().tolist()].tolist()
                     norm_data = new_norm_data
                     norm_factors = new_norm_factors
                 else:
                     norm_data, norm_factors = norm.do_normalization_step(norm_data, **d)
             output_columns += [norm_data]
             output_factors += [norm_factors]
-
             
         
-        output_table = 'NormTest'#'2008_11_05_QualityControlForScreens'            
+        output_table = 'NormTest'           
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
         col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                               for col in dbconnect.image_key_columns() + dbconnect.well_key_columns()])
@@ -255,7 +257,7 @@ class NormalizationUI(wx.Frame):
         cmd += '%d,'*len(dbconnect.image_key_columns())
         cmd += '"%s",'*len(dbconnect.well_key_columns())
         cmd += "%f)"
-        for i, (val, factor) in enumerate(zip(norm_data, norm_factors)):
+        for i, (val, factor) in enumerate(zip(output_columns[0], output_factors[0])):
             db.execute(cmd%tuple([output_table] + list(input_data[i, :FIRST_MEAS_INDEX]) + [val]))
         
 

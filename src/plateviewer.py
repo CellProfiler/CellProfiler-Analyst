@@ -275,7 +275,7 @@ class PlateViewer(wx.Frame, CPATool):
                 plateMap.SetPlate(plate)
                 self.colorBar.AddNotifyWindow(plateMap)
                 keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
-                platedata, wellkeys = FormatPlateMapData(keys_and_vals, categorical)
+                platedata, wellkeys, ignore = FormatPlateMapData(keys_and_vals, categorical)
                 data += [platedata]
                 key_lists += [wellkeys]
                 if not categorical:
@@ -283,7 +283,7 @@ class PlateViewer(wx.Frame, CPATool):
                     dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
         else:
             self.colorBar.AddNotifyWindow(self.plateMaps[0])
-            platedata, wellkeys = FormatPlateMapData(wellkeys_and_values, categorical)
+            platedata, wellkeys, ignore = FormatPlateMapData(wellkeys_and_values, categorical)
             data += [platedata]
             key_lists += [wellkeys]
             if not categorical:
@@ -699,8 +699,9 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
             objects and therefore no entry in the table.''')
         assert len(data) == 5600
         data = np.array(list(meander(data.reshape(shape)))).reshape(shape)
+        sort_indices = np.array(list(meander(range(len(data)).reshape(shape)))).reshape(shape)
         well_keys = np.array(list(meander(well_keys.reshape(shape + (nkeycols,) )))).reshape(shape + (nkeycols,))
-        return data, well_keys
+        return data, well_keys, sort_indices
 
     # compute the number of sites-per-well as the max number of rows with the same well-key
     nsites = max([len(list(grp))
@@ -719,19 +720,23 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
         dummy_key = ('UnknownWell',)
     well_keys = np.array([dummy_key] * np.prod(shape), 
                          dtype=object).reshape(shape + (nkeycols,))
+    sort_indices = np.ones(data.shape)*np.nan
+    
     dm = DataModel.getInstance()
     ind = keys_and_vals.argsort(axis=0)
-    for k, well_grp in groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
-                               lambda(row): tuple(row[:len(dummy_key)])):
+    for i, (k, well_grp) in enumerate(groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
+                               lambda(row): tuple(row[:len(dummy_key)]))):
         (row, col) = dm.get_well_position_from_name(k[-1])
         well_data = np.array(list(well_grp))[:,-1]
         if len(well_data) == 1:
             data[row, col] = well_data[0]
+            sort_indices[row,col] = ind[:,len(dummy_key)-1][i]
         else:
             data[row, col] = well_data
+            sort_indices[row,col] = ind[:,len(dummy_key)-1][i*nsites + np.array(range(nsites))] 
         well_keys[row, col] = k
         
-    return data, well_keys
+    return data, well_keys, sort_indices
 
 def meander(a):
     ''' a - 2D array

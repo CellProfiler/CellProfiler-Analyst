@@ -1,6 +1,5 @@
 from scipy.ndimage import median_filter
 import numpy as np
-import properties
 # Grouping options
 from normalizationtool import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 # Aggregation options
@@ -16,8 +15,6 @@ P_CONSTANT = 'constant'
 # Spatial neighbor options (window_type)
 W_SQUARE = "Square"
 W_LINEAR = "Linear"
-
-p = properties.Properties.getInstance()
 
 def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_type, constant):
     '''Aply a single normalization step
@@ -95,9 +92,9 @@ def do_normalization(data, aggregate_type_or_const):
        to divide by
     '''
     if aggregate_type_or_const == M_MEDIAN:
-        val = np.median(data)
+        val = np.median(data.flatten())
     elif aggregate_type_or_const == M_MEAN:
-        val = np.mean(data)
+        val = np.mean(data.flatten())
     elif aggregate_type_or_const == M_MODE:
         import scipy.ndimage
         # Use histogram function with values a bit removed from saturation
