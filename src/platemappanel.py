@@ -401,7 +401,7 @@ class PlateMapPanel(wx.Panel):
         self.well_selection_handlers += [handler]
             
     def OnLClick(self, evt):
-        well = self.GetWellAtCoord(evt.X, evt.Y)
+        well = self.GetWellAtCoord(evt.GetX(), evt.GetY())
         
         if well is None:
             return        
@@ -420,8 +420,8 @@ class PlateMapPanel(wx.Panel):
         self.plate = plate
 
     def OnMotion(self, evt):
-        well = self.GetWellAtCoord(evt.X, evt.Y)
-        wellLabel = self.GetWellLabelAtCoord(evt.X, evt.Y)
+        well = self.GetWellAtCoord(evt.GetX(), evt.GetY())
+        wellLabel = self.GetWellLabelAtCoord(evt.GetX(), evt.GetY())
         if well is not None and wellLabel is not None:
             self.tip.SetTip('%s: %s'%(wellLabel,self.data[well]))
             self.tip.Enable(True)
@@ -430,7 +430,7 @@ class PlateMapPanel(wx.Panel):
             
     def OnDClick(self, evt):
         if self.plate is not None:
-            well = self.GetWellLabelAtCoord(evt.X, evt.Y)
+            well = self.GetWellLabelAtCoord(evt.GetX(), evt.GetY())
             imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
                                 (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate), silent=False)
             for imKey in imKeys:
@@ -440,8 +440,8 @@ class PlateMapPanel(wx.Panel):
                     logging.error('Could not open image: %s'%(e))
 
     def OnRClick(self, evt):
-        well_label = self.GetWellLabelAtCoord(evt.X, evt.Y)
-        wellkey = self.GetWellKeyAtCoord(evt.X, evt.Y)
+        well_label = self.GetWellLabelAtCoord(evt.GetX(), evt.GetY())
+        wellkey = self.GetWellKeyAtCoord(evt.GetX(), evt.GetY())
         if wellkey is None:
             return 
         imkeys = db.execute('SELECT %s FROM %s WHERE %s'%
@@ -452,14 +452,14 @@ class PlateMapPanel(wx.Panel):
         popupMenu.SetTitle('well: %s'%(well_label))
         if p.image_thumbnail_cols:
             item = popupMenu.Append(-1, 'Show thumbnail montage')
-            show_montage = lambda(e): self.show_thumbnail_montage(wellkey, (evt.X, evt.Y))
+            show_montage = lambda(e): self.show_thumbnail_montage(wellkey, (evt.GetX(), evt.GetY()))
             popupMenu.Bind(wx.EVT_MENU, show_montage, item)
         for key in imkeys:
             item = popupMenu.Append(-1, ','.join([str(k) for k in key]))
             def handler(evt, key=key):
                 imagetools.ShowImage(key, self.chMap, parent=self)
             popupMenu.Bind(wx.EVT_MENU, handler, item)
-        self.PopupMenu(popupMenu, (evt.X, evt.Y))
+        self.PopupMenu(popupMenu, (evt.GetX(), evt.GetY()))
         
     def show_thumbnail_montage(self, wellkey, pos):
         try:
