@@ -14,7 +14,6 @@ P_WIN_SIZE = 'win_size'
 P_WIN_TYPE = 'win_type'
 P_CONSTANT = 'constant'
 
-
 def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_type, constant):
     '''Aply a single normalization step
     input_data -- a numpy array of raw data to normalize. This array MUST be in the same
@@ -57,7 +56,7 @@ def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_ty
     else:
         raise 'Programming Error: Unknown normalization type supplied.'
         
-    return output_data, input_data / output_data
+    return output_data
 
 def square_filter_normalization(data, aggregate_type, win_size):
     '''
@@ -92,9 +91,9 @@ def do_normalization(data, aggregate_type_or_const):
        to divide by
     '''
     if aggregate_type_or_const == M_MEDIAN:
-        val = np.median(data.flatten())
+        normalization_value = np.median(data.flatten())
     elif aggregate_type_or_const == M_MEAN:
-        val = np.mean(data.flatten())
+        normalization_value = np.mean(data.flatten())
     elif aggregate_type_or_const == M_MODE:
         import scipy.ndimage
         # Use histogram function with values a bit removed from saturation
@@ -103,7 +102,7 @@ def do_normalization(data, aggregate_type_or_const):
         nbins = 256
         h = scipy.ndimage.histogram(data.flatten(), robust_min, robust_max, nbins)
         index = np.argmax(h)
-        val = np.min(data) + float(index)/float(nbins-1)*(np.max(data) - np.min(data))
+        normalization_value = np.min(data) + float(index)/float(nbins-1)*(np.max(data) - np.min(data))
     elif type(aggregate_type_or_const) in (float, int, long):
-        val = aggregate_type_or_const
-    return data/val
+        normalization_value = aggregate_type_or_const
+    return data / normalization_value
