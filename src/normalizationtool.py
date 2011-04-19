@@ -23,6 +23,10 @@ M_MODE = "Mode"
 M_ZSCORE = "Z score"
 AGG_CHOICES = [ M_MEDIAN, M_MEAN, M_MODE ]
 
+W_SQUARE = "Square"
+W_MEANDER = "Linear (meander)"
+WINDOW_CHOICES = [ W_MEANDER, W_SQUARE ]
+
 class NormalizationStepPanel(wx.Panel):
     def __init__(self, parent, id=-1, allow_delete=True, **kwargs):
         wx.Panel.__init__(self, parent, id, **kwargs)
@@ -33,9 +37,9 @@ class NormalizationStepPanel(wx.Panel):
         self.agg_type.Select(0)
         self.constant_float = FS.FloatSpin(self, -1, increment=1, value=1.0)
         self.constant_float.Hide()
-        self.window_type = wx.RadioBox(self, -1, 'Window type', choices=['linear', 'linear (meander)', 'square'])
+        self.window_type = wx.RadioBox(self, -1, 'Window type', choices=WINDOW_CHOICES)
         self.window_type.Disable()
-        self.window_size = wx.lib.intctrl.IntCtrl(self, value=3, min=1, max=100)
+        self.window_size = wx.lib.intctrl.IntCtrl(self, value=3, min=1, max=999)
         self.window_size.Disable()
         self.window_size.SetForegroundColour(wx.LIGHT_GREY)
                 
@@ -95,7 +99,7 @@ class NormalizationStepPanel(wx.Panel):
                 norm.P_AGG_TYPE : self.agg_type.GetStringSelection(), 
                 norm.P_CONSTANT : self.constant_float.GetValue() if self.window_group.GetStringSelection()==G_CONSTANT else None, 
                 norm.P_WIN_TYPE : self.window_type.GetStringSelection() if self.window_group.GetStringSelection()==G_WELL_NEIGHBORS else None, 
-                norm.P_WIN_SIZE : self.window_size.Value if self.window_group.GetStringSelection()==G_WELL_NEIGHBORS else None
+                norm.P_WIN_SIZE : int(self.window_size.Value) if self.window_group.GetStringSelection()==G_WELL_NEIGHBORS else None
                 }
 
 class NormalizationUI(wx.Frame):
@@ -259,7 +263,6 @@ class NormalizationUI(wx.Frame):
         cmd += "%f)"
         for i, (val, factor) in enumerate(zip(output_columns[0], output_factors[0])):
             db.execute(cmd%tuple([output_table] + list(input_data[i, :FIRST_MEAS_INDEX]) + [val]))
-        
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()

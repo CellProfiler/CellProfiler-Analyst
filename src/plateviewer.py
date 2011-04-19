@@ -699,7 +699,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
             objects and therefore no entry in the table.''')
         assert len(data) == 5600
         data = np.array(list(meander(data.reshape(shape)))).reshape(shape)
-        sort_indices = np.array(list(meander(range(len(data)).reshape(shape)))).reshape(shape)
+        sort_indices = np.array(list(meander(np.arange(np.prod(shape)).reshape(shape)))).reshape(shape)
         well_keys = np.array(list(meander(well_keys.reshape(shape + (nkeycols,) )))).reshape(shape + (nkeycols,))
         return data, well_keys, sort_indices
 

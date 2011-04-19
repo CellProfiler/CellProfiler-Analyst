@@ -4,6 +4,8 @@ import numpy as np
 from normalizationtool import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 # Aggregation options
 from normalizationtool import  M_MEDIAN, M_MEAN, M_MODE
+# Window options
+from normalizationtool import W_SQUARE, W_MEANDER
 
 # Parameter names for do_normalization_step
 P_GROUPING = 'grouping'
@@ -12,9 +14,6 @@ P_WIN_SIZE = 'win_size'
 P_WIN_TYPE = 'win_type'
 P_CONSTANT = 'constant'
 
-# Spatial neighbor options (window_type)
-W_SQUARE = "Square"
-W_LINEAR = "Linear"
 
 def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_type, constant):
     '''Aply a single normalization step
@@ -44,12 +43,13 @@ def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_ty
             (np.arange(input_data.shape[0]) % 2 != 0, np.arange(input_data.shape[1]) % 2 != 0) ]
         output_data = input_data.copy()
         for quad in all_quadrants:
-            output_data[quad[0],:][:,quad[1]] = do_normalization(input_data[quad[0],:][:,quad[1]], aggregate_type)
+            ixgrid = np.ix_(quad[0],quad[1])
+            output_data[ixgrid] = do_normalization(input_data[ixgrid], aggregate_type)
             
     elif grouping == G_WELL_NEIGHBORS:
-        if neighbor_type == W_SQUARE:
+        if win_type == W_SQUARE:
             output_data = square_filter_normalization(input_data, aggregate_type, win_size)
-        elif neighbor_type == W_LINEAR:
+        elif win_type == W_MEANDER:
             output_data = linear_filter_normalization(input_data, aggregate_type, win_size)
             
     elif grouping == G_CONSTANT:
@@ -68,7 +68,7 @@ def square_filter_normalization(data, aggregate_type, win_size):
     elif aggregate_type  == M_MEAN:
         normalization_values = uniform_filter(data, (win_size, win_size))
     else:
-        raise
+        raise 'Programming Error: Unknown window type supplied.'
     
     return data / normalization_values
 
@@ -81,7 +81,7 @@ def linear_filter_normalization(data, aggregate_type, win_size):
     elif aggregate_type  == M_MEAN:
         normalization_values = uniform_filter(data.flatten(), win_size).reshape(data.shape)
     else:
-        raise
+        raise 'Programming Error: Unknown window type supplied.'
     
     return data / normalization_values
 
