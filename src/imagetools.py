@@ -281,10 +281,10 @@ def tile_images(images):
     returns an image that is a composite of the given images tiled in in as
        nearly a square grid as possible
     '''        
-    h, w = images[0].shape
+    h, w = [int(x) for x in images[0].shape]
     for im in images:
         assert (im.shape == (h,w)), 'Images must be the same size to tile them.'
-    cols = np.ceil(len(images)**0.5)
+    cols = int(np.ceil(len(images)**0.5))
     
     composite = np.zeros((h, w * cols))
     i = 0
