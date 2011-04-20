@@ -114,6 +114,7 @@ class NormalizationUI(wx.Frame):
         # Define the controls
         #
         db = dbconnect.DBConnect.getInstance()
+        # TODO: Add UI to pick per-image or per-obj tables and populate accordingly
         measurements = db.GetColumnNames(p.image_table)
         types = db.GetColumnTypes(p.image_table)
         numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, long]]
@@ -164,7 +165,7 @@ class NormalizationUI(wx.Frame):
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        # TODO: Warn if resultant col header length > 64 chars
+        # TODO: Warn if resultant col header length > 64 chars (e.g., turn text red with tooltip)
         sz.Add(wx.StaticText(self, -1, 'Choose a prefix for each normalized measurement:'), 0, wx.EXPAND)
         sz.AddSpacer((5,-1))
         sz.Add(prefix_text, 0, wx.EXPAND)
@@ -224,14 +225,14 @@ class NormalizationUI(wx.Frame):
         input_data = np.array(db.execute(query), dtype=object)
         well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
         
-        output_columns = []
-        output_factors = []
+        output_columns = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape)
+        output_factors = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape)
         for colnum, col in enumerate(input_data[:,FIRST_MEAS_INDEX:].T):
             norm_data = col.copy()
             for step_num, step_panel in enumerate(self.norm_steps):
                 d = step_panel.get_configuration_dict()
                 if d[norm.P_GROUPING] in (norm.G_PLATE, norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
-                    # Reshape data if norm step is plate sensitive.
+                    # Reshape data if normalization step is plate sensitive.
                     assert p.plate_id and p.well_id
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
@@ -239,43 +240,42 @@ class NormalizationUI(wx.Frame):
                         keys_and_vals = list(plate_grp)
                         plate_data, wks, ind = FormatPlateMapData(keys_and_vals)
                         pnorm_data = norm.do_normalization_step(plate_data, **d)
-                        new_norm_data    += pnorm_data.flatten()[ind.flatten().tolist()].tolist()
+                        new_norm_data += pnorm_data.flatten()[ind.flatten().tolist()].tolist()
                     norm_data = new_norm_data
                 else:
                     norm_data = norm.do_normalization_step(norm_data, **d)
-            output_columns += [norm_data]
-            output_factors += [list(col.astype(float)/ np.array(norm_data))]
-            
+                    
+            output_columns[:,colnum] = np.array(norm_data)
+            output_factors[:,colnum] = col.astype(float)/np.array(norm_data,dtype=float)
+        
         # Divide by minimum value and re-compute normalized values
-        for colnum, (val,factor) in enumerate(zip(output_columns, output_factors)):
-            col = np.array(val)*np.array(factor) # Get original input data back
-            new_factor = np.array(factor)/np.nanmin(np.array(factor)) # Divide by min, ignoring NaNs
-            output_columns[colnum] = list(col/new_factor) # Re-normalize data
-            output_factors[colnum] = list(new_factor) # Retain new norm factors
-            
+        #new_factor = np.nanmin(output_factors,axis=0) # Divide by min, ignoring NaNs
+        #output_factors /= np.tile(new_factor, (output_factors.shape[0], 1)) # Retain new norm factors 
+        #output_columns /= output_factors # Re-normalize data
+        
         # Write new table
         output_table = 'NormTest'           
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
         col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                               for col in dbconnect.image_key_columns() + dbconnect.well_key_columns()])
-        col_defs += ', '+ ', '.join(['%s_NormV %s'%(col, db.GetColumnTypeString(p.image_table, col))
+        col_defs += ', '+ ', '.join(['%s_NmV %s'%(col, db.GetColumnTypeString(p.image_table, col))
                                     for col in meas_col_names]) 
-        col_defs += ', '+ ', '.join(['%s_NormF %s'%(col, db.GetColumnTypeString(p.image_table, col))
+        col_defs += ', '+ ', '.join(['%s_NmF %s'%(col, db.GetColumnTypeString(p.image_table, col))
                                     for col in meas_col_names]) 
         db.execute('CREATE TABLE %s (%s)'%(output_table, col_defs))
         
         cmd = 'INSERT INTO %s values ('
         cmd += '%d,'*len(dbconnect.image_key_columns())
         cmd += '"%s",'*len(dbconnect.well_key_columns())
-        for i, (val, factor) in enumerate(zip(output_columns[0], output_factors[0])):
-            # Check for NaN/Infs and convert into "None"s
-            stmt = cmd + ",".join(("%s" if (np.isnan(val) or np.isinf(val)) else "%f", 
-                                   "%s" if (np.isnan(factor) or np.isinf(factor)) else "%f"))
+        for i, (val, factor) in enumerate(zip(output_columns, output_factors)):
+            # Check for NaN/Infs and convert into NULLs
+            stmt = cmd + ",".join(["%s" if (np.isnan(x) or np.isinf(x)) else "%f" for x in val]) + "," + \
+                         ",".join(["%s" if (np.isnan(x) or np.isinf(x)) else "%f" for x in factor])
             stmt += ")"
             db.execute(stmt%tuple([output_table] + 
                                  list(input_data[i, :FIRST_MEAS_INDEX]) + 
-                                 ['NULL' if (np.isnan(val) or np.isinf(val)) else val] + 
-                                 ['NULL' if (np.isnan(factor) or np.isinf(factor)) else factor]))
+                                 ['NULL' if (np.isnan(x) or np.isinf(x)) else x for x in val] + 
+                                 ['NULL' if (np.isnan(x) or np.isinf(x)) else x for x in factor]))
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()

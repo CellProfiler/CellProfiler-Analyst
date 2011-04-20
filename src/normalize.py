@@ -95,12 +95,12 @@ def do_normalization(data, aggregate_type_or_const):
     elif aggregate_type_or_const == M_MEAN:
         normalization_value = np.mean(data.flatten())
     elif aggregate_type_or_const == M_MODE:
-        import scipy.ndimage
+        import scipy.ndimage.histogram
         # Use histogram function with values a bit removed from saturation
         robust_min = 0.02 * (np.max(data) - np.min(data)) + np.min(data)
         robust_max = 0.98 * (np.max(data) - np.min(data)) + np.min(data)
         nbins = 256
-        h = scipy.ndimage.histogram(data.flatten(), robust_min, robust_max, nbins)
+        h = histogram(data.flatten(), robust_min, robust_max, nbins)
         index = np.argmax(h)
         normalization_value = np.min(data) + float(index)/float(nbins-1)*(np.max(data) - np.min(data))
     elif type(aggregate_type_or_const) in (float, int, long):
