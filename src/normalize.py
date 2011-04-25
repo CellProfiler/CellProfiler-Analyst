@@ -1,11 +1,19 @@
 from scipy.ndimage import median_filter
 import numpy as np
-# Grouping options
-from normalizationtool import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
-# Aggregation options
-from normalizationtool import  M_MEDIAN, M_MEAN, M_MODE
-# Window options
-from normalizationtool import W_SQUARE, W_MEANDER
+
+G_EXPERIMENT = "Experiment"
+G_PLATE = "Plate"
+G_QUADRANT = "Quadrant"
+G_WELL_NEIGHBORS = "Neighbors"
+G_CONSTANT = "Constant"
+
+M_MEDIAN = "Median"
+M_MEAN = "Mean"
+M_MODE = "Mode"
+M_ZSCORE = "Z score"
+
+W_SQUARE = "Square"
+W_MEANDER = "Linear (meander)"
 
 # Parameter names for do_normalization_step
 P_GROUPING = 'grouping'
