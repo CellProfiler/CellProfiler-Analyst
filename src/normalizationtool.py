@@ -16,6 +16,7 @@ import properties
 from itertools import groupby
 from plateviewer import FormatPlateMapData
 import sqltools as sql
+from cpatool import CPATool
 
 GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT]
 AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE]
@@ -26,6 +27,9 @@ db = dbconnect.DBConnect.getInstance()
 
 class NormalizationStepPanel(wx.Panel):
     def __init__(self, parent, id=-1, allow_delete=True, **kwargs):
+        '''allow_delete - whether or not to show an "X" button to allow the user
+        to delete this panel
+        '''
         wx.Panel.__init__(self, parent, id, **kwargs)
         
         if not (p.plate_id and p.well_id):
@@ -72,6 +76,8 @@ class NormalizationStepPanel(wx.Panel):
         self.Fit()
 
     def on_window_group_selected(self, evt):
+        self.update_plate_dependent_fields()
+    def update_plate_dependent_fields(self):
         selected_string = self.window_group.GetStringSelection()
         self.window_type.Disable()
         self.window_size.Disable()
@@ -91,6 +97,19 @@ class NormalizationStepPanel(wx.Panel):
     def on_remove(self, evt):
         self.GrandParent.remove_norm_step(self)
         
+    def set_from_configuration_dict(self, config):
+        '''config - a configuration dictionary as output by get_configuration_dict()
+        '''
+        self.window_group.SetStringSelection(config[norm.P_GROUPING])
+        self.update_plate_dependent_fields()
+        self.agg_type.SetStringSelection(config[norm.P_AGG_TYPE])
+        if config[norm.P_CONSTANT] is not None:
+            self.constant_float.SetValue(config[norm.P_CONSTANT])
+        if config[norm.P_WIN_TYPE] is not None:
+            self.window_type.SetStringSelection(config[norm.P_WIN_TYPE])
+        if config[norm.P_WIN_SIZE] is not None:
+            self.window_size.SetValue(config[norm.P_WIN_SIZE])
+        
     def get_configuration_dict(self):
         '''returns a dictionary of configuration settings to be used by 
         normalize.do_normalization_step.
@@ -104,11 +123,13 @@ class NormalizationStepPanel(wx.Panel):
                 norm.P_WIN_SIZE : int(self.window_size.Value) if self.window_group.GetStringSelection()==G_WELL_NEIGHBORS else None
                 }
 
-class NormalizationUI(wx.Frame):
+class NormalizationUI(wx.Frame, CPATool):
     '''
     '''
-    def __init__(self, parent=None, id=-1, title='Normalization Settings', **kwargs):
+    def __init__(self, parent, id=-1, title='Normalization Settings', **kwargs):
+        kwargs['size'] = kwargs.get('size', (500,550))
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
+        CPATool.__init__(self)
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
 
         self.n_steps = 1
@@ -416,6 +437,41 @@ class NormalizationUI(wx.Frame):
                 break
         dlg.Destroy()
         db.Commit()
+        
+    def save_settings(self):
+        '''returns a dictionary mapping setting names to values encoded as strings'''
+        return {
+            'table' : self.table_choice.GetStringSelection(),
+            'columns' : ','.join(self.col_choices.GetCheckedStrings()),
+            'steps' : repr([s.get_configuration_dict() for s in self.norm_steps]),
+            'wants_meas' : str(int(self.norm_meas_checkbox.IsChecked())),
+            'wants_factor' : str(int(self.norm_factor_checkbox.IsChecked())),
+            'output_table' : self.output_table.Value,
+            'version' : '1',
+        }
+    
+    def load_settings(self, settings):
+        '''settings - a dictionary mapping setting names to values encoded as strings.'''
+        if 'table' in settings:
+            self.table_choice.SetStringSelection(settings['table'])
+            self.update_measurement_choices()
+        if 'columns' in settings:
+            cols = map(str.strip, settings['columns'].split(','))
+            self.col_choices.SetCheckedStrings(cols)
+        if 'steps' in settings:
+            steps = eval(settings['steps'])
+            for p in self.norm_steps[1:]:
+                self.remove_norm_step(p)
+            self.norm_steps[0].set_from_configuration_dict(steps[0])
+            for config in steps[1:]:
+                self.add_norm_step()
+                self.norm_steps[-1].set_from_configuration_dict(config)
+        if 'wants_meas' in settings:
+            self.norm_meas_checkbox.SetValue(int(settings['wants_meas']))
+        if 'wants_factor' in settings:
+            self.norm_factor_checkbox.SetValue(int(settings['wants_factor']))
+        if 'output_table' in settings:
+            self.output_table.SetValue(settings['output_table'])
 
             
 if __name__ == "__main__":
@@ -423,7 +479,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
     if p.show_load_dialog():
-        f = NormalizationUI(size=(500,550))
+        f = NormalizationUI(None)
         f.Show()
         f.Center()
     
