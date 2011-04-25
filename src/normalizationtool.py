@@ -118,6 +118,7 @@ class NormalizationUI(wx.Frame):
         #
         tables = ([p.image_table] or []) + ([p.object_table] or [])
         self.table_choice = wx.Choice(self, -1, choices=tables)
+        self.table_choice.Select(0)
         self.col_choices = wx.CheckListBox(self, -1, choices=[], size=(-1, 100))
         self.update_measurement_choices()
         add_norm_step_btn = wx.Button(self, -1, 'Add normalization step')
@@ -359,13 +360,15 @@ class NormalizationUI(wx.Frame):
         # Write new table
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
         if input_table == p.image_table:
-            new_cols = imkey_cols
+            col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
+                              for col in dbconnect.image_key_columns()])
         elif input_table == p.object_table:
-            new_cols = dbconnect.object_key_columns()
+            #new_cols = dbconnect.object_key_columns()
+            col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.object_table, col))
+                              for col in dbconnect.object_key_columns()])
         if wellkey_cols:
-            new_cols += wellkey_cols
-        col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(input_table, col))
-                              for col in new_cols])
+            col_defs +=  ', '+ ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
+                                        for col in wellkey_cols])
         if wants_norm_meas:
             col_defs += ', '+ ', '.join(['%s_NmV %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
