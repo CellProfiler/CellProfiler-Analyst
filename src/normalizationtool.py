@@ -295,6 +295,10 @@ class NormalizationUI(wx.Frame, CPATool):
         wants_norm_factor = self.norm_factor_checkbox.IsChecked()
         output_table = self.output_table.Value
         FIRST_MEAS_INDEX = len(imkey_cols + (wellkey_cols or tuple()))
+        if p.db_type == 'mysql':
+            BATCH_SIZE = 100
+        else:
+            BATCH_SIZE = 1
         if input_table == p.object_table: 
             FIRST_MEAS_INDEX += 1
         if wellkey_cols:
@@ -378,16 +382,19 @@ class NormalizationUI(wx.Frame, CPATool):
 
         dlg.Destroy()
                 
+        norm_table_cols = []
         # Write new table
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
         if input_table == p.image_table:
+            norm_table_cols += dbconnect.image_key_columns()
             col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                               for col in dbconnect.image_key_columns()])
         elif input_table == p.object_table:
-            #new_cols = dbconnect.object_key_columns()
+            norm_table_cols += dbconnect.object_key_columns()
             col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.object_table, col))
                               for col in dbconnect.object_key_columns()])
         if wellkey_cols:
+            norm_table_cols += wellkey_cols
             col_defs +=  ', '+ ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                                         for col in wellkey_cols])
         if wants_norm_meas:
@@ -396,6 +403,11 @@ class NormalizationUI(wx.Frame, CPATool):
         if wants_norm_factor:
             col_defs += ', '+ ', '.join(['%s_NmF %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
+        for col in meas_cols:
+            if wants_norm_meas:
+                norm_table_cols += ['%s_NmV'%(col)]
+            if wants_norm_factor:
+                norm_table_cols += ['%s_NmF'%(col)]
         db.execute('CREATE TABLE %s (%s)'%(output_table, col_defs))
         
         dlg = wx.ProgressDialog('Writing to "%s"'%(output_table),
@@ -403,38 +415,30 @@ class NormalizationUI(wx.Frame, CPATool):
                                maximum = output_columns.shape[0],
                                parent=self,
                                style = wx.PD_CAN_ABORT|wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_ESTIMATED_TIME|wx.PD_REMAINING_TIME)
-        
-        cmd = 'INSERT INTO %s values ('
-        if input_table == p.image_table:
-            cmd += '%d,'*len(imkey_cols)
-        elif input_table == p.object_table:
-            cmd += '%d,'*len(dbconnect.object_key_columns())
-        if wellkey_cols:
-            cmd += '"%s",'*len(wellkey_cols)
+            
+        cmd = 'INSERT INTO %s VALUES '%(output_table)
+        cmdi = cmd
         for i, (val, factor) in enumerate(zip(output_columns, output_factors)):
+            cmdi += '(' + ','.join(['"%s"']*len(norm_table_cols)) + ')'
             if wants_norm_meas and wants_norm_factor:
-                stmt = cmd + ",".join(["%s" if (np.isnan(x) or np.isinf(x)) else "%f" for x in val]) \
-                     + "," + ",".join(["%s" if (np.isnan(x) or np.isinf(x)) else "%f" for x in factor]) \
-                     + ")"
-                stmt = stmt%tuple([output_table] + 
-                                  list(input_data[i, :FIRST_MEAS_INDEX]) + 
+                cmdi = cmdi%tuple(list(input_data[i, :FIRST_MEAS_INDEX]) + 
                                   ['NULL' if (np.isnan(x) or np.isinf(x)) else x for x in val] + 
                                   ['NULL' if (np.isnan(x) or np.isinf(x)) else x for x in factor])
             elif wants_norm_meas:
-                stmt = cmd + ",".join(["%s" if (np.isnan(x) or np.isinf(x)) else "%f" for x in val]) + ")"
-                stmt = stmt%tuple([output_table] + 
-                                  list(input_data[i, :FIRST_MEAS_INDEX]) + 
+                cmdi = cmdi%tuple(list(input_data[i, :FIRST_MEAS_INDEX]) + 
                                   ['NULL' if (np.isnan(x) or np.isinf(x)) else x for x in val])
             elif wants_norm_factor:
-                stmt += ",".join(["%s" if (np.isnan(x) or np.isinf(x)) else "%f" for x in factor]) + ")"
-                stmt = stmt%tuple([output_table] + 
-                                  list(input_data[i, :FIRST_MEAS_INDEX]) + 
+                cmdi = cmdi%tuple(list(input_data[i, :FIRST_MEAS_INDEX]) + 
                                   ['NULL' if (np.isnan(x) or np.isinf(x)) else x for x in factor])
-            db.execute(stmt)
-            # update status dialog
-            (keep_going, skip) = dlg.Update(i)
-            if not keep_going:
-                break
+            if (i+1) % BATCH_SIZE == 0 or i==len(output_columns)-1:
+                db.execute(str(cmdi))
+                cmdi = cmd
+                # update status dialog
+                (keep_going, skip) = dlg.Update(i)
+                if not keep_going:
+                    break
+            else:
+                cmdi += ',\n'
         dlg.Destroy()
         db.Commit()
         
