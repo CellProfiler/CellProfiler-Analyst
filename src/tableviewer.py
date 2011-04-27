@@ -1049,7 +1049,7 @@ def show_loaddata_table(gate_names, as_columns=True):
         wx.MessageBox('Sorry, no data points fall within the combined selected gates.', 'No data to show')
         return None
     grid = TableViewer(None, title="Gated Data")
-    grid.table_from_array(np.array(data), columns, grouping='image', 
+    grid.table_from_array(np.array(data, dtype='object'), columns, grouping='image', 
                           key_indices=range(len(dbconnect.image_key_columns())))
     grid.Show()
     return grid
