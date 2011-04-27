@@ -6,7 +6,8 @@ import sqltools as sql
 import multiclasssql
 from properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
-from guiutils import TableComboBox, get_other_table_from_user
+import guiutils as ui
+from gating import GatingHelper
 import imagetools
 import icons
 import logging
@@ -18,7 +19,6 @@ import re
 from time import time
 import wx
 import wx.combo
-from matplotlib.patches import Rectangle
 from matplotlib.widgets import Lasso
 from matplotlib.nxutils import points_inside_poly
 from matplotlib.colors import colorConverter
@@ -29,9 +29,6 @@ from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
-
-NO_FILTER = 'No filter'
-CREATE_NEW_FILTER = '*create new filter*'
 
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
@@ -103,16 +100,16 @@ class ScatterControlPanel(wx.Panel):
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
-        self.x_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
-        self.y_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.x_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.y_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], size=(90,-1), style=wx.CB_READONLY)
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], size=(90,-1), style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
-        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
-        self.filter_choice.Select(0)
+        self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_x_choices()
@@ -148,6 +145,10 @@ class ScatterControlPanel(wx.Panel):
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
         sz.AddSpacer((3,-1))
         sz.Add(self.filter_choice, 1, wx.EXPAND)
+        sz.AddSpacer((3,-1))
+        sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.gate_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))
         
@@ -155,7 +156,7 @@ class ScatterControlPanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
         wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
-        wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
+        wx.EVT_COMBOBOX(self.gate_choice, -1, self.on_gate_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
 
         self.SetSizer(sizer)
@@ -163,8 +164,8 @@ class ScatterControlPanel(wx.Panel):
         
     def on_x_table_selected(self, evt):
         table = self.x_table_choice.Value
-        if table == TableComboBox.OTHER_TABLE:
-            t = get_other_table_from_user(self)
+        if table == ui.TableComboBox.OTHER_TABLE:
+            t = ui.get_other_table_from_user(self)
             if t is not None:
                 self.x_table_choice.Items = self.x_table_choice.Items[:-1] + [t] + self.x_table_choice.Items[-1:]
                 self.x_table_choice.Select(self.x_table_choice.Items.index(t))
@@ -178,8 +179,8 @@ class ScatterControlPanel(wx.Panel):
         
     def on_y_table_selected(self, evt):
         table = self.y_table_choice.Value
-        if table == TableComboBox.OTHER_TABLE:
-            t = get_other_table_from_user(self)
+        if table == ui.TableComboBox.OTHER_TABLE:
+            t = ui.get_other_table_from_user(self)
             if t is not None:
                 self.y_table_choice.Items = self.y_table_choice.Items[:-1] + [t] + self.y_table_choice.Items[-1:]
                 self.y_table_choice.Select(self.y_table_choice.Items.index(t))
@@ -190,24 +191,31 @@ class ScatterControlPanel(wx.Panel):
                 self.y_table_choice.Select(0)
                 return
         self.update_y_choices()
-        
-    def on_filter_selected(self, evt):
-        filter = self.filter_choice.Value
-        if filter == CREATE_NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
-            if cff.ShowModal()==wx.OK:
-                fltr = cff.get_filter()
-                fname = str(cff.get_filter_name())
-                p._filters_ordered += [fname]
-                p._filters[fname] = fltr
-                items = self.filter_choice.GetItems()
-                self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
-                self.filter_choice.SetSelection(len(items)-1)
+                
+    def on_gate_selected(self, evt):
+        gate = self.gate_choice.GetStringSelection()
+        x_table = self.x_table_choice.GetStringSelection()
+        y_table = self.y_table_choice.GetStringSelection()
+        x_column = self.x_choice.GetStringSelection()
+        y_column = self.y_choice.GetStringSelection()
+        if gate == ui.GateComboBox.NEW_GATE:
+            dlg = ui.GateDialog(self)
+            if dlg.ShowModal() == wx.ID_OK:
+                self.gate_choice.Items = self.gate_choice.Items[:-1] + [dlg.Value] + self.gate_choice.Items[-1:]
+                self.gate_choice.SetStringSelection(dlg.Value)
+                p.gates[dlg.Value] = sql.Gate()
+                self.figpanel.gate_helper.set_displayed_gate(p.gates[dlg.Value], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
             else:
-                self.filter_choice.SetSelection(0)
-            cff.Destroy()
-        
+                self.gate_choice.Select(0)
+                self.figpanel.gate_helper.disable()
+            dlg.Destroy()
+        elif gate == ui.GateComboBox.NO_GATE:
+            self.figpanel.gate_helper.disable()
+        elif gate == ui.GateComboBox.MANAGE_GATES:
+            self.figpanel.gate_helper.disable()
+            evt.Skip()
+        else:
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
 
     def update_x_choices(self):
         tablename = self.x_table_choice.Value
@@ -224,14 +232,16 @@ class ScatterControlPanel(wx.Panel):
         self.y_choice.SetSelection(0)
         
     def update_figpanel(self, evt=None):
-        keys_and_points = self.loadpoints(self.x_table_choice.Value,
-                                          self.y_table_choice.Value,
-                                          self.x_choice.Value,
-                                          self.y_choice.Value,
-                                          self.filter_choice.Value)
+        xtable = self.x_table_choice.Value
+        ytable = self.y_table_choice.Value
+        xcol = self.x_choice.Value
+        ycol = self.y_choice.Value
+        fltr = self.filter_choice.get_filter_or_none()
+        gate_name = self.gate_choice.Value
+        
+        keys_and_points = self.loadpoints(xtable, ytable, xcol, ycol, fltr)
         col_types = self.get_selected_column_types()
-        plot_per_object_data = p.object_table in [self.x_table_choice.Value,
-                                                  self.y_table_choice.Value]
+        plot_per_object_data = p.object_table in [xtable, ytable]
                 
         # Convert keys and points into a np array
         # NOTE: We must set dtype "object" on creation or values like 0.34567e-9
@@ -258,14 +268,21 @@ class ScatterControlPanel(wx.Panel):
         # plot the points
         self.figpanel.set_points(xpoints, ypoints)
         self.figpanel.set_keys(keys)
-        self.figpanel.set_x_label(self.x_choice.Value)
-        self.figpanel.set_y_label(self.y_choice.Value)
+        self.figpanel.set_x_label(xcol)
+        self.figpanel.set_y_label(ycol)
         self.figpanel.set_x_scale(self.x_scale_choice.Value)
         self.figpanel.set_y_scale(self.y_scale_choice.Value)
+        if gate_name != ui.GateComboBox.NO_GATE:
+            self.figpanel.gate_helper.set_displayed_gate(
+                p.gates[gate_name], 
+                sql.Column(xtable, xcol), 
+                sql.Column(ytable, ycol))
+        else:
+            self.figpanel.gate_helper.disable()
         self.figpanel.redraw()
         self.figpanel.draw()
         
-    def loadpoints(self, xtable, ytable, xcol, ycol, filter=NO_FILTER):
+    def loadpoints(self, xtable, ytable, xcol, ycol, fltr):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, (ObjectNumber), X measurement, Y measurement
         '''
@@ -281,8 +298,8 @@ class ScatterControlPanel(wx.Panel):
         select += [sql.Column(xtable, xcol), 
                    sql.Column(ytable, ycol)]
         q.set_select_clause(select)
-        if filter != NO_FILTER:
-            q.add_filter(p._filters[filter])
+        if fltr != None:
+            q.add_filter(fltr)
         return db.execute(str(q))
     
     def get_selected_column_types(self):
@@ -295,17 +312,20 @@ class ScatterControlPanel(wx.Panel):
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        return {'x-table' : self.x_table_choice.Value,
-                'y-table' : self.y_table_choice.Value,
-                'x-axis' : self.x_choice.Value,
-                'y-axis' : self.y_choice.Value,
-                'x-scale' : self.x_scale_choice.Value,
-                'y-scale' : self.y_scale_choice.Value,
-                'filter' : self.filter_choice.Value,
-                'x-lim': self.figpanel.subplot.get_xlim(),
-                'y-lim': self.figpanel.subplot.get_ylim(),
-                'version' : '1',
-                }
+        d = {'x-table' : self.x_table_choice.Value,
+             'y-table' : self.y_table_choice.Value,
+             'x-axis' : self.x_choice.Value,
+             'y-axis' : self.y_choice.Value,
+             'x-scale' : self.x_scale_choice.Value,
+             'y-scale' : self.y_scale_choice.Value,
+             'filter' : self.filter_choice.Value,
+             'x-lim': self.figpanel.subplot.get_xlim(),
+             'y-lim': self.figpanel.subplot.get_ylim(),
+             'version' : '1',
+             }
+        if self.gate_choice.get_gate_or_none() != None:
+            d['gate'] = self.gate_choice.Value
+        return d
     
     def load_settings(self, settings):
         '''load_settings is called when loading a workspace from file.
@@ -339,6 +359,15 @@ class ScatterControlPanel(wx.Panel):
             self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
         if 'y-lim' in settings:
             self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        if 'gate' in settings:
+            xtable = self.x_table_choice.GetStringSelection()            
+            xcolumn = self.x_choice.GetStringSelection()
+            ytable = self.y_table_choice.GetStringSelection()
+            ycolumn = self.y_choice.GetStringSelection()
+            self.gate_choice.SetStringSelection(settings['gate'])
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[settings['gate']],
+                                                         sql.Column(xtable, xcolumn),
+                                                         sql.Column(ytable, ycolumn))
         self.figpanel.draw()
 
 
@@ -349,13 +378,15 @@ class ScatterPanel(FigureCanvasWxAgg):
     def __init__(self, parent, xpoints=[], ypoints=[], keys=None, clr_list=None, **kwargs):
         self.figure = Figure()
         FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
+        
         self.canvas = self.figure.canvas
         self.SetMinSize((100,100))
         self.figure.set_facecolor((1,1,1))
         self.figure.set_edgecolor((1,1,1))
         self.canvas.SetBackgroundColour('white')
-        
         self.subplot = self.figure.add_subplot(111)
+        self.gate_helper = GatingHelper(self.subplot, self)
+        
         self.navtoolbar = None
         self.x_points = []
         self.y_points = []
@@ -370,7 +401,6 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.legend = None
         self.set_points(xpoints, ypoints)
         self.lasso = None
-        self.dragging = False
         if keys is not None:
             self.set_keys(keys)
         if clr_list is not None:
@@ -378,7 +408,6 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.redraw()
         
         self.canvas.mpl_connect('button_press_event', self.on_press)
-        self.canvas.mpl_connect('motion_notify_event', self.on_motion)
         self.canvas.mpl_connect('button_release_event', self.on_release)
     
     def set_configpanel(self,configpanel):
@@ -452,42 +481,12 @@ class ScatterPanel(FigureCanvasWxAgg):
             self.selection_key = evt.key
             if self.canvas.widgetlock.locked(): return
             if evt.inaxes is None: return
-            
-            if self.navtoolbar.get_mode() == 'gate':
-                self.dragging = True
-                self.mouse_x = evt.xdata
-                self.mouse_y = evt.ydata
-            elif self.navtoolbar.get_mode() == 'lasso':
+            if self.navtoolbar.get_mode() == 'lasso':
                 self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.lasso_callback)
                 # acquire a lock on the widget drawing
                 self.canvas.widgetlock(self.lasso)
-    
-    def on_motion(self, evt):
-        if self.navtoolbar and self.navtoolbar.get_mode() == 'gate':
-            # evt.xdata, evt.ydata return None when the cursor exits the axes
-            # since we want to snap the rectangle to the edge(s) where the mouse is
-            # we use evt.x and evt.y and transform them into the data space.
-            x, y = self.subplot.transData.inverted().transform((evt.x,evt.y))
-            x = min(x, self.subplot.get_xlim()[1])
-            x = max(x, self.subplot.get_xlim()[0])
-            y = min(y, self.subplot.get_ylim()[1])
-            y = max(y, self.subplot.get_ylim()[0])
-            if self.dragging:
-                dx = self.mouse_x - x
-                dy = self.mouse_y - y
-                if len(self.subplot.patches) == 0:
-                    rect = Rectangle((x, y), dx, dy)
-                    rect.set_fill(False)
-                    rect.set_linestyle('dashed')
-                    self.subplot.add_patch(rect)
-                else:
-                    self.subplot.patches[-1].set_xy((x, y))
-                    self.subplot.patches[-1].set_width(dx)
-                    self.subplot.patches[-1].set_height(dy)
-                self.draw()
         
     def on_release(self, evt):
-        self.dragging = False
         # Note: lasso_callback is not called on click without drag so we release
         #   the lock here to handle this case as well.
         if evt.button == 1:
@@ -495,7 +494,7 @@ class ScatterPanel(FigureCanvasWxAgg):
                 self.canvas.draw_idle()
                 self.canvas.widgetlock.release(self.lasso)
                 self.lasso = None
-        else:
+        elif evt.button == 3:  # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
     def show_objects_from_selection(self, evt=None):
@@ -688,6 +687,14 @@ class ScatterPanel(FigureCanvasWxAgg):
     def show_popup_menu(self, (x,y), data):
         self.popup_menu_filters = {}
         popup = wx.Menu()
+
+        loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
+        selected_gates = [self.configpanel.gate_choice.get_gate_or_none()] or []
+        self.Bind(wx.EVT_MENU, 
+                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  loadimages_table_item)
+        
+        popup.AppendSeparator()
         
         show_images_item = popup.Append(-1, 'Show images from selection')
         if self.selection_is_empty():
@@ -894,17 +901,6 @@ class ScatterPanel(FigureCanvasWxAgg):
         logging.debug('Scatter: Plotted %s points in %.3f seconds.'
                       %(sum(map(len, self.x_points)), time() - t0))
         
-        
-        # XXXXXXXXXXXXXXXXXXXXX
-        #for f in p._filters.values():
-            
-            #rect = Rectangle((x, y), dx, dy)
-            #rect.set_fill(False)
-            #rect.set_linestyle('dashed')
-            #self.subplot.add_patch(rect)
-        
-        
-        
         if self.navtoolbar:
             self.navtoolbar.reset_history()
         
@@ -1072,11 +1068,12 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        if not p.show_load_dialog():
-            print 'Scatterplot requires a properties file.  Exiting.'
-            # necessary in case other modal dialogs are up
-            wx.GetApp().Exit()
-            sys.exit()
+        p.load_file('/Users/afraser/cpa_example/example2.properties')
+        #if not p.show_load_dialog():
+            #print 'Scatterplot requires a properties file.  Exiting.'
+            ## necessary in case other modal dialogs are up
+            #wx.GetApp().Exit()
+            #sys.exit()
    
     
 ##    import calc_tsne
@@ -1103,21 +1100,14 @@ if __name__ == "__main__":
 ##                   silent=True)
 ##        i += 1
 ##    wx.GetApp().user_tables = ['tSNE']
-    
+
     
     xpoints = []
     ypoints = []
     clrs = None
-#    clrs = [(0., 0.62, 1., 0.75),
-#            (0.1, 0.2, 0.3, 0.75),
-#            (0,0,0,1),
-#            (1,0,1,1),
-#            ]
 
     scatter = Scatter(None, xpoints, ypoints, clrs)
     scatter.Show()
-#    scatter.figpanel.set_x_label('test')
-#    scatter.figpanel.set_y_label('test')
     
     app.MainLoop()
     

@@ -1,6 +1,6 @@
 import wx
 import re
-from sqltools import Filter
+import sqltools as sql
 from properties import Properties
 from dbconnect import DBConnect
 from wx.combo import OwnerDrawnComboBox as ComboBox
@@ -13,7 +13,7 @@ class ColumnFilterPanel(wx.Panel):
     Creates a UI that allows the user to create WHERE clauses by selecting 
     1) a DB column name, 2) a comparator, and 3) a value
     '''
-    def __init__(self, parent, tables, allow_delete=True, **kwargs):
+    def __init__(self, parent, tables, allow_delete=True, expression=None, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
 
         self.fieldSets = []
@@ -29,6 +29,9 @@ class ColumnFilterPanel(wx.Panel):
         self.valueField = wx.ComboBox(self, -1, value='')
         if allow_delete:
             self.x_btn = wx.Button(self, -1, 'x', size=(30,-1))
+            
+##        if expression is not None:
+##            self.set_expression(expression)
 
         colSizer = wx.BoxSizer(wx.HORIZONTAL)
         colSizer.Add(self.tableChoice, 1, wx.EXPAND)
@@ -51,7 +54,6 @@ class ColumnFilterPanel(wx.Panel):
 
     def on_remove(self, evt):
         self.GrandParent.remove(self)
-        self.Destroy()
 
     def on_select_col(self, evt):
         self.update_comparator_choice()
@@ -100,11 +102,24 @@ class ColumnFilterPanel(wx.Panel):
         value = self.valueField.GetValue()
         if self._get_col_type() in [int, float, long]:
             # Don't quote numbers
-            return Filter((table, column), comparator, '%s'%(value))
+            return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
         if comparator.upper() in ['IS', 'IS NOT'] and value.upper() == 'NULL':
             # Don't comparisons to NULL
-            return Filter((table, column), comparator, '%s'%(value))
-        return Filter((table, column), comparator, '"%s"'%(value))
+            return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
+        return sql.Filter(sql.Column(table, column), comparator, '"%s"'%(value))
+    
+##    def set_expression(self, expression):
+##        '''Populate inputs with expression values'''
+##        assert len(expression.get_token_list()) == 3
+##        col, comp, val = expression.get_token_list()
+##        
+##        self.tableChoice.SetStringSelection(col.table)
+##        self.update_col_choice()
+##        self.colChoice.SetStringSelection(col.col)
+##        self.update_comparator_choice()
+##        self.comparatorChoice.SetStringSelection(comp)
+##        self.update_value_choice()
+##        self.valueField.SetValue(val)
 
 
 class ColumnFilterDialog(wx.Dialog):
@@ -116,7 +131,9 @@ class ColumnFilterDialog(wx.Dialog):
 
         self.tables = tables
         self.conjunctions = []
-        self.filter_name = wx.TextCtrl(self, -1, 'My_Filter')
+        self.filter_name = wx.TextCtrl(self, -1, '')
+##        self.filter_name = ComboBox(self, choices=p._filters_ordered)
+##        self.filter_name.SetStringSelection('My_Filter')
         self.addbtn = wx.Button(self, -1, 'Add Column')
         self.ok = wx.Button(self, -1, 'OK')
         self.cancel = wx.Button(self, -1, 'Cancel')
@@ -155,13 +172,19 @@ class ColumnFilterDialog(wx.Dialog):
 
         self.validate_filter_name()
 
-        self.addbtn.Bind(wx.EVT_BUTTON, self.add_column)
+        self.addbtn.Bind(wx.EVT_BUTTON, self.on_add_column)
         self.ok.Bind(wx.EVT_BUTTON, self.on_ok)
         self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
         self.filter_name.Bind(wx.EVT_TEXT, self.validate_filter_name)
+##        self.filter_name.Bind(wx.EVT_COMBOBOX, self.on_select_existing_filter)
 
         self.resize_to_fit()
 
+    def reset(self):
+        for panel in self.panels[1:]:
+            self.remove(panel)
+        self.Refresh()
+        
     def on_ok(self, evt):
         self.EndModal(wx.OK)
 
@@ -178,28 +201,34 @@ class ColumnFilterDialog(wx.Dialog):
             self.filter_name.SetForegroundColour('red')
 
     def get_filter(self):
-        filter = self.panels[0].get_filter()
+        fltr = self.panels[0].get_filter()
         for i, conj in enumerate(self.conjunctions):
-            filter.add_filter(self.panels[i+1].get_filter(), conj.GetStringSelection())
-        return filter
+            fltr.append_expression(conj.GetStringSelection(), 
+                                   *self.panels[i+1].get_filter().get_token_list())
+        return fltr
 
     def get_filter_name(self):
         return str(self.filter_name.Value) # do NOT return unicode
 
     def remove(self, panel):
         i = self.panels.index(panel)
-        if i <= len(self.conjunctions):
+        if 0 < i <= len(self.conjunctions):
             self.sw.Sizer.Remove(self.conjunctions[i-1])
             self.conjunctions.pop(i-1).Destroy()
-        self.panels.remove(panel)
         self.Sizer.Remove(panel)
+        self.panels.remove(panel)
+        panel.Destroy()
         self.sw.FitInside()
         self.resize_to_fit()
 
-    def add_column(self, evt):
-        self.panels += [ColumnFilterPanel(self.sw, self.tables)]
+    def on_add_column(self, evt):
+        self.add_column()
+    def add_column(self, conjunction='AND', expression=None):
+        '''expression -- sqltools.Expression instance
+        '''
+        self.panels += [ColumnFilterPanel(self.sw, self.tables, expression=expression)]
         self.conjunctions += [wx.Choice(self.sw, -1, choices=['AND', 'OR'])]
-        self.conjunctions[-1].Select(0)
+        self.conjunctions[-1].SetStringSelection(conjunction)
         self.sw.Sizer.Add(self.conjunctions[-1], 0, wx.CENTER|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         self.sw.Sizer.Add(self.panels[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         self.sw.FitInside()
@@ -211,6 +240,22 @@ class ColumnFilterDialog(wx.Dialog):
         h = min(self.sw.Sizer.MinSize[1] + self.Sizer.MinSize[1],
                 wx.GetDisplaySize()[1] - self.Position[1])
         self.SetSize((w,h+7))
+        
+##    def on_select_existing_filter(self, evt):
+##        self.load_existing_filter(self.filter_name.GetStringSelection())
+        
+##    def load_existing_filter(self, filter_name):
+##        # TODO: make this work so filters can be modified.
+##        fltr = p._filters[filter_name]
+##        if isinstance(fltr, sql.Filter):
+##            self.reset()
+##            self.panels[0].set_expression(fltr.get_sub_expressions()[0])
+##            for conj, exp in zip(fltr.get_conjunctions(), fltr.get_sub_expressions()[1:]):
+##                self.add_column(conj, exp)
+##        else:
+##            self.reset()
+##            logging.error('Can not load old filter')
+##        self.Refresh()
 
 
 
@@ -219,13 +264,20 @@ if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.DEBUG)
     app = wx.PySimpleApp()
-
+    
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
         p.LoadFile('/Users/afraser/cpa_example/example.properties')
+
+    p._filters['test'] = sql.Filter(('per_image', 'gene'), 'REGEXP', 'MAP*',
+                                    'OR', sql.Column('per_image', 'gene'), 'IS', 'NULL')
+    p._filters_ordered += ['test']
+
+    p._filters['test2'] = sql.Filter(('per_image', 'well'), '!=', 'A01')
+    p._filters_ordered += ['test2']
 
     cff = ColumnFilterDialog(None, tables=[p.image_table])
     if cff.ShowModal()==wx.OK:

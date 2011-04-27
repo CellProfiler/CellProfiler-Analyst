@@ -3,7 +3,8 @@ from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 import sqltools as sql
 from multiclasssql import filter_table_prefix
 from properties import Properties
-from guiutils import TableComboBox, get_other_table_from_user
+import guiutils as ui 
+from gating import GatingHelper
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import logging
@@ -20,8 +21,6 @@ from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as Navigat
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
-NO_FILTER = 'No filter'
-CREATE_NEW_FILTER = '*create new filter*'
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
 LINEAR_SCALE = 'linear'
@@ -33,14 +32,13 @@ class DataSourcePanel(wx.Panel):
     '''
     def __init__(self, parent, figpanel, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
-        
         # the panel to draw charts on
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.x_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
-        self.y_table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.x_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.y_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.gridsize_input = wx.TextCtrl(self, -1, '50')
@@ -54,8 +52,8 @@ class DataSourcePanel(wx.Panel):
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
-        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
-        self.filter_choice.Select(0)
+        self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_x_choices()
@@ -67,7 +65,7 @@ class DataSourcePanel(wx.Panel):
         sz.Add(self.x_table_choice, 1, wx.EXPAND)
         sz.AddSpacer((3,-1))
         sz.Add(self.x_choice, 2, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer((5,-1))
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
         sz.AddSpacer((3,-1))
         sz.Add(self.x_scale_choice)
@@ -80,7 +78,7 @@ class DataSourcePanel(wx.Panel):
         sz.Add(self.y_table_choice, 1, wx.EXPAND)
         sz.AddSpacer((3,-1))
         sz.Add(self.y_choice, 2, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer((5,-1))
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
         sz.AddSpacer((3,-1))
         sz.Add(self.y_scale_choice)
@@ -88,24 +86,28 @@ class DataSourcePanel(wx.Panel):
         sizer.AddSpacer((-1,2))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)        
-        sz.Add(wx.StaticText(self, -1, "grid size:"))
+        sz.Add(wx.StaticText(self, -1, "grid size:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.gridsize_input, 1, wx.TOP, 3)
         sz.AddSpacer((5,-1))
-        sz.Add(self.gridsize_input, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, label='color map:'))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, label='color map:'), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.colormap_choice, 1, wx.EXPAND)
         sz.AddSpacer((5,-1))
-        sz.Add(wx.StaticText(self, label='color scale:'))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, label='color scale:'), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.color_scale_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "filter:"))
-        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
         sz.Add(self.filter_choice, 1, wx.EXPAND)
+        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
+        sz.AddSpacer((3,-1))
+        sz.Add(self.gate_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,5))
         
@@ -113,7 +115,7 @@ class DataSourcePanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
         wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
-        wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
+        wx.EVT_COMBOBOX(self.gate_choice, -1, self.on_gate_selected)
         wx.EVT_COMBOBOX(self.colormap_choice, -1, self.on_cmap_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
         
@@ -122,8 +124,8 @@ class DataSourcePanel(wx.Panel):
 
     def on_x_table_selected(self, evt):
         table = self.x_table_choice.Value
-        if table == TableComboBox.OTHER_TABLE:
-            t = get_other_table_from_user(self)
+        if table == ui.TableComboBox.OTHER_TABLE:
+            t = ui.get_other_table_from_user(self)
             if t is not None:
                 self.x_table_choice.Items = self.x_table_choice.Items[:-1] + [t] + self.x_table_choice.Items[-1:]
                 self.x_table_choice.Select(self.x_table_choice.Items.index(t))
@@ -137,8 +139,8 @@ class DataSourcePanel(wx.Panel):
         
     def on_y_table_selected(self, evt):
         table = self.y_table_choice.Value
-        if table == TableComboBox.OTHER_TABLE:
-            t = get_other_table_from_user(self)
+        if table == ui.TableComboBox.OTHER_TABLE:
+            t = ui.get_other_table_from_user(self)
             if t is not None:
                 self.y_table_choice.Items = self.y_table_choice.Items[:-1] + [t] + self.y_table_choice.Items[-1:]
                 self.y_table_choice.Select(self.y_table_choice.Items.index(t))
@@ -149,24 +151,29 @@ class DataSourcePanel(wx.Panel):
                 self.y_table_choice.Select(0)
                 return
         self.update_y_choices()
-        
-    def on_filter_selected(self, evt):
-        filter = self.filter_choice.GetStringSelection()
-        if filter == CREATE_NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
-            if cff.ShowModal()==wx.OK:
-                fltr = cff.get_filter()
-                fname = str(cff.get_filter_name())
-                p._filters_ordered += [fname]
-                p._filters[fname] = fltr
-                items = self.filter_choice.GetItems()
-                self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
-                self.filter_choice.SetSelection(len(items)-1)
-            else:
-                self.filter_choice.SetSelection(0)
-            cff.Destroy()
             
+    def on_gate_selected(self, evt):
+        gate = self.gate_choice.GetStringSelection()
+        x_table = self.x_table_choice.GetStringSelection()
+        y_table = self.y_table_choice.GetStringSelection()
+        x_column = self.x_choice.GetStringSelection()
+        y_column = self.y_choice.GetStringSelection()
+        if gate == ui.GateComboBox.NEW_GATE:
+            dlg = ui.GateDialog(self)
+            if dlg.ShowModal() == wx.ID_OK:
+                self.gate_choice.Items = self.gate_choice.Items[:-1] + [dlg.Value] + self.gate_choice.Items[-1:]
+                self.gate_choice.SetStringSelection(dlg.Value)
+                p.gates[dlg.Value] = sql.Gate()
+                self.figpanel.gate_helper.set_displayed_gate(p.gates[dlg.Value], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
+            else:
+                self.gate_choice.Select(0)
+                self.figpanel.gate_helper.disable()
+            dlg.Destroy()
+        elif gate == ui.GateComboBox.NO_GATE:
+            self.figpanel.gate_helper.disable()
+        else:
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
+
     def on_cmap_selected(self, evt):
         self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
         
@@ -191,30 +198,39 @@ class DataSourcePanel(wx.Panel):
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
     def update_figpanel(self, evt=None):
-        filter = self.filter_choice.GetStringSelection()
-        points = self.loadpoints(self.x_table_choice.GetStringSelection(),
-                                 self.y_table_choice.GetStringSelection(),
-                                 self.x_choice.GetStringSelection(),
-                                 self.y_choice.GetStringSelection(),
-                                 filter)
+        xtable = self.x_table_choice.Value
+        ytable = self.y_table_choice.Value
+        xcol = self.x_choice.Value
+        ycol = self.y_choice.Value
+        filter_name = self.filter_choice.Value
+        gate_name = self.gate_choice.Value
+
+        points = self.loadpoints(xtable, ytable, xcol, ycol, filter_name)
         self.figpanel.setgridsize(int(self.gridsize_input.GetValue()))
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
         self.figpanel.set_color_scale(self.color_scale_choice.GetStringSelection())
-        self.figpanel.set_x_label(self.x_choice.GetStringSelection())
-        self.figpanel.set_y_label(self.y_choice.GetStringSelection())
+        self.figpanel.set_x_label(xcol)
+        self.figpanel.set_y_label(ycol)
         self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
         self.figpanel.setpointslists(points)
+        if gate_name != ui.GateComboBox.NO_GATE:
+            self.figpanel.gate_helper.set_displayed_gate(
+                p.gates[gate_name], 
+                sql.Column(xtable, xcol), 
+                sql.Column(ytable, ycol))
+        else:
+            self.figpanel.gate_helper.disable()
         self.figpanel.draw()
         
-    def loadpoints(self, xtable, ytable, xcol, ycol, filter=NO_FILTER):
+    def loadpoints(self, xtable, ytable, xcol, ycol, filter_name=ui.FilterComboBox.NO_FILTER):
         ''' Returns a list of tuples (X measurement, Y measurement)
         '''
         q = sql.QueryBuilder()
         q.set_select_clause([sql.Column(xtable, xcol), 
                              sql.Column(ytable, ycol)])
-        if filter != NO_FILTER:
-            q.add_filter(p._filters[filter])
+        if filter_name != ui.FilterComboBox.NO_FILTER:
+            q.add_filter(p._filters[filter_name])
         return db.execute(str(q))
         
     def save_settings(self):
@@ -222,20 +238,23 @@ class DataSourcePanel(wx.Panel):
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        return {'x-table' : self.x_table_choice.GetStringSelection(),
-                'y-table' : self.x_table_choice.GetStringSelection(),
-                'x-axis' : self.x_choice.GetStringSelection(),
-                'y-axis' : self.y_choice.GetStringSelection(),
-                'x-scale' : self.x_scale_choice.GetStringSelection(),
-                'y-scale' : self.y_scale_choice.GetStringSelection(),
-                'grid size' : self.gridsize_input.GetValue(),
-                'colormap' : self.colormap_choice.GetStringSelection(),
-                'color scale' : self.color_scale_choice.GetStringSelection(),
-                'filter' : self.filter_choice.GetStringSelection(),
-                'x-lim': self.figpanel.subplot.get_xlim(),
-                'y-lim': self.figpanel.subplot.get_ylim(),
-                'version' : '1',
-                }
+        d = {'x-table' : self.x_table_choice.GetStringSelection(),
+             'y-table' : self.x_table_choice.GetStringSelection(),
+             'x-axis' : self.x_choice.GetStringSelection(),
+             'y-axis' : self.y_choice.GetStringSelection(),
+             'x-scale' : self.x_scale_choice.GetStringSelection(),
+             'y-scale' : self.y_scale_choice.GetStringSelection(),
+             'grid size' : self.gridsize_input.GetValue(),
+             'colormap' : self.colormap_choice.GetStringSelection(),
+             'color scale' : self.color_scale_choice.GetStringSelection(),
+             'filter' : self.filter_choice.GetStringSelection(),
+             'x-lim': self.figpanel.subplot.get_xlim(),
+             'y-lim': self.figpanel.subplot.get_ylim(),
+             'version' : '1',
+             }
+        if self.gate_choice.get_gate_or_none() != None:
+            d['gate'] = self.gate_choice.Value
+        return d
     
     def load_settings(self, settings):
         '''load_settings is called when loading a workspace from file.
@@ -249,10 +268,10 @@ class DataSourcePanel(wx.Panel):
                 settings['y-table'] = settings['table']
             settings['version'] = '1'
         if 'x-table' in settings:
-            self.x_table_choice.SetStringSelection(settings['table'])
+            self.x_table_choice.SetStringSelection(settings['x-table'])
             self.update_x_choices()
         if 'y-table' in settings:
-            self.y_table_choice.SetStringSelection(settings['table'])
+            self.y_table_choice.SetStringSelection(settings['y-table'])
             self.update_y_choices()
         if 'x-axis' in settings:
             self.x_choice.SetStringSelection(settings['x-axis'])
@@ -275,8 +294,18 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
         if 'y-lim' in settings:
             self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        if 'gate' in settings:
+            xtable = self.x_table_choice.GetStringSelection()
+            xcolumn = self.x_choice.GetStringSelection()
+            ytable = self.y_table_choice.GetStringSelection()
+            ycolumn = self.y_choice.GetStringSelection()
+            self.gate_choice.SetStringSelection(settings['gate'])
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[settings['gate']],
+                                                         sql.Column(xtable, xcolumn),
+                                                         sql.Column(ytable, ycolumn))
         self.figpanel.draw()
 
+        
 class DensityPanel(FigureCanvasWxAgg):
     def __init__(self, parent, **kwargs):
         self.figure = Figure()
@@ -286,7 +315,9 @@ class DensityPanel(FigureCanvasWxAgg):
         self.figure.set_facecolor((1,1,1))
         self.figure.set_edgecolor((1,1,1))
         self.canvas.SetBackgroundColour('white')
-        
+        self.subplot = self.figure.add_subplot(111)
+        self.gate_helper = GatingHelper(self.subplot, self)
+
         self.navtoolbar = None
         self.point_list = []
         self.gridsize = 50
@@ -297,13 +328,12 @@ class DensityPanel(FigureCanvasWxAgg):
         self.x_label = ''
         self.y_label = ''
         self.cmap ='jet'
+        
+        self.canvas.mpl_connect('button_release_event', self.on_release)
     
     def setpointslists(self, points):
-        self.point_list = points
-        
-        self.figure.clear()
-        self.subplot = self.figure.add_subplot(111)
-            
+        self.subplot.clear()
+        self.point_list = points        
         plot_pts = np.array(points).astype(float)
         
         if self.x_scale == LOG_SCALE:
@@ -317,12 +347,17 @@ class DensityPanel(FigureCanvasWxAgg):
                                  yscale=self.y_scale,
                                  bins=self.color_scale,
                                  cmap=matplotlib.cm.get_cmap(self.cmap))
-            
+
         #h, xedges, yedges = np.histogram2d(plot_pts[:, 0], plot_pts[:, 1],
                                            #bins=self.gridsize)
         #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         #hb = self.subplot.imshow(h, extent=extent, interpolation='nearest')
-            
+        
+        if self.cb:
+            # Remove the existing colorbar and reclaim the space so when we add
+            # a colorbar to the new hexbin subplot, it doesn't get indented.
+            self.figure.delaxes(self.figure.axes[1])
+            self.figure.subplots_adjust(right=0.90)
         self.cb = self.figure.colorbar(hb)
         if self.color_scale==LOG_SCALE:
             self.cb.set_label('log10(N)')
@@ -384,7 +419,6 @@ class DensityPanel(FigureCanvasWxAgg):
     def get_toolbar(self):
         if not self.navtoolbar:
             self.navtoolbar = NavigationToolbar(self.canvas)
-            self.navtoolbar.DeleteToolByPos(6)
         return self.navtoolbar
 
     def reset_toolbar(self):
@@ -394,6 +428,24 @@ class DensityPanel(FigureCanvasWxAgg):
             self.navtoolbar._positions.clear()
             self.navtoolbar.push_current()
     
+    def set_configpanel(self,configpanel):
+        '''Allow access of the control panel from the plotting panel'''
+        self.configpanel = configpanel
+        
+    def on_release(self, evt):
+        if evt.button == 3: # right click
+            self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
+            
+    def show_popup_menu(self, (x,y), data):
+        self.popup_menu_filters = {}
+        popup = wx.Menu()
+        loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
+        selected_gates = [self.configpanel.gate_choice.get_gate_or_none()] or []
+        self.Bind(wx.EVT_MENU, 
+                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  loadimages_table_item)
+        self.PopupMenu(popup, (x,y))
+
 
 class Density(wx.Frame, CPATool):
     '''
@@ -406,6 +458,7 @@ class Density(wx.Frame, CPATool):
         
         figpanel = DensityPanel(self)
         configpanel = DataSourcePanel(self, figpanel)
+        figpanel.set_configpanel(configpanel)
         self.SetToolBar(figpanel.get_toolbar())
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)

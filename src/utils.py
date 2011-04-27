@@ -20,3 +20,15 @@ class ObservableDict(dict, Observable):
         dict.__setitem__(self, key, value)
         self.notify((key, value))
 
+    def __delitem__(self, key):
+        dict.__delitem__(self, key)
+        self.notify((key, None))
+        
+    def pop(self, key):
+        v = dict.pop(self, key)
+        self.notify((key, None))
+        return v
+    
+    def clear(self):
+        dict.clear(self)
+        self.notify(None)

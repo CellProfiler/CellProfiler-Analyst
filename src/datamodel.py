@@ -242,7 +242,7 @@ class DataModel(Singleton):
         # apply filter if supplied
         if filter_name is not None:
             if filter_name not in self.filterkeys.keys():
-                self.filterkeys[filter_name] = set(db.execute(p._filters[filter_name]))
+                self.filterkeys[filter_name] = db.GetFilteredImages(filter_name)
             imkeys = set(imkeys).intersection(self.filterkeys[filter_name])    
         
         return imkeys

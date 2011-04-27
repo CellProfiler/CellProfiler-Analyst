@@ -58,6 +58,8 @@ list_vars = ['image_path_cols', 'image_channel_paths',
              'classifier_ignore_columns',
              'image_thumbnail_cols']
 
+dict_vars = ['gates']
+
 optional_vars = ['db_port', 
                  'db_host', 
                  'db_name', 
@@ -107,7 +109,7 @@ field_mappings = {'classifier_ignore_substrings' : 'classifier_ignore_columns',
 required_vars = list(set(list_vars + string_vars) - set(optional_vars) 
                      - set(field_mappings.keys()))
 
-valid_vars = set(list_vars + string_vars)
+valid_vars = set(list_vars + string_vars + dict_vars)
 
 class Properties(Singleton):
     '''
@@ -115,11 +117,19 @@ class Properties(Singleton):
     '''
     def __init__(self):
         super(Properties, self).__init__()        
-        self._groups = {}
-        self._groups_ordered = []
-        self._filters = {}
-        self._filters_ordered = []
         self._initialized = False
+        
+    @property
+    def _filters_ordered(self):
+        return sorted(self._filters.keys())
+    
+    @property
+    def _groups_ordered(self):
+        return sorted(self._groups.keys())
+    
+    @property
+    def gates_ordered(self):
+        return sorted(self.gates.keys())
     
     def __str__(self):
         s=''
@@ -135,9 +145,9 @@ class Properties(Singleton):
         else:
             return self.__dict__[field]
         
-    def __setattr__(self, id, val):
-        self.__dict__[id] = val
-    
+    def __setattr__(self, field, val):
+        self.__dict__[field] = val
+
     def show_load_dialog(self):
         import wx
         if not wx.GetApp():
@@ -158,18 +168,18 @@ class Properties(Singleton):
         
     def load_file(self, filename):
         ''' Loads variables in from a properties file. '''
+        from sqltools import Gate, Filter, OldFilter
+        from utils import ObservableDict
+        
         self.clear()
-        self._groups = {}
-        self._groups_ordered = []
-        self._filters = {}
-        self._filters_ordered = []
-        self._filename = filename
+        self._filename        = filename
+        self._groups          = {}
+        self._filters         = ObservableDict()
+        self.gates            = ObservableDict()
 
-        f = open(filename, 'U')        
+        f = open(filename, 'U')
         lines = f.read()
-        self._textfile = lines
-        # replace CRs with LFs
-        #lines = lines.replace('\r', '\n')
+        self._textfile = lines     # store raw file
         lines = lines.split('\n')
 
         for idx in xrange(len(lines)):
@@ -204,12 +214,10 @@ class Properties(Singleton):
                     if not val:
                         logging.warn('PROPERTIES WARNING (%s): Undefined group'%(name))
                         continue
-                    # TODO: test query
                     self._groups[group_name] = val
-                    self._groups_ordered += [group_name]
                     
                 elif name.startswith('filter_SQL_'):
-                    # Handle old-style filters:
+                    # Load old-style SQL filters:
                     filter_name = name[11:]
                     if filter_name == '':
                         raise Exception, ('PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
@@ -224,30 +232,28 @@ class Properties(Singleton):
                     if not val:
                         logging.warn('PROPERTIES WARNING (%s): Undefined filter'%(name))
                         continue
-                    import sqltools
-                    self._filters[filter_name] = sqltools.OldFilter(filter_name, val)
-                    self._filters_ordered += [filter_name]
+                    self._filters[filter_name] = OldFilter(filter_name, val)
                 
-                elif name in ['groups', 'filters']:
+                elif name == 'groups':
                     logging.warn('PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\n'
                               'Only the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name))
                     
-                #elif name == 'gates':
-                    ## gates are the new filters
-                    ## gates are all the rage
-                    ## gates are the new black
-                    #not_parsed = True
-                    #gates = ''
-                    #while not_parsed:
-                        #gates += val.strip()
-                        #try:
-                            #self.__dict__[name] = eval(gates)
-                            #not_parsed = False
-                        #except SyntaxError:
-                            #idx += 1
-                            #if idx >= len(lines):
-                                #raise Exception, 'PROPERTIES ERROR: Error parsing gates. Could not find end of definition.'
-                            #val = lines[idx]
+                elif name == 'filters':
+                    # Load new-style filters
+                    d = eval(val)
+                    if type(d) != dict:
+                        raise Exception, 'PROPERTIES ERROR (filters): Error parsing filters. Check the "filters" field in your properties file.'
+                    for k, v in d.items():
+                        self._filters[k] = Filter.decode(v)
+                    del d
+                        
+                elif name == 'gates':
+                    d = eval(val)
+                    if type(d) != dict:
+                        raise Exception, 'PROPERTIES ERROR (gates): Error parsing gates. Check the "gates" field in your properties file.'
+                    for k, v in d.items():
+                        self.gates[k] = Gate.decode(v)
+                    del d
                     
                 else:
                     logging.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
@@ -274,59 +280,95 @@ class Properties(Singleton):
         
     def save_file(self, filename):
         '''
-        Saves the file including original comments and whitespace. 
+        Saves the file.
         This function skips vars that start with _ (underscore)
         '''
-        f = open(filename, 'w')
+        import sqltools
+        fd = open(filename, 'w')
         self._filename = filename
         
-        fields_to_write = set([k for k in self.__dict__.keys() if not k.startswith('_')])
-        
-        # Write whole file out replacing any changed values
-        for line in StringIO(self._textfile):
-            if line.strip().startswith('#') or line.strip()=='':
-                f.write(line)
-            else:
-                (name, oldval) = line.split('=', 1)    # split each side of the first eq sign
-                name = name.strip()
-                oldval = oldval.strip()
-                val = self.__getattr__(name)
-                if name in string_vars and str(val) == oldval:
-                    # write string fields back if they're the same
-                    f.write(line)
-                elif name in list_vars and val == parse_list_value(oldval):
-                    # write list vars back if they're the same
-                    f.write(line)
-                elif name.startswith('group') or name.startswith('filter'):
-                    # write old groups and filters back as they were
-                    f.write(line)
-                else:
-                    # the field value has changed
-                    if type(val)==list:
-                        f.write('%s  =  %s\n'%(name, ', '.join([str(v) for v in val if v])))
-                    else:
-                        f.write('%s  =  %s\n'%(name, val))
-                fields_to_write.remove(name)
-        
-        f.write('\n')
-        # Write out fields that weren't present in the file
+        fields_to_write = sorted([k for k, v in self.__dict__.items() 
+                                  if not k.startswith('_') and v is not None])
+
         for field in fields_to_write:
             val = self.__getattr__(field)
-            if type(val)==list:
-                f.write('%s  =  %s\n'%(field, ', '.join([str(v) for v in val if v])))
+            if type(val) == list:
+                fd.write('%s  =  %s\n'%(field, ', '.join([str(v) for v in val if v])))
+            elif field == 'gates':
+                encoded = repr(dict([(k, g.encode()) for k, g in val.items() if not g.is_empty()]))
+                fd.write('gates  =  %s\n'%(encoded))
             else:
-                f.write('%s  =  %s\n'%(field, val))
+                fd.write('%s  =  %s\n'%(field, val))
+
+        # Write new filters
+        encoded = repr( dict([ (k, f.encode()) 
+                              for k, f in self._filters.items() 
+                              if isinstance(f,sqltools.Filter) and f.is_not_empty() ])
+                        )
+        fd.write('# These filters were created while using CPAnalyst. Do not edit.\n')
+        fd.write('filters  =  %s\n'%(encoded))
+                
+        # write old groups and filters back as they were
+        for line in StringIO(self._textfile):
+            if not (line.strip().startswith('#') or line.strip()==''):
+                (field, oldval) = line.split('=', 1)
+                field = field.strip()
+                if field.startswith('filter_SQL_'):
+                    current_val = self._filters[field[len('filter_SQL_'):]]
+                    # skip filters that were converted
+                    if not isinstance(current_val, sqltools.Filter):
+                        fd.write(line)
+                if field.startswith('group_SQL_'):
+                    fd.write(line)
+        fd.close()
         
-        f.close()
+        
+##        # Write whole file out replacing any changed values
+##        for line in StringIO(self._textfile):
+##            if line.strip().startswith('#') or line.strip()=='':
+##                fd.write(line)
+##            else:
+##                (name, oldval) = line.split('=', 1)    # split each side of the first eq sign
+##                name = name.strip()
+##                oldval = oldval.strip()
+##                val = self.__getattr__(name)
+##                if name in string_vars and str(val) == oldval:
+##                    # write string fields back if they're the same
+##                    fd.write(line)
+##                elif name in list_vars and val == self.parse_list_value(oldval):
+##                    # write list vars back if they're the same
+##                    fd.write(line)
+##                elif name.startswith('group') or name.startswith('filter'):
+##                    # write old groups and filters back as they were
+##                    fd.write(line)
+##                else:
+##                    # the field value has changed
+##                    if type(val)==list:
+##                        fd.write('%s  =  %s\n'%(name, ', '.join([str(v) for v in val if v])))
+##                    else:
+##                        fd.write('%s  =  %s\n'%(name, val))
+##                fields_to_write.remove(name)
+##        
+##        fd.write('\n')
+##        # Write out fields that weren't present in the file
+##        for field in fields_to_write:
+##            val = self.__getattr__(field)
+##            if type(val)==list:
+##                fd.write('%s  =  %s\n'%(field, ', '.join([str(v) for v in val if v])))
+##            elif field == 'gates':
+##                fd.write(repr(dict(zip(val.keys(), [g.encode() for g in val.values()]))))
+##            else:
+##                fd.write('%s  =  %s\n'%(field, val))
+##        
+##        fd.close()
         
     def clear(self):
+        from utils import ObservableDict
         # only clear known variables
         for k in valid_vars & set(self.__dict__.keys()):
             del self.__dict__[k]
-        self._groups = {}
-        self._groups_ordered = []
-        self._filters = {}
-        self._filters_ordered = []
+        self._groups      = {}
+        self._filters     = ObservableDict()
         self._initialized = True
         
     def is_initialized(self):
@@ -503,6 +545,11 @@ class Properties(Singleton):
                                     
         if not self.field_defined('plate_type'):
             logging.warn('PROPERTIES WARNING (plate_type): Field is required for plate map viewer.')
+        else:
+            supported_values = ['96', '384', '1536', '5600']
+            if self.__dict__['plate_type'] not in supported_values:
+                raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
+                                %(self.__dict__['plate_type'], ', '.join(supported_values)))
             
         if self.field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.check_tables = 'no'
@@ -541,6 +588,10 @@ class Properties(Singleton):
             
         if not self.field_defined('link_columns_table'):
             self.link_columns_table = '_link_columns_%s_'%(self.image_table)
+            
+        if not self.field_defined('gates'):
+            import sqltools
+            self.gates = sqltools.ObservableDict()
         
 
 if __name__ == "__main__":

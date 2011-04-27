@@ -695,16 +695,16 @@ class DBConnect(Singleton):
                 d[row[:key_size]] = row[key_size:]
         return d, col_names
     
-    def GetFilteredImages(self, filter):
+    def GetFilteredImages(self, filter_name):
         ''' Returns a list of imKeys from the given filter. '''
         try:
-            f = p._filters[filter]
+            f = p._filters[filter_name]
             query = 'SELECT %s FROM %s WHERE %s'%(UniqueImageClause(), ','.join(f.get_tables()), str(f))
             return self.execute(query)
         except Exception, e:
-            logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter))
+            logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)
-            raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter)
+            raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name)
     
     def GetTableNames(self):
         '''
@@ -820,9 +820,9 @@ class DBConnect(Singleton):
 
         self.Commit()
             
-    def get_linking_conditions(self, tables):
-        '''returns: A list of WhereConditions linking the tables given. These 
-        conditions may link through some intermediate table if a path exists.
+    def get_linking_expressions(self, tables):
+        '''returns: A list of Expressions linking the tables given. These 
+        expressions may link through some intermediate table if a path exists.
         
         Use when constructing a where clause for a multi-table query.
                  
@@ -830,10 +830,10 @@ class DBConnect(Singleton):
         DBConnect.get_linking_tables first to check that all tables are linked.
                  
         usage: 
-        >>> get_linking_conditions(['per_well', 'per_image', 'per_object'])
-        [WhereCondition(('per_well', 'Plate'), '=', ('per_image', 'Plate')),
-         WhereCondition(('per_well', 'Well'),  '=', ('per_image', 'Well')),
-         WhereCondition(('per_image', 'ImageNumber'),  '=', ('per_object', 'ImageNumber'))]
+        >>> get_linking_expressions(['per_well', 'per_image', 'per_object'])
+        [Expression(('per_well', 'Plate'), '=', ('per_image', 'Plate')),
+         Expression(('per_well', 'Well'),  '=', ('per_image', 'Well')),
+         Expression(('per_image', 'ImageNumber'),  '=', ('per_object', 'ImageNumber'))]
         '''
         import sqltools as sql
         for t in tables[1:]:
@@ -841,15 +841,15 @@ class DBConnect(Singleton):
                 raise Exception('Tables "%s" and "%s" are not linked.'%(tables[0], t))
             
         def get_linking_clauses(table1, table2):
-            #helper function returns conditions that link 2 tables
-            return [sql.WhereCondition((ta, cola), '=', (tb, colb))
+            #helper function returns expressions that link 2 tables
+            return [sql.Expression(sql.Column(ta, cola), '=', sql.Column(tb, colb))
                     for ta, tb in self.get_linking_table_pairs(table1, table2)
                     for cola, colb in self.get_linking_columns(ta, tb)]
         
-        conditions = set()
+        expressions = set()
         for table in tables[1:]:
-            conditions.update(get_linking_clauses(tables[0], table))
-        return conditions
+            expressions.update(get_linking_clauses(tables[0], table))
+        return expressions
     
     def get_linking_tables(self, table_from, table_to):
         '''returns: an ordered list of tables that must be used to join
@@ -949,10 +949,13 @@ class DBConnect(Singleton):
             if col == colname:
                 return coltype
 
-    def GetColnamesForClassifier(self, force=False):
+    def GetColnamesForClassifier(self, exclude_features_with_no_variance=False,
+                                 force=False):
         '''
         Returns a list of column names for the object_table excluding 
         those specified in Properties.classifier_ignore_columns
+        and excluding those with zero variance (unless 
+        exclude_features_with_no_variance is set to False)
         '''
         if (self.classifierColNames is None) or force:
             col_names = self.GetColumnNames(p.object_table)
@@ -975,9 +978,19 @@ class DBConnect(Singleton):
             # for column names to ignore
             if p.classifier_ignore_columns:
                 self.classifierColNames = [col for col in self.classifierColNames
-                                                if not any([re.match('^'+user_exp+'$',col)
+                                           if not any([re.match('^'+user_exp+'$',col)
                                                        for user_exp in p.classifier_ignore_columns])]
             logging.info('Ignoring columns: %s'%([x for x in col_names if x not in self.classifierColNames]))
+
+            if exclude_features_with_no_variance:
+                # ignore columns which have no variance
+                cq = ', '.join(['MAX(%s)-MIN(%s)'%(col,col) for col in col_names])
+                res = np.array(self.execute('SELECT %s FROM %s'%(cq, p.object_table))[0])
+                ignore_cols = np.array(col_names)[np.where(res==0)[0]]                
+                for colname in ignore_cols:
+                    self.classifierColNames.remove(colname)            
+                    logging.warn('Ignoring column "%s" because it has zero variance'%(colname))
+            
             if len(self.classifierColNames) == 0 and p.classifier_ignore_columns:
                 import wx
                 wx.MessageBox('No columns were found to use for classification '
@@ -1757,8 +1770,8 @@ if __name__ == "__main__":
     p.LoadFile('/Users/afraser/cpa_example/example.properties')
     
 
-    conditions = db.get_linking_conditions(['class_table', 'per_image'])
-    print ' AND '.join([str(c) for c in conditions])
+    exps = db.get_linking_expressions(['class_table', 'per_image'])
+    print ' AND '.join([str(c) for c in exps])
         
     #print db.get_linking_tables('class_table', 'per_object')
     

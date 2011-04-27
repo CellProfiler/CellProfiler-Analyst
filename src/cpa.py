@@ -80,17 +80,11 @@ from scatter import Scatter
 from histogram import Histogram
 from density import Density
 from querymaker import QueryMaker
+from normalizationtool import NormalizationUI
 import icons
 import cpaprefs
 from cpatool import CPATool
-
-PLOTS = {'scatter'     : Scatter, 
-         'histogram'   : Histogram,
-         'density'     : Density, 
-         'plateviewer' : PlateViewer,
-         'datatable'   : TableViewer, 
-         'classifier'  : Classifier,
-         'boxplot'     : BoxPlot}
+import inspect
 
 from icons import get_cpa_icon
 import dbconnect
@@ -106,6 +100,14 @@ ID_SCATTER = wx.NewId()
 ID_HISTOGRAM = wx.NewId()
 ID_DENSITY = wx.NewId()
 ID_BOXPLOT = wx.NewId()
+ID_NORMALIZE = wx.NewId()
+
+def get_cpatool_subclasses():
+    '''returns a list of CPATool subclasses.
+    '''
+    class_objs = inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    return [klass for name, klass in class_objs 
+            if issubclass(klass, CPATool) and klass!=CPATool]
 
 class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
@@ -148,8 +150,11 @@ class MainGUI(wx.Frame):
         #
         self.SetMenuBar(wx.MenuBar())
         fileMenu = wx.Menu()
-        saveWorkspaceMenuItem = fileMenu.Append(-1, 'Save workspace\tCtrl+S', help='Save the currently open plots and settings.')
-        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load workspace\tCtrl+O', help='Open plots saved in a previous workspace.')
+        savePropertiesMenuItem = fileMenu.Append(-1, 'Save properties\tCtrl+S', help='Save the properties.')
+##        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load properties\tCtrl+O', help='Open another properties file.')
+        fileMenu.AppendSeparator()
+        saveWorkspaceMenuItem = fileMenu.Append(-1, 'Save workspace\tCtrl+Shift+S', help='Save the currently open plots and settings.')
+        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load workspace\tCtrl+Shift+O', help='Open plots saved in a previous workspace.')
         fileMenu.AppendSeparator()
         saveLogMenuItem = fileMenu.Append(-1, 'Save log', help='Save the contents of the log window.')
         fileMenu.AppendSeparator()
@@ -177,6 +182,7 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(logMenu, 'Logging')
 
         advancedMenu = wx.Menu()
+        normalizeMenuItem = advancedMenu.Append(-1, 'Launch feature normalization tool', help='Launches a tool for generating normalized values for measurement columns in your tables.')
         queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', help='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
         clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
@@ -209,9 +215,11 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.WARN), warnMenuItem)
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.ERROR), errorMenuItem)
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.CRITICAL), criticalMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_save_properties, savePropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
         self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)        
         self.Bind(wx.EVT_MENU, self.save_log, saveLogMenuItem)
+        self.Bind(wx.EVT_MENU, self.launch_normalization_tool, normalizeMenuItem)
         self.Bind(wx.EVT_MENU, self.clear_link_tables, clearTableLinksMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_query_maker, queryMenuItem)
         self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
@@ -269,6 +277,20 @@ class MainGUI(wx.Frame):
     def launch_query_maker(self, evt=None):
         querymaker = QueryMaker(parent=self)
         querymaker.Show(True)
+        
+    def launch_normalization_tool(self, evt=None):
+        normtool = NormalizationUI(parent=self)
+        normtool.Show(True)
+
+    def on_save_properties(self, evt):
+        p = Properties.getInstance()
+        dirname, filename = os.path.split(p._filename)
+        ext = os.path.splitext(p._filename)[-1]
+        dlg = wx.FileDialog(self, message="Save properties as...", defaultDir=dirname, 
+                            defaultFile=filename, wildcard=ext, 
+                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            p.save_file(dlg.GetPath())
 
     def on_save_workspace(self, evt):
         p = Properties.getInstance()
@@ -443,15 +465,15 @@ class CPAnalyst(wx.App):
         settings = {}
         pos = 20
         for i in range(len(lines)):
-            for plot_type in PLOTS:
-                if lines[i].lower().startswith(plot_type):
+            for cpatool in get_cpatool_subclasses():
+                if lines[i] == cpatool.__name__:
                     logging.info('opening plot "%s"'%(lines[i]))
                     while lines[i+1].startswith('\t'):
                         i += 1
-                        setting, value = map(str.strip, lines[i].split(':'))
+                        setting, value = map(str.strip, lines[i].split(':', 1))
                         settings[setting] = value
                     pos += 15
-                    plot = PLOTS[plot_type](parent=self.frame, pos=(pos,pos))
+                    plot = cpatool(parent=self.frame, pos=(pos,pos))
                     plot.Show(True)
                     plot.load_settings(settings)
         logging.info('...done loading workspace')

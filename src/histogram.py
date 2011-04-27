@@ -3,7 +3,7 @@ from icons import lasso_tool
 import sqltools as sql
 from multiclasssql import filter_table_prefix
 from properties import Properties
-from guiutils import TableComboBox, get_other_table_from_user
+import guiutils as ui
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import logging
@@ -12,8 +12,8 @@ import os
 import sys
 import re
 import wx
+from gating import GatingHelper
 from matplotlib.figure import Figure
-from matplotlib.widgets import SpanSelector
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
@@ -22,12 +22,11 @@ from cpatool import CPATool
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
-NO_FILTER = 'No filter'
-CREATE_NEW_FILTER = '*create new filter*'
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
 LOG2_SCALE   = 'log2'
 LINEAR_SCALE = 'linear'
+
 
 class DataSourcePanel(wx.Panel):
     '''
@@ -41,7 +40,7 @@ class DataSourcePanel(wx.Panel):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.bins_input = wx.SpinCtrl(self, -1, '100')
         self.bins_input.SetRange(1,400)
@@ -49,8 +48,8 @@ class DataSourcePanel(wx.Panel):
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
-        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
-        self.filter_choice.Select(0)
+        self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
@@ -83,22 +82,26 @@ class DataSourcePanel(wx.Panel):
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
         sz.AddSpacer((2,-1))
         sz.Add(self.filter_choice, 1, wx.EXPAND)
+        sz.AddSpacer((5,-1))
+        sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
+        sz.AddSpacer((2,-1))
+        sz.Add(self.gate_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))
-        
+                
         sizer.Add(self.update_chart_btn)    
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
-        wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
+        wx.EVT_COMBOBOX(self.gate_choice, -1, self.on_gate_selected)
+        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
         
         self.SetSizer(sizer)
         self.Show(1)
 
     def on_table_selected(self, evt):
         table = self.table_choice.Value
-        if table == TableComboBox.OTHER_TABLE:
-            t = get_other_table_from_user(self)
+        if table == ui.TableComboBox.OTHER_TABLE:
+            t = ui.get_other_table_from_user(self)
             if t is not None:
                 self.table_choice.Items = self.table_choice.Items[:-1] + [t] + self.table_choice.Items[-1:]
                 self.table_choice.Select(self.table_choice.Items.index(t))
@@ -106,24 +109,27 @@ class DataSourcePanel(wx.Panel):
                 self.table_choice.Select(0)
                 return
         self.update_column_fields()
-        
-    def on_filter_selected(self, evt):
-        filter = self.filter_choice.GetStringSelection()
-        if filter == CREATE_NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
-            if cff.ShowModal()==wx.OK:
-                fltr = cff.get_filter()
-                fname = str(cff.get_filter_name())
-                p._filters_ordered += [fname]
-                p._filters[fname] = fltr
-                items = self.filter_choice.GetItems()
-                self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
-                self.filter_choice.SetSelection(len(items)-1)
-            else:
-                self.filter_choice.SetSelection(0)
-            cff.Destroy()
             
+    def on_gate_selected(self, evt):
+        gate = self.gate_choice.GetStringSelection()
+        table = self.table_choice.GetStringSelection()
+        column = self.x_choice.GetStringSelection()
+        if gate == ui.GateComboBox.NEW_GATE:
+            dlg = ui.GateDialog(self)
+            if dlg.ShowModal() == wx.ID_OK:
+                self.gate_choice.Items = self.gate_choice.Items[:-1] + [dlg.Value] + self.gate_choice.Items[-1:]
+                self.gate_choice.SetStringSelection(dlg.Value)
+                p.gates[dlg.Value] = sql.Gate()
+                self.figpanel.gate_helper.set_displayed_gate(p.gates[dlg.Value], sql.Column(table, column), None)
+            else:
+                self.gate_choice.Select(0)
+                self.figpanel.gate_helper.disable()
+            dlg.Destroy()
+        elif gate == ui.GateComboBox.NO_GATE:
+            self.figpanel.gate_helper.disable()
+        else:
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(table, column), None)
+
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
         fieldnames = self.get_numeric_columns_from_table(tablename)
@@ -138,25 +144,31 @@ class DataSourcePanel(wx.Panel):
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
     def update_figpanel(self, evt=None):    
-        filter = self.filter_choice.GetStringSelection()
-        points = self.loadpoints(self.table_choice.GetStringSelection(),
-                                 self.x_choice.GetStringSelection(),
-                                 filter)
+        filter_name = self.filter_choice.GetStringSelection()
+        table = self.table_choice.GetStringSelection()
+        column = self.x_choice.GetStringSelection()
+        points = self.loadpoints(table, column, filter_name)
         points = np.array(points[0]).T[0]
         bins = int(self.bins_input.GetValue())
-        self.figpanel.set_x_label(self.x_choice.GetStringSelection())
+        gate = self.gate_choice.GetStringSelection()
+        
+        self.figpanel.set_x_label(column)
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
         self.figpanel.setpoints(points, bins)
+        if gate == ui.GateComboBox.NO_GATE:
+            self.figpanel.gate_helper.disable()
+        else:
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(table, column), None)
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, xpoints, filter=NO_FILTER):
+    def loadpoints(self, tablename, xpoints, filter=ui.FilterComboBox.NO_FILTER):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, X measurement
         '''
         q = sql.QueryBuilder()
         q.set_select_clause([sql.Column(tablename, xpoints)])
-        if filter != NO_FILTER:
+        if filter != ui.FilterComboBox.NO_FILTER:
             q.add_filter(p._filters[filter])
         return [db.execute(str(q))]
 
@@ -165,15 +177,18 @@ class DataSourcePanel(wx.Panel):
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        return {'table' : self.table_choice.GetStringSelection(),
-                'x-axis' : self.x_choice.GetStringSelection(),
-                'bins' : self.bins_input.GetValue(),
-                'x-scale' : self.x_scale_choice.GetStringSelection(),
-                'y-scale' : self.y_scale_choice.GetStringSelection(),
-                'filter' : self.filter_choice.GetStringSelection(),
-                'x-lim': self.figpanel.subplot.get_xlim(),
-                'y-lim': self.figpanel.subplot.get_ylim(),
-                }
+        d=  {'table' : self.table_choice.GetStringSelection(),
+             'x-axis' : self.x_choice.GetStringSelection(),
+             'bins' : self.bins_input.GetValue(),
+             'x-scale' : self.x_scale_choice.GetStringSelection(),
+             'y-scale' : self.y_scale_choice.GetStringSelection(),
+             'filter' : self.filter_choice.GetStringSelection(),
+             'x-lim' : self.figpanel.subplot.get_xlim(),
+             'y-lim' : self.figpanel.subplot.get_ylim(),
+             }
+        if self.gate_choice.get_gate_or_none() != None:
+            d['gate'] = self.gate_choice.Value
+        return d
     
     def load_settings(self, settings):
         '''load_settings is called when loading a workspace from file.
@@ -199,6 +214,12 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
         if 'y-lim' in settings:
             self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        if 'gate' in settings:
+            table = self.table_choice.GetStringSelection()
+            column = self.x_choice.GetStringSelection()
+            self.gate_choice.SetStringSelection(settings['gate'])
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[settings['gate']],
+                                                         sql.Column(table, column), None)
         self.figpanel.draw()
         
 
@@ -211,32 +232,18 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.figure.set_facecolor((1,1,1))
         self.figure.set_edgecolor((1,1,1))
         self.canvas.SetBackgroundColour('white')
+        self.subplot = self.figure.add_subplot(111)
+        self.gate_helper = GatingHelper(self.subplot, self)
         
         self.navtoolbar = NavigationToolbar(self.canvas)
-        self.navtoolbar.DeleteToolByPos(6)
-        #self.span_tool = self.navtoolbar.InsertSimpleTool(5, -1, lasso_tool.ConvertToBitmap(), 
-                                                          #shortHelpString='Draw gate', 
-                                                          #isToggle=True)
-        self.span = None
         self.navtoolbar.Realize()
-        #self.navtoolbar.Bind(wx.EVT_TOOL, self.on_span_tool_clicked, self.span_tool)
             
         self.x_label = ''
         self.log_y = False
         self.x_scale = LINEAR_SCALE
         self.setpoints(points, bins)
         
-        #self.canvas.mpl_connect('button_press_event', self.on_press)
-        #self.canvas.mpl_connect('button_release_event', self.on_release)
-        
-    #def on_press(self, evt):
-        #if self.span_tool.IsToggled():
-            #import matplotlib as mpl
-
-            #mpl.lines.Line2D([evt.x, evt.x], [0, 1], transform=self.figure.transFigure, figure=self.figure)
-
-    #def selection_callback(self, xmin, xmax):
-        #print xmin, xmax
+        self.canvas.mpl_connect('button_release_event', self.on_release)
         
     def setpoints(self, points, bins):
         ''' Updates the data to be plotted and redraws the plot.
@@ -244,16 +251,9 @@ class HistogramPanel(FigureCanvasWxAgg):
         bins - number of bins to aggregate points in
         '''
         self.points = np.array(points).astype('f')
-        self.bins = bins
-        
+        self.bins = bins        
         points = self.points
         x_label = self.x_label
-        #Draw data.
-        if not hasattr(self, 'subplot'):
-            self.subplot = self.figure.add_subplot(111)
-            #self.span = SpanSelector(self.subplot, self.selection_callback, 
-                                     #'horizontal', useblit=True,
-                                     #rectprops=dict(alpha=0.3, facecolor='red'))
 
         self.subplot.clear()
         # log xform the data, ignoring non-positives
@@ -284,8 +284,6 @@ class HistogramPanel(FigureCanvasWxAgg):
                           log=self.log_y,
                           alpha=0.75)
         self.subplot.set_xlabel(x_label)
-        #self.span.visible = self.span_tool.IsToggled()
-
         self.reset_toolbar()
     
     def set_x_label(self, label):
@@ -315,10 +313,23 @@ class HistogramPanel(FigureCanvasWxAgg):
             self.navtoolbar._positions.clear()
             self.navtoolbar.push_current()
             
-    #def on_span_tool_clicked(self, evt):
-        #if self.span:
-            #self.span.visible = evt.IsChecked()
-
+    def set_configpanel(self,configpanel):
+        '''Allow access of the control panel from the plotting panel'''
+        self.configpanel = configpanel
+        
+    def on_release(self, evt):
+        if evt.button == 3: # right click
+            self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
+            
+    def show_popup_menu(self, (x,y), data):
+        self.popup_menu_filters = {}
+        popup = wx.Menu()
+        loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
+        selected_gates = [self.configpanel.gate_choice.get_gate_or_none()] or []
+        self.Bind(wx.EVT_MENU, 
+                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  loadimages_table_item)
+        self.PopupMenu(popup, (x,y))
 
 class Histogram(wx.Frame, CPATool):
     '''
@@ -330,7 +341,8 @@ class Histogram(wx.Frame, CPATool):
         self.SetName(self.tool_name)
         points = []
         figpanel = HistogramPanel(self, points)
-        configpanel = DataSourcePanel(self, figpanel)        
+        configpanel = DataSourcePanel(self, figpanel)
+        figpanel.set_configpanel(configpanel)
         self.SetToolBar(figpanel.get_toolbar())
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
@@ -342,8 +354,9 @@ class Histogram(wx.Frame, CPATool):
         #
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
-
-                    
+        self.fig = figpanel
+        
+        
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
@@ -358,15 +371,15 @@ if __name__ == "__main__":
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
-
+            
+##    p.gates = sql.ObservableDict()
+               
     histogram = Histogram(None)
     histogram.Show()
     
     app.MainLoop()
 
-    #
     # Kill the Java VM
-    #
     try:
         import cellprofiler.utilities.jutil as jutil
         jutil.kill_vm()

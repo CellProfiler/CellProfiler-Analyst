@@ -237,9 +237,9 @@ class PlateViewer(wx.Frame, CPATool):
                 select += [sql.Column(table, measurement, 'STDDEV')]
             elif aggMethod=='cv%':
                 # stddev(col) / avg(col) * 100
-                select += [sql.Expression([
+                select += [sql.Expression(
                               sql.Column(table, measurement, 'STDDEV'), ' / ', 
-                              sql.Column(table, measurement, 'AVG'), ' * 100'])]
+                              sql.Column(table, measurement, 'AVG'), ' * 100')]
             elif aggMethod=='sum':    
                 select += [sql.Column(table, measurement, 'SUM')]
             elif aggMethod=='min':    

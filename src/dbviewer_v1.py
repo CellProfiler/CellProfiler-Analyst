@@ -74,7 +74,6 @@ class VirtualList(wx.ListCtrl):
     # this demo we'll just calculate them
     def OnGetItemText(self, row, col):
         if not row in self.cache:
-            print "query", row
             lo = max(row - 25, 0)
             hi = row + 25
             cols = ','.join(self.cols)

@@ -422,6 +422,9 @@ class DBTable(TableData):
                 return None
             return [key[:-1]]
         else:
+            # BAD: assumes that columns with the same name as the image key 
+            #    columns ARE image key columns (not true if looking at unrelated 
+            #    image table)
             key = []
             for col in dbconnect.image_key_columns():
                 if col not in self.col_labels:
@@ -533,9 +536,6 @@ class DBTable(TableData):
     def GetRowLabelValue(self, row):
         return '*'
 
-                
-BTN_PREV = wx.NewId()
-BTN_NEXT = wx.NewId()
 
 class TableViewer(wx.Frame):
     '''
@@ -548,20 +548,11 @@ class TableViewer(wx.Frame):
         self.selected_cols = set([])
         
         # Toolbar
-        '''
-        tb = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER | wx.TB_FLAT)
-        tb.AddControl(wx.Button(tb, BTN_PREV, '<', size=(30,-1)))
-        self.Bind(wx.EVT_BUTTON, self.OnPrev, id=BTN_PREV)
-        self.row_min = intctrl.IntCtrl(tb, -1, 1, size=(60,-1), min=0)
-        tb.AddControl(self.row_min)
-        self.row_min.Bind(wx.EVT_TEXT, self.OnEditMin)
-        self.row_max = intctrl.IntCtrl(tb, -1, 1000, size=(60,-1), min=0)
-        tb.AddControl(self.row_max)
-        self.row_max.Bind(wx.EVT_TEXT, self.OnEditMax)
-        tb.AddControl(wx.Button(tb, BTN_NEXT, '>', size=(30,-1)))
-        self.Bind(wx.EVT_BUTTON, self.OnNext, id=BTN_NEXT)
-        tb.Realize()
-        '''
+##        from guiutils import FilterComboBox
+##        tb = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER | wx.TB_FLAT)
+##        self.filter_choice = FilterComboBox(self)
+##        tb.AddControl(self.filter_choice)
+##        tb.Realize()
         
         #
         # Create the menubar
@@ -626,6 +617,12 @@ class TableViewer(wx.Frame):
         gridlib.EVT_GRID_LABEL_RIGHT_CLICK(self.grid, self.on_rightclick_label)
         gridlib.EVT_GRID_SELECT_CELL(self.grid, self.on_select_cell)
         gridlib.EVT_GRID_RANGE_SELECT(self.grid, self.on_select_range)
+        
+##    def on_select_filter(self, evt):
+##        #
+##        #  CONSTRUCTION (add filters to dbtable), ignore for plaintable
+##        #
+##        self.grid.set_filter( self.filter_choice.GetStringSelection() )
         
     def on_select_cell(self, evt):
         evt.Skip()
@@ -753,6 +750,8 @@ class TableViewer(wx.Frame):
         self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
         
     def new_blank_table(self, rows, cols):
+        '''Sort of pointless since the table can't be edited... yet.
+        '''
         data = np.array([''] * (rows * cols)).reshape((rows, cols))
         table_base = PlainTable(self, data)
         self.grid.SetTable(table_base, True)
@@ -760,24 +759,8 @@ class TableViewer(wx.Frame):
         self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
         
     def on_load_db_table(self, evt=None):
-        try:
-            user_tables = wx.GetApp().user_tables
-        except AttributeError:
-            # running outside of main UI
-            wx.GetApp().user_tables = []
-            user_tables = []
-            
-        primary_tables = [p.image_table]
-        if p.object_table:
-            primary_tables += [p.object_table]
-        primary_tables += user_tables
-        other_tables = list(set(db.GetTableNames()) - set(primary_tables))
-        dlg = wx.SingleChoiceDialog(self, 
-                'Select a table to load from the database',
-                'Load table from database',
-                primary_tables + other_tables,
-                wx.CHOICEDLG_STYLE)
-
+        from guiutils import TableSelectionDialog
+        dlg = TableSelectionDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
             table_name = dlg.GetStringSelection()
             pos = (self.Position[0]+10, self.Position[1]+10)
@@ -929,40 +912,6 @@ class TableViewer(wx.Frame):
                         imagetools.ShowImage(imkey, p.image_channel_colors,
                                              parent=self.Parent)
 
-    def OnPrev(self, evt=None):
-        rmax = int(self.row_max.GetValue())
-        rmin = int(self.row_min.GetValue())
-        diff = rmax - rmin + 1
-        self.row_max.SetValue(max(rmax - diff, diff))
-        self.row_min.SetValue(max(rmin - diff, 1))
-        rmax = int(self.row_max.GetValue())
-        rmin = int(self.row_min.GetValue())
-        self.grid.Table.set_row_interval(rmin-1, rmax)
-        self.grid.Table.ResetView(self.grid)
-
-    def OnNext(self, evt=None):
-        rmax = int(self.row_max.GetValue())
-        rmin = int(self.row_min.GetValue())
-        diff = rmax - rmin + 1
-        self.row_max.SetValue(rmax + diff)
-        self.row_min.SetValue(rmin + diff)
-        rmax = int(self.row_max.GetValue())
-        rmin = int(self.row_min.GetValue())
-        self.grid.Table.set_row_interval(rmin-1, rmax)
-        self.grid.Table.ResetView(self.grid)
-
-    def OnEditMin(self, evt=None):
-        rmax = int(self.row_max.GetValue())
-        rmin = int(self.row_min.GetValue())
-        self.grid.Table.set_row_interval(rmin-1, rmax)
-        self.grid.Table.ResetView(self.grid)
-
-    def OnEditMax(self, evt=None):
-        rmax = int(self.row_max.GetValue())
-        rmin = int(self.row_min.GetValue())
-        self.grid.Table.set_row_interval(rmin-1, rmax)
-        self.grid.Table.ResetView(self.grid)
-
     def on_save_csv(self, evt):
         defaultFileName = 'my_table.csv'
         saveDialog = wx.FileDialog(self, message="Save as:",
@@ -1074,7 +1023,36 @@ class TableViewer(wx.Frame):
                    strings.
         '''
         pass
-        
+    
+    
+def show_loaddata_table(gate_names, as_columns=True):
+    '''Utility function to create a table that can be read by CP LoadData.
+    gate_names -- list of gate names to apply
+    as_columns -- use True to output each gate as a column with 0's and 1's
+                  use False to output only the rows that fall within all gates.
+    '''
+    for g in gate_names:
+        for t in p.gates[g].get_tables():
+            assert t == p.image_table, 'this function only takes per-image gates'
+    columns = list(dbconnect.image_key_columns() + dbconnect.well_key_columns()) + p.image_file_cols + p.image_path_cols
+    if as_columns:
+        query_columns = columns + ['(%s) AS %s'%(str(p.gates[g]), g) for g in gate_names]
+        columns += gate_names
+        data = db.execute('SELECT %s FROM %s'
+                          %(','.join(query_columns), p.image_table))
+    else:
+        # display only values within the given gates
+        where_clause = ' AND '.join([str(p.gates[g]) for g in gate_names])
+        data = db.execute('SELECT %s FROM %s WHERE %s'
+                          %(','.join(columns), p.image_table, where_clause))
+    if data == []:
+        wx.MessageBox('Sorry, no data points fall within the combined selected gates.', 'No data to show')
+        return None
+    grid = TableViewer(None, title="Gated Data")
+    grid.table_from_array(np.array(data), columns)
+    grid.Show()
+    return grid
+
 
 if __name__ == '__main__':
     import sys
@@ -1084,4 +1062,7 @@ if __name__ == '__main__':
         frame = TableViewer(None)
         frame.Show(True)
         frame.load_db_table(p.image_table)
+##        show_loaddata_table(p.gates.keys(), True)
+##        show_loaddata_table(p.gates.keys(), False)
+        
     app.MainLoop()

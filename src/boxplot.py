@@ -2,9 +2,9 @@ from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from multiclasssql import filter_table_prefix
 from properties import Properties
 import datamodel
+import guiutils as ui 
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import sqltools as sql
-from guiutils import TableComboBox, get_other_table_from_user
 import imagetools
 import logging
 import numpy as np
@@ -21,9 +21,7 @@ from cpatool import CPATool
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
-NO_FILTER = 'No filter'
 NO_GROUP = "Whole column"
-CREATE_NEW_FILTER = '*create new filter*'
 ID_EXIT = wx.NewId()
 SELECT_MULTIPLE = '<MULTIPLE SELECTED>'
 
@@ -41,13 +39,12 @@ class DataSourcePanel(wx.Panel):
         
         self.x_columns = [] # column names to plot if selecting multiple columns
 
-        self.table_choice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.x_multiple = wx.Button(self, -1, 'select multiple')
         self.group_choice = ComboBox(self, -1, choices=[NO_GROUP]+p._groups_ordered, style=wx.CB_READONLY)
         self.group_choice.Select(0)
-        self.filter_choice = ComboBox(self, -1, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
-        self.filter_choice.Select(0)
+        self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
@@ -84,7 +81,6 @@ class DataSourcePanel(wx.Panel):
         wx.EVT_BUTTON(self.x_multiple, -1, self.on_select_multiple)
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
         wx.EVT_COMBOBOX(self.x_choice, -1, self.on_column_selected)
-        wx.EVT_COMBOBOX(self.filter_choice, -1, self.on_filter_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
         
         self.SetSizer(sizer)
@@ -105,8 +101,8 @@ class DataSourcePanel(wx.Panel):
         
     def on_table_selected(self, evt):
         table = self.table_choice.Value
-        if table == TableComboBox.OTHER_TABLE:
-            t = get_other_table_from_user(self)
+        if table == ui.TableComboBox.OTHER_TABLE:
+            t = ui.get_other_table_from_user(self)
             if t is not None:
                 self.table_choice.Items = self.table_choice.Items[:-1] + [t] + self.table_choice.Items[-1:]
                 self.table_choice.Select(self.table_choice.Items.index(t))
@@ -120,23 +116,6 @@ class DataSourcePanel(wx.Panel):
     def on_column_selected(self, evt):
         self.group_choice.Enable()        
     
-    def on_filter_selected(self, evt):
-        filter = self.filter_choice.Value
-        if filter == CREATE_NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
-            if cff.ShowModal()==wx.OK:
-                fltr = cff.get_filter()
-                fname = str(cff.get_filter_name())
-                p._filters_ordered += [fname]
-                p._filters[fname] = fltr
-                items = self.filter_choice.GetItems()
-                self.filter_choice.SetItems(items[:-1]+[fname]+items[-1:])
-                self.filter_choice.SetSelection(len(items)-1)
-            else:
-                self.filter_choice.SetSelection(0)
-            cff.Destroy()
-            
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
         fieldnames = self.get_numeric_columns_from_table(tablename)
@@ -185,7 +164,7 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.set_y_axis_label(self.x_choice.Value)
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, col, filter=NO_FILTER, grouping=NO_GROUP):
+    def loadpoints(self, tablename, col, filter=ui.FilterComboBox.NO_FILTER, grouping=NO_GROUP):
         '''
         Returns a dict mapping x label values to lists of values from col
         '''
@@ -196,7 +175,7 @@ class DataSourcePanel(wx.Panel):
             group_cols = dm.GetGroupColumnNames(grouping, include_table_name=True)
             select += [sql.Column(*col.split('.')) for col in group_cols]
         q.set_select_clause(select)
-        if filter != NO_FILTER:
+        if filter != ui.FilterComboBox.NO_FILTER:
             q.add_filter(p._filters[filter])
 
         res = db.execute(str(q))
