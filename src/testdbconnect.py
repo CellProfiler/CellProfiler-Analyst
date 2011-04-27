@@ -256,7 +256,7 @@ class TestDBConnect(unittest.TestCase):
                 ['A04', 1, 200],
                 ]
         colnames = ['well', 'plate', 'vals']
-        self.db.CreateTempTableFromData(data, colnames, '__test_table')
+        self.db.CreateTableFromData(data, colnames, '__test_table', temporary=True)
         res =  self.db.execute('select * from __test_table')
         assert res==[('A01', 1, 1.0), ('A02', 1, 2.0), ('A03', 1, None), ('A04', 1, None), ('A04', 1, None), ('A04', 1, 100.0), ('A04', 1, 200.0)]
         
@@ -271,7 +271,7 @@ class TestDBConnect(unittest.TestCase):
                 ['A04', 1, 200],
                 ]
         colnames = ['well', 'plate', 'vals']
-        self.db.CreateTempTableFromData(data, colnames, '__test_table')
+        self.db.CreateTableFromData(data, colnames, '__test_table', temporary=True)
         res =  self.db.execute('select * from __test_table')
         assert res==[('A01', 1, 1.0), ('A02', 1, 2.0), ('A03', 1, None), ('A04', 1, None), ('A04', 1, None), ('A04', 1, 100.0), ('A04', 1, 200.0)]
     
