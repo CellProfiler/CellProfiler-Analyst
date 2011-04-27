@@ -19,7 +19,7 @@ class CPATool(object):
         
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        pass
+        raise NotImplementedError
     
     def load_settings(self, settings):
         '''Override this method when defining a new tool or visualization.
@@ -29,4 +29,4 @@ class CPATool(object):
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
-        pass
+        raise NotImplementedError
