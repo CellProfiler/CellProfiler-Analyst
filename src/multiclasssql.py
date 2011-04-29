@@ -155,9 +155,9 @@ def PerImageCounts(weaklearners, filter_name=None, cb=None):
                                                                         objectify(p.image_id), hi[1])
                     else:
                         # query spans a table boundary
-                        yield "(%s = %d) AND (%s > %d)"%(objectify(p.table_id), lo[0], 
+                        yield "(%s >= %d) AND (%s > %d)"%(objectify(p.table_id), lo[0], 
                                                          objectify(p.image_id), lo[1])
-                        yield "(%s = %d) AND (%s <= %d)"%(objectify(p.table_id), hi[0], 
+                        yield "(%s <= %d) AND (%s <= %d)"%(objectify(p.table_id), hi[0], 
                                                           objectify(p.image_id), hi[1])
             return list(splitter())
         else:
