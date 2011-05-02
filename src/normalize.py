@@ -82,7 +82,7 @@ def square_filter_normalization(data, aggregate_type, win_size):
 def linear_filter_normalization(data, aggregate_type, win_size):
     '''
     '''
-    # Filter linearly (assumes meandering pattern)
+    # Filter linearly (assumes FormatPlateData reordered plate-data to account for meandering)
     if aggregate_type  == M_MEDIAN:
         normalization_values = median_filter(data.flatten(), win_size).reshape(data.shape)
     elif aggregate_type  == M_MEAN:
