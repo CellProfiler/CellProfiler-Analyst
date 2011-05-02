@@ -43,11 +43,12 @@ class NormalizationStepPanel(wx.Panel):
         self.constant_float = FS.FloatSpin(self, -1, increment=1, value=1.0)
         self.constant_float.Hide()
         self.window_type = wx.RadioBox(self, -1, 'Window type', choices=WINDOW_CHOICES)
-        self.window_type.Disable()
+        self.window_type.Hide()
+        self.window_size_desc = wx.StaticText(self, -1, 'Window size:')
+        self.window_size_desc.Hide()
         self.window_size = wx.lib.intctrl.IntCtrl(self, value=3, min=1, max=999)
-        self.window_size.Disable()
+        self.window_size.Hide()
         self.window_size.SetHelpText("Window size help text...")
-        self.window_size.SetForegroundColour(wx.LIGHT_GREY)
                 
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         sz = wx.BoxSizer(wx.HORIZONTAL)
@@ -65,34 +66,32 @@ class NormalizationStepPanel(wx.Panel):
         self.Sizer.Add(sz, 1, wx.EXPAND)
         
         self.Sizer.Add(self.window_type, 0, wx.LEFT, 30)
-        self.Sizer.AddSpacer((-1,15))
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, 'Window size:'), 0)
-        sz.AddSpacer((5,-1))
-        sz.Add(self.window_size, 0)
+        sz.Add(self.window_size_desc, 0)
+        sz.Add(self.window_size, 0, wx.LEFT, 5)
         self.Sizer.Add(sz, 1, wx.EXPAND|wx.LEFT, 30)
         
         self.window_group.Bind(wx.EVT_CHOICE, self.on_window_group_selected)
         self.Fit()
 
     def on_window_group_selected(self, evt):
-        self.update_plate_dependent_fields()
-    def update_plate_dependent_fields(self):
+        self.update_visible_fields()
+    def update_visible_fields(self):
         selected_string = self.window_group.GetStringSelection()
-        self.window_type.Disable()
-        self.window_size.Disable()
-        self.window_size.SetForegroundColour(wx.LIGHT_GREY)
+        self.window_type.Hide()
+        self.window_size.Hide()
+        self.window_size_desc.Hide()
         self.agg_type.Show()
         self.constant_float.Hide()
         if selected_string == G_WELL_NEIGHBORS:
-            self.window_type.Enable()
-            self.window_size.Enable()
-            self.window_size.SetForegroundColour(wx.BLACK)
+            self.window_type.Show()
+            self.window_size.Show()
+            self.window_size_desc.Show()
         elif selected_string == G_CONSTANT:
             self.agg_type.Hide()
             self.constant_float.Show()
-        self.Refresh()
-        self.Layout()
+        self.Fit()
+        self.Parent.FitInside()
         
     def on_remove(self, evt):
         self.GrandParent.remove_norm_step(self)
@@ -101,7 +100,7 @@ class NormalizationStepPanel(wx.Panel):
         '''config - a configuration dictionary as output by get_configuration_dict()
         '''
         self.window_group.SetStringSelection(config[norm.P_GROUPING])
-        self.update_plate_dependent_fields()
+        self.update_visible_fields()
         self.agg_type.SetStringSelection(config[norm.P_AGG_TYPE])
         if config[norm.P_CONSTANT] is not None:
             self.constant_float.SetValue(config[norm.P_CONSTANT])
@@ -109,6 +108,19 @@ class NormalizationStepPanel(wx.Panel):
             self.window_type.SetStringSelection(config[norm.P_WIN_TYPE])
         if config[norm.P_WIN_SIZE] is not None:
             self.window_size.SetValue(config[norm.P_WIN_SIZE])
+            
+    def set_group_choices(self, choices):
+        '''since the per-object table can't yet be spatially grouped, this 
+        method allows the choices to be narrowed
+        '''
+        assert all(c in GROUP_CHOICES for c in choices)
+        sel = self.window_group.GetStringSelection()
+        self.window_group.SetItems(choices)
+        if sel in self.window_group.Items:
+            self.window_group.SetStringSelection(sel)
+        else:
+            self.window_group.Select(0)
+        self.update_visible_fields()
         
     def get_configuration_dict(self):
         '''returns a dictionary of configuration settings to be used by 
@@ -127,7 +139,7 @@ class NormalizationUI(wx.Frame, CPATool):
     '''
     '''
     def __init__(self, parent, id=-1, title='Normalization Settings', **kwargs):
-        kwargs['size'] = kwargs.get('size', (500,550))
+        kwargs['size'] = kwargs.get('size', (500,500))
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
         CPATool.__init__(self)
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
@@ -141,11 +153,10 @@ class NormalizationUI(wx.Frame, CPATool):
         self.table_choice = wx.Choice(self, -1, choices=tables)
         self.table_choice.Select(0)
         self.col_choices = wx.CheckListBox(self, -1, choices=[], size=(-1, 100))
-        self.update_measurement_choices()
         add_norm_step_btn = wx.Button(self, -1, 'Add normalization step')
-        self.norm_meas_checkbox = wx.CheckBox(self, -1, 'Normalized measurement')
+        self.norm_meas_checkbox = wx.CheckBox(self, -1, 'Normalized measurements')
         self.norm_meas_checkbox.Set3StateValue(True)
-        self.norm_factor_checkbox = wx.CheckBox(self, -1, 'Normalization value')
+        self.norm_factor_checkbox = wx.CheckBox(self, -1, 'Normalization factors')
         self.output_table = wx.TextCtrl(self, -1, 'normalized_measurements', size=(200,-1))
         self.output_table.SetHelpText("TODO: help text...")
         self.help_btn = wx.ContextHelpButton(self)
@@ -186,16 +197,16 @@ class NormalizationUI(wx.Frame, CPATool):
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.RIGHT, 15)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        self.output_format_desc = wx.StaticText(self, -1, 'Output format:')
-        sz.Add(self.output_format_desc, 0, wx.EXPAND|wx.RIGHT, 5)
-        sz.Add(self.norm_meas_checkbox, 0, wx.EXPAND|wx.RIGHT, 5)
-        sz.Add(self.norm_factor_checkbox, 0, wx.EXPAND)
-        self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-
-        sz = wx.BoxSizer(wx.HORIZONTAL)
         self.output_table_desc = wx.StaticText(self, -1, 'Name your output table:')
         sz.Add(self.output_table_desc, 0, wx.EXPAND|wx.RIGHT, 5)
         sz.Add(self.output_table, 0, wx.EXPAND)
+        self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
+
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        self.output_format_desc = wx.StaticText(self, -1, 'Output columns:')
+        sz.Add(self.output_format_desc, 0, wx.EXPAND|wx.RIGHT, 5)
+        sz.Add(self.norm_meas_checkbox, 0, wx.EXPAND|wx.RIGHT, 5)
+        sz.Add(self.norm_factor_checkbox, 0, wx.EXPAND)
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
@@ -212,15 +223,28 @@ class NormalizationUI(wx.Frame, CPATool):
         self.output_table.Bind(wx.EVT_TEXT, lambda(e):self.validate())
         self.do_norm_btn.Bind(wx.EVT_BUTTON, self.on_do_normalization)
         
+        self.update_measurement_choices()
         self.validate()
 
     def on_select_table(self, evt):
         self.update_measurement_choices()
+        self.update_steps()
+        
     def update_measurement_choices(self):
         measurements = db.GetColumnNames(self.table_choice.GetStringSelection())
         types = db.GetColumnTypes(p.image_table)
         numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, long]]
         self.col_choices.SetItems(numeric_columns)
+        self.validate()
+        
+    def update_steps(self):
+        table = self.table_choice.GetStringSelection()
+        if table != p.image_table:
+            for panel in self.norm_steps:
+                panel.set_group_choices([G_EXPERIMENT, G_PLATE, G_CONSTANT])
+        else:
+            for panel in self.norm_steps:
+                panel.set_group_choices(GROUP_CHOICES)
         
     def on_add_norm_step(self, evt):
         self.add_norm_step()
@@ -259,11 +283,11 @@ class NormalizationUI(wx.Frame, CPATool):
         sz = wx.StaticBoxSizer(wx.StaticBox(self.sw, label=''), wx.VERTICAL)
         self.norm_steps += [NormalizationStepPanel(self.sw)]
         self.boxes += [sz]
-        # TODO: Add new boxes at bottom, rather than at top
         sz.Add(self.norm_steps[-1], 0, wx.EXPAND)
         self.sw.Sizer.InsertSizer(len(self.norm_steps)-1, sz, 0, wx.EXPAND|wx.TOP, 15)
         self.sw.FitInside()
         self.Layout()
+        self.update_steps()
         
     def remove_norm_step(self, panel):
         idx = self.norm_steps.index(panel)
@@ -286,6 +310,7 @@ class NormalizationUI(wx.Frame, CPATool):
             # Should be unreachable
             wx.MessageBox('Your normalization settings are invalid. Can\'t perform normalization.')
         imkey_cols = dbconnect.image_key_columns()
+        obkey_cols = dbconnect.object_key_columns()
         wellkey_cols = dbconnect.well_key_columns()
         im_clause = dbconnect.UniqueImageClause
         well_clause = dbconnect.UniqueWellClause
@@ -302,8 +327,11 @@ class NormalizationUI(wx.Frame, CPATool):
         if input_table == p.object_table: 
             FIRST_MEAS_INDEX += 1
         if wellkey_cols:
-            WELL_KEY_INDEX = len(imkey_cols)
-            
+            if input_table == p.image_table:
+                WELL_KEY_INDEX = len(imkey_cols)
+            else:
+                WELL_KEY_INDEX = len(imkey_cols) + 1
+                
         if db.table_exists(output_table):
             dlg = wx.MessageDialog(self, 'Are you sure you want to overwrite the table "%s"?'%(output_table), 
                                    "Overwrite table?", wx.YES_NO|wx.NO_DEFAULT|wx.ICON_EXCLAMATION)
@@ -344,9 +372,10 @@ class NormalizationUI(wx.Frame, CPATool):
             
             
         dlg = wx.ProgressDialog('Computing normalized values',
-                               "Querying database for raw data.",
-                               parent=self,
-                               style = wx.PD_CAN_ABORT|wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME)
+                                'Querying database for raw data.',
+                                parent=self,
+                                style = wx.PD_CAN_ABORT|wx.PD_APP_MODAL)
+        dlg.Pulse()
         #
         # MAKE THE QUERY
         #
@@ -362,17 +391,27 @@ class NormalizationUI(wx.Frame, CPATool):
             norm_data = col.copy()
             for step_num, step_panel in enumerate(self.norm_steps):
                 d = step_panel.get_configuration_dict()
-                if d[norm.P_GROUPING] in (norm.G_PLATE, norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
+                if d[norm.P_GROUPING] in (norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
                     # Reshape data if normalization step is plate sensitive.
                     assert p.plate_id and p.well_id
                     well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
-                    for k, plate_grp in groupby(wellkeys_and_vals, lambda(row): tuple(row[0])):
-                        keys_and_vals = list(plate_grp)
+                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
+                        keys_and_vals = np.array(list(plate_grp))
                         plate_data, wks, ind = FormatPlateMapData(keys_and_vals)
                         pnorm_data = norm.do_normalization_step(plate_data, **d)
                         new_norm_data += pnorm_data.flatten()[ind.flatten().tolist()].tolist()
+                    norm_data = new_norm_data
+                elif d[norm.P_GROUPING] == norm.G_PLATE:
+                    assert p.plate_id and p.well_id
+                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
+                    wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
+                    new_norm_data    = []
+                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
+                        plate_data = np.array(list(plate_grp))[:,-1].flatten()
+                        pnorm_data = norm.do_normalization_step(plate_data, **d)
+                        new_norm_data += pnorm_data.tolist()
                     norm_data = new_norm_data
                 else:
                     norm_data = norm.do_normalization_step(norm_data, **d)
@@ -390,22 +429,22 @@ class NormalizationUI(wx.Frame, CPATool):
             col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                               for col in dbconnect.image_key_columns()])
         elif input_table == p.object_table:
-            norm_table_cols += dbconnect.object_key_columns()
+            norm_table_cols += obkey_cols
             col_defs = ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.object_table, col))
-                              for col in dbconnect.object_key_columns()])
+                              for col in obkey_cols])
         if wellkey_cols:
             norm_table_cols += wellkey_cols
             col_defs +=  ', '+ ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                                         for col in wellkey_cols])
         if wants_norm_meas:
-            col_defs += ', '+ ', '.join(['%s_NmV %s'%(col, db.GetColumnTypeString(input_table, col))
+            col_defs += ', '+ ', '.join(['%s_NmM %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
         if wants_norm_factor:
             col_defs += ', '+ ', '.join(['%s_NmF %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
         for col in meas_cols:
             if wants_norm_meas:
-                norm_table_cols += ['%s_NmV'%(col)]
+                norm_table_cols += ['%s_NmM'%(col)]
             if wants_norm_factor:
                 norm_table_cols += ['%s_NmF'%(col)]
         db.execute('CREATE TABLE %s (%s)'%(output_table, col_defs))
@@ -442,6 +481,22 @@ class NormalizationUI(wx.Frame, CPATool):
         dlg.Destroy()
         db.Commit()
         
+        #
+        # Link the resultant table to the corresponding table in the database
+        #
+        if input_table == p.image_table:
+            db.do_link_tables(output_table, input_table, imkey_cols, imkey_cols)
+        elif input_table == p.object_table:
+            db.do_link_tables(output_table, input_table, obkey_cols, obkey_cols)            
+        
+        #
+        # Show the resultant table        
+        #
+        import tableviewer
+        tv = tableviewer.TableViewer(self)
+        tv.Show()
+        tv.load_db_table(output_table)
+        
     def save_settings(self):
         '''returns a dictionary mapping setting names to values encoded as strings'''
         return {
@@ -464,8 +519,8 @@ class NormalizationUI(wx.Frame, CPATool):
             self.col_choices.SetCheckedStrings(cols)
         if 'steps' in settings:
             steps = eval(settings['steps'])
-            for p in self.norm_steps[1:]:
-                self.remove_norm_step(p)
+            for panel in self.norm_steps[1:]:
+                self.remove_norm_step(panel)
             self.norm_steps[0].set_from_configuration_dict(steps[0])
             for config in steps[1:]:
                 self.add_norm_step()
