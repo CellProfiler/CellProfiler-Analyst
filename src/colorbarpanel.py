@@ -52,29 +52,29 @@ class ColorBarPanel(wx.Panel):
     
     def OnLeftDown(self, evt):
         # Get the slider closest to the click point.
-        if abs(self.low_slider.GetPositionTuple()[0] - evt.X) < abs(self.high_slider.GetPositionTuple()[0] - evt.X):
+        if abs(self.low_slider.GetPositionTuple()[0] - evt.GetX()) < abs(self.high_slider.GetPositionTuple()[0] - evt.GetX()):
             self.cur_slider = self.low_slider
         else:
             self.cur_slider = self.high_slider
-        self.cur_slider.SetPosition((evt.X - s_off, -1))
+        self.cur_slider.SetPosition((evt.GetX() - s_off, -1))
         self.xo = 0
         self.UpdateInterval()
     
     def OnMotion(self, evt):
         if not evt.Dragging() or not evt.LeftIsDown():
             return
-        self.cur_slider.SetPosition((evt.X - s_off, -1))
+        self.cur_slider.SetPosition((evt.GetX() - s_off, -1))
         self.UpdateInterval()
     
     def OnClipSliderLeftDown(self, evt):
         self.cur_slider = evt.EventObject
-        self.xo = evt.X
+        self.xo = evt.GetX()
     
     def OnClipSliderMotion(self, evt):
         slider = evt.EventObject
         if not evt.Dragging() or not evt.LeftIsDown():
             return
-        slider.SetPosition((slider.GetPositionTuple()[0] + evt.X - self.xo - s_off, -1))
+        slider.SetPosition((slider.GetPositionTuple()[0] + evt.GetX() - self.xo - s_off, -1))
         self.xo = 0
         self.UpdateInterval()
         
@@ -106,10 +106,6 @@ class ColorBarPanel(wx.Panel):
             self.high_slider.SetToolTipString(str(self.global_extents[0] + ((self.high_slider.GetPositionTuple()[0] + s_off) / w * range)))
         else:
             self.interval = list(self.local_extents)
-
-        logging.info('Colorbar global extents=%s; local extents=%s'%(
-            str(tuple(self.global_extents)), 
-            str(tuple(self.local_extents))))
 
         self.UpdateLabelFormat()
         
@@ -215,7 +211,7 @@ class ColorBarPanel(wx.Panel):
             popupMenu.AppendSeparator()
             saveitem = popupMenu.AppendItem(wx.MenuItem(popupMenu, -1, 'Save interval to properties as a filter'))
             self.Bind(wx.EVT_MENU, self.OnSaveIntervalAsFilter, saveitem)
-        self.PopupMenu(popupMenu, (evt.X, evt.Y))
+        self.PopupMenu(popupMenu, (evt.GetX(), evt.GetY()))
         
     def OnSaveIntervalAsFilter(self, evt):
         #
