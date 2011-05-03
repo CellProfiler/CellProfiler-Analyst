@@ -298,7 +298,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         self.Layout()
         
     def get_filter_or_none(self):
-        '''returns a sqltools.Filter object for the selected object or None
+        '''returns a Filter (or OldFilter) for the selected object or None
         if the selection is NO_FILTER or NEW_FILTER
         '''
         kind = self.get_item_kind(self.Selection)
@@ -445,9 +445,11 @@ class GateDialog(wx.TextEntryDialog):
 
     def validate(self):
         val = self.txtCtrl.Value
-        if not re.match('^[A-Za-z0-9]\w*$', val):
+        if not re.match('^[A-Za-z]\w*$', val):
             return False
-        if val in p.gates.keys():
+        if val in p.gates:
+            return False
+        if val in p._filters:
             return False
         if val in [GateComboBox.NO_GATE, GateComboBox.NEW_GATE, GateComboBox.MANAGE_GATES]:
             return False
@@ -514,6 +516,9 @@ class CreateLoadImagesTableDialog(wx.Dialog):
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         text = wx.StaticText(self, -1, 'Select gates to apply:')
         self.Sizer.Add(text, 0, wx.TOP|wx.CENTER, 10)
+        for g in select_gates:
+            for c in g.get_columns():
+                assert p.image_table==c.table, 'Can only create LoadImages table from per-image gates.'
         gates = [g for g in p.gates_ordered 
                  if all([p.image_table==c.table for c in p.gates[g].get_columns()])]
         self.gate_choices = wx.CheckListBox(self, choices=gates)
