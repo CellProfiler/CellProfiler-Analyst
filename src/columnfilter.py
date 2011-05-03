@@ -195,8 +195,9 @@ class ColumnFilterDialog(wx.Dialog):
         name = self.get_filter_name()
         self.ok.Enable()
         self.filter_name.SetForegroundColour('black')
-        if (name in p._filters_ordered 
-            or not re.match('^[A-Za-z0-9_]+$',name)):
+        if (name in p._filters
+            or name in p.gates
+            or not re.match('^[A-Za-z]\w*$',name)):
             self.ok.Disable() 
             self.filter_name.SetForegroundColour('red')
 
