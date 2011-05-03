@@ -19,9 +19,10 @@ class QueryBuilder(object):
     '''
     def __init__(self):
         self.select_clause = []
-        self.where_clause = Expression()
+        self.filters = []
         self.group_cols = []
         self.other_tables = []
+        self.sub_queries = []
         
     def __str__(self):
         select_clause = self.get_select_clause_string()
@@ -55,37 +56,6 @@ class QueryBuilder(object):
         '''tables - a list of table names to add to the from clause
         '''
         self.other_tables = tables
-        
-    def filter_imkeys(self, imkeys):
-        '''imkeys - a list of image keys
-        computes a where clause to include only the specified images
-        '''
-        imkeys.sort()
-        if not p.table_id:
-            exp_list = [(p.image_table, p.image_id), 'IN', 
-                        '(%s)'%(','.join([str(k[0]) for k in imkeys]))]
-            if self.where_clause.is_empty:
-                self.where_clause.append_expression(*exp_list)
-            else:
-                self.where_clause.append_expression('AND', *exp_list)                
-        else:
-            wc = Expression()
-            imkeys = np.array(imkeys)
-            count = 0
-            tnum = 0
-            wheres = []
-            while count < len(imkeys):
-                imnums = imkeys[(imkeys[:,0]==tnum), 1]
-                count += len(imnums)
-                if len(imnums)>0:
-                    exp_list = ['(', (p.image_table, p.table_id), '=', tnum, 
-                                'AND', (p.image_table, p.image_id), 'IN', ','.join([str(k) for k in imnums]), ')']
-                    if wc.is_empty:
-                        wc.append_expression(*exp_list)
-                    else:
-                        wc.append_expression('OR', *exp_list)
-                tnum += 1
-            self.where_clause.add_where_clause(wc)
 
     def set_group_columns(self, cols):
         '''cols - a list of either Columns or column tuples: (table, col, [agg])
@@ -107,8 +77,9 @@ class QueryBuilder(object):
         # add the tables from the select clause
         for exp in self.select_clause:
             tables += exp.get_tables()
-        # add the tables from the where clause
-        tables += self.where_clause.get_tables()
+        # add tables from filters
+        for f in self.filters:
+            tables += f.get_tables()
         # add the tables from the group columns
         tables += [col.table for col in self.group_cols]
         return list(set(tables))
@@ -125,7 +96,7 @@ class QueryBuilder(object):
         return list(set(tables))
 
     def get_from_clause(self):
-        return ', '.join(self.get_tables())
+        return ', '.join(self.get_tables() + self.sub_queries)
 
     def get_where_clause(self):
         '''Build the where clause from conditions given by the user and 
@@ -133,29 +104,28 @@ class QueryBuilder(object):
         '''
         db = DBConnect.getInstance()
         conditions = []
-        if self.where_clause.is_not_empty():
-            conditions += [str(self.where_clause)]
+        conditions += [str(f) for f in self.filters]
         queried_tables = self.get_queried_tables()
         if len(queried_tables) > 1:
             link_exps = db.get_linking_expressions(queried_tables)
             if link_exps:
-                conditions += [' AND '.join([str(exp) for exp in link_exps])]
+                conditions += [str(exp) for exp in link_exps]
+        if self.sub_queries:
+            conditions += ['%s.%s = subquery_%d.%s'%(p.image_table, col, i, col) 
+                           for i in range(len(self.sub_queries))
+                           for col in image_key_columns()]
         return ' AND '.join(conditions)
     
     def add_filter(self, fltr):
         '''Adds a filter to the where clause
         filter -- a Filter or OldFilter object
         '''
-        exp_list = []
-        if self.where_clause.is_not_empty():
-            exp_list += ['AND']
         if isinstance(fltr, Filter):
-            exp_list += fltr.get_token_list()
+            self.filters += [fltr]
         elif isinstance(fltr, OldFilter):
-            exp_list += [str(fltr)]
+            self.sub_queries += ['(%s) AS subquery_%d'%(fltr, len(self.sub_queries))]
         else:
             raise 'add_filter requires a Filter or OldFilter object as input'
-        self.where_clause.append_expression(*exp_list)
 
 
 class Column(object):
@@ -410,32 +380,6 @@ class Filter(Expression):
         '''
         self.exp += [conjunction] + fltr.get_token_list()
         
-##    def get_sub_expressions(self):
-##        ''' This is a bit hokey: break this expression up into a list of 
-##        expressions of the form: [Expression(col, comparator, value), ...]
-##        each of these expressions must be separated by conjunctions (ie: "AND" 
-##        or "OR") in this Expression.
-##        Note: this will break if value is a conjunction 
-##        returns None if the expression can't be broken down this way.
-##        '''
-##        l = [[]]
-##        for exp in self.get_token_list():
-##            if type(l) == str and l.strip().upper() in ['AND', 'OR']:
-##                l += [[]]
-##                if len(l[-1]) != 3:
-##                    return None
-##            else:
-##                l[-1] += [exp]
-##        if len(l[-1]) != 3:
-##            return None
-##        return [Expression(*ll) for ll in l]
-##    
-##    def get_conjunctions(self):
-##        ''' Return a list of the conjunctions that are used in this expression
-##        '''
-##        return [t.strip() for t in self.get_token_list() 
-##                if type(t)==str and t.strip().upper() in ['AND', 'OR']]
-    
     def encode(self):
         '''returns string representation of this filter.
         call Filter.decode with this string representation to get the filter back.
@@ -451,41 +395,13 @@ class Filter(Expression):
         return Filter(*init_param_list)
 
 
-class OldFilter(object):
+class OldFilter(str):
     '''Wrapper class for backwards compatibility with the old style of defining
-    filters. 
+    filters. We simply wrap the filter query.
     '''
-    def __init__(self, filter_name, filter_query):
-        fq = filter_query
-        self.query = filter_query
-        parseable = re.match('^SELECT\s+(?P<select>.+)\s+'
-                             'FROM\s+(?P<from>.+)\s+'
-                             '(WHERE\s+(?P<where>.+)\s+)?'
-                             '(GROUP BY\s+(?P<group>.+))?', 
-                             fq, re.IGNORECASE) is not None
-        self.where_clause = re.search('\sWHERE\s(?P<wc>.*)', fq, re.IGNORECASE).groups()[0]
-        self.from_clause = re.search('\sFROM\s(?P<wc>.*)\sWHERE', fq, re.IGNORECASE).groups()[0]    
-        self.tables = [t.strip() for t in self.from_clause.split(',')]
-        for t in self.tables:
-            if ' ' in t:
-                import wx
-                wx.MessageBox('Unable to parse properties filter "%s" because '
-                              'it appears to use table aliases. Please remove '
-                              'aliases and try again.\n\tQuery was: "%s".'%(filter_name, fq), 'Error')
-        if not parseable:
-            import wx
-            wx.MessageBox('Unable to parse properties filter query.\n\t"%s".'%(fq), 'Error')
-    
-    def __str__(self):
-        return self.where_clause
-    
-    def get_tables(self):
-        return self.tables
-    
-    def get_columns(self):
-        raise Exception('OldFilter does not support get_columns interface.')
+    pass
 
-    
+
 def parse_old_group_query(group_query):
     '''
     '''

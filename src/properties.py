@@ -232,7 +232,7 @@ class Properties(Singleton):
                     if not val:
                         logging.warn('PROPERTIES WARNING (%s): Undefined filter'%(name))
                         continue
-                    self._filters[filter_name] = OldFilter(filter_name, val)
+                    self._filters[filter_name] = OldFilter(val)
                 
                 elif name == 'groups':
                     logging.warn('PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\n'
