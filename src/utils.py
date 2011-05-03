@@ -8,7 +8,8 @@ class Observable:
         self._observers.append(observer)
 
     def removeobserver(self, observer):
-        self._observers.remove(observer)
+        if observer in self._observers:
+            self._observers.remove(observer)
 
     def notify(self, event):
         for o in self._observers or ():
