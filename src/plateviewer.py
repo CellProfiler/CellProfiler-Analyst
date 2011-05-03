@@ -5,7 +5,7 @@ import dbconnect
 import sqltools as sql
 import platemappanel as pmp
 from datamodel import DataModel
-from guiutils import TableComboBox, get_other_table_from_user
+from guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import imagetools
 import properties
@@ -27,9 +27,6 @@ P96   = (8, 12)
 P384  = (16, 24)
 P1536 = (32, 48)
 P5600 = (40, 140)
-
-NO_FILTER = 'No filter'
-CREATE_NEW_FILTER = '*create new filter*'
 
 required_fields = ['plate_type', 'well_id']
 
@@ -70,8 +67,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         dataSourceSizer.Add(wx.StaticText(self, label='Filter:'))
-        self.filterChoice = ComboBox(self, choices=[NO_FILTER]+p._filters_ordered+[CREATE_NEW_FILTER], style=wx.CB_READONLY)
-        self.filterChoice.Select(0)
+        self.filterChoice = FilterComboBox(self)
         dataSourceSizer.Add(self.filterChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
@@ -255,8 +251,13 @@ class PlateViewer(wx.Frame, CPATool):
         
         q.set_select_clause(select)
         q.set_group_columns(well_key_cols)
-        if fltr != NO_FILTER:
-            q.add_filter(p._filters[fltr])
+        if fltr not in (FilterComboBox.NO_FILTER, FilterComboBox.NEW_FILTER):
+            if fltr in p._filters:
+                q.add_filter(p._filters[fltr])
+            elif fltr in p.gates:
+                q.add_filter(p.gates[fltr].as_filter())
+            else:
+                raise 'Could not find filter "%s" in gates or filters'%(fltr)
         wellkeys_and_values = db.execute(str(q))
         wellkeys_and_values = np.array(wellkeys_and_values, dtype=object)
 
@@ -298,12 +299,12 @@ class PlateViewer(wx.Frame, CPATool):
                 if np.isinf(dmin) or np.isinf(dmax):
                     gmin = gmax = dmin = dmax = 1.
                     # Warn if there was no data for this plate (and no filter was used)
-                    if fltr == NO_FILTER:
+                    if fltr == FilterComboBox.NO_FILTER:
                         wx.MessageBox('No numeric data was found in "%s.%s" for plate "%s"'
                                       %(table, measurement, plate), 'Warning')
             else:
                 gmin = gmax = 1.
-                if fltr == NO_FILTER:
+                if fltr == FilterComboBox.NO_FILTER:
                     wx.MessageBox('No numeric data was found in %s.%s'
                                   %(table, measurement), 'Warning')
 
@@ -556,7 +557,7 @@ class PlateViewer(wx.Frame, CPATool):
         '''
         # Disable filters when outlining marked wells
         #if self.outlineMarked.IsChecked():
-            #self.filterChoice.SetStringSelection(NO_FILTER)
+            #self.filterChoice.SetStringSelection(FilterComboBox.NO_FILTER)
             #self.filterChoice.Disable()
         #else:
             #if not self.annotationShowVals.IsChecked():
@@ -588,7 +589,7 @@ class PlateViewer(wx.Frame, CPATool):
             self.sourceChoice.SetStringSelection(p.image_table)
             self.measurementsChoice.SetItems(get_non_blob_types_from_table(p.image_table))            
             self.measurementsChoice.SetStringSelection(column)
-            self.filterChoice.SetStringSelection(NO_FILTER)
+            self.filterChoice.SetStringSelection(FilterComboBox.NO_FILTER)
             self.sourceChoice.Disable()
             self.measurementsChoice.Disable()
             self.filterChoice.Disable()
@@ -605,21 +606,8 @@ class PlateViewer(wx.Frame, CPATool):
         self.UpdatePlateMaps()
         
     def OnSelectFilter(self, evt):
-        f = self.filterChoice.Value
-        if f == CREATE_NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
-            if cff.ShowModal()==wx.OK:
-                fltr = cff.get_filter()
-                fname = str(cff.get_filter_name())
-                p._filters_ordered += [fname]
-                p._filters[fname] = fltr
-                items = self.filterChoice.GetItems()
-                self.filterChoice.SetItems(items[:-1]+[fname]+items[-1:])
-                self.filterChoice.SetSelection(len(items)-1)
-            else:
-                self.filterChoice.SetStringSelection(NO_FILTER)
-            cff.Destroy()
+##        evt.Skip()
+        self.filterChoice.on_select(evt)
         self.UpdatePlateMaps()
         
     def save_settings(self):
@@ -671,8 +659,9 @@ class PlateViewer(wx.Frame, CPATool):
             
 def FormatPlateMapData(keys_and_vals, categorical=False):
     '''
-    wellsAndVals: a list of lists of well-keys and values
-       (eg. [['plate1', 'A01', 0.2], ...])
+    keys_and_vals -- a list of lists of well-keys and values
+                     eg: [['p1', 'A01', 0.2], 
+                          ['p1', 'A02', 0.9], ...]
     returns a 2-tuple containing:
        -an array in the shape of the plate containing the given values with 
         NaNs filling empty slots. If multiple sites per-well are given, then
@@ -725,7 +714,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     dm = DataModel.getInstance()
     ind = keys_and_vals.argsort(axis=0)
     for i, (k, well_grp) in enumerate(groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
-                               lambda(row): tuple(row[:len(dummy_key)]))):
+                                              lambda(row): tuple(row[:len(dummy_key)]))):
         (row, col) = dm.get_well_position_from_name(k[-1])
         well_data = np.array(list(well_grp))[:,-1]
         if len(well_data) == 1:
@@ -737,6 +726,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
         well_keys[row, col] = k
         
     return data, well_keys, sort_indices
+
 
 def meander(a):
     ''' a - 2D array
