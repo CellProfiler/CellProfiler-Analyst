@@ -251,7 +251,7 @@ class PlateViewer(wx.Frame, CPATool):
         
         q.set_select_clause(select)
         q.set_group_columns(well_key_cols)
-        if fltr not in (FilterComboBox.NO_FILTER, FilterComboBox.NEW_FILTER):
+        if fltr not in (FilterComboBox.NO_FILTER, FilterComboBox.NEW_FILTER, ''):
             if fltr in p._filters:
                 q.add_filter(p._filters[fltr])
             elif fltr in p.gates:
