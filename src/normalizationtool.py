@@ -275,7 +275,7 @@ class NormalizationUI(wx.Frame, CPATool):
             self.output_format_desc.SetForegroundColour((255,0,0))
         else:
             self.output_format_desc.SetForegroundColour((0,0,0))
-            
+        
         self.do_norm_btn.Enable(is_valid)
         return is_valid
         
@@ -309,6 +309,19 @@ class NormalizationUI(wx.Frame, CPATool):
         if not self.validate():
             # Should be unreachable
             wx.MessageBox('Your normalization settings are invalid. Can\'t perform normalization.')
+            
+        long_cols = [col for col in self.col_choices.GetCheckedStrings() 
+                     if len(col) + 4 > 14]
+        if long_cols:
+            dlg = wx.MessageDialog(self, 'The following columns contain more '
+                    'than 64 characters when a normalization suffix (4 '
+                    'characters) is appended. This may cause a problem when '
+                    'writing to the database.\n %s'%('\n'.join(long_cols)), 
+                    'Warning', wx.OK|wx.CANCEL|wx.ICON_EXCLAMATION)
+            if dlg.ShowModal() == wx.ID_CANCEL:
+                return
+            dlg.Destroy()
+
         imkey_cols = dbconnect.image_key_columns()
         obkey_cols = dbconnect.object_key_columns()
         wellkey_cols = dbconnect.well_key_columns()
