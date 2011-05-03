@@ -257,7 +257,7 @@ class PlateViewer(wx.Frame, CPATool):
             elif fltr in p.gates:
                 q.add_filter(p.gates[fltr].as_filter())
             else:
-                raise 'Could not find filter "%s" in gates or filters'%(fltr)
+                raise Exception('Could not find filter "%s" in gates or filters'%(fltr))
         wellkeys_and_values = db.execute(str(q))
         wellkeys_and_values = np.array(wellkeys_and_values, dtype=object)
 
