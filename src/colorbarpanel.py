@@ -116,14 +116,14 @@ class ColorBarPanel(wx.Panel):
 # TODO: To be added.  Not sure how to treat intervals that are outside 
 #       the current extents, do we resize the extents?  This could get
 #       ugly and confusing.
-
-#    def SetInterval(self, interval):
-#        self.interval = interval
-#        self.low_slider.SetPosition((0-s_off,-1))                
-#        self.high_slider.SetPosition((self.Size[0]-s_off,-1))
-#        for win in self.notify_windows:
-#            win.SetClipInterval(self.GetInterval(), self.clipmode)
-#        self.Refresh()
+##    def SetInterval(self, interval):
+##        ''' '''
+##        self.interval = interval
+##        self.low_slider.SetPosition((0-s_off,-1))                
+##        self.high_slider.SetPosition((self.Size[0]-s_off,-1))
+##        for win in self.notify_windows:
+##            win.SetClipInterval(self.GetInterval(), self.clipmode)
+##        self.Refresh()
         
     def GetGlobalInterval(self):
         ''' Returns the interval clipped on the value axis. '''
@@ -133,12 +133,8 @@ class ColorBarPanel(wx.Panel):
         ''' Returns the interval clipped on the local color bar. 
         If either part is outside the local_extents, the extent is returned.
         '''
-        i = list(self.interval)
-        if self.interval[0] < self.local_extents[0]:
-            i[0] = self.local_extents[0]
-        if self.interval[1] > self.local_extents[1]:
-            i[1] = self.local_extents[1]
-        return i
+        return (max(self.interval[0], self.local_extents[0]),
+                min(self.interval[1], self.local_extents[1]))
     
     def GetGlobalExtents(self):
         return self.global_extents
@@ -206,47 +202,24 @@ class ColorBarPanel(wx.Panel):
         aggmethod = self.Parent.aggregationMethodsChoice.GetStringSelection().lower()
         src_table = self.Parent.sourceChoice.GetStringSelection()
         if (aggmethod in ['mean', 'median', 'min', 'max'] 
-            and self.interval != self.global_extents 
-            and src_table != p.object_table):
+            and self.interval != self.global_extents):
             popupMenu.AppendSeparator()
-            saveitem = popupMenu.AppendItem(wx.MenuItem(popupMenu, -1, 'Save interval to properties as a filter'))
-            self.Bind(wx.EVT_MENU, self.OnSaveIntervalAsFilter, saveitem)
+            saveitem = popupMenu.AppendItem(wx.MenuItem(popupMenu, -1, 'Create gate from interval'))
+            self.Bind(wx.EVT_MENU, self.on_create_gate_from_interval, saveitem)
         self.PopupMenu(popupMenu, (evt.GetX(), evt.GetY()))
         
-    def OnSaveIntervalAsFilter(self, evt):
-        #
-        # TODO: Need to save this as new style filter and remove SQL restrictions on filter names
-        #
-        import dbconnect
-        import os.path
+    def on_create_gate_from_interval(self, evt):
+        self.create_gate_from_interval()
+        
+    def create_gate_from_interval(self):
+        table = self.Parent.sourceChoice.GetStringSelection()
         colname = self.Parent.measurementsChoice.GetStringSelection()
-        
-        lb = ub = 'inf'
-        if self.interval[0] != self.global_extents[0]:
-            lb = ('%.3f'%self.interval[0]).replace('.',',')
-        if self.interval[1] != self.global_extents[1]:
-            ub = ('%.3f'%self.interval[1]).replace('.',',')
-        filtername = 'filter_SQL_%s_between_%s_and_%s'%(colname, lb, ub)
-        
-        if lb and ub:
-            where = '%s>%s AND %s<%s'%(colname, self.interval[0], colname, self.interval[1])
-        elif lb:
-            where = '%s>%s'%(colname, self.interval[0])
-        elif ub: 
-            where = '%s<%s'%(colname, self.interval[1])
-            
-        p.__dict__[filtername] = 'SELECT %s FROM %s WHERE %s'%(dbconnect.UniqueImageClause(), p.image_table, where)
-
-        defaultPath, defaultFileName = os.path.split(p._filename)
-        saveDialog = wx.FileDialog(self, message="Save as:",
-                                   defaultDir=defaultPath, defaultFile=defaultFileName,
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |wx.FD_CHANGE_DIR))
-        if saveDialog.ShowModal()==wx.ID_OK:
-            logging.info('Saving filter to %s'%(saveDialog.GetPath()))
-            logging.debug('   '+filtername+' = '+p.__dict__[filtername])
-            p.save_file(saveDialog.GetPath())
-        saveDialog.Destroy()
-
+        from guiutils import GateDialog
+        dlg = GateDialog(self)
+        if dlg.ShowModal() == wx.ID_OK:
+            from sqltools import Gate, Gate1D
+            p.gates[dlg.Value] = Gate([Gate1D((table, colname), self.interval)])
+        dlg.Destroy()
         
     def OnResize(self, evt):
         range = self.global_extents[1] - self.global_extents[0]
