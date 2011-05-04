@@ -345,7 +345,7 @@ class NormalizationUI(wx.Frame, CPATool):
             wx.MessageBox('Your normalization settings are invalid. Can\'t perform normalization.')
             
         long_cols = [col for col in self.col_choices.GetCheckedStrings() 
-                     if len(col) + 4 > 14]
+                     if len(col) + 4 > 64]
         if long_cols:
             dlg = wx.MessageDialog(self, 'The following columns contain more '
                     'than 64 characters when a normalization suffix (4 '
