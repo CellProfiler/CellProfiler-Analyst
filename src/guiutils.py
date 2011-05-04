@@ -310,11 +310,8 @@ class FilterComboBox(wx.combo.BitmapComboBox):
             return None
         
     def get_choices(self):
-        choices = [FilterComboBox.NO_FILTER] + p._filters_ordered
-        choices += [g for g in p.gates_ordered 
-                    if all([p.image_table==t for t in p.gates[g].get_tables()])] 
-        choices += [FilterComboBox.NEW_FILTER]
-        return choices
+        return [FilterComboBox.NO_FILTER] + p._filters_ordered \
+               + p.gates_ordered + [FilterComboBox.NEW_FILTER]
     
     def get_item_kind(self, n):
         '''returns the kind of item at index n.
@@ -368,7 +365,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         else:
             evt.Skip()
 
-        
+
 class GateComboBox(wx.combo.BitmapComboBox):
     '''A combobox for selecting/creating gates. This box will automatically 
     update it's choices as gates are created and deleted.
