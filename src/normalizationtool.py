@@ -38,17 +38,32 @@ class NormalizationStepPanel(wx.Panel):
             GROUP_CHOICES.remove(G_WELL_NEIGHBORS)
         self.window_group = wx.Choice(self, -1, choices=GROUP_CHOICES)
         self.window_group.Select(0)
+        self.window_group.SetHelpText("Set the grouping to be used for the normalization.\n"
+                                     "Experiment: Perform using all data.\n"
+                                     "Plate: Perform on a per-plate basis.\n"
+                                     "Quadrant: Perform by grouping wells from each 4 x 4 grid together.\n"
+                                     "Neighbors: Perform using data aggregated from neighboring spots/wells; corrects for spatial effects.\n"
+                                     "Constant: Simple division by a constant value.\n\n"
+                                     "If no plate or well information is available, only the Experiment and Constant options are shown.")
         self.agg_type = wx.Choice(self, -1, choices=AGG_CHOICES)
         self.agg_type.Select(0)
+        self.agg_type.SetHelpText("Set the aggregation statistic to use.")
         self.constant_float = FS.FloatSpin(self, -1, increment=1, value=1.0)
         self.constant_float.Hide()
+        self.constant_float.SetHelpText("Specify the constant to divide by.")
         self.window_type = wx.RadioBox(self, -1, 'Window type', choices=WINDOW_CHOICES)
         self.window_type.Hide()
+        self.window_type.SetHelpText("Set the type of spatial averaging to use. "
+                                     "This is commonly used for screens in which the cells are plated according to a spatial pattern, or "
+                                     "there are spatially-dependent variations to correct for.")
         self.window_size_desc = wx.StaticText(self, -1, 'Window size:')
         self.window_size_desc.Hide()
         self.window_size = wx.lib.intctrl.IntCtrl(self, value=3, min=1, max=999)
         self.window_size.Hide()
-        self.window_size.SetHelpText("Window size help text...")
+        self.window_size.SetHelpText("Sets the number of adjacent spots/wells to be "
+                                     "included in the aggregation.\n"
+                                     "If 'Linear (meander)' is selected, the size N is used for a 1 x N filter. "
+                                     "If 'Square' is selected, the filter size is N x N.")
                 
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         sz = wx.BoxSizer(wx.HORIZONTAL)
@@ -60,6 +75,7 @@ class NormalizationStepPanel(wx.Panel):
         sz.Add(self.constant_float)
         if allow_delete:
             self.x_btn = wx.Button(self, -1, 'x', size=(30,-1))
+            self.x_btn.SetHelpText("Click this button to remove a normalization step.")
             sz.AddStretchSpacer()
             sz.Add(self.x_btn)
             self.x_btn.Bind(wx.EVT_BUTTON, self.on_remove)
@@ -76,6 +92,7 @@ class NormalizationStepPanel(wx.Panel):
 
     def on_window_group_selected(self, evt):
         self.update_visible_fields()
+        
     def update_visible_fields(self):
         selected_string = self.window_group.GetStringSelection()
         self.window_type.Hide()
@@ -149,18 +166,35 @@ class NormalizationUI(wx.Frame, CPATool):
         #
         # Define the controls
         #
-        tables = ([p.image_table] or []) + ([p.object_table] or [])
+        tables = ([p.image_table] or []) + ([p.object_table] if p.object_table else [])
         self.table_choice = wx.Choice(self, -1, choices=tables)
         self.table_choice.Select(0)
+        self.table_choice.SetHelpText("Select the table containing the measurement columns to normalize.")
         self.col_choices = wx.CheckListBox(self, -1, choices=[], size=(-1, 100))
+        self.col_choices.SetHelpText("Select the measurement columns to normalize. More than one column may be selected. "
+                                     "The normalization steps below will be performed on all columns.")
         add_norm_step_btn = wx.Button(self, -1, 'Add normalization step')
+        add_norm_step_btn.SetHelpText("Click this button to add another normalization to perform. "
+                                      "The normalizations are performed from top to bottom, with the "
+                                      "results from one step being used as input into the following step.")
         self.norm_meas_checkbox = wx.CheckBox(self, -1, 'Normalized measurements')
         self.norm_meas_checkbox.Set3StateValue(True)
+        self.norm_meas_checkbox.SetHelpText("Write a column of normalized measurements to the output table. "
+                                            "This column ihas the same name as the input, with the suffix '_NmV'")
         self.norm_factor_checkbox = wx.CheckBox(self, -1, 'Normalization factors')
+        self.norm_factor_checkbox.SetHelpText("Write a column of normalization factors to the output table. "
+                                            "This column ihas the same name as the input, with the suffix '_NmF' added.")
         self.output_table = wx.TextCtrl(self, -1, 'normalized_measurements', size=(200,-1))
-        self.output_table.SetHelpText("TODO: help text...")
+        self.output_table.SetHelpText("Enter the name of the output table which will contain "
+                                      "your normalized measurements and/or the normalization factors.\n "
+                                      "The text will appear orange if the table already exists "
+                                      "in the database. The output table will be linked to the existing "
+                                      "tables so it is usable immediately.")
         self.help_btn = wx.ContextHelpButton(self)
         self.do_norm_btn = wx.Button(self, wx.ID_OK, 'Perform Normalization')
+        self.do_norm_btn.SetHelpText("Once you have adjusted the settings, click this button to start normalization "
+                                     "and write the results to the output table. A progress bar will inform you "
+                                     "of the normalization status.")
                 
         self.boxes = [ ]
         
