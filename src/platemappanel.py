@@ -6,11 +6,8 @@ import wx
 import numpy as np
 import matplotlib.cm
 import Image
+from guiutils import BitmapPopup
 from StringIO import StringIO
-try:
-    from agw import supertooltip as STT
-except ImportError: # if it's not there locally, try the wxPython lib.
-    import wx.lib.agw.supertooltip as STT
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -474,12 +471,6 @@ class PlateMapPanel(wx.Panel):
         self.PopupMenu(popupMenu, (self.GetX(evt), self.GetY(evt)))
         
     def show_thumbnail_montage(self, wellkey, pos):
-        try:
-            self.tipwin.Destroy()
-        except:
-            pass
-        tip = STT.SuperToolTip('')
-        
         images = db.execute('SELECT %s FROM %s WHERE %s ORDER BY %s'%
                             (','.join(p.image_thumbnail_cols), p.image_table,
                              dbconnect.GetWhereClauseForWells([wellkey]),
@@ -490,7 +481,7 @@ class PlateMapPanel(wx.Panel):
         for channels in images:
             pngs = [Image.open(StringIO(im), 'r') for im in channels]
             imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
-                    for png in pngs]]
+                        for png in pngs]]
         
         n_channels = len(imsets[0])
         composite = []
@@ -499,15 +490,8 @@ class PlateMapPanel(wx.Panel):
             composite += [imagetools.tile_images([imset[i] for imset in imsets])]
         bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)
         
-        tip.SetEndDelay(1)
-        tip.SetBodyImage(bmp)
-        tip.SetHeader('Well: %s'%(wellkey[-1]))
-        tip.ApplyStyle("Silver")
-        self.tipwin = STT.ToolTipWindow(self, tip)
-        self.tipwin.SetPosition((self.Parent.GetPosition()[0] + pos[0], 
-                                 self.Parent.GetPosition()[1] + pos[1]))
-        self.tipwin.SetSize((bmp.Width+10, bmp.Height+10))
-        self.tipwin.Show()
+        popup = BitmapPopup(self, bmp, pos=pos)
+        popup.Popup()
 
         
 if __name__ == "__main__":
