@@ -471,7 +471,6 @@ class GateDialog(wx.TextEntryDialog):
         evt.Skip()
                 
         
-        
 class TableSelectionDialog(wx.SingleChoiceDialog):
     '''This dialog prompts the user to select a table from a list of all tables
     in the database. More relevant tables are shown at the top.
@@ -659,6 +658,22 @@ class CheckListComboPopup(wx.combo.ComboPopup):
         return wx.Size(minWidth, min(100, maxHeight))
     
 
+class BitmapPopup(wx.PopupTransientWindow):
+    def __init__(self, parent, bitmap, pos=(-1,-1)):
+        '''bitmap -- wx.Bitmap object to show'''
+        wx.PopupTransientWindow.__init__(self, parent)
+        self.bmp = bitmap
+        self.SetPosition(pos)
+        self.SetSize(bitmap.Size)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+
+    def on_paint(self, evt):
+        dc = wx.BufferedPaintDC(self)
+        dc.BeginDrawing()
+        dc.DrawBitmap(self.bmp, 0, 0)
+        dc.EndDrawing()
+        
+    
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     import logging, sys
