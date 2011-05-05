@@ -796,7 +796,9 @@ class DBConnect(Singleton):
                     %(p.link_columns_table))
             
         if self.get_linking_tables(src, dest) is not None:
-            raise Exception('Tables are already linked')
+            raise Exception('Tables are already linked. Call '
+                'DBConnect.get_linking_tables to check if tables are linked '
+                'before do_link_tables.')
         
         # Connect src directly to dest
         self._add_link_tables_row(src, dest, dest, 0)
@@ -818,6 +820,18 @@ class DBConnect(Singleton):
         for col1, col2 in zip(src_cols, dest_cols):
             self._add_link_columns_row(dest, src, col2, col1)
 
+        self.Commit()
+        
+    #
+    # TODO: ensure this table wasn't linking others together.
+    #
+    def do_unlink_table(self, table):
+        '''remove all linkage entries pertaining to the given table
+        '''
+        self.execute('DELETE FROM %s WHERE src=%s OR dest=%s OR link=%s'
+                     %(p.link_tables_table, table, table, table))
+        self.execute('DELETE FROM %s WHERE table1=%s OR table2=%s'
+                     %(p.link_columns_table, table, table))
         self.Commit()
             
     def get_linking_expressions(self, tables):
