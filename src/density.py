@@ -202,10 +202,10 @@ class DataSourcePanel(wx.Panel):
         ytable = self.y_table_choice.Value
         xcol = self.x_choice.Value
         ycol = self.y_choice.Value
-        filter_name = self.filter_choice.Value
+        fltr = self.filter_choice.get_filter_or_none()
         gate_name = self.gate_choice.Value
 
-        points = self.loadpoints(xtable, ytable, xcol, ycol, filter_name)
+        points = self.loadpoints(xtable, ytable, xcol, ycol, fltr)
         self.figpanel.setgridsize(int(self.gridsize_input.GetValue()))
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
@@ -223,14 +223,14 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.gate_helper.disable()
         self.figpanel.draw()
         
-    def loadpoints(self, xtable, ytable, xcol, ycol, filter_name=ui.FilterComboBox.NO_FILTER):
+    def loadpoints(self, xtable, ytable, xcol, ycol, fltr=None):
         ''' Returns a list of tuples (X measurement, Y measurement)
         '''
         q = sql.QueryBuilder()
         q.set_select_clause([sql.Column(xtable, xcol), 
                              sql.Column(ytable, ycol)])
-        if filter_name != ui.FilterComboBox.NO_FILTER:
-            q.add_filter(p._filters[filter_name])
+        if fltr is not None:
+            q.add_filter(fltr)
         return db.execute(str(q))
         
     def save_settings(self):
