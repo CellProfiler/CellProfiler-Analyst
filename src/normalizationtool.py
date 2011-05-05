@@ -531,10 +531,13 @@ class NormalizationUI(wx.Frame, CPATool):
         #
         # Link the resultant table to the corresponding table in the database
         #
-        if input_table == p.image_table:
-            db.do_link_tables(output_table, input_table, imkey_cols, imkey_cols)
-        elif input_table == p.object_table:
-            db.do_link_tables(output_table, input_table, obkey_cols, obkey_cols)            
+        if db.get_linking_tables(input_table, output_table) is None:
+            # Note: if the tables were already linked, then the linking columns
+            #   should be the same, so we don't have to update the link table.
+            if input_table == p.image_table:
+                db.do_link_tables(output_table, input_table, imkey_cols, imkey_cols)
+            elif input_table == p.object_table:
+                db.do_link_tables(output_table, input_table, obkey_cols, obkey_cols)            
         
         #
         # Show the resultant table        
