@@ -237,7 +237,7 @@ class ScatterControlPanel(wx.Panel):
         xcol = self.x_choice.Value
         ycol = self.y_choice.Value
         fltr = self.filter_choice.get_filter_or_none()
-        gate_name = self.gate_choice.Value
+        gate_name = self.gate_choice.get_gatename_or_none()
         
         keys_and_points = self.loadpoints(xtable, ytable, xcol, ycol, fltr)
         col_types = self.get_selected_column_types()
@@ -272,7 +272,7 @@ class ScatterControlPanel(wx.Panel):
         self.figpanel.set_y_label(ycol)
         self.figpanel.set_x_scale(self.x_scale_choice.Value)
         self.figpanel.set_y_scale(self.y_scale_choice.Value)
-        if gate_name != ui.GateComboBox.NO_GATE:
+        if gate_name:
             self.figpanel.gate_helper.set_displayed_gate(
                 p.gates[gate_name], 
                 sql.Column(xtable, xcol), 
@@ -323,8 +323,8 @@ class ScatterControlPanel(wx.Panel):
              'y-lim': self.figpanel.subplot.get_ylim(),
              'version' : '1',
              }
-        if self.gate_choice.get_gate_or_none() != None:
-            d['gate'] = self.gate_choice.Value
+        if self.gate_choice.get_gatename_or_none():
+            d['gate'] = self.gate_choice.GetStringSelection()
         return d
     
     def load_settings(self, settings):
@@ -689,7 +689,10 @@ class ScatterPanel(FigureCanvasWxAgg):
         popup = wx.Menu()
 
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
-        selected_gates = [self.configpanel.gate_choice.get_gate_or_none()] or []
+        selected_gate = self.configpanel.gate_choice.get_gatename_or_none()
+        selected_gates = []
+        if selected_gate:
+            selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
                   lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)

@@ -203,7 +203,7 @@ class DataSourcePanel(wx.Panel):
         xcol = self.x_choice.Value
         ycol = self.y_choice.Value
         fltr = self.filter_choice.get_filter_or_none()
-        gate_name = self.gate_choice.Value
+        gate_name = self.gate_choice.get_gatename_or_none()
 
         points = self.loadpoints(xtable, ytable, xcol, ycol, fltr)
         self.figpanel.setgridsize(int(self.gridsize_input.GetValue()))
@@ -214,7 +214,7 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.set_y_label(ycol)
         self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
         self.figpanel.setpointslists(points)
-        if gate_name != ui.GateComboBox.NO_GATE:
+        if gate_name:
             self.figpanel.gate_helper.set_displayed_gate(
                 p.gates[gate_name], 
                 sql.Column(xtable, xcol), 
@@ -252,8 +252,8 @@ class DataSourcePanel(wx.Panel):
              'y-lim': self.figpanel.subplot.get_ylim(),
              'version' : '1',
              }
-        if self.gate_choice.get_gate_or_none() != None:
-            d['gate'] = self.gate_choice.Value
+        if self.gate_choice.get_gatename_or_none():
+            d['gate'] = self.gate_choice.GetStringSelection()
         return d
     
     def load_settings(self, settings):
@@ -440,7 +440,10 @@ class DensityPanel(FigureCanvasWxAgg):
         self.popup_menu_filters = {}
         popup = wx.Menu()
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
-        selected_gates = [self.configpanel.gate_choice.get_gate_or_none()] or []
+        selected_gate = self.configpanel.gate_choice.get_gatename_or_none()
+        selected_gates = []
+        if selected_gate:
+            selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
                   lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)

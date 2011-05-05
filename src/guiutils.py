@@ -394,10 +394,12 @@ class GateComboBox(wx.combo.BitmapComboBox):
         else:
             self.Select(0)
         
-    def get_gate_or_none(self):
-        if self.Value in (GateComboBox.NO_GATE, GateComboBox.NEW_GATE, GateComboBox.MANAGE_GATES):
+    def get_gatename_or_none(self):
+        if self.GetStringSelection() in (GateComboBox.NO_GATE, 
+                                         GateComboBox.NEW_GATE, 
+                                         GateComboBox.MANAGE_GATES):
             return None
-        return self.Value
+        return self.GetStringSelection()
         
     def get_item_bitmap(self, n):
         '''returns the bitmap corresponding with the nth item'''
@@ -492,7 +494,7 @@ class TableSelectionDialog(wx.SingleChoiceDialog):
                 wx.CHOICEDLG_STYLE)        
 
 
-def prompt_user_to_create_loadimages_table(parent, select_gates):
+def prompt_user_to_create_loadimages_table(parent, select_gates=[]):
     dlg = CreateLoadImagesTableDialog(parent, select_gates)
     if dlg.ShowModal() == wx.ID_OK:
         import tableviewer
@@ -513,7 +515,7 @@ class CreateLoadImagesTableDialog(wx.Dialog):
         text = wx.StaticText(self, -1, 'Select gates to apply:')
         self.Sizer.Add(text, 0, wx.TOP|wx.CENTER, 10)
         for g in select_gates:
-            for c in g.get_columns():
+            for c in p.gates[g].get_columns():
                 assert p.image_table==c.table, 'Can only create LoadImages table from per-image gates.'
         gates = [g for g in p.gates_ordered 
                  if all([p.image_table==c.table for c in p.gates[g].get_columns()])]
