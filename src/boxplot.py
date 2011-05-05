@@ -131,17 +131,17 @@ class DataSourcePanel(wx.Panel):
         
     def update_figpanel(self, evt=None):
         table = self.table_choice.Value
-        filter = self.filter_choice.Value
+        fltr = self.filter_choice.get_filter_or_none()
         grouping = self.group_choice.Value
         if self.x_choice.Value == SELECT_MULTIPLE:
             points_dict = {}
             for col in self.x_columns:
-                pts = self.loadpoints(table, col, filter, NO_GROUP)
+                pts = self.loadpoints(table, col, fltr, NO_GROUP)
                 for k in pts.keys(): assert k not in points_dict.keys()
                 points_dict.update(pts)
         else:
             col = self.x_choice.Value
-            points_dict = self.loadpoints(table, col, filter, grouping)
+            points_dict = self.loadpoints(table, col, fltr, grouping)
         
         # Check if the user is creating a plethora of plots by accident
         if 100 >= len(points_dict) > 25:
@@ -164,7 +164,7 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.set_y_axis_label(self.x_choice.Value)
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, col, filter=ui.FilterComboBox.NO_FILTER, grouping=NO_GROUP):
+    def loadpoints(self, tablename, col, fltr=None, grouping=NO_GROUP):
         '''
         Returns a dict mapping x label values to lists of values from col
         '''
@@ -175,8 +175,8 @@ class DataSourcePanel(wx.Panel):
             group_cols = dm.GetGroupColumnNames(grouping, include_table_name=True)
             select += [sql.Column(*col.split('.')) for col in group_cols]
         q.set_select_clause(select)
-        if filter != ui.FilterComboBox.NO_FILTER:
-            q.add_filter(p._filters[filter])
+        if fltr is not None:
+            q.add_filter(fltr)
 
         res = db.execute(str(q))
         res = np.array(res, dtype=object)
