@@ -606,9 +606,9 @@ class PlateViewer(wx.Frame, CPATool):
         self.UpdatePlateMaps()
         
     def OnSelectFilter(self, evt):
-##        evt.Skip()
         self.filterChoice.on_select(evt)
         self.UpdatePlateMaps()
+        self.colorBar.ResetInterval()
         
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
