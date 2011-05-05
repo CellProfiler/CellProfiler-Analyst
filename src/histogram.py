@@ -127,7 +127,7 @@ class DataSourcePanel(wx.Panel):
             dlg.Destroy()
         elif gate == ui.GateComboBox.NO_GATE:
             self.figpanel.gate_helper.disable()
-        else:
+        elif gate != ui.GateComboBox.MANAGE_GATES:
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(table, column), None)
 
     def update_column_fields(self):
@@ -144,10 +144,10 @@ class DataSourcePanel(wx.Panel):
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
     def update_figpanel(self, evt=None):    
-        filter_name = self.filter_choice.GetStringSelection()
+        fltr = self.filter_choice.get_filter_or_none()
         table = self.table_choice.GetStringSelection()
         column = self.x_choice.GetStringSelection()
-        points = self.loadpoints(table, column, filter_name)
+        points = self.loadpoints(table, column, fltr)
         points = np.array(points[0]).T[0]
         bins = int(self.bins_input.GetValue())
         gate = self.gate_choice.GetStringSelection()
@@ -162,14 +162,14 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(table, column), None)
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, xpoints, filter=ui.FilterComboBox.NO_FILTER):
+    def loadpoints(self, tablename, xpoints, fltr):
         ''' Returns a list of rows containing:
         (TableNumber), ImageNumber, X measurement
         '''
         q = sql.QueryBuilder()
         q.set_select_clause([sql.Column(tablename, xpoints)])
-        if filter != ui.FilterComboBox.NO_FILTER:
-            q.add_filter(p._filters[filter])
+        if fltr is not None:
+            q.add_filter(fltr)
         return [db.execute(str(q))]
 
     def save_settings(self):
