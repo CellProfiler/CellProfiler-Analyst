@@ -157,9 +157,9 @@ class DataSourcePanel(wx.Panel):
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
         self.figpanel.setpoints(points, bins)
         if gate_name:
-            self.figpanel.gate_helper.disable()
-        else:
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], sql.Column(table, column), None)
+        else:
+            self.figpanel.gate_helper.disable()
         self.figpanel.draw()
         
     def loadpoints(self, tablename, xpoints, fltr):
