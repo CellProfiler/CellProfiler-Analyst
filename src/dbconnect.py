@@ -1779,24 +1779,9 @@ class Objects(Entity):
 
 if __name__ == "__main__":
     ''' For debugging only... '''
-    from datamodel import DataModel
     import wx
     app = wx.PySimpleApp()
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    
-    p = Properties.getInstance()
-    dm = DataModel.getInstance()   
-    db = DBConnect.getInstance()
     p.LoadFile('/Users/afraser/cpa_example/example.properties')
-    
-
-    exps = db.get_linking_expressions(['class_table', 'per_image'])
-    print ' AND '.join([str(c) for c in exps])
-        
-    #print db.get_linking_tables('class_table', 'per_object')
-    
-    #print db.get_linking_table_pairs('class_table', 'per_object')
-##    print db.get_linking_columns('class_table', 'per_object')
-
     
     app.MainLoop()
