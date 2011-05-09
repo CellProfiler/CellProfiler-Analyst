@@ -37,13 +37,6 @@ LINEAR_SCALE = 'linear'
 SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
-def get_numeric_columns_from_table(table):
-    ''' Fetches names of numeric columns for the given table. '''
-    measurements = db.GetColumnNames(table)
-    types = db.GetColumnTypes(table)
-    return [m for m,t in zip(measurements, types) if t in [float, int, long]]
-
-
 class Datum:
     def __init__(self, (x, y), color):
         self.x = x
@@ -204,14 +197,14 @@ class ScatterControlPanel(wx.Panel):
 
     def update_x_choices(self):
         tablename = self.x_table_choice.Value
-        fieldnames = db.GetColumnNames(tablename)#get_numeric_columns_from_table(tablename)
+        fieldnames = db.GetColumnNames(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
         self.x_choice.SetSelection(0)
             
     def update_y_choices(self):
         tablename = self.y_table_choice.Value
-        fieldnames = db.GetColumnNames(tablename)#get_numeric_columns_from_table(tablename)
+        fieldnames = db.GetColumnNames(tablename)
         self.y_choice.Clear()
         self.y_choice.AppendItems(fieldnames)
         self.y_choice.SetSelection(0)
@@ -360,7 +353,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     '''
     Contains the guts for drawing scatter plots.
     '''
-    def __init__(self, parent, xpoints=[], ypoints=[], keys=None, clr_list=None, **kwargs):
+    def __init__(self, parent, **kwargs):
         self.figure = Figure()
         FigureCanvasWxAgg.__init__(self, parent, -1, self.figure, **kwargs)
         
@@ -384,12 +377,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.selection = {}
         self.mouse_mode = 'gate'
         self.legend = None
-        self.set_points(xpoints, ypoints)
         self.lasso = None
-        if keys is not None:
-            self.set_keys(keys)
-        if clr_list is not None:
-            self.set_colors(clr_list)
         self.redraw()
         
         self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -932,21 +920,18 @@ class Scatter(wx.Frame, CPATool):
     '''
     A very basic scatter plot with controls for setting it's data source.
     '''
-    def __init__(self, parent, xpoints=[], ypoints=[], keys=None, clr_lists=None,
-                 show_controls=True,
-                 size=(600,600), **kwargs):
+    def __init__(self, parent, size=(600,600), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
         
-        figpanel = ScatterPanel(self, xpoints, ypoints, keys, clr_lists)
+        figpanel = ScatterPanel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
                 
-        if show_controls:
-            configpanel = ScatterControlPanel(self, figpanel)
-            figpanel.set_configpanel(configpanel)
-            sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
+        configpanel = ScatterControlPanel(self, figpanel)
+        figpanel.set_configpanel(configpanel)
+        sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         
         self.SetToolBar(figpanel.get_toolbar())            
         self.SetSizer(sizer)
@@ -1056,45 +1041,13 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        p.load_file('/Users/afraser/cpa_example/example2.properties')
-        #if not p.show_load_dialog():
-            #print 'Scatterplot requires a properties file.  Exiting.'
-            ## necessary in case other modal dialogs are up
-            #wx.GetApp().Exit()
-            #sys.exit()
-   
-    
-##    import calc_tsne
-##    import tsne
-##    data = db.execute('SELECT %s FROM %s'%
-##                      (','.join(get_numeric_columns_from_table(p.image_table)), 
-##                       p.image_table))
-##    data = np.array(data)
-##    from time import time
-##
-##    t = time()
-##    res = calc_tsne.calc_tsne(data, INITIAL_DIMS=data.shape[1])
-##    print 'Time to calculate tSNE: %s seconds'%(str(time() - t))
-##
-##    t = time()
-##    res2 = np.real(tsne.pca(data, 2))
-##    print 'Time to calculate tSNE: %s seconds'%(str(time() - t))
-##    
-##    db.execute('DROP TABLE IF EXISTS tSNE')
-##    db.execute('CREATE TABLE tSNE(ImageNumber int, a FLOAT, b FLOAT)')
-##    i = 1
-##    for a,b in res2:
-##        db.execute('INSERT INTO tSNE (ImageNumber, a, b) VALUES(%s, %s, %s)'%(i,a,b),
-##                   silent=True)
-##        i += 1
-##    wx.GetApp().user_tables = ['tSNE']
-
-    
-    xpoints = []
-    ypoints = []
-    clrs = None
-
-    scatter = Scatter(None, xpoints, ypoints, clrs)
+##        p.load_file('/Users/afraser/cpa_example/example2.properties')
+        if not p.show_load_dialog():
+            print 'Scatterplot requires a properties file.  Exiting.'
+            # necessary in case other modal dialogs are up
+            wx.GetApp().Exit()
+            sys.exit()
+    scatter = Scatter(None)
     scatter.Show()
     
     app.MainLoop()
