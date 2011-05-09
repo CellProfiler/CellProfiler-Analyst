@@ -699,7 +699,13 @@ class DBConnect(Singleton):
         ''' Returns a list of imKeys from the given filter. '''
         try:
             f = p._filters[filter_name]
-            query = 'SELECT %s FROM %s WHERE %s'%(UniqueImageClause(), ','.join(f.get_tables()), str(f))
+            import sqltools
+            if isinstance(f, sqltools.Filter):
+                query = 'SELECT %s FROM %s WHERE %s'%(UniqueImageClause(), ','.join(f.get_tables()), str(f))
+            elif isinstance(f, sqltools.OldFilter):
+                query = f
+            else:
+                raise Exception('Invalid filter type in p._filters')
             return self.execute(query)
         except Exception, e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
