@@ -41,8 +41,8 @@ class NormalizationStepPanel(wx.Panel):
         self.window_group.SetHelpText("Set the grouping to be used for the normalization.\n"
                                      "Experiment: Perform using all data.\n"
                                      "Plate: Perform on a per-plate basis.\n"
-                                     "Quadrant: Perform by grouping wells from each 4 x 4 grid together.\n"
-                                     "Neighbors: Perform using data aggregated from neighboring spots/wells; corrects for spatial effects.\n"
+                                     "Plate Quadrant: Perform by grouping wells from each 4 x 4 grid together.\n"
+                                     "Well Neighbors: Perform using data aggregated from neighboring spots/wells; corrects for spatial effects.\n"
                                      "Constant: Simple division by a constant value.\n\n"
                                      "If no plate or well information is available, only the Experiment and Constant options are shown.")
         self.agg_type = wx.Choice(self, -1, choices=AGG_CHOICES)
@@ -543,7 +543,7 @@ class NormalizationUI(wx.Frame, CPATool):
         # Show the resultant table        
         #
         import tableviewer
-        tv = tableviewer.TableViewer(self)
+        tv = tableviewer.TableViewer(wx.GetApp().frame)
         tv.Show()
         tv.load_db_table(output_table)
         
