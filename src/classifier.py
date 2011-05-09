@@ -560,7 +560,7 @@ class Classifier(wx.Frame):
         nObjects    = int(self.nObjectsTxt.Value)
         obClass     = self.obClassChoice.Selection
         obClassName = self.obClassChoice.GetStringSelection()
-        filter      = self.filterChoice.GetStringSelection()
+        fltr_sel      = self.filterChoice.GetStringSelection()
         
         statusMsg = 'Fetched %d %s %s'%(nObjects, obClassName, p.object_name[1])
         
@@ -568,23 +568,23 @@ class Classifier(wx.Frame):
         obKeys = []
         # unclassified:
         if obClass == 0:
-            if filter == 'experiment':
+            if fltr_sel == 'experiment':
                 obKeys = dm.GetRandomObjects(nObjects)
                 statusMsg += ' from whole experiment'
-            elif filter == 'image':
+            elif fltr_sel == 'image':
                 imKey = self.GetGroupKeyFromGroupSizer()
                 obKeys = dm.GetRandomObjects(nObjects, [imKey])
                 statusMsg += ' from image %s'%(imKey,)
-            elif filter in p._filters_ordered:
-                filteredImKeys = db.GetFilteredImages(filter)
+            elif fltr_sel in p._filters_ordered:
+                filteredImKeys = db.GetFilteredImages(fltr_sel)
                 if filteredImKeys == []:
-                    self.PostMessage('No images were found in filter "%s"'%(filter))
+                    self.PostMessage('No images were found in filter "%s"'%(fltr_sel))
                     return
                 obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
-                statusMsg += ' from filter "%s"'%(filter)
-            elif filter in p._groups_ordered:
+                statusMsg += ' from filter "%s"'%(fltr_sel)
+            elif fltr_sel in p._groups_ordered:
                 # if the filter name is a group then it's actually a group
-                groupName = filter
+                groupName = fltr_sel
                 groupKey = self.GetGroupKeyFromGroupSizer(groupName)
                 filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
                 colNames = dm.GetGroupColumnNames(groupName)
@@ -604,17 +604,17 @@ class Classifier(wx.Frame):
         else:
             hits = 0
             # Get images within any selected filter or group
-            if filter != 'experiment':
-                if filter == 'image':
+            if fltr_sel != 'experiment':
+                if fltr_sel == 'image':
                     imKey = self.GetGroupKeyFromGroupSizer()
                     filteredImKeys = [imKey]
-                elif filter in p._filters_ordered:
-                    filteredImKeys = db.GetFilteredImages(filter)
+                elif fltr_sel in p._filters_ordered:
+                    filteredImKeys = db.GetFilteredImages(fltr_sel)
                     if filteredImKeys == []:
-                        self.PostMessage('No images were found in filter "%s"'%(filter))
+                        self.PostMessage('No images were found in filter "%s"'%(fltr_sel))
                         return
-                elif filter in p._groups_ordered:
-                    group_name = filter
+                elif fltr_sel in p._groups_ordered:
+                    group_name = fltr_sel
                     groupKey = self.GetGroupKeyFromGroupSizer(group_name)
                     colNames = dm.GetGroupColumnNames(group_name)
                     filteredImKeys = dm.GetImagesInGroupWithWildcards(group_name, groupKey)
@@ -627,7 +627,7 @@ class Classifier(wx.Frame):
             # Now check which objects fall within the classification
             while len(obKeys) < nObjects:
                 self.PostMessage('Gathering random %s.'%(p.object_name[1]))
-                if filter == 'experiment':
+                if fltr_sel == 'experiment':
                     if 0 and p.db_sqlite_file:
                         # This is incredibly slow in SQLite
                         #obKeysToTry = dm.GetRandomObjects(100)
@@ -637,7 +637,7 @@ class Classifier(wx.Frame):
                     else:
                         obKeysToTry = dm.GetRandomObjects(100)
                     loopMsg = ' from whole experiment'
-                elif filter == 'image':
+                elif fltr_sel == 'image':
                     # All objects are tried in first pass
                     if attempts>0: 
                         break
@@ -647,10 +647,10 @@ class Classifier(wx.Frame):
                 else:
                     obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
                     obKeysToTry.sort()
-                    if filter in p._filters_ordered:
-                        loopMsg = ' from filter %s'%(filter)
-                    elif filter in p._groups_ordered:
-                        loopMsg = ' from group %s: %s'%(filter,
+                    if fltr_sel in p._filters_ordered:
+                        loopMsg = ' from filter %s'%(fltr_sel)
+                    elif fltr_sel in p._groups_ordered:
+                        loopMsg = ' from group %s: %s'%(fltr_sel,
                                             ', '.join(['%s=%s'%(n,v) for n, v in zip(colNames,groupKey)]))
                 
                 self.PostMessage('Classifying %s.'%(p.object_name[1]))
@@ -1212,21 +1212,17 @@ class Classifier(wx.Frame):
             from columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
-                fltr = str(cff.get_filter())
-                fname = str(cff.get_filter_name())
-                p._filters_ordered += [fname]
+                fltr = cff.get_filter()
+                fname = cff.get_filter_name()
                 p._filters[fname] = fltr
                 items = self.filterChoice.GetItems()
                 self.filterChoice.SetItems(items[:-1]+[fname]+items[-1:])
-                self.filterChoice.SetSelection(len(items)-1)
-                logging.info('Creating filter table...')
-                multiclasssql.CreateFilterTable(fname, wx.Yield)
-                logging.info('Done creating filter.')
+                self.filterChoice.Select(len(items)-1)
+            else:
+                self.filterChoice.Select(0)
             cff.Destroy()
-
         self.fetch_panel.Layout()
         self.fetch_panel.Refresh()
-    
     
     def SetupFetchFromGroupSizer(self, group):
         '''
