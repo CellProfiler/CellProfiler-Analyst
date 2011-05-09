@@ -104,7 +104,7 @@ class ColumnFilterPanel(wx.Panel):
             # Don't quote numbers
             return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
         if comparator.upper() in ['IS', 'IS NOT'] and value.upper() == 'NULL':
-            # Don't comparisons to NULL
+            # Don't quote comparisons to NULL
             return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
         return sql.Filter(sql.Column(table, column), comparator, '"%s"'%(value))
     
