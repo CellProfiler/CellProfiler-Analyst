@@ -92,8 +92,8 @@ class DataSourcePanel(wx.Panel):
         sizer.Add(self.update_chart_btn)    
         
         wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
-        wx.EVT_COMBOBOX(self.gate_choice, -1, self.on_gate_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
+        self.gate_choice.addobserver(self.on_gate_selected)
         
         self.SetSizer(sizer)
         self.Show(1)
@@ -109,26 +109,14 @@ class DataSourcePanel(wx.Panel):
                 self.table_choice.Select(0)
                 return
         self.update_column_fields()
-            
-    def on_gate_selected(self, evt):
-        gate = self.gate_choice.GetStringSelection()
+
+    def on_gate_selected(self, gate_name):
         table = self.table_choice.GetStringSelection()
         column = self.x_choice.GetStringSelection()
-        if gate == ui.GateComboBox.NEW_GATE:
-            dlg = ui.GateDialog(self)
-            if dlg.ShowModal() == wx.ID_OK:
-                self.gate_choice.Items = self.gate_choice.Items[:-1] + [dlg.Value] + self.gate_choice.Items[-1:]
-                self.gate_choice.SetStringSelection(dlg.Value)
-                p.gates[dlg.Value] = sql.Gate()
-                self.figpanel.gate_helper.set_displayed_gate(p.gates[dlg.Value], sql.Column(table, column), None)
-            else:
-                self.gate_choice.Select(0)
-                self.figpanel.gate_helper.disable()
-            dlg.Destroy()
-        elif gate == ui.GateComboBox.NO_GATE:
+        if gate_name:
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], sql.Column(table, column), None)
+        else:
             self.figpanel.gate_helper.disable()
-        elif gate != ui.GateComboBox.MANAGE_GATES:
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(table, column), None)
 
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
@@ -245,6 +233,15 @@ class HistogramPanel(FigureCanvasWxAgg):
         
         self.canvas.mpl_connect('button_release_event', self.on_release)
         
+        #
+        # TODO: plot should store state. Make all redraws from db start here.
+        #
+##    def configure(self, config):
+##        '''
+##        '''
+##        self.config = config
+##        get_points(table, col, fltr)
+        
     def setpoints(self, points, bins):
         ''' Updates the data to be plotted and redraws the plot.
         points - array of samples
@@ -290,23 +287,23 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.x_label = label
         
     def set_x_scale(self, scale):
+        '''scale -- LINEAR_SCALE, LOG_SCALE, or LOG2_SCALE'''
         self.x_scale = scale
         
     def set_y_scale(self, scale):
+        '''scale -- LINEAR_SCALE or LOG_SCALE'''
         if scale == LINEAR_SCALE:
             self.log_y = False
         elif scale == LOG_SCALE:
             self.log_y = True
         else:
             raise 'Unsupported y-axis scale.' 
-
-    def getpointslists(self):
-        return self.points
     
     def get_toolbar(self):
         return self.navtoolbar
 
     def reset_toolbar(self):
+        '''Clears the navigation toolbar history. Called after setpoints.'''
         # Cheat since there is no way reset
         if self.navtoolbar:
             self.navtoolbar._views.clear()
@@ -318,10 +315,12 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.configpanel = configpanel
         
     def on_release(self, evt):
+        '''click handler'''
         if evt.button == 3: # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
     def show_popup_menu(self, (x,y), data):
+        '''Show context sensitive popup menu.'''
         self.popup_menu_filters = {}
         popup = wx.Menu()
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
@@ -333,6 +332,7 @@ class HistogramPanel(FigureCanvasWxAgg):
                   lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         self.PopupMenu(popup, (x,y))
+
 
 class Histogram(wx.Frame, CPATool):
     '''

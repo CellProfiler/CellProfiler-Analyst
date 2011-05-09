@@ -156,7 +156,7 @@ class ScatterControlPanel(wx.Panel):
         
         wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
         wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
-        wx.EVT_COMBOBOX(self.gate_choice, -1, self.on_gate_selected)
+        self.gate_choice.addobserver(self.on_gate_selected)
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
 
         self.SetSizer(sizer)
@@ -191,31 +191,16 @@ class ScatterControlPanel(wx.Panel):
                 self.y_table_choice.Select(0)
                 return
         self.update_y_choices()
-                
-    def on_gate_selected(self, evt):
-        gate = self.gate_choice.GetStringSelection()
+
+    def on_gate_selected(self, gate_name):
         x_table = self.x_table_choice.GetStringSelection()
         y_table = self.y_table_choice.GetStringSelection()
         x_column = self.x_choice.GetStringSelection()
         y_column = self.y_choice.GetStringSelection()
-        if gate == ui.GateComboBox.NEW_GATE:
-            dlg = ui.GateDialog(self)
-            if dlg.ShowModal() == wx.ID_OK:
-                self.gate_choice.Items = self.gate_choice.Items[:-1] + [dlg.Value] + self.gate_choice.Items[-1:]
-                self.gate_choice.SetStringSelection(dlg.Value)
-                p.gates[dlg.Value] = sql.Gate()
-                self.figpanel.gate_helper.set_displayed_gate(p.gates[dlg.Value], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
-            else:
-                self.gate_choice.Select(0)
-                self.figpanel.gate_helper.disable()
-            dlg.Destroy()
-        elif gate == ui.GateComboBox.NO_GATE:
-            self.figpanel.gate_helper.disable()
-        elif gate == ui.GateComboBox.MANAGE_GATES:
-            self.figpanel.gate_helper.disable()
-            evt.Skip()
+        if gate_name:
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
         else:
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
+            self.figpanel.gate_helper.disable()
 
     def update_x_choices(self):
         tablename = self.x_table_choice.Value

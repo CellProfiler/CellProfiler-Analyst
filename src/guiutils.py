@@ -5,6 +5,7 @@ import icons
 import properties
 import dbconnect
 import sqltools
+from utils import Observable
 from wx.combo import OwnerDrawnComboBox as ComboBox
 
 p = properties.Properties.getInstance()
@@ -294,7 +295,10 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         selected_string = self.Value
         self.SetItems(self.get_choices())
         self.reset_bitmaps()
-        self.SetStringSelection(selected_string)
+        if selected_string in self.Items:
+            self.SetStringSelection(selected_string)
+        else:
+            self.Select(0)
         self.Layout()
         
     def get_filter_or_none(self):
@@ -366,7 +370,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
             evt.Skip()
 
 
-class GateComboBox(wx.combo.BitmapComboBox):
+class GateComboBox(wx.combo.BitmapComboBox, Observable):
     '''A combobox for selecting/creating gates. This box will automatically 
     update it's choices as gates are created and deleted.
     '''
@@ -374,8 +378,8 @@ class GateComboBox(wx.combo.BitmapComboBox):
     NEW_GATE = 'CREATE NEW GATE'
     MANAGE_GATES = 'MANAGE GATES'
     def __init__(self, parent, id=-1, **kwargs):
-        choices = kwargs.get('choices', self.get_choices())
-        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=choices, **kwargs)
+        self.columns = []
+        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
         self.Select(0)
         self.reset_bitmaps()
         p.gates.addobserver(self.update_choices)
@@ -383,7 +387,11 @@ class GateComboBox(wx.combo.BitmapComboBox):
         self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
         
     def get_choices(self):
-        return [GateComboBox.NO_GATE] + p.gates_ordered + [GateComboBox.NEW_GATE, GateComboBox.MANAGE_GATES]
+        choices = [GateComboBox.NO_GATE]
+        choices += [g for g in p.gates_ordered 
+                    if set(p.gates[g].get_columns()).issubset(self.columns) or self.columns==[]]
+        choices += [GateComboBox.NEW_GATE, GateComboBox.MANAGE_GATES]
+        return choices
 
     def update_choices(self, evt=None):
         selected_string = self.Value
@@ -410,6 +418,13 @@ class GateComboBox(wx.combo.BitmapComboBox):
         else:
             return wx.NullBitmap
 
+    def filter_gates_by_columns(self, columns):
+        '''Show only gates that operate on a subset of the specified columns.
+        columns -- a list of Columns ([] to show all gates)
+        '''
+        assert all([isinstance(c, sqltools.Column) for c in columns])
+        self.columns = columns
+
     def reset_bitmaps(self):
         '''resets the bitmaps associated with each choice. Should be called 
         after updating choices with get_choices() 
@@ -421,13 +436,23 @@ class GateComboBox(wx.combo.BitmapComboBox):
         if self.Value == GateComboBox.MANAGE_GATES:
             dlg = GateManager(self.Parent)
             dlg.ShowModal()
+            dlg.Destroy()
             self.Select(0)
-        evt.Skip()
-        
+        elif self.Value == GateComboBox.NEW_GATE:
+            dlg = GateDialog(self.Parent)
+            if dlg.ShowModal() == wx.ID_OK:
+                self.Items = self.Items[:-1] + [dlg.Value] + self.Items[-1:]
+                self.SetStringSelection(dlg.Value)
+                p.gates[dlg.Value] = sqltools.Gate()
+            else:
+                self.Select(0)
+            dlg.Destroy()
+        self.notify(self.get_gatename_or_none())
+   
     def on_destroy(self, evt):
         p.gates.removeobserver(self.update_choices)
         evt.Skip()
-
+        
 
 class GateDialog(wx.TextEntryDialog):
     '''A Dialog that asks the user to choose a gate name. This dialog prevents
@@ -582,16 +607,24 @@ class GateManager(wx.Dialog):
         
         self.gatelist.Bind(wx.EVT_LISTBOX, self.on_select)
         self.deletebtn.Bind(wx.EVT_BUTTON, self.on_delete)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
         
         p.gates.addobserver(self.update_choices)
+        
+    def on_destroy(self, evt):
+        p.gates.removeobserver(self.update_choices)
+        evt.Skip()
         
     def on_select(self, evt):
         self.update_info()
         
     def update_info(self):
         gate = self.gatelist.GetStringSelection()
-        self.deletebtn.Enable(gate in p.gates_ordered)
-        self.gateinfo.Value = str(p.gates[gate]) if gate else ''
+        self.deletebtn.Enable(gate in p.gates)
+        if gate:
+            self.gateinfo.Value = str(p.gates[gate])
+        else:
+            self.gateinfo.Value = ''
         
     def update_choices(self, evt):
         sel = self.gatelist.GetStringSelection()
@@ -611,6 +644,7 @@ class GateManager(wx.Dialog):
         if dlg.ShowModal() == wx.ID_YES:
             p.gates.pop(gate)
 
+            
 class CheckListComboBox(wx.combo.ComboCtrl):
     '''A handy concoction for doing selecting multiple items with a ComboBox.
     '''
@@ -658,21 +692,24 @@ class CheckListComboPopup(wx.combo.ComboPopup):
     
 
 class BitmapPopup(wx.PopupTransientWindow):
+    '''Transient popup window that displays a bitmap. This window will be
+    dismissed when the user clicks elsewhere.
+    '''
     def __init__(self, parent, bitmap, pos=(-1,-1)):
         '''bitmap -- wx.Bitmap object to show'''
         wx.PopupTransientWindow.__init__(self, parent)
         self.bmp = bitmap
         self.SetPosition(pos)
         self.SetSize(bitmap.Size)
-        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_PAINT, self._on_paint)
 
-    def on_paint(self, evt):
+    def _on_paint(self, evt):
         dc = wx.BufferedPaintDC(self)
         dc.BeginDrawing()
         dc.DrawBitmap(self.bmp, 0, 0)
         dc.EndDrawing()
         
-    
+
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     import logging, sys
