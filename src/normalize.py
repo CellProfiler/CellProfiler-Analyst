@@ -3,8 +3,8 @@ import numpy as np
 
 G_EXPERIMENT = "Experiment"
 G_PLATE = "Plate"
-G_QUADRANT = "Quadrant"
-G_WELL_NEIGHBORS = "Neighbors"
+G_QUADRANT = "Plate Quadrant"
+G_WELL_NEIGHBORS = "Well Neighbors"
 G_CONSTANT = "Constant"
 
 M_MEDIAN = "Median"
