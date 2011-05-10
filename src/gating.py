@@ -2,6 +2,8 @@ import wx
 import numpy as np
 import sqltools as sql
 from matplotlib.patches import Rectangle
+from properties import Properties
+p = Properties.getInstance()
 
 class GatingHelper(object):
     '''
@@ -32,6 +34,7 @@ class GatingHelper(object):
         self.background = self.canvas.copy_from_bbox(self.subplot.bbox)
         if parent_window:
             parent_window.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
+        p.gates.addobserver(self.on_gate_list_changed)
         
     def on_destroy(self, evt=None):
         self.destroy()
@@ -43,6 +46,13 @@ class GatingHelper(object):
         '''
         if self.gate:
             self.gate.removeobserver(self.redraw)
+        p.gates.removeobserver(self.on_gate_list_changed)
+            
+    def on_gate_list_changed(self, (name, gate)):
+        if gate is None:
+            # a gate was deleted, check to see if it was this gate.
+            if self.gate not in p.gates.values():
+                self.disable()
         
     def disable(self):
         '''Hide gates and disable mouse interactions.'''
