@@ -177,13 +177,13 @@ class GatingHelper(object):
             elif self.hover == self.BOUNDARY_INSIDE and evt.xdata and evt.ydata:
                 for subgate in self.gate.get_subgates():
                     if subgate.get_column() == self.x_column:
-                        new_range = subgate.get_range() - self.__mouse_xy_data[0] + evt.xdata
+                        new_range = self._init_range[subgate.get_column()] - self._mouse_click_xy_data[0] + evt.xdata
                     elif subgate.get_column() == self.y_column:
-                        new_range = subgate.get_range() - self.__mouse_xy_data[1] + evt.ydata
+                        new_range = self._init_range[subgate.get_column()] - self._mouse_click_xy_data[1] + evt.ydata
                     subgate.set_range(*new_range)
 
             if evt.xdata and evt.ydata:
-                self.__mouse_xy_data = (evt.xdata, evt.ydata)
+                self._mouse_xy_data = (evt.xdata, evt.ydata)
             return
 
         self.hover = None
@@ -231,8 +231,8 @@ class GatingHelper(object):
             wx.SetCursor(wx.StockCursor(wx.CURSOR_CROSS))
             if self.dragging:
                 if self.x_column:
-                    xmin = min(self.__mouse_xy_data[0], evt.xdata)
-                    xmax = max(self.__mouse_xy_data[0], evt.xdata)
+                    xmin = min(self._mouse_xy_data[0], evt.xdata)
+                    xmax = max(self._mouse_xy_data[0], evt.xdata)
                     if self.x_column not in [g.get_column() for g in self.gate.get_subgates()]:
                         self.gate.add_subgate(sql.Gate1D(self.x_column.copy(), (xmin, xmax)))
                     else:
@@ -240,8 +240,8 @@ class GatingHelper(object):
                             if subgate.get_column() == self.x_column:
                                 subgate.set_range(xmin, xmax)
                 if self.y_column and self.y_column != self.x_column:
-                    ymin = min(self.__mouse_xy_data[1], evt.ydata)
-                    ymax = max(self.__mouse_xy_data[1], evt.ydata)
+                    ymin = min(self._mouse_xy_data[1], evt.ydata)
+                    ymax = max(self._mouse_xy_data[1], evt.ydata)
                     if self.y_column not in [g.get_column() for g in self.gate.get_subgates()]:
                         self.gate.add_subgate(sql.Gate1D(self.y_column.copy(), (ymin, ymax)))
                     else:
@@ -258,7 +258,12 @@ class GatingHelper(object):
         if self.hover or self.gate.is_empty():
             if evt.button == 1:
                 self.dragging = True
-                self.__mouse_xy_data = (evt.xdata, evt.ydata)
+                self._mouse_xy_data = (evt.xdata, evt.ydata)
+                self._mouse_click_xy_data = (evt.xdata, evt.ydata)
+                self._init_range = {}
+                for subgate in self.gate.get_subgates():
+                    self._init_range[subgate.get_column()] = np.array(subgate.get_range())
+
             
     def on_release(self, evt):
         '''Mouse-up handler. Stop dragging.
