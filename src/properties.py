@@ -240,6 +240,9 @@ class Properties(Singleton):
                     
                 elif name == 'filters':
                     # Load new-style filters
+                    if val.strip() == '':
+                        logging.warn('PROPERTIES WARNING (filters): Field should not be left blank')
+                        continue
                     d = eval(val)
                     if type(d) != dict:
                         raise Exception, 'PROPERTIES ERROR (filters): Error parsing filters. Check the "filters" field in your properties file.'
