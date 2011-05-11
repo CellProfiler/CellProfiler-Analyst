@@ -378,7 +378,7 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
     NEW_GATE = 'CREATE NEW GATE'
     MANAGE_GATES = 'MANAGE GATES'
     def __init__(self, parent, id=-1, **kwargs):
-        self.columns = []
+        self.gatable_columns = None
         wx.combo.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
         self.Select(0)
         self.reset_bitmaps()
@@ -388,8 +388,11 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
         
     def get_choices(self):
         choices = [GateComboBox.NO_GATE]
-        choices += [g for g in p.gates_ordered 
-                    if set(p.gates[g].get_columns()).issubset(self.columns) or self.columns==[]]
+        if self.gatable_columns == None:
+            choices += p.gates_ordered
+        else:
+            choices += [g for g in p.gates_ordered 
+                        if set(p.gates[g].get_columns()).issubset(self.gatable_columns)]
         choices += [GateComboBox.NEW_GATE, GateComboBox.MANAGE_GATES]
         return choices
 
@@ -418,12 +421,13 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
         else:
             return wx.NullBitmap
 
-    def filter_gates_by_columns(self, columns):
+    def set_gatable_columns(self, columns):
         '''Show only gates that operate on a subset of the specified columns.
-        columns -- a list of Columns ([] to show all gates)
+        columns -- a list of Columns or None to show all gates
         '''
         assert all([isinstance(c, sqltools.Column) for c in columns])
-        self.columns = columns
+        self.gatable_columns = columns
+        self.update_choices()
 
     def reset_bitmaps(self):
         '''resets the bitmaps associated with each choice. Should be called 
