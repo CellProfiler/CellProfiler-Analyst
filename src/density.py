@@ -122,6 +122,18 @@ class DataSourcePanel(wx.Panel):
         self.SetSizer(sizer)
         self.Show(1)
 
+    @property
+    def x_column(self):
+        return sql.Column(self.x_table_choice.GetStringSelection(), 
+                          self.x_choice.GetStringSelection())
+    @property
+    def y_column(self):
+        return sql.Column(self.y_table_choice.GetStringSelection(), 
+                          self.y_choice.GetStringSelection())
+    @property
+    def filter(self):
+        return self.filter_choice.get_filter_or_none()
+        
     def on_x_table_selected(self, evt):
         table = self.x_table_choice.Value
         if table == ui.TableComboBox.OTHER_TABLE:
@@ -153,12 +165,12 @@ class DataSourcePanel(wx.Panel):
         self.update_y_choices()
             
     def on_gate_selected(self, gate_name):
-        x_table = self.x_table_choice.GetStringSelection()
-        y_table = self.y_table_choice.GetStringSelection()
-        x_column = self.x_choice.GetStringSelection()
-        y_column = self.y_choice.GetStringSelection()
+        self.update_gate_helper()
+        
+    def update_gate_helper(self):
+        gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
         else:
             self.figpanel.gate_helper.disable()
 
@@ -186,59 +198,43 @@ class DataSourcePanel(wx.Panel):
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
     def update_figpanel(self, evt=None):
-        xtable = self.x_table_choice.Value
-        ytable = self.y_table_choice.Value
-        xcol = self.x_choice.Value
-        ycol = self.y_choice.Value
-        fltr = self.filter_choice.get_filter_or_none()
-        gate_name = self.gate_choice.get_gatename_or_none()
-
-        points = self.loadpoints(xtable, ytable, xcol, ycol, fltr)
+        self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
+        points = self._load_points()
         self.figpanel.setgridsize(int(self.gridsize_input.GetValue()))
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
         self.figpanel.set_color_scale(self.color_scale_choice.GetStringSelection())
-        self.figpanel.set_x_label(xcol)
-        self.figpanel.set_y_label(ycol)
+        self.figpanel.set_x_label(self.x_column.col)
+        self.figpanel.set_y_label(self.y_column.col)
         self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
         self.figpanel.setpointslists(points)
-        if gate_name:
-            self.figpanel.gate_helper.set_displayed_gate(
-                p.gates[gate_name], 
-                sql.Column(xtable, xcol), 
-                sql.Column(ytable, ycol))
-        else:
-            self.figpanel.gate_helper.disable()
         self.figpanel.draw()
+        self.update_gate_helper()
         
-    def loadpoints(self, xtable, ytable, xcol, ycol, fltr=None):
-        ''' Returns a list of tuples (X measurement, Y measurement)
-        '''
+    def _load_points(self):
         q = sql.QueryBuilder()
-        q.set_select_clause([sql.Column(xtable, xcol), 
-                             sql.Column(ytable, ycol)])
-        if fltr is not None:
-            q.add_filter(fltr)
+        q.set_select_clause([self.x_column, self.y_column])
+        if self.filter is not None:
+            q.add_filter(self.filter)
         return db.execute(str(q))
         
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
-        
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        d = {'x-table' : self.x_table_choice.GetStringSelection(),
-             'y-table' : self.x_table_choice.GetStringSelection(),
-             'x-axis' : self.x_choice.GetStringSelection(),
-             'y-axis' : self.y_choice.GetStringSelection(),
-             'x-scale' : self.x_scale_choice.GetStringSelection(),
-             'y-scale' : self.y_scale_choice.GetStringSelection(),
-             'grid size' : self.gridsize_input.GetValue(),
-             'colormap' : self.colormap_choice.GetStringSelection(),
+        d = {'x-table'     : self.x_table_choice.GetStringSelection(),
+             'y-table'     : self.x_table_choice.GetStringSelection(),
+             'x-axis'      : self.x_choice.GetStringSelection(),
+             'y-axis'      : self.y_choice.GetStringSelection(),
+             'x-scale'     : self.x_scale_choice.GetStringSelection(),
+             'y-scale'     : self.y_scale_choice.GetStringSelection(),
+             'grid size'   : self.gridsize_input.GetValue(),
+             'colormap'    : self.colormap_choice.GetStringSelection(),
              'color scale' : self.color_scale_choice.GetStringSelection(),
-             'filter' : self.filter_choice.GetStringSelection(),
-             'x-lim': self.figpanel.subplot.get_xlim(),
-             'y-lim': self.figpanel.subplot.get_ylim(),
-             'version' : '1',
+             'filter'      : self.filter_choice.GetStringSelection(),
+             'x-lim'       : self.figpanel.subplot.get_xlim(),
+             'y-lim'       : self.figpanel.subplot.get_ylim(),
+             'version'     : '1',
              }
         if self.gate_choice.get_gatename_or_none():
             d['gate'] = self.gate_choice.GetStringSelection()
@@ -246,7 +242,6 @@ class DataSourcePanel(wx.Panel):
     
     def load_settings(self, settings):
         '''load_settings is called when loading a workspace from file.
-        
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
@@ -283,14 +278,9 @@ class DataSourcePanel(wx.Panel):
         if 'y-lim' in settings:
             self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
         if 'gate' in settings:
-            xtable = self.x_table_choice.GetStringSelection()
-            xcolumn = self.x_choice.GetStringSelection()
-            ytable = self.y_table_choice.GetStringSelection()
-            ycolumn = self.y_choice.GetStringSelection()
             self.gate_choice.SetStringSelection(settings['gate'])
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[settings['gate']],
-                                                         sql.Column(xtable, xcolumn),
-                                                         sql.Column(ytable, ycolumn))
+            self.figpanel.gate_helper.set_displayed_gate(
+                p.gates[settings['gate']], self.x_column, self.y_column)
         self.figpanel.draw()
 
         
@@ -335,11 +325,6 @@ class DensityPanel(FigureCanvasWxAgg):
                                  yscale=self.y_scale,
                                  bins=self.color_scale,
                                  cmap=matplotlib.cm.get_cmap(self.cmap))
-
-        #h, xedges, yedges = np.histogram2d(plot_pts[:, 0], plot_pts[:, 1],
-                                           #bins=self.gridsize)
-        #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        #hb = self.subplot.imshow(h, extent=extent, interpolation='nearest')
         
         if self.cb:
             # Remove the existing colorbar and reclaim the space so when we add

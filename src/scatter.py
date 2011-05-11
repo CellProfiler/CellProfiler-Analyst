@@ -103,6 +103,7 @@ class ScatterControlPanel(wx.Panel):
         self.y_scale_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
         self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
+        self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_x_choices()
@@ -155,6 +156,18 @@ class ScatterControlPanel(wx.Panel):
         self.SetSizer(sizer)
         self.Show(1)
         
+    @property
+    def x_column(self):
+        return sql.Column(self.x_table_choice.GetStringSelection(), 
+                          self.x_choice.GetStringSelection())
+    @property
+    def y_column(self):
+        return sql.Column(self.y_table_choice.GetStringSelection(), 
+                          self.y_choice.GetStringSelection())
+    @property
+    def filter(self):
+        return self.filter_choice.get_filter_or_none()
+        
     def on_x_table_selected(self, evt):
         table = self.x_table_choice.Value
         if table == ui.TableComboBox.OTHER_TABLE:
@@ -184,16 +197,16 @@ class ScatterControlPanel(wx.Panel):
                 self.y_table_choice.Select(0)
                 return
         self.update_y_choices()
-
+        
     def on_gate_selected(self, gate_name):
-        x_table = self.x_table_choice.GetStringSelection()
-        y_table = self.y_table_choice.GetStringSelection()
-        x_column = self.x_choice.GetStringSelection()
-        y_column = self.y_choice.GetStringSelection()
+        self.update_gate_helper()
+            
+    def update_gate_helper(self):
+        gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], sql.Column(x_table, x_column), sql.Column(y_table, y_column))
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
         else:
-            self.figpanel.gate_helper.disable()
+            self.figpanel.gate_helper.disable()        
 
     def update_x_choices(self):
         tablename = self.x_table_choice.Value
@@ -210,16 +223,10 @@ class ScatterControlPanel(wx.Panel):
         self.y_choice.SetSelection(0)
         
     def update_figpanel(self, evt=None):
-        xtable = self.x_table_choice.Value
-        ytable = self.y_table_choice.Value
-        xcol = self.x_choice.Value
-        ycol = self.y_choice.Value
-        fltr = self.filter_choice.get_filter_or_none()
-        gate_name = self.gate_choice.get_gatename_or_none()
-        
-        keys_and_points = self.loadpoints(xtable, ytable, xcol, ycol, fltr)
+        self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
+        keys_and_points = self._load_points()
         col_types = self.get_selected_column_types()
-        plot_per_object_data = p.object_table in [xtable, ytable]
+        plot_per_object_data = p.object_table in [self.x_column.table, self.y_column.table]
                 
         # Convert keys and points into a np array
         # NOTE: We must set dtype "object" on creation or values like 0.34567e-9
@@ -246,38 +253,30 @@ class ScatterControlPanel(wx.Panel):
         # plot the points
         self.figpanel.set_points(xpoints, ypoints)
         self.figpanel.set_keys(keys)
-        self.figpanel.set_x_label(xcol)
-        self.figpanel.set_y_label(ycol)
+        self.figpanel.set_x_label(self.x_column.col)
+        self.figpanel.set_y_label(self.y_column.col)
         self.figpanel.set_x_scale(self.x_scale_choice.Value)
         self.figpanel.set_y_scale(self.y_scale_choice.Value)
-        if gate_name:
-            self.figpanel.gate_helper.set_displayed_gate(
-                p.gates[gate_name], 
-                sql.Column(xtable, xcol), 
-                sql.Column(ytable, ycol))
-        else:
-            self.figpanel.gate_helper.disable()
+        self.update_gate_helper()
         self.figpanel.redraw()
         self.figpanel.draw()
         
-    def loadpoints(self, xtable, ytable, xcol, ycol, fltr):
-        ''' Returns a list of rows containing:
-        (TableNumber), ImageNumber, (ObjectNumber), X measurement, Y measurement
-        '''
+    def _load_points(self):
         q = sql.QueryBuilder()
         select = []
         #
         # If there's an object table fetch object keys. Else fetch image keys.
         #
-        if p.object_table in [xtable, ytable]:
+        # TODO: linking per-well data doesn't work if we fetch keys this way
+        #
+        if p.object_table in [self.x_column.table, self.x_column.table]:
             select += [sql.Column(p.object_table, col) for col in object_key_columns()]
         else:
             select += [sql.Column(p.image_table, col) for col in image_key_columns()]
-        select += [sql.Column(xtable, xcol), 
-                   sql.Column(ytable, ycol)]
+        select += [self.x_column, self.y_column]
         q.set_select_clause(select)
-        if fltr != None:
-            q.add_filter(fltr)
+        if self.filter != None:
+            q.add_filter(self.filter)
         return db.execute(str(q))
     
     def get_selected_column_types(self):
@@ -287,18 +286,17 @@ class ScatterControlPanel(wx.Panel):
 
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
-        
         returns a dictionary mapping setting names to values encoded as strings
         '''
         d = {'x-table' : self.x_table_choice.Value,
              'y-table' : self.y_table_choice.Value,
-             'x-axis' : self.x_choice.Value,
-             'y-axis' : self.y_choice.Value,
+             'x-axis'  : self.x_choice.Value,
+             'y-axis'  : self.y_choice.Value,
              'x-scale' : self.x_scale_choice.Value,
              'y-scale' : self.y_scale_choice.Value,
-             'filter' : self.filter_choice.Value,
-             'x-lim': self.figpanel.subplot.get_xlim(),
-             'y-lim': self.figpanel.subplot.get_ylim(),
+             'filter'  : self.filter_choice.Value,
+             'x-lim'   : self.figpanel.subplot.get_xlim(),
+             'y-lim'   : self.figpanel.subplot.get_ylim(),
              'version' : '1',
              }
         if self.gate_choice.get_gatename_or_none():
@@ -307,7 +305,6 @@ class ScatterControlPanel(wx.Panel):
     
     def load_settings(self, settings):
         '''load_settings is called when loading a workspace from file.
-        
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
@@ -338,14 +335,9 @@ class ScatterControlPanel(wx.Panel):
         if 'y-lim' in settings:
             self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
         if 'gate' in settings:
-            xtable = self.x_table_choice.GetStringSelection()            
-            xcolumn = self.x_choice.GetStringSelection()
-            ytable = self.y_table_choice.GetStringSelection()
-            ycolumn = self.y_choice.GetStringSelection()
             self.gate_choice.SetStringSelection(settings['gate'])
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[settings['gate']],
-                                                         sql.Column(xtable, xcolumn),
-                                                         sql.Column(ytable, ycolumn))
+            self.figpanel.gate_helper.set_displayed_gate(
+                p.gates[settings['gate']], self.x_column, self.y_column)
         self.figpanel.draw()
 
 
@@ -365,6 +357,8 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.subplot = self.figure.add_subplot(111)
         self.gate_helper = GatingHelper(self.subplot, self)
         
+        self.x_column = None
+        self.y_column = None 
         self.navtoolbar = None
         self.x_points = []
         self.y_points = []
@@ -764,7 +758,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     def get_y_points(self):
         return self.y_points
 
-    def redraw(self):
+    def redraw(self):        
         t0 = time()
         # XXX: maybe attempt to maintain selection based on keys
         self.selection = {}

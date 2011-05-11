@@ -16,7 +16,6 @@ from gating import GatingHelper
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
-
 from cpatool import CPATool
 
 p = Properties.getInstance()
@@ -50,6 +49,7 @@ class DataSourcePanel(wx.Panel):
         self.y_scale_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
         self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
+        self.gate_choice.set_gatable_columns([self.x_column])
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
@@ -97,6 +97,14 @@ class DataSourcePanel(wx.Panel):
         
         self.SetSizer(sizer)
         self.Show(1)
+        
+    @property
+    def x_column(self):
+        return sql.Column(self.table_choice.GetStringSelection(), 
+                          self.x_choice.GetStringSelection())
+    @property
+    def filter(self):
+        return self.filter_choice.get_filter_or_none()
 
     def on_table_selected(self, evt):
         table = self.table_choice.Value
@@ -111,12 +119,14 @@ class DataSourcePanel(wx.Panel):
         self.update_column_fields()
 
     def on_gate_selected(self, gate_name):
-        table = self.table_choice.GetStringSelection()
-        column = self.x_choice.GetStringSelection()
+        self.update_gate_helper()
+            
+    def update_gate_helper(self):
+        gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], sql.Column(table, column), None)
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, None)
         else:
-            self.figpanel.gate_helper.disable()
+            self.figpanel.gate_helper.disable()        
 
     def update_column_fields(self):
         tablename = self.table_choice.GetStringSelection()
@@ -131,48 +141,36 @@ class DataSourcePanel(wx.Panel):
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
-    def update_figpanel(self, evt=None):    
-        fltr = self.filter_choice.get_filter_or_none()
-        table = self.table_choice.GetStringSelection()
-        column = self.x_choice.GetStringSelection()
-        points = self.loadpoints(table, column, fltr)
-        points = np.array(points[0]).T[0]
+    def update_figpanel(self, evt=None):
+        self.gate_choice.set_gatable_columns([self.x_column])
+        points = self._load_points()
         bins = int(self.bins_input.GetValue())
-        gate_name = self.gate_choice.get_gatename_or_none()
-        
-        self.figpanel.set_x_label(column)
+        self.figpanel.set_x_label(self.x_column.col)
         self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
         self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
         self.figpanel.setpoints(points, bins)
-        if gate_name:
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], sql.Column(table, column), None)
-        else:
-            self.figpanel.gate_helper.disable()
+        self.update_gate_helper()
         self.figpanel.draw()
         
-    def loadpoints(self, tablename, xpoints, fltr):
-        ''' Returns a list of rows containing:
-        (TableNumber), ImageNumber, X measurement
-        '''
+    def _load_points(self):
         q = sql.QueryBuilder()
-        q.set_select_clause([sql.Column(tablename, xpoints)])
-        if fltr is not None:
-            q.add_filter(fltr)
-        return [db.execute(str(q))]
+        q.set_select_clause([self.x_column])
+        if self.filter is not None:
+            q.add_filter(self.filter)
+        return np.array(db.execute(str(q))).T[0]
 
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
-        
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        d=  {'table' : self.table_choice.GetStringSelection(),
-             'x-axis' : self.x_choice.GetStringSelection(),
-             'bins' : self.bins_input.GetValue(),
+        d = {'table'   : self.table_choice.GetStringSelection(),
+             'x-axis'  : self.x_choice.GetStringSelection(),
+             'bins'    : self.bins_input.GetValue(),
              'x-scale' : self.x_scale_choice.GetStringSelection(),
              'y-scale' : self.y_scale_choice.GetStringSelection(),
-             'filter' : self.filter_choice.GetStringSelection(),
-             'x-lim' : self.figpanel.subplot.get_xlim(),
-             'y-lim' : self.figpanel.subplot.get_ylim(),
+             'filter'  : self.filter_choice.GetStringSelection(),
+             'x-lim'   : self.figpanel.subplot.get_xlim(),
+             'y-lim'   : self.figpanel.subplot.get_ylim(),
              }
         if self.gate_choice.get_gatename_or_none():
             d['gate'] = self.gate_choice.GetStringSelection()
@@ -180,7 +178,6 @@ class DataSourcePanel(wx.Panel):
     
     def load_settings(self, settings):
         '''load_settings is called when loading a workspace from file.
-        
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
@@ -203,11 +200,9 @@ class DataSourcePanel(wx.Panel):
         if 'y-lim' in settings:
             self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
         if 'gate' in settings:
-            table = self.table_choice.GetStringSelection()
-            column = self.x_choice.GetStringSelection()
             self.gate_choice.SetStringSelection(settings['gate'])
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[settings['gate']],
-                                                         sql.Column(table, column), None)
+            self.figpanel.gate_helper.set_displayed_gate(
+                p.gates[settings['gate']], self.x_column, None)
         self.figpanel.draw()
         
 
@@ -232,24 +227,14 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.setpoints(points, bins)
         
         self.canvas.mpl_connect('button_release_event', self.on_release)
-        
-        #
-        # TODO: plot should store state. Make all redraws from db start here.
-        #
-##    def configure(self, config):
-##        '''
-##        '''
-##        self.config = config
-##        get_points(table, col, fltr)
-        
+                
     def setpoints(self, points, bins):
         ''' Updates the data to be plotted and redraws the plot.
         points - array of samples
         bins - number of bins to aggregate points in
         '''
-        self.points = np.array(points).astype('f')
-        self.bins = bins        
-        points = self.points
+        points = np.array(points).astype('f')
+        self.bins = bins
         x_label = self.x_label
 
         self.subplot.clear()
@@ -257,12 +242,12 @@ class HistogramPanel(FigureCanvasWxAgg):
         # XXX: This will not work for selection since the data is changed
         if self.x_scale in [LOG_SCALE, LOG2_SCALE]:
             if self.x_scale == LOG_SCALE:
-                points = np.log(self.points[self.points>0])
+                points = np.log(points[points>0])
                 x_label = 'Log(%s)'%(self.x_label)
             elif self.x_scale == LOG2_SCALE:
-                points = np.log2(self.points[self.points>0])
+                points = np.log2(points[points>0])
                 x_label = 'Log2(%s)'%(self.x_label)
-            ignored = len(self.points[self.points<=0])
+            ignored = len(points[points<=0])
             if ignored>0:
                 logging.warn('Histogram ignored %s negative value%s.'%
                              (ignored, (ignored!=1 and's' or '')))
@@ -374,8 +359,6 @@ if __name__ == "__main__":
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
-            
-##    p.gates = sql.ObservableDict()
                
     histogram = Histogram(None)
     histogram.Show()
