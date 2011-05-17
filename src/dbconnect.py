@@ -748,9 +748,9 @@ class DBConnect(Singleton):
     # +-------------------------------------+
     # | src     | dest     | link   | ord   |
     # +-------------------------------------+
-    # | obj     | treat    | img    | 1     |
-    # | obj     | treat    | well   | 2     |
-    # | obj     | treat    | treat  | 3     |
+    # | obj     | treat    | img    | 0     |
+    # | obj     | treat    | well   | 1     |
+    # | obj     | treat    | treat  | 2     |
     #
     #          link_columns_table
     # +-----------------------------------+
@@ -780,6 +780,18 @@ class DBConnect(Singleton):
         return [r[0] for r in self.execute('SELECT DISTINCT dest FROM %s '
                                            'WHERE src="%s"'
                                            %(p.link_tables_table, table))]
+        
+    def adjacent_tables(self, table):
+        '''return tables directly connected to the given table
+        '''
+        return [r[0] for r in self.execute('SELECT DISTINCT link FROM %s '
+                                           'WHERE src="%s" AND ord=0'
+                                           %(p.link_tables_table, table))]
+        
+    def adjacent(self, table1, table2):
+        '''return whether the given tables are adjacent
+        '''
+        return table1 in self.adjacent_tables(table2)
         
     def do_link_tables(self, src, dest, src_cols, dest_cols):
         '''Inserts table linking information into the database so src can 
