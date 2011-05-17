@@ -222,11 +222,17 @@ class ScatterControlPanel(wx.Panel):
         self.y_choice.AppendItems(fieldnames)
         self.y_choice.SetSelection(0)
         
+    def _plotting_per_object_data(self):
+        return (p.object_table and
+                p.object_table in [self.x_column.table, self.x_column.table]
+                or (self.x_column.table != p.image_table and db.adjacent(p.object_table, self.x_column.table))
+                or (self.y_column.table != p.image_table and db.adjacent(p.object_table, self.y_column.table))
+                )
+        
     def update_figpanel(self, evt=None):
         self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
         keys_and_points = self._load_points()
         col_types = self.get_selected_column_types()
-        plot_per_object_data = p.object_table in [self.x_column.table, self.y_column.table]
                 
         # Convert keys and points into a np array
         # NOTE: We must set dtype "object" on creation or values like 0.34567e-9
@@ -234,7 +240,7 @@ class ScatterControlPanel(wx.Panel):
         #       the array contains strings.
         kps = np.array(keys_and_points, dtype='object')
         # Strip out keys
-        if plot_per_object_data:
+        if self._plotting_per_object_data:
             key_indices = list(xrange(len(object_key_columns())))
         else:
             key_indices = list(xrange(len(image_key_columns())))
@@ -269,7 +275,7 @@ class ScatterControlPanel(wx.Panel):
         #
         # TODO: linking per-well data doesn't work if we fetch keys this way
         #
-        if p.object_table in [self.x_column.table, self.x_column.table]:
+        if self._plotting_per_object_data():
             select += [sql.Column(p.object_table, col) for col in object_key_columns()]
         else:
             select += [sql.Column(p.image_table, col) for col in image_key_columns()]
@@ -401,13 +407,8 @@ class ScatterPanel(FigureCanvasWxAgg):
     
     def is_per_image_data(self):
         '''return whether points in the current plot represent images'''
-        for kl in self.key_lists:
-            try:
-                if len(kl[0]) == len(object_key_columns()):
-                    return False
-            except KeyError:
-                pass
-        return True
+        # FIXME: still don't support per-well data
+        return not self.is_per_object_data()
         
     def selection_is_empty(self):
         return self.selection == {} or all([len(s)==0 for s in self.selection.values()])
@@ -470,6 +471,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
             show_keys += list(set([tuple(k) for k in keys]))
+        print 'keys', show_keys
         if len(show_keys[0]) == len(image_key_columns()):
             import datamodel
             dm = datamodel.DataModel.getInstance()
