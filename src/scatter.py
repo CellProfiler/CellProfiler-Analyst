@@ -471,7 +471,6 @@ class ScatterPanel(FigureCanvasWxAgg):
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
             show_keys += list(set([tuple(k) for k in keys]))
-        print 'keys', show_keys
         if len(show_keys[0]) == len(image_key_columns()):
             import datamodel
             dm = datamodel.DataModel.getInstance()
@@ -494,10 +493,9 @@ class ScatterPanel(FigureCanvasWxAgg):
                 wx.MessageDialog('You have entered an invalid number', 'Error').ShowModal()
                 return
         import sortbin
-        f = wx.Frame(None)
-        sb = sortbin.SortBin(f)
+        f = sortbin.CellMontageFrame(None)
         f.Show()
-        sb.AddObjects(show_keys)
+        f.add_objects(show_keys)
 
     def show_images_from_selection(self, evt=None):
         '''Callback for "Show images from selection" popup item.'''

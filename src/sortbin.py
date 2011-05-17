@@ -2,6 +2,7 @@ from dbconnect import DBConnect
 import tilecollection
 from imagetile import ImageTile
 from imagetilesizer import ImageTileSizer
+from imagecontrolpanel import ImageControlPanel
 from properties import Properties
 import imagetools
 import cPickle
@@ -16,6 +17,44 @@ db = DBConnect.getInstance()
 # will need to check all the SortBins anyway.
 EVT_QUANTITY_CHANGED = wx.PyEventBinder(wx.NewEventType(), 1)
 
+
+class CellMontageFrame(wx.Frame):
+    '''A frame that allows you to add a bunch of object tiles
+    '''
+    def __init__(self, parent, **kwargs):
+        wx.Frame.__init__(self, parent, **kwargs)
+        self.sb = SortBin(self)
+        self.cp = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
+        self.icp = ImageControlPanel(self.cp.GetPane(), self)
+        
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Sizer.Add(self.sb, 1, wx.EXPAND)
+        self.Sizer.Add(self.cp, 0, wx.EXPAND)
+        
+        self.cp.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self._on_control_pane_change)
+        
+    def _on_control_pane_change(self, evt=None):
+        self.Layout()
+        if self.cp.IsExpanded():
+            self.cp.SetLabel('Hide controls')
+        else:
+            self.cp.SetLabel('Show controls')
+        
+    def add_objects(self, obkeys):
+        self.sb.AddObjects(obkeys)
+        
+    #
+    # required by ImageControlPanel
+    #
+    def SetBrightness(self, brightness):
+        [t.SetBrightness(brightness) for t in self.sb.tiles]
+
+    def SetScale(self, scale):
+        [t.SetScale(scale) for t in self.sb.tiles]
+        self.sb.UpdateSizer()
+
+    def SetContrastMode(self, mode):
+        [t.SetContrastMode(mode) for t in self.sb.tiles]
 
 class SortBinDropTarget(wx.DropTarget):
     def __init__(self, bin):
@@ -200,7 +239,10 @@ class SortBin(wx.ScrolledWindow):
         if srcID == self.GetId():
             return
         self.DeselectAll()
-        self.AddObjects(obKeys, self.classifier.chMap)
+        if self.classifier:
+            self.AddObjects(obKeys, self.classifier.chMap)
+        else:
+            self.AddObjects(obKeys)
         [tile.Select() for tile in self.tiles if tile.obKey in obKeys]
         self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
         return wx.DragMove
