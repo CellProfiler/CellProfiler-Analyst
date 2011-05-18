@@ -593,8 +593,8 @@ class Properties(Singleton):
             self.link_columns_table = '_link_columns_%s_'%(self.image_table)
             
         if not self.field_defined('gates'):
-            import sqltools
-            self.gates = sqltools.ObservableDict()
+            from utils import ObservableDict()
+            self.gates = ObservableDict()
         
 
 if __name__ == "__main__":
