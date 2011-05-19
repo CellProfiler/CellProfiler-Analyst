@@ -1,11 +1,9 @@
 import decimal
 import types
 import random
-from MySQLdb.cursors import SSCursor
 from properties import Properties
 from singleton import Singleton
 from sys import stderr
-import MySQLdb
 import exceptions
 import numpy as np
 import logging
@@ -31,12 +29,31 @@ class DBException(Exception):
 #        filename, line_number, function_name, text = traceback.extract_tb(sys.last_traceback)[-1]
 #        return "ERROR <%s>: "%(function_name) + self.args[0] + '\n'
 
+
+def DBError():
+    '''returns the Error type associated with the db library in use'''
+    if p.db_type.lower() == 'mysql':
+        import MySQLdb
+        return MySQLdb.Error
+    elif p.db_type.lower() == 'sqlite':
+        import sqlite3
+        return sqlite3.Error
+    
+def DBOperationalError():
+    '''returns the Error type associated with the db library in use'''
+    if p.db_type.lower() == 'mysql':
+        import MySQLdb
+        return MySQLdb.OperationalError
+    elif p.db_type.lower() == 'sqlite':
+        import sqlite3
+        return sqlite3.OperationalError
+
+
 class DBDisconnectedException(Exception):
     """
     Raised when a query or other database operation fails because the
     database is shutting down or the connection has been lost.
     """
-
     def with_mysql_retry(cls, f):
         """
         Decorator that tries calling its function a second time if a
@@ -260,7 +277,7 @@ class SqliteClassifier():
     
 class DBConnect(Singleton):
     '''
-    DBConnect abstracts calls to MySQLdb. It is a singleton that maintains 
+    DBConnect abstracts calls to MySQLdb/SQLite. It's a singleton that maintains
     unique connections for each thread that uses it.  These connections are 
     automatically created on "execute", and results are automatically returned
     as a list.
@@ -277,7 +294,7 @@ class DBConnect(Singleton):
     def __str__(self):
         return string.join([ (key + " = " + str(val) + "\n")
                             for (key, val) in self.__dict__.items()])
-
+            
     def connect(self):
         '''
         Attempts to create a new connection to the specified database using
@@ -299,6 +316,7 @@ class DBConnect(Singleton):
 
         # MySQL database: connect normally
         if p.db_type.lower() == 'mysql':
+            from MySQLdb.cursors import SSCursor
             try:
                 conn = MySQLdb.connect(host=p.db_host, db=p.db_name, 
                                        user=p.db_user, passwd=p.db_passwd)
@@ -307,7 +325,7 @@ class DBConnect(Singleton):
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
                                                p.db_passwd, p.db_name)
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
-            except MySQLdb.Error, e:
+            except self.DatabaseError, e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
             
         # SQLite database: create database from CSVs
@@ -475,10 +493,13 @@ class DBConnect(Singleton):
                 cursor.execute(query, args=args)
             if return_result:
                 return self._get_results_as_list()
-        except MySQLdb.Error, e:
-            if isinstance(e, MySQLdb.OperationalError) and e.args[0] in [2006, 2013, 1053]:
-                raise DBDisconnectedException()
-            else:
+        except Exception:
+            try:
+                if isinstance(e, DBOperationalError()) and e.args[0] in [2006, 2013, 1053]:
+                    raise DBDisconnectedException()
+                else:
+                    raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
+            except:
                 raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
             
     def Commit(self):
@@ -486,7 +507,7 @@ class DBConnect(Singleton):
         try:
             logging.debug('[%s] Commit'%(connID))
             self.connections[connID].commit()
-        except MySQLdb.Error, e:
+        except DBError(), e:
             raise DBException, 'Commit failed for connection "%s"\n\t%s\n' %(connID, e)
         except KeyError, e:
             raise DBException, 'No such connection: "%s".\n' %(connID)
@@ -495,7 +516,7 @@ class DBConnect(Singleton):
         connID = threading.currentThread().getName()
         try:
             return self.cursors[connID].next()
-        except MySQLdb.Error, e:
+        except DBError(), e:
             raise DBException, \
                 'Error retrieving next result from database: %s'%(e,)
             return None
