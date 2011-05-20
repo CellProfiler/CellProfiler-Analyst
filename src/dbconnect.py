@@ -494,7 +494,7 @@ class DBConnect(Singleton):
                 cursor.execute(query, args=args)
             if return_result:
                 return self._get_results_as_list()
-        except Exception:
+        except Exception, e:
             try:
                 if isinstance(e, DBOperationalError()) and e.args[0] in [2006, 2013, 1053]:
                     raise DBDisconnectedException()
