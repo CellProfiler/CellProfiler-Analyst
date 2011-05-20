@@ -1,4 +1,5 @@
 from singleton import Singleton
+from utils import *
 import re
 from timeline import Timeline
 #
@@ -52,19 +53,48 @@ class ExperimentSettings(Singleton):
     def get_field(self, tag, default=None):
         return self.global_settings.get(tag, default)
 
-    def remove_field(self, tag):
+    def remove_field(self, tag, notify_subscribers=True):
         '''completely removes the specified tag from the metadata (if it exists)
         '''
-        if self.get_field(tag) is not None:
-            self.global_settings.pop(tag)
-            if re.match(get_matchstring_for_subtag(2, 'Well'), tag):
-                self.update_timeline(tag)
+        #if self.get_field(tag) is not None:
+        self.global_settings.pop(tag)
+        if re.match(get_matchstring_for_subtag(2, 'Well'), tag):
+            self.update_timeline(tag)
+
+        if notify_subscribers:
             self.notify_subscribers(tag)
+    
+    def get_temporal_tag_list(self):
+        '''returns all existing TEMPORAL tags as list'''
+        tags = set([tag for tag in self.global_settings 
+                   if tag.startswith('CellTransfer') or tag.startswith('Perturbation') or tag.startswith('Labeling') or tag.startswith('AddProcess') or tag.startswith('DataAcquis')])
+        return list(tags)
 
     def get_field_instances(self, tag_prefix):
         '''returns a list of unique instance ids for each tag beginning with 
         tag_prefix'''
         ids = set([tag.split('|')[3] for tag in self.global_settings
+                   if tag.startswith(tag_prefix)])
+        return list(ids)
+    
+    def get_attribute_list(self, tag_prefix):
+        '''returns a list of attributes name for each tag beginning with 
+        tag_prefix'''
+        ids = set([tag.split('|')[2] for tag in self.global_settings
+                   if tag.startswith(tag_prefix)])
+        return list(ids)
+    
+    def get_eventtype_list(self, tag_prefix):
+        '''returns a list of attributes name for each tag beginning with 
+        tag_prefix'''
+        ids = set([tag.split('|')[1] for tag in self.global_settings
+                   if tag.startswith(tag_prefix)])
+        return list(ids)
+    
+    def get_eventclass_list(self, tag_prefix):
+        '''returns a list of event class name for each tag beginning with 
+        tag_prefix'''
+        ids = set([tag.split('|')[0] for tag in self.global_settings
                    if tag.startswith(tag_prefix)])
         return list(ids)
 
@@ -124,6 +154,14 @@ class ExperimentSettings(Singleton):
                 # add 1x1 plate for each flask instance
                 plate_id = 'flask%s'%(get_tag_instance(tag))
                 PlateDesign.add_plate(plate_id, FLASK)
+            elif tag.startswith('ExptVessel|Dish|Size'):
+                # add 1x1 plate for each flask instance
+                plate_id = 'dish%s'%(get_tag_instance(tag))
+                PlateDesign.add_plate(plate_id, FLASK)
+            elif tag.startswith('ExptVessel|Coverslip|Size'):
+                # add 1x1 plate for each flask instance
+                plate_id = 'coverslip%s'%(get_tag_instance(tag))
+                PlateDesign.add_plate(plate_id, FLASK)
             self.set_field(tag, eval(value), notify_subscribers=False)
         for tag in tags:
             self.notify_subscribers(tag)            
@@ -142,6 +180,14 @@ class ExperimentSettings(Singleton):
                         to be notified of changes to
         '''
         self.subscribers[match_string] = self.subscribers.get(match_string, []) + [callback]
+        
+    def remove_subscriber(self, callback):
+        '''unsubscribe the given callback function.
+        This MUST be called before a callback function is deleted.
+        '''
+        for k, v in self.subscribers:
+            if v == callback:
+                self.subscribers.pop(k)
             
     def notify_subscribers(self, tag):
         for matchstring, callbacks in self.subscribers.items():
@@ -154,23 +200,43 @@ ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 # Plate formats
 FLASK = (1, 1)
+#P1    = (1,1)
+#P2    = (1,2)
+#P4    = (1,4)
 P6    = (2, 3)
+#P8    = (2,4)
+P12   = (3,4)
 P24   = (4, 6)
+P48   = (6, 8)
 P96   = (8, 12)
 P384  = (16, 24)
 P1536 = (32, 48)
 P5600 = (40, 140)
 
-WELL_NAMES = {'6-Well-(2x3)'       : P6, 
+WELL_NAMES = {
+              #'1-Well-(1x1)'       : P1,
+              #'2-Well-(1x2)'       : P2,
+              #'4-Well-(1x4)'       : P4,
+              '6-Well-(2x3)'       : P6,
+              #'8-Well-(2x4)'       : P8,
+              '12-Well-(3x4)'      : P12, 
               '24-Well-(4x6)'      : P24, 
+              '48-Well-(6x8)'      : P48,
               '96-Well-(8x12)'     : P96, 
               '384-Well-(16x24)'   : P384, 
               '1536-Well-(32x48)'  : P1536, 
               '5600-Well-(40x140)' : P5600,
               }
 
-WELL_NAMES_ORDERED = ['6-Well-(2x3)',
+WELL_NAMES_ORDERED = [
+                      #'1-Well-(1x1)',
+                      #'2-Well-(1x2)',
+                      #'4-Well-(1x4)',
+                      '6-Well-(2x3)',
+                      #'8-Well-(2x4)',
+                      '12-Well-(3x4)',
                       '24-Well-(4x6)',
+                      '48-Well-(6x8)',
                       '96-Well-(8x12)',
                       '384-Well-(16x24)',
                       '1536-Well-(32x48)',
