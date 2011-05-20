@@ -316,6 +316,7 @@ class DBConnect(Singleton):
 
         # MySQL database: connect normally
         if p.db_type.lower() == 'mysql':
+            import MySQLdb
             from MySQLdb.cursors import SSCursor
             try:
                 conn = MySQLdb.connect(host=p.db_host, db=p.db_name, 
