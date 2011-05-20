@@ -325,7 +325,7 @@ class DBConnect(Singleton):
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
                                                p.db_passwd, p.db_name)
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
-            except self.DatabaseError, e:
+            except DBError(), e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
             
         # SQLite database: create database from CSVs
