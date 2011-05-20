@@ -1,5 +1,5 @@
 from cpatool import CPATool
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns
+from dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
 import sqltools as sql
 from multiclasssql import filter_table_prefix
 from properties import Properties
@@ -197,6 +197,13 @@ class DataSourcePanel(wx.Panel):
         types = db.GetColumnTypes(table)
         return [m for m,t in zip(measurements, types) if t in [float, int, long]]
         
+    def _plotting_per_object_data(self):
+        return (p.object_table and
+                p.object_table in [self.x_column.table, self.x_column.table]
+                or (self.x_column.table != p.image_table and db.adjacent(p.object_table, self.x_column.table))
+                or (self.y_column.table != p.image_table and db.adjacent(p.object_table, self.y_column.table))
+                )
+        
     def update_figpanel(self, evt=None):
         self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
         points = self._load_points()
@@ -213,9 +220,22 @@ class DataSourcePanel(wx.Panel):
         
     def _load_points(self):
         q = sql.QueryBuilder()
-        q.set_select_clause([self.x_column, self.y_column])
-        if self.filter is not None:
+        select = []
+        #
+        # If there's an object table fetch object keys. Else fetch image keys.
+        #
+        # TODO: linking per-well data doesn't work if we fetch keys this way
+        #
+        if self._plotting_per_object_data():
+            select += [sql.Column(p.object_table, col) for col in object_key_columns()]
+        else:
+            select += [sql.Column(p.image_table, col) for col in image_key_columns()]
+        select += [self.x_column, self.y_column]
+        
+        q.set_select_clause(select)
+        if self.filter != None:
             q.add_filter(self.filter)
+            
         return db.execute(str(q))
         
     def save_settings(self):
