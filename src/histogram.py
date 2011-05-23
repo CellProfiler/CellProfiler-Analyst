@@ -166,19 +166,15 @@ class DataSourcePanel(wx.Panel):
         #
         # TODO: linking per-well data doesn't work if we fetch keys this way
         #
-        if self._plotting_per_object_data():
-            select += [sql.Column(p.object_table, col) for col in object_key_columns()]
-        else:
-            select += [sql.Column(p.image_table, col) for col in image_key_columns()]
+        #if self._plotting_per_object_data():
+        #    select += [sql.Column(p.object_table, col) for col in object_key_columns()]
+        #else:
+        #    select += [sql.Column(p.image_table, col) for col in image_key_columns()]
         select += [self.x_column]
         
         q.set_select_clause(select)
-        if self.filter != None:
+        if self.filter is not None:
             q.add_filter(self.filter)
-            
-        #q.set_select_clause([self.x_column])
-        #if self.filter is not None:
-            #q.add_filter(self.filter)
             
         return np.array(db.execute(str(q))).T[0]
 
