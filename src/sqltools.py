@@ -34,7 +34,7 @@ class QueryBuilder(object):
         self.wheres = []
         self.group_cols = []
         self.other_tables = []
-        self.sub_queries = []
+        self.old_filters = []
         
     def __str__(self):
         select_clause = self.get_select_clause_string()
@@ -106,6 +106,8 @@ class QueryBuilder(object):
         # add tables from filters
         for f in self.filters:
             tables += f.get_tables()
+        if self.old_filters:
+            tables += [p.image_table]
         for wh in self.wheres:
             tables += wh.get_tables()
         # add the tables from the group columns
@@ -124,7 +126,7 @@ class QueryBuilder(object):
         return list(set(tables))
 
     def get_from_clause(self):
-        return ', '.join(self.get_tables() + self.sub_queries)
+        return ', '.join(self.get_tables() + self.old_filters)
 
     def get_where_clause(self):
         '''Build the where clause from conditions given by the user and 
@@ -138,9 +140,9 @@ class QueryBuilder(object):
             link_exps = db.get_linking_expressions(queried_tables)
             if link_exps:
                 conditions += [str(exp) for exp in link_exps]
-        if self.sub_queries:
+        if self.old_filters:
             conditions += ['%s.%s = subquery_%d.%s'%(p.image_table, col, i, col) 
-                           for i in range(len(self.sub_queries))
+                           for i in range(len(self.old_filters))
                            for col in image_key_columns()]
         if self.wheres:
             conditions += [str(where) for where in self.wheres]
@@ -153,7 +155,7 @@ class QueryBuilder(object):
         if isinstance(fltr, Filter):
             self.filters += [fltr]
         elif isinstance(fltr, OldFilter):
-            self.sub_queries += ['(%s) AS subquery_%d'%(fltr, len(self.sub_queries))]
+            self.old_filters += ['(%s) AS subquery_%d'%(fltr, len(self.old_filters))]
         else:
             raise 'add_filter requires a Filter or OldFilter object as input'
         
