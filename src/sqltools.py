@@ -20,6 +20,7 @@ class QueryBuilder(object):
     def __init__(self):
         self.select_clause = []
         self.filters = []
+        self.wheres = []
         self.group_cols = []
         self.other_tables = []
         self.sub_queries = []
@@ -80,6 +81,8 @@ class QueryBuilder(object):
         # add tables from filters
         for f in self.filters:
             tables += f.get_tables()
+        for wh in self.wheres:
+            tables += wh.get_tables()
         # add the tables from the group columns
         tables += [col.table for col in self.group_cols]
         return list(set(tables))
@@ -114,6 +117,8 @@ class QueryBuilder(object):
             conditions += ['%s.%s = subquery_%d.%s'%(p.image_table, col, i, col) 
                            for i in range(len(self.sub_queries))
                            for col in image_key_columns()]
+        if self.wheres:
+            conditions += [str(where) for where in self.wheres]
         return ' AND '.join(conditions)
     
     def add_filter(self, fltr):
@@ -126,6 +131,10 @@ class QueryBuilder(object):
             self.sub_queries += ['(%s) AS subquery_%d'%(fltr, len(self.sub_queries))]
         else:
             raise 'add_filter requires a Filter or OldFilter object as input'
+        
+    def add_where(self, exp):
+        assert isinstance(exp, Expression)
+        self.wheres += [exp]
 
 
 class Column(object):

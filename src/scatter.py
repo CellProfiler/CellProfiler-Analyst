@@ -283,6 +283,8 @@ class ScatterControlPanel(wx.Panel):
         q.set_select_clause(select)
         if self.filter != None:
             q.add_filter(self.filter)
+        q.add_where(sql.Expression(self.x_column, ' IS NOT NULL'))
+        q.add_where(sql.Expression(self.y_column, ' IS NOT NULL'))
         return db.execute(str(q))
     
     def get_selected_column_types(self):
