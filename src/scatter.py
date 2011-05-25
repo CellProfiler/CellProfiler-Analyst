@@ -240,11 +240,11 @@ class ScatterControlPanel(wx.Panel):
         #       the array contains strings.
         kps = np.array(keys_and_points, dtype='object')
         # Strip out keys
-        if self._plotting_per_object_data:
+        if self._plotting_per_object_data():
             key_indices = list(xrange(len(object_key_columns())))
         else:
             key_indices = list(xrange(len(image_key_columns())))
-        keys = kps.take(key_indices,axis=1).astype(int)
+        keys = kps[:,key_indices].astype(int)
         # Strip out x coords
         if col_types[0] in [float, int, long]:
             xpoints = kps[:,-2].astype('float32')
