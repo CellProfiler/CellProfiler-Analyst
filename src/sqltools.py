@@ -3,6 +3,17 @@ from properties import Properties
 from utils import Observable
 p = Properties.getInstance()
 
+def image_cols():
+    '''returns the image key columns as a list of Columns'''
+    return [Column(p.image_table, col) for col in image_key_columns()]
+
+def object_cols():
+    '''returns the object key columns as a list of Columns'''
+    return [Column(p.object_table, col) for col in object_key_columns()]
+
+def well_cols():
+    '''returns the welll key columns as a list of Columns'''
+    return [Column(p.image_table, col) for col in well_key_columns()]
 
 class QueryBuilder(object):
     '''
@@ -47,14 +58,12 @@ class QueryBuilder(object):
         "AVG(t.a), AVG(t.a)/AVG(t.a)"
         '''
         self.select_clause = sel_list
+    select = set_select_clause
         
-    def get_select_clause_string(self):
-        '''returns the select clause as a string
-        '''
-        return ', '.join([str(t) for t in self.select_clause])
-            
     def add_table_dependencies(self, tables):
         '''tables - a list of table names to add to the from clause
+        NOTE: QueryBuilder will automatically compute the FROM clause by parsing
+        tables out of the Columns in other clauses
         '''
         self.other_tables = tables
 
@@ -69,7 +78,23 @@ class QueryBuilder(object):
                 self.group_cols += [Column(*col)]
             else:
                 raise 'Invalid parameter type'
+    group_by = set_group_columns
 
+    def add_where(self, exp):
+        '''exp - Expression or list of Expressions to add to the WHERE clause'''
+        if isinstance(exp, Expression):
+            self.wheres += [exp]
+        elif type(exp) in (list, tuple):
+            self.wheres += exp
+        else:
+            raise 'invalid type (%s) passed into add_where'%(type(exp))
+    where = add_where
+
+    def get_select_clause_string(self):
+        '''returns the select clause as a string
+        '''
+        return ', '.join([str(t) for t in self.select_clause])
+            
     def get_queried_tables(self):
         '''returns all tables referenced in the "select", "where", and 
         "group by" clauses.
@@ -132,10 +157,6 @@ class QueryBuilder(object):
         else:
             raise 'add_filter requires a Filter or OldFilter object as input'
         
-    def add_where(self, exp):
-        assert isinstance(exp, Expression)
-        self.wheres += [exp]
-
 
 class Column(object):
     def __init__(self, table, col, agg=None):
