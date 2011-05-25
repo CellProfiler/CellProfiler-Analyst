@@ -283,8 +283,8 @@ class ScatterControlPanel(wx.Panel):
         q.set_select_clause(select)
         if self.filter != None:
             q.add_filter(self.filter)
-        q.add_where(sql.Expression(self.x_column, ' IS NOT NULL'))
-        q.add_where(sql.Expression(self.y_column, ' IS NOT NULL'))
+        q.add_where(sql.Expression(self.x_column, 'IS NOT NULL'))
+        q.add_where(sql.Expression(self.y_column, 'IS NOT NULL'))
         return db.execute(str(q))
     
     def get_selected_column_types(self):
@@ -468,7 +468,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
     def show_objects_from_selection(self, evt=None):
-        '''Callback for "Show objects from selection" popup item.'''
+        '''Callback for "Show objects in selection" popup item.'''
         show_keys = []
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
@@ -498,9 +498,21 @@ class ScatterPanel(FigureCanvasWxAgg):
         f = sortbin.CellMontageFrame(None)
         f.Show()
         f.add_objects(show_keys)
+        
+    def show_objects_from_gate(self, evt=None):
+        '''Callback for "Show objects in gate" popup item.'''
+        gatename = self.configpanel.gate_choice.get_gatename_or_none()
+        if gatename:
+            ui.show_objects_from_gate(gatename)
+        
+    def show_images_from_gate(self, evt=None):
+        '''Callback for "Show images in gate" popup item.'''
+        gatename = self.configpanel.gate_choice.get_gatename_or_none()
+        if gatename:
+            ui.show_images_from_gate(gatename)
 
     def show_images_from_selection(self, evt=None):
-        '''Callback for "Show images from selection" popup item.'''
+        '''Callback for "Show images in selection" popup item.'''
         show_keys = set()
         for i, sel in self.selection.items():
             keys = self.key_lists[i][sel]
@@ -508,7 +520,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         if len(show_keys)>10:
             dlg = wx.MessageDialog(self, 'You are about to open %s images. '
                                    'This may take some time depending on your '
-                                   'settings.'%(len(show_keys)),
+                                   'settings. Continue?'%(len(show_keys)),
                                    'Warning', wx.YES_NO|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response != wx.ID_YES:
@@ -666,14 +678,21 @@ class ScatterPanel(FigureCanvasWxAgg):
                   lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
+        show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
+        show_images_in_gate_item.Enable(selected_gate is not None)
+        self.Bind(wx.EVT_MENU, self.show_images_from_gate, show_images_in_gate_item)
+        
+        show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate'%(p.object_name[1]))
+        show_objects_in_gate_item.Enable(selected_gate is not None)
+        self.Bind(wx.EVT_MENU, self.show_objects_from_gate, show_objects_in_gate_item)
+
         popup.AppendSeparator()
         
-        show_images_item = popup.Append(-1, 'Show images from selection')
-        if self.selection_is_empty():
-            show_images_item.Enable(False)
+        show_images_item = popup.Append(-1, 'Show images in selection')
+        show_images_item.Enable(not self.selection_is_empty())
         self.Bind(wx.EVT_MENU, self.show_images_from_selection, show_images_item)
         
-        show_objects_item = popup.Append(-1, 'Show %s from selection'%(p.object_name[1]))
+        show_objects_item = popup.Append(-1, 'Show %s in selection'%(p.object_name[1]))
         if self.selection_is_empty():
             show_objects_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.show_objects_from_selection, show_objects_item)

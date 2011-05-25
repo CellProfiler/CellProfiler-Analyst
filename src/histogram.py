@@ -335,7 +335,30 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.Bind(wx.EVT_MENU, 
                   lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
+        
+        show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
+        show_images_in_gate_item.Enable(selected_gate is not None)
+        self.Bind(wx.EVT_MENU, self.show_images_from_gate, show_images_in_gate_item)
+        
+        show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate'%(p.object_name[1]))
+        show_objects_in_gate_item.Enable(selected_gate is not None)
+        self.Bind(wx.EVT_MENU, self.show_objects_from_gate, show_objects_in_gate_item)
+
         self.PopupMenu(popup, (x,y))
+        
+    def show_objects_from_gate(self, evt=None):
+        '''Callback for "Show objects in gate" popup item.'''
+        gatename = self.configpanel.gate_choice.get_gatename_or_none()
+        if gatename:
+            ui.show_objects_from_gate(gatename)
+        
+    def show_images_from_gate(self, evt=None):
+        '''Callback for "Show images in gate" popup item.'''
+        gatename = self.configpanel.gate_choice.get_gatename_or_none()
+        if gatename:
+            ui.show_images_from_gate(gatename)
+
+
 
 
 class Histogram(wx.Frame, CPATool):
