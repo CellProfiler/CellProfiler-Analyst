@@ -4,12 +4,17 @@ import re
 import icons
 import properties
 import dbconnect
+import logging
 import sqltools
+import numpy as np
 from utils import Observable
 from wx.combo import OwnerDrawnComboBox as ComboBox
 
 p = properties.Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
+
+def get_main_frame_or_none():
+    return wx.GetApp().__dict__.get('frame', None)
 
 class _ColumnLinkerPanel(wx.Panel):
     def __init__(self, parent, table_a, table_b, col_a=None, col_b=None, allow_delete=True, **kwargs):
@@ -184,7 +189,7 @@ def prompt_user_to_link_table(parent, table):
     dlg.Sizer.Children[2].GetSizer().InsertStretchSpacer(1, 1)
     def on_show_table(evt):
         from tableviewer import TableViewer
-        tableview = TableViewer(wx.GetApp().__dict__.get('frame', None))
+        tableview = TableViewer(get_main_frame_or_none())
         tableview.Show()
         tableview.load_db_table(table)
     show_table_button.Bind(wx.EVT_BUTTON, on_show_table)
@@ -712,6 +717,61 @@ class BitmapPopup(wx.PopupTransientWindow):
         dc.BeginDrawing()
         dc.DrawBitmap(self.bmp, 0, 0)
         dc.EndDrawing()
+        
+        
+def show_objects_from_gate(gatename, warn=100):
+    '''Launch a CellMontageFrame with the objects in the specified gate.
+    gatename -- name of the gate to apply
+    warn -- specify a number of objects that is considered too many to show at
+      once without warning the user and prompting to input how many they want.
+      set to None if you don't want to warn for any amount.'''
+    q = sqltools.QueryBuilder()
+    q.select(sqltools.object_cols())
+    q.where([p.gates[gatename]])
+    q.group_by(sqltools.object_cols())
+    keys = db.execute(str(q))
+    keys = [tuple(row) for row in keys]
+    if warn and len(keys) > warn:
+        te = wx.TextEntryDialog(get_main_frame_or_none(), 'You have selected %s %s. '
+                    'How many would you like to show at random?'%(len(keys), 
+                    p.object_name[1]), 'Choose # of %s'%
+                    (p.object_name[1]), defaultValue='100')
+        te.ShowModal()
+        try:
+            numobs = int(te.Value)
+            np.random.shuffle(keys)
+            keys = keys[:numobs]
+        except ValueError:
+            wx.MessageDialog(get_main_frame_or_none(), 'You have entered an invalid number', 'Error').ShowModal()
+            return
+    import sortbin
+    f = sortbin.CellMontageFrame(get_main_frame_or_none())
+    f.Show()
+    f.add_objects(keys)
+    
+def show_images_from_gate(gatename, warn=10):
+    '''Callback for "Show images in gate" popup item.
+    gatename -- name of the gate to apply
+    warn -- specify a number of objects that is considered too many to show at
+      once without warning the user and prompting to input how many they want.
+      set to None if you don't want to warn for any amount.'''
+    q = sqltools.QueryBuilder()
+    q.select(sqltools.image_cols())
+    q.where([p.gates[gatename]])
+    q.group_by(sqltools.image_cols())
+    res = db.execute(str(q))
+    if warn and len(res) > warn:
+        dlg = wx.MessageDialog(get_main_frame_or_none(), 'You are about to open %s '
+                'images. This may take some time depending on your settings. '
+                'Continue?'%(len(res)),
+                'Warning', wx.YES_NO|wx.ICON_QUESTION)
+        response = dlg.ShowModal()
+        if response != wx.ID_YES:
+            return
+    logging.info('Opening %s images.'%(len(res)))
+    import imagetools
+    for row in res:
+        imagetools.ShowImage(tuple(row), p.image_channel_colors, parent=get_main_frame_or_none())
         
 
 if __name__ == "__main__":
