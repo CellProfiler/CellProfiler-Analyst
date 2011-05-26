@@ -204,6 +204,8 @@ class ScatterControlPanel(wx.Panel):
     def update_gate_helper(self):
         gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
+            #Deactivate the lasso tool
+            self.figpanel.get_toolbar().toggle_user_tool('lasso', False)
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
         else:
             self.figpanel.gate_helper.disable()        
@@ -1018,6 +1020,13 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
                 wx.CommandEvent(wx.EVT_TOOL.typeId, self._NTB2_ZOOM)
             )
             self.ToggleTool(self._NTB2_ZOOM, False)
+            
+    def toggle_user_tool(self, mode_name, state):
+        '''mode_name -- the mode name given to the tool when added with
+        add_user_tool
+        state -- True or False
+        '''
+        self.ToggleTool(self.user_tools[mode_name].Id, state)
     
     def on_toggle_user_tool(self, evt):
         '''User tool click handler.
