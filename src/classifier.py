@@ -311,6 +311,7 @@ class Classifier(wx.Frame):
 
         # Update the GUI complexity text and classifier description
         self.complexityTxt.SetLabel(self.algorithm.ComplexityTxt())
+        self.complexityTxt.Parent.Layout()
         self.rules_text.Value = ''
 
         # Make sure the classifier is cleared before running a new training session
@@ -377,9 +378,9 @@ class Classifier(wx.Frame):
         self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save training set\tCtrl+S', help='Save your training set to file so you can reload these classified cells again.')
         self.fileMenu.AppendSeparator()
         # JEN - Start Add
-        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load classifier model\tCtrl+Shift+O', help='Loads a classifier model specified in a text file')
-        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save classifier model\tCtrl+Shift+S', help='Save your classifier model to file so you can use it again on this or other experiments.')
-        self.fileMenu.AppendSeparator()
+##        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load classifier model\tCtrl+Shift+O', help='Loads a classifier model specified in a text file')
+##        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save classifier model\tCtrl+Shift+S', help='Save your classifier model to file so you can use it again on this or other experiments.')
+##        self.fileMenu.AppendSeparator()
         # JEN - End Add
         self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
         self.GetMenuBar().Append(self.fileMenu, 'File')
@@ -399,23 +400,23 @@ class Classifier(wx.Frame):
 
         # JK - Start Add
         # Classifier Type chooser
-        self.classifierMenu = wx.Menu();
-        fgbMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
-        if scikits_loaded:
-            svmMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Support Vector Machines', help='User Support Vector Machines to find classifier rules.')
-        self.GetMenuBar().Append(self.classifierMenu, 'Classifier')
+##        self.classifierMenu = wx.Menu();
+##        fgbMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
+##        if scikits_loaded:
+##            svmMenuItem = self.classifierMenu.AppendRadioItem(-1, text='Support Vector Machines', help='User Support Vector Machines to find classifier rules.')
+##        self.GetMenuBar().Append(self.classifierMenu, 'Classifier')
         # JK - End Add
 
         # Bind events to different menu items
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnLoadModel, self.loadModelMenuItem) # JEN - Added
-        self.Bind(wx.EVT_MENU, self.SaveModel, self.saveModelMenuItem) # JEN - Added
+##        self.Bind(wx.EVT_MENU, self.OnLoadModel, self.loadModelMenuItem) # JEN - Added
+##        self.Bind(wx.EVT_MENU, self.SaveModel, self.saveModelMenuItem) # JEN - Added
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, fgbMenuItem) # JK - Added
-        if scikits_loaded:
-            self.Bind(wx.EVT_MENU, self.AlgorithmSelect, svmMenuItem) # JK - Added
+##        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, fgbMenuItem) # JK - Added
+##        if scikits_loaded:
+##            self.Bind(wx.EVT_MENU, self.AlgorithmSelect, svmMenuItem) # JK - Added
 
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
@@ -692,8 +693,8 @@ class Classifier(wx.Frame):
 
     def LoadModel(self, filename):
         '''
-	    Loads the selected file and parses the classifier model.
-	    '''
+        Loads the selected file and parses the classifier model.
+        '''
         self.PostMessage('Loading classifier model from: %s'%filename)
         # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         os.chdir(os.path.split(filename)[0])
@@ -726,7 +727,9 @@ class Classifier(wx.Frame):
             return
 
         saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(),
-                                   defaultFile=self.defaultModelFileName, wildcard='Model files (*.model)|*.model|All files 					   (*.*)|*.*', style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+                        defaultFile=self.defaultModelFileName, 
+                        wildcard='Model files (*.model)|*.model|All files(*.*)|*.*', 
+                        style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if saveDialog.ShowModal()==wx.ID_OK:
             filename = saveDialog.GetPath()
             self.defaultModelFileName = os.path.split(filename)[1]
@@ -770,7 +773,6 @@ class Classifier(wx.Frame):
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
 
             self.PostMessage('Training set loaded.')
-
     
     def OnSaveTrainingSet(self, evt):
         self.SaveTrainingSet()
