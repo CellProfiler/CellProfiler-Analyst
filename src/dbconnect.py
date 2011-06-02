@@ -143,6 +143,7 @@ def image_key_columns(table_name=''):
 def object_key_columns(table_name=''):
     '''Return, as a tuple, the names of the columns that make up the
     object key.'''
+    assert p.object_table is not None
     if table_name is None:
         table_name = ''
     if table_name != '':
