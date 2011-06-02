@@ -22,6 +22,10 @@ try:
     from scikits.learn.svm import SVC
     from scikits.learn import feature_selection
     from scikits.learn.pipeline import Pipeline
+    from scikits.learn import __version__
+    if __version__ != '0.8':
+        logging.warn('SupportVectorMachine classifier requires scikits.learn '
+                     'version 0.8, you have version %s'%(__version__))
     scikits_loaded = True
 except:
     # classifier.py checks this so developers don't have to install it if they don't want it.
@@ -251,15 +255,16 @@ class SupportVectorMachines(object):
         from scikits.learn.grid_search import GridSearchCV
         from scikits.learn.metrics import precision_score
         from scikits.learn.cross_val import StratifiedKFold
+        # 
+        # XXX: program crashes with >1 worker when running cpa.py
+        #      No crash when running from classifier.py. Why?
+        #
+        n_workers = 1
         #try:
             #from multiprocessing import cpu_count
             #n_workers = cpu_count()
         #except:
             #n_workers = 1
-        # 
-        # TODO: program crashes with >1 worker
-        #
-        n_workers = 1
 
         # Define the parameter ranges for C and gamma and perform a grid search for the optimal setting
         parameters = {'C': 2**np.arange(-5,11,2, dtype=float),
@@ -269,11 +274,11 @@ class SupportVectorMachines(object):
                 cv=StratifiedKFold(self.svm_train_labels, nValidation))
 
         # Pick the best parameters as the ones with the maximum cross-validation rate
-        bestParameters = max(clf.grid_points_scores_, key=lambda a: clf.grid_points_scores_.get(a))
-        bestC = bestParameters[0][1]
-        bestGamma = bestParameters[1][1]
-        logging.info('Optimal values: C=%s g=%s rate=%s' % (bestC, bestGamma, 
-                                                            clf.grid_points_scores_[bestParameters]))
+        bestParameters = max(clf.grid_scores_, key=lambda a: a[1])
+        bestC = bestParameters[0]['C']
+        bestGamma = bestParameters[0]['gamma']
+        logging.info('Optimal values: C=%s g=%s rate=%s'%
+                     (bestC, bestGamma, bestParameters[1]))
         return bestC, bestGamma
 
     def PerImageCounts(self, filter_name=None, cb=None):
@@ -367,7 +372,7 @@ class SupportVectorMachines(object):
         # Train the model using the obtained C and gamma parameters to obtain the final classifier
         self.model = Pipeline([('anova', feature_selection.SelectPercentile(feature_selection.f_classif,
                                                                             percentile=self.percentile)),
-                               ('svc', SVC(kernel='rbf', C=C, gamma=gamma, eps=0.1))])
+                               ('svc', SVC(kernel='rbf', C=C, gamma=gamma, tol=0.1))])
         self.model.fit(self.svm_train_values, self.svm_train_labels)
 
     def TranslateTrainingSet(self, labels, values):
