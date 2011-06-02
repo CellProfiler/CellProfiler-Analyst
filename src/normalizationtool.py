@@ -16,6 +16,7 @@ import properties
 from itertools import groupby
 from plateviewer import FormatPlateMapData
 import sqltools as sql
+import guiutils as ui
 from cpatool import CPATool
 
 GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT]
@@ -543,7 +544,7 @@ class NormalizationUI(wx.Frame, CPATool):
         # Show the resultant table        
         #
         import tableviewer
-        tv = tableviewer.TableViewer(wx.GetApp().frame)
+        tv = tableviewer.TableViewer(ui.get_main_frame_or_none())
         tv.Show()
         tv.load_db_table(output_table)
         
