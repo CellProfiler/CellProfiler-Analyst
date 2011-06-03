@@ -649,23 +649,6 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.set_y_scale(self.y_scale)
         self.redraw()
         self.figure.canvas.draw_idle()
-        
-    def on_scatter_from_selection(self, evt):
-        ''' Creates a new scatter plot from the current selection. '''
-        sel_keys = []
-        sel_xs = []
-        sel_ys = []
-        for c, collection in enumerate(self.subplot.collections):
-            indices = xrange(len(collection.get_offsets()))
-            sel_indices = self.selection[c]
-            if len(sel_indices) > 0:
-                if self.key_lists:
-                    sel_keys += [self.key_lists[c][sel_indices]]
-                sel_xs += [self.x_points[c][sel_indices]]
-                sel_ys += [self.y_points[c][sel_indices]]
-            
-        scatter = Scatter(self.Parent, sel_xs, sel_ys, (sel_keys or None))
-        scatter.Show()
     
     def show_popup_menu(self, (x,y), data):
         self.popup_menu_filters = {}
@@ -703,11 +686,6 @@ class ScatterPanel(FigureCanvasWxAgg):
         if self.selection_is_empty():
             show_imagelist_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.show_selection_in_table, show_imagelist_item)
-        
-        scatter_from_sel_item = popup.Append(-1, 'Open selected points in new plot')
-        if self.selection_is_empty():
-            scatter_from_sel_item.Enable(False)
-        self.Bind(wx.EVT_MENU, self.on_scatter_from_selection, scatter_from_sel_item)
         
         collection_from_selection_item = popup.Append(-1, 'Create collection from selection')
         if self.selection_is_empty():
