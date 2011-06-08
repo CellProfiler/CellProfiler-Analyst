@@ -587,10 +587,10 @@ class Properties(Singleton):
             logging.warn('PROPERTIES WARNING (well_format): Field was not defined, using default format of "A01".')
             
         if not self.field_defined('link_tables_table'):
-            self.link_tables_table = '_link_tables_%s_'%(self.image_table)
+            self.link_tables_table = '_link_tables_%s_%s_'%(self.image_table, (self.object_table or ''))
             
         if not self.field_defined('link_columns_table'):
-            self.link_columns_table = '_link_columns_%s_'%(self.image_table)
+            self.link_columns_table = '_link_columns_%s_%s_'%(self.image_table, (self.object_table or ''))
             
         if not self.field_defined('gates'):
             from utils import ObservableDict
