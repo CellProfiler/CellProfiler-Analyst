@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from dbconnect import *
-from datatable import DataGrid
 from datamodel import DataModel
 from properties import Properties
 from StringIO import StringIO, StringIO
@@ -18,39 +17,52 @@ import wx
 
 USAGE = '''
 ABOUT:
-This script will train a classifier for a given properties file and training set and output a table of counts.
+This script will train a classifier for a given properties file and training
+set and output a results table. You can also use it to write directly to a
+database table.
 
 USAGE:
-python ScoreAll.py <propertiesfile> <trainingset>
+python scoreall.py <propertiesfile> <trainingset>
 '''
 
-def score(properties, ts, nRules, filter_name=None, group='Image', show_results=False):
+def score(properties, ts, nRules, filter_name=None, group='Image',
+          show_results=False, results_table=None, overwrite=False):
     '''
     Trains a Classifier on a training set and scores the experiment
-    returns the loaded training set and a DataGrid of scores 
+    returns the table of scores as a numpy array.
         
-    properties -- Properties instance
-    ts         -- TrainingSet instance
-    nRules     -- number of rules to use
-    filter     -- name of a filter to use from the properties file
-    group      -- name of a group to use from the properties file 
+    properties    -- Properties instance
+    ts            -- TrainingSet instance
+    nRules        -- number of rules to use
+    filter_name   -- name of a filter to use from the properties file
+    group         -- name of a group to use from the properties file
+    show_results  -- whether or not to show the results in TableViewer
+    results_table -- table name to save results to or None.
     '''
     
-    if group == None:
-        group = 'Image'
-
-    print ''
-    print 'properties:  ', properties
-    print 'training set:', ts
-    print '# rules:     ', nRules
-    print 'filter:      ', filter_name
-    print 'grouping by: ', group
-    print ''
-        
     p = properties
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
-    
+
+    if group == None:
+        group = 'Image'
+        
+    if results_table:
+        if db.table_exists(results_table) and not overwrite:
+            print 'Table "%s" already exists. Delete this table before running scoreall.'%(results_table)
+            return None
+
+    print ''
+    print 'properties:    ', properties
+    print 'training set:  ', ts
+    print '# rules:       ', nRules
+    print 'filter:        ', filter_name
+    print 'grouping by:   ', group
+    print 'show results:  ', show_results
+    print 'results table: ', results_table
+    print 'overwrite:     ', overwrite
+    print ''
+            
     nClasses = len(ts.labels)
     nKeyCols = len(image_key_columns())
     
@@ -140,41 +152,50 @@ def score(properties, ts, nRules, filter_name=None, group='Image', show_results=
     # CREATE COLUMN LABELS LIST
     # if grouping isn't per-image, then get the group key column names.
     if group != 'Image':
-        labels = dm.GetGroupColumnNames(group)
+        colnames = dm.GetGroupColumnNames(group)
     else:
-        labels = list(image_key_columns())
+        colnames = list(image_key_columns())
 
     # record the column indices for the keys
-    key_col_indices = [i for i in range(len(labels))]
+    key_col_indices = [i for i in range(len(colnames))]
     
     if group != 'Image':
-        labels += ['# Images']
-    labels += ['Total %s Count'%(p.object_name[0].capitalize())]
+        colnames += ['Number_of_Images']
+    colnames += ['Total_%s_Count'%(p.object_name[0].capitalize())]
     for i in xrange(nClasses):
-        labels += ['%s %s Count'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
+        colnames += ['%s_%s_Count'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
     if p.area_scoring_column is not None:
-        labels += ['Total %s Area'%(p.object_name[0].capitalize())]
+        colnames += ['Total_%s_Area'%(p.object_name[0].capitalize())]
         for i in xrange(nClasses):
-            labels += ['%s %s Area'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
+            colnames += ['%s_%s_Area'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
     for i in xrange(nClasses):
-        labels += ['p(Enriched)\n'+ts.labels[i]]
+        colnames += ['pEnriched_%s'%(ts.labels[i])]
     if nClasses==2:
-        labels += ['Enriched Score\n'+ts.labels[0]]
+        colnames += ['Enriched_Score_%s'%(ts.labels[0])]
     else:
         for i in xrange(nClasses):
-            labels += ['Enriched Score\n'+ts.labels[i]]
+            colnames += ['Enriched_Score_%s'%(ts.labels[i])]
 
-    title = "Enrichments grouped by %s"%(group,)
+    title = results_table or "Enrichments_per_%s"%(group,)
     if filter_name:
-        title += " filtered by %s"%(filter_name,)
+        title += "_filtered_by_%s"%(filter_name,)
     title += ' (%s)'%(os.path.split(p._filename)[1])
+    
+    if results_table:
+        print 'Creating table %s'%(results_table)
+        success = db.CreateTableFromData(tableData, colnames, results_table, temporary=False)
+        if not success:
+            print 'Failed to create results table :('
     
     if show_results:
         import tableviewer
-        grid = tableviewer.TableViewer(None, title=title)
-        grid.table_from_array(tableData, labels, group, key_col_indices)
-        grid.set_fitted_col_widths()
-        grid.Show()
+        tableview = tableviewer.TableViewer(None, title=title)
+        if results_table and overwrite:
+            tableview.load_db_table(results_table)
+        else:
+            tableview.table_from_array(tableData, colnames, group, key_col_indices)
+        tableview.set_fitted_col_widths()
+        tableview.Show()
     return tableData
 
 
@@ -200,9 +221,11 @@ if __name__ == "__main__":
     if filter_name == '':
         filter_name = None
     
-    group  = raw_input('Group name (return for none): ')
+    group = raw_input('Group name (return for none): ')
     if group=='':
         group = 'Image'
+        
+    results_table = raw_input('Results table name (return for none): ')
 
     logging.info('Loading properties file...')
     p = Properties.getInstance()
@@ -211,7 +234,18 @@ if __name__ == "__main__":
     ts = TrainingSet(p)
     ts.Load(ts_file)
 
-    score(p, ts, nRules, filter_name, group, show_results=True)
+    score(p, ts, nRules, filter_name, group, show_results=True,
+          results_table=results_table, overwrite=False)
     
     app.MainLoop()
     
+    #
+    # Kill the Java VM
+    #
+    try:
+        import cellprofiler.utilities.jutil as jutil
+        jutil.kill_vm()
+    except:
+        import traceback
+        traceback.print_exc()
+        print "Caught exception while killing VM"
