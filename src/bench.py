@@ -46,37 +46,34 @@ class Bench(wx.Frame):
         
          ## --- Timer Panel--- #
         self.tp = wx.Panel(self)
-        time_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.tp.time_slider = wx.Slider(self.tp, -1)
-        self.tp.time_slider.Bind(wx.EVT_SLIDER, self.on_adjust_timepoint)
-        self.tp.time_slider.SetRange(0, 1440)
-        self.tp.tlabel1 = wx.StaticText(self.tp, -1, "Time:")
-        self.tp.time_text_box = wx.TextCtrl(self.tp, -1, '0:00', size=(50, -1))
-        self.tp.time_spin = wx.SpinButton(self.tp, -1, style=wx.SP_VERTICAL)
-        self.tp.time_spin.Max = 1000000
+        time_sizer = self.tp.Sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.time_slider = wx.Slider(self.tp, -1)
+        self.time_slider.Bind(wx.EVT_SLIDER, self.on_adjust_timepoint)
+        self.time_slider.SetRange(0, 1440)
+        self.tlabel1 = wx.StaticText(self.tp, -1, "Time:")
+        self.time_text_box = wx.TextCtrl(self.tp, -1, '0:00', size=(50, -1))
+        self.time_spin = wx.SpinButton(self.tp, -1, style=wx.SP_VERTICAL)
+        self.time_spin.Max = 1000000
 
-        self.tp.add24_button = wx.Button(self.tp, -1, "Add 24h")
-        self.tp.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.set_time_interval(0, self.tp.time_slider.GetMax()+1440))
+        self.add24_button = wx.Button(self.tp, -1, "Add 24h")
+        self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.set_time_interval(0, self.time_slider.GetMax()+1440))
 
         time_sizer.AddSpacer((10,-1))
-        time_sizer.Add(self.tp.tlabel1,0, wx.EXPAND)
+        time_sizer.Add(self.tlabel1,0, wx.EXPAND|wx.ALL, 5)
         time_sizer.AddSpacer((2,-1))
-        time_sizer.Add(self.tp.time_slider, 1, wx.EXPAND)
+        time_sizer.Add(self.time_slider, 1, wx.EXPAND|wx.ALL, 5)
         time_sizer.AddSpacer((5,-1))
-        time_sizer.Add(self.tp.time_text_box, 0, wx.BOTTOM, 15)
+        time_sizer.Add(self.time_text_box, 0, wx.ALL, 5)
         time_sizer.AddSpacer((2,-1))
-        time_sizer.Add(self.tp.time_spin, 0, wx.BOTTOM, 15)
+        time_sizer.Add(self.time_spin, 0, wx.ALL, 5)
         time_sizer.AddSpacer((5,-1))
-        time_sizer.Add(self.tp.add24_button, 0, wx.ALIGN_CENTER|wx.ALIGN_RIGHT, 5)
+        time_sizer.Add(self.add24_button, 0, wx.ALL, 5)
         time_sizer.AddSpacer((10,-1))
         
-        self.tp.time_spin.Bind(wx.EVT_SPIN_UP, self.on_increment_time)
-        self.tp.time_spin.Bind(wx.EVT_SPIN_DOWN, self.on_decrement_time)
-        self.tp.time_text_box.Bind(wx.EVT_TEXT, self.on_edit_time_text_box)
-        
-        self.tp.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
-        self.tp.Sizer.Add(time_sizer,1, wx.EXPAND)
-        
+        self.time_spin.Bind(wx.EVT_SPIN_UP, self.on_increment_time)
+        self.time_spin.Bind(wx.EVT_SPIN_DOWN, self.on_decrement_time)
+        self.time_text_box.Bind(wx.EVT_TEXT, self.on_edit_time_text_box)
+                
         ## -- Tag List Panel -- ##
         self.tagpanel = wx.Panel(self)
         tagpanel_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -133,7 +130,7 @@ class Bench(wx.Frame):
         self.vp.Sizer.Add(self.vpg, 1,wx.EXPAND|wx.ALL, 5)
         self.vp.Sizer.Add(self.vesselscroller, 6, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
-        self.Sizer.Add(self.tp, 1, wx.EXPAND)
+        self.Sizer.Add(self.tp, 0, wx.EXPAND)
         self.Sizer.Add(self.tagpanel, 2, wx.EXPAND)
         self.Sizer.Add(self.vp, 5, wx.EXPAND)
         
@@ -434,49 +431,49 @@ class Bench(wx.Frame):
         self.vesselscroller.FitInside() 
         
     def on_adjust_timepoint(self, evt):
-        self.set_timepoint(self.tp.time_slider.Value)
+        self.set_timepoint(self.time_slider.Value)
         self.onPopulateTaglist()
 
     def get_selected_timepoint(self):
-        return self.tp.time_slider.GetValue()
+        return self.time_slider.GetValue()
     
     def set_time_interval(self, tmin, tmax):
         '''Sets the time slider interval.
         tmin, tmax -- min and max timepoint values
         '''
-        self.tp.time_slider.SetRange(tmin, tmax)
+        self.time_slider.SetRange(tmin, tmax)
     
     def set_timepoint(self, timepoint):
         '''Sets the slider timepoint and updates the plate display.
         If a timepoint is set that is greater than time_slider's max, then the
         time_slider interval is increased to include the timepoint.
         '''
-        if timepoint > self.tp.time_slider.Max:
-            self.tp.time_slider.SetRange(0, timepoint)
-        self.tp.time_slider.Value = timepoint
-        self.tp.time_text_box.Value = format_time_string(timepoint)
+        if timepoint > self.time_slider.Max:
+            self.time_slider.SetRange(0, timepoint)
+        self.time_slider.Value = timepoint
+        self.time_text_box.Value = format_time_string(timepoint)
         self.update_well_selections()
 
     def on_increment_time(self, evt):
-        self.set_timepoint(self.tp.time_slider.Value + 1)
+        self.set_timepoint(self.time_slider.Value + 1)
         
     def on_decrement_time(self, evt):
-        self.set_timepoint(self.tp.time_slider.Value - 1)
+        self.set_timepoint(self.time_slider.Value - 1)
 
     
         
     def on_edit_time_text_box(self, evt):
-        time_string = self.tp.time_text_box.GetValue()
+        time_string = self.time_text_box.GetValue()
         if not re.match('^\d*:\d\d$', time_string):
-            self.tp.time_text_box.SetForegroundColour(wx.RED)
+            self.time_text_box.SetForegroundColour(wx.RED)
             return
         try:
             hours, mins = map(int, time_string.split(':'))
             minutes = hours * 60 + mins
             self.set_timepoint(minutes)
-            self.tp.time_text_box.SetForegroundColour(wx.BLACK)
+            self.time_text_box.SetForegroundColour(wx.BLACK)
         except:
-            self.tp.time_text_box.SetForegroundColour(wx.RED)
+            self.time_text_box.SetForegroundColour(wx.RED)
     
 
 
