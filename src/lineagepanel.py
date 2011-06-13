@@ -475,7 +475,7 @@ class LineagePanel(wx.Panel):
                         X-NODE_R < self.cursor_pos[0] < X + NODE_R and
                         Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
                         dc.SetBrush(wx.Brush('#FFFFAA'))
-                        dc.SetPen(wx.Pen('#FAF9F7', 3))
+                        dc.SetPen(wx.Pen('#000000', 3))
                         self.current_node = node
                     else:
                         if len(node.get_tags()) > 0:
@@ -484,7 +484,7 @@ class LineagePanel(wx.Panel):
                         else:
                             # no event
                             dc.SetBrush(wx.Brush('#FAF9F7'))
-                        #dc.SetPen(wx.Pen('#FAF9F7', 1))
+                        dc.SetPen(wx.Pen('#000000', 1))
                     
                     dc.DrawCircle(X, Y, NODE_R)
                     #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
@@ -502,7 +502,6 @@ class LineagePanel(wx.Panel):
                         X-NODE_R < self.cursor_pos[0] < X + NODE_R and
                         Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
                         dc.SetBrush(wx.Brush('#FFFFAA'))
-                        dc.SetPen(wx.Pen('#FAF9F7', 3))
                         self.current_node = node
                     else:
                         if len(node.get_tags()) > 0:
@@ -510,9 +509,8 @@ class LineagePanel(wx.Panel):
                             dc.SetBrush(wx.Brush('#333333'))
                         else:
                             # no event
-                            #dc.SetBrush(wx.Brush('#FFFFFF'))
-                            dc.SetBrush(wx.Brush('#FAF9F7'))
-                        #dc.SetPen(wx.Pen(wx.BLACK, 1))
+                            dc.SetBrush(wx.Brush('#FFFFFF'))
+                        dc.SetPen(wx.Pen(wx.BLACK, 1))
                     
                     if t == -1:
                         dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
@@ -521,7 +519,7 @@ class LineagePanel(wx.Panel):
                     #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
                         
                     dc.SetBrush(wx.Brush('#FAF9F7'))
-                    #dc.SetPen(wx.Pen(wx.BLACK, 1))
+                    dc.SetPen(wx.Pen(wx.BLACK, 1))
 
                     for child in node.get_children():
                         if t == -1:
