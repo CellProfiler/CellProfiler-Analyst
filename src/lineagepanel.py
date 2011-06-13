@@ -252,6 +252,8 @@ class TimelinePanel(wx.Panel):
                     bmps += [icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('CellTransfer|Harvest') and stump not in process_types:
                     bmps += [icons.harvest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('CellTransfer|Reseed') and stump not in process_types:
+                    bmps += [icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('Perturbation|Chem') and stump not in process_types:
                     bmps += [icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('Perturbation|Bio') and stump not in process_types:
@@ -496,7 +498,7 @@ class LineagePanel(wx.Panel):
                         dc.SetPen(wx.Pen('#000000', 1))
                     
                     dc.DrawCircle(X, Y, NODE_R)
-##                    dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
+                    dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
                     nodeY[node.id] = Y
                     Y += y_gap
                     
@@ -525,11 +527,15 @@ class LineagePanel(wx.Panel):
                         dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
                     else:
                         dc.DrawCircle(X, Y, NODE_R)
-##                    dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
+                    dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                         
+                    # DRAW LINES CONNECTING THIS NODE TO ITS CHILDREN
                     dc.SetBrush(wx.Brush('#FAF9F7'))
                     dc.SetPen(wx.Pen(wx.BLACK, 1))
-
+                    harvest_tag = False
+                    for tag in node.get_tags():
+                        if tag.startswith('CellTransfer|Harvest'):
+                            harvest_tag = tag
                     for child in node.get_children():
                         if t == -1:
                             if self.time_x:
@@ -539,8 +545,16 @@ class LineagePanel(wx.Panel):
                                 dc.DrawLine(X + NODE_R, Y, 
                                             X + FLASK_GAP - NODE_R ,nodeY[child.id])
                         else:
-                            dc.DrawLine(X + NODE_R, Y, 
-                                        X + x_gap - NODE_R ,nodeY[child.id])
+                            if harvest_tag:
+                                for nn in nodes_by_tp[timepoints[i-1]]:
+                                    for tag in nn.get_tags():
+                                        if (tag.startswith('CellTransfer|Reseed') and 
+                                            meta.get_field('CellTransfer|Reseed|HarvestInstance|'+exp.get_tag_instance(tag)) == exp.get_tag_instance(harvest_tag)):
+                                            dc.DrawLine(X + NODE_R, Y, 
+                                                        X + x_gap - NODE_R ,nodeY[nn.id])
+                            else:
+                                dc.DrawLine(X + NODE_R, Y, 
+                                            X + x_gap - NODE_R ,nodeY[child.id])
                     nodeY[node.id] = Y
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
