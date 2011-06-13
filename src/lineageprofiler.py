@@ -2,6 +2,8 @@ from bench import Bench
 from metadatainput import ExperimentSettingsWindow
 from lineagepanel import LineageFrame
 from experimentsettings import ExperimentSettings
+from instancelist import *
+from utils import *
 import wx
 import os
 
@@ -23,10 +25,10 @@ class LineageProfiler(wx.App):
         self.settings_frame.Bind(wx.EVT_MENU, on_load_settings, loadSettingsMenuItem) 
         self.settings_frame.GetMenuBar().Append(fileMenu, 'File')
         
-        self.bench_frame = Bench(None, size=(600,300), pos=(0, self.settings_frame.Position[1]+410))
+        self.bench_frame = Bench(None, size=(600,450), pos=(0, self.settings_frame.Position[1]+410))
         self.bench_frame.Show()
         
-        self.lineage_frame = LineageFrame(None, size=(600, 700), pos=(610, -1))
+        self.lineage_frame = LineageFrame(None, size=(700, 800), pos=(610, -1))
         self.lineage_frame.Show()
         
         return True

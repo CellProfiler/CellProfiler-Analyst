@@ -37,9 +37,9 @@ class LineageFrame(wx.Frame):
         self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS)).GetControl()
         self.zoom.SetRange(1, 30)
         self.zoom.SetValue(8)
-        x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
-        x_spacing.GetControl().SetValue(0)
-        generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
+        #x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
+        #x_spacing.GetControl().SetValue(0)
+        #generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
         tb.Realize()
         
         #from f import TreeCtrlComboPopup
@@ -50,8 +50,8 @@ class LineageFrame(wx.Frame):
         #meta.add_subscriber(self.on_metadata_changed, '')
         
         self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
-        self.Bind(wx.EVT_CHECKBOX, self.on_change_spacing, x_spacing)
-        self.Bind(wx.EVT_BUTTON, self.generate_random_data, generate)
+        #self.Bind(wx.EVT_CHECKBOX, self.on_change_spacing, x_spacing)
+        #self.Bind(wx.EVT_BUTTON, self.generate_random_data, generate)
         
     def on_metadata_changed(self, tag):
         self.tcp.Clear()
@@ -182,6 +182,7 @@ class TimelinePanel(wx.Panel):
         '''Handler for paint events.
         '''
         if self.timepoints is None:
+            evt.Skip()
             return
 
         PAD = self.PAD + self.ICON_SIZE / 2.0
@@ -246,7 +247,7 @@ class TimelinePanel(wx.Panel):
             bmps = []
             process_types = set([])
             for i, ev in enumerate(self.events_by_timepoint[timepoint]):
-                stump = exp.get_tag_stump(ev.get_welltag())                
+                stump = exp.get_tag_stump(ev.get_welltag())
                 if stump.startswith('CellTransfer|Seed') and stump not in process_types:
                     bmps += [icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('CellTransfer|Harvest') and stump not in process_types:
@@ -254,22 +255,31 @@ class TimelinePanel(wx.Panel):
                 elif stump.startswith('Perturbation|Chem') and stump not in process_types:
                     bmps += [icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('Perturbation|Bio') and stump not in process_types:
-                    bmps += [icons.treat_bio.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('AddProcess|Stain') and stump not in process_types:
-                    bmps += [icons.add_stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                    bmps += [icons.dna.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('Labeling|Stain') and stump not in process_types:
+                    bmps += [icons.stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('Labeling|Antibody') and stump not in process_types:
+                    bmps += [icons.antibody.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('Labeling|Primer') and stump not in process_types:
+                    bmps += [icons.primer.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('AddProcess|Spin') and stump not in process_types:
+                    bmps += [icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('AddProcess|Wash') and stump not in process_types:
                     bmps += [icons.wash.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('AddProcess|Dry') and stump not in process_types:
-                    bmps += [icons.dry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('AddProcess|Spin') and stump not in process_types:
-                    bmps += [icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                    bmps += [icons.keepdry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('AddProcess|Medium') and stump not in process_types:
+                    bmps += [icons.medium.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                elif stump.startswith('AddProcess|Incubator') and stump not in process_types:
+                    bmps += [icons.incubator.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('DataAcquis|HCS') and stump not in process_types:
-                    bmps += [icons.imaging.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                    bmps += [icons.staticimage.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('DataAcquis|FCS') and stump not in process_types:
-                    bmps += [icons.flow.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                    bmps += [icons.fcs.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 elif stump.startswith('DataAcquis|TLM') and stump not in process_types:
-                    bmps += [icons.timelapse.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
+                    bmps += [icons.tlm.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
                 process_types.add(stump)
+                
             for i, bmp in enumerate(bmps):
                 dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
                               y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)
@@ -295,7 +305,7 @@ class TimelinePanel(wx.Panel):
                 bench = wx.GetApp().get_bench()
             except: return
             bench.set_timepoint(self.hover_timepoint)
-            
+            bench.show_selected_instances(self.hover_timepoint)
 
 
 class LineagePanel(wx.Panel):
@@ -311,6 +321,8 @@ class LineagePanel(wx.Panel):
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
+        self.SetBackgroundColour('#FAF9F7')
+
         self.nodes_by_timepoint = {}
         self.time_x = False
         self.cursor_pos = None
@@ -354,7 +366,7 @@ class LineagePanel(wx.Panel):
         timeline = meta.get_timeline()
         t0 = time()
         self.nodes_by_timepoint = timeline.get_nodes_by_timepoint()
-        print 'built tree in %s seconds'%(time() - t0)
+        #print 'built tree in %s seconds'%(time() - t0)
         # get the unique timpoints from the timeline
         self.timepoints = meta.get_timeline().get_unique_timepoints()
         # For time-compact x-spacing
@@ -385,6 +397,7 @@ class LineagePanel(wx.Panel):
         '''Handler for paint events.
         '''
         if self.nodes_by_timepoint == {}:
+            evt.Skip()
             return
 
         t0 = time()
@@ -427,7 +440,7 @@ class LineagePanel(wx.Panel):
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
-        dc.SetPen(wx.Pen("BLACK",1))
+        #dc.SetPen(wx.Pen("BLACK",1))
 
         # Iterate from leaf nodes up to the root, and draw R->L, Top->Bottom
         for i, t in enumerate(timepoints):
@@ -446,11 +459,11 @@ class LineagePanel(wx.Panel):
                     X-NODE_R < self.cursor_pos[0] < X + NODE_R and
                     Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
                     dc.SetBrush(wx.Brush('#FFFFAA'))
-                    dc.SetPen(wx.Pen(wx.BLACK, 3))
+                    dc.SetPen(wx.Pen(wx.RED, 3))
                     self.current_node = nodes_by_tp.values()[t][0]
                 else:
-                    dc.SetBrush(wx.Brush('#FFFFFF'))
-                    dc.SetPen(wx.Pen(wx.BLACK, 1))
+                    dc.SetBrush(wx.Brush('#FAF9F7'))
+                    #dc.SetPen(wx.Pen(wx.BLACK, 1))
                     self.current_node = None
                     
                 dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
@@ -462,7 +475,7 @@ class LineagePanel(wx.Panel):
                         X-NODE_R < self.cursor_pos[0] < X + NODE_R and
                         Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
                         dc.SetBrush(wx.Brush('#FFFFAA'))
-                        dc.SetPen(wx.Pen(wx.BLACK, 3))
+                        dc.SetPen(wx.Pen('#FAF9F7', 3))
                         self.current_node = node
                     else:
                         if len(node.get_tags()) > 0:
@@ -470,8 +483,8 @@ class LineagePanel(wx.Panel):
                             dc.SetBrush(wx.Brush('#333333'))
                         else:
                             # no event
-                            dc.SetBrush(wx.Brush('#FFFFFF'))
-                        dc.SetPen(wx.Pen(wx.BLACK, 1))
+                            dc.SetBrush(wx.Brush('#FAF9F7'))
+                        #dc.SetPen(wx.Pen('#FAF9F7', 1))
                     
                     dc.DrawCircle(X, Y, NODE_R)
                     #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
@@ -489,7 +502,7 @@ class LineagePanel(wx.Panel):
                         X-NODE_R < self.cursor_pos[0] < X + NODE_R and
                         Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
                         dc.SetBrush(wx.Brush('#FFFFAA'))
-                        dc.SetPen(wx.Pen(wx.BLACK, 3))
+                        dc.SetPen(wx.Pen('#FAF9F7', 3))
                         self.current_node = node
                     else:
                         if len(node.get_tags()) > 0:
@@ -497,8 +510,9 @@ class LineagePanel(wx.Panel):
                             dc.SetBrush(wx.Brush('#333333'))
                         else:
                             # no event
-                            dc.SetBrush(wx.Brush('#FFFFFF'))
-                        dc.SetPen(wx.Pen(wx.BLACK, 1))
+                            #dc.SetBrush(wx.Brush('#FFFFFF'))
+                            dc.SetBrush(wx.Brush('#FAF9F7'))
+                        #dc.SetPen(wx.Pen(wx.BLACK, 1))
                     
                     if t == -1:
                         dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
@@ -506,8 +520,8 @@ class LineagePanel(wx.Panel):
                         dc.DrawCircle(X, Y, NODE_R)
                     #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
                         
-                    dc.SetBrush(wx.Brush('#FFFFFF'))
-                    dc.SetPen(wx.Pen(wx.BLACK, 1))
+                    dc.SetBrush(wx.Brush('#FAF9F7'))
+                    #dc.SetPen(wx.Pen(wx.BLACK, 1))
 
                     for child in node.get_children():
                         if t == -1:
@@ -522,7 +536,7 @@ class LineagePanel(wx.Panel):
                                         X + x_gap - NODE_R ,nodeY[child.id])
                     nodeY[node.id] = Y
         dc.EndDrawing()
-        print 'rendered lineage in %.2f seconds'%(time() - t0)
+        #print 'rendered lineage in %.2f seconds'%(time() - t0)
         
     def _on_mouse_motion(self, evt):
         self.cursor_pos = (evt.X, evt.Y)

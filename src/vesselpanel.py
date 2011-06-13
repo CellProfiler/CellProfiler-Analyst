@@ -1,5 +1,6 @@
 import wx
-from experimentsettings import PlateDesign
+#from experimentsettings import PlateDesign
+from experimentsettings import *
 
 # Well Displays
 ROUNDED   = 'rounded'
@@ -7,6 +8,7 @@ CIRCLE    = 'circle'
 SQUARE    = 'square'
 
 all_well_shapes = [SQUARE, ROUNDED, CIRCLE]
+meta = ExperimentSettings.getInstance()
 
 class VesselPanel(wx.Panel):    
     def __init__(self, parent, plate_id, well_disp=ROUNDED, **kwargs):
@@ -21,6 +23,7 @@ class VesselPanel(wx.Panel):
         self.well_disp = well_disp
         self.selection = set()           # list of (row,col) tuples 
         self.marked = set()
+        self.affected = set()
         self.selection_enabled = True
         self.repaint = False
         self.well_selection_handlers = []  # funcs to call when a well is selected        
@@ -77,9 +80,14 @@ class VesselPanel(wx.Panel):
         self.marked = set([PlateDesign.get_pos_for_wellid(self.shape, wellid)
                            for wellid in wellids])
         self.Refresh()
+        
+    def set_affected_well_ids(self, wellids):
+        self.affected = set([PlateDesign.get_pos_for_wellid(self.shape, wellid)
+                           for wellid in wellids])
+        self.Refresh()
 
     def select_well_at_pos(self, (wellx, welly)):
-        self.selection = set([(wellx, welly)])
+        self.selection.add((wellx, welly))
         self.Refresh()
 
     def deselect_well_at_pos(self, (wellx, welly)):
@@ -153,10 +161,17 @@ class VesselPanel(wx.Panel):
             dc.SetBrush(wx.Brush((255,255,255)))
         else:
             dc.SetBrush(wx.Brush((230,230,230)))
+        
+        # for each well time independently find out whether it had been affect by any event if so
+        # color it dc.SetBrush(wx.Brush((255,255,204)))
+        
+        
+            
         for x in range(COLS + 1):
             for y in range(ROWS + 1):
                 px = PAD + GAP/2. + (x * R*2)
                 py = PAD + GAP/2. + (y * R*2)
+                
                 
                 if (y-1, x-1) in self.selection:
                     if self.selection_enabled:
@@ -167,7 +182,9 @@ class VesselPanel(wx.Panel):
                     if self.selection_enabled:
                         dc.SetPen(wx.Pen("BLACK", 2, style=wx.SHORT_DASH))
                     else:
-                        dc.SetPen(wx.Pen("GRAY", 2, style=wx.SHORT_DASH))                    
+                        dc.SetPen(wx.Pen("GRAY", 2, style=wx.SHORT_DASH))
+                
+                
                 else:
                     dc.SetPen(wx.Pen((210,210,210),1))
 
@@ -211,8 +228,7 @@ class VesselPanel(wx.Panel):
             return        
         selected = self.toggle_selected(well)
         for handler in self.well_selection_handlers:
-            handler(self.get_platewell_id_at_xy(evt.X, evt.Y), selected)
-        
+            handler(self.get_platewell_id_at_xy(evt.X, evt.Y), selected)   
             
 class VesselScroller(wx.ScrolledWindow):
     def __init__(self, parent, id=-1, **kwargs):
@@ -227,18 +243,18 @@ class VesselScroller(wx.ScrolledWindow):
             self.Sizer.AddSpacer((10,-1))
         sz = wx.BoxSizer(wx.VERTICAL)
         sz.Add(wx.StaticText(self, -1, plate_id), 0, wx.EXPAND|wx.TOP|wx.LEFT, 10)
-        sz.Add(panel, 1, wx.EXPAND)
+        sz.Add(panel, 1, wx.EXPAND|wx.ALIGN_CENTER)
         self.Sizer.Add(sz, 1, wx.EXPAND)
         self.plates += [panel]
 
     def get_vessels(self):
         return self.plates
 
-    def get_selected_well_ids(self):
-        wells = []
-        for plate in self.plates:
-            wells += plate.get_selected_well_keys()
-        return wells
+    #def get_selected_well_ids(self):
+        #wells = []
+        #for plate in self.plates:
+            #wells += plate.get_selected_well_keys()
+        #return wells
 
     def clear(self):
         self.plates = []

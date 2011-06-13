@@ -18,9 +18,9 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
         
         self.tree = wx.TreeCtrl(self, 1, wx.DefaultPosition, (-1,-1), wx.TR_HAS_BUTTONS)
 
-        root = self.tree.AddRoot('Experimental Elements')
+        root = self.tree.AddRoot('Experiment')
 
-        stc = self.tree.AppendItem(root, 'STATIC')
+        stc = self.tree.AppendItem(root, 'SETTINGS')
         ovr = self.tree.AppendItem(stc, 'Overview')
         stk = self.tree.AppendItem(stc, 'Stock Culture')
         ins = self.tree.AppendItem(stc, 'Instrument')
@@ -32,7 +32,7 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
         self.tree.AppendItem(exv, 'Dish')
         self.tree.AppendItem(exv, 'Coverslip')
         #self.tree.AppendItem(exv, 'Culture Slide').Disable()
-        stc = self.tree.AppendItem(root, 'TEMPORAL')
+        stc = self.tree.AppendItem(root, 'ASSAY')
         cld = self.tree.AppendItem(stc, 'Cell Transfer')
         self.tree.AppendItem(cld, 'Seeding')
         self.tree.AppendItem(cld, 'Harvesting')
@@ -2115,7 +2115,7 @@ class CellSeedPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5) 
         
         #-- Cell Line selection ---#
-        celllineselcTAG = 'CellTransfer|Seed|CellLineInstance|'+str(self.page_counter)
+        celllineselcTAG = 'CellTransfer|Seed|StockInstance|'+str(self.page_counter)
         self.settings_controls[celllineselcTAG] = wx.TextCtrl(self.sw, value=meta.get_field(celllineselcTAG, default=''))
         showInstBut = wx.Button(self.sw, -1, 'Show Stock Cultures', (100,100))
         showInstBut.Bind (wx.EVT_BUTTON, self.OnShowDialog) 
@@ -2187,7 +2187,7 @@ class CellSeedPanel(wx.Panel):
         if dia.ShowModal() == wx.ID_OK:
             if dia.listctrl.get_selected_instances() != []:
                 instance = dia.listctrl.get_selected_instances()[0]
-                celllineselcTAG = 'CellTransfer|Seed|CellLineInstance|'+str(self.page_counter)
+                celllineselcTAG = 'CellTransfer|Seed|StockInstance|'+str(self.page_counter)
                 self.settings_controls[celllineselcTAG].SetValue(str(instance))
         dia.Destroy()
 
@@ -2274,7 +2274,7 @@ class CellHarvestPanel(wx.Panel):
             cell_Line_choices.append(meta.get_field('StockCulture|Sample|CellLine|'+cell_Line_instance)+'_'+cell_Line_instance)
   
         #-- Cell Line selection ---#
-        celllineselcTAG = 'CellTransfer|Harvest|CellLineInstance|'+str(self.page_counter)
+        celllineselcTAG = 'CellTransfer|Harvest|StockInstance|'+str(self.page_counter)
         self.settings_controls[celllineselcTAG] = wx.Choice(self.sw, -1,  choices=cell_Line_choices)
         if meta.get_field(celllineselcTAG) is not None:
             self.settings_controls[celllineselcTAG].SetStringSelection(meta.get_field(celllineselcTAG))
