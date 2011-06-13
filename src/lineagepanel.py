@@ -326,6 +326,7 @@ class LineagePanel(wx.Panel):
         self.nodes_by_timepoint = {}
         self.time_x = False
         self.cursor_pos = None
+        self.current_node = None
         
         meta.add_subscriber(self.on_timeline_updated, 
                             exp.get_matchstring_for_subtag(2, 'Well'))
@@ -441,6 +442,19 @@ class LineagePanel(wx.Panel):
         dc.Clear()
         dc.BeginDrawing()
         #dc.SetPen(wx.Pen("BLACK",1))
+        
+        def hover(mouse_pos, node_pos, node_r):
+            '''returns whether the mouse is hovering over a node
+            mouse_pos - the mouse position
+            node_pos - the node position
+            node_r - the node radius
+            '''
+            if mouse_pos is None:
+                return False
+            MX,MY = mouse_pos
+            X,Y = node_pos
+            return (X - node_r < MX < X + node_r and 
+                    Y - node_r < MY < Y + node_r)
 
         # Iterate from leaf nodes up to the root, and draw R->L, Top->Bottom
         for i, t in enumerate(timepoints):
@@ -452,63 +466,58 @@ class LineagePanel(wx.Panel):
             else:
                 X = PAD + FLASK_GAP + (len(timepoints) - i - 2) * x_gap
             
+            # NO EVENTS. JUST DRAW THE STOCK, CENTERED.
             if len(nodes_by_tp) == 1:
                 X = w_win / 2
                 Y = h_win / 2
-                if (self.cursor_pos is not None and 
-                    X-NODE_R < self.cursor_pos[0] < X + NODE_R and
-                    Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
+                if hover(self.cursor_pos, (X,Y), self.NODE_R): 
                     dc.SetBrush(wx.Brush('#FFFFAA'))
-                    dc.SetPen(wx.Pen(wx.RED, 3))
                     self.current_node = nodes_by_tp.values()[t][0]
                 else:
                     dc.SetBrush(wx.Brush('#FAF9F7'))
-                    #dc.SetPen(wx.Pen(wx.BLACK, 1))
                     self.current_node = None
-                    
                 dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
-                #dc.DrawText(str(nodes_by_tp[t][0].get_timepoint()), X, Y+NODE_R)
+##                dc.DrawText(str(nodes_by_tp[t][0].get_timepoint()), X, Y+NODE_R)
+                
+            # LEAF NODES
             elif i == 0:
-                # Leaf nodes
                 for node in nodes_by_tp[t]:
-                    if (self.cursor_pos is not None and 
-                        X-NODE_R < self.cursor_pos[0] < X + NODE_R and
-                        Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
+                    if hover(self.cursor_pos, (X,Y), self.NODE_R):
                         dc.SetBrush(wx.Brush('#FFFFAA'))
                         dc.SetPen(wx.Pen('#000000', 3))
                         self.current_node = node
                     else:
                         if len(node.get_tags()) > 0:
-                            # If an event occurred
+                            # Event occurred
                             dc.SetBrush(wx.Brush('#333333'))
                         else:
-                            # no event
+                            # No event
                             dc.SetBrush(wx.Brush('#FAF9F7'))
                         dc.SetPen(wx.Pen('#000000', 1))
                     
                     dc.DrawCircle(X, Y, NODE_R)
-                    #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
+##                    dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
                     nodeY[node.id] = Y
                     Y += y_gap
+                    
+            # INTERNAL NODES
             else:
-                # Internal nodes
                 for node in nodes_by_tp[t]:
                     ys = []
                     for child in node.get_children():
                         ys.append(nodeY[child.id])
                     Y = (min(ys) + max(ys)) / 2
 
-                    if (self.cursor_pos is not None and 
-                        X-NODE_R < self.cursor_pos[0] < X + NODE_R and
-                        Y-NODE_R < self.cursor_pos[1] < Y + NODE_R):
+                    if hover(self.cursor_pos, (X,Y), self.NODE_R):
                         dc.SetBrush(wx.Brush('#FFFFAA'))
+                        dc.SetPen(wx.Pen(wx.BLACK, 3))
                         self.current_node = node
                     else:
                         if len(node.get_tags()) > 0:
-                            # If an event occurred
+                            # Event occurred
                             dc.SetBrush(wx.Brush('#333333'))
                         else:
-                            # no event
+                            # No event
                             dc.SetBrush(wx.Brush('#FFFFFF'))
                         dc.SetPen(wx.Pen(wx.BLACK, 1))
                     
@@ -516,7 +525,7 @@ class LineagePanel(wx.Panel):
                         dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
                     else:
                         dc.DrawCircle(X, Y, NODE_R)
-                    #dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
+##                    dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
                         
                     dc.SetBrush(wx.Brush('#FAF9F7'))
                     dc.SetPen(wx.Pen(wx.BLACK, 1))
