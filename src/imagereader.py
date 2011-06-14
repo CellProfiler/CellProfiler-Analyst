@@ -12,7 +12,6 @@ except:
     logging.warn('ImageReader failed to import LoadImagesImageProvider from '
                  'CellProfiler, will fall back on PIL and TiffFile.')
 
-use_cp_loadimages = False
 p = Properties.getInstance()
 
 class ImageReader(object):
