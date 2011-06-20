@@ -370,6 +370,15 @@ class StockCulturePanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)
     
         #----------- Labels and Text Controler-------        
+        #--Fask Size--#
+        flaskTAG = 'StockCulture|Sample|VesselSize|%s'%str(self.stk_id)
+        self.settings_controls[flaskTAG] = wx.Choice(self.sw, -1, choices=['12.5','25','75','150','175'])
+        if meta.get_field(flaskTAG) is not None:
+            self.settings_controls[flaskTAG].SetStringSelection(meta.get_field(flaskTAG))
+        self.settings_controls[flaskTAG].Bind(wx.EVT_CHOICE, self.OnSavingData) 
+        self.settings_controls[flaskTAG].SetToolTipString('Select the stock culture flask size')
+        fgs.Add(wx.StaticText(self.sw, -1, 'Stock Flask Size (cm2)'), 0)
+        fgs.Add(self.settings_controls[flaskTAG], 0, wx.EXPAND) 
         # Cell Line Name
         cellLineTAG = 'StockCulture|Sample|CellLine|%s'%str(self.stk_id)
         self.settings_controls[cellLineTAG] = wx.TextCtrl(self.sw, value=meta.get_field(cellLineTAG, default=''))
@@ -378,10 +387,7 @@ class StockCulturePanel(wx.Panel):
         cellLineTXT = wx.StaticText(self.sw, -1, 'Cell Line')
         cellLineTXT.SetForegroundColour((0,0,0))
         fgs.Add(cellLineTXT, 0)
-        fgs.Add(self.settings_controls[cellLineTAG], 0, wx.EXPAND)
-        
-        
-        #meta.add_subscriber(lambda(evt): cellLineTXT.SetForegroundColour((0,0,0)), cellLineTAG)
+        fgs.Add(self.settings_controls[cellLineTAG], 0, wx.EXPAND)               
         # ATCC reference
         acttTAG = 'StockCulture|Sample|ATCCref|%s'%str(self.stk_id)
         self.settings_controls[acttTAG] = wx.TextCtrl(self.sw, value=meta.get_field(acttTAG, default=''))

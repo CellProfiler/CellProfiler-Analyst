@@ -8,7 +8,7 @@ from experimentsettings import *
 ########################################################################            
 class SeedDialog(wx.Dialog):
     def __init__(self, parent, stock_instance):
-        wx.Dialog.__init__(self, parent, -1, size=(250,300), style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
+        wx.Dialog.__init__(self, parent, -1, size=(250,300), title='Seeding', style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
         
         self.settings_controls = {}        
         meta = ExperimentSettings.getInstance()
@@ -35,7 +35,7 @@ class SeedDialog(wx.Dialog):
         meta.set_field('CellTransfer|Seed|StockInstance|'+str(self.page_counter), stock_instance)
         
         # Seeding Density
-        seedTAG = 'CellTransfer|Seed|SeedingDensity|'+str(self.page_counter)
+        seedTAG = 'CellTransfer|Seed|Density|'+str(self.page_counter)
         self.settings_controls[seedTAG] = wx.TextCtrl(self, value=meta.get_field(seedTAG, default=''))
         self.settings_controls[seedTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[seedTAG].SetToolTipString('Number of cells seeded in each well or flask')
