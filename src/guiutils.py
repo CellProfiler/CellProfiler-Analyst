@@ -9,6 +9,7 @@ import sqltools
 import numpy as np
 from utils import Observable
 from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.lib.combotreebox import ComboTreeBox
 
 p = properties.Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
@@ -657,20 +658,32 @@ class GateManager(wx.Dialog):
 class CheckListComboBox(wx.combo.ComboCtrl):
     '''A handy concoction for doing selecting multiple items with a ComboBox.
     '''
-    def __init__(self, parent, choices, **kwargs):
+    def __init__(self, parent, choices=[], **kwargs):
         wx.combo.ComboCtrl.__init__(self, parent, -1, **kwargs)
-        self.checklist = CheckListComboPopup(choices)
-        self.SetPopupControl(self.checklist)
+        self.popup = CheckListComboPopup(choices)
+        self.SetPopupControl(self.popup)
         
-    def GetValue(self):
-        return self.checklist.GetValue()
-    Value = property(GetValue)
+    def GetCheckList(self):
+        return self.popup.checklist
+        
+    def GetItems(self):
+        return self.GetCheckList().GetItems()
+    
+    def SetItems(self, items):
+        self.GetCheckList().SetItems(items)
+        
+    def GetCheckedStrings(self):
+        return self.GetCheckList().GetCheckedStrings()
 
+    def SetCheckedStrings(self, strings):
+        self.GetCheckList().SetCheckedStrings(strings)
+        self.Value = self.popup.GetStringValue()
 
+        
 class CheckListComboPopup(wx.combo.ComboPopup):
     '''A ComboBox that provides a CheckList for multiple selection. Hurray!
     '''
-    def __init__(self, choices):
+    def __init__(self, choices=[]):
         wx.combo.ComboPopup.__init__(self)
         self.choices = choices
 
@@ -678,23 +691,23 @@ class CheckListComboPopup(wx.combo.ComboPopup):
         self.Dismiss()
 
     def GetValue(self):
-        return self.list.GetCheckedStrings()
-
+        return self.checklist.GetCheckedStrings()
+    
     # Overridden ComboPopup methods
 
     def Create(self, parent):
-        self.list = wx.CheckListBox(parent, -1, choices=self.choices, style=wx.SIMPLE_BORDER)
-        self.list.Bind(wx.EVT_LEFT_DCLICK, self.on_dclick)
+        self.checklist = wx.CheckListBox(parent, -1, choices=self.choices, style=wx.SIMPLE_BORDER)
+        self.checklist.Bind(wx.EVT_LEFT_DCLICK, self.on_dclick)
 
     def GetControl(self):
-        return self.list
+        return self.checklist
 
     def GetStringValue(self):
-        return ', '.join(self.list.GetCheckedStrings())
+        return ', '.join(self.checklist.GetCheckedStrings())
 
     def SetStringValue(self, value):
         if type(value)==list:
-            self.list.SetCheckedStrings(value)
+            self.checklist.SetCheckedStrings(value)
 
     def GetAdjustedSize(self, minWidth, prefHeight, maxHeight):
         return wx.Size(minWidth, min(100, maxHeight))
@@ -778,21 +791,39 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     import logging, sys
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
     p.load_file('/Users/afraser/cpa_example/example.properties')
 
-    d = GateManager(None)
-    d.ShowModal()
-##    print get_other_table_from_user(None)
+    f = wx.Frame(None)
+    f.Sizer = wx.BoxSizer(wx.VERTICAL)
+    #f.Sizer.Add(CheckListComboBox(f, 'asdf'))
+    
+    
+    treebox = ComboTreeBox(f, style=wx.CB_READONLY)
+    def build_tree(colnames, parent=None):
+        #i = 1
+        #while 1:
+            #prefixes, b = zip(*[col.split('_', i) for col in colnames])
+            #prefixes = set(prefixes)
+            #if len(prefixes) > 1 or :
+                #break
+            #i += 1
+        for prefix in prefixes:
+            subcols = [col.split('_', 1)[1] for col in colnames if col.startswith(prefix+'_')]
+            if len(subcols) == 1:
+                treebox.Append(prefix+'_'+subcols[0], parent)
+            elif subcols:
+                child = treebox.Append(prefix, parent)
+                build_tree(subcols, child)
+            else:
+                treebox.Append(prefix, parent)
+    cols = ['test_t_t_t_1', 'test_t_t_t_2']
+    build_tree(cols)
+    for table in sorted(db.get_linkable_tables()):
+        child = treebox.Append(table)
+        cols = db.GetColumnNames(table)
+        build_tree(cols, child)
 
-    #dlg = LinkTablesDialog(None, p.object_table, p.image_table, dbconnect.object_key_columns(), dbconnect.object_key_columns())
-    #if (dlg.ShowModal() == wx.ID_OK):
-        #print dlg.get_column_pairs()
-
-##   f = wx.Frame(None)
-##   f.Sizer = wx.BoxSizer()
-##   t = TableComboBox(f)
-##   f.Sizer.Add(t, 0)
-##   f.Show()
+    f.Sizer.Add(treebox, 0, wx.EXPAND)
+    f.Show()
 
     app.MainLoop()
