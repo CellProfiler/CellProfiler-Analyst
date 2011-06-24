@@ -46,6 +46,7 @@ class Bench(wx.Frame):
         self.time_text_box.Bind(wx.EVT_TEXT, self.on_edit_time_text_box)
         self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.set_time_interval(0, self.time_slider.GetMax()+1440))
         self.taglistctrl.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_instance_selected)
+        self.taglistctrl.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_instance_selected)
         self.group_checklist.GetCheckList().Bind(wx.EVT_CHECKLISTBOX, self.update_plate_groups)
 
         # --- LAY OUT THE FRAME ---
@@ -95,7 +96,7 @@ class Bench(wx.Frame):
                 vessel_type = tag.split('|')[1]
                 inst = get_tag_instance(tag)
                 plate_id = PlateDesign.get_plate_id(vessel_type, inst)
-                plate_shape = WELL_NAMES[meta.get_field('%s|Design|%s'%(prefix, inst))]
+                plate_shape = PlateDesign.get_plate_format(plate_id)
                 well_ids = PlateDesign.get_well_ids(plate_shape)
                 plate = VesselPanel(self.vesselscroller, plate_id)
                 self.vesselscroller.add_vessel_panel(plate, group_name+' %s'%(inst))
