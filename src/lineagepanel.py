@@ -4,6 +4,7 @@ import os
 import numpy as np
 from time import time
 import icons
+import timeline
 from wx.lib.combotreebox import ComboTreeBox
 from PIL import Image
 
@@ -244,45 +245,44 @@ class TimelinePanel(wx.Panel):
             dc.DrawLine(x, y - TIC_SIZE, 
                         x, y + TIC_SIZE)
             #dc.DrawRectangle(x, y, ICON_SIZE, ICON_SIZE)
-            bmps = []
-            process_types = set([])
-            for i, ev in enumerate(self.events_by_timepoint[timepoint]):
-                stump = exp.get_tag_stump(ev.get_welltag())
-                if stump.startswith('CellTransfer|Seed') and stump not in process_types:
-                    bmps += [icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('CellTransfer|Harvest') and stump not in process_types:
-                    bmps += [icons.harvest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('CellTransfer|Reseed') and stump not in process_types:
-                    bmps += [icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('Perturbation|Chem') and stump not in process_types:
-                    bmps += [icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('Perturbation|Bio') and stump not in process_types:
-                    bmps += [icons.dna.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('Labeling|Stain') and stump not in process_types:
-                    bmps += [icons.stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('Labeling|Antibody') and stump not in process_types:
-                    bmps += [icons.antibody.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('Labeling|Primer') and stump not in process_types:
-                    bmps += [icons.primer.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('AddProcess|Spin') and stump not in process_types:
-                    bmps += [icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('AddProcess|Wash') and stump not in process_types:
-                    bmps += [icons.wash.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('AddProcess|Dry') and stump not in process_types:
-                    bmps += [icons.keepdry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('AddProcess|Medium') and stump not in process_types:
-                    bmps += [icons.medium.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('AddProcess|Incubator') and stump not in process_types:
-                    bmps += [icons.incubator.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('DataAcquis|HCS') and stump not in process_types:
-                    bmps += [icons.staticimage.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('DataAcquis|FCS') and stump not in process_types:
-                    bmps += [icons.fcs.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                elif stump.startswith('DataAcquis|TLM') and stump not in process_types:
-                    bmps += [icons.tlm.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()]
-                process_types.add(stump)
-                
-            for i, bmp in enumerate(bmps):
+            
+            prefixes = set([exp.get_tag_stump(ev.get_welltag(), 2) for ev in self.events_by_timepoint[timepoint]])
+            for i, stump in enumerate(prefixes):
+                if stump.startswith('CellTransfer|Seed'):
+                    bmp = icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('CellTransfer|Harvest'):
+                    bmp = icons.harvest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                    
+                elif stump.startswith('Perturbation|Chem'):
+                    bmp = icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('Perturbation|Bio'):
+                    bmp = icons.dna.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                    
+                elif stump.startswith('Labeling|Stain'):
+                    bmp = icons.stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('Labeling|Antibody'):
+                    bmp = icons.antibody.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('Labeling|Primer'):
+                    bmp = icons.primer.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                    
+                elif stump.startswith('AddProcess|Spin'):
+                    bmp = icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('AddProcess|Wash'):
+                    bmp = icons.wash.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('AddProcess|Dry'):
+                    bmp = icons.dry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('AddProcess|Medium'):
+                    bmp = icons.medium.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('AddProcess|Incubator'):
+                    bmp = icons.incubator.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                    
+                elif stump.startswith('DataAcquis|HCS'):
+                    bmp = icons.staticimage.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('DataAcquis|FCS'):
+                    bmp = icons.fcs.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                elif stump.startswith('DataAcquis|TLM'):
+                    bmp = icons.tlm.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+    
                 dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
                               y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)
                 
@@ -307,7 +307,7 @@ class TimelinePanel(wx.Panel):
                 bench = wx.GetApp().get_bench()
             except: return
             bench.set_timepoint(self.hover_timepoint)
-            bench.show_selected_instances(self.hover_timepoint)
+            bench.update_well_selections()
 
 
 class LineagePanel(wx.Panel):
@@ -484,50 +484,66 @@ class LineagePanel(wx.Panel):
             # LEAF NODES
             elif i == 0:
                 for node in nodes_by_tp[t]:
+                    empty_path = False # whether this path follows a harvesting
+                    if len(node.get_tags()) > 0:
+                        # Event occurred
+                        dc.SetBrush(wx.Brush('YELLOW'))
+                    else:
+                        # No event
+                        dc.SetBrush(wx.Brush('WHITE'))
+                        if 'CellTransfer|Harvest' in [exp.get_tag_stump(ptag, 2)
+                                                      for pnode in timeline.reverse_iter_tree(node) if pnode
+                                                      for ptag in pnode.tags]:
+                            empty_path = True
+
                     if hover(self.cursor_pos, (X,Y), self.NODE_R):
-                        dc.SetBrush(wx.Brush('#FFFFAA'))
+                        # MouseOver
                         dc.SetPen(wx.Pen('#000000', 3))
                         self.current_node = node
                     else:
-                        if len(node.get_tags()) > 0:
-                            # Event occurred
-                            dc.SetBrush(wx.Brush('#333333'))
-                        else:
-                            # No event
-                            dc.SetBrush(wx.Brush('#FAF9F7'))
+                        # No MouseOver
                         dc.SetPen(wx.Pen('#000000', 1))
                     
-                    dc.DrawCircle(X, Y, NODE_R)
-                    dc.DrawText(str(node.get_timepoint()), X, Y+NODE_R)
+                    if not empty_path:
+                        dc.DrawCircle(X, Y, NODE_R)
+##                        dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                     nodeY[node.id] = Y
                     Y += y_gap
                     
             # INTERNAL NODES
             else:
                 for node in nodes_by_tp[t]:
+                    empty_path = False # whether this path follows a harvesting
                     ys = []
                     for child in node.get_children():
                         ys.append(nodeY[child.id])
                     Y = (min(ys) + max(ys)) / 2
 
+                    if len(node.get_tags()) > 0:
+                        # Event occurred
+                        dc.SetBrush(wx.Brush('YELLOW'))
+                    else:
+                        # No event
+                        dc.SetBrush(wx.Brush('WHITE'))
+                        if 'CellTransfer|Harvest' in [exp.get_tag_stump(ptag, 2)
+                                                      for pnode in timeline.reverse_iter_tree(node) if pnode
+                                                      for ptag in pnode.tags]:
+                            empty_path = True
+
                     if hover(self.cursor_pos, (X,Y), self.NODE_R):
-                        dc.SetBrush(wx.Brush('#FFFFAA'))
+                        # MouseOver
                         dc.SetPen(wx.Pen(wx.BLACK, 3))
                         self.current_node = node
                     else:
-                        if len(node.get_tags()) > 0:
-                            # Event occurred
-                            dc.SetBrush(wx.Brush('#333333'))
-                        else:
-                            # No event
-                            dc.SetBrush(wx.Brush('#FFFFFF'))
+                        # No MouseOver
                         dc.SetPen(wx.Pen(wx.BLACK, 1))
                     
                     if t == -1:
                         dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
                     else:
-                        dc.DrawCircle(X, Y, NODE_R)
-                    dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
+                        if not empty_path:
+                            dc.DrawCircle(X, Y, NODE_R)
+##                            dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                         
                     # DRAW LINES CONNECTING THIS NODE TO ITS CHILDREN
                     dc.SetBrush(wx.Brush('#FAF9F7'))
@@ -546,15 +562,21 @@ class LineagePanel(wx.Panel):
                                             X + FLASK_GAP - NODE_R ,nodeY[child.id])
                         else:
                             if harvest_tag:
+                                # TODO: improve performance by caching reseed 
+                                #       events from the previous timepoint
                                 for nn in nodes_by_tp[timepoints[i-1]]:
                                     for tag in nn.get_tags():
-                                        if (tag.startswith('CellTransfer|Reseed') and 
-                                            meta.get_field('CellTransfer|Reseed|HarvestInstance|'+exp.get_tag_instance(tag)) == exp.get_tag_instance(harvest_tag)):
+                                        if (tag.startswith('CellTransfer|Seed') and 
+                                            meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag)) == exp.get_tag_instance(harvest_tag)):
+                                            dc.SetPen(wx.Pen('BLACK', 1, wx.SHORT_DASH))
                                             dc.DrawLine(X + NODE_R, Y, 
                                                         X + x_gap - NODE_R ,nodeY[nn.id])
                             else:
-                                dc.DrawLine(X + NODE_R, Y, 
-                                            X + x_gap - NODE_R ,nodeY[child.id])
+                                if not empty_path:
+                                    dc.SetPen(wx.Pen(wx.BLACK, 1))
+                                    dc.DrawLine(X + NODE_R, Y, 
+                                                X + x_gap - NODE_R,
+                                                nodeY[child.id])
                     nodeY[node.id] = Y
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
@@ -592,17 +614,29 @@ class LineagePanel(wx.Panel):
                     for url in urls:
                         os.startfile(url)
         
-        message = ''
-        for well in sorted(self.current_node.get_well_ids()):
-            message += ', '.join(well)
-            message += '\n'
-        msg = wx.MessageDialog(self, message, caption='Info', style=wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP, pos=(200,200))
-        msg.ShowModal()
-        msg.Destroy()
-
-
-        #print self.current_node.get_tags()                                     
-
+##        message = ''
+##        for well in sorted(self.current_node.get_well_ids()):
+##            message += ', '.join(well)
+##            message += '\n'
+##        msg = wx.MessageDialog(self, message, caption='Info', style=wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP, pos=(200,200))
+##        msg.ShowModal()
+##        msg.Destroy()
+        
+        
+        try:
+            bench = wx.GetApp().get_bench()
+        except: 
+            return
+        
+        # --- Update the Bench view ---
+        bench.set_timepoint(self.current_node.get_timepoint())
+        bench.taglistctrl.set_selected_protocols(
+            [exp.get_tag_protocol(tag) for tag in self.current_node.get_tags()])
+        bench.group_checklist.SetCheckedStrings(
+            [exp.PlateDesign.get_plate_group(well[0]) 
+             for well in self.current_node.get_well_ids()])
+        bench.update_plate_groups()
+        bench.update_well_selections()
 
         
 if __name__ == "__main__":
@@ -618,8 +652,8 @@ if __name__ == "__main__":
     f.Show()
     #f.generate_random_data()
 
-    exp.PlateDesign.add_plate('test', PLATE_TYPE)
-    allwells = exp.PlateDesign.get_well_ids(exp.PlateDesign.get_plate_format('test'))
+    exp.PlateDesign.add_plate('Plate', '1', PLATE_TYPE, 'groupA')
+    allwells = exp.PlateDesign.get_well_ids(exp.PlateDesign.get_plate_format('Plate1'))
     f.lineage_panel.on_timeline_updated('')
     ## GENERATE RANDOM EVENTS ON RANDOM WELLS
     #for t in [0] + list(np.random.random_integers(1, MAX_TIMEPOINT, N_TIMEPOINTS)):

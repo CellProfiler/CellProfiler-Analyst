@@ -2,9 +2,12 @@ from singleton import Singleton
 from utils import *
 import re
 from timeline import Timeline
+
 #
 # TODO: Updating PlateDesign could be done entirely within 
 #       set_field and remove_field.
+#
+# TODO: Add backwards compatiblize and file versioning.
 #
 
 def format_time_string(timepoint):
@@ -22,6 +25,9 @@ def get_matchstring_for_subtag(pos, subtag):
 def get_tag_stump(tag, n_subtags=3):
     return '|'.join(tag.split('|')[:n_subtags])
 
+def get_tag_attribute(tag):
+    return tag.split('|')[2]
+
 def get_tag_instance(tag):
     return tag.split('|')[3]
 
@@ -33,6 +39,13 @@ def get_tag_well(tag):
     DataAcquis|<type>|Images|<inst>|<timepoint>|<well> = [channel_urls, ...]
     '''
     return int(tag.split('|')[5])
+
+def get_tag_protocol(tag):
+    '''returns the tag prefix and instance that define a unique protocol
+    eg: get_tag_protocol("CT|Seed|Density|1") ==> "CT|Seed|1"
+    '''
+    return get_tag_stump(tag,2) + '|' + tag.split('|')[3]
+
 
 class ExperimentSettings(Singleton):
     
@@ -49,6 +62,7 @@ class ExperimentSettings(Singleton):
             self.update_timeline(tag)
         if notify_subscribers:
             self.notify_subscribers(tag)
+        print 'SET FIELD: %s = %s'%(tag, value)
         
     def get_field(self, tag, default=None):
         return self.global_settings.get(tag, default)
@@ -63,26 +77,40 @@ class ExperimentSettings(Singleton):
 
         if notify_subscribers:
             self.notify_subscribers(tag)
+        print 'DEL FIELD: %s'%(tag)
     
-    def get_temporal_tag_list(self):
+    def get_action_tags(self):
         '''returns all existing TEMPORAL tags as list'''
-        tags = set([tag for tag in self.global_settings 
-                   if tag.startswith('CellTransfer') or tag.startswith('Perturbation') or tag.startswith('Labeling') or tag.startswith('AddProcess') or tag.startswith('DataAcquis')])
-        return list(tags)
+        return [tag for tag in self.global_settings 
+                if tag.split('|')[0] in ('CellTransfer', 'Perturbation', 
+                                    'Labeling', 'AddProcess', 'DataAcquis')]
 
     def get_field_instances(self, tag_prefix):
         '''returns a list of unique instance ids for each tag beginning with 
         tag_prefix'''
-        ids = set([tag.split('|')[3] for tag in self.global_settings
+        ids = set([get_tag_instance(tag) for tag in self.global_settings
                    if tag.startswith(tag_prefix)])
         return list(ids)
     
     def get_attribute_list(self, tag_prefix):
         '''returns a list of attributes name for each tag beginning with 
         tag_prefix'''
-        ids = set([tag.split('|')[2] for tag in self.global_settings
+        ids = set([get_tag_attribute(tag) for tag in self.global_settings
                    if tag.startswith(tag_prefix)])
         return list(ids)
+    
+    def get_attribute_dict(self, protocol):
+        '''returns a dict mapping attribute names to their values for a given
+        protocol.
+        eg: get_attribute_dict('CellTransfer|Seed|1') -->
+               {'SeedingDensity': 12, 'MediumUsed': 'agar', 
+                'MediumAddatives': 'None', 'Trypsinization': True}
+        '''
+        d = {}
+        for tag in self.get_matching_tags('|*|'.join(protocol.rsplit('|',1))):
+            if (get_tag_attribute(tag) not in ('Wells', 'EventTimepoint', 'Images', 'OriginWells')):
+                d[get_tag_attribute(tag)] = self.global_settings[tag]
+        return d
     
     def get_eventtype_list(self, tag_prefix):
         '''returns a list of attributes name for each tag beginning with 
@@ -107,7 +135,40 @@ class ExperimentSettings(Singleton):
                 (instance is None or get_tag_instance(tag) == instance)):
                 tags += [tag]
         return tags
-            
+    
+    def get_matching_tags(self, matchstring):
+        '''returns a list of all tags matching matchstring
+        matchstring -- a string that matches the tags you want
+        eg: CellTransfer|*
+        '''
+        tags = []
+        for tag in self.global_settings:
+            match = True
+            for m, subtag in map(None, matchstring.split('|'), tag.split('|')):
+                if m != subtag and m not in ('*', None):
+                    match = False
+                    break
+            if match:
+                tags += [tag]
+
+        return tags
+    
+    def get_protocol_instances(self, prefix):
+        '''returns a list of protocol instance names for tags 
+        matching the given prefix.
+        '''
+        return list(set([get_tag_instance(tag) 
+                         for tag in self.get_field_tags(prefix)]))
+    
+    def get_new_protocol_id(self, prefix):
+        '''returns an id string that hasn't been used for the given tag prefix
+        prefix -- eg: CellTransfer|Seed
+        '''
+        instances = self.get_protocol_instances(prefix)
+        for i in xrange(100000):
+            if str(i) not in instances:
+                return str(i)
+                        
     def clear(self):
         self.global_settings = {}
         #
@@ -134,46 +195,44 @@ class ExperimentSettings(Singleton):
 
     def save_to_file(self, file):
         f = open(file, 'w')
-        for field, value in self.global_settings.items():
+        for field, value in sorted(self.global_settings.items()):
             f.write('%s = %s\n'%(field, repr(value)))
         f.close()
 
     def load_from_file(self, file):
+        # Populate the tag structure
         self.clear()
-        PlateDesign.clear()
-        tags = []
         f = open(file, 'r')
         for line in f:
             tag, value = line.split('=')
             tag = tag.strip()
-            tags += [tag]
-            if tag.startswith('ExptVessel|Plate|Design'):
-                plate_id = 'plate%s'%(get_tag_instance(tag))
-                PlateDesign.add_plate(plate_id, WELL_NAMES[eval(value)])
-            elif tag.startswith('ExptVessel|Flask|Size'):
-                # add 1x1 plate for each flask instance
-                plate_id = 'flask%s'%(get_tag_instance(tag))
-                PlateDesign.add_plate(plate_id, FLASK)
-            elif tag.startswith('ExptVessel|Dish|Size'):
-                # add 1x1 plate for each flask instance
-                plate_id = 'dish%s'%(get_tag_instance(tag))
-                PlateDesign.add_plate(plate_id, FLASK)
-            elif tag.startswith('ExptVessel|Coverslip|Size'):
-                # add 1x1 plate for each flask instance
-                plate_id = 'coverslip%s'%(get_tag_instance(tag))
-                PlateDesign.add_plate(plate_id, FLASK)
             self.set_field(tag, eval(value), notify_subscribers=False)
-        for tag in tags:
-            self.notify_subscribers(tag)            
         f.close()
+        
+        # Populate PlateDesign
+        PlateDesign.clear()
+        for vessel_type in ('Plate', 'Flask', 'Dish', 'Coverslip'):
+            prefix = 'ExptVessel|%s'%(vessel_type)
+            for inst in self.get_field_instances(prefix):
+                d = self.get_attribute_dict(prefix+'|'+inst)
+                shape = d.get('Design', None)
+                if shape is None:
+                    shape = (1,1)
+                group = d.get('GroupName', None)
+                PlateDesign.add_plate(vessel_type, inst, shape, group)
+            
+        # Update everything
+        for tag in self.global_settings:
+            self.notify_subscribers(tag)            
+
         # Update the bench time-slider
+        # TODO: this is crappy
         try:
             import wx
             bench = wx.GetApp().get_bench()
             bench.set_time_interval(0, self.get_timeline().get_max_timepoint())
         except:return
-
-        
+                
     def add_subscriber(self, callback, match_string):
         '''callback -- the function to be called
         match_string -- a regular expression string matching the tags you want 
@@ -242,42 +301,86 @@ WELL_NAMES_ORDERED = [
                       '1536-Well-(32x48)',
                       '5600-Well-(40x140)']
 
+
+class Vessel(object):
+    def __init__(self, vessel_type, instance, shape, group, **kwargs):
+        self.instance    = instance
+        self.group       = group
+        self.vessel_type = vessel_type
+        if type(shape) == tuple:
+            self.shape = shape
+        else:
+            self.shape = WELL_NAMES[shape]
+##        meta.set_field('ExptVessel|%(vessel_type)|Design|%(instance)'%(locals), shape)
+##        meta.set_field('ExptVessel|%(vessel_type)|GroupName|%(instance)'%(locals), group)
+        for k,v in kwargs:
+            self.set_attribute(k, v)
+        
+##    def __del__(self):
+##        for tag in meta.get_matching_tags('ExptVessel|%(vessel_type)|*|%(instance)'%(self.__dict__)):
+##            meta.remove_field(tag)
+            
+    def set_attribute(self, att, value):
+        self.__dict__[att] = value
+##        meta.set_field('ExptVessel|%s|*|%s'%(att, self.instance), value)
+        
+    @property
+    def vessel_id(self):
+        return '%(vessel_type)s%(instance)s'%(self.__dict__)    
+
+
 class PlateDesign:
     '''Maps plate_ids to plate formats.
     Provides methods for getting well information for different plate formats.
     '''
+    
     plates = {}
+    
     @classmethod
     def clear(self):
         self.plates = {}
         
     @classmethod
-    def add_plate(self, plate_id, plate_format):
+    def add_plate(self, vessel_type, instance, shape, group, **kwargs):
         '''Add a new plate with the specified format
         '''
-        self.plates[plate_id] = plate_format
+        v = Vessel(vessel_type, instance, shape, group, **kwargs)
+        self.plates[v.vessel_id] = v
         
     @classmethod
-    def set_plate_format(self, plate_id, plate_format):
-        self.plates[plate_id] = plate_format        
+    def set_plate_format(self, plate_id, shape):
+        self.plates[plate_id].shape = shape
         
     @classmethod
     def get_plate_ids(self):
-        
         return self.plates.keys()
+    
+    @classmethod
+    def get_plate_id(self, vessel_type, instance):
+        for vessel in self.plates.values():
+            if vessel.instance == instance and vessel.vessel_type == vessel_type:
+                return vessel.vessel_id
+            
+    @classmethod
+    def get_plate_group(self, vessel_id):
+        return self.plates[vessel_id].group
+    
+    @classmethod
+    def get_vessel(self, vessel_id):
+        return self.plates[vessel_id]
 
     @classmethod
     def get_plate_format(self, plate_id):
         '''returns the plate_format for a given plate_id
         '''
-        return self.plates[plate_id]
+        return self.plates[plate_id].shape
     
     @classmethod
     def get_all_platewell_ids(self):
         '''returns a list of every platewell_id across all plates
         '''
         return [(plate_id, well_id) 
-                for plate_id in self.plates 
+                for plate_id in self.plates
                 for well_id in self.get_well_ids(self.get_plate_format(plate_id))
                 ]
 

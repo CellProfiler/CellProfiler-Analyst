@@ -19,11 +19,10 @@ class VesselPanel(wx.Panel):
         '''
         wx.Panel.__init__(self, parent, **kwargs)
         
-        self.plate_id = plate_id
+        self.vessel = PlateDesign.get_vessel(plate_id)
         self.well_disp = well_disp
         self.selection = set()           # list of (row,col) tuples 
         self.marked = set()
-        self.affected = set()
         self.selection_enabled = True
         self.repaint = False
         self.well_selection_handlers = []  # funcs to call when a well is selected        
@@ -32,12 +31,11 @@ class VesselPanel(wx.Panel):
         self.GAP = 0.5
         self.WELL_R = 1.0
         
-        self.shape = PlateDesign.get_plate_format(self.plate_id)
-        self.row_labels = PlateDesign.get_row_labels(self.shape)
-        self.col_labels = PlateDesign.get_col_labels(self.shape)
+        self.row_labels = PlateDesign.get_row_labels(self.vessel.shape)
+        self.col_labels = PlateDesign.get_col_labels(self.vessel.shape)
         
         # minimum 5 sq. pixels per cell
-        long_edge = max(self.shape)
+        long_edge = max(self.vessel.shape)
         self.SetMinSize(((long_edge + 1) * 8.0, 
                          (long_edge + 1) * 8.0))
 
@@ -45,9 +43,9 @@ class VesselPanel(wx.Panel):
         self.Bind(wx.EVT_SIZE, self._on_size)
         self.Bind(wx.EVT_IDLE, self._on_idle)
         self.Bind(wx.EVT_LEFT_DOWN, self._on_click)
-        
+                
     def get_plate_id(self):
-        return self.plate_id
+        return self.vessel.vessel_id
 
     def set_well_display(self, well_disp):
         '''well_disp in PlatMapPanel.ROUNDED,
@@ -57,8 +55,8 @@ class VesselPanel(wx.Panel):
         self.well_disp = well_disp
         self.Refresh()
 
-    def enable_selection(self):
-        self.selection_enabled = True
+    def enable_selection(self, enabled=True):
+        self.selection_enabled = enabled
         self.Refresh()
         
     def disable_selection(self):
@@ -69,7 +67,7 @@ class VesselPanel(wx.Panel):
         '''selects the wells corresponding to the specified wellids or 
         platewell_ids
         '''
-        self.selection = set([PlateDesign.get_pos_for_wellid(self.shape, wellid)
+        self.selection = set([PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid)
                               for wellid in wellids])
         self.Refresh()
         
@@ -77,15 +75,16 @@ class VesselPanel(wx.Panel):
         '''selects the wells corresponding to the specified wellids or 
         platewell_ids
         '''
-        self.marked = set([PlateDesign.get_pos_for_wellid(self.shape, wellid)
-                           for wellid in wellids])
-        self.Refresh()
-        
-    def set_affected_well_ids(self, wellids):
-        self.affected = set([PlateDesign.get_pos_for_wellid(self.shape, wellid)
+        self.marked = set([PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid)
                            for wellid in wellids])
         self.Refresh()
 
+    def select_well_id(self, wellid):
+        self.select_well_at_pos(PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid))
+        
+    def deselect_well_id(self, wellid):
+        self.deselect_well_at_pos(PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid))
+        
     def select_well_at_pos(self, (wellx, welly)):
         self.selection.add((wellx, welly))
         self.Refresh()
@@ -111,23 +110,23 @@ class VesselPanel(wx.Panel):
         x0 = y0 = self.PAD + cell_w
         row = (py - y0) / cell_w
         col = (px - x0) / cell_w
-        if (row > self.shape[0] or row < 0 or
-            col > self.shape[1] or col < 0):
+        if (row > self.vessel.shape[0] or row < 0 or
+            col > self.vessel.shape[1] or col < 0):
             return None
         return (int(row), int(col))
 
     def get_well_id_at_xy(self, px, py):
         '''returns the well_id at the pixel coord px,py
         '''
-        return PlateDesign.get_well_id_at_pos(self.shape, self.get_well_pos_at_xy(px,py))
+        return PlateDesign.get_well_id_at_pos(self.vessel.shape, self.get_well_pos_at_xy(px,py))
 
     def get_platewell_id_at_xy(self, px, py):
         '''returns the platewell_id at the pixel coord px,py
         '''
-        return (self.plate_id, self.get_well_id_at_xy(px, py))
+        return (self.vessel.vessel_id, self.get_well_id_at_xy(px, py))
     
     def get_selected_well_ids(self):
-        return [PlateDesign.get_well_id_at_pos(self.shape, pos) 
+        return [PlateDesign.get_well_id_at_pos(self.vessel.shape, pos) 
                 for pos in self.selection]
     
     def _on_paint(self, evt=None):
@@ -137,7 +136,7 @@ class VesselPanel(wx.Panel):
 
         PAD = self.PAD
         GAP = self.GAP
-        ROWS, COLS = self.shape
+        ROWS, COLS = self.vessel.shape
 
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
         # calculate the well radius
@@ -170,23 +169,24 @@ class VesselPanel(wx.Panel):
         for x in range(COLS + 1):
             for y in range(ROWS + 1):
                 px = PAD + GAP/2. + (x * R*2)
-                py = PAD + GAP/2. + (y * R*2)
-                
-                
+                py = PAD + GAP/2. + (y * R*2) 
                 if (y-1, x-1) in self.selection:
                     if self.selection_enabled:
-                        dc.SetPen(wx.Pen("BLACK", 4))
+                        dc.SetPen(wx.Pen("BLACK", 2))
+                        dc.SetBrush(wx.Brush("YELLOW"))
                     else:
-                        dc.SetPen(wx.Pen("GRAY", 4))
+                        dc.SetPen(wx.Pen("GRAY", 2))
+                        dc.SetBrush(wx.Brush("LIGHT GRAY"))
                 elif (y-1, x-1) in self.marked:
                     if self.selection_enabled:
                         dc.SetPen(wx.Pen("BLACK", 2, style=wx.SHORT_DASH))
+                        dc.SetBrush(wx.Brush("#FFFFE0"))
                     else:
                         dc.SetPen(wx.Pen("GRAY", 2, style=wx.SHORT_DASH))
-                
-                
+                        dc.SetBrush(wx.Brush("LIGHT GRAY"))
                 else:
-                    dc.SetPen(wx.Pen((210,210,210),1))
+                    dc.SetPen(wx.Pen((210,210,210), 1))
+                    dc.SetBrush(wx.Brush("WHITE"))
 
                 if y==0 and x!=0:
                     dc.DrawText(self.col_labels[x-1], px, py)
@@ -230,46 +230,88 @@ class VesselPanel(wx.Panel):
         for handler in self.well_selection_handlers:
             handler(self.get_platewell_id_at_xy(evt.X, evt.Y), selected)   
             
+            
 class VesselScroller(wx.ScrolledWindow):
+    '''Scrolled window that displays a set of vessel panels with text labels
+    '''
     def __init__(self, parent, id=-1, **kwargs):
         wx.ScrolledWindow.__init__(self, parent, id, **kwargs)
         self.SetSizer(wx.BoxSizer(wx.HORIZONTAL))
         (w,h) = self.Sizer.GetSize()
         self.SetScrollbars(20,20,w/20,h/20,0,0)
-        self.plates = []
+        self.vessels = {}
+        # TODO: Update self when vessels are removed from the experiment.
 
-    def add_vessel_panel(self, panel, plate_id):
+    def add_vessel_panel(self, panel, vessel_id):
         if len(self.Sizer.GetChildren()) > 0:
             self.Sizer.AddSpacer((10,-1))
         sz = wx.BoxSizer(wx.VERTICAL)
-        sz.Add(wx.StaticText(self, -1, plate_id), 0, wx.EXPAND|wx.TOP|wx.LEFT, 10)
+        sz.Add(wx.StaticText(self, -1, vessel_id), 0, wx.EXPAND|wx.TOP|wx.LEFT, 10)
         sz.Add(panel, 1, wx.EXPAND|wx.ALIGN_CENTER)
         self.Sizer.Add(sz, 1, wx.EXPAND)
-        self.plates += [panel]
+        self.vessels[vessel_id] = panel
 
     def get_vessels(self):
-        return self.plates
+        return self.vessels.values()
+    
+    def get_vessel(self, vessel_id):
+        '''returns the vessel matching the given vessel_id or None
+        vessel_id -- the first part of a platewell_id tuple
+        '''
+        return self.vessels[vessel_id]
 
-    #def get_selected_well_ids(self):
-        #wells = []
-        #for plate in self.plates:
-            #wells += plate.get_selected_well_keys()
-        #return wells
+    def get_selected_well_ids(self):
+        return [v.get_selected_well_ids() for v in self.get_vessels()]
 
     def clear(self):
-        self.plates = []
+        self.vessels = {}
         self.Sizer.Clear(deleteWindows=True)
+        
+        
+class VesselSelectionPopup(wx.Dialog):
+    '''Dialog that presents the user with a vesselscroller from which to choose 
+    vessels.
+    Used for reseeding.
+    '''
+    def __init__(self, parent, **kwargs):
+        wx.Dialog.__init__(self, parent, style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER, **kwargs)
+        label = wx.StaticText(self, -1, 'Specify the destination vessel(s) where cells were transfered.')
+        font = wx.Font(18, wx.SWISS, wx.NORMAL, wx.NORMAL)
+        label.SetFont(font)
+        self.vpanel = VesselScroller(self)
+        for plate_id in PlateDesign.get_plate_ids():
+            self.vpanel.add_vessel_panel(
+                VesselPanel(self.vpanel, plate_id),
+                plate_id)
+        self.done = wx.Button(self, wx.ID_OK, 'Done')
+        self.cancel = wx.Button(self, wx.ID_CANCEL, 'Cancel')
+
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        button_sizer.AddStretchSpacer()
+        button_sizer.Add(self.done)
+        button_sizer.AddSpacer((10,-1))
+        button_sizer.Add(self.cancel)
+        
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Sizer.Add(label, 0, wx.ALL, 20)
+        self.Sizer.Add(self.vpanel, 1, wx.EXPAND|wx.ALL, 10)
+        self.Sizer.Add(button_sizer, 0, wx.EXPAND|wx.RIGHT|wx.BOTTOM, 10)
+                
+    def get_selected_platewell_ids(self):
+        return self.vpanel.get_selected_well_ids()
+            
+        
 
         
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-    
+        
     f = wx.Frame(None, size=(900.,800.))
     
-    from experimentsettings import P1536, P96
+    from experimentsettings import P12, P96
     ps = VesselScroller(f)
     
-    PlateDesign.add_plate('1', P1536)
+    PlateDesign.add_plate('1', P12)
     vp = VesselPanel(ps, '1')
     ps.add_vessel_panel(vp, '1')
     
@@ -277,7 +319,9 @@ if __name__ == "__main__":
     vp = VesselPanel(ps, '2')
 
     ps.add_vessel_panel(vp, '2')
-    f.Show()
+##    f.Show()
+
+    VesselSelectionPopup(None, size=(600,400)).ShowModal()
 
     app.MainLoop()
 

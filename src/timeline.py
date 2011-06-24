@@ -217,6 +217,14 @@ class Event(object):
         return '%s event'%(self.welltag)
 
 
+def reverse_iter_tree(node):
+    '''a generator that returns parents of the given node.
+    '''
+    while node is not None:
+        yield node.parent
+        node = node.parent
+    
+    
 class LineageNode(object):
     '''A lineage node represents a unique state in a subset of wells at a given
     timepoint. For example: the set of wells that were seeded at density X at t0,

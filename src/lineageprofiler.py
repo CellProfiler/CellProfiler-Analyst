@@ -77,5 +77,7 @@ def on_load_settings(evt):
 
 if __name__ == '__main__':
     app = LineageProfiler(redirect=False)
-    #ExperimentSettings.getInstance().load_from_file('/Users/afraser/Desktop/experiment_settings.txt')
+    # Load a settings file if passed in args
+    if len(sys.argv) > 1:
+        ExperimentSettings.getInstance().load_from_file(sys.argv[1])
     app.MainLoop()
