@@ -21,11 +21,11 @@ class VesselPanel(wx.Panel):
         
         self.vessel = PlateDesign.get_vessel(plate_id)
         self.well_disp = well_disp
-        self.selection = set()           # list of (row,col) tuples 
+        self.selection = set()           # list of (row,col) tuples
         self.marked = set()
         self.selection_enabled = True
         self.repaint = False
-        self.well_selection_handlers = []  # funcs to call when a well is selected        
+        self.well_selection_handlers = []  # funcs to call when a well is selected
         # drawing parameters
         self.PAD = 10.0
         self.GAP = 0.5
@@ -164,29 +164,23 @@ class VesselPanel(wx.Panel):
         # for each well time independently find out whether it had been affect by any event if so
         # color it dc.SetBrush(wx.Brush((255,255,204)))
         
-        
-            
         for x in range(COLS + 1):
             for y in range(ROWS + 1):
                 px = PAD + GAP/2. + (x * R*2)
                 py = PAD + GAP/2. + (y * R*2) 
-                if (y-1, x-1) in self.selection:
-                    if self.selection_enabled:
+                if self.selection_enabled:
+                    if (y-1, x-1) in self.selection:
                         dc.SetPen(wx.Pen("BLACK", 2))
                         dc.SetBrush(wx.Brush("YELLOW"))
-                    else:
-                        dc.SetPen(wx.Pen("GRAY", 2))
-                        dc.SetBrush(wx.Brush("LIGHT GRAY"))
-                elif (y-1, x-1) in self.marked:
-                    if self.selection_enabled:
+                    elif (y-1, x-1) in self.marked:
                         dc.SetPen(wx.Pen("BLACK", 2, style=wx.SHORT_DASH))
                         dc.SetBrush(wx.Brush("#FFFFE0"))
                     else:
-                        dc.SetPen(wx.Pen("GRAY", 2, style=wx.SHORT_DASH))
-                        dc.SetBrush(wx.Brush("LIGHT GRAY"))
+                        dc.SetPen(wx.Pen((210,210,210), 1))
+                        dc.SetBrush(wx.Brush("WHITE"))
                 else:
-                    dc.SetPen(wx.Pen((210,210,210), 1))
-                    dc.SetBrush(wx.Brush("WHITE"))
+                    dc.SetPen(wx.Pen("GRAY", 0))
+                    dc.SetBrush(wx.Brush("LIGHT GRAY"))
 
                 if y==0 and x!=0:
                     dc.DrawText(self.col_labels[x-1], px, py)
