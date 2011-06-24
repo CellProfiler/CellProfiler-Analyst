@@ -1313,14 +1313,12 @@ class PlateConfigPanel(wx.Panel):
         
         # save the input from the max instances         
         for plate_id in range(max_id, max_id+plate_count):
-            
-            id = 'plate%s'%(plate_id)
             plate_design = self.platedesign.GetClientData(self.platedesign.GetSelection())
-    
+            pid ='Plate'+str(plate_id)
             if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate(id, plate_design)
+                PlateDesign.add_plate('Plate', str(plate_id), plate_design, self.groupname.GetValue())
             else:
-                PlateDesign.set_plate_format(('Plate', plate_id), plate_design)
+                PlateDesign.set_plate_format(pid, plate_design)
         
             meta.set_field('ExptVessel|Plate|GroupNo|%s'%str(plate_id),    self.plgrp_id, notify_subscribers =False)
             meta.set_field('ExptVessel|Plate|Number|%s'%str(plate_id),     self.platenum.GetStringSelection(), notify_subscribers =False)
@@ -1550,14 +1548,12 @@ class FlaskConfigPanel(wx.Panel):
         
         # save the input from the max instances         
         for flask_id in range(max_id, max_id+flask_count):
-            
-            id = 'flask%s'%(flask_id)
+            id = 'Flask%s'%(flask_id)
             plate_design = (1,1)  # since flask is alwasys a sigle entity resembling to 1x1 well plate format   
-    
             if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate(id, plate_design)
+                PlateDesign.add_plate('Flask', str(flask_id), plate_design, self.groupname.GetValue())
             else:
-                PlateDesign.set_plate_format(('Flask', flask_id), plate_design)
+                PlateDesign.set_plate_format(id, plate_design)
         
             meta.set_field('ExptVessel|Flask|GroupNo|%s'%str(flask_id),    self.plgrp_id, notify_subscribers =False)
             meta.set_field('ExptVessel|Flask|Number|%s'%str(flask_id),     self.flasknum.GetStringSelection(), notify_subscribers =False)
@@ -1779,14 +1775,12 @@ class DishConfigPanel(wx.Panel):
         
         # save the input from the max instances         
         for dish_id in range(max_id, max_id+dish_count):
-            
-            id = 'dish%s'%(dish_id)
             plate_design = (1,1)  # since dish is alwasys a sigle entity resembling to 1x1 well plate format   
-    
+            id = 'Dish%s'%(dish_id)
             if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate(id, plate_design)
+                PlateDesign.add_plate('Dish', str(dish_id), plate_design, self.groupname.GetValue())
             else:
-                PlateDesign.set_plate_format(('Dish', dish_id), plate_design)
+                PlateDesign.set_plate_format(id, plate_design)
         
             meta.set_field('ExptVessel|Dish|GroupNo|%s'%str(dish_id),    self.plgrp_id, notify_subscribers =False)
             meta.set_field('ExptVessel|Dish|Number|%s'%str(dish_id),     self.dishnum.GetStringSelection(), notify_subscribers =False)
@@ -2008,14 +2002,12 @@ class CoverslipConfigPanel(wx.Panel):
         
         # save the input from the max instances         
         for coverslip_id in range(max_id, max_id+coverslip_count):
-            
-            id = 'coverslip%s'%(coverslip_id)
+            id = 'Coverslip%s'%(coverslip_id)
             plate_design = (1,1)  # since coverslip is alwasys a sigle entity resembling to 1x1 well plate format   
-    
             if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate(id, plate_design)
+                PlateDesign.add_plate('Coverslip', str(coverslip_id), plate_design, self.groupname.GetValue())
             else:
-                PlateDesign.set_plate_format(('Coverslip', coverslip_id), plate_design)
+                PlateDesign.set_plate_format(id, plate_design)
         
             meta.set_field('ExptVessel|Coverslip|GroupNo|%s'%str(coverslip_id),    self.plgrp_id, notify_subscribers =False)
             meta.set_field('ExptVessel|Coverslip|Number|%s'%str(coverslip_id),     self.coverslipnum.GetStringSelection(), notify_subscribers =False)
