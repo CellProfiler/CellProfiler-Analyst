@@ -42,11 +42,16 @@ class QueryMaker(wx.Frame):
         db = dbconnect.DBConnect.getInstance()
         q = self.query_textctrl.Value
         try:
+            res = db.execute(q)
+            if res is not None:
+                logging.info('Query successful')
+                return
             res = np.array(db.execute(q))
             colnames = db.GetResultColumnNames()
             grid = tableviewer.TableViewer(self, title='query results')
             grid.table_from_array(res, colnames)
             grid.Show()
+            logging.info('Query successful')
         except Exception, e:
             logging.error('Query failed:')
             logging.error(e)
