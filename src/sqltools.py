@@ -15,6 +15,10 @@ def well_cols():
     '''returns the welll key columns as a list of Columns'''
     return [Column(p.image_table, col) for col in well_key_columns()]
 
+def object_position_cols():
+    '''returns the object key columns as a list of Columns'''
+    return [Column(p.object_table, col) for col in (p.cell_x_loc, p.cell_y_loc)]
+
 class QueryBuilder(object):
     '''
     A class for building query strings.
