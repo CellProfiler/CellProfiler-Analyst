@@ -401,6 +401,8 @@ class ScatterPanel(FigureCanvasWxAgg):
     
     def is_per_object_data(self):
         '''return whether points in the current plot represent objects'''
+        if p.object_table is None:
+            return False
         for kl in self.key_lists:
             try:
                 if len(kl[0]) == len(object_key_columns()):
