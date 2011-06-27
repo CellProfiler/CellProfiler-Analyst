@@ -500,7 +500,8 @@ class ImageViewer(wx.Frame):
                 
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''
-        self.PopupMenu(self.popupMenu, evt.GetPosition())
+        if p.object_table:
+            self.PopupMenu(self.popupMenu, evt.GetPosition())
 
     def OnOpenImage(self, evt=None):
         # 1) Get the image key
