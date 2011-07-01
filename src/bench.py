@@ -185,14 +185,23 @@ class Bench(wx.Frame):
         # destination well(s) for each harvested well.
         if prefix == 'CellTransfer|Harvest':
             if selected:
+                #
+                # TODO:
+                #
+##                dlg = TimepointSelectionPopup(self)
+##                if dlg.ShowModal() != wx.ID_OK:
+##                    self.vesselscroller.get_vessel(platewell_id[0]).deselect_well_id(platewell_id)
+##                    return
+##                new_timepoint = dlg.get_timepoint()
                 dlg = VesselSelectionPopup(self)
                 if dlg.ShowModal() == wx.ID_OK:
                     destination_wells = dlg.get_selected_platewell_ids()
                     assert destination_wells
-                    seed_wells_tag = 'CellTransfer|Seed|Wells|%s|%s'%(
-                        meta.get_new_protocol_id('CellTransfer|Seed'),
-                        self.get_selected_timepoint())
-                    meta.set_field(seed_wells_tag, destination_wells)
+                    new_id = meta.get_new_protocol_id('CellTransfer|Seed')
+                    meta.set_field('CellTransfer|Seed|Wells|%s|%s'%
+                                   (new_id, self.get_selected_timepoint() + 1), # For now all reseeding instances are set 1 minute after harvesting
+                                   destination_wells)
+                    meta.set_field('CellTransfer|Seed|HarvestInstance|%s'%(new_id), instance)
                 else:
                     self.vesselscroller.get_vessel(platewell_id[0]).deselect_well_id(platewell_id)
                     return

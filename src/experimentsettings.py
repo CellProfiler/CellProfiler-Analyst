@@ -175,7 +175,10 @@ class ExperimentSettings(Singleton):
         # TODO:
         #
         self.timeline = Timeline('TEST_STOCK')
-
+        for matchstring, callbacks in self.subscribers.items():
+            for callback in callbacks:
+                callback(None)
+        
     def get_timeline(self):
         return self.timeline
 

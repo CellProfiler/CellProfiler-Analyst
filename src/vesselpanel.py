@@ -129,6 +129,10 @@ class VesselPanel(wx.Panel):
         return [PlateDesign.get_well_id_at_pos(self.vessel.shape, pos) 
                 for pos in self.selection]
     
+    def get_selected_platewell_ids(self):
+        return [(self.vessel.vessel_id, PlateDesign.get_well_id_at_pos(self.vessel.shape, pos)) 
+                for pos in self.selection]
+    
     def _on_paint(self, evt=None):
         dc = wx.PaintDC(self)
         dc.Clear()
@@ -254,8 +258,11 @@ class VesselScroller(wx.ScrolledWindow):
         '''
         return self.vessels[vessel_id]
 
-    def get_selected_well_ids(self):
-        return [v.get_selected_well_ids() for v in self.get_vessels()]
+    def get_selected_platewell_ids(self):
+        well_ids = []
+        for v in self.get_vessels():
+            well_ids += v.get_selected_platewell_ids()
+        return well_ids
 
     def clear(self):
         self.vessels = {}
@@ -292,7 +299,7 @@ class VesselSelectionPopup(wx.Dialog):
         self.Sizer.Add(button_sizer, 0, wx.EXPAND|wx.RIGHT|wx.BOTTOM, 10)
                 
     def get_selected_platewell_ids(self):
-        return self.vpanel.get_selected_well_ids()
+        return self.vpanel.get_selected_platewell_ids()
             
         
 

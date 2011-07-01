@@ -182,7 +182,7 @@ class TimelinePanel(wx.Panel):
     def _on_paint(self, evt=None):
         '''Handler for paint events.
         '''
-        if self.timepoints is None:
+        if not self.timepoints:
             evt.Skip()
             return
 

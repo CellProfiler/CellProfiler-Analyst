@@ -19,10 +19,12 @@ class LineageProfiler(wx.App):
         self.settings_frame.Show()
         self.settings_frame.SetMenuBar(wx.MenuBar())
         fileMenu = wx.Menu()
+        newExperimentMenuItem = fileMenu.Append(-1, 'New Experiment\tCtrl+N', help='')
         saveSettingsMenuItem = fileMenu.Append(-1, 'Save settings\tCtrl+S', help='')
         loadSettingsMenuItem = fileMenu.Append(-1, 'Load settings\tCtrl+O', help='')
-        self.settings_frame.Bind(wx.EVT_MENU, on_save_settings, saveSettingsMenuItem)
-        self.settings_frame.Bind(wx.EVT_MENU, on_load_settings, loadSettingsMenuItem) 
+        self.settings_frame.Bind(wx.EVT_MENU, self.on_new_experiment, newExperimentMenuItem)
+        self.settings_frame.Bind(wx.EVT_MENU, self.on_save_settings, saveSettingsMenuItem)
+        self.settings_frame.Bind(wx.EVT_MENU, self.on_load_settings, loadSettingsMenuItem) 
         self.settings_frame.GetMenuBar().Append(fileMenu, 'File')
         
         self.bench_frame = Bench(None, size=(600,450), pos=(0, self.settings_frame.Position[1]+410))
@@ -41,38 +43,42 @@ class LineageProfiler(wx.App):
     
     def get_settings(self):
         return self.lineage_frame
-
     
-def on_save_settings(evt):
-    # for saving the experimental file, the text file may have the following nomenclature
-    # Date(YYYY_MM_DD)_ExperimenterNumber_Experimenter Name_ first 20 words from the aim
+    def on_new_experiment(self, evt):
+        '''clears the existing Experiment settings
+        '''
+        return ExperimentSettings.getInstance().clear()
 
-    meta = ExperimentSettings.getInstance()
+    def on_save_settings(self, evt):
+        # for saving the experimental file, the text file may have the following nomenclature
+        # Date(YYYY_MM_DD)_ExperimenterNumber_Experimenter Name_ first 20 words from the aim
     
-    #-- Get Experimental Date/number ---#
-    exp_date = meta.get_field('Overview|Project|ExptDate')
-    exp_num = meta.get_field('Overview|Project|ExptNum')
-    exp_title = meta.get_field('Overview|Project|Title')
-    if None not in [exp_date, exp_num, exp_title]:
-        day, month, year = exp_date.split('/')
-        filename = '%s%s%s_%s_%s.txt'%(year, month, day , exp_num, exp_title)
-    else:
-        filename = 'new_experiment.txt'
-    
-    dlg = wx.FileDialog(None, message='Saving experimental metadata...', 
-                        defaultDir=os.getcwd(), defaultFile=filename, 
-                        wildcard='.txt', 
-                        style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
-    if dlg.ShowModal() == wx.ID_OK:
-        os.chdir(os.path.split(dlg.GetPath())[0])
-        ExperimentSettings.getInstance().save_to_file(dlg.GetPath())
-
+        meta = ExperimentSettings.getInstance()
         
-def on_load_settings(evt):
-    dlg = wx.FileDialog(None, "Select the file containing your CPAnalyst workspace...",
-                        defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
-        ExperimentSettings.getInstance().load_from_file(dlg.GetPath())
+        #-- Get Experimental Date/number ---#
+        exp_date = meta.get_field('Overview|Project|ExptDate')
+        exp_num = meta.get_field('Overview|Project|ExptNum')
+        exp_title = meta.get_field('Overview|Project|Title')
+        if None not in [exp_date, exp_num, exp_title]:
+            day, month, year = exp_date.split('/')
+            filename = '%s%s%s_%s_%s.txt'%(year, month, day , exp_num, exp_title)
+        else:
+            filename = 'new_experiment.txt'
+        
+        dlg = wx.FileDialog(None, message='Saving experimental metadata...', 
+                            defaultDir=os.getcwd(), defaultFile=filename, 
+                            wildcard='.txt', 
+                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+        if dlg.ShowModal() == wx.ID_OK:
+            os.chdir(os.path.split(dlg.GetPath())[0])
+            ExperimentSettings.getInstance().save_to_file(dlg.GetPath())
+    
+            
+    def on_load_settings(self, evt):
+        dlg = wx.FileDialog(None, "Select the file containing your CPAnalyst workspace...",
+                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            ExperimentSettings.getInstance().load_from_file(dlg.GetPath())
 
 
 if __name__ == '__main__':
