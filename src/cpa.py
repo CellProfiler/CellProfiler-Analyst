@@ -1,21 +1,21 @@
 from __future__ import with_statement
 
-# This must come almost first for py2app/py2exe
-__version__ = ''
-try:
-    import cpa_version
-    __version__ = 'r'+cpa_version.VERSION
-    svn_version = int(cpa_version.VERSION)
-except: 
-    # this can be updated periodically just to ensure there's a reasonable value here.
-    svn_version = 10000
-
-
 import sys
 import os
 import logging
-
+import subprocess
+import re
 from properties import Properties
+
+# This must come almost first for py2app/py2exe
+version, error = subprocess.Popen(["svnversion","-n"], 
+                                  stdout=subprocess.PIPE).communicate()
+if error:
+    print "Failed to find svn version."
+    __version__ = -1
+else:
+    __version__ = version.split(':')[-1]
+    __version__ = int(re.sub("\D", "", __version__))
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -437,9 +437,9 @@ class CPAnalyst(wx.App):
         try:
             import cellprofiler.utilities.check_for_updates as cfu
             cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
-                                  max(svn_version, cpaprefs.get_skip_version()), 
+                                  max(__version__, cpaprefs.get_skip_version()), 
                                   new_version_cb,
-                                  user_agent='CPAnalyst/2.0.%d'%(svn_version))
+                                  user_agent='CPAnalyst/2.0.%d'%(__version__))
         except ImportError:
             logging.warn("CPA was unable to check for updates. Could not import cellprofiler.utilities.check_for_updates.")
 
