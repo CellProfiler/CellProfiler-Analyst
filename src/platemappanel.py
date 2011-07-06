@@ -453,9 +453,10 @@ class PlateMapPanel(wx.Panel):
         wellkey = self.GetWellKeyAtCoord(self.GetX(evt), self.GetY(evt))
         if wellkey is None:
             return 
-        imkeys = db.execute('SELECT %s FROM %s WHERE %s'%
+        imkeys = db.execute('SELECT %s FROM %s WHERE %s ORDER BY %s'%
                             (UniqueImageClause(), p.image_table, 
-                             dbconnect.GetWhereClauseForWells([wellkey])))
+                             dbconnect.GetWhereClauseForWells([wellkey]),
+                             p.image_id))
 
         popupMenu = wx.Menu()
         popupMenu.SetTitle('well: %s'%(well_label))
