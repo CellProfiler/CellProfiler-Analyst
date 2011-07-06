@@ -94,11 +94,11 @@ class ImageControlPanel(wx.Panel):
         try:
             self.contrast_radiobox.SetSelection(contrast_modes.index(mode))
         except:
-            self.contrast_radiobox.SetSelection(0)
+            self.contrast_radiobox.SetSelection(1)
         self.sizer3.Add(self.contrast_radiobox, flag=wx.EXPAND)
         self.sizer3.AddSpacer((-1,10))
         self.contrast_radiobox.Bind(wx.EVT_RADIOBOX, self.OnSetContrastMode)
-        
+        self.UpdateContrastMode()
 
     def SetClassPoints(self, classCoords):
         self.sizer4.DeleteWindows()
