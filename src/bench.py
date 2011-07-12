@@ -99,7 +99,7 @@ class Bench(wx.Frame):
                 plate_shape = PlateDesign.get_plate_format(plate_id)
                 well_ids = PlateDesign.get_well_ids(plate_shape)
                 plate = VesselPanel(self.vesselscroller, plate_id)
-                self.vesselscroller.add_vessel_panel(plate, group_name+' %s'%(inst))
+                self.vesselscroller.add_vessel_panel(plate, plate_id)
                 plate.add_well_selection_handler(self.on_update_well)
                 
         self.update_well_selections()
