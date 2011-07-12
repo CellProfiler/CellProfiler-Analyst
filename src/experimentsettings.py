@@ -171,6 +171,7 @@ class ExperimentSettings(Singleton):
                         
     def clear(self):
         self.global_settings = {}
+        PlateDesign.clear()
         #
         # TODO:
         #
