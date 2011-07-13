@@ -1,6 +1,7 @@
 try:
     import cellprofiler.gui.cpfigure as cpfig
 except: pass
+import re
 import dbconnect
 import logging
 import multiclasssql
