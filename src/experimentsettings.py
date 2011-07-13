@@ -165,10 +165,10 @@ class ExperimentSettings(Singleton):
         prefix -- eg: CellTransfer|Seed
         '''
         instances = self.get_protocol_instances(prefix)
-        for i in xrange(100000):
+        for i in xrange(1, 100000):
             if str(i) not in instances:
                 return str(i)
-                        
+    
     def clear(self):
         self.global_settings = {}
         PlateDesign.clear()
