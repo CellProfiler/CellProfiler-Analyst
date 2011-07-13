@@ -11,7 +11,7 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
         '''
         tag_prefix -- the tag whose instances to list in this list control
         '''
-        wx.ListCtrl.__init__(self, parent, -1, size=(200,100), style=wx.LC_REPORT|wx.BORDER_SUNKEN|wx.LC_SORT_ASCENDING|wx.LC_HRULES|wx.LC_SINGLE_SEL)
+        wx.ListCtrl.__init__(self, parent, -1, size=(200,100), style=wx.LC_REPORT|wx.BORDER_SUNKEN|wx.LC_HRULES|wx.LC_SINGLE_SEL)
         listmix.ListCtrlAutoWidthMixin.__init__(self)
 ##        listmix.ColumnSorterMixin.__init__(self, 4)
 
