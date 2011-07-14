@@ -8,7 +8,7 @@ import re
 from properties import Properties
 
 # This must come almost first for py2app/py2exe
-version, error = subprocess.Popen(["svnversion","-n"], 
+version, error = subprocess.Popen(["svnversion","-n",os.path.dirname(__file__)], 
                                   stdout=subprocess.PIPE).communicate()
 if error:
     print "Failed to find svn version."
