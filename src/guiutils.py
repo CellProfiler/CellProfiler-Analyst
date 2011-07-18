@@ -713,16 +713,16 @@ class CheckListComboPopup(wx.combo.ComboPopup):
         return wx.Size(minWidth, min(100, maxHeight))
     
 
-class BitmapPopup(wx.PopupTransientWindow):
-    '''Transient popup window that displays a bitmap. This window will be
-    dismissed when the user clicks elsewhere.
-    '''
-    def __init__(self, parent, bitmap, pos=(-1,-1)):
-        '''bitmap -- wx.Bitmap object to show'''
-        wx.PopupTransientWindow.__init__(self, parent)
+    
+class BitmapPopup(wx.MiniFrame):
+    def __init__(self, parent, bitmap, **kwargs):
+        wx.MiniFrame.__init__(self, parent, -1, **kwargs)
+        
         self.bmp = bitmap
-        self.SetPosition(pos)
+        self.SetPosition(kwargs.get('pos', (-1,-1)))
         self.SetSize(bitmap.Size)
+
+        self.Bind(wx.EVT_LEFT_DOWN, lambda(e): self.Destroy())
         self.Bind(wx.EVT_PAINT, self._on_paint)
 
     def _on_paint(self, evt):
@@ -730,6 +730,7 @@ class BitmapPopup(wx.PopupTransientWindow):
         dc.BeginDrawing()
         dc.DrawBitmap(self.bmp, 0, 0)
         dc.EndDrawing()
+
         
         
 def show_objects_from_gate(gatename, warn=100):

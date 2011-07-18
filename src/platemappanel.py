@@ -6,6 +6,7 @@ import wx
 import numpy as np
 import matplotlib.cm
 import Image
+from base64 import b64decode
 from guiutils import BitmapPopup
 from StringIO import StringIO
 
@@ -294,7 +295,10 @@ class PlateMapPanel(wx.Panel):
                     p.well_id, ','.join(p.image_thumbnail_cols), p.image_table, p.well_id))
 
             for wims in wells_and_images:
-                ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
+                try:
+                    ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
+                except IOError, e:
+                    ims = [Image.open(StringIO(b64decode(im)), 'r') for im in wims[1:]]
                 ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
                        for im in ims]
                 imgs[wims[0]] =  ims
@@ -480,9 +484,13 @@ class PlateMapPanel(wx.Panel):
             return
         imsets = []
         for channels in images:
-            pngs = [Image.open(StringIO(im), 'r') for im in channels]
+            try:
+                pngs = [Image.open(StringIO(im), 'r') for im in channels]
+            except IOError, e:
+                pngs = [Image.open(StringIO(b64decode(im)), 'r') for im in channels]
+
             imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
-                        for png in pngs]]
+                        for png in pngs]]                
         
         n_channels = len(imsets[0])
         composite = []
@@ -492,7 +500,7 @@ class PlateMapPanel(wx.Panel):
         bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)
         
         popup = BitmapPopup(self, bmp, pos=pos)
-        popup.Popup()
+        popup.Show()
 
         
 if __name__ == "__main__":
