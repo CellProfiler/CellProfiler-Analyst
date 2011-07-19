@@ -8,14 +8,20 @@ import re
 from properties import Properties
 
 # This must come almost first for py2app/py2exe
-version, error = subprocess.Popen(["svnversion","-n",os.path.dirname(__file__)], 
-                                  stdout=subprocess.PIPE).communicate()
-if error:
-    print "Failed to find svn version."
-    __version__ = -1
-else:
-    __version__ = version.split(':')[-1]
+if hasattr(sys, 'frozen'):
+    import cpa_version
+    __version__ = cpa_version.VERSION
     __version__ = int(re.sub("\D", "", __version__))
+else:
+    version, error = subprocess.Popen(["svnversion", "-n", 
+                                       os.path.dirname(__file__)], 
+                                      stdout=subprocess.PIPE).communicate()
+    if error:
+        print "Failed to find svn version."
+        __version__ = -1
+    else:
+        __version__ = version.split(':')[-1]
+        __version__ = int(re.sub("\D", "", __version__))
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.

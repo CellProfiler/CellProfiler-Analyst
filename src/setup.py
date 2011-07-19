@@ -17,6 +17,13 @@ if not os.path.exists(CP_HOME):
 else:
     sys.path.append(CP_HOME)
 
+#
+# Store version in cpa_version.py
+# The CPA app will use this to determine version rather than svn
+#
+if sys.platform == "darwin":
+    os.system(''' svnversion | sed -e's/^/VERSION = \"/' -e 's/[0-9]*://' -e 's/M//' -e 's/$/\"/' > cpa_version.py ''')
+    
 APPNAME = 'CPAnalyst'
 APP = ['cpa.py']
 DATA_FILES = [('bioformats', [CP_HOME+'bioformats/loci_tools.jar']),
