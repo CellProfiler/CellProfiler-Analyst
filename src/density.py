@@ -220,18 +220,7 @@ class DataSourcePanel(wx.Panel):
         
     def _load_points(self):
         q = sql.QueryBuilder()
-        select = []
-        #
-        # If there's an object table fetch object keys. Else fetch image keys.
-        #
-        # TODO: linking per-well data doesn't work if we fetch keys this way
-        #
-        if self._plotting_per_object_data():
-            select += [sql.Column(p.object_table, col) for col in object_key_columns()]
-        else:
-            select += [sql.Column(p.image_table, col) for col in image_key_columns()]
-        select += [self.x_column, self.y_column]
-        
+        select = [self.x_column, self.y_column]
         q.set_select_clause(select)
         if self.filter != None:
             q.add_filter(self.filter)
