@@ -1483,7 +1483,7 @@ class DBConnect(Singleton):
             for col in image_key_columns():
                 if col not in idx_cols:
                     import wx
-                    wx.MessageDialog(self, 'Column "%s" is not indexed in table '
+                    wx.MessageDialog(self.gui_parent, 'Column "%s" is not indexed in table '
                         '"%s" Without column indices, dabase performance will be '
                         'severly slowed.\n'
                         'To avoid this warning, set check_tables = false in your '
@@ -1508,7 +1508,7 @@ class DBConnect(Singleton):
             for col in object_key_columns():
                 if col not in idx_cols:
                     import wx
-                    wx.MessageDialog(self, 'Column "%s" is not indexed in table '
+                    wx.MessageDialog(self.gui_parent, 'Column "%s" is not indexed in table '
                         '"%s" Without column indices, dabase performance will be '
                         'severly slowed.\n'
                         'To avoid this warning, set check_tables = false in your '
@@ -1516,7 +1516,7 @@ class DBConnect(Singleton):
                         'Missing column index', 
                         style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
         else:
-            logging.warn('%s is a view. CheckTables will skip the index check on this table'%(p.object_table))
+            loggin.warn('%s is a view. CheckTables will skip the index check on this table'%(p.object_table))
         
         # Explicitly check for TableNumber in case it was not specified in props file
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in self.GetColumnNames(p.object_table)):
