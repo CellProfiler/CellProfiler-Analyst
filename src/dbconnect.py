@@ -1460,6 +1460,11 @@ class DBConnect(Singleton):
         self.Commit()
         return True
     
+    def is_view(self, table):
+        self.execute('SHOW CREATE TABLE %s'%(table))
+        res = self.GetResultColumnNames()
+        return res[0].lower() == 'view'
+    
     def CheckTables(self):
         '''
         Queries the DB to check that the per_image and per_object
@@ -1470,46 +1475,53 @@ class DBConnect(Singleton):
             return
 
         logging.info('Checking database tables...')
-        # Check for index on image_table
-        res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
-        idx_cols = [r[4] for r in res]
-        for col in image_key_columns():
-            if col not in idx_cols:
-                import wx
-                wx.MessageDialog(self, 'Column "%s" is not indexed in table '
-                    '"%s" Without column indices, dabase performance will be '
-                    'severly slowed.\n'
-                    'To avoid this warning, set check_tables = false in your '
-                    'properties file.'%(col, p.object_table),
-                    'Missing column index', 
-                    style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
+        if not self.is_view(p.image_table):
+            # For now, don't check indices on views.
+            # Check for index on image_table
+            res = self.execute('SHOW INDEX FROM %s'%(p.image_table))
+            idx_cols = [r[4] for r in res]
+            for col in image_key_columns():
+                if col not in idx_cols:
+                    import wx
+                    wx.MessageDialog(self, 'Column "%s" is not indexed in table '
+                        '"%s" Without column indices, dabase performance will be '
+                        'severly slowed.\n'
+                        'To avoid this warning, set check_tables = false in your '
+                        'properties file.'%(col, p.object_table),
+                        'Missing column index', 
+                        style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
+        else:
+            logging.warn('%s is a view. CheckTables will skip the index check on this table'%(p.image_table))
 
         # Explicitly check for TableNumber in case it was not specified in props file
-        if not p.object_table and 'TableNumber' in idx_cols:
+        if not p.object_table and 'TableNumber' in self.GetColumnNames(p.image_table):
             raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
         
         # STOP here if there is no object table
         if not p.object_table:
             return
         
-        # Check for index on object_table
-        res = self.execute('SHOW INDEX FROM %s'%(p.object_table))
-        idx_cols = [r[4] for r in res]
-        for col in object_key_columns():
-            if col not in idx_cols:
-                import wx
-                wx.MessageDialog(self, 'Column "%s" is not indexed in table '
-                    '"%s" Without column indices, dabase performance will be '
-                    'severly slowed.\n'
-                    'To avoid this warning, set check_tables = false in your '
-                    'properties file.'%(col, p.object_table),
-                    'Missing column index', 
-                    style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
+        if not self.is_view(p.object_table):
+            # Check for index on object_table
+            res = self.execute('SHOW INDEX FROM %s'%(p.object_table))
+            idx_cols = [r[4] for r in res]
+            for col in object_key_columns():
+                if col not in idx_cols:
+                    import wx
+                    wx.MessageDialog(self, 'Column "%s" is not indexed in table '
+                        '"%s" Without column indices, dabase performance will be '
+                        'severly slowed.\n'
+                        'To avoid this warning, set check_tables = false in your '
+                        'properties file.'%(col, p.object_table),
+                        'Missing column index', 
+                        style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
+        else:
+            logging.warn('%s is a view. CheckTables will skip the index check on this table'%(p.object_table))
         
         # Explicitly check for TableNumber in case it was not specified in props file
-        if ('TableNumber' not in object_key_columns()) and ('TableNumber' in idx_cols):
+        if ('TableNumber' not in object_key_columns()) and ('TableNumber' in self.GetColumnNames(p.object_table)):
             raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
-        elif ('TableNumber' in idx_cols):
+        elif ('TableNumber' in self.GetColumnNames(p.object_table)):
             logging.warn('TableNumber column was found indexed in your image table but not your object table.')
         elif ('TableNumber' not in object_key_columns()):
             logging.warn('TableNumber column was found indexed in your object table but not your image table.')
