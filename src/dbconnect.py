@@ -1461,7 +1461,7 @@ class DBConnect(Singleton):
         return True
     
     def is_view(self, table):
-        if p.db_type = 'sqlite':
+        if p.db_type == 'sqlite':
             return False
         self.execute('SHOW CREATE TABLE %s'%(table))
         res = self.GetResultColumnNames()
