@@ -668,10 +668,10 @@ class ScatterPanel(FigureCanvasWxAgg):
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
         show_images_in_gate_item.Enable(selected_gate is not None)
         self.Bind(wx.EVT_MENU, self.show_images_from_gate, show_images_in_gate_item)
-        
-        show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate'%(p.object_name[1]))
-        show_objects_in_gate_item.Enable(selected_gate is not None)
-        self.Bind(wx.EVT_MENU, self.show_objects_from_gate, show_objects_in_gate_item)
+        if p.object_table:
+            show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate'%(p.object_name[1]))
+            show_objects_in_gate_item.Enable(selected_gate is not None)
+            self.Bind(wx.EVT_MENU, self.show_objects_from_gate, show_objects_in_gate_item)
 
         popup.AppendSeparator()
         
