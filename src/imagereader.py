@@ -1,26 +1,30 @@
 import numpy as np
 import urllib2
+import urllib
 import os.path
 import logging
 from properties import Properties
-try:
-    from cellprofiler.modules.loadimages import LoadImagesImageProvider
-    use_cp_loadimages = True
-    logging.debug('ImageReader will use LoadImages from CellProfiler.')
-except:
-    use_cp_loadimages = False
-    logging.warn('ImageReader failed to import LoadImagesImageProvider from '
-                 'CellProfiler, will fall back on PIL and TiffFile.')
 
 p = Properties.getInstance()
 
 class ImageReader(object):
+    def __init__(self):
+        self.load_using_bioformats = None
+        try:
+            from bioformats import load_using_bioformats
+            logging.debug('ImageReader will use load_using_bioformats from CellProfiler.')
+            self.load_using_bioformats = load_using_bioformats
+        except ImportError:
+            import traceback
+            logging.error(traceback.format_exc())
+            logging.error('ImageReader failed to import load_using_bioformats from '
+                          'CellProfiler, will fall back on PIL and TiffFile.')
 
     def ReadImages(self, fds):
         '''fds -- list of file descriptors (filenames or urls)
         returns a list of channels as numpy float32 arrays
         '''
-        if use_cp_loadimages:
+        if self.load_using_bioformats is not None:
             return self.read_images_via_cp(fds)
         else:
             return self.read_images_old_way(fds)
@@ -29,16 +33,16 @@ class ImageReader(object):
         '''Uses CellProfiler's LoadImagesImageProvider to load images.
         fds -- list of file descriptors (filenames or urls)
         returns a list of channels as numpy float32 arrays
-        '''        
+        '''
+        assert self.load_using_bioformats is not None
         channels = []
         for i, fd in enumerate(fds):
             if p.image_url_prepend and p.image_url_prepend.lower().startswith('http://'):
-                url = 'http://' + urllib2.quote(p.image_url_prepend[7:]) + urllib2.quote(fd)
+                url, ignored_headers = urllib.urlretrieve('http://' + urllib2.quote(p.image_url_prepend[7:]) + urllib2.quote(fd))
             else:
                 url = fd
             logging.info('Loading image from "%s"'%(url))
-            lip = LoadImagesImageProvider("dummy", "", url, True)
-            image = lip.provide_image(None).pixel_data
+            image = self.load_using_bioformats(url)
             
             if p.channels_per_image[i] == '1':
                 if image.ndim == 2:

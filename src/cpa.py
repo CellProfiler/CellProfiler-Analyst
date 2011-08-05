@@ -1,5 +1,12 @@
 from __future__ import with_statement
-
+try:
+    # Important. Do this up front to make bioformats work
+    # in windows executables. Otherwise it will look for
+    # loci_tools.jar in the directory where your properties
+    # were loaded from (presumably because this is set to
+    # the cwd).
+    import bioformats
+except: pass
 import sys
 import os
 import logging
