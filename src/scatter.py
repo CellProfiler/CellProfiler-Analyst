@@ -226,7 +226,7 @@ class ScatterControlPanel(wx.Panel):
         
     def _plotting_per_object_data(self):
         return (p.object_table is not None and
-                p.object_table in [self.x_column.table, self.x_column.table]
+                p.object_table in [self.x_column.table, self.y_column.table]
                 or (self.x_column.table != p.image_table and db.adjacent(p.object_table, self.x_column.table))
                 or (self.y_column.table != p.image_table and db.adjacent(p.object_table, self.y_column.table))
                 )
