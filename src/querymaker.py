@@ -43,8 +43,8 @@ class QueryMaker(wx.Frame):
         q = self.query_textctrl.Value
         try:
             res = db.execute(q)
-            if res is not None:
-                logging.info('Query successful')
+            if res is None:
+                logging.info('Query successful. No Data to return.')
                 return
             res = np.array(db.execute(q))
             colnames = db.GetResultColumnNames()
