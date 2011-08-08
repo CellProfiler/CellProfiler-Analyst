@@ -534,7 +534,7 @@ app.MainLoop()
 # Kill the Java VM
 #
 try:
-    import cellprofiler.utilities.jutil as jutil
+    from bioformats import jutil
     jutil.kill_vm()
 except:
     import traceback
