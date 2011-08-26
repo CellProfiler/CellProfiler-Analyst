@@ -20,15 +20,19 @@ if hasattr(sys, 'frozen'):
     __version__ = cpa_version.VERSION
     __version__ = int(re.sub("\D", "", __version__))
 else:
-    version, error = subprocess.Popen(["svnversion", "-n", 
-                                       os.path.dirname(__file__)], 
-                                      stdout=subprocess.PIPE).communicate()
-    if error:
-        print "Failed to find svn version."
+    try:
+        version, error = subprocess.Popen(["svnversion", "-n", 
+                                           os.path.dirname(__file__)], 
+                                          stdout=subprocess.PIPE).communicate()   
+        if error:
+            logging.error("Failed to find svn version.")
+            __version__ = -1
+        else:
+            __version__ = version.split(':')[-1]
+            __version__ = int(re.sub("\D", "", __version__))
+    except OSError:
+        logging.error("Failed to find svn version. Do you have svn installed?")
         __version__ = -1
-    else:
-        __version__ = version.split(':')[-1]
-        __version__ = int(re.sub("\D", "", __version__))
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -448,11 +452,12 @@ class CPAnalyst(wx.App):
         db.register_gui_parent(self.frame)
 
         try:
-            import cellprofiler.utilities.check_for_updates as cfu
-            cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
-                                  max(__version__, cpaprefs.get_skip_version()), 
-                                  new_version_cb,
-                                  user_agent='CPAnalyst/2.0.%d'%(__version__))
+            if __version__ != -1:
+                import cellprofiler.utilities.check_for_updates as cfu
+                cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
+                                      max(__version__, cpaprefs.get_skip_version()), 
+                                      new_version_cb,
+                                      user_agent='CPAnalyst/2.0.%d'%(__version__))
         except ImportError:
             logging.warn("CPA was unable to check for updates. Could not import cellprofiler.utilities.check_for_updates.")
 
