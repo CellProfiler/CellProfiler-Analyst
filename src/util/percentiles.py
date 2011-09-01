@@ -1,6 +1,7 @@
 import sys
 from cpa.util import cache
 import cpa
+import os
 
     # read precomputed percentiles from disk
     # normalize the data
@@ -19,6 +20,10 @@ def normalize(data, colnames, cache_dir, plate):
     """
 
 if __name__ == '__main__':
+    program_name = os.path.basename(sys.argv[0])
+    if len(sys.argv) != 4:
+        print >>sys.stderr, 'Usage: %s PROPERTIES-FILE PREDICATE CACHE-DIR' % program_name
+        sys.exit(os.EX_USAGE)
     properties, predicate, cache_dir = sys.argv[1:4]
     percentiles_dir = os.path.join(cache_dir, 'percentiles')
     plates = cpa.db.execute("select distinct %s from %s" % (cpa.properties.plate_id, cpa.properties.image_table))
@@ -39,4 +44,4 @@ if __name__ == '__main__':
             percentiles[0, j] = scoreatpercentile(features[:, j], 1)
             percentiles[1, j] = scoreatpercentile(features[:, j], 99)
         np.save(percentiles_filename, percentiles)
-        
+
