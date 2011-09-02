@@ -31,15 +31,11 @@ It might be possible to run CPAnalyst with other versions of Python or
 these packages.
 
 CellProfiler Analyst can be run from a terminal as follows:
- % python CPAnalyst/src/cpa.py
+ % python CPAnalyst/cpa/cpa.py
 
-Some minor functionality of CPAnalyst depends on having an
-installation of CellProfiler 2.0's source code available and on the
-PYTHONPATH.  However, the only functionality that will be missing
-without this are cross-validation plots for Classifier and checking
-for new releases at startup.  The CellProfiler 2.0 code is available
-at:
-  https://svn.broadinstitute.org/CellProfiler/trunk/CellProfiler/pyCellProfiler
+Some functionality of CPAnalyst depends on having an installation 
+of CellProfiler 2.0's source code available and on the PYTHONPATH.
+  https://svn.broadinstitute.org/CellProfiler/trunk/CellProfiler/
 
 Classifier using MySQL can be sped up by installing the UDF in
 mysql_plugins/classify.c. To add this function to MySQL, compile
