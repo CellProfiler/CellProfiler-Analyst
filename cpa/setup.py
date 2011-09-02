@@ -18,12 +18,13 @@ else:
     sys.path.append(CP_HOME)
     
 
-import bioformats.tests.test_formatreader
-CP_EXAMPLE_IMAGES = '/Users/afraser/trunk/ExampleImages'
-os.environ['CP_EXAMPLEIMAGES'] = os.path.abspath(CP_EXAMPLE_IMAGES)
-retval = os.system(''' nosetests %s/bioformats/tests/test_formatreader.py --with-kill-vm '''%(CP_HOME))
-if retval != 0:
-    print 'nosetests failed. Aborting setup.py'
+##import bioformats.tests.test_formatreader
+##CP_EXAMPLE_IMAGES = '/Users/afraser/trunk/ExampleImages'
+##os.environ['CP_EXAMPLEIMAGES'] = os.path.abspath(CP_EXAMPLE_IMAGES)
+##retval = os.system(''' nosetests %s/bioformats/tests/test_formatreader.py --with-kill-vm '''%(CP_HOME))
+##if retval != 0:
+##    print 'nosetests failed. Aborting setup.py'
+##    exit(1)
 
 #
 # Store version in cpa_version.py
