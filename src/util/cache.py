@@ -24,7 +24,8 @@ def load(cache_dir, plate_name, well_name):
     return np.load(_filename(cache_dir, plate_name, well_name))
 
 def get_colnames(cache_dir):
-    return open(os.path.join(cache_dir, 'colnames.txt'), 'rU').readlines()
+    return [line.rstrip() 
+            for line in open(os.path.join(cache_dir, 'colnames.txt'), 'rU').readlines()]
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
