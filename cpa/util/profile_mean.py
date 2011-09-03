@@ -58,9 +58,7 @@ if __name__ == '__main__':
     text_file = open(output_file, "w")
     text_file.write('%s\t%s\n' % (grps, cols))
     
-    
     # !! we have no choice but to include the whole well as soon as an image of a well is present in the group... not so great
-    # This prevent the granularity to be below the well level and can lead to unexpected results in this case.
     # Solution: implement the cache at image level and not well level (hence drawback of increasing file access, also not really usefull in practice)
     for gp in mapping_group_images.keys():
         plate_well = []
