@@ -500,9 +500,14 @@ class DBConnect(Singleton):
                 if isinstance(e, DBOperationalError()) and e.args[0] in [2006, 2013, 1053]:
                     raise DBDisconnectedException()
                 else:
-                    raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
-            except:
-                raise DBException, 'Database query failed for connection "%s"\n\t%s\n\t%s\n' %(connID, query, e)
+                    raise DBException, ('Database query failed for connection "%s"'
+                                    '\nQuery was: "%s"'
+                                    '\nException was: %s'%(connID, query, e))
+            except Exception, e2:
+                raise DBException, ('Database query failed for connection "%s" and failed to reconnect'
+                                    '\nQuery was: "%s"'
+                                    '\nFirst exception was: %s'
+                                    '\nSecond exception was: %s'%(connID, query, e, e2))
             
     def Commit(self):
         connID = threading.currentThread().getName()
