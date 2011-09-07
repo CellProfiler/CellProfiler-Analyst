@@ -10,11 +10,11 @@ Example usage as module:
 >>> import cpa
 >>> from cpa.util import cache
 >>> cpa.properties.LoadFile('Morphology.properties')
->>> cache_dir = '/broad/shptmp/ljosa/az_cache'
+>>> c = cache.Cache('/broad/shptmp/ljosa/az_cache')
 >>> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
 >>> imKeys = mapping.values()[0]
->>> unnormalized, unnormalized_colnames = cache.load(cache_dir, imKeys)
->>> normalized, normalized_colnames = cache.load(cache_dir, imKeys, normalization=cache.RobustLinearNormalization)
+>>> unnormalized, unnormalized_colnames = c.load(imKeys)
+>>> normalized, normalized_colnames = c.load(imKeys, normalization=cache.RobustLinearNormalization)
 
 '''
 
