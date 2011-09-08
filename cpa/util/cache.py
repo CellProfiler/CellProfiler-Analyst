@@ -57,8 +57,10 @@ class RobustLinearNormalization(object):
         self.cache = cache
         self.dir = os.path.join(cache.cache_dir, 'robust_linear')
         self._colmask_filename = os.path.join(self.dir, 'colmask.npy')
-        self._percentiles_filename = os.path.join(self.dir, 'percentiles', 
-                                                  unicode(plate) + '.npy')
+
+    def _percentiles_filename(self, plate):
+        return os.path.join(self.dir, 'percentiles', 
+                            unicode(plate) + '.npy')
 
     @property
     def _colmask(self):
