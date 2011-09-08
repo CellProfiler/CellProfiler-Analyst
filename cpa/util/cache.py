@@ -3,18 +3,18 @@ Cache of per-well block of per-cell feature data.
 
 Example usage as a script (builds cache and precomputes normalizations):
 
-$ py -m cpa.util.cache CDP2.properties /imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache
+$ python -m cpa.util.cache CDP2.properties /imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache "Image_Metadata_ASSAY_WELL_ROLE = 'mock'"
 
 Example usage as module:
 
 >>> import cpa
->>> from cpa.util import cache
->>> cpa.properties.LoadFile('Morphology.properties')
->>> c = cache.Cache('/broad/shptmp/ljosa/az_cache')
+>>> from cpa.util.cache import Cache, RobustLinearNormalization
+>>> cpa.properties.LoadFile('CDP2.properties')
+>>> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
 >>> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
->>> imKeys = mapping.values()[0]
->>> unnormalized, unnormalized_colnames = c.load(imKeys)
->>> normalized, normalized_colnames = c.load(imKeys, normalization=cache.RobustLinearNormalization)
+>>> imKeys = cc_mapping.values()[0]
+>>> unnormalized, unnormalized_colnames = cache.load(imKeys)
+>>> normalized, normalized_colnames = cache.load(imKeys, normalization=RobustLinearNormalization)
 
 '''
 
@@ -95,9 +95,9 @@ class RobustLinearNormalization(object):
     # Methods to precompute the normalizations
     #
 
-    def _create_cache(self, resume=False):
-        self._create_cache_colmask()
+    def _create_cache(self, predicate, resume=False):
         self._create_cache_percentiles(resume)
+        self._create_cache_colmask(predicate)
 
     def _get_controls(self, predicate):
         """Return a dictionary mapping plate names to lists of control wells"""
@@ -127,7 +127,9 @@ class RobustLinearNormalization(object):
     def _create_cache_percentiles(self, resume=False):
         controls = self._get_controls(predicate)
         for i, (plate, imKeys) in enumerate(controls.items()):
-            features = self.cache.load(imKeys)
+            _check_directory(os.path.dirname(self._percentiles_filename(plate)), 
+                             resume)
+            features = self.cache.load(imKeys)[0]
             if len(features) == 0:
                 logger.warning('No DMSO features for plate %s' % str(plate))
                 percentiles = np.zeros((0, len(colnames)))
@@ -170,9 +172,10 @@ class Cache(object):
             images_per_plate.setdefault(self._plate_map[imKey], []).append(imKey)
         features = []
         for plate, imKeys in images_per_plate.items():
-            f = np.load(self._image_filename(plate_name, well_name))
-            if len(data) > 0:
-                features.append(normalizer.normalize(f))
+            for imKey in imKeys:
+                raw = np.load(self._image_filename(plate, imKey))
+                if len(raw) > 0:
+                    features.append(normalizer.normalize(plate, raw))
         return np.vstack(features), normalizer.colnames
 
     @property
@@ -200,7 +203,7 @@ class Cache(object):
             for image_key in image_keys:
                 self._create_cache_image(plate, image_key, resume)
                 i += 1
-                logger.info('Image %d of %d' % (i + 1, nimages))
+                logger.info('Image %d of %d' % (i, nimages))
 
     def _create_cache_colnames(self):
         """Create cache of column names"""
@@ -220,17 +223,25 @@ class Cache(object):
 
     def _create_cache_image(self, plate, image_key, resume=False):
         filename = self._image_filename(plate, image_key)
-        if resume and os.exists(filename):
+        if resume and os.path.exists(filename):
             return
         features = cpa.db.execute("""select %s from %s where %s""" % (
                 ','.join(self.colnames), cpa.properties.object_table, 
                 cpa.dbconnect.GetWhereClauseForImages([image_key])))
         np.save(filename, features)
 
+def _check_directory(dir, resume):
+    if os.path.exists(dir):
+        if not resume:
+            logger.error('Directory exists already (remove or use -r): ' + dir)
+            sys.exit(1)
+    else:
+        os.makedirs(dir)
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
-    parser = OptionParser("usage: %prog [-f] PROPERTIES-FILE CACHE-DIR PREDICATE")
+    parser = OptionParser("usage: %prog [-r] PROPERTIES-FILE CACHE-DIR PREDICATE")
     parser.add_option('-r', dest='resume', action='store_true')
     options, args = parser.parse_args()
     if len(args) != 3:
@@ -239,13 +250,9 @@ if __name__ == '__main__':
 
     cpa.properties.LoadFile(properties_file)
 
-    if os.path.exists(cache_dir):
-        logger.error('Cache directory exists already. Remove or use -r.')
-        sys.exit(1)
-    else:
-        os.mkdir(cache_dir)
+    _check_directory(cache_dir, options.resume)
 
     cache = Cache(cache_dir)
 
-    cache._create_cache(options.resume)
-    RobustLinearNormalization(cache)._create_cache(options.resume)
+    #cache._create_cache(options.resume)
+    RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
