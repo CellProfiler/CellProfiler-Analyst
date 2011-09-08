@@ -138,7 +138,7 @@ class QueryBuilder(object):
         '''
         db = DBConnect.getInstance()
         conditions = []
-        conditions += [str(f) for f in self.filters]
+        conditions += ['(%s)'%(str(f)) for f in self.filters]
         queried_tables = self.get_queried_tables()
         if len(queried_tables) > 1:
             link_exps = db.get_linking_expressions(queried_tables)
