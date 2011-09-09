@@ -681,25 +681,36 @@ class DBConnect(Singleton):
             groupMaps[group], groupColNames[group] = self.group_map(group, reverse=reverse)
         return groupMaps, groupColNames
 
-    def group_map(self, group, reverse=False):
-        """Return a tuple of (1) a dictionary mapping image keys to
+    def group_map(self, group, reverse=False, filter=None):
+        """
+        Return a tuple of (1) a dictionary mapping image keys to
         group keys and (2) a list of column names for the group
-        keys. If reverse is set to true, the dictionary will map
-        group keys to image keys instead."""
+        keys. 
+
+        If reverse is set to true, the dictionary will map
+        group keys to image keys instead.
+
+        """
         key_size = p.table_id and 2 or 1
         query = p._groups[group]
+        from_idx = re.search('\sFROM\s', query.upper()).start()
+        try:
+            where_idx = re.search('\sWHERE\s', query.upper()).start()
+        except AttributeError:
+            where_idx = len(query)
+
+        if filter:
+            join_clause = ' JOIN (%s) as f USING (%s)' % (self.filter_sql(filter),
+                                                          ','.join(image_key_columns()))
+            query = query[:where_idx] + join_clause + query[where_idx:]
         try:
             res = self.execute(query)
         except DBException, e:
             raise DBException('Group query failed for group "%s". Check the SQL'
                               ' syntax in your properties file.\n'
                               'Error was: "%s"'%(group, e))
+        
         col_names = self.GetResultColumnNames()[key_size:]
-        from_idx = re.search('\sFROM\s', query.upper()).start()
-        try:
-            where_idx = re.search('\sWHERE\s', query.upper()).start()
-        except AttributeError:
-            where_idx = len(query)
         from_clause = query[from_idx+6 : where_idx].strip()
         if ',' not in from_clause and ' ' not in from_clause:
             col_names = ['%s.%s'%(from_clause, col) for col in col_names]
@@ -711,7 +722,7 @@ class DBConnect(Singleton):
                                     'in your FROM clause. Please try rewriting your '
                                     'query without aliases and try again.'%(group))
             col_names = [col.strip() for col in query[7 : from_idx].split(',')][len(image_key_columns()):]
-        
+
         d = {}
         for row in res:
             if reverse:
@@ -723,18 +734,22 @@ class DBConnect(Singleton):
                 d[row[:key_size]] = row[key_size:]
         return d, col_names
     
+    def filter_sql(self, filter_name):
+        f = p._filters[filter_name]
+        import sqltools
+        if isinstance(f, sqltools.Filter):
+            return 'SELECT %s FROM %s WHERE %s' % (UniqueImageClause(), 
+                                                   ','.join(f.get_tables()), 
+                                                   str(f))
+        elif isinstance(f, sqltools.OldFilter):
+            return f
+        else:
+            raise Exception('Invalid filter type in p._filters')
+
     def GetFilteredImages(self, filter_name):
         ''' Returns a list of imKeys from the given filter. '''
         try:
-            f = p._filters[filter_name]
-            import sqltools
-            if isinstance(f, sqltools.Filter):
-                query = 'SELECT %s FROM %s WHERE %s'%(UniqueImageClause(), ','.join(f.get_tables()), str(f))
-            elif isinstance(f, sqltools.OldFilter):
-                query = f
-            else:
-                raise Exception('Invalid filter type in p._filters')
-            return self.execute(query)
+            return self.execute(filter_sql(filter_name))
         except Exception, e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)
@@ -1748,7 +1763,6 @@ class Union(Entity):
     def all_query(self, *args, **kwargs):
         return " UNION ".join([e.all_query(*args, **kwargs) 
                                for e in self.operands])
-
 
 class Images(Entity):
     '''
