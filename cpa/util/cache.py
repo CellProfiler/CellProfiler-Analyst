@@ -173,7 +173,8 @@ class Cache(object):
         features = []
         for plate, imKeys in images_per_plate.items():
             for imKey in imKeys:
-                raw = np.load(self._image_filename(plate, imKey))
+                raw = np.array(np.load(self._image_filename(plate, imKey)),
+                               dtype=float)
                 if len(raw) > 0:
                     features.append(normalizer.normalize(plate, raw))
         return np.vstack(features), normalizer.colnames
@@ -228,7 +229,7 @@ class Cache(object):
         features = cpa.db.execute("""select %s from %s where %s""" % (
                 ','.join(self.colnames), cpa.properties.object_table, 
                 cpa.dbconnect.GetWhereClauseForImages([image_key])))
-        np.save(filename, features)
+        np.save(filename, np.array(features, dtype=float))
 
 def _check_directory(dir, resume):
     if os.path.exists(dir):
