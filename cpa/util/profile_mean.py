@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-$ profile_mean.py properties_file cache_dir group [output_file]
+$ profile_mean.py properties_file cache_dir output_file group [filter]
 
 Writes a tab-delimited file containing the profiles. Example:
 
@@ -20,122 +20,149 @@ import sys
 import os
 import numpy as np
 import time
-import commands
-from threading import Thread
 import itertools
+from datetime import timedelta
+from threading import Thread
 
 import cpa
 from cpa.util import cache
-from cpa.util import percentiles
 
+from IPython.parallel import Client
 
-
-def _compute_group_means(properties_file, cache_dir, group, output_file=''):
+class waiter(Thread):
+    def init(self, group_mean_dir, group_item_total):
+        self.group_mean_dir = group_mean_dir
+        self.group_item_total = group_item_total
+    
+    def run(self):
+        self.running = True
+        startTime = time.time()
+        group_item_current = 1.0
+        while(group_item_current < self.group_item_total and self.running):
+            filenum = len(os.listdir(self.group_mean_dir))
+            if (filenum > 0): 
+                group_item_current = float(filenum)
+            remaining = self.group_item_total - group_item_current
+            ratio = group_item_current/self.group_item_total
+            percent = (ratio * 100)
+            now = time.time()
+            elapsedTime = (now - startTime)
+            estTotalTime = elapsedTime / ratio
+            estRemainingTime = estTotalTime - elapsedTime;
+            timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
+            print '(%d) %d%% Est remaining time: %s' % (remaining,percent,timeleft)
+            time.sleep(1)
        
+
+
+def _compute_group_mean((cache_dir, gp_mean_file, images)):
+    try:
+        import numpy as np
+        from cpa.util import cache
+        cash = cache.Cache(cache_dir)
+        normalizeddata, normalized_colnames = cash.load(images, normalization=cache.RobustLinearNormalization)
+        normalizeddata_mean = np.mean(normalizeddata, axis = 0)
+        np.save(gp_mean_file, normalizeddata_mean)
+        return normalizeddata_mean
+    except: # catch *all* exceptions
+        e = sys.exc_info()[1]
+        print >>sys.stderr, "Error: (%s) %s" % (gp_mean_file,e) 
+    
+
+def _compute_group_means(properties_file, cache_dir, output_file, group, filter = None):
     cpa.properties.LoadFile(properties_file)
+    cash = cache.Cache(cache_dir)
+    
+    client = Client(profile='lsf')
+    dview = client.load_balanced_view() #client[:]
     
     group_mean_dir = os.path.join(cache_dir, 'mean_profile_%s' % group)
+    if filter:
+        group_mean_dir = group_mean_dir + '_' + filter
+    
     if not os.path.exists(group_mean_dir):
         os.mkdir(group_mean_dir)
     
-    mapping_group_images, colnames_group = cpa.db.group_map(group, reverse=True)
+    mapping_group_images, colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
     
-    colnames = cache.get_colnames(cache_dir)
+    colnames = cash.colnames
     
     grps = '\t'.join("%s"%g for g in colnames_group)
     cols = '\t'.join("%s"%c for c in colnames)
     
-    combine = len(output_file) != 0
+    parameters = []
+    group_item_total = len(mapping_group_images)
+    w = waiter()
+    w.init(group_mean_dir, group_item_total)
+    w.start()
     
-    if combine:
-        text_file = open(output_file, "w")
-        text_file.write('%s\t%s\n' % (grps, cols))
-        
-    # !! we have no choice but to include the whole well as soon as an image of a well is present in the group... not so great
-    for gp in mapping_group_images.keys()[0:4]:
-    
-        predicate = (' or %s='%(cpa.properties.image_id)).join("%d"%im for im in mapping_group_images[gp])
-        predicate = '%s=%s' % (cpa.properties.image_id, predicate)
-        
-        # has to be inside the loop because Copper for instance hasn't enough memory 
-        images_plates_wells = cpa.db.execute("select distinct %s, %s, %s from %s where %s" % (cpa.properties.image_id, cpa.properties.plate_id, cpa.properties.well_id, cpa.properties.image_table, predicate))
-        images = [row[0] for row in images_plates_wells]
-        plates = [row[1] for row in images_plates_wells]
-        wells  = [row[2] for row in images_plates_wells]
-        
-        # ensure unicity of each well
-        plate_well = []
-        for image in mapping_group_images[gp]:
-            i = images.index(image[0])
-            value = [plates[i], wells[i]]
-            if not value in plate_well:
-                plate_well.append(value)
-
+    for gp in mapping_group_images.keys():
         gp_name = '_'.join("%s"%i for i in gp)
         gp_mean_file = os.path.join(group_mean_dir, '%s' % gp_name)
-
-        if combine:
-            # combine data
-            print '%s.npy' % gp_mean_file
-            datamean = np.load('%s.npy' % gp_mean_file)
-            groupItem = '\t'.join("%s"%i for i in gp)
-            values = '\t'.join("%s"%v for v in datamean)
-            text_file.write('%s\t%s\n' % (groupItem, values))
-        else:
-            # collect data with LSF 
-            sub_output_file = os.path.join(group_mean_dir, '%s.txt' % gp_name)
-            well_plate_args =  ' '.join("'%s'"%i for i in list(itertools.chain(*plate_well)))
-            bsubcommand = "bsub -P mean_profile -o %s -q hour python ./profile_mean.py '%s' '%s' '%s' '%s' %s" % (sub_output_file, properties_file, cache_dir, group, gp_mean_file, well_plate_args)
-            #print bsubcommand
-            commands.getstatusoutput(bsubcommand)
+        if not os.path.exists('%s.npy' % gp_mean_file):
+            parameter = (cache_dir, gp_mean_file, mapping_group_images[gp])
+            parameters.append(parameter)
+            
+    
+    if(len(parameters)>0):
+        results = dview.map(_compute_group_mean, parameters)    
+        #results = dview.map_sync(_compute_group_mean, parameters)
+        #results = map(_compute_group_mean, parameters)
         
-    if combine:
-        text_file.close()
-
-
-def _compute_group_mean(cache_dir, gp_mean_file, plate_well):
+    w.running = False
+        
+    #writing text file
+    text_file = open(output_file, "w")
+    text_file.write('%s\t%s\n' % (grps, cols))
     
-    rawdata = []
-    for i in range(0,len(plate_well)-1,2):
-        plate = plate_well[i]
-        well  = plate_well[i+1]
-        plate_dir = os.path.join(cache_dir, '%s' % plate)
-        for row in cache.load(cache_dir, '%s' % plate, '%s' % well):
-            rawdata.append(row)
-    
-    # compute the mean vector
-    normalizeddata = percentiles.normalize(np.array(rawdata), cache_dir, plate)
-    normalizeddata_mean = np.mean(normalizeddata, axis = 0)
-    np.save(gp_mean_file, normalizeddata_mean)
-    
-    
-    
-    
-
+    print "writing file..."
+    time.sleep(5) # #let a little time to write properly the last files
+    startTime = time.time()
+    row = 1.0
+    for gp in mapping_group_images.keys():
+        gp_name = '_'.join("%s"%i for i in gp)
+        gp_mean_file = os.path.join(group_mean_dir, '%s' % gp_name)
+        if not os.path.exists('%s.npy' % gp_mean_file):
+            print >>sys.stderr, '%s was not computed, exiting program' % gp_name
+            text_file.close()
+            os.remove(output_file)
+            sys.exit(os.EX_USAGE)
+        datamean = np.load('%s.npy' % gp_mean_file)
+        groupItem = '\t'.join("%s"%i for i in gp)
+        values = '\t'.join("%s"%v for v in datamean)
+        text_file.write('%s\t%s\n' % (groupItem, values))
+        
+        if(row % 100 == 0):
+            ratio = row/group_item_total
+            percent = (ratio * 100)
+            now = time.time()
+            elapsedTime = (now - startTime)
+            estTotalTime = elapsedTime / ratio
+            estRemainingTime = estTotalTime - elapsedTime;
+            timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
+            print '%d%% Est remaining time: %s' % (percent,timeleft)
+        row += 1
+            
+    text_file.close()
 
 if __name__ == '__main__':
  
+    # python profile_mean.py '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2.properties' '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache' '/home/unix/auguste/ImagingAuguste/CDP2/test_cc_map.txt' 'CompoundConcentration' 'compound_treated'
+
     program_name = os.path.basename(sys.argv[0])
     len_argv = len(sys.argv)
-
-    # profile_mean.py properties_file cache_dir group [output_file]
-
-    if len_argv < 4:
-        print >>sys.stderr, 'Usage: %s PROPERTIES-FILE CACHE-DIR GROUP [OUTPUT_FILE]' % program_name
-        sys.exit(os.EX_USAGE)
-
-    if len_argv == 4:
-        properties_file, cache_dir, group = sys.argv[1:4]          
-        _compute_group_means(properties_file, cache_dir, group)
-
-    elif len_argv == 5:
-        properties_file, cache_dir, group, output_file = sys.argv[1:5]          
-        _compute_group_means(properties_file, cache_dir, group, output_file)
-
-    elif len_argv > 5:
-        properties_file, cache_dir, group, gp_mean_file = sys.argv[1:5]
-        plate_well = sys.argv[5:len_argv]    
-        _compute_group_mean(cache_dir, gp_mean_file, plate_well)
     
-
+    if len_argv < 5:
+        print >>sys.stderr, 'Usage: %s PROPERTIES-FILE CACHE-DIR OUTPUT_FILE GROUP [FILTER]' % program_name
+        sys.exit(os.EX_USAGE)
+    
+    if len_argv == 5:
+        properties_file, cache_dir, output_file, group = sys.argv[1:5]          
+        _compute_group_means(properties_file, cache_dir, output_file, group)
+        
+    if len_argv == 6:
+        properties_file, cache_dir, output_file, group, filter = sys.argv[1:6]
+        _compute_group_means(properties_file, cache_dir, output_file, group, filter=filter)
+     
+    
 
