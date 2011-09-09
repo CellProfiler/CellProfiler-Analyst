@@ -130,7 +130,7 @@ class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
-        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 %s'%(__version__), **kwargs)
+        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 (r%s)'%(__version__), **kwargs)
 
         self.properties = properties
         self.SetIcon(get_cpa_icon())
@@ -363,7 +363,7 @@ class MainGUI(wx.Frame):
                    'Public License version 2.')
         info = wx.AboutDialogInfo()
         info.SetIcon(icons.get_cpa_icon())
-        info.SetName('CellProfiler Analyst 2.0 %s'%(__version__ or 'unknown revision'))
+        info.SetName('CellProfiler Analyst 2.0 (%s)'%('r%s'(__version__) or 'unknown revision'))
         info.SetDescription(message)
         info.AddDeveloper('Adam Fraser')
         info.AddDeveloper('Thouis (Ray) Jones')

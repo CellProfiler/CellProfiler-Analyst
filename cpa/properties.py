@@ -6,7 +6,8 @@ import re
 import os
 import logging
 import incell
-
+import sys
+import subprocess
 #
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
 #
@@ -289,6 +290,27 @@ class Properties(Singleton):
         import sqltools
         fd = open(filename, 'w')
         self._filename = filename
+        
+        # Write revision first
+        if hasattr(sys, 'frozen'):
+            import cpa_version
+            __version__ = cpa_version.VERSION
+            __version__ = int(re.sub("\D", "", __version__))
+        else:
+            try:
+                version, error = subprocess.Popen(["svnversion", "-n", 
+                                                   os.path.dirname(__file__)], 
+                                                  stdout=subprocess.PIPE).communicate()   
+                if error:
+                    logging.error("Failed to find svn version.")
+                    __version__ = -1
+                else:
+                    __version__ = version.split(':')[-1]
+                    __version__ = int(re.sub("\D", "", __version__))
+            except OSError:
+                logging.error("Failed to find svn version. Do you have svn installed?")
+                __version__ = -1
+        fd.write('# CellProfiler Analyst revision: %s\n'%(__version__))
         
         fields_to_write = sorted([k for k, v in self.__dict__.items() 
                                   if not k.startswith('_') and v is not None])
