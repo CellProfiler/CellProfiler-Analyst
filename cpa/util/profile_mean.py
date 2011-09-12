@@ -152,7 +152,7 @@ if __name__ == '__main__':
     program_name = os.path.basename(sys.argv[0])
     len_argv = len(sys.argv)
     
-    if len_argv < 5:
+    if len_argv < 5 or len_argv > 6:
         print >>sys.stderr, 'Usage: %s PROPERTIES-FILE CACHE-DIR OUTPUT_FILE GROUP [FILTER]' % program_name
         sys.exit(os.EX_USAGE)
     
