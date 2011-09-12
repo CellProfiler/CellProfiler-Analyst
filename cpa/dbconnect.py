@@ -667,7 +667,7 @@ class DBConnect(Singleton):
             if p.image_url_prepend:
                 filenames.append( imPaths[i]+'/'+imPaths[i+1] )
             else:
-                filenames.append( imPaths[i]+os.path.sep+imPaths[i+1] )
+                filenames.append( os.path.join(imPaths[i],imPaths[i+1]) )
         return filenames
 
     def GetGroupMaps(self, reverse=False):
