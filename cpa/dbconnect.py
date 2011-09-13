@@ -296,7 +296,7 @@ class DBConnect(Singleton):
         return string.join([ (key + " = " + str(val) + "\n")
                             for (key, val) in self.__dict__.items()])
             
-    def connect(self):
+    def connect(self, empty_sqlite_db=False):
         '''
         Attempts to create a new connection to the specified database using
           the current thread name as a connection ID.
@@ -414,7 +414,10 @@ class DBConnect(Singleton):
             
             try:
                 # Try the connection
-                self.GetAllImageKeys()
+                if empty_sqlite_db:
+                    self.execute('select 1')
+                else:
+                    self.GetAllImageKeys()
             except Exception:
                 # If this is the first connection, then we need to create the DB from the csv files
                 if len(self.connections) == 1:
