@@ -1,5 +1,6 @@
 import wx
 import wx.combo
+import os
 import re
 import icons
 import properties
@@ -787,7 +788,29 @@ def show_images_from_gate(gatename, warn=10):
     for row in res:
         imagetools.ShowImage(tuple(row), p.image_channel_colors, parent=get_main_frame_or_none())
         
-
+def show_load_dialog():
+    '''
+    prompt the user to choose a CPA properties or Columbus MeasurementIndex file
+    '''
+    if not wx.GetApp():
+        raise Exception("Can't display load dialog without a wx App.")
+    dlg = wx.FileDialog(None, 'Select a the file containing your properties.', '', '', 
+                    'Properties file (*.properties, *.txt)|*.properties;*.txt|'
+                    'Columbus MeasurementIndex file (*.ColumbusIDX.xml)|*.ColumbusIDX.xml',
+                    style=wx.OPEN|wx.FD_CHANGE_DIR)
+    if dlg.ShowModal() == wx.ID_OK:
+        filename = dlg.GetPath()
+        os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        if filename.endswith('.xml'):
+            from parseperkinelmer import load_columbus
+            load_columbus(filename)
+        else:
+            p.load_file(filename)
+        return True
+    else:
+        return False
+            
+        
 if __name__ == "__main__":
     app = wx.PySimpleApp()
     import logging, sys
