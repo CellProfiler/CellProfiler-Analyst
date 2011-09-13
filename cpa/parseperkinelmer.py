@@ -37,7 +37,7 @@ DEFAULT_DB_NAME = 'cpa.db'
 DEFAULT_PROPERTIES_FILENAME = 'cpa.properties'
 
 p = Properties.getInstance()
-
+db = dbconnect.DBConnect.getInstance()
 
 def load_columbus(filepath):
     '''
@@ -77,20 +77,22 @@ def load_columbus(filepath):
     
     plates, wells, images = get_plates_wells_and_images(image_index)
     channels = get_channel_names(plates, wells, images)
-    
-    im_cols, im_table, imagenumber_dict = create_per_image_table(image_dir, plates, wells, images, channels)    
-    ob_cols, ob_table = create_per_object_table(doc, imagenumber_dict)
+
     print 'Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
     create_properties_file(image_index, channels)
-    
-    db = dbconnect.DBConnect.getInstance()
-    db.connect(empty_sqlite_db=True)
+    db.connect(empty_sqlite_db = True)
+    p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+
     print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
     print 'Creating per_image table'
-    db.CreateTableFromData(im_table, im_cols, 'per_image')
+    imagenumber_dict = create_per_image_table(image_dir, plates, wells, images, channels)    
+    
     print 'Creating per_object table'
-    db.CreateTableFromData(ob_table, ob_cols, 'per_object')
-    p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    from time import time
+    t = time()
+    create_per_object_table(doc, imagenumber_dict)
+    print 'TIME TO CREATE TABLE:', time() - t
+    
 
 
 
@@ -153,10 +155,13 @@ def create_per_object_table(doc, imagenumber_dict):
     
     coltypes = ['INTEGER', 'INTEGER', 'VARCHAR(3)', 'REAL', 'REAL']
     coltypes += ['REAL'] * len(param_columns)
+    
+    colnames = dbconnect.clean_up_colnames(colnames)
+    db.create_empty_table('per_object', colnames, coltypes)
+    db.create_default_indexes_on_table('per_object')
 
     # create object measurement matrix
     object_number = 1
-    table = []
     for well_res_file in well_result_files:
         doc = dom.parse(os.path.join(results_dir, well_res_file))
         platename = doc.getElementsByTagName('PlateName')[0].firstChild.data
@@ -165,6 +170,7 @@ def create_per_object_table(doc, imagenumber_dict):
         pid = doc.getElementsByTagName('ResultTable')[0].getAttribute('PlaneID')
         tid = doc.getElementsByTagName('ResultTable')[0].getAttribute('TimepointID')
         wellname = convert_rowcol_to_wellid(r, c)
+        rows = []
         for tr in doc.getElementsByTagName('ResultTable')[0].getElementsByTagName('tr'):
             fid = tr.getAttribute('FieldID')
             image_number = imagenumber_dict[platename, wellname, fid, pid, tid]
@@ -175,10 +181,13 @@ def create_per_object_table(doc, imagenumber_dict):
                    float(tr.getAttribute('y'))]
             row += [float(col.firstChild.data) 
                     for col in tr.childNodes]
-            table += [row]
+            rows += [row]
             object_number += 1
+        
+        # Insert rows from this well result file
+        db.insert_rows_into_table('per_object', colnames, coltypes, [row])
             
-    return colnames, table
+    db.Commit()
 
 
 def create_per_image_table(image_dir, plates, wells, images, channels):
@@ -224,12 +233,10 @@ def create_per_image_table(image_dir, plates, wells, images, channels):
                 
                 imagenumber += 1
                 table += [row]
+
+    db.CreateTableFromData(table, colnames, 'per_image')
                 
-    #
-    # TODO: populate the table.
-    #
-                
-    return colnames, table, imagenumber_dict
+    return imagenumber_dict
 
 
 ##########################################################################
@@ -367,13 +374,8 @@ def get_plate_shape(image_index):
 #
 
 if __name__ == "__main__":
+    app = wx.PySimpleApp()
     load_columbus(results_dir+'/'+measurements_index)
-    
+    app.MainLoop()
     import cpa
     cpa.CPAnalyst
-    
-##    import sqlite3 as db
-##    conn = db.connect('/Users/afraser/Desktop/test.db')
-##    cur = conn.cursor()
-##    cur.execute('CREATE TABLE')
-    
