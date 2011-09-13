@@ -443,7 +443,8 @@ class CPAnalyst(wx.App):
 
         p = Properties.getInstance()
         if not p.is_initialized():
-            if not p.show_load_dialog():
+            from guiutils import show_load_dialog
+            if not show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
         self.frame = MainGUI(p, None, size=(860,-1))
