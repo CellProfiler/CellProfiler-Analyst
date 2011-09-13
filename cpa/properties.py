@@ -150,6 +150,10 @@ class Properties(Singleton):
         self.__dict__[field] = val
 
     def show_load_dialog(self):
+        '''
+        Note: this is only used for loading properties files. To load Columbus 
+        output files, use guiutils.show_load_dialog
+        '''
         import wx
         if not wx.GetApp():
             raise Exception("Can't display load dialog without a wx App.")
