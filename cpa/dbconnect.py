@@ -1443,6 +1443,42 @@ class DBConnect(Singleton):
         typed_table = np.array(typed_table, dtype=object).T
         return self.CreateTempTableFromData(typed_table, colnames, tablename)
     
+    def create_empty_table(self, tablename, colnames, coltypes, temporary=False):
+        '''Creates an empty table with the given tablename and columns.
+        Note: column names will automatically be cleaned up.
+        '''
+        self.execute('DROP TABLE IF EXISTS %s'%(tablename))
+        # Clean up column names
+        colnames = clean_up_colnames(colnames)
+        coldefs = ', '.join(['`%s` %s'%(lbl, coltypes[i]) for i, lbl in enumerate(colnames)])
+        if not temporary:
+            self.execute('CREATE TABLE %s (%s)'%(tablename, coldefs))
+        else:
+            self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
+
+    def create_default_indexes_on_table(self, tablename):
+        '''automatically adds indexes to all the image, object, and well key 
+        columns in the specified table
+        '''
+        for key in list(well_key_columns() or []) + list(object_key_columns()):
+            if key in self.GetColumnNames(tablename):
+                self.execute('CREATE INDEX %s ON %s (%s)'%('%s_%s'%(tablename,key), tablename, key))
+
+    def insert_rows_into_table(self, tablename, colnames, coltypes, rows):
+        '''Inserts the given rows into the table
+        '''
+        for row in rows:
+            vals = []
+            for i, val in enumerate(row):
+                if (coltypes[i]=='FLOAT' and (np.isinf(val) or np.isnan(val))
+                    or val is None):
+                    vals += ['NULL']
+                else:
+                    vals += ['"%s"'%val]
+            vals = ', '.join(vals)
+            self.execute('INSERT INTO %s (%s) VALUES (%s)'%(
+                          tablename, ', '.join(colnames), vals), silent=True)
+    
     def CreateTempTableFromData(self, dtable, colnames, tablename, temporary=True):
         '''Creates and populates a temporary table in the database.
         '''
@@ -1452,34 +1488,17 @@ class DBConnect(Singleton):
         '''Creates and populates a table in the database.
         dtable -- array of the data to populate the table with (SQL data types 
                   are inferred from the array data)
-        colnames -- the column names to use
+        colnames -- the column names to use (note: these will be cleaned up if 
+                    invalid characters are used)
         tablename -- the name of the table
         temporary -- whether the table should be created as temporary
         '''
-        self.execute('DROP TABLE IF EXISTS %s'%(tablename))
-        # Clean up column names
         colnames = clean_up_colnames(colnames)
-        # Infer column types
         coltypes = self.InferColTypesFromData(dtable, len(colnames))
-        coldefs = ', '.join(['`%s` %s'%(lbl, coltypes[i]) for i, lbl in enumerate(colnames)])
-        if not temporary:
-            self.execute('CREATE TABLE %s (%s)'%(tablename, coldefs))
-        else:
-            self.execute('CREATE TEMPORARY TABLE %s (%s)'%(tablename, coldefs))
-        for key in list(well_key_columns() or []) + list(image_key_columns()):
-            if key in colnames:
-                self.execute('CREATE INDEX %s ON %s (%s)'%('%s_%s'%(tablename,key), tablename, key))
+        self.create_empty_table(tablename, colnames, coltypes, temporary)
+        self.create_default_indexes_on_table(tablename)
         logging.info('Populating %stable %s...'%((temporary and 'temporary ' or ''), tablename))
-        for row in dtable:
-            vals = []
-            for i, val in enumerate(row):
-                if coltypes[i]=='FLOAT' and (np.isinf(val) or np.isnan(val)):
-                    vals += ['NULL']
-                else:
-                    vals += ['"%s"'%val]
-            vals = ', '.join(vals)
-            self.execute('INSERT INTO %s (%s) VALUES (%s)'%(
-                          tablename, ', '.join(colnames), vals), silent=True)
+        self.insert_rows_into_table(tablename, colnames, coltypes, dtable)
         self.Commit()
         return True
     
