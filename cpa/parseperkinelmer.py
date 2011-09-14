@@ -87,11 +87,11 @@ def load_columbus(filepath):
     print 'Creating per_image table'
     imagenumber_dict = create_per_image_table(image_dir, plates, wells, images, channels)    
     
-    print 'Creating per_object table'
+    print 'Creating per_object table...'
     from time import time
     t = time()
     create_per_object_table(doc, imagenumber_dict)
-    print 'TIME TO CREATE TABLE:', time() - t
+    print '...done in %.2f seconds'%(time() - t)
     
 
 
@@ -103,6 +103,14 @@ def create_properties_file(image_index, channels):
     assert channels != []
     
     plate_shape = get_plate_shape(image_index)
+    dlg = wx.TextEntryDialog(None, 'Enter cell window size',
+                             'What is the approximate maximum diameter of your '
+                             'cells in microns? CPA will use this value to crop '
+                             'cell tiles for Classifier.',
+                             '50', style=wx.CENTER|wx.OK)
+    dlg.ShowModal()
+    cell_diameter = float(dlg.GetValue())
+    dlg.Destroy()
     
     p.db_type             = 'sqlite'
     p.db_sqlite_file      = os.path.join(results_dir, DEFAULT_DB_NAME)
@@ -118,7 +126,7 @@ def create_properties_file(image_index, channels):
     p.image_file_cols     = [FILE_COLUMN_PREFIX + c for c in channels]
     p.image_channel_names = channels
     p.plate_type          = convert_plate_dims_to_platetype(*plate_shape)
-    p.image_tile_size     = 100 # TODO
+    p.image_tile_size     = str(int(get_cell_pixel_size(image_index, cell_diameter)))
     p._filters = {}
     p._groups = {}
     p._textfile = ''
@@ -185,7 +193,7 @@ def create_per_object_table(doc, imagenumber_dict):
             object_number += 1
         
         # Insert rows from this well result file
-        db.insert_rows_into_table('per_object', colnames, coltypes, [row])
+        db.insert_rows_into_table('per_object', colnames, coltypes, rows)
             
     db.Commit()
 
@@ -367,8 +375,25 @@ def get_plate_shape(image_index):
     cols = plate_node.getElementsByTagName('PlateColumns')[0].firstChild.data
     return (rows, cols)
         
+def get_cell_pixel_size(image_index, size_in_microns):
+    '''
+    Returns cell pixel size computed from the image resolution and it's diameter
+    in microns.
+    '''
+    doc = dom.parse(os.path.join(results_dir, image_index))
+    image_node = doc.getElementsByTagName('Images')[0].getElementsByTagName('Image')[0]
+    xres = float(image_node.getElementsByTagName('ImageResolutionX')[0].firstChild.data)
+    yres = float(image_node.getElementsByTagName('ImageResolutionY')[0].firstChild.data)
+    # resolution currently assumed to be in meters (per-pixel)
+    xunits = image_node.getElementsByTagName('ImageResolutionY')[0].getAttribute('Unit')
+    yunits = image_node.getElementsByTagName('ImageResolutionY')[0].getAttribute('Unit')
+    assert xunits == yunits == 'm', 'CPA expects image resolution to be in meters per-pixel.'
+    # convert res to microns per-pixel
+    xres *= 1000000
+    yres *= 1000000
+    return size_in_microns / min(xres, yres)
 
-
+    
 #
 # try it out
 #
