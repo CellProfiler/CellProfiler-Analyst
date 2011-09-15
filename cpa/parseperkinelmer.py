@@ -46,6 +46,14 @@ def load_columbus(filepath):
     
     filepath -- path to the MeasurementIndex.ColumbusIDX.xml file output by Columbus
     '''
+##    progress_dlg = wx.ProgressDialog('Creating CPA database.', '0% Complete', 100, None, 
+##                            wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+##    def update(frac):
+##        cont, skip = progress_dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
+##        if not cont: # cancel was pressed
+##            progress_dlg.Destroy()
+##            raise StopCalculating()
+    
     global measurements_index
     global results_dir
     measurements_index = filepath
@@ -84,8 +92,9 @@ def load_columbus(filepath):
     p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
 
     print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
-    print 'Creating per_image table'
-    imagenumber_dict = create_per_image_table(image_dir, plates, wells, images, channels)    
+    print 'Creating per_image table...'
+    imagenumber_dict = create_per_image_table(image_dir, plates, wells, images, channels)
+    print '...done'
     
     print 'Creating per_object table...'
     from time import time
@@ -93,7 +102,7 @@ def load_columbus(filepath):
     create_per_object_table(doc, imagenumber_dict)
     print '...done in %.2f seconds'%(time() - t)
     
-
+##    progress_dlg.Destroy()
 
 
 def create_properties_file(image_index, channels):
@@ -103,14 +112,15 @@ def create_properties_file(image_index, channels):
     assert channels != []
     
     plate_shape = get_plate_shape(image_index)
-    dlg = wx.TextEntryDialog(None, 'Enter cell window size',
-                             'What is the approximate maximum diameter of your '
-                             'cells in microns? CPA will use this value to crop '
-                             'cell tiles for Classifier.',
-                             '50', style=wx.CENTER|wx.OK)
-    dlg.ShowModal()
-    cell_diameter = float(dlg.GetValue())
-    dlg.Destroy()
+##    dlg = wx.TextEntryDialog(None, 'Enter cell window size',
+##                             'What is the approximate maximum diameter of your '
+##                             'cells in microns? CPA will use this value to crop '
+##                             'cell tiles for Classifier.',
+##                             '50', style=wx.CENTER|wx.OK)
+##    dlg.ShowModal()
+##    cell_diameter = float(dlg.GetValue())
+##    image_tile_size = str(int(get_cell_pixel_size(image_index, cell_diameter)))
+##    dlg.Destroy()
     
     p.db_type             = 'sqlite'
     p.db_sqlite_file      = os.path.join(results_dir, DEFAULT_DB_NAME)
@@ -126,7 +136,7 @@ def create_properties_file(image_index, channels):
     p.image_file_cols     = [FILE_COLUMN_PREFIX + c for c in channels]
     p.image_channel_names = channels
     p.plate_type          = convert_plate_dims_to_platetype(*plate_shape)
-    p.image_tile_size     = str(int(get_cell_pixel_size(image_index, cell_diameter)))
+    p.image_tile_size     = 100 #image_tile_size
     p._filters = {}
     p._groups = {}
     p._textfile = ''
