@@ -19,7 +19,7 @@ AllowNoIcons=yes
 LicenseFile=LICENSE.txt
 OutputDir=CPAnalyst_2.0r10646
 OutputBaseFilename=setup_CPAnalyst
-SetupIconFile=src\icons\cpa.ico
+SetupIconFile=cpa\icons\cpa.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -51,8 +51,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 0,6.1
 
 [Files]
-Source: "src\dist\cpa.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "src\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "cpa\dist\cpa.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "cpa\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
