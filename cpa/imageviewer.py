@@ -1,3 +1,14 @@
+#######################
+# Notes: Christina 09.16.2011
+# The following is an example of properties file data that work with this imageviewer:
+#
+#image_path_cols =  Image_PathName_OutlinedAxons,Image_PathName_SomaOutlines,Image_PathName_SkelDendrites,Image_PathName_SkelAxons,Image_PathName_ColorImage,Image_PathName_OrigD,Image_PathName_OrigA,Image_PathName_OrigN,Image_PathName_OutlinedDendrites
+#image_file_cols = Image_FileName_OutlinedAxons,Image_FileName_SomaOutlines,Image_FileName_SkelDendrites,Image_FileName_SkelAxons,Image_FileName_ColorImage,Image_FileName_OrigD,Image_FileName_OrigA,Image_FileName_OrigN,Image_FileName_OutlinedDendrites
+#image_names = OutlinedAxons,SomaOutlines,SkelDendrites,SkelAxons,ColorImage,OrigD,OrigA,OrigN,OutlinedDendrites
+#channels_per_image  = 3,3,1,1,3,1,1,1,3
+#image_channel_colors = none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, 
+#########################
+
 from dbconnect import *
 from datamodel import DataModel
 from imagecontrolpanel import *
@@ -12,7 +23,7 @@ import wx
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
-REQUIRED_PROPERTIES = ['image_channel_colors', 'object_name', 'image_names', 'image_id']
+REQUIRED_PROPERTIES = ['channels_per_image','image_channel_colors', 'object_name', 'image_names', 'image_id']
 
 CL_NUMBERED = 'numbered'
 CL_COLORED = 'colored'
@@ -271,48 +282,161 @@ class ImageViewer(wx.Frame):
         self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
         self.classViewMenuItem.Enable(p.object_table is not None)
         self.GetMenuBar().Append(self.viewMenu, 'View')
-    
+
+
+    #######################################
+    # CreateChannelMenus 
+    #######################################
     def CreateChannelMenus(self):
-        ''' Create color-selection menus for each channel. '''
-        # clean up existing channel menus
-        try:
-            menus = set([items[2].Menu for items in self.chMapById.values()])
-            for menu in menus:
-                for i, mbmenu in enumerate(self.MenuBar.Menus):
-                    if mbmenu[0] == menu:
-                        self.MenuBar.Remove(i)
-            for menu in menus:
-                menu.Destroy()
-        except:
-            pass
+		''' Create color-selection menus for each channel. '''
+		
+		# Clean up existing channel menus
+		try:
+			menus = set([items[2].Menu for items in self.chMapById.values()])
+			for menu in menus:
+				for i, mbmenu in enumerate(self.MenuBar.Menus):
+					if mbmenu[0] == menu:
+						self.MenuBar.Remove(i)
+			for menu in menus:
+				menu.Destroy()
+		except:
+			pass
         
-        chIndex = 0
-        self.chMapById = {}
-        channel_names = []
-        for i, chans in enumerate(p.channels_per_image):
-            chans = int(chans)
-            # Construct channel names, for RGB images, append a # to the end of
-            # each channel. 
-            name = p.image_names[i]
-            if chans == 1:
-                channel_names += [name]
-            elif chans == 3: #RGB
-                channel_names += ['%s [%s]'%(name,x) for x in 'RGB']
-            else:
-                raise ValueError('Unsupported number of channels (%s) specified in properties field channels_per_image.'%(chans))
-        
-        for channel, setColor in zip(channel_names, self.chMap):
-            channel_menu = wx.Menu()
-            for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
-                id = wx.NewId()
-                item = channel_menu.AppendRadioItem(id,color)
-                self.chMapById[id] = (chIndex, color, item, channel_menu)
-                if color.lower() == setColor.lower():
-                    item.Check()
-                self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
-            self.GetMenuBar().Append(channel_menu, channel)
-            chIndex+=1
-                                
+		# Initialize variables
+		self.imagesMenu = wx.Menu()
+		chIndex = 0
+		imIndex = 0
+		self.chMapById = {}
+		self.imMapById = {}
+		channel_names = []
+		startIndex = 0
+	
+		# Construct channel names, for RGB images, append a # to the end of
+		# each channel. 
+		for i, chans in enumerate(p.channels_per_image):
+			chans = int(chans)
+			name = p.image_names[i]
+			if chans == 1:
+				channel_names += [name]
+			elif chans == 3: #RGB
+				channel_names += ['%s [%s]'%(name,x) for x in 'RGB']
+			else:
+				raise ValueError('Unsupported number of channels (%s) specified in properties field channels_per_image.'%(chans))
+
+		# Zip channel names with channel map
+		zippedChNamesChMap = zip(channel_names, self.chMap)
+				
+		# Loop over all the image names in the properties file
+		for i, chans in enumerate(p.image_names):
+			channelIds = []
+			# Loop over all the channels
+			for j in range(0, int(p.channels_per_image[i])):
+				(channel, setColor) = zippedChNamesChMap[chIndex]
+				channel_menu = wx.Menu()
+				for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
+					id = wx.NewId()
+					# Create a radio item that maps an id and a color. 
+					item = channel_menu.AppendRadioItem(id,color)
+					# Add a new chmapbyId object
+					self.chMapById[id] = (chIndex, color, item, channel_menu)
+					# If lowercase color matches what it was originally set to...
+					if color.lower() == setColor.lower():
+						# Check off the item 
+						item.Check()
+					# Bind
+					self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
+					# Add appropriate Ids to imMapById
+					if (int(p.channels_per_image[i]) == 1 and color == 'Gray') or (int(p.channels_per_image[i]) == 3 and j == 0 and color == 'Red') or (int(p.channels_per_image[i]) == 3 and j == 2 and color == 'Blue') or (int(p.channels_per_image[i]) == 3 and j == 1 and color == 'Green'): 
+						channelIds = channelIds + [id]
+						print("Constructing channelIds... for " + channel + ": " + str(channelIds))
+				# Add new menu item  
+				self.GetMenuBar().Append(channel_menu, channel)
+				chIndex+=1
+			# New id for the image as a whole
+			id = wx.NewId()
+			item = self.imagesMenu.AppendRadioItem(id, p.image_names[i])
+			#Effectively this code creates a data structure that stores relevant info with ID as a key
+			self.imMapById[id] = (int(p.channels_per_image[i]), item, startIndex, channelIds) 
+			# Binds the event menu to OnFetchImage (below) and item 
+			self.Bind(wx.EVT_MENU, self.OnFetchImage, item)
+			startIndex += int(p.channels_per_image[i])
+		# Add the "none" image and check it off. 
+		id= wx.NewId()
+		item = self.imagesMenu.AppendRadioItem(id, 'None')
+		self.Bind(wx.EVT_MENU, self.OnFetchImage, item)
+		item.Check()
+		# Add new "Images" menu bar item
+		self.GetMenuBar().Append(self.imagesMenu, 'Images')
+	#######################################
+	# /CreateChannelMenus 
+	#######################################
+
+
+
+    #######################################
+    # OnFetchImage
+    # 
+    # Allows user to display one image at a time.  If image is single channel,
+    # displays the image as gray.  If image is multichannel, displays image as
+    # RGB.
+    # @param self, evt
+    #######################################
+    def OnFetchImage(self, evt=None):
+		
+		# Set every channel to black and set all the toggle options to 'none'
+		for ids in self.chMapById.keys():
+			(chIndex, color, item, channel_menu) = self.chMapById[ids] 
+			if (color.lower() == 'none'):
+				item.Check()		
+		for ids in self.imMapById.keys():
+			(cpi, itm, si, channelIds) = self.imMapById[ids]
+			if cpi == 3:
+				self.chMap[si] = 'none'
+				self.chMap[si+1] = 'none'
+				self.chMap[si+2] = 'none'
+				self.toggleChMap[si] = 'none'
+				self.toggleChMap[si+1] = 'none'
+				self.toggleChMap[si+2] = 'none'
+			else:
+				self.chMap[si] = 'none'
+				self.toggleChMap[si] = 'none'
+
+		# Determine what image was selected based on the event.  Set channel to appropriate color(s)
+		if evt.GetId() in self.imMapById.keys():
+
+			(chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
+
+			if chanPerIm == 3:
+				# Set chMap and toggleChMap values
+				self.chMap[startIndex] = 'red'
+				self.chMap[startIndex+1] = 'green'
+				self.chMap[startIndex+2] = 'blue'
+				self.toggleChMap[startIndex] = 'red'
+				self.toggleChMap[startIndex + 1] ='green'
+				self.toggleChMap[startIndex + 2] = 'blue'
+				
+				# Toggle the option in the independent channel menus
+				(chIndex, color, item, channel_menu) = self.chMapById[channelIds[0]] 
+				item.Check()
+				(chIndex, color, item, channel_menu) = self.chMapById[channelIds[1]] 
+				item.Check()
+				(chIndex, color, item, channel_menu) = self.chMapById[channelIds[2]] 
+				item.Check()
+			else:
+				# Set channel map and toggleChMap values. 
+				self.chMap[startIndex] = 'gray'
+				self.toggleChMap[startIndex] = 'gray'
+				
+				# Toggle the option for the independent channel menu
+				(chIndex, color, item, channel_menu) = self.chMapById[channelIds[0]] 
+				item.Check()
+			
+		self.MapChannels(self.chMap)
+	#######################################
+	# /OnFetchImage
+	#######################################
+
+
     def DoLayout(self):
         if self.imagePanel:
             if not self.cp:
@@ -671,3 +795,6 @@ if __name__ == "__main__":
     #imagetools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
            
     app.MainLoop()
+    
+    
+
