@@ -524,25 +524,26 @@ class CPAnalyst(wx.App):
 
 
 
-# Initialize the app early because the fancy exception handler
-# depends on it in order to show a dialog.
-app = CPAnalyst(redirect=False)
-
-# Install our own pretty exception handler unless one has already
-# been installed (e.g., a debugger)
-if sys.excepthook == sys.__excepthook__:
-    from classifier import show_exception_as_dialog
-    sys.excepthook = show_exception_as_dialog
-
-app.MainLoop()
-
-#
-# Kill the Java VM
-#
-try:
-    from bioformats import jutil
-    jutil.kill_vm()
-except:
-    import traceback
-    traceback.print_exc()
-    print "Caught exception while killing VM"
+if __name__ == "__main__":
+    # Initialize the app early because the fancy exception handler
+    # depends on it in order to show a dialog.
+    app = CPAnalyst(redirect=False)
+    
+    # Install our own pretty exception handler unless one has already
+    # been installed (e.g., a debugger)
+    if sys.excepthook == sys.__excepthook__:
+        from classifier import show_exception_as_dialog
+        sys.excepthook = show_exception_as_dialog
+    
+    app.MainLoop()
+    
+    #
+    # Kill the Java VM
+    #
+    try:
+        from bioformats import jutil
+        jutil.kill_vm()
+    except:
+        import traceback
+        traceback.print_exc()
+        print "Caught exception while killing VM"
