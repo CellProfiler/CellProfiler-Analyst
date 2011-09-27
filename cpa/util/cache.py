@@ -96,7 +96,7 @@ class RobustLinearNormalization(object):
     #
 
     def _create_cache(self, predicate, resume=False):
-        self._create_cache_percentiles(resume)
+        self._create_cache_percentiles(predicate, resume)
         self._create_cache_colmask(predicate)
 
     def _get_controls(self, predicate):
@@ -124,7 +124,7 @@ class RobustLinearNormalization(object):
                 colmask &= nonzero
         np.save(self._colmask_filename, colmask)
 
-    def _create_cache_percentiles(self, resume=False):
+    def _create_cache_percentiles(self, predicate, resume=False):
         controls = self._get_controls(predicate)
         for i, (plate, imKeys) in enumerate(controls.items()):
             _check_directory(os.path.dirname(self._percentiles_filename(plate)), 
@@ -195,9 +195,9 @@ class Cache(object):
         self._create_cache_colnames()
         self._create_cache_plate_map()
 
-        nimages = len(cache._plate_map)
+        nimages = len(self._cached_plate_map)
         i = 0
-        for plate, image_keys in invert_dict(cache._plate_map).items():
+        for plate, image_keys in invert_dict(self._cached_plate_map).items():
             plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
             if not os.path.exists(plate_dir):
                 os.mkdir(plate_dir)
@@ -215,12 +215,12 @@ class Cache(object):
 
     def _create_cache_plate_map(self):
         """Create cache of map from image key to plate name"""
-        plate_map = dict((tuple(row[1:]), row[0])
+        self._cached_plate_map = dict((tuple(row[1:]), row[0])
                          for row in cpa.db.execute('select distinct %s, %s from %s'%
                                                    (cpa.properties.plate_id, 
                                                     ', '.join(cpa.dbconnect.image_key_columns()),
                                                     cpa.properties.image_table)))
-        cpa.util.pickle(self._plate_map_filename, plate_map)
+        cpa.util.pickle(self._plate_map_filename, self._cached_plate_map)
 
     def _create_cache_image(self, plate, image_key, resume=False):
         filename = self._image_filename(plate, image_key)
