@@ -178,7 +178,6 @@ def GetWhereClauseForObjects(obkeys, table_name=None):
 
     return split(obkeys,table_name)
 
-
 def GetWhereClauseForImages(imkeys):
     '''
     Return a SQL WHERE clause that matches any of the given image keys.
@@ -310,7 +309,7 @@ class DBConnect(Singleton):
         # If this connection ID already exists print a warning
         if connID in self.connections.keys():
             if self.connectionInfo[connID] == (p.db_host, p.db_user, 
-                                               p.db_passwd, p.db_name):
+                                               (p.db_passwd or None), p.db_name):
                 logging.warn('A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
             else:
                 raise DBException, 'A connection already exists for this thread (%s). Close this connection first.'%(connID,)
@@ -321,11 +320,11 @@ class DBConnect(Singleton):
             from MySQLdb.cursors import SSCursor
             try:
                 conn = MySQLdb.connect(host=p.db_host, db=p.db_name, 
-                                       user=p.db_user, passwd=p.db_passwd)
+                                       user=p.db_user, passwd=(p.db_passwd or None))
                 self.connections[connID] = conn
                 self.cursors[connID] = SSCursor(conn)
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
-                                               p.db_passwd, p.db_name)
+                                               (p.db_passwd or None), p.db_name)
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
             except DBError(), e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
