@@ -54,7 +54,7 @@ class waiter(Thread):
             time.sleep(1)
        
 
-
+            
 def _compute_group_mean((cache_dir, gp_mean_file, images)):
     try:
         import numpy as np
@@ -63,88 +63,126 @@ def _compute_group_mean((cache_dir, gp_mean_file, images)):
         normalizeddata, normalized_colnames = cash.load(images, normalization=cache.RobustLinearNormalization)
         normalizeddata_mean = np.mean(normalizeddata, axis = 0)
         np.save(gp_mean_file, normalizeddata_mean)
+        #print gp_mean_file
         return normalizeddata_mean
     except: # catch *all* exceptions
         e = sys.exc_info()[1]
         print >>sys.stderr, "Error: (%s) %s" % (gp_mean_file,e) 
-    
+        
 
-def _compute_group_means(properties_file, cache_dir, output_file, group, filter = None):
-    cpa.properties.LoadFile(properties_file)
-    cash = cache.Cache(cache_dir)
+class ProfileMean(object):
     
-    client = Client(profile='lsf')
-    dview = client.load_balanced_view() #client[:]
-    
-    group_mean_dir = os.path.join(cache_dir, 'mean_profile_%s' % group)
-    if filter:
-        group_mean_dir = group_mean_dir + '_' + filter
-    
-    if not os.path.exists(group_mean_dir):
-        os.mkdir(group_mean_dir)
-    
-    mapping_group_images, colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
-    
-    colnames = cash.colnames
-    
-    grps = '\t'.join("%s"%g for g in colnames_group)
-    cols = '\t'.join("%s"%c for c in colnames)
-    
-    parameters = []
-    group_item_total = len(mapping_group_images)
-    w = waiter()
-    w.init(group_mean_dir, group_item_total)
-    w.start()
-    
-    for gp in mapping_group_images.keys():
-        gp_name = '_'.join("%s"%i for i in gp)
-        gp_mean_file = os.path.join(group_mean_dir, '%s' % gp_name)
-        if not os.path.exists('%s.npy' % gp_mean_file):
-            parameter = (cache_dir, gp_mean_file, mapping_group_images[gp])
-            parameters.append(parameter)
+    def __init__(self, properties_file, cache_dir, group, filter = None):
+        cpa.properties.LoadFile(properties_file)
+        self.cache_dir = cache_dir
+        self.cash = cache.Cache(cache_dir)
+        
+        self.group_mean_dir = os.path.join(cache_dir, 'mean_profile_%s' % group)
+        if filter:
+            self.group_mean_dir = self.group_mean_dir + '_' + filter
+        
+        if not os.path.exists(self.group_mean_dir):
+            os.mkdir(self.group_mean_dir)
             
-    
-    if(len(parameters)>0):
-        results = dview.map(_compute_group_mean, parameters)    
-        #results = dview.map_sync(_compute_group_mean, parameters)
-        #results = map(_compute_group_mean, parameters)
+        self.mapping_group_images, self.colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
+        self.colnames = self.cash.colnames
         
-    w.running = False
+        self.group_mean_file = '%s.npy' % self.group_mean_dir
         
-    #writing text file
-    text_file = open(output_file, "w")
-    text_file.write('%s\t%s\n' % (grps, cols))
+        if not os.path.exists(self.group_mean_file):
+            self._compute_mean_profile()
+        
     
-    print "writing file..."
-    time.sleep(5) # #let a little time to write properly the last files
-    startTime = time.time()
-    row = 1.0
-    for gp in mapping_group_images.keys():
-        gp_name = '_'.join("%s"%i for i in gp)
-        gp_mean_file = os.path.join(group_mean_dir, '%s' % gp_name)
-        if not os.path.exists('%s.npy' % gp_mean_file):
-            print >>sys.stderr, '%s was not computed, exiting program' % gp_name
-            text_file.close()
-            os.remove(output_file)
+    def _compute_mean_profile(self):
+        client = Client(profile='lsf')
+        dview = client[:] #client.load_balanced_view() 
+        dview.block = True
+        
+        parameters = []
+        group_item_total = len(self.mapping_group_images)
+        w = waiter()
+        w.init(self.group_mean_dir, group_item_total)
+        w.start()
+
+        for gp in self.mapping_group_images.keys():
+            gp_name = '_'.join("%s"%i for i in gp)
+            gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
+            if not os.path.exists('%s.npy' % gp_mean_file):
+                parameter = (self.cache_dir, gp_mean_file, self.mapping_group_images[gp])
+                parameters.append(parameter)
+                #print parameter
+        
+        if(len(parameters)>0):
+            #results = dview.map_sync(_compute_group_mean, parameters)
+            #results = dview.map(_compute_group_mean, parameters)    
+            #results = map(_compute_group_mean, parameters)
+            results = _compute_group_mean(parameters[0])
+        
+        if(results.__contains__(None)):
+            index = results.index(None)
+            print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
+            _compute_group_mean(parameters[index])
+            print >>sys.stderr, '#### Exiting'
             sys.exit(os.EX_USAGE)
-        datamean = np.load('%s.npy' % gp_mean_file)
-        groupItem = '\t'.join("%s"%i for i in gp)
-        values = '\t'.join("%s"%v for v in datamean)
-        text_file.write('%s\t%s\n' % (groupItem, values))
-        
-        if(row % 100 == 0):
-            ratio = row/group_item_total
-            percent = (ratio * 100)
-            now = time.time()
-            elapsedTime = (now - startTime)
-            estTotalTime = elapsedTime / ratio
-            estRemainingTime = estTotalTime - elapsedTime;
-            timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
-            print '%d%% Est remaining time: %s' % (percent,timeleft)
-        row += 1
             
-    text_file.close()
+        time.sleep(5) #let a little time to write properly the last files
+        w.running = False
 
+        print "combining files..."
+        startTime = time.time()
+        row = 1.0
+        data = []
+        for gp in self.mapping_group_images.keys():
+            gp_name = '_'.join("%s"%i for i in gp)
+            gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
+            if not os.path.exists('%s.npy' % gp_mean_file):
+                print >>sys.stderr, '%s was not computed, exiting program' % gp_name
+                sys.exit(os.EX_USAGE)
+            datamean = np.load('%s.npy' % gp_mean_file)
+            labeleddatamean = ['_'.join("%s"%i for i in gp)] + list(datamean)
+            
+            data.append(labeleddatamean)
+            
+            if(row % 100 == 0):
+                ratio = row/group_item_total
+                percent = (ratio * 100)
+                now = time.time()
+                elapsedTime = (now - startTime)
+                estTotalTime = elapsedTime / ratio
+                estRemainingTime = estTotalTime - elapsedTime;
+                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
+                print '%d%% Est remaining time: %s' % (percent,timeleft)
+            row += 1
+            
+        np.save(self.group_mean_dir, data)
+    
+    def get_data(self):
+        return np.load('%s.npy' % self.group_mean_file)
+        
+    def save_as_ext_file(self, output_file):
+
+        grps = '\t'.join("%s"%g for g in self.colnames_group)
+        cols = '\t'.join("%s"%c for c in self.colnames)
+
+        #writing text file
+        text_file = open(output_file, "w")
+        text_file.write('%s\t%s\n' % (grps, cols))
+        for gp in self.mapping_group_images.keys():
+            gp_name = '_'.join("%s"%i for i in gp)
+            gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
+            if not os.path.exists('%s.npy' % gp_mean_file):
+                print >>sys.stderr, '%s was not computed, exiting program' % gp_name
+                text_file.close()
+                os.remove(output_file)
+                sys.exit(os.EX_USAGE)
+            datamean = np.load('%s.npy' % gp_mean_file)
+            groupItem = '\t'.join("%s"%i for i in gp)
+            values = '\t'.join("%s"%v for v in datamean)
+            text_file.write('%s\t%s\n' % (groupItem, values))
+                
+        text_file.close()
+    
+    
 if __name__ == '__main__':
  
     # python profile_mean.py '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2.properties' '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache' '/home/unix/auguste/ImagingAuguste/CDP2/test_cc_map.txt' 'CompoundConcentration' 'compound_treated'
@@ -157,12 +195,14 @@ if __name__ == '__main__':
         sys.exit(os.EX_USAGE)
     
     if len_argv == 5:
-        properties_file, cache_dir, output_file, group = sys.argv[1:5]          
-        _compute_group_means(properties_file, cache_dir, output_file, group)
+        properties_file, cache_dir, output_file, group = sys.argv[1:5]
+        profileMean = ProfileMean(properties_file, cache_dir, group)
+        profileMean.save_as_text(output_file) 
         
     if len_argv == 6:
         properties_file, cache_dir, output_file, group, filter = sys.argv[1:6]
-        _compute_group_means(properties_file, cache_dir, output_file, group, filter=filter)
+        profileMean = ProfileMean(properties_file, cache_dir, group, filter=filter)
+        profileMean.save_as_text(output_file) 
      
     
 
