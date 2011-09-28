@@ -206,8 +206,8 @@ def check_image_shape_compatibility(imgs):
                 absolute_error = abs(actual - expected)
                 return absolute_error <= max(abs_err, rel_err * abs(expected))
             for i in xrange(len(aspect_ratios)):
-                assert (almost_equal(aspect_ratios[0], aspect_ratios[i], abs_err=0.01),
-                        'Can\'t merge image channels. Aspect ratios do not match.')
+                if not almost_equal(aspect_ratios[0], aspect_ratios[i], abs_err=0.01):
+                    raise Exception('Can\'t merge image channels. Aspect ratios do not match.')
             areas = map(np.product, dims)
             max_idx = areas.index(max(areas))
             min_idx = areas.index(min(areas))
