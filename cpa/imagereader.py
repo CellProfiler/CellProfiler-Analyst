@@ -1,3 +1,4 @@
+import wx
 import numpy as np
 import urllib2
 import urllib
@@ -43,27 +44,53 @@ class ImageReader(object):
                 url = fd
             logging.info('Loading image from "%s"'%(url))
             image = self.load_using_bioformats(url)
+
+            # Got 1 channel, expected more
+            if image.ndim == 2 and p.channels_per_image[i] != '1':
+                raise Exception('CPA found %d channels in the "%s" image at '
+                                '%s, but it was expecting %s as specified '
+                                'by properties field channels_per_image. '
+                                'Please update the channels_per_image field '
+                                'in your properties file, or make sure your '
+                                'images are in the right format.'
+                                %(1, 
+                                  p.image_names[i],
+                                  fd,
+                                  p.channels_per_image[i]))
             
-            if p.channels_per_image[i] == '1':
+            # Got fewer channels than expected
+            elif image.ndim > 2 and image.shape[2] < int(p.channels_per_image[i]):
+                raise Exception('CPA found %d channels in the "%s" image at '
+                                '%s, but it was expecting %s as specified '
+                                'by properties field channels_per_image. '
+                                'Please update the channels_per_image field '
+                                'in your properties file, or make sure your '
+                                'images are in the right format.'
+                                %(image.shape[2], 
+                                  p.image_names[i],
+                                  fd,
+                                  p.channels_per_image[i]))
+            
+            # Got more channels than expected (load the first ones & warn)
+            elif image.ndim > 2 and image.shape[2] > int(p.channels_per_image[i]):
+                logging.warn('WARNING: CPA found %d channels in the "%s" image '
+                             'at %s, but it will only load the first %s as '
+                             'specified by properties field channels_per_image.'
+                             %(image.shape[2], 
+                               p.image_names[i],
+                               fd,
+                               p.channels_per_image[i]))
+                channels += [image[:,:,i] for i in range(int(p.channels_per_image[i]))]
+
+            # Got as many channels as expected
+            else:
                 if image.ndim == 2:
                     channels += [image]
                 else:
-                    channels += [image[:,:,0]]
-            elif p.channels_per_image[i] == '3':
-                channels += [image[:,:,i] for i in range(3)]
-            elif p.channels_per_image[i] >= '4':
-                if image.shape[2] != p.channels_per_image[i]:
-                    raise ('Your properties file specifies %s channels for '
-                           'image #%s but %s channels were found. Make sure '
-                           '"channels_per_image" is set correctly in your '
-                           'properties file.'%(p.channels_per_image[i], i+1, 
-                                               image.shape[2]))
-                channels += [image[:,:,i] for i in range(image.shape[2])]
-            else:
-                raise ('Invalid number of channels (%s) specified for image #%s.'
-                       ' Make sure "channels_per_image" is set correctly in your'
-                       'properties file.'%(p.channels_per_image[0] ,i+1))
-        
+                    channels += [image[:,:,i] for i in range(image.shape[2])]
+                
+        # Check if any images need to be rescaled, and if they are the same
+        # aspect ratio. If so, do the scaling.
         from imagetools import check_image_shape_compatibility
         check_image_shape_compatibility(channels)
         if p.image_rescale:
@@ -79,22 +106,53 @@ class ImageReader(object):
         returns a list of channels as numpy float32 arrays
         '''
         channels = []
-        for fd in fds:
+        for i, fd in enumerate(fds):
             format = fd.split('.')[-1]
             if format.upper() in ['TIF', 'TIFF', 'BMP', 'JPG', 'PNG', 'GIF', 'C01']:
-                channels += self.ReadBitmap(fd)
+                planes = self.ReadBitmap(fd)
             elif format.upper() in ['DIB']:
-                channels += [self.ReadDIB(fd)]
+                planes = [self.ReadDIB(fd)]
             else:
                 logging.error('Image format (%s) not supported. Skipping image "%s".'%(format, fds))
+            
+            # Got fewer channels than expected
+            if len(planes) < int(p.channels_per_image[i]):
+                raise Exception('CPA found %d channels in the "%s" image at '
+                                '%s, but it was expecting %s as specified '
+                                'by properties field channels_per_image. '
+                                'Please update the channels_per_image field '
+                                'in your properties file, or make sure your '
+                                'images are in the right format.'
+                                %(len(planes), 
+                                  p.image_names[i],
+                                  fd,
+                                  p.channels_per_image[i]))
+            
+            # Got more channels than expected (load the first ones & warn)
+            elif len(planes) > int(p.channels_per_image[i]):
+                logging.warn('WARNING: CPA found %d channels in the "%s" image '
+                             'at %s, but it will only load the first %s as '
+                             'specified by properties field channels_per_image.'
+                             %(len(planes), 
+                               p.image_names[i],
+                               fd,
+                               p.channels_per_image[i]))
+                channels += planes[:int(p.channels_per_image[i])]
+                
+            # Got as many channels as expected
+            else:
+                channels += planes
+
+        # Check if any images need to be rescaled, and if they are the same
+        # aspect ratio. If so, do the scaling.
 
         from imagetools import check_image_shape_compatibility
         check_image_shape_compatibility(channels)
         if p.image_rescale:
             from imagetools import rescale
             for i in range(len(channels)):
-                if channels[i].shape != p.image_rescale:
-                    channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
+                if channels[i].shape != map(int, p.image_rescale):
+                    channels[i] = rescale(channels[i], (int(p.image_rescale[1]), int(p.image_rescale[0])))
 
         return channels
 
