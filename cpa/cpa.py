@@ -363,7 +363,7 @@ class MainGUI(wx.Frame):
                    'Public License version 2.')
         info = wx.AboutDialogInfo()
         info.SetIcon(icons.get_cpa_icon())
-        info.SetName('CellProfiler Analyst 2.0 (%s)'%('r%s'(__version__) or 'unknown revision'))
+        info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(__version__) or 'unknown revision'))
         info.SetDescription(message)
         info.AddDeveloper('Adam Fraser')
         info.AddDeveloper('Thouis (Ray) Jones')
