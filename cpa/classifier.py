@@ -1328,7 +1328,7 @@ class Classifier(wx.Frame):
     def OnShowImageControls(self, evt):
         ''' Shows the image adjustment control panel in a new frame. '''
         self.imageControlFrame = wx.Frame(self)
-        ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale)
+        ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale, contrast=self.contrast)
         self.imageControlFrame.Show(True)
 
         
