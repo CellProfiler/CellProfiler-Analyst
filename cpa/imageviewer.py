@@ -323,9 +323,10 @@ class ImageViewer(wx.Frame):
                 channel_names += [name]
             elif chans == 3: #RGB
                 channel_names += ['%s [%s]'%(name,x) for x in 'RGB']
+            elif chans == 4: #RGBA
+                channel_names += ['%s [%s]'%(name,x) for x in 'RGBA']
             else:
-                raise ValueError('Unsupported number of channels (%s) specified in properties field channels_per_image.'%(chans))
-
+                channel_names += ['%s [%s]'%(name,x+1) for x in range(chans)]
         # Zip channel names with channel map
         zippedChNamesChMap = zip(channel_names, self.chMap)
 
@@ -349,7 +350,10 @@ class ImageViewer(wx.Frame):
                     # Bind
                     self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
                     # Add appropriate Ids to imMapById
-                    if (int(p.channels_per_image[i]) == 1 and color == 'Gray') or (int(p.channels_per_image[i]) == 3 and j == 0 and color == 'Red') or (int(p.channels_per_image[i]) == 3 and j == 2 and color == 'Blue') or (int(p.channels_per_image[i]) == 3 and j == 1 and color == 'Green'): 
+                    if ((int(p.channels_per_image[i]) == 1 and color == 'Gray') or 
+                        (int(p.channels_per_image[i]) > 1 and j == 0 and color == 'Red') or 
+                        (int(p.channels_per_image[i]) > 1 and j == 2 and color == 'Blue') or 
+                        (int(p.channels_per_image[i]) > 1 and j == 1 and color == 'Green')): 
                         channelIds = channelIds + [id]
                         print("Constructing channelIds... for " + channel + ": " + str(channelIds))
                 # Add new menu item  
@@ -409,23 +413,7 @@ class ImageViewer(wx.Frame):
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
-            if chanPerIm == 3:
-                # Set chMap and toggleChMap values
-                self.chMap[startIndex] = 'red'
-                self.chMap[startIndex+1] = 'green'
-                self.chMap[startIndex+2] = 'blue'
-                self.toggleChMap[startIndex] = 'red'
-                self.toggleChMap[startIndex + 1] ='green'
-                self.toggleChMap[startIndex + 2] = 'blue'
-
-                # Toggle the option in the independent channel menus
-                (chIndex, color, item, channel_menu) = self.chMapById[channelIds[0]] 
-                item.Check()
-                (chIndex, color, item, channel_menu) = self.chMapById[channelIds[1]] 
-                item.Check()
-                (chIndex, color, item, channel_menu) = self.chMapById[channelIds[2]] 
-                item.Check()
-            else:
+            if chanPerIm == 1:
                 # Set channel map and toggleChMap values. 
                 self.chMap[startIndex] = 'gray'
                 self.toggleChMap[startIndex] = 'gray'
@@ -433,6 +421,15 @@ class ImageViewer(wx.Frame):
                 # Toggle the option for the independent channel menu
                 (chIndex, color, item, channel_menu) = self.chMapById[channelIds[0]] 
                 item.Check()
+            else:
+                RGB = ['red', 'green', 'blue'] + ['none'] * chanPerIm
+                for i in range(chanPerIm):
+                    # Set chMap and toggleChMap values
+                    self.chMap[startIndex + i] = RGB[i]
+                    self.toggleChMap[startIndex + i] = RGB[i]                
+                    # Toggle the option in the independent channel menus
+                    (chIndex, color, item, channel_menu) = self.chMapById[channelIds[i]] 
+                    item.Check()                
 
         self.MapChannels(self.chMap)
         #######################################
