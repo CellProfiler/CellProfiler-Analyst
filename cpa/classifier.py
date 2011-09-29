@@ -85,7 +85,7 @@ class Classifier(wx.Frame):
         self.toggleChMap = p.image_channel_colors[:] # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.scale = 1.0
-        self.contrast = None
+        self.contrast = 'Linear'
         self.defaultTSFileName = None
         self.defaultModelFileName = None
         self.lastScoringFilter = None
@@ -432,8 +432,10 @@ class Classifier(wx.Frame):
                 channel_names += [name]
             elif chans == 3: #RGB
                 channel_names += ['%s [%s]'%(name,x) for x in 'RGB']
+            elif chans == 4: #RGBA
+                channel_names += ['%s [%s]'%(name,x) for x in 'RGBA']
             else:
-                raise ValueError('Unsupported number of channels (%s) specified in properties field channels_per_image.'%(chans))
+                channel_names += ['%s [%s]'%(name,x+1) for x in range(chans)]
         
         for channel, setColor in zip(channel_names, self.chMap):
             channel_menu = wx.Menu()
@@ -446,7 +448,6 @@ class Classifier(wx.Frame):
                 self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
             self.GetMenuBar().Append(channel_menu, channel)
             chIndex+=1
-        
         
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
