@@ -355,7 +355,6 @@ class ImageViewer(wx.Frame):
                         (int(p.channels_per_image[i]) > 1 and j == 2 and color == 'Blue') or 
                         (int(p.channels_per_image[i]) > 1 and j == 1 and color == 'Green')): 
                         channelIds = channelIds + [id]
-                        print("Constructing channelIds... for " + channel + ": " + str(channelIds))
                 # Add new menu item  
                 self.GetMenuBar().Append(channel_menu, channel)
                 chIndex+=1
