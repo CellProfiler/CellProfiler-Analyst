@@ -447,10 +447,7 @@ class PlateMapPanel(wx.Panel):
             imKeys = db.execute('SELECT %s FROM %s WHERE %s="%s" AND %s="%s"'%
                                 (UniqueImageClause(), p.image_table, p.well_id, well, p.plate_id, self.plate), silent=False)
             for imKey in imKeys:
-                try:
-                    imagetools.ShowImage(imKey, self.chMap, parent=self)
-                except Exception, e:
-                    logging.error('Could not open image: %s'%(e))
+                imagetools.ShowImage(imKey, self.chMap, parent=self)
 
     def OnRClick(self, evt):
         well_label = self.GetWellLabelAtCoord(self.GetX(evt), self.GetY(evt))
