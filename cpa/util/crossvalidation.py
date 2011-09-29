@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+'''
+Cross validation.
+
+'''
+
+import sys
+import csv
+import numpy as np
+import itertools as it
+import matplotlib.pyplot as plt
+
+def _k_fold_cross_validation_iterator(cdata, K):
+   """
+   Generates K (training, validation) pairs from the items in X.
+   """
+   np.random.shuffle(cdata)
+   for k in xrange(K):
+      training = np.array([x for i, x in enumerate(cdata) if i % K != k])
+      validation = np.array([x for i, x in enumerate(cdata) if i % K == k])
+      yield training, validation
+
+
+def get_confusion_matrix(classifier, cdata, K=10):
+   '''   
+   return classes, confusion, percent, avg
+   
+   compute a confusion matrix from the 'K'-fold validation of the 'classifier' on the 'cdata', cdata contains class labels in the first column
+   '''
+   classes = np.sort(np.unique(cdata[:,0]))
+   numclasses = classes.shape[0]
+   confusion = np.zeros((numclasses,numclasses), dtype=np.int)
+   
+   for training, test in _k_fold_cross_validation_iterator(cdata, K): 
+      training_data   = training[:,1:]
+      training_labels = training[:,0]
+      
+      test_data   = test[:,1:]
+      test_labels = test[:,0]
+      
+      classifier.train(training_labels, training_data)
+      pred_labels = classifier.classify(test_data)
+
+      for i, label_pred in enumerate(pred_labels):
+         label_real = test_labels[i]
+         ind_real = np.where(classes==label_real)
+         ind_pred = np.where(classes==label_pred)
+         confusion[ind_real, ind_pred] += 1
+   
+   s = np.sum(confusion,axis=1)
+   percent = [100*confusion[i,i]/float(s[i]) for i in range(len(s))]
+   avg = np.mean(percent)
+   
+   return classes, confusion, percent, avg
+
+
+def _inner_join(labels, profiles, keysize):
+   for labelrow in labels:
+      for profilerow in profiles:
+         k1 = labelrow[1:]
+         k2 = profilerow[:keysize]
+         #print str(k1) + ' => ' + str(k2)
+         if (all(k1==k2)):
+            row = [labelrow[0]] + list(profilerow[keysize:])
+            yield row
+
+def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
+   '''
+   - labels_csvfile's first column are the labels, following N columns are the key 
+   - profile_csvfile N first column are considered to be the key, the remining column are the vector data values
+   - First row (headers) in two files are ignored
+   '''
+   
+   labels   = [row for row in csv.reader(open(labels_csvfile, "rb"))]
+   profiles = [row for row in csv.reader(open(profile_csvfile, "rb"))]
+   
+   labels = np.array(labels)
+   profiles = np.array(profiles)
+   
+   # ignore header row
+   labels = labels[1:,:]
+   profiles = profiles[1:,:]
+   
+   keysize  = labels.shape[1] - 1
+   cdata = np.array([row for row in _inner_join(labels, profiles, keysize)])
+   
+   classes, confusion, percent, avg = get_confusion_matrix(classifier, cdata, K)
+
+   print 'Classifying %d profiles:' % profiles.shape[0]
+   for i, v in enumerate(confusion):
+      for u in v:
+         print "%2d " % u ,
+      print "%3d%%  %s " % (percent[i],classes[i])
+   
+   print 'Average: %3d%%' % avg
+
+   fig = plt.figure()
+   ax = fig.add_subplot(111)
+   im = ax.imshow(sim, interpolation='nearest', vmin=-1, vmax=1, cmap = mpl.cm.RdBu_r)
