@@ -18,6 +18,7 @@ Comp1	Conc2   8.901	2.345
 import io
 import sys
 import os
+import csv
 import numpy as np
 import time
 import itertools
@@ -85,7 +86,7 @@ class ProfileMean(object):
             os.mkdir(self.group_mean_dir)
             
         self.mapping_group_images, self.colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
-        self.colnames = self.cash.colnames
+        self.colnames = cache.RobustLinearNormalization(self.cash).colnames
         
         self.group_mean_file = '%s.npy' % self.group_mean_dir
         
@@ -113,59 +114,35 @@ class ProfileMean(object):
                 #print parameter
         
         if(len(parameters)>0):
-            #results = dview.map_sync(_compute_group_mean, parameters)
+            results = dview.map_sync(_compute_group_mean, parameters)
             #results = dview.map(_compute_group_mean, parameters)    
             #results = map(_compute_group_mean, parameters)
-            results = _compute_group_mean(parameters[0])
+            #results = _compute_group_mean(parameters[0])
         
-        if(results.__contains__(None)):
-            index = results.index(None)
-            print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
-            _compute_group_mean(parameters[index])
-            print >>sys.stderr, '#### Exiting'
-            sys.exit(os.EX_USAGE)
-            
-        time.sleep(5) #let a little time to write properly the last files
-        w.running = False
-
-        print "combining files..."
-        startTime = time.time()
-        row = 1.0
-        data = []
-        for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
-            gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
-            if not os.path.exists('%s.npy' % gp_mean_file):
-                print >>sys.stderr, '%s was not computed, exiting program' % gp_name
+            if(results.__contains__(None)):
+                index = results.index(None)
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
+                _compute_group_mean(parameters[index])
+                print >>sys.stderr, '#### Exiting'
                 sys.exit(os.EX_USAGE)
-            datamean = np.load('%s.npy' % gp_mean_file)
-            labeleddatamean = ['_'.join("%s"%i for i in gp)] + list(datamean)
             
-            data.append(labeleddatamean)
-            
-            if(row % 100 == 0):
-                ratio = row/group_item_total
-                percent = (ratio * 100)
-                now = time.time()
-                elapsedTime = (now - startTime)
-                estTotalTime = elapsedTime / ratio
-                estRemainingTime = estTotalTime - elapsedTime;
-                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
-                print '%d%% Est remaining time: %s' % (percent,timeleft)
-            row += 1
+            time.sleep(5) #let a little time to write properly the last files
             
         np.save(self.group_mean_dir, data)
-    
-    def get_data(self):
-        return np.load('%s.npy' % self.group_mean_file)
+        w.running = False            
         
-    def save_as_ext_file(self, output_file):
+    def save_as_text_file(self, output_file):
 
         grps = '\t'.join("%s"%g for g in self.colnames_group)
         cols = '\t'.join("%s"%c for c in self.colnames)
 
-        #writing text file
-        text_file = open(output_file, "w")
+        group_item_total = len(self.mapping_group_images)
+
+        print "combining files..."
+        startTime = time.time()
+        row = 1.0
+
+        text_file = open(output_file + '.txt', "w")
         text_file.write('%s\t%s\n' % (grps, cols))
         for gp in self.mapping_group_images.keys():
             gp_name = '_'.join("%s"%i for i in gp)
@@ -179,8 +156,52 @@ class ProfileMean(object):
             groupItem = '\t'.join("%s"%i for i in gp)
             values = '\t'.join("%s"%v for v in datamean)
             text_file.write('%s\t%s\n' % (groupItem, values))
+            
+            if(row % 100 == 0):
+                ratio = row/group_item_total
+                percent = (ratio * 100)
+                now = time.time()
+                elapsedTime = (now - startTime)
+                estTotalTime = elapsedTime / ratio
+                estRemainingTime = estTotalTime - elapsedTime;
+                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
+                print '%d%% Est remaining time: %s' % (percent,timeleft)
+            row += 1
                 
         text_file.close()
+    
+    def save_as_csv_file(self, output_file):
+
+        group_item_total = len(self.mapping_group_images)
+
+        print "combining files..."
+        startTime = time.time()
+        row = 1.0
+
+        csv_file = csv.writer(open(output_file + '.csv', "w"))
+        csv_file.writerow(list(self.colnames_group) + list(self.colnames))
+
+        for gp in self.mapping_group_images.keys():
+            gp_name = '_'.join("%s"%i for i in gp)
+            gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
+            if not os.path.exists('%s.npy' % gp_mean_file):
+                print >>sys.stderr, '%s was not computed, exiting program' % gp_name
+                text_file.close()
+                os.remove(output_file)
+                sys.exit(os.EX_USAGE)
+            datamean = np.load('%s.npy' % gp_mean_file)
+            csv_file.writerow(list(gp) + list(datamean))
+            
+            if(row % 100 == 0):
+                ratio = row/group_item_total
+                percent = (ratio * 100)
+                now = time.time()
+                elapsedTime = (now - startTime)
+                estTotalTime = elapsedTime / ratio
+                estRemainingTime = estTotalTime - elapsedTime;
+                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
+                print '%d%% Est remaining time: %s' % (percent,timeleft)
+            row += 1
     
     
 if __name__ == '__main__':

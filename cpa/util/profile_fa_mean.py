@@ -18,6 +18,7 @@ Comp1	Conc2   8.901	2.345
 import io
 import sys
 import os
+import csv
 import numpy as np
 import time
 import itertools
@@ -93,6 +94,7 @@ class ProfileFAMean(object):
         cpa.properties.LoadFile(properties_file)
         self.cache_dir = cache_dir
         self.cash = cache.Cache(cache_dir)
+        self.factors = factors
         
         self.group_fa_mean_dir = os.path.join(cache_dir, 'mean_fa_profile_%s' % group)
         if filter:
@@ -110,20 +112,22 @@ class ProfileFAMean(object):
         
             
         self.mapping_group_images, self.colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
-        self.colnames = self.cash.colnames
+        self.colnames = cache.RobustLinearNormalization(self.cash).colnames
         
         
         self.group_subsample_file = os.path.join(self.group_fa_mean_dir, 'subsample.npy')
         if not os.path.exists(self.group_subsample_file):
             self._compute_subsamples()
         
-        self.group_fa_mean_file = os.path.join(self.group_fa_mean_dir, 'fa_mean_profile.npy')
-        print self.group_fa_mean_file
-        if not os.path.exists(self.group_fa_mean_file) and os.path.exists(self.group_subsample_file):
-            self._compute_fa_mean_profile(factors)
+        #self.group_fa_mean_file = os.path.join(self.group_fa_mean_dir, 'fa_mean_profile.npy')
+        #print self.group_fa_mean_file
+        if os.path.exists(self.group_subsample_file):
+            self._compute_fa_mean_profile()
         
     
     def _compute_subsamples(self):
+        print "subsampling..."
+        
         client = Client(profile='lsf')
         dview = client[:] #client.load_balanced_view() 
 
@@ -148,14 +152,15 @@ class ProfileFAMean(object):
             #results = map(_compute_group_mean, parameters)
             #_compute_group_mean(parameters[0])
          
-        if(results.__contains__(None)):
-            index = results.index(None)
-            print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
-            _compute_group_mean(parameters[index])
-            print >>sys.stderr, '#### Exiting'
-            sys.exit(os.EX_USAGE)
+            if(results.__contains__(None)):
+                index = results.index(None)
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
+                _compute_group_mean(parameters[index])
+                print >>sys.stderr, '#### Exiting'
+                sys.exit(os.EX_USAGE)
 
-        time.sleep(5) #let a little time to write properly the last files
+            time.sleep(5) #let a little time to write properly the last files
+            
         w.running = False
 
         print "combining subsample files..."
@@ -184,93 +189,76 @@ class ProfileFAMean(object):
             
         np.save(self.group_subsample_file, data)
     
-    def _compute_fa_mean_profile(self,factors):
-       
+    def _compute_fa_mean_profile(self):
+
+        if(len(os.listdir(self.group_mean_dir)) == len(self.mapping_group_images)):
+            return        
+        
+        # in any other case recompute the whole factor analysis & projection
+        
+        print "computing Factor Analysis"
+
         subsampled_data = np.load(self.group_subsample_file)
   
-        print "computing Factor Analysis"
         meanvector = np.mean(subsampled_data, axis = 0)   
         subsampled_data = subsampled_data - meanvector
         standarddev = np.std(subsampled_data, axis = 0)
         subsampled_data = subsampled_data/standarddev
         
-        factors = min(factors, subsampled_data.shape[1])
-        
-        fa_node = nodes.FANode(input_dim=None, output_dim=factors, dtype=None, max_cycles=20)
+        self.factors = min(self.factors, subsampled_data.shape[1])
+
+        fa_node = nodes.FANode(input_dim=None, output_dim=self.factors, dtype=None, max_cycles=30)
         fa_node.train(subsampled_data)
         fa_node.stop_training()
         
         client = Client(profile='lsf')
         dview = client[:] #client.load_balanced_view() 
-
-        parameters = []
-        group_item_total = len(self.mapping_group_images)
+        dview.block = True
+        
         print "projecting groups (%s) ..." % len(self.mapping_group_images)
         w = waiter()
         w.init(self.group_mean_dir, group_item_total)
         w.start()
+        
+        parameters = []
+        group_item_total = len(self.mapping_group_images)
 
         for gp in self.mapping_group_images.keys():
             gp_name = '_'.join("%s"%i for i in gp)
             gp_fa_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
-            if not os.path.exists('%s.npy' % gp_fa_mean_file):
-                parameter = (self.cache_dir, gp_fa_mean_file, self.mapping_group_images[gp], fa_node, meanvector, standarddev)
-                parameters.append(parameter)
-                #print parameter
-        
+            parameter = (self.cache_dir, gp_fa_mean_file, self.mapping_group_images[gp], fa_node, meanvector, standarddev)
+            parameters.append(parameter)
+     
         if(len(parameters)>0):
+
             results = dview.map_sync(_compute_group_projection_and_mean, parameters)
             
             #results = dview.map(_compute_group_projection_and_mean, parameters)    
             #results = map(_compute_group_projection_and_mean, parameters)
             #_compute_group_projection_and_mean(parameters[0])
             
-        if(results.__contains__(None)):
-            index = results.index(None)
-            print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
-            _compute_group_mean(parameters[index])
-            print >>sys.stderr, '#### Exiting'
-            sys.exit(os.EX_USAGE)
+            if(results.__contains__(None)):
+                index = results.index(None)
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
+                _compute_group_mean(parameters[index])
+                print >>sys.stderr, '#### Exiting'
+                sys.exit(os.EX_USAGE)
 
-        time.sleep(5) #let a little time to write properly the last files
+            time.sleep(5) #let a little time to write properly the last files
         w.running = False
+        
+    def save_as_text_file(self, output_file):
+
+        grps = '\t'.join("%s"%g for g in self.colnames_group)
+        cols = '\t'.join("F%03d"%f for f in range(self.factors))
+
+        group_item_total = len(self.mapping_group_images)
 
         print "combining group mean files..."
         startTime = time.time()
         row = 1.0
-        data = []
-        for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
-            gp_fa_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
-            if not os.path.exists('%s.npy' % gp_fa_mean_file):
-                print >>sys.stderr, '%s was not computed (%s), exiting program' % (gp_name,gp_fa_mean_file)
-                sys.exit(os.EX_USAGE)
-            datamean = np.load('%s.npy' % gp_fa_mean_file)
-            labeleddatamean = ['_'.join("%s"%i for i in gp)] + list(datamean)
-            data.append(labeleddatamean)
-            
-            if(row % 100 == 0):
-                ratio = row/group_item_total
-                percent = (ratio * 100)
-                now = time.time()
-                elapsedTime = (now - startTime)
-                estTotalTime = elapsedTime / ratio
-                estRemainingTime = estTotalTime - elapsedTime;
-                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
-                print '%d%% Est remaining time: %s' % (percent,timeleft)
-            row += 1
-        np.save(self.group_fa_mean_file, data)
 
-    def get_data(self):
-        return np.load('%s.npy' % self.gp_fa_mean_file)
-        
-    def save_as_ext_file(self, output_file):
-
-        grps = '\t'.join("%s"%g for g in self.colnames_group)
-        cols = '\t'.join("%s"%c for c in self.colnames)
-
-        #writing text file
-        text_file = open(output_file, "w")
+        text_file = open(output_file + '.txt', "w")
         text_file.write('%s\t%s\n' % (grps, cols))
         for gp in self.mapping_group_images.keys():
             gp_name = '_'.join("%s"%i for i in gp)
@@ -285,7 +273,52 @@ class ProfileFAMean(object):
             values = '\t'.join("%s"%v for v in datamean)
             text_file.write('%s\t%s\n' % (groupItem, values))
                 
+            if(row % 100 == 0):
+                ratio = row/group_item_total
+                percent = (ratio * 100)
+                now = time.time()
+                elapsedTime = (now - startTime)
+                estTotalTime = elapsedTime / ratio
+                estRemainingTime = estTotalTime - elapsedTime;
+                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
+                print '%d%% Est remaining time: %s' % (percent,timeleft)
+            row += 1
+
         text_file.close()
+    
+    def save_as_csv_file(self, output_file):
+
+        group_item_total = len(self.mapping_group_images)
+
+        print "combining files..."
+        startTime = time.time()
+        row = 1.0
+
+        csv_file = csv.writer(open(output_file + '.csv', "w"))
+        csv_file.writerow(list(self.colnames_group) + map(lambda x: 'F%03d'%x, range(self.factors)))
+
+        for gp in self.mapping_group_images.keys():
+            gp_name = '_'.join("%s"%i for i in gp)
+            gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
+            if not os.path.exists('%s.npy' % gp_mean_file):
+                print >>sys.stderr, '%s was not computed, exiting program' % gp_name
+                text_file.close()
+                os.remove(output_file)
+                sys.exit(os.EX_USAGE)
+            datamean = np.load('%s.npy' % gp_mean_file)
+            csv_file.writerow(list(gp) + list(datamean))
+            
+            if(row % 100 == 0):
+                ratio = row/group_item_total
+                percent = (ratio * 100)
+                now = time.time()
+                elapsedTime = (now - startTime)
+                estTotalTime = elapsedTime / ratio
+                estRemainingTime = estTotalTime - elapsedTime;
+                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
+                print '%d%% Est remaining time: %s' % (percent,timeleft)
+            row += 1
+
     
     
 if __name__ == '__main__':

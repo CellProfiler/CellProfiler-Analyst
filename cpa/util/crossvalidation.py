@@ -10,6 +10,7 @@ import csv
 import numpy as np
 import itertools as it
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 def _k_fold_cross_validation_iterator(cdata, K):
    """
@@ -95,6 +96,16 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
    
    print 'Average: %3d%%' % avg
 
+   # normalized figure
+   
+   s = np.sum(confusion,axis=1)
+   norm_confusion = np.zeros((len(classes),len(classes)), dtype=np.float)
+   for i, row in enumerate(confusion):
+      for j, v in enumerate(row):
+         norm_confusion[i,j] = v / float(s[i])
+      
    fig = plt.figure()
    ax = fig.add_subplot(111)
-   im = ax.imshow(sim, interpolation='nearest', vmin=-1, vmax=1, cmap = mpl.cm.RdBu_r)
+   im = ax.imshow(norm_confusion, interpolation='nearest', cmap = mpl.cm.RdBu_r)
+   plt.draw()
+   plt.show()
