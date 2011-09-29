@@ -618,6 +618,8 @@ class PlotMain(wx.Frame):
         '''
         col_names = db.GetColumnNames(table)
         filter_cols = [p.cell_x_loc, p.cell_y_loc, p.plate_id, p.well_id, p.image_id]
+        if not p.classifier_ignore_columns:
+            p.classifier_ignore_columns = []
         [p.classifier_ignore_columns.append(column) for column in filter_cols if column in col_names]
 
     def update_figures(self):
