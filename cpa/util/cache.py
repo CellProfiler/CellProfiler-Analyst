@@ -132,7 +132,7 @@ class RobustLinearNormalization(object):
             features = self.cache.load(imKeys)[0]
             if len(features) == 0:
                 logger.warning('No DMSO features for plate %s' % str(plate))
-                percentiles = np.zeros((0, len(colnames)))
+                percentiles = np.zeros((0, len(self.cache.colnames)))
             else:
                 m = features.shape[1]
                 percentiles = np.ones((2, m)) * np.nan
@@ -177,7 +177,11 @@ class Cache(object):
                                dtype=float)
                 if len(raw) > 0:
                     features.append(normalizer.normalize(plate, raw))
-        return np.vstack(features), normalizer.colnames
+        if(len(features) > 0):
+            stackedfeatures = np.vstack(features)
+        else:
+            stackedfeatures = np.array([])
+        return stackedfeatures, normalizer.colnames
 
     @property
     def colnames(self):
@@ -255,5 +259,5 @@ if __name__ == '__main__':
 
     cache = Cache(cache_dir)
 
-    #cache._create_cache(options.resume)
+    cache._create_cache(options.resume)
     RobustLinearNormalization(cache)._create_cache(predicate, options.resume)

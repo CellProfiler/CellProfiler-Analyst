@@ -106,7 +106,7 @@ class ProfileFAMean(object):
         if not os.path.exists(self.group_subsample_dir):
             os.mkdir(self.group_subsample_dir)
             
-        self.group_mean_dir = os.path.join(self.group_fa_mean_dir, 'mean')
+        self.group_mean_dir = os.path.join(self.group_fa_mean_dir, 'mean_%s'%factors)
         if not os.path.exists(self.group_mean_dir):
             os.mkdir(self.group_mean_dir)
         
@@ -154,7 +154,7 @@ class ProfileFAMean(object):
          
             if(results.__contains__(None)):
                 index = results.index(None)
-                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
                 _compute_group_mean(parameters[index])
                 print >>sys.stderr, '#### Exiting'
                 sys.exit(os.EX_USAGE)
@@ -239,7 +239,7 @@ class ProfileFAMean(object):
             
             if(results.__contains__(None)):
                 index = results.index(None)
-                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
                 _compute_group_mean(parameters[index])
                 print >>sys.stderr, '#### Exiting'
                 sys.exit(os.EX_USAGE)

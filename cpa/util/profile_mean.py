@@ -97,7 +97,7 @@ class ProfileMean(object):
     def _compute_mean_profile(self):
         client = Client(profile='lsf')
         dview = client[:] #client.load_balanced_view() 
-        dview.block = True
+        #dview.block = True
         
         parameters = []
         group_item_total = len(self.mapping_group_images)
@@ -121,14 +121,13 @@ class ProfileMean(object):
         
             if(results.__contains__(None)):
                 index = results.index(None)
-                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index]
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
                 _compute_group_mean(parameters[index])
                 print >>sys.stderr, '#### Exiting'
                 sys.exit(os.EX_USAGE)
             
             time.sleep(5) #let a little time to write properly the last files
             
-        np.save(self.group_mean_dir, data)
         w.running = False            
         
     def save_as_text_file(self, output_file):
@@ -190,7 +189,9 @@ class ProfileMean(object):
                 os.remove(output_file)
                 sys.exit(os.EX_USAGE)
             datamean = np.load('%s.npy' % gp_mean_file)
-            csv_file.writerow(list(gp) + list(datamean))
+            print '##############%s.npy' % gp_mean_file
+            if(datamean != 'nan'):
+                csv_file.writerow(list(gp) + list(datamean))
             
             if(row % 100 == 0):
                 ratio = row/group_item_total
