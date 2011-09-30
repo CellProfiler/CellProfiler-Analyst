@@ -189,9 +189,7 @@ class ProfileMean(object):
                 os.remove(output_file)
                 sys.exit(os.EX_USAGE)
             datamean = np.load('%s.npy' % gp_mean_file)
-            print '##############%s.npy' % gp_mean_file
-            if(datamean != 'nan'):
-                csv_file.writerow(list(gp) + list(datamean))
+            csv_file.writerow(list(gp) + list(datamean))
             
             if(row % 100 == 0):
                 ratio = row/group_item_total
