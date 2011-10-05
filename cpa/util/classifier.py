@@ -48,8 +48,10 @@ class KNearestNeighborClassifier(Classifier):
       dist = []
       for i, y in enumerate(self.data):
          if(all(y == x)): # should never happen in k-fold validation
-            print 'KNearestNeighborClassifier: how come this happened ??!!'
-         dist.append((self._cosinesimilarity(x,y),self.labels[i]))
+            print 'KNearestNeighborClassifier: how come this happened ??!! sum -> ', 
+            print np.sum(x)
+         else:
+            dist.append((self._cosinesimilarity(x,y),self.labels[i]))
 
       dist.sort(reverse=True)
       dist = dist[0:min(self.K, len(dist))]

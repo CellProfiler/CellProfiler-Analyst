@@ -95,18 +95,12 @@ class ProfileMean(object):
         
     
     def _compute_mean_profile(self):
-        client = Client(profile='lsf')
-        dview = client[:] #client.load_balanced_view() 
-        #dview.block = True
         
         parameters = []
         group_item_total = len(self.mapping_group_images)
-        w = waiter()
-        w.init(self.group_mean_dir, group_item_total)
-        w.start()
 
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
             if not os.path.exists('%s.npy' % gp_mean_file):
                 parameter = (self.cache_dir, gp_mean_file, self.mapping_group_images[gp])
@@ -114,10 +108,19 @@ class ProfileMean(object):
                 #print parameter
         
         if(len(parameters)>0):
+            client = Client(profile='lsf')
+            dview = client[:] #client.load_balanced_view() 
+            #dview.block = True
+            
+            w = waiter()
+            w.init(self.group_mean_dir, group_item_total)
+            w.start()
+            
             results = dview.map_sync(_compute_group_mean, parameters)
+            
             #results = dview.map(_compute_group_mean, parameters)    
             #results = map(_compute_group_mean, parameters)
-            #results = _compute_group_mean(parameters[0])
+            #results = [_compute_group_mean(parameters[0])]
         
             if(results.__contains__(None)):
                 index = results.index(None)
@@ -128,7 +131,7 @@ class ProfileMean(object):
             
             time.sleep(5) #let a little time to write properly the last files
             
-        w.running = False            
+            w.running = False            
         
     def save_as_text_file(self, output_file):
 
@@ -144,7 +147,7 @@ class ProfileMean(object):
         text_file = open(output_file + '.txt', "w")
         text_file.write('%s\t%s\n' % (grps, cols))
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
             if not os.path.exists('%s.npy' % gp_mean_file):
                 print >>sys.stderr, '%s was not computed, exiting program' % gp_name
@@ -181,11 +184,10 @@ class ProfileMean(object):
         csv_file.writerow(list(self.colnames_group) + list(self.colnames))
 
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
             if not os.path.exists('%s.npy' % gp_mean_file):
                 print >>sys.stderr, '%s was not computed, exiting program' % gp_name
-                text_file.close()
                 os.remove(output_file)
                 sys.exit(os.EX_USAGE)
             datamean = np.load('%s.npy' % gp_mean_file)

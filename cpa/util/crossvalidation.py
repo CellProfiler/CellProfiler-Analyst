@@ -40,6 +40,9 @@ def get_confusion_matrix(classifier, cdata, K=10):
       test_data   = test[:,1:]
       test_labels = test[:,0]
       
+      print 'training: ', training_data.shape
+      print 'test    : ', test_data.shape
+      
       classifier.train(training_labels, training_data)
       pred_labels = classifier.classify(test_data)
 
@@ -51,7 +54,7 @@ def get_confusion_matrix(classifier, cdata, K=10):
    
    s = np.sum(confusion,axis=1)
    percent = [100*confusion[i,i]/float(s[i]) for i in range(len(s))]
-   avg = np.mean(percent)
+   avg = 100 * np.trace(confusion) / float(np.sum(confusion))
    
    return classes, confusion, percent, avg
 
@@ -78,7 +81,10 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
    
    labels = np.array(labels)
    profiles = np.array(profiles)
-   
+ 
+   #print 'labels: ', labels.shape
+   #print 'profiles:', profiles.shape
+
    # ignore header row
    labels = labels[1:,:]
    profiles = profiles[1:,:]
@@ -86,16 +92,26 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
    keysize  = labels.shape[1] - 1
    cdata = np.array([row for row in _inner_join(labels, profiles, keysize)])
    
+   np.save('labeled_profiles', cdata)
+   
    classes, confusion, percent, avg = get_confusion_matrix(classifier, cdata, K)
 
-   print 'Classifying %d profiles:' % profiles.shape[0]
+   _display_as_text(classes, confusion, percent, avg, cdata.shape[0])
+   _display_as_graph(classes, confusion, percent, avg)
+   
+def _display_as_text(classes, confusion, percent, avg, numprofiles):
+   
+   s = np.sum(confusion,axis=1)
+   print 'Classifying %d profiles:' % numprofiles
    for i, v in enumerate(confusion):
       for u in v:
          print "%2d " % u ,
-      print "%3d%%  %s " % (percent[i],classes[i])
+      print "(%02d)  %3d%%  %s " % (s[i],percent[i],classes[i])
    
    print 'Average: %3d%%' % avg
 
+
+def _display_as_graph(classes, confusion, percent, avg):   
    # normalized figure
    
    s = np.sum(confusion,axis=1)
@@ -107,5 +123,26 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
    fig = plt.figure()
    ax = fig.add_subplot(111)
    im = ax.imshow(norm_confusion, interpolation='nearest', cmap = mpl.cm.RdBu_r)
+
+   ax.set_xticklabels([''])
+   ax.set_yticklabels([''])
+   
+   # print categories
+   xcoord = len(classes)
+   ycoord = 0
+   ticks = []
+   for i in range(len(classes)):
+      #ticks.append(yoffset)
+      txt = "(%02d)  %3d%%  %s " % (s[i],percent[i],classes[i])
+      ax.text(xcoord, ycoord, txt, transform=ax.transData, fontsize='small', verticalalignment='center', horizontalalignment='left')
+      ycoord += 1
+   
+   plt.xticks([], [])
+   plt.yticks(ticks, [])
+   
+   
+   
+   
+   
    plt.draw()
    plt.show()

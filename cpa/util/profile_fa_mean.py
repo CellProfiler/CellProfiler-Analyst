@@ -69,8 +69,9 @@ def _compute_group_subsample((cache_dir, gp_subsample_file, images)):
         np.save(gp_subsample_file, normalizeddata_sample)
         return normalizeddata_sample
     except: # catch *all* exceptions
-        e = sys.exc_info()[1]
-        print >>sys.stderr, "Error: (%s) %s" % (gp_mean_file,e)
+        print >>sys.stderr, "Error: (%s)" % gp_subsample_file
+        for e in sys.exc_info():
+            print >>sys.stderr, "Error: %s" % e
       
 def _compute_group_projection_and_mean((cache_dir, gp_fa_mean_file, images, fa_node, meanvector, standarddev)):
     try:
@@ -82,7 +83,7 @@ def _compute_group_projection_and_mean((cache_dir, gp_fa_mean_file, images, fa_n
         normalizeddata_projected = fa_node.execute(normalizeddata)
         normalizeddata_projected_mean = np.mean(normalizeddata_projected, axis = 0)
         np.save(gp_fa_mean_file, normalizeddata_projected_mean)
-        return normalizeddata_mean
+        return normalizeddata_projected_mean
     except: # catch *all* exceptions
         e = sys.exc_info()[1]
         print >>sys.stderr, "Error: (%s) %s" % (gp_fa_mean_file,e)
@@ -138,7 +139,7 @@ class ProfileFAMean(object):
         w.start()
         
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_subsample_file = os.path.join(self.group_subsample_dir, '%s' % gp_name)
             if not os.path.exists('%s.npy' % gp_subsample_file):
                 parameter = (self.cache_dir, gp_subsample_file, self.mapping_group_images[gp])
@@ -148,9 +149,9 @@ class ProfileFAMean(object):
         if(len(parameters)>0):
             results = dview.map_sync(_compute_group_subsample, parameters)
             
-            #results = dview.map(_compute_group_mean, parameters)    
-            #results = map(_compute_group_mean, parameters)
-            #_compute_group_mean(parameters[0])
+            #results = dview.map(_compute_group_subsample, parameters)    
+            #results = map(_compute_group_subsample, parameters)
+            #results = [_compute_group_subsample(parameters[0])]
          
             if(results.__contains__(None)):
                 index = results.index(None)
@@ -168,7 +169,7 @@ class ProfileFAMean(object):
         row = 1.0
         data = []
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_subsample_file = os.path.join(self.group_subsample_dir, '%s' % gp_name)
             if not os.path.exists('%s.npy' % gp_subsample_file):
                 print >>sys.stderr, '%s was not computed, exiting program' % gp_name
@@ -215,17 +216,18 @@ class ProfileFAMean(object):
         dview = client[:] #client.load_balanced_view() 
         dview.block = True
         
+        parameters = []
+        group_item_total = len(self.mapping_group_images)
+
         print "projecting groups (%s) ..." % len(self.mapping_group_images)
         w = waiter()
         w.init(self.group_mean_dir, group_item_total)
         w.start()
         
-        parameters = []
-        group_item_total = len(self.mapping_group_images)
-
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_fa_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
+            #recompute the whole FA at each run #if not os.path.exists('%s.npy' % gp_fa_mean_file):
             parameter = (self.cache_dir, gp_fa_mean_file, self.mapping_group_images[gp], fa_node, meanvector, standarddev)
             parameters.append(parameter)
      
@@ -235,12 +237,12 @@ class ProfileFAMean(object):
             
             #results = dview.map(_compute_group_projection_and_mean, parameters)    
             #results = map(_compute_group_projection_and_mean, parameters)
-            #_compute_group_projection_and_mean(parameters[0])
+            #results = [_compute_group_projection_and_mean(parameters[0])]
             
             if(results.__contains__(None)):
                 index = results.index(None)
                 print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
-                _compute_group_mean(parameters[index])
+                _compute_group_projection_and_mean(parameters[index])
                 print >>sys.stderr, '#### Exiting'
                 sys.exit(os.EX_USAGE)
 
@@ -261,7 +263,7 @@ class ProfileFAMean(object):
         text_file = open(output_file + '.txt', "w")
         text_file.write('%s\t%s\n' % (grps, cols))
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_fa_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
             if not os.path.exists('%s.npy' % gp_fa_mean_file):
                 print >>sys.stderr, '%s was not computed (%s), exiting program' % (gp_name,gp_fa_mean_file)
@@ -298,7 +300,7 @@ class ProfileFAMean(object):
         csv_file.writerow(list(self.colnames_group) + map(lambda x: 'F%03d'%x, range(self.factors)))
 
         for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp)
+            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
             gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
             if not os.path.exists('%s.npy' % gp_mean_file):
                 print >>sys.stderr, '%s was not computed, exiting program' % gp_name
@@ -309,7 +311,7 @@ class ProfileFAMean(object):
             csv_file.writerow(list(gp) + list(datamean))
             
             if(row % 100 == 0):
-                ratio = row/group_item_total
+                ratio = row/group_item_total 
                 percent = (ratio * 100)
                 now = time.time()
                 elapsedTime = (now - startTime)
