@@ -75,24 +75,22 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
    - profile_csvfile N first column are considered to be the key, the remining column are the vector data values
    - First row (headers) in two files are ignored
    '''
-   
+      
    labels   = [row for row in csv.reader(open(labels_csvfile, "rb"))]
    profiles = [row for row in csv.reader(open(profile_csvfile, "rb"))]
    
    labels = np.array(labels)
    profiles = np.array(profiles)
- 
+   
    #print 'labels: ', labels.shape
    #print 'profiles:', profiles.shape
-
+   
    # ignore header row
    labels = labels[1:,:]
    profiles = profiles[1:,:]
-   
+      
    keysize  = labels.shape[1] - 1
    cdata = np.array([row for row in _inner_join(labels, profiles, keysize)])
-   
-   np.save('labeled_profiles', cdata)
    
    classes, confusion, percent, avg = get_confusion_matrix(classifier, cdata, K)
 
