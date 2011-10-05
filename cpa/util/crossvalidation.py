@@ -40,8 +40,8 @@ def get_confusion_matrix(classifier, cdata, K=10):
       test_data   = test[:,1:]
       test_labels = test[:,0]
       
-      print 'training: ', training_data.shape
-      print 'test    : ', test_data.shape
+      #print 'training: ', training_data.shape
+      #print 'test    : ', test_data.shape
       
       classifier.train(training_labels, training_data)
       pred_labels = classifier.classify(test_data)
