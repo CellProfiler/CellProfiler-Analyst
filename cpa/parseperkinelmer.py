@@ -134,11 +134,15 @@ def create_properties_file(image_index, channels):
     p.cell_y_loc          = 'Y'
     p.image_path_cols     = [PATH_COLUMN_PREFIX + c for c in channels]
     p.image_file_cols     = [FILE_COLUMN_PREFIX + c for c in channels]
-    p.image_channel_names = channels
+    p.image_names         = channels
     p.plate_type          = convert_plate_dims_to_platetype(*plate_shape)
     p.image_tile_size     = 100 #image_tile_size
+    p.classifier_ignore_columns = ['ImageNumber', 'ObjectNumber', 'X', 'Y']
     p._filters = {}
-    p._groups = {}
+    p._groups = {'plate': 'SELECT ImageNumber, Plate FROM per_image', 
+                 'well': 'SELECT ImageNumber, Plate, Well FROM per_image'}
+    p.group_SQL_plate = 'SELECT ImageNumber, Plate FROM per_image'
+    p.group_SQL_well = 'SELECT ImageNumber, Plate, Well FROM per_image'
     p._textfile = ''
     
     p.save_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
@@ -341,7 +345,6 @@ def get_plates_wells_and_images(image_index):
         
     return plates, wells, images
 
-
 def get_channel_names(plates, wells, images):
     '''
     Returns the ChannelName entries from the first plate well since all image 
@@ -349,7 +352,6 @@ def get_channel_names(plates, wells, images):
     '''
     return list(set([images[im_id].ChannelName 
                      for im_id in wells[plates.values()[0].well_ids[0]].image_ids]))
-
 
 def get_image_index_file(doc):
     '''
@@ -412,5 +414,8 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     load_columbus(results_dir+'/'+measurements_index)
     app.MainLoop()
+    app.ExitMainLoop()
+    
     import cpa
-    cpa.CPAnalyst
+    cpaapp = cpa.CPAnalyst(redirect=False)
+    cpaapp.MainLoop()
