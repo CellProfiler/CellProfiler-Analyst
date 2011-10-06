@@ -1237,10 +1237,6 @@ class Classifier(wx.Frame):
             fieldNames = ['table', 'image'] if p.table_id else ['image']
             fieldTypes = [int, int]
             validKeys = dm.GetAllImageKeys()
-        elif group=='well':
-            fieldNames = ['plate', 'well']
-            fieldTypes = [str, str]
-            validKeys = dm.GetAllImageKeys()
         else:            
             fieldNames = dm.GetGroupColumnNames(group)
             fieldTypes = dm.GetGroupColumnTypes(group)
