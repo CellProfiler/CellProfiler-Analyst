@@ -23,11 +23,6 @@ p = properties.Properties.getInstance()
 properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
 
-P96   = (8, 12)
-P384  = (16, 24)
-P1536 = (32, 48)
-P5600 = (40, 140)
-
 required_fields = ['plate_type', 'well_id']
 
 class PlateViewer(wx.Frame, CPATool):
@@ -179,11 +174,7 @@ class PlateViewer(wx.Frame, CPATool):
         '''
         Adds a new blank plateMap to the PlateMapSizer.
         '''
-        data = np.ones(int(p.plate_type))
-        if p.plate_type == '384': shape = P384
-        elif p.plate_type == '96': shape = P96
-        elif p.plate_type == '5600': shape = P5600
-        elif p.plate_type == '1536': shape = P1536
+        data = np.ones(p.plate_shape)
 
         # Try to get explicit labels for all wells.
         res = db.execute('SELECT DISTINCT %s FROM %s WHERE %s != "" and %s IS NOT NULL'%
@@ -203,7 +194,7 @@ class PlateViewer(wx.Frame, CPATool):
             plateMapChoiceSizer.Add(self.plateMapChoices[-1])
         well_keys = res
 
-        platemap = pmp.PlateMapPanel(self, data, well_keys, shape,
+        platemap = pmp.PlateMapPanel(self, data, well_keys, p.plate_shape,
                                      colormap = self.colorMapsChoice.Value,
                                      well_disp = self.wellDisplayChoice.Value)
         platemap.add_well_selection_handler(self.OnSelectWell)
@@ -673,11 +664,8 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     from itertools import groupby
     keys_and_vals = np.array(keys_and_vals)
     nkeycols = len(dbconnect.well_key_columns())
-    if   p.plate_type == '96':   shape = P96
-    elif p.plate_type == '384':  shape = P384
-    elif p.plate_type == '1536': shape = P1536
-    elif p.plate_type == '5600': 
-        shape = P5600
+    shape = p.plate_shape
+    if p.plate_type == '5600': 
         well_keys = keys_and_vals[:,:-1] # first column(s) are keys
         data = keys_and_vals[:,-1]       # last column is data
         assert data.ndim == 1

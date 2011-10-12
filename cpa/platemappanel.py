@@ -351,7 +351,6 @@ class PlateMapPanel(wx.Panel):
                     elif self.well_disp == SQUARE:
                         dc.DrawRectangle(px+1, py+1, r*2, r*2)
                     elif self.well_disp == THUMBNAIL:
-                        p.image_buffer_size = int(p.plate_type)
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
                         if imgs.has_key(well):
@@ -360,7 +359,7 @@ class PlateMapPanel(wx.Panel):
                             bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     elif self.well_disp == IMAGE:
-                        p.image_buffer_size = int(p.plate_type)
+                        p.image_buffer_size = p.plate_shape[0] * p.plate_shape[1]
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
                         if imgs.has_key(well):

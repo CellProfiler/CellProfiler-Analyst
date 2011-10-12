@@ -12,6 +12,15 @@ import subprocess
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
 #
 
+# Plate formats
+supported_plate_types = {'6'    : (2, 3),
+                         '24'   : (4, 6),
+                         '96'   : (8, 12),
+                         '384'  : (16, 24),
+                         '1536' : (32, 48),
+                         '5600' : (40, 140),
+                         }
+
 string_vars = ['db_type', 
                'db_port', 
                'db_host', 
@@ -57,7 +66,8 @@ list_vars = ['image_path_cols', 'image_channel_paths',
              'object_name',
              'classifier_ignore_substrings', 
              'classifier_ignore_columns',
-             'image_thumbnail_cols']
+             'image_thumbnail_cols',
+             'plate_shape',]
 
 dict_vars = ['gates']
 
@@ -98,6 +108,7 @@ optional_vars = ['db_port',
                  'link_tables_table',
                  'link_columns_table',
                  'image_rescale',
+                 'plate_shape',
                  ]
 
 # map deprecated fields to new fields
@@ -571,14 +582,35 @@ class Properties(Singleton):
                                     
         if not self.field_defined('well_id'):
             logging.warn('PROPERTIES WARNING (well_id): Field is required for plate map viewer.')
-                                    
+        
+        #
+        # plate_shape
+        # This field can be set directly, otherwise it is set indirectly by the plate_type field
+        #
+        if self.field_defined('plate_shape'):
+            if len(self.__dict__['plate_shape']) != 2:
+                raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_shape. Expected: rows, cols'
+                                %(self.__dict__['plate_shape']))
+            try:
+                self.__dict__['plate_shape'][0] = int(self.__dict__['plate_shape'][0])
+                self.__dict__['plate_shape'][1] = int(self.__dict__['plate_shape'][1])
+            except:
+                raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_shape. Expected: rows, cols'
+                                %(self.__dict__['plate_shape']))
+            
+        #
+        # plate_type
+        # This field is used to set the plate_shape field indirectly
+        #
         if not self.field_defined('plate_type'):
-            logging.warn('PROPERTIES WARNING (plate_type): Field is required for plate map viewer.')
+            logging.warn('PROPERTIES WARNING (plate_type): Field is required for plate viewer')
         else:
-            supported_values = ['96', '384', '1536', '5600']
-            if self.__dict__['plate_type'] not in supported_values:
+            if self.field_defined('plate_shape'):
+                raise Exception('PROPERTIES ERROR: You have defined plate_type and plate_shape in your properties file. Please use one or the other.')
+            if self.__dict__['plate_type'] not in supported_plate_types.keys():
                 raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
                                 %(self.__dict__['plate_type'], ', '.join(supported_values)))
+            self.plate_shape = supported_plate_types[self.__dict__['plate_type']]
             
         if self.field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.check_tables = 'no'

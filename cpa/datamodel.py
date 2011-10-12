@@ -8,14 +8,6 @@ from properties import Properties
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
-# Plate formats
-P6    = (2, 3)
-P24   = (4, 6)
-P96   = (8, 12)
-P384  = (16, 24)
-P1536 = (32, 48)
-P5600 = (40, 140)
-
 class DataModel(Singleton):
     '''
     DataModel is a dictionary of perImageObjectCounts indexed by (TableNumber,ImageNumber)
@@ -268,13 +260,8 @@ class DataModel(Singleton):
         else:
             raise 'Unknown well format'
         
-        if   p.plate_type == '6'    : pshape = P6
-        elif p.plate_type == '24'   : pshape = P24
-        elif p.plate_type == '96'   : pshape = P96
-        elif p.plate_type == '384'  : pshape = P384
-        elif p.plate_type == '1536' : pshape = P1536
-        elif p.plate_type == '5600' : pshape = P5600
-
+        pshape = p.plate_shape
+        
         res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
         for r in res:
             well = r[0]
@@ -293,14 +280,14 @@ class DataModel(Singleton):
                     return
 
             if p.well_format == 'A01':
-                if p.plate_type in ['96', '384']:
+                if pshape[0] <= 26:
                     row = 'abcdefghijklmnopqrstuvwxyz'.index(well[0].lower())
                     col = int(well[1:]) - 1
-                elif p.plate_type == '1536':
+                elif pshape[0] <= 52:
                     row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.index(well[0])
                     col = int(well[1:]) - 1
-                elif p.plate_type == '5600':
-                    raise 'Plate type "5600" cannot have well format "A01" Check your properties file.'
+                else:
+                    raise 'Plates with over 52 rows cannot have well format "A01" Check your properties file.'
                 self.plate_map[well] = (row, col)
                 self.rev_plate_map[(row, col)] = well
             elif p.well_format == '123':
