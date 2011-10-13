@@ -465,7 +465,7 @@ class NormalizationUI(wx.Frame, CPATool):
                     norm_data = norm.do_normalization_step(norm_data, **d)
                     
             output_columns[:,colnum] = np.array(norm_data)
-            output_factors[:,colnum] = col.astype(float)/np.array(norm_data,dtype=float)
+            output_factors[:,colnum] = col.astype(float) / np.array(norm_data,dtype=float)
 
         dlg.Destroy()
                 

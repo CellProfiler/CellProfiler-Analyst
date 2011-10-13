@@ -373,9 +373,9 @@ class ImageViewer(wx.Frame):
         item.Check()
         # Add new "Images" menu bar item
         self.GetMenuBar().Append(self.imagesMenu, 'Images')
-        #######################################
-        # /CreateChannelMenus 
-        #######################################
+    #######################################
+    # /CreateChannelMenus 
+    #######################################
 
 
 

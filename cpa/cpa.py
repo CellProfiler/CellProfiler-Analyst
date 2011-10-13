@@ -523,7 +523,6 @@ class CPAnalyst(wx.App):
         return '%s %d'%(prefix, plot_num)
 
 
-
 if __name__ == "__main__":
     # Initialize the app early because the fancy exception handler
     # depends on it in order to show a dialog.
