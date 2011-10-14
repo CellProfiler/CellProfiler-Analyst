@@ -467,6 +467,8 @@ class Classifier(wx.Frame):
         self.classified_bins_panel.Layout()
         self.binsCreated += 1
         self.QuantityChanged()
+        # IMPORTANT: required for drag and drop to work on Linux
+        # see: http://trac.wxwidgets.org/ticket/2763
         box.Lower()
   
     def RemoveSortClass(self, label, clearModel = True):
