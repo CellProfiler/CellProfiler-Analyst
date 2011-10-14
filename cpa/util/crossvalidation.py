@@ -132,9 +132,7 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=None, exclud
    
    # remove nan rows
    nan_row_indices = np.unique(np.where(ckdata == 'nan')[0])
-   ckdata = np.delete(ckdata,nan_row_indices, axis=0)
-   
-   np.savetxt("foo.csv", ckdata, delimiter=",")
+   ckdata = np.delete(ckdata, nan_row_indices, axis=0)
    
    # standardize
    if standardize:
@@ -150,6 +148,27 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=None, exclud
    _display_as_text(classes, confusion, percent, avgTotal, ckdata.shape[0])
    _display_as_graph(classes, confusion, percent, avgTotal)
       
+      
+   ## subsampling loop
+   #P = []
+   #rate = []
+   #for p in range(5,100,5):
+      #np.random.shuffle(ckdata)
+      #ckdata_sample = np.array([x for i, x in enumerate(ckdata) if i % 100/p == 0])
+   
+      #classes, confusion, percent, avg, avgTotal = get_confusion_matrix(classifier, ckdata_sample, keysize, K, exclude_subkey, include_subkey)
+      #print '%d %d %d' % (p,avgTotal,ckdata_sample.shape[0])
+      #P.append(p)
+      #rate.append(avg)
+
+      #_display_as_graph(classes, confusion, percent, avg, 'image_%s'%p)
+    
+   #fig = plt.figure()
+   #plt.plot(P,rate)
+   #plt.show()
+
+def concentration_selection(compound1, compound2, compoundKeyIndex):
+   return None
    
 def _display_as_text(classes, confusion, percent, avg, numprofiles):
    
