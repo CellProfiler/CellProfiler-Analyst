@@ -452,10 +452,14 @@ class Classifier(wx.Frame):
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
         This sizer is then added to the classified_bins_sizer. '''
-        sizer = wx.StaticBoxSizer(wx.StaticBox(self.classified_bins_panel, label=label), wx.VERTICAL)
-        # NOTE: bin must be created after sizer or drop events will occur on the sizer
         bin = sortbin.SortBin(parent=self.classified_bins_panel, label=label, 
-                              classifier=self, parentSizer=sizer)
+                              classifier=self)
+        
+        box = wx.StaticBox(self.classified_bins_panel, label=label)
+        # NOTE: bin must be created after sizer or drop events will occur on the sizer
+        sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+        bin.parentSizer = sizer
+        
         sizer.Add(bin, proportion=1, flag=wx.EXPAND)
         self.classified_bins_sizer.Add(sizer, proportion=1, flag=wx.EXPAND)
         self.classBins.append(bin)
@@ -463,6 +467,7 @@ class Classifier(wx.Frame):
         self.classified_bins_panel.Layout()
         self.binsCreated += 1
         self.QuantityChanged()
+        box.Lower()
   
     def RemoveSortClass(self, label, clearModel = True):
         for bin in self.classBins:
