@@ -12,36 +12,73 @@ import itertools as it
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-def _k_fold_cross_validation_iterator(cdata, K):
+def _k_fold_cross_validation_iterator(data, K=None):
    """
-   Generates K (training, validation) pairs from the items in X.
+   Generates K (training, validation) pairs from the items in X. If K is unspecified it is set to a leave one out
    """
-   np.random.shuffle(cdata)
+   if K == None:
+      K = data.shape[0]
+
+   np.random.shuffle(data)
    for k in xrange(K):
-      training = np.array([x for i, x in enumerate(cdata) if i % K != k])
-      validation = np.array([x for i, x in enumerate(cdata) if i % K == k])
+      training = np.array([x for i, x in enumerate(data) if i % K != k])
+      validation = np.array([x for i, x in enumerate(data) if i % K == k])
       yield training, validation
 
 
-def get_confusion_matrix(classifier, cdata, K=10):
+def get_confusion_matrix(classifier, ckdata, keysize, K=None, exclude_subkey=None, include_subkey=None):
    '''   
-   return classes, confusion, percent, avg
+   return classes, confusion, percent, avg, avgTotal
    
    compute a confusion matrix from the 'K'-fold validation of the 'classifier' on the 'cdata', cdata contains class labels in the first column
    '''
-   classes = np.sort(np.unique(cdata[:,0]))
+   #import pdb
+   #pdb.set_trace()
+   classes = np.sort(np.unique(ckdata[:,0]))
    numclasses = classes.shape[0]
    confusion = np.zeros((numclasses,numclasses), dtype=np.int)
    
-   for training, test in _k_fold_cross_validation_iterator(cdata, K): 
-      training_data   = training[:,1:]
+   for training, test in _k_fold_cross_validation_iterator(ckdata, K):
+      
       training_labels = training[:,0]
+      training_keys = training[:,1:1+keysize]
+      training_data   = training[:,1+keysize:]
       
-      test_data   = test[:,1:]
       test_labels = test[:,0]
+      test_keys = test[:,1:1+keysize]
+      test_data   = test[:,1+keysize:]
+
+      if exclude_subkey != None:
+         if test_data.shape[0] > 1:
+            print 'A group exclusion cannot be used for a k fold cross validation that is not a leave one out (K=%s)' % K
       
-      #print 'training: ', training_data.shape
-      #print 'test    : ', test_data.shape
+         training_exclude = training_keys[:,exclude_subkey]
+         test_exclude = test_keys[0,exclude_subkey]
+         if isinstance(exclude_subkey,int):
+            indices = np.where([not row==test_exclude for row in training_exclude])[0]
+         else:
+            indices = np.where([not all(row==test_exclude) for row in training_exclude])[0]
+         #import pdb
+         #pdb.set_trace()
+         
+         if include_subkey != None:
+            if test_data.shape[0] > 1:
+               print 'A group inclusion cannot be used for a k fold cross validation that is not a leave one out (K=%s)' % K
+         
+            training_include = training_keys[:,include_subkey]
+            test_include = test_keys[0,include_subkey]
+            if isinstance(include_subkey,int):
+               indices_include = np.where([row==test_include for row in training_include])[0]
+            else:
+               indices_include = np.where([all(row==test_include) for row in training_include])[0]
+            #import pdb
+            #pdb.set_trace()
+            indices = np.union1d(indices, indices_include)
+            
+            
+         training_data = training_data[indices]
+         training_labels = training_labels[indices]
+
       
       classifier.train(training_labels, training_data)
       pred_labels = classifier.classify(test_data)
@@ -54,9 +91,10 @@ def get_confusion_matrix(classifier, cdata, K=10):
    
    s = np.sum(confusion,axis=1)
    percent = [100*confusion[i,i]/float(s[i]) for i in range(len(s))]
-   avg = 100 * np.trace(confusion) / float(np.sum(confusion))
+   avg = np.mean(percent)
+   avgTotal = 100 * np.trace(confusion) / float(np.sum(confusion))
    
-   return classes, confusion, percent, avg
+   return classes, confusion, percent, avg, avgTotal
 
 
 def _inner_join(labels, profiles, keysize):
@@ -66,10 +104,10 @@ def _inner_join(labels, profiles, keysize):
          k2 = profilerow[:keysize]
          #print str(k1) + ' => ' + str(k2)
          if (all(k1==k2)):
-            row = [labelrow[0]] + list(profilerow[keysize:])
+            row = [labelrow[0]] + list(profilerow[:])
             yield row
 
-def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
+def cross_validation(labels_csvfile, profile_csvfile, classifier, K=None, exclude_subkey=None, include_subkey=None, standardize=False):
    '''
    - labels_csvfile's first column are the labels, following N columns are the key 
    - profile_csvfile N first column are considered to be the key, the remining column are the vector data values
@@ -88,14 +126,30 @@ def cross_validation(labels_csvfile, profile_csvfile, classifier, K=10):
    # ignore header row
    labels = labels[1:,:]
    profiles = profiles[1:,:]
-      
-   keysize  = labels.shape[1] - 1
-   cdata = np.array([row for row in _inner_join(labels, profiles, keysize)])
    
-   classes, confusion, percent, avg = get_confusion_matrix(classifier, cdata, K)
+   keysize  = labels.shape[1] - 1
+   ckdata = np.array([row for row in _inner_join(labels, profiles, keysize)])
+   
+   # remove nan rows
+   nan_row_indices = np.unique(np.where(ckdata == 'nan')[0])
+   ckdata = np.delete(ckdata,nan_row_indices, axis=0)
+   
+   np.savetxt("foo.csv", ckdata, delimiter=",")
+   
+   # standardize
+   if standardize:
+      ck = ckdata[:,:1+keysize]
+      data = ckdata[:,1+keysize:].astype(float)
+      m_data = np.mean(data, axis=0)
+      s_data = np.std(data, axis=0)
+      data = (data - m_data) / s_data 
+      ckdata = np.hstack((ck,data))
 
-   _display_as_text(classes, confusion, percent, avg, cdata.shape[0])
-   _display_as_graph(classes, confusion, percent, avg)
+
+   classes, confusion, percent, avg, avgTotal = get_confusion_matrix(classifier, ckdata, keysize, K, exclude_subkey, include_subkey)
+   _display_as_text(classes, confusion, percent, avgTotal, ckdata.shape[0])
+   _display_as_graph(classes, confusion, percent, avgTotal)
+      
    
 def _display_as_text(classes, confusion, percent, avg, numprofiles):
    
@@ -109,7 +163,7 @@ def _display_as_text(classes, confusion, percent, avg, numprofiles):
    print 'Average: %3d%%' % avg
 
 
-def _display_as_graph(classes, confusion, percent, avg):   
+def _display_as_graph(classes, confusion, percent, avg, filename=None):   
    # normalized figure
    
    s = np.sum(confusion,axis=1)
@@ -137,10 +191,9 @@ def _display_as_graph(classes, confusion, percent, avg):
    
    plt.xticks([], [])
    plt.yticks(ticks, [])
-   
-   
-   
-   
-   
-   plt.draw()
-   plt.show()
+ 
+   #plt.draw()
+   if filename != None:
+      plt.savefig("%s.png"%filename, format='png')
+   else:
+      plt.show()
