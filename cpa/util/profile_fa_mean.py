@@ -32,33 +32,8 @@ from cpa.util import cache
 
 from IPython.parallel import Client
 
-class waiter(Thread):
-    def init(self, file_dir, file_item_total):
-        self.file_dir = file_dir
-        self.file_item_total = file_item_total
-    
-    def run(self):
-        self.running = True
-        startTime = time.time()
-        group_item_current = 1.0
-        while(group_item_current < self.file_item_total and self.running):
-            filenum = len(os.listdir(self.file_dir))
-            if (filenum > 0): 
-                group_item_current = float(filenum)
-            remaining = self.file_item_total - group_item_current
-            ratio = group_item_current/self.file_item_total
-            percent = (ratio * 100)
-            now = time.time()
-            elapsedTime = (now - startTime)
-            estTotalTime = elapsedTime / ratio
-            estRemainingTime = estTotalTime - elapsedTime;
-            timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
-            print '(%d) %d%% Est remaining time: %s' % (remaining,percent,timeleft)
-            time.sleep(1)
-       
-
             
-def _compute_group_subsample((cache_dir, gp_subsample_file, images)):
+def _compute_group_subsample((cache_dir, images)):
     try:
         import numpy as np
         from cpa.util import cache
@@ -66,27 +41,30 @@ def _compute_group_subsample((cache_dir, gp_subsample_file, images)):
         normalizeddata, normalized_colnames = cash.load(images, normalization=cache.RobustLinearNormalization)
         np.random.shuffle(normalizeddata)
         normalizeddata_sample = [x for i, x in enumerate(normalizeddata) if i % 100 == 0]
-        np.save(gp_subsample_file, normalizeddata_sample)
         return normalizeddata_sample
     except: # catch *all* exceptions
-        print >>sys.stderr, "Error: (%s)" % gp_subsample_file
-        for e in sys.exc_info():
-            print >>sys.stderr, "Error: %s" % e
+        from traceback import print_exc
+        print_exc(None, sys.stderr)
+        e = sys.exc_info()[1]
+        print >>sys.stderr, "Error: %s" % (e,)
+        return None
       
-def _compute_group_projection_and_mean((cache_dir, gp_fa_mean_file, images, fa_node, meanvector, standarddev)):
+def _compute_group_projection_and_mean((cache_dir, images, fa_node, mean, stdev)):
     try:
         import numpy as np        
         from cpa.util import cache
         cash = cache.Cache(cache_dir)
         normalizeddata, normalized_colnames = cash.load(images, normalization=cache.RobustLinearNormalization)
-        normalizeddata = (normalizeddata - meanvector) / standarddev
+        normalizeddata = (normalizeddata - mean) / stdev
         normalizeddata_projected = fa_node.execute(normalizeddata)
         normalizeddata_projected_mean = np.mean(normalizeddata_projected, axis = 0)
-        np.save(gp_fa_mean_file, normalizeddata_projected_mean)
         return normalizeddata_projected_mean
     except: # catch *all* exceptions
+        from traceback import print_exc
+        print_exc(None, sys.stderr)
         e = sys.exc_info()[1]
-        print >>sys.stderr, "Error: (%s) %s" % (gp_fa_mean_file,e)
+        print >>sys.stderr, "Error: %s" % (e,)
+        return None
         
 
 class ProfileFAMean(object):
@@ -95,232 +73,101 @@ class ProfileFAMean(object):
         cpa.properties.LoadFile(properties_file)
         self.cache_dir = cache_dir
         self.cash = cache.Cache(cache_dir)
-        self.factors = factors
-        
-        self.group_fa_mean_dir = os.path.join(cache_dir, 'mean_fa_profile_%s' % group)
-        if filter:
-            self.group_fa_mean_dir = self.group_fa_mean_dir + '_' + filter
-        if not os.path.exists(self.group_fa_mean_dir):
-            os.mkdir(self.group_fa_mean_dir)
-
-        self.group_subsample_dir = os.path.join(self.group_fa_mean_dir, 'subsample')
-        if not os.path.exists(self.group_subsample_dir):
-            os.mkdir(self.group_subsample_dir)
-            
-        self.group_mean_dir = os.path.join(self.group_fa_mean_dir, 'mean_%s'%factors)
-        if not os.path.exists(self.group_mean_dir):
-            os.mkdir(self.group_mean_dir)
-        
+        self.factors = factors        
             
         self.mapping_group_images, self.colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
         self.colnames = cache.RobustLinearNormalization(self.cash).colnames
         
-        
-        self.group_subsample_file = os.path.join(self.group_fa_mean_dir, 'subsample.npy')
-        if not os.path.exists(self.group_subsample_file):
-            self._compute_subsamples()
-        
-        #self.group_fa_mean_file = os.path.join(self.group_fa_mean_dir, 'fa_mean_profile.npy')
-        #print self.group_fa_mean_file
-        if os.path.exists(self.group_subsample_file):
-            self._compute_fa_mean_profile()
-        
-    
+        self.subsamples = self._compute_subsamples()
+        self.results = self._compute_fa_mean_profile()
+  
     def _compute_subsamples(self):
-        print "subsampling..."
-        
-        client = Client(profile='lsf')
-        dview = client[:] #client.load_balanced_view() 
 
-        parameters = []
-        group_item_total = len(self.mapping_group_images)
-        w = waiter()
-        w.init(self.group_subsample_dir, group_item_total)
-        w.start()
-        
-        for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
-            gp_subsample_file = os.path.join(self.group_subsample_dir, '%s' % gp_name)
-            if not os.path.exists('%s.npy' % gp_subsample_file):
-                parameter = (self.cache_dir, gp_subsample_file, self.mapping_group_images[gp])
-                parameters.append(parameter)
-                #print parameter
-        
-        if(len(parameters)>0):
-            results = dview.map_sync(_compute_group_subsample, parameters)
-            
-            #results = dview.map(_compute_group_subsample, parameters)    
-            #results = map(_compute_group_subsample, parameters)
-            #results = [_compute_group_subsample(parameters[0])]
-         
-            if(results.__contains__(None)):
-                index = results.index(None)
+        print "subsampling..."
+
+        parameters = [(self.cache_dir, self.mapping_group_images[gp])
+                      for gp in self.mapping_group_images.keys()]
+
+        client = Client(profile='lsf')
+        lview = client.load_balanced_view()
+        print len(parameters), ' jobs'
+        ar = lview.map_async(_compute_group_subsample, parameters)
+        while not ar.ready():
+            msgset = set(ar.msg_ids)
+            completed = msgset.difference(client.outstanding)
+            print '%d of %d complete' % (len(completed), len(msgset))
+            ar.wait(1)
+
+        results = ar.get()
+        subsample = []
+        for i, (p, r) in enumerate(zip(parameters, results)):
+            if r is None:
                 print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
-                _compute_group_mean(parameters[index])
+                results[i] = _compute_group_subsample(p) # just to see throw the exception
                 print >>sys.stderr, '#### Exiting'
                 sys.exit(os.EX_USAGE)
-
-            time.sleep(5) #let a little time to write properly the last files
+            subsample.extend(r)
             
-        w.running = False
-
-        print "combining subsample files..."
-        startTime = time.time()
-        row = 1.0
-        data = []
-        for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
-            gp_subsample_file = os.path.join(self.group_subsample_dir, '%s' % gp_name)
-            if not os.path.exists('%s.npy' % gp_subsample_file):
-                print >>sys.stderr, '%s was not computed, exiting program' % gp_name
-                sys.exit(os.EX_USAGE)
-            subsample = np.load('%s.npy' % gp_subsample_file)
-            data.extend(subsample)
-            
-            if(row % 100 == 0):
-                ratio = row/group_item_total
-                percent = (ratio * 100)
-                now = time.time()
-                elapsedTime = (now - startTime)
-                estTotalTime = elapsedTime / ratio
-                estRemainingTime = estTotalTime - elapsedTime;
-                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
-                print '%d%% Est remaining time: %s' % (percent,timeleft)
-            row += 1
-            
-        np.save(self.group_subsample_file, data)
+        return subsample
     
-    def _compute_fa_mean_profile(self):
+    def _compute_fa_mean_profile(self):        
 
-        if(len(os.listdir(self.group_mean_dir)) == len(self.mapping_group_images)):
-            return        
-        
-        # in any other case recompute the whole factor analysis & projection
-        
         print "computing Factor Analysis"
-
-        subsampled_data = np.load(self.group_subsample_file)
   
-        meanvector = np.mean(subsampled_data, axis = 0)   
-        subsampled_data = subsampled_data - meanvector
-        standarddev = np.std(subsampled_data, axis = 0)
-        subsampled_data = subsampled_data/standarddev
+##        import pdb
+##        pdb.set_trace()
+        mean = np.mean(self.subsamples, axis = 0)   
+        subsampled_data = self.subsamples - mean
+        stdev = np.std(subsampled_data, axis = 0)
+        subsampled_data = subsampled_data/stdev
         
-        self.factors = min(self.factors, subsampled_data.shape[1])
-
         fa_node = nodes.FANode(input_dim=None, output_dim=self.factors, dtype=None, max_cycles=30)
         fa_node.train(subsampled_data)
         fa_node.stop_training()
-        
-        client = Client(profile='lsf')
-        dview = client[:] #client.load_balanced_view() 
-        dview.block = True
-        
-        parameters = []
-        group_item_total = len(self.mapping_group_images)
+                
+        self.factors = min(self.factors, subsampled_data.shape[1])
 
         print "projecting groups (%s) ..." % len(self.mapping_group_images)
-        w = waiter()
-        w.init(self.group_mean_dir, group_item_total)
-        w.start()
-        
-        for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
-            gp_fa_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
-            #recompute the whole FA at each run #if not os.path.exists('%s.npy' % gp_fa_mean_file):
-            parameter = (self.cache_dir, gp_fa_mean_file, self.mapping_group_images[gp], fa_node, meanvector, standarddev)
-            parameters.append(parameter)
-     
-        if(len(parameters)>0):
 
-            results = dview.map_sync(_compute_group_projection_and_mean, parameters)
-            
-            #results = dview.map(_compute_group_projection_and_mean, parameters)    
-            #results = map(_compute_group_projection_and_mean, parameters)
-            #results = [_compute_group_projection_and_mean(parameters[0])]
-            
-            if(results.__contains__(None)):
-                index = results.index(None)
+        parameters = [(self.cache_dir, self.mapping_group_images[gp], fa_node, mean, stdev)
+                      for gp in self.mapping_group_images.keys()]
+
+        client = Client(profile='lsf')
+        lview = client.load_balanced_view()
+        print len(parameters), ' jobs'
+        ar = lview.map_async(_compute_group_projection_and_mean, parameters)
+        while not ar.ready():
+            msgset = set(ar.msg_ids)
+            completed = msgset.difference(client.outstanding)
+            print '%d of %d complete' % (len(completed), len(msgset))
+            ar.wait(1)
+
+        results = ar.get()
+        for i, (p, r) in enumerate(zip(parameters, results)):
+            if r is None:
                 print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
-                _compute_group_projection_and_mean(parameters[index])
-                print >>sys.stderr, '#### Exiting'
-                sys.exit(os.EX_USAGE)
+                results[i] = _compute_group_projection_and_mean(p)
 
-            time.sleep(5) #let a little time to write properly the last files
-        w.running = False
+        return results
+
         
     def save_as_text_file(self, output_file):
-
         grps = '\t'.join("%s"%g for g in self.colnames_group)
         cols = '\t'.join("F%03d"%f for f in range(self.factors))
-
-        group_item_total = len(self.mapping_group_images)
-
-        print "combining group mean files..."
-        startTime = time.time()
-        row = 1.0
-
         text_file = open(output_file + '.txt', "w")
         text_file.write('%s\t%s\n' % (grps, cols))
-        for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
-            gp_fa_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
-            if not os.path.exists('%s.npy' % gp_fa_mean_file):
-                print >>sys.stderr, '%s was not computed (%s), exiting program' % (gp_name,gp_fa_mean_file)
-                text_file.close()
-                os.remove(output_file)
-                sys.exit(os.EX_USAGE)
-            datamean = np.load('%s.npy' % gp_fa_mean_file)
+        for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             groupItem = '\t'.join("%s"%i for i in gp)
             values = '\t'.join("%s"%v for v in datamean)
             text_file.write('%s\t%s\n' % (groupItem, values))
-                
-            if(row % 100 == 0):
-                ratio = row/group_item_total
-                percent = (ratio * 100)
-                now = time.time()
-                elapsedTime = (now - startTime)
-                estTotalTime = elapsedTime / ratio
-                estRemainingTime = estTotalTime - elapsedTime;
-                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
-                print '%d%% Est remaining time: %s' % (percent,timeleft)
-            row += 1
-
         text_file.close()
     
     def save_as_csv_file(self, output_file):
-
-        group_item_total = len(self.mapping_group_images)
-
-        print "combining files..."
-        startTime = time.time()
-        row = 1.0
-
         csv_file = csv.writer(open(output_file + '.csv', "w"))
         csv_file.writerow(list(self.colnames_group) + map(lambda x: 'F%03d'%x, range(self.factors)))
-
-        for gp in self.mapping_group_images.keys():
-            gp_name = '_'.join("%s"%i for i in gp).replace('/','_')
-            gp_mean_file = os.path.join(self.group_mean_dir, '%s' % gp_name)
-            if not os.path.exists('%s.npy' % gp_mean_file):
-                print >>sys.stderr, '%s was not computed, exiting program' % gp_name
-                text_file.close()
-                os.remove(output_file)
-                sys.exit(os.EX_USAGE)
-            datamean = np.load('%s.npy' % gp_mean_file)
+        for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             csv_file.writerow(list(gp) + list(datamean))
-            
-            if(row % 100 == 0):
-                ratio = row/group_item_total 
-                percent = (ratio * 100)
-                now = time.time()
-                elapsedTime = (now - startTime)
-                estTotalTime = elapsedTime / ratio
-                estRemainingTime = estTotalTime - elapsedTime;
-                timeleft = time.strftime("%H:%M:%S", time.gmtime(estRemainingTime))
-                print '%d%% Est remaining time: %s' % (percent,timeleft)
-            row += 1
-
+    
     
     
 if __name__ == '__main__':
