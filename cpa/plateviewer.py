@@ -23,7 +23,7 @@ p = properties.Properties.getInstance()
 properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
 
-required_fields = ['plate_type', 'well_id']
+required_fields = ['plate_shape', 'well_id']
 
 class PlateViewer(wx.Frame, CPATool):
     def __init__(self, parent, size=(800,-1), **kwargs):
@@ -664,7 +664,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     from itertools import groupby
     keys_and_vals = np.array(keys_and_vals)
     nkeycols = len(dbconnect.well_key_columns())
-    shape = p.plate_shape
+    shape = list(p.plate_shape)
     if p.plate_type == '5600': 
         well_keys = keys_and_vals[:,:-1] # first column(s) are keys
         data = keys_and_vals[:,-1]       # last column is data
@@ -678,7 +678,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
         assert len(data) == 5600
         data = np.array(list(meander(data.reshape(shape)))).reshape(shape)
         sort_indices = np.array(list(meander(np.arange(np.prod(shape)).reshape(shape)))).reshape(shape)
-        well_keys = np.array(list(meander(well_keys.reshape(shape + (nkeycols,) )))).reshape(shape + (nkeycols,))
+        well_keys = np.array(list(meander(well_keys.reshape(shape + [nkeycols] )))).reshape(shape + [nkeycols])
         return data, well_keys, sort_indices
 
     # compute the number of sites-per-well as the max number of rows with the same well-key
@@ -688,7 +688,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
                   ])
     if nsites > 1:
         # add a sites dimension to the array shape if there's >1 site per well
-        shape += (nsites,)        
+        shape += [nsites]
     data = np.ones(shape) * np.nan
     if categorical:
         data = data.astype('object')
@@ -697,7 +697,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     else:
         dummy_key = ('UnknownWell',)
     well_keys = np.array([dummy_key] * np.prod(shape), 
-                         dtype=object).reshape(shape + (nkeycols,))
+                         dtype=object).reshape(shape + [nkeycols])
     sort_indices = np.ones(data.shape)*np.nan
     
     dm = DataModel.getInstance()
