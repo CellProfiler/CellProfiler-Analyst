@@ -70,6 +70,8 @@ def _compute_group_projection_and_mean((cache_dir, images, fa_node, mean, stdev)
 class ProfileFAMean(object):
     
     def __init__(self, properties_file, cache_dir, group, filter = None, factors = 50):
+        startTime = time.time()
+
         cpa.properties.LoadFile(properties_file)
         self.cache_dir = cache_dir
         self.cash = cache.Cache(cache_dir)
@@ -80,6 +82,10 @@ class ProfileFAMean(object):
         
         self.subsamples = self._compute_subsamples()
         self.results = self._compute_fa_mean_profile()
+        
+        now = time.time()
+        print "Elapsed time: %s" % time.strftime("%H:%M:%S", time.gmtime(now-startTime))
+        
   
     def _compute_subsamples(self):
 
@@ -97,17 +103,22 @@ class ProfileFAMean(object):
             completed = msgset.difference(client.outstanding)
             print '%d of %d complete' % (len(completed), len(msgset))
             ar.wait(1)
-
         results = ar.get()
+
+##        results = []
+##        for p in parameters:
+##            results.append(_compute_group_subsample (p))
+##
         subsample = []
         for i, (p, r) in enumerate(zip(parameters, results)):
             if r is None:
-                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[i][1]
                 results[i] = _compute_group_subsample(p) # just to see throw the exception
                 print >>sys.stderr, '#### Exiting'
                 sys.exit(os.EX_USAGE)
             subsample.extend(r)
-            
+
+        print "the subsampling set contains %d items" % len(subsample)
         return subsample
     
     def _compute_fa_mean_profile(self):        
@@ -141,11 +152,15 @@ class ProfileFAMean(object):
             completed = msgset.difference(client.outstanding)
             print '%d of %d complete' % (len(completed), len(msgset))
             ar.wait(1)
-
         results = ar.get()
+        
+##        results = []
+##        for p in parameters:
+##            results.append(_compute_group_subsample (p))
+##
         for i, (p, r) in enumerate(zip(parameters, results)):
             if r is None:
-                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[i][1]
                 results[i] = _compute_group_projection_and_mean(p)
 
         return results
