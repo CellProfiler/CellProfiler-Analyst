@@ -108,7 +108,7 @@ class ImageReader(object):
         channels = []
         for i, fd in enumerate(fds):
             format = fd.split('.')[-1]
-            if format.upper() in ['TIF', 'TIFF', 'BMP', 'JPG', 'PNG', 'GIF', 'C01']:
+            if format.upper() in ['TIF', 'TIFF', 'BMP', 'JPG', 'JPEG', 'PNG', 'GIF', 'C01']:
                 planes = self.ReadBitmap(fd)
             elif format.upper() in ['DIB']:
                 planes = [self.ReadDIB(fd)]
