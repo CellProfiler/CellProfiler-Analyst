@@ -22,6 +22,7 @@ import sys
 import os
 import logging
 from optparse import OptionParser
+import progressbar
 import numpy as np
 from scipy.stats.stats import scoreatpercentile
 import cpa
@@ -29,6 +30,12 @@ import cpa.dbconnect
 import cpa.util
 
 logger = logging.getLogger(__name__)
+
+def make_progress_bar(text=None):
+    widgets = (['%s: ' % text] if text else []) + [progressbar.Percentage(), ' ', 
+                                                   progressbar.Bar(), ' ', 
+                                                   progressbar.ETA()]
+    return progressbar.ProgressBar(widgets=widgets)
 
 def invert_dict(d):
     inverted = {}
@@ -126,8 +133,7 @@ class RobustLinearNormalization(object):
 
     def _create_cache_percentiles(self, predicate, resume=False):
         controls = self._get_controls(predicate)
-        for i, (plate, imKeys) in enumerate(controls.items()):
-            logger.info('Plate %d of %d' % (i + 1, len(controls.keys())))
+        for i, (plate, imKeys) in enumerate(make_progress_bar('Percentiles')(controls.items())):
             filename = self._percentiles_filename(plate)
             if i == 0:
                 _check_directory(os.path.dirname(filename), resume)
@@ -204,14 +210,13 @@ class Cache(object):
 
         nimages = len(self._cached_plate_map)
         i = 0
-        for plate, image_keys in invert_dict(self._cached_plate_map).items():
+        for plate, image_keys in make_progress_bar('Features')(invert_dict(self._cached_plate_map).items()):
             plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
             if not os.path.exists(plate_dir):
                 os.mkdir(plate_dir)
             for image_key in image_keys:
                 self._create_cache_image(plate, image_key, resume)
                 i += 1
-                logger.info('Image %d of %d' % (i, nimages))
 
     def _create_cache_colnames(self):
         """Create cache of column names"""
