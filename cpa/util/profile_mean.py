@@ -19,9 +19,10 @@ import io
 import sys
 import os
 import csv
-import numpy as np
+from optparse import OptionParser
 import time
 import itertools
+import numpy as np
 from datetime import timedelta
 from threading import Thread
 
@@ -82,11 +83,9 @@ class ProfileMean(object):
         self.results = results
         return results
         
-    def save_as_text_file(self, output_file):
+    def save_as_text(self, text_file):
         grps = '\t'.join('' for g in self.colnames_group)
         cols = '\t'.join("%s"%c for c in self.colnames)
-        text_file = open(output_file + '.txt', "w")
-        text_file.write('%s\t%s\n' % (grps, cols))
         for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             groupItem = '\t'.join("%s"%i for i in gp)
             values = '\t'.join("%s"%v for v in datamean)
@@ -105,21 +104,20 @@ if __name__ == '__main__':
     # python profile_mean.py '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2.properties' '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache' '/home/unix/auguste/ImagingAuguste/CDP2/test_cc_map.txt' 'CompoundConcentration' 'compound_treated'
 
     program_name = os.path.basename(sys.argv[0])
-    len_argv = len(sys.argv)
-    
-    if len_argv < 5 or len_argv > 6:
-        print >>sys.stderr, 'Usage: %s PROPERTIES-FILE CACHE-DIR OUTPUT_FILE GROUP [FILTER]' % program_name
-        sys.exit(os.EX_USAGE)
-    
-    if len_argv == 5:
-        properties_file, cache_dir, output_file, group = sys.argv[1:5]
-        profileMean = ProfileMean(properties_file, cache_dir, group)
-        profileMean.save_as_text_file(output_file) 
-        
-    if len_argv == 6:
-        properties_file, cache_dir, output_file, group, filter = sys.argv[1:6]
-        profileMean = ProfileMean(properties_file, cache_dir, group, filter=filter)
-        profileMean.save_as_text_file(output_file) 
-     
-    
 
+    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] PROPERTIES-FILE CACHE-DIR GROUP [FILTER]")
+    parser.add_option('--profile', dest='profile', help='iPython.parallel profile')
+    parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
+    parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
+    options, args = parser.parse_args()
+
+    if len(args) != 3:
+        parser.error('Incorrect number of arguments')
+    properties_file, cache_dir, group = args
+
+    profileMean = ProfileMean(properties_file, cache_dir, group, filter=options.filter)
+    if options.output_filename:
+        with open(options.output_filename, "w") as f:
+            profileMean.save_as_text_file(f)
+    else:
+        profileMean.save_as_text_file(sys.stdout)
