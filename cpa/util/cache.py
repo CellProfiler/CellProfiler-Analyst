@@ -127,8 +127,12 @@ class RobustLinearNormalization(object):
     def _create_cache_percentiles(self, predicate, resume=False):
         controls = self._get_controls(predicate)
         for i, (plate, imKeys) in enumerate(controls.items()):
-            _check_directory(os.path.dirname(self._percentiles_filename(plate)), 
-                             resume)
+            logger.info('Plate %d of %d' % (i + 1, len(controls.keys())))
+            filename = self._percentiles_filename(plate)
+            if i == 0:
+                _check_directory(os.path.dirname(filename), resume)
+            if resume and os.path.exists(filename):
+                continue
             features = self.cache.load(imKeys)[0]
             if len(features) == 0:
                 logger.warning('No DMSO features for plate %s' % str(plate))
@@ -139,8 +143,7 @@ class RobustLinearNormalization(object):
                 for j in xrange(m):
                     percentiles[0, j] = scoreatpercentile(features[:, j], 1)
                     percentiles[1, j] = scoreatpercentile(features[:, j], 99)
-            np.save(self._percentiles_filename(plate), percentiles)
-            logger.info('Plate %d of %d' % (i + 1, len(controls.keys())))
+            np.save(filename, percentiles)
 
 
 class Cache(object):
@@ -247,7 +250,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     parser = OptionParser("usage: %prog [-r] PROPERTIES-FILE CACHE-DIR PREDICATE")
-    parser.add_option('-r', dest='resume', action='store_true')
+    parser.add_option('-r', dest='resume', action='store_true', help='resume')
     options, args = parser.parse_args()
     if len(args) != 3:
         parser.error('Incorrect number of arguments')
