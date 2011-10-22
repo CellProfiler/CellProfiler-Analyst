@@ -65,7 +65,7 @@ class Classifier(wx.Frame):
         db.register_gui_parent(self)
         for field in required_fields:
             if not p.field_defined(field):
-                raise 'Properties field "%s" is required for Classifier.'%(field)
+                raise Exception('Properties field "%s" is required for Classifier.'%(field))
                 self.Destroy()
                 return
         
