@@ -1,10 +1,12 @@
 import xml.dom.minidom as dom
 import os
+import re
 import numpy as np
 from properties import Properties
 import dbconnect
 import wx
-
+import logging
+logging.basicConfig(level=logging.DEBUG)
 # PER-IMAGE DATA
 
 # output/<image dir>/ImageIndex.ColumbusIDX.xml
@@ -39,6 +41,52 @@ DEFAULT_PROPERTIES_FILENAME = 'cpa.properties'
 p = Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
 
+
+def load_harmony(harmony_output_dir):
+    '''
+    Loads a Harmony dataset by either importing the data into a CPA database 
+    and properties file or by loading a pre-existing CPA database.
+    
+    results_path -- full path to the harmony output directory 
+    '''
+    global results_dir
+    results_dir = harmony_output_dir
+    os.chdir(results_dir)
+    
+    if check_already_imported(results_dir):
+        return
+    
+    eval_dirs = [os.path.abspath(fd) for fd in os.listdir(results_dir) if fd.startswith('Evaluation')]
+    image_dir = os.path.join(results_dir, '../Images')
+    image_index = os.path.join(image_dir, 'Index.idx.xml')
+    plate_results = os.path.join(results_dir, 'PlateResults.xml')
+    
+    plates, wells, images = get_plates_wells_and_images(image_index)
+    channels = get_channel_names(plates, wells, images)
+    object_results_files = get_object_results_files_harmony(results_dir)
+    
+    print 'Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    create_properties_file(image_index, channels, len(object_results_files)>0)
+    db.connect(empty_sqlite_db = True)
+    p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    
+    print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
+    print 'Creating per_image table...'
+    imagesets = create_image_set_dict(plates, wells, images)
+    create_per_image_table(plates, channels, imagesets, image_dir)
+    print '...done'
+    
+    print 'Creating per_well table...'
+    create_harmony_per_well_table(plate_results)
+    print '...done'
+    
+    if object_results_files:
+        print 'Creating per_object table...'
+        create_per_object_table(object_results_files)
+        print '...done'
+    
+    
+
 def load_columbus(filepath):
     '''
     Loads a Columbus dataset by either importing the data into a CPA database 
@@ -46,14 +94,6 @@ def load_columbus(filepath):
     
     filepath -- path to the MeasurementIndex.ColumbusIDX.xml file output by Columbus
     '''
-##    progress_dlg = wx.ProgressDialog('Creating CPA database.', '0% Complete', 100, None, 
-##                            wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
-##    def update(frac):
-##        cont, skip = progress_dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
-##        if not cont: # cancel was pressed
-##            progress_dlg.Destroy()
-##            raise StopCalculating()
-    
     global measurements_index
     global results_dir
     measurements_index = filepath
@@ -61,23 +101,8 @@ def load_columbus(filepath):
     # relative image paths are loaded from cwd
     os.chdir(results_dir)
     
-    if (os.path.exists(os.path.join(results_dir, DEFAULT_DB_NAME)) and
-        os.path.exists(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))):
-        res = wx.MessageDialog(None, 
-            'A CPA database and properties already exists for these results. '
-            'Do you wish to delete them and reimport?\n\nTo avoid seeing this '
-            'message, load "%s" instead of your MeasurementIndex file.'
-            %(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME)), 
-            'Re-import results?', style=wx.YES_NO|wx.ICON_EXCLAMATION
-            ).ShowModal()
-        if res == wx.ID_NO:
-            # load from existing properties
-            p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
-            return
-        else:
-            # delete then re-import
-            os.remove(os.path.join(results_dir, DEFAULT_DB_NAME))
-            os.remove(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    if check_already_imported(results_dir):
+        return
             
     doc = dom.parse(os.path.join(results_dir, measurements_index))
     image_index = get_image_index_file(doc)
@@ -93,51 +118,37 @@ def load_columbus(filepath):
 
     print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
     print 'Creating per_image table...'
-    imagenumber_dict = create_per_image_table(image_dir, plates, wells, images, channels)
+    imagesets = create_image_set_dict(plates, wells, images)
+    create_per_image_table(plates, channels, imagesets, image_dir)
     print '...done'
     
     print 'Creating per_object table...'
     from time import time
     t = time()
-    create_per_object_table(doc, imagenumber_dict)
+    object_results_files = get_object_results_files_columbus(doc)
+    create_per_object_table(object_results_files)
     print '...done in %.2f seconds'%(time() - t)
     
-##    progress_dlg.Destroy()
 
-
-def create_properties_file(image_index, channels):
+def create_properties_file(image_index, channels, has_per_object=True):
     '''
     returns (image_column_names, image_table
     '''
     assert channels != []
     
     plate_shape = get_plate_shape(image_index)
-##    dlg = wx.TextEntryDialog(None, 'Enter cell window size',
-##                             'What is the approximate maximum diameter of your '
-##                             'cells in microns? CPA will use this value to crop '
-##                             'cell tiles for Classifier.',
-##                             '50', style=wx.CENTER|wx.OK)
-##    dlg.ShowModal()
-##    cell_diameter = float(dlg.GetValue())
-##    image_tile_size = str(int(get_cell_pixel_size(image_index, cell_diameter)))
-##    dlg.Destroy()
-    
+    is_http = get_url_protocol(image_index) == 'http'
     p.db_type             = 'sqlite'
     p.db_sqlite_file      = os.path.join(results_dir, DEFAULT_DB_NAME)
     p.image_table         = 'per_image'
-    p.object_table        = 'per_object'
     p.image_id            = 'ImageNumber'
-    p.object_id           = 'ObjectNumber'
     p.plate_id            = 'Plate'
     p.well_id             = 'Well'
-    p.cell_x_loc          = 'X'
-    p.cell_y_loc          = 'Y'
     p.image_path_cols     = [PATH_COLUMN_PREFIX + c for c in channels]
     p.image_file_cols     = [FILE_COLUMN_PREFIX + c for c in channels]
     p.image_names         = channels
-    p.plate_type          = convert_plate_dims_to_platetype(*plate_shape)
-    p.image_tile_size     = 100 #image_tile_size
-    p.classifier_ignore_columns = ['ImageNumber', 'ObjectNumber', 'X', 'Y']
+    p.plate_shape          = [int(d) for d in plate_shape]
+    p.classifier_ignore_columns = ['ImageNumber']
     p._filters = {}
     p._groups = {'plate': 'SELECT ImageNumber, Plate FROM per_image', 
                  'well': 'SELECT ImageNumber, Plate, Well FROM per_image'}
@@ -145,13 +156,19 @@ def create_properties_file(image_index, channels):
     p.group_SQL_well = 'SELECT ImageNumber, Plate, Well FROM per_image'
     p._textfile = ''
     
+    if has_per_object:
+        p.object_table        = 'per_object'
+        p.object_id           = 'ObjectNumber'
+        p.cell_x_loc          = 'X'
+        p.cell_y_loc          = 'Y'
+        p.image_tile_size     = 100 #image_tile_size
+        p.classifier_ignore_columns = ['ImageNumber', 'ObjectNumber', 'X', 'Y']
+
     p.save_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
 
 
-def create_per_object_table(doc, imagenumber_dict):
+def create_per_object_table(well_result_files):
     '''doc -- measurements_index DOM document object
-    imagenumber_dict -- a dict mapping (well, fieldID, planeID, timepointID) to 
-        an ImageNumber value. This is generated by create_per_image_table
     '''
     def get_column_names(well_res_file):
         '''parses reported column names out of the given well_results_file'''
@@ -166,9 +183,6 @@ def create_per_object_table(doc, imagenumber_dict):
                            for p in params_node.getElementsByTagName('Parameter')]
         
         return [ob_col_dict[id]['name'] for id in measurement_ids]
-
-    
-    well_result_files = get_well_results_files(doc)
     
     # Get per-object column names
     default_columns = ['ImageNumber', 'ObjectNumber', 'Well', 'X', 'Y']
@@ -183,8 +197,11 @@ def create_per_object_table(doc, imagenumber_dict):
     db.create_default_indexes_on_table('per_object')
 
     # create object measurement matrix
-    object_number = 1
     for well_res_file in well_result_files:
+        #
+        # TODO: Object number should change for every image, not every well
+        #
+        object_number = 1
         doc = dom.parse(os.path.join(results_dir, well_res_file))
         platename = doc.getElementsByTagName('PlateName')[0].firstChild.data
         r = doc.getElementsByTagName('ResultTable')[0].getAttribute('Row')
@@ -195,14 +212,17 @@ def create_per_object_table(doc, imagenumber_dict):
         rows = []
         for tr in doc.getElementsByTagName('ResultTable')[0].getElementsByTagName('tr'):
             fid = tr.getAttribute('FieldID')
-            image_number = imagenumber_dict[platename, wellname, fid, pid, tid]
+            query = 'SELECT ImageNumber FROM per_image WHERE Plate="%s" AND ' \
+                    'Well="%s" AND FieldID="%s" AND PlaneID="%s" AND ' \
+                    'TimepointID="%s"'%(platename, wellname, fid, pid, tid)
+            image_number = db.execute(query)[0][0]
             row = [image_number, 
                    object_number, 
                    wellname, 
                    float(tr.getAttribute('x')), 
                    float(tr.getAttribute('y'))]
             row += [float(col.firstChild.data) 
-                    for col in tr.childNodes]
+                    for col in tr.childNodes if col.firstChild]
             rows += [row]
             object_number += 1
         
@@ -210,57 +230,116 @@ def create_per_object_table(doc, imagenumber_dict):
         db.insert_rows_into_table('per_object', colnames, coltypes, rows)
             
     db.Commit()
-
-
-def create_per_image_table(image_dir, plates, wells, images, channels):
+    
+    
+def create_image_set_dict(plates, wells, images):
     '''
-    Creates the per_image table 
+    returns a dict d[plateid, well, fieldid, planeid, timepointid] = [ImageInfo, ...]
     '''
-    default_colnames = ['ImageNumber', 'Plate', 'Well']
-    plate_colnames = [col for col in plates.values()[0].__dict__.keys() if col not in ['PlateID', 'well_ids'] ]
-    
-    image_loc_colnames = [FILE_COLUMN_PREFIX + cname for cname in channels]
-    image_loc_colnames += [PATH_COLUMN_PREFIX + cname for cname in channels]
-        
-    colnames = default_colnames + plate_colnames + image_loc_colnames
-    
-    coltypes = ['INTEGER', 'TEXT', 'VARCHAR(3)']
-    coltypes += ['TEXT'] * len(plate_colnames)
-    coltypes += ['TEXT'] * len(image_loc_colnames)
-    
-    table = []
-    imagenumber = 1
-    imagenumber_dict = {}
+    imagesets = {}
     for pid, pinfo in plates.items():
         for wid in pinfo.well_ids:
             winfo = wells[wid]
-            wellname = convert_rowcol_to_wellid(winfo.Row, winfo.Col)
+            well = convert_rowcol_to_wellid(winfo.Row, winfo.Col)
             # merge channels into single rows (ie: imagesets)
-            imagesets = {}
             for iid in winfo.image_ids:
                 im = images[iid]
-                imagesets[(im.FieldID, im.PlaneID, im.TimepointID)] = imagesets.get((im.FieldID, im.PlaneID, im.TimepointID), []) + [im]
-            for (fid, pid, tid), imageset in imagesets.items():
-                imagenumber_dict[pinfo.PlateID, wellname, fid, pid, tid] = imagenumber
-                row = [
-                    imagenumber,
-                    pinfo.PlateID,
-                    wellname
+                plate = pinfo.PlateID
+                fid = im.FieldID
+                pid = im.PlaneID
+                tid = im.TimepointID
+                imagesets[plate, well, fid, pid, tid] = imagesets.get((plate, well, fid, pid, tid), []) + [im]
+    return imagesets    
+
+def create_per_image_table(plates, channels, imagesets, image_dir):
+    # Default columns assumed to be in ImageIndex and MeasurementIndex
+    col_defs = [('ImageNumber', 'INTEGER'),
+                ('Plate', 'TEXT'),
+                ('Well', 'VARCHAR(3)'),
+                ('FieldID', 'INTEGER'),
+                ('PlaneID', 'INTEGER'),
+                ('TimepointID', 'INTEGER'),
                 ]
-                row += [pinfo.__dict__[c] for c in plate_colnames]
-                row += [None] * len(image_loc_colnames)
-                for iinfo in imageset:
-                    row[colnames.index(FILE_COLUMN_PREFIX + iinfo.ChannelName)] = iinfo.URL
-                    row[colnames.index(PATH_COLUMN_PREFIX + iinfo.ChannelName)] = image_dir
-                
-                imagenumber += 1
-                table += [row]
+    # Metadata columns stored in the Plate tags of the ImageIndex
+    col_defs += [(col, 'TEXT')
+                 for col in plates.values()[0].__dict__.keys() 
+                 if col not in ['PlateID', 'well_ids'] ]
+    # Image file and path columns from the Image tags
+    col_defs += [(FILE_COLUMN_PREFIX + cname, 'TEXT')
+                 for cname in channels]
+    col_defs += [(PATH_COLUMN_PREFIX + cname, 'TEXT')
+                  for cname in channels]
 
-    db.CreateTableFromData(table, colnames, 'per_image')
-                
-    return imagenumber_dict
+    # Create the table definition
+    db.execute('CREATE TABLE per_image (%s)'
+               %(', '.join(col+' '+typ for col, typ in col_defs)))
 
+    # Populate the table
+    imagenumber = 1
+    colnames = [col for col, typ in col_defs]
+    for (plate, well, fid, pid, tid), imageset in imagesets.items():
+        row = [ imagenumber, plate, well, fid, pid, tid ]
+        row += [v for col, v in plates[plate].__dict__.items() 
+                if col not in ['PlateID', 'well_ids']]
+        row += [None] * (len(colnames) - len(row))
+        for iinfo in imageset:
+            row[colnames.index(FILE_COLUMN_PREFIX + iinfo.ChannelName)] = iinfo.URL
+            row[colnames.index(PATH_COLUMN_PREFIX + iinfo.ChannelName)] = image_dir
 
+        db.execute('INSERT INTO per_image VALUES (%s)'%(','.join('"%s"'%r for r in row)))
+            
+        imagenumber += 1
+        
+    db.Commit()
+
+def create_harmony_per_well_table(plate_results_file):    
+    # First parse parameter information from the PlateResults
+    col_dict = get_param_map_from_plate_results(plate_results_file)
+    par_ids = get_resultgroup_param_ids_from_plate_results(plate_results_file)
+    plate_res_param_names = [col_dict[p]['name'] for p in par_ids]
+
+    # Default columns assumed to be in ImageIndex and MeasurementIndex
+    col_defs = [('Plate', 'TEXT'),
+                ('Well', 'VARCHAR(3)'),
+                ]
+    # Parameters from the PlateResults
+    col_defs += [(param, 'FLOAT') for param in plate_res_param_names]
+    
+    # Convert to db-friendly column names
+    col_defs = [(convert_to_friendly_column_name(col), typ) for col, typ in col_defs]
+
+    # Create the table definition
+    db.execute('CREATE TABLE per_well (%s)'
+               %(', '.join('%s %s'%(col, typ) for col, typ in col_defs)))
+    
+    # Populate the table
+    colnames = [col for col, typ in col_defs]
+
+    par_id_set = set(par_ids) # for fast inclusion testing
+    doc = dom.parse(plate_results_file)
+    
+    platename = doc.getElementsByTagName('PlateName')[0].firstChild.data
+    
+    for ref in doc.getElementsByTagName('Results'):
+        if not ref.attributes: continue
+        results = {}
+        wellname = convert_rowcol_to_wellid(ref.attributes.get('Row').value, ref.attributes.get('Col').value)
+        for res in ref.childNodes:
+            if not res.childNodes or res.tagName != 'Result':
+                continue
+            for val in res.getElementsByTagName('value'):
+                for att, attval in val.attributes.items():
+                    if att == 'parID' and attval in par_id_set:
+                        results[attval] = val.firstChild.data
+                        
+        set_clause = '"%s", "%s", '%(platename, wellname)
+        set_clause += ', '.join(['"%s"'%(results[par_id]) for par_id  in par_ids])
+        db.execute('INSERT INTO per_well VALUES (%s)'%(set_clause))
+    db.Commit()
+    
+    db.do_link_tables('per_well', 'per_image', ('Plate', 'Well'), ('Plate', 'Well'))
+
+        
 ##########################################################################
 ##
 ##  Helper Classes
@@ -308,6 +387,8 @@ class ImageInfo:
             self.URL_BufferNo = "0"
         '''
         for ch in image_node.childNodes:
+            if ch.localName is None:
+                continue
             if ch.firstChild is None:
                 self.__dict__[ch.localName] = None
             else:
@@ -321,6 +402,28 @@ class ImageInfo:
 ##  Helper Functions
 ##
 ##########################################################################
+
+def check_already_imported(results_dir):
+    '''Checks whether the data is already imported into a db and props file
+    '''
+    if (os.path.exists(os.path.join(results_dir, DEFAULT_DB_NAME)) and
+        os.path.exists(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))):
+        res = wx.MessageDialog(None, 
+            'A CPA database and properties already exists for these results. '
+            'Do you wish to delete them and reimport?\n\nTo avoid seeing this '
+            'message, load "%s" instead of your MeasurementIndex file.'
+            %(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME)), 
+            'Re-import results?', style=wx.YES_NO|wx.ICON_EXCLAMATION
+            ).ShowModal()
+        if res == wx.ID_NO:
+            # load from existing properties
+            p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+            return True
+        else:
+            # delete then re-import
+            os.remove(os.path.join(results_dir, DEFAULT_DB_NAME))
+            os.remove(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    return False
 
 def get_plates_wells_and_images(image_index):
     '''returns plates, wells and images dictionaries mapping their respective 
@@ -365,13 +468,17 @@ def get_image_index_file(doc):
             assert ref.firstChild.nodeType == ref.TEXT_NODE
             return ref.firstChild.data
 
-def get_well_results_files(doc):
+def get_object_results_files_columbus(doc):
+    '''doc -- MeasurementIndex xml object'''
     well_result_files = []
     for ref in doc.getElementsByTagName('Reference'):
         if ref.getAttribute('Class') == 'WELLRESULT':
             assert ref.firstChild.nodeType == ref.TEXT_NODE
             well_result_files += [ref.firstChild.data]
     return well_result_files
+
+def get_object_results_files_harmony(results_dir):
+    return [f for f in os.listdir(results_dir) if f.startswith('ObjectList')]
 
 def convert_rowcol_to_wellid(row, col):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -386,6 +493,17 @@ def get_plate_shape(image_index):
     rows = plate_node.getElementsByTagName('PlateRows')[0].firstChild.data
     cols = plate_node.getElementsByTagName('PlateColumns')[0].firstChild.data
     return (rows, cols)
+
+def get_url_protocol(image_index):
+    doc = dom.parse(os.path.join(results_dir, image_index))
+    images_node = doc.getElementsByTagName('Images')[0]
+    image_node = images_node.getElementsByTagName('Image')[0]
+    url = image_node.getElementsByTagName('URL')[0].firstChild.data
+    assert type(url) in [str, unicode]
+    if url.lower().startswith('http://'):
+        return 'http'
+    else:
+        return 'local'
         
 def get_cell_pixel_size(image_index, size_in_microns):
     '''
@@ -405,14 +523,47 @@ def get_cell_pixel_size(image_index, size_in_microns):
     yres *= 1000000
     return size_in_microns / min(xres, yres)
 
-    
+def get_param_map_from_plate_results(plate_results_file):
+    '''Parses the ParameterAnnotations tag in the PlateResults file.
+    returns a dict mapping parameter ids to dictionaries of items.
+    eg: {"par0" : {"id"          : "par0",
+                   "name"        : "Total Number of Cells", 
+                   "description" : "Number of Objects, population All Nuclei", 
+                   "population"  : "All Nuclei",
+                   "kind"        : "count"},
+         "par1" : ...
+        }
+    '''
+    col_dict = {}
+    doc = dom.parse(plate_results_file)
+    for ref in doc.getElementsByTagName('ParameterAnnotations'):
+        for param in ref.getElementsByTagName('Parameter'):
+            col_dict[param.getAttribute('id')] = dict(param.attributes.items())
+    return col_dict
+
+def convert_to_friendly_column_name(param_name):
+    '''mangles param name into something database friendly'''
+    #TODO: avoid name collisions (unlikely)
+    #TODO: shorten long names
+    return re.sub("[^0-9a-zA-Z_$]", "_", param_name) 
+
+def get_resultgroup_param_ids_from_plate_results(plate_results_file):
+    '''returns the reported parameter ids from of the ResultGroup tag of the
+    PlateResults file'''
+    doc = dom.parse(plate_results_file)
+    params_node = doc.getElementsByTagName('ResultGroup')[0].getElementsByTagName('Parameters')[0]
+    measurement_ids = [p.getAttribute('parID') for p in params_node.getElementsByTagName('Parameter')]
+    return measurement_ids
+
 #
 # try it out
 #
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-    load_columbus(results_dir+'/'+measurements_index)
+    load_columbus(os.path.join(results_dir, measurements_index))
+##    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P010-R ETAR__2009-02-12T17_11_35-Measurement1/Evaluation1')
+##    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P018-Colony Formation__2010-09-17T11_57_24-Measurement1/Evaluation1')
     app.MainLoop()
     app.ExitMainLoop()
     
