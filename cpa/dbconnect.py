@@ -1483,7 +1483,7 @@ class DBConnect(Singleton):
         '''
         return CreateTableFromData(dtable, colnames, tablename, temporary=temporary)
     
-    def CreateTableFromData(self, dtable, colnames, tablename, temporary=False):
+    def CreateTableFromData(self, dtable, colnames, tablename, temporary=False, coltypes=None):
         '''Creates and populates a table in the database.
         dtable -- array of the data to populate the table with (SQL data types 
                   are inferred from the array data)
@@ -1493,7 +1493,8 @@ class DBConnect(Singleton):
         temporary -- whether the table should be created as temporary
         '''
         colnames = clean_up_colnames(colnames)
-        coltypes = self.InferColTypesFromData(dtable, len(colnames))
+        if coltypes is None:
+            coltypes = self.InferColTypesFromData(dtable, len(colnames))
         self.create_empty_table(tablename, colnames, coltypes, temporary)
         self.create_default_indexes_on_table(tablename)
         logging.info('Populating %stable %s...'%((temporary and 'temporary ' or ''), tablename))
