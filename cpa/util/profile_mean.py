@@ -44,45 +44,6 @@ def _compute_group_mean((cache_dir, images)):
         e = sys.exc_info()[1]
         print >>sys.stderr, "Error: %s" % (e,) 
 
-class IMapUnorderedIterator(object):
-    def __init__(self, client, msg_ids):
-        self.client = client
-        self.msg_ids = msg_ids
-        self.returned = set()
-        self.queue = []
-        
-    def __len__(self):
-        return len(self.msg_ids)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        if len(self.returned) == len(self.msg_ids):
-            raise StopIteration
-        if len(self.queue) == 0:
-            while True:
-                msg_ids = list(set(self.msg_ids)
-                               .intersection(self.client.history)
-                               .difference(self.returned))
-                results = self.client.result_status(msg_ids, status_only=False)
-                if results['completed']:
-                    for msg_id in results['completed']:
-                        self.returned.add(msg_id)
-                        self.queue.append(results[msg_id])
-                    break
-                else:
-                    time.sleep(1e-3)
-                    self.client.spin()
-        return self.queue.pop()
-            
-
-def ParallelFunction_imap_unordered(self, func, iterable, chunksize=1):
-    if chunksize != 1:
-        raise NotImplementedError
-    ar = self.map(func, iterable)
-    return IMapUnorderedIterator(self.client, ar.msg_ids)
-
 class ProfileMean(object):
     
     def __init__(self, properties_file, cache_dir, group, filter=None, profile=None):
@@ -101,7 +62,6 @@ class ProfileMean(object):
         if profile:
             from IPython.parallel import Client, LoadBalancedView
             client = Client(profile='lsf')
-            LoadBalancedView.imap_unordered = ParallelFunction_imap_unordered
             lview = client.load_balanced_view()
         else:
             from multiprocessing import Pool
@@ -112,8 +72,7 @@ class ProfileMean(object):
                                                     str(njobs), ' ',
                                                     progressbar.ETA()],
                                            maxval=njobs)
-        results = list(progress(lview.imap_unordered(_compute_group_mean, 
-                                                     parameters)))
+        results = list(progress(lview.imap(_compute_group_mean, parameters)))
 
         for i, (p, r) in enumerate(zip(parameters, results)):
             if r is None:

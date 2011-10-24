@@ -19,6 +19,8 @@ import io
 import sys
 import os
 import csv
+from optparse import OptionParser
+import progressbar
 import numpy as np
 import time
 import itertools
@@ -69,13 +71,15 @@ def _compute_group_projection_and_mean((cache_dir, images, fa_node, mean, stdev)
 
 class ProfileFAMean(object):
     
-    def __init__(self, properties_file, cache_dir, group, filter = None, factors = 50):
+    def __init__(self, properties_file, cache_dir, group, filter=None, 
+                 factors=50, profile=None):
         startTime = time.time()
 
         cpa.properties.LoadFile(properties_file)
         self.cache_dir = cache_dir
         self.cash = cache.Cache(cache_dir)
         self.factors = factors        
+        self.profile = profile
             
         self.mapping_group_images, self.colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
         self.colnames = cache.RobustLinearNormalization(self.cash).colnames
@@ -93,22 +97,21 @@ class ProfileFAMean(object):
 
         parameters = [(self.cache_dir, self.mapping_group_images[gp])
                       for gp in self.mapping_group_images.keys()]
+        if self.profile:
+            from IPython.parallel import Client, LoadBalancedView
+            client = Client(profile='lsf')
+            lview = client.load_balanced_view()
+        else:
+            from multiprocessing import Pool
+            lview = Pool()
+        progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+                                                    progressbar.Bar(), ' ', 
+                                                    progressbar.Counter(), '/', 
+                                                    str(len(parameters)), ' ',
+                                                    progressbar.ETA()],
+                                           maxval=len(parameters))
+        results = list(progress(lview.imap(_compute_group_subsample, parameters)))
 
-        client = Client(profile='lsf')
-        lview = client.load_balanced_view()
-        print len(parameters), ' jobs'
-        ar = lview.map_async(_compute_group_subsample, parameters)
-        while not ar.ready():
-            msgset = set(ar.msg_ids)
-            completed = msgset.difference(client.outstanding)
-            print '%d of %d complete' % (len(completed), len(msgset))
-            ar.wait(1)
-        results = ar.get()
-
-##        results = []
-##        for p in parameters:
-##            results.append(_compute_group_subsample (p))
-##
         subsample = []
         for i, (p, r) in enumerate(zip(parameters, results)):
             if r is None:
@@ -142,35 +145,33 @@ class ProfileFAMean(object):
 
         parameters = [(self.cache_dir, self.mapping_group_images[gp], fa_node, mean, stdev)
                       for gp in self.mapping_group_images.keys()]
+        njobs = len(parameters)
+        print njobs, ' jobs'
+        if self.profile:
+            from IPython.parallel import Client, LoadBalancedView
+            client = Client(profile='lsf')
+            lview = client.load_balanced_view()
+        else:
+            from multiprocessing import Pool
+            lview = Pool()
+        progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+                                                    progressbar.Bar(), ' ', 
+                                                    progressbar.Counter(), '/', 
+                                                    str(njobs), ' ',
+                                                    progressbar.ETA()],
+                                           maxval=njobs)
+        results = list(progress(lview.imap(_compute_group_projection_and_mean, parameters)))
 
-        client = Client(profile='lsf')
-        lview = client.load_balanced_view()
-        print len(parameters), ' jobs'
-        ar = lview.map_async(_compute_group_projection_and_mean, parameters)
-        while not ar.ready():
-            msgset = set(ar.msg_ids)
-            completed = msgset.difference(client.outstanding)
-            print '%d of %d complete' % (len(completed), len(msgset))
-            ar.wait(1)
-        results = ar.get()
-        
-##        results = []
-##        for p in parameters:
-##            results.append(_compute_group_subsample (p))
-##
         for i, (p, r) in enumerate(zip(parameters, results)):
             if r is None:
                 print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[i][1]
                 results[i] = _compute_group_projection_and_mean(p)
 
         return results
-
         
-    def save_as_text_file(self, output_file):
-        grps = '\t'.join("%s"%g for g in self.colnames_group)
-        cols = '\t'.join("F%03d"%f for f in range(self.factors))
-        text_file = open(output_file + '.txt', "w")
-        text_file.write('%s\t%s\n' % (grps, cols))
+    def save_as_text(self, text_file):
+        grps = '\t'.join('' for g in self.colnames_group)
+        cols = '\t'.join("%s"%c for c in self.colnames)
         for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             groupItem = '\t'.join("%s"%i for i in gp)
             values = '\t'.join("%s"%v for v in datamean)
@@ -187,18 +188,21 @@ class ProfileFAMean(object):
     
 if __name__ == '__main__':
  
-    # python profile_mean.py '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2.properties' '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache' '/home/unix/auguste/ImagingAuguste/CDP2/test_cc_map.txt' 'CompoundConcentration' 'compound_treated'
+    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] [--factors NFACTORS] PROPERTIES-FILE CACHE-DIR GROUP")
+    parser.add_option('--profile', dest='profile', help='iPython.parallel profile')
+    parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
+    parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
+    parser.add_option('--factors', dest='nfactors', type='int', default=5, help='number of factors')
+    options, args = parser.parse_args()
 
-    program_name = os.path.basename(sys.argv[0])
-    len_argv = len(sys.argv)
-    
-    if len_argv != 7:
-        print >>sys.stderr, 'Usage: %s PROPERTIES-FILE CACHE-DIR OUTPUT_FILE GROUP FILTER FACTORS' % program_name
-        sys.exit(os.EX_USAGE)
-    
-    properties_file, cache_dir, output_file, group, filter, factors = sys.argv[1:6]
-    profileFAMean = ProfileFAMean(properties_file, cache_dir, group, filter, factors)
-    profileFAMean.save_as_text(output_file) 
-     
-    
+    if len(args) != 3:
+        parser.error('Incorrect number of arguments')
+    properties_file, cache_dir, group = args
 
+    profiles = ProfileFAMean(properties_file, cache_dir, group, filter=options.filter, 
+                  factors=options.nfactors, profile=options.profile)
+    if options.output_filename:
+        with open(options.output_filename, "w") as f:
+            profiles.save_as_text(f)
+    else:
+        profiles.save_as_text(sys.stdout)
