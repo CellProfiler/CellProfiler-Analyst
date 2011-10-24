@@ -66,7 +66,7 @@ class DraggableLegend:
             self.legend.figure.canvas.draw()
     
     def on_press(self, evt):
-        if evt.button == 1 and self.legend.get_window_extent().contains(evt.x, evt.y):
+        if evt.button == 1 and self.hit_test(evt):
             bbox = self.legend.get_window_extent()
             self.mouse_x = evt.x
             self.mouse_y = evt.y
@@ -74,6 +74,9 @@ class DraggableLegend:
             self.legend_y = bbox.ymin 
             self.dragging = True
             
+    def hit_test(self, evt):
+        return self.legend.get_window_extent().contains(evt.x, evt.y)
+    
     def on_release(self, evt):
         self.dragging = False
             
@@ -449,7 +452,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.canvas.draw_idle()
         
     def on_press(self, evt):
-        if self.legend and self.legend.dragging:
+        if self.legend and self.legend.hit_test(evt):
             return
         if evt.button == 1:
             self.selection_key = evt.key
@@ -679,10 +682,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         show_images_item.Enable(not self.selection_is_empty())
         self.Bind(wx.EVT_MENU, self.show_images_from_selection, show_images_item)
         
-        show_objects_item = popup.Append(-1, 'Show %s in selection'%(p.object_name[1]))
-        if self.selection_is_empty():
-            show_objects_item.Enable(False)
-        self.Bind(wx.EVT_MENU, self.show_objects_from_selection, show_objects_item)
+        if p.object_table:
+            show_objects_item = popup.Append(-1, 'Show %s in selection'%(p.object_name[1]))
+            if self.selection_is_empty():
+                show_objects_item.Enable(False)
+            self.Bind(wx.EVT_MENU, self.show_objects_from_selection, show_objects_item)
         
         show_imagelist_item = popup.Append(-1, 'Show selection in table')
         if self.selection_is_empty():
