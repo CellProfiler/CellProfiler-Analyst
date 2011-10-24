@@ -790,20 +790,26 @@ def show_images_from_gate(gatename, warn=10):
         
 def show_load_dialog():
     '''
-    prompt the user to choose a CPA properties or Columbus MeasurementIndex file
+    prompt the user to choose a CPA properties file
+    or Columbus MeasurementIndex file
+    or Harmony PlateResults file.
     '''
     if not wx.GetApp():
         raise Exception("Can't display load dialog without a wx App.")
     dlg = wx.FileDialog(None, 'Select a the file containing your properties.', '', '', 
                     'Properties file (*.properties, *.txt)|*.properties;*.txt|'
-                    'Columbus MeasurementIndex file (*.ColumbusIDX.xml)|*.ColumbusIDX.xml',
+                    'Columbus MeasurementIndex file (*.ColumbusIDX.xml)|*.ColumbusIDX.xml|'
+                    'Harmony PlateResults file (*.xml)|*.xml',
                     style=wx.OPEN|wx.FD_CHANGE_DIR)
     if dlg.ShowModal() == wx.ID_OK:
         filename = dlg.GetPath()
         os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        if filename.endswith('.xml'):
+        if filename.endswith('ColumbusIDX.xml'):
             from parseperkinelmer import load_columbus
             load_columbus(filename)
+        elif filename.endswith('.xml'):
+            from parseperkinelmer import load_harmony
+            load_harmony(filename)            
         else:
             p.load_file(filename)
         return True
