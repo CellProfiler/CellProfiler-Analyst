@@ -25,11 +25,7 @@ logging.basicConfig(level=logging.DEBUG)
 # -- measurement data are under AnalysisResults > ResultTable > table
 
 
-#
-# REQUIRED
-#
-results_dir = '/Users/afraser/Desktop/PKI Example Data/Columbus/P010-R ETAR[56]_SinglePlaneTIF'
-measurements_index = 'MeasurementIndex.ColumbusIDX.xml'
+results_dir = ''
 
 URL_COLUMN_PREFIX = 'Image_URL_'
 PATH_COLUMN_PREFIX = 'Image_Path_'
@@ -42,7 +38,7 @@ p = Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
 
 
-def load_harmony(harmony_output_dir):
+def load_harmony(plate_results):
     '''
     Loads a Harmony dataset by either importing the data into a CPA database 
     and properties file or by loading a pre-existing CPA database.
@@ -50,8 +46,9 @@ def load_harmony(harmony_output_dir):
     results_path -- full path to the harmony output directory 
     '''
     global results_dir
-    results_dir = harmony_output_dir
-    os.chdir(results_dir)
+    results_dir = os.path.dirname(plate_results)
+    
+    os.chdir(results_dir) # relative image paths are loaded from cwd
     
     if check_already_imported(results_dir):
         return
@@ -59,7 +56,6 @@ def load_harmony(harmony_output_dir):
     eval_dirs = [os.path.abspath(fd) for fd in os.listdir(results_dir) if fd.startswith('Evaluation')]
     image_dir = os.path.join(results_dir, '../Images')
     image_index = os.path.join(image_dir, 'Index.idx.xml')
-    plate_results = os.path.join(results_dir, 'PlateResults.xml')
     
     plates, wells, images = get_plates_wells_and_images(image_index)
     channels = get_channel_names(plates, wells, images)
@@ -87,25 +83,22 @@ def load_harmony(harmony_output_dir):
     
     
 
-def load_columbus(filepath):
+def load_columbus(measurements_index):
     '''
     Loads a Columbus dataset by either importing the data into a CPA database 
     and properties file or by loading a pre-existing CPA database.
     
-    filepath -- path to the MeasurementIndex.ColumbusIDX.xml file output by Columbus
+    measurements_index -- path to the MeasurementIndex.ColumbusIDX.xml file output by Columbus
     '''
-    global measurements_index
     global results_dir
-    measurements_index = filepath
-    results_dir = os.path.dirname(filepath)
-    # relative image paths are loaded from cwd
-    os.chdir(results_dir)
+    results_dir = os.path.dirname(measurements_index)
+    os.chdir(results_dir) # relative image paths are loaded from cwd
     
     if check_already_imported(results_dir):
         return
             
-    doc = dom.parse(os.path.join(results_dir, measurements_index))
-    image_index = get_image_index_file(doc)
+    doc = dom.parse(measurements_index)
+    image_index = get_columbus_image_index_file(doc)
     image_dir = os.path.dirname(image_index)
     
     plates, wells, images = get_plates_wells_and_images(image_index)
@@ -136,8 +129,8 @@ def create_properties_file(image_index, channels, has_per_object=True):
     '''
     assert channels != []
     
-    plate_shape = get_plate_shape(image_index)
-    is_http = get_url_protocol(image_index) == 'http'
+    plate_shape           = get_plate_shape(image_index)
+    is_http               = get_url_protocol(image_index) == 'http'
     p.db_type             = 'sqlite'
     p.db_sqlite_file      = os.path.join(results_dir, DEFAULT_DB_NAME)
     p.image_table         = 'per_image'
@@ -147,7 +140,7 @@ def create_properties_file(image_index, channels, has_per_object=True):
     p.image_path_cols     = [PATH_COLUMN_PREFIX + c for c in channels]
     p.image_file_cols     = [FILE_COLUMN_PREFIX + c for c in channels]
     p.image_names         = channels
-    p.plate_shape          = [int(d) for d in plate_shape]
+    p.plate_shape         = [int(d) for d in plate_shape]
     p.classifier_ignore_columns = ['ImageNumber']
     p._filters = {}
     p._groups = {'plate': 'SELECT ImageNumber, Plate FROM per_image', 
@@ -456,7 +449,7 @@ def get_channel_names(plates, wells, images):
     return list(set([images[im_id].ChannelName 
                      for im_id in wells[plates.values()[0].well_ids[0]].image_ids]))
 
-def get_image_index_file(doc):
+def get_columbus_image_index_file(doc):
     '''
     Parse the ImageIndex filename from measurement index doc:
     doc -- xml.dom.minidom.Document instance
@@ -561,12 +554,23 @@ def get_resultgroup_param_ids_from_plate_results(plate_results_file):
 
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-    load_columbus(os.path.join(results_dir, measurements_index))
-##    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P010-R ETAR__2009-02-12T17_11_35-Measurement1/Evaluation1')
-##    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P018-Colony Formation__2010-09-17T11_57_24-Measurement1/Evaluation1')
+##    load_columbus('/Users/afraser/Desktop/PKI Example Data/Columbus/P010-R ETAR[56]_SinglePlaneTIF/MeasurementIndex.ColumbusIDX.xml')
+##    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P010-R ETAR__2009-02-12T17_11_35-Measurement1/Evaluation1/PlateResults.xml')
+    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P018-Colony Formation__2010-09-17T11_57_24-Measurement1/Evaluation1/PlateResults.xml')
     app.MainLoop()
     app.ExitMainLoop()
     
     import cpa
     cpaapp = cpa.CPAnalyst(redirect=False)
     cpaapp.MainLoop()
+
+    #
+    # Kill the Java VM
+    #
+    try:
+        from bioformats import jutil
+        jutil.kill_vm()
+    except:
+        import traceback
+        traceback.print_exc()
+        print "Caught exception while killing VM"
