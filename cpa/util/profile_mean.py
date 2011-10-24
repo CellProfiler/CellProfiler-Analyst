@@ -22,14 +22,13 @@ import csv
 from optparse import OptionParser
 import time
 import itertools
+import progressbar
 import numpy as np
 from datetime import timedelta
 from threading import Thread
 
 import cpa
 from cpa.util import cache
-
-from IPython.parallel import Client
 
 def _compute_group_mean((cache_dir, images)):
     try:
@@ -44,11 +43,49 @@ def _compute_group_mean((cache_dir, images)):
         print_exc(None, sys.stderr)
         e = sys.exc_info()[1]
         print >>sys.stderr, "Error: %s" % (e,) 
+
+class IMapUnorderedIterator(object):
+    def __init__(self, client, msg_ids):
+        self.client = client
+        self.msg_ids = msg_ids
+        self.returned = set()
+        self.queue = []
         
+    def __len__(self):
+        return len(self.msg_ids)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if len(self.returned) == len(self.msg_ids):
+            raise StopIteration
+        if len(self.queue) == 0:
+            while True:
+                msg_ids = list(set(self.msg_ids)
+                               .intersection(self.client.history)
+                               .difference(self.returned))
+                results = self.client.result_status(msg_ids, status_only=False)
+                if results['completed']:
+                    for msg_id in results['completed']:
+                        self.returned.add(msg_id)
+                        self.queue.append(results[msg_id])
+                    break
+                else:
+                    time.sleep(1e-3)
+                    self.client.spin()
+        return self.queue.pop()
+            
+
+def ParallelFunction_imap_unordered(self, func, iterable, chunksize=1):
+    if chunksize != 1:
+        raise NotImplementedError
+    ar = self.map(func, iterable)
+    return IMapUnorderedIterator(self.client, ar.msg_ids)
 
 class ProfileMean(object):
     
-    def __init__(self, properties_file, cache_dir, group, filter = None):
+    def __init__(self, properties_file, cache_dir, group, filter=None, profile=None):
         cpa.properties.LoadFile(properties_file)
         self.cache_dir = cache_dir
         self.cash = cache.Cache(cache_dir)
@@ -56,32 +93,34 @@ class ProfileMean(object):
         self.mapping_group_images, self.colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
         self.colnames = cache.RobustLinearNormalization(self.cash).colnames
         
-        self.results = self._compute_mean_profile()
-        
-    
-    def _compute_mean_profile(self):
-        
         parameters = [(self.cache_dir, self.mapping_group_images[gp])
                       for gp in self.mapping_group_images.keys()]
+        njobs = len(parameters)
+        print njobs, 'jobs'
 
-        client = Client(profile='lsf')
-        lview = client.load_balanced_view()
-        print len(parameters), 'jobs'
-        ar = lview.map_async(_compute_group_mean, parameters)
-        while not ar.ready():
-            msgset = set(ar.msg_ids)
-            completed = msgset.difference(client.outstanding)
-            print '%d of %d complete' % (len(completed), len(msgset))
-            ar.wait(1)
+        if profile:
+            from IPython.parallel import Client, LoadBalancedView
+            client = Client(profile='lsf')
+            LoadBalancedView.imap_unordered = ParallelFunction_imap_unordered
+            lview = client.load_balanced_view()
+        else:
+            from multiprocessing import Pool
+            lview = Pool()
+        progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+                                                    progressbar.Bar(), ' ', 
+                                                    progressbar.Counter(), '/', 
+                                                    str(njobs), ' ',
+                                                    progressbar.ETA()],
+                                           maxval=njobs)
+        results = list(progress(lview.imap_unordered(_compute_group_mean, 
+                                                     parameters)))
 
-        results = ar.get()
         for i, (p, r) in enumerate(zip(parameters, results)):
             if r is None:
-                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[index][1]
+                print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[i][1]
                 results[i] = _compute_group_mean(p)
 
         self.results = results
-        return results
         
     def save_as_text(self, text_file):
         grps = '\t'.join('' for g in self.colnames_group)
@@ -105,7 +144,7 @@ if __name__ == '__main__':
 
     program_name = os.path.basename(sys.argv[0])
 
-    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] PROPERTIES-FILE CACHE-DIR GROUP [FILTER]")
+    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] PROPERTIES-FILE CACHE-DIR GROUP")
     parser.add_option('--profile', dest='profile', help='iPython.parallel profile')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
@@ -115,9 +154,10 @@ if __name__ == '__main__':
         parser.error('Incorrect number of arguments')
     properties_file, cache_dir, group = args
 
-    profileMean = ProfileMean(properties_file, cache_dir, group, filter=options.filter)
+    profileMean = ProfileMean(properties_file, cache_dir, group, 
+                              filter=options.filter, profile=options.profile)
     if options.output_filename:
         with open(options.output_filename, "w") as f:
-            profileMean.save_as_text_file(f)
+            profileMean.save_as_text(f)
     else:
-        profileMean.save_as_text_file(sys.stdout)
+        profileMean.save_as_text(sys.stdout)
