@@ -92,7 +92,7 @@ class ProfileMean(object):
         text_file.close()
     
     def save_as_csv_file(self, output_file):
-        csv_file = csv.writer(open(output_file + '.csv', "w"))
+        csv_file = csv.writer(output_file)
         csv_file.writerow(list(self.colnames_group) + list(self.colnames))
         for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             csv_file.writerow(list(gp) + list(datamean))
