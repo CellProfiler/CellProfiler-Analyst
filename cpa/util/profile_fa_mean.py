@@ -170,8 +170,8 @@ class ProfileFAMean(object):
         return results
         
     def save_as_text(self, text_file):
-        grps = '\t'.join('' for g in self.colnames_group)
-        cols = '\t'.join("%s"%c for c in self.colnames)
+        #grps = '\t'.join('' for g in self.colnames_group)
+        #cols = '\t'.join("%s"%c for c in self.colnames)
         for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             groupItem = '\t'.join("%s"%i for i in gp)
             values = '\t'.join("%s"%v for v in datamean)
@@ -179,7 +179,7 @@ class ProfileFAMean(object):
         text_file.close()
     
     def save_as_csv_file(self, output_file):
-        csv_file = csv.writer(open(output_file + '.csv', "w"))
+        csv_file = csv.writer(output_file)
         csv_file.writerow(list(self.colnames_group) + map(lambda x: 'F%03d'%x, range(self.factors)))
         for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             csv_file.writerow(list(gp) + list(datamean))
