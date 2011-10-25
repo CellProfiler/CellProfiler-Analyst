@@ -40,6 +40,7 @@ def _compute_group_mean((cache_dir, images)):
         return normalizeddata_mean
     except: # catch *all* exceptions
         from traceback import print_exc
+        import sys
         print_exc(None, sys.stderr)
         e = sys.exc_info()[1]
         print >>sys.stderr, "Error: %s" % (e,) 
@@ -61,7 +62,7 @@ class ProfileMean(object):
 
         if profile:
             from IPython.parallel import Client, LoadBalancedView
-            client = Client(profile='lsf')
+            client = Client(profile=profile)
             lview = client.load_balanced_view()
         else:
             from multiprocessing import Pool
