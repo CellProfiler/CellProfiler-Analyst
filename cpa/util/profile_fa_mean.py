@@ -30,7 +30,7 @@ from random import shuffle
 import mdp.nodes as nodes
 
 import cpa
-from cpa.util import cache
+from cpa.util.cache import Cache, RobustLinearNormalization
 
 from IPython.parallel import Client
 
@@ -39,8 +39,8 @@ def _compute_group_subsample((cache_dir, images)):
     try:
         import numpy as np
         from cpa.util import cache
-        cash = cache.Cache(cache_dir)
-        normalizeddata, normalized_colnames = cash.load(images, normalization=cache.RobustLinearNormalization)
+        cache = Cache(cache_dir)
+        normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
         np.random.shuffle(normalizeddata)
         normalizeddata_sample = [x for i, x in enumerate(normalizeddata) if i % 100 == 0]
         return normalizeddata_sample
@@ -55,8 +55,8 @@ def _compute_group_projection_and_mean((cache_dir, images, fa_node, mean, stdev)
     try:
         import numpy as np        
         from cpa.util import cache
-        cash = cache.Cache(cache_dir)
-        normalizeddata, normalized_colnames = cash.load(images, normalization=cache.RobustLinearNormalization)
+        cache = Cache(cache_dir)
+        normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
         normalizeddata = (normalizeddata - mean) / stdev
         normalizeddata_projected = fa_node.execute(normalizeddata)
         normalizeddata_projected_mean = np.mean(normalizeddata_projected, axis = 0)
@@ -77,12 +77,12 @@ class ProfileFAMean(object):
 
         cpa.properties.LoadFile(properties_file)
         self.cache_dir = cache_dir
-        self.cash = cache.Cache(cache_dir)
+        self.cache = Cache(cache_dir)
         self.factors = factors        
         self.profile = profile
             
         self.mapping_group_images, self.colnames_group = cpa.db.group_map(group, reverse=True, filter=filter)
-        self.colnames = cache.RobustLinearNormalization(self.cash).colnames
+        self.colnames = RobustLinearNormalization(self.cache).colnames
         
         self.subsamples = self._compute_subsamples()
         self.results = self._compute_fa_mean_profile()
