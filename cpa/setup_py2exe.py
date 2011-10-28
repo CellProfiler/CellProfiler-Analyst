@@ -1,3 +1,4 @@
+import distutils
 import sys
 from distutils.core import setup, Extension
 import py2exe
@@ -6,7 +7,49 @@ import os
 import os.path
 import glob
 import numpy
+import cpa_version
+import subprocess
+import _winreg
 
+class CellProfilerAnalystMSI(distutils.core.Command):
+    description = "Make CellProfilerAnalyst.msi using InnoSetup"
+    user_options = []
+    def initialize_options(self):
+        pass
+    
+    def finalize_options(self):
+        pass
+    
+    def run(self):
+        fd = open("version.iss", "w")
+        fd.write("""
+AppVerName=CellProfiler 2.0 r%s
+OutputBaseFilename=CellProfilerAnalyst_win32_r%s
+""" % (cpa_version.VERSION, cpa_version.VERSION))
+        fd.close()
+        required_files = os.path.join("dist", "cpa.exe")
+        compile_command = self.__compile_command()
+        compile_command = compile_command.replace("%1", "CellProfilerAnalyst.iss")
+        self.make_file(
+            required_files,
+            os.path.join("Output", "CellProfilerAnalyst_win32_r%s.exe" % cpa_version.VERSION),
+            subprocess.check_call, ([compile_command]))
+        
+    def __compile_command(self):
+        """Return the command to use to compile an .iss file
+        """
+        try:
+            key = _winreg.OpenKey(_winreg.HKEY_CLASSES_ROOT, 
+                                   "InnoSetupScriptFile\\shell\\Compile\\command")
+            result = _winreg.QueryValueEx(key,None)[0]
+            key.Close()
+            return result
+        except WindowsError:
+            if key:
+                key.Close()
+            raise DistutilsFileError, "Inno Setup does not seem to be installed properly. Specifically, there is no entry in the HKEY_CLASSES_ROOT for InnoSetupScriptFile\\shell\\Compile\\command"
+
+    
 CP_HOME = '../../CellProfiler/'
 if not os.path.exists(CP_HOME):
     raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py')
@@ -50,5 +93,6 @@ setup(windows=['cpa.py'],
                ('cellprofiler/icons', [CP_HOME+'cellprofiler/icons/CellProfilerIcon.png']), # needed for cpfigure used by classifier cross validation
               ]
             ),
+      cmdclass={"msi":CellProfilerAnalystMSI}
 )
     
