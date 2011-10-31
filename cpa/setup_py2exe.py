@@ -7,7 +7,6 @@ import os
 import os.path
 import glob
 import numpy
-import cpa_version
 import subprocess
 import _winreg
 
@@ -65,6 +64,7 @@ version = s.read()
 f = open('cpa_version.py', 'w')
 f.write('VERSION = "%s"\n'%("".join([v for v in version.strip() if v in '0123456789'])))
 f.close()
+import cpa_version
 
 if not 'py2exe' in sys.argv:
     sys.argv.append('py2exe')
