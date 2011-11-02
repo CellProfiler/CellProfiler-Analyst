@@ -58,7 +58,6 @@ class ProfileMean(object):
         parameters = [(self.cache_dir, self.mapping_group_images[gp])
                       for gp in self.mapping_group_images.keys()]
         njobs = len(parameters)
-        print njobs, 'jobs'
 
         if profile:
             from IPython.parallel import Client, LoadBalancedView
@@ -85,11 +84,11 @@ class ProfileMean(object):
     def save_as_text(self, text_file):
         grps = '\t'.join('' for g in self.colnames_group)
         cols = '\t'.join("%s"%c for c in self.colnames)
+        text_file.write('%s\t%s\n' % (grps, cols))
         for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             groupItem = '\t'.join("%s"%i for i in gp)
             values = '\t'.join("%s"%v for v in datamean)
             text_file.write('%s\t%s\n' % (groupItem, values))
-        text_file.close()
     
     def save_as_csv_file(self, output_file):
         csv_file = csv.writer(output_file)
@@ -101,8 +100,6 @@ class ProfileMean(object):
 if __name__ == '__main__':
  
     # python profile_mean.py '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2.properties' '/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache' '/home/unix/auguste/ImagingAuguste/CDP2/test_cc_map.txt' 'CompoundConcentration' 'compound_treated'
-
-    program_name = os.path.basename(sys.argv[0])
 
     parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] PROPERTIES-FILE CACHE-DIR GROUP")
     parser.add_option('--profile', dest='profile', help='iPython.parallel profile')

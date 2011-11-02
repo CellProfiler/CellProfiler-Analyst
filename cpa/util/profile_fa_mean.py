@@ -92,9 +92,6 @@ class ProfileFAMean(object):
         
   
     def _compute_subsamples(self):
-
-        print "subsampling..."
-
         parameters = [(self.cache_dir, self.mapping_group_images[gp])
                       for gp in self.mapping_group_images.keys()]
         if self.profile:
@@ -104,7 +101,8 @@ class ProfileFAMean(object):
         else:
             from multiprocessing import Pool
             lview = Pool()
-        progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+        progress = progressbar.ProgressBar(widgets=['Subsampling:',
+                                                    progressbar.Percentage(), ' ',
                                                     progressbar.Bar(), ' ', 
                                                     progressbar.Counter(), '/', 
                                                     str(len(parameters)), ' ',
@@ -125,23 +123,17 @@ class ProfileFAMean(object):
         return subsample
     
     def _compute_fa_mean_profile(self):        
-
-        print "computing Factor Analysis"
-  
-##        import pdb
-##        pdb.set_trace()
         mean = np.mean(self.subsamples, axis = 0)   
         subsampled_data = self.subsamples - mean
         stdev = np.std(subsampled_data, axis = 0)
         subsampled_data = subsampled_data/stdev
         
         fa_node = nodes.FANode(input_dim=None, output_dim=self.factors, dtype=None, max_cycles=30)
+        print 'Training'
         fa_node.train(subsampled_data)
         fa_node.stop_training()
                 
         self.factors = min(self.factors, subsampled_data.shape[1])
-
-        print "projecting groups (%s) ..." % len(self.mapping_group_images)
 
         parameters = [(self.cache_dir, self.mapping_group_images[gp], fa_node, mean, stdev)
                       for gp in self.mapping_group_images.keys()]
@@ -154,7 +146,8 @@ class ProfileFAMean(object):
         else:
             from multiprocessing import Pool
             lview = Pool()
-        progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+        progress = progressbar.ProgressBar(widgets=['Projecting:', 
+                                                    progressbar.Percentage(), ' ',
                                                     progressbar.Bar(), ' ', 
                                                     progressbar.Counter(), '/', 
                                                     str(njobs), ' ',
@@ -172,11 +165,11 @@ class ProfileFAMean(object):
     def save_as_text(self, text_file):
         #grps = '\t'.join('' for g in self.colnames_group)
         #cols = '\t'.join("%s"%c for c in self.colnames)
+        text_file.write('%s\t%s\n' % (grps, cols))
         for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
             groupItem = '\t'.join("%s"%i for i in gp)
             values = '\t'.join("%s"%v for v in datamean)
             text_file.write('%s\t%s\n' % (groupItem, values))
-        text_file.close()
     
     def save_as_csv_file(self, output_file):
         csv_file = csv.writer(output_file)
