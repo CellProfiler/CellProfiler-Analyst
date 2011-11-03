@@ -1,6 +1,9 @@
 import sys
 import itertools
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 class InputError(Exception):
     def __init__(self, filename, message, line=None):
@@ -79,3 +82,41 @@ class Profiles(object):
     def assert_not_isnan(self):
         for key, vector in self.items():
             assert not np.any(np.isnan(vector)), 'Error: Profile %r has a NaN value.' % key
+
+    @classmethod
+    def compute(self, keys, variables, function, parameters, ipython_profile=None, 
+                show_progress=False):
+        """
+        Compute profiles by applying the parameters to the function in parallel.
+
+        """
+        assert len(keys) == len(parameters)
+        njobs = len(parameters)
+        if ipython_profile:
+            from IPython.parallel import Client, LoadBalancedView
+            client = Client(profile=ipython_profile)
+            view = client.load_balanced_view()
+            logger.debug('Running %d jobs' % njobs)
+        else:
+            from multiprocessing import Pool, cpu_count
+            view = Pool()
+            logger.debug('Running %d jobs on %d local CPU%s' % (njobs, cpu_count(), ' s'[cpu_count() > 1]))
+        generator = view.imap(function, parameters)
+        if show_progress:
+            import progressbar
+            progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+                                                        progressbar.Bar(), ' ', 
+                                                        progressbar.Counter(), '/', 
+                                                        str(njobs), ' ',
+                                                        progressbar.ETA()],
+                                               maxval=njobs)
+            data = list(progress(generator))
+        else:
+            data = list(generator)
+
+        for i, (p, r) in enumerate(zip(parameters, data)):
+            if r is None:
+                logger.info('Retrying failed computation locally')
+                data[i] = function(p)
+
+        return cls(keys, data, variables)
