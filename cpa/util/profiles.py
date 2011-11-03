@@ -19,7 +19,7 @@ class InputError(Exception):
                                                       self.message)
 
 class Profiles(object):
-    def __init__(self, keys, data, variables, key_size=None):
+    def __init__(self, keys, data, variables, key_size=None, group_name=None):
         assert isinstance(keys, list)
         assert all(isinstance(k, tuple) for k in keys)
         assert all(isinstance(v, str) for v in variables)
@@ -30,6 +30,7 @@ class Profiles(object):
             self.key_size = len(keys[0])
         else:
             self.key_size = key_size
+        self.group_name = group_name
 
     @classmethod
     def load(cls, filename):
@@ -41,10 +42,14 @@ class Profiles(object):
                 headers = line.split('\t')
                 try:
                     headers.index('')
+                    key_size = len(headers) - headers[::-1].index('')
                 except ValueError:
-                    raise InputError(filename, 'Header should be empty for the key columns', i + 1)
-                key_size = len(headers) - headers[::-1].index('')
+                    key_size = 1
+                for h in headers[1:key_size]:
+                    if h != '':
+                        raise InputError(filename, 'Header should be empty for the key columns, except for the first, which should contain the group name', i + 1)
                 variables = headers[key_size:]
+                group_name = headers[0]
             else:
                 row = line.split('\t')
                 key = tuple(row[:key_size])
@@ -53,10 +58,12 @@ class Profiles(object):
                     raise InputError(filename, 'Expected %d feature values, found %d' % (len(variables), len(values)), i + 1)
                 keys.append(key)
                 data.append(map(float, values))
-        return cls(keys, np.array(data), variables, key_size)
+        return cls(keys, np.array(data), variables, key_size, group_name=group_name)
 
     def save(self, filename=None):
-        header = ['' for i in xrange(self.key_size)] + self.variables
+        header = ['' if self.group_name is None else self.group_name] + \
+            [''] * (self.key_size - 1) + self.variables
+        assert len(header) == self.key_size + self.data.shape[1]
         if isinstance(filename, str):
             f = open(filename, 'w')
         elif filename is None:
@@ -84,8 +91,8 @@ class Profiles(object):
             assert not np.any(np.isnan(vector)), 'Error: Profile %r has a NaN value.' % key
 
     @classmethod
-    def compute(self, keys, variables, function, parameters, ipython_profile=None, 
-                show_progress=False):
+    def compute(cls, keys, variables, function, parameters, ipython_profile=None,
+                group_name=None):
         """
         Compute profiles by applying the parameters to the function in parallel.
 
@@ -102,7 +109,7 @@ class Profiles(object):
             view = Pool()
             logger.debug('Running %d jobs on %d local CPU%s' % (njobs, cpu_count(), ' s'[cpu_count() > 1]))
         generator = view.imap(function, parameters)
-        if show_progress:
+        try:
             import progressbar
             progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
                                                         progressbar.Bar(), ' ', 
@@ -111,7 +118,7 @@ class Profiles(object):
                                                         progressbar.ETA()],
                                                maxval=njobs)
             data = list(progress(generator))
-        else:
+        except ImportError:
             data = list(generator)
 
         for i, (p, r) in enumerate(zip(parameters, data)):
@@ -119,4 +126,4 @@ class Profiles(object):
                 logger.info('Retrying failed computation locally')
                 data[i] = function(p)
 
-        return cls(keys, data, variables)
+        return cls(keys, data, variables, group_name=group_name)

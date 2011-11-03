@@ -10,21 +10,21 @@ import cpa
 from .profiles import Profiles
 
 def parse_arguments():
-    parser = OptionParser("usage: %prog [-o OUTPUT-FILENAME] PROPERTIES-FILE INPUT-FILENAME INPUT-GROUP OUTPUT-GROUP")
+    parser = OptionParser("usage: %prog [-o OUTPUT-FILENAME] PROPERTIES-FILE INPUT-FILENAME OUTPUT-GROUP")
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     options, args = parser.parse_args()
-    if len(args) != 4:
+    if len(args) != 3:
         parser.error('Incorrect number of arguments')
     return options, args
 
 if __name__ == '__main__':
-    options, (properties_file, input_filename, input_group_name, output_group_name) = parse_arguments()
+    options, (properties_file, input_filename, output_group_name) = parse_arguments()
     cpa.properties.LoadFile(properties_file)
 
-    input_group_r, input_colnames = cpa.db.group_map(input_group_name, reverse=True)
-    output_group, output_colnames = cpa.db.group_map(output_group_name)
     input_profiles = Profiles.load(input_filename)
     input_profiles.assert_not_isnan()
+    input_group_r, input_colnames = cpa.db.group_map(input_profiles.group_name, reverse=True)
+    output_group, output_colnames = cpa.db.group_map(output_group_name)
 
     d = {}
     for key, vector in input_profiles.items():
@@ -37,5 +37,6 @@ if __name__ == '__main__':
 
     keys = d.keys()
     output_profiles = Profiles(keys, [np.median(np.vstack(d[key]), 0)
-                                      for key in keys], input_profiles.variables)
+                                      for key in keys], input_profiles.variables,
+                               group_name=output_group_name)
     output_profiles.save(options.output_filename)

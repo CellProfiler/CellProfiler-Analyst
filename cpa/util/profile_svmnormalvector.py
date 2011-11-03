@@ -17,10 +17,10 @@ from profiles import Profiles
 logger = logging.getLogger(__name__)
 
 def _compute_svmnormalvector((cache_dir, images, control_images)):
-    try:
+    #try:
         import numpy as np 
         import sys
-        from cpa.util import cache
+        from cpa.util.cache import Cache, RobustLinearNormalization
         from sklearn.svm import LinearSVC
 
         cache = Cache(cache_dir)
@@ -30,13 +30,13 @@ def _compute_svmnormalvector((cache_dir, images, control_images)):
         downsampled = control_data[np.random.randint(0, len(control_data), len(normalizeddata)), :]
         x = np.vstack((normalizeddata, downsampled))
         y = [1] * len(normalizeddata) + [0] * len(downsampled)
-        clf = LinearSVC()
+        clf = LinearSVC(C=1.0)
         m = clf.fit(x, y)
         return m.coef_[0]
-    except: # catch *all* exceptions
-        from traceback import print_exc
-        print_exc(None, sys.stderr)
-        return None
+    #except: # catch *all* exceptions
+    #    from traceback import print_exc
+    #    print_exc(None, sys.stderr)
+    #    return None
         
 def images_by_plate(filter):
     f = cpa.properties._filters[filter]
@@ -51,8 +51,8 @@ def images_by_plate(filter):
         d.setdefault(plate_name, []).append(imkey)
     return d
 
-def profile_svm_normalvector(cache_dir, group_name, control_filter, 
-                             filter=None, ipython_profile=None, show_progress=False):
+def profile_svmnormalvector(cache_dir, group_name, control_filter, 
+                             filter=None, ipython_profile=None):
         cache = Cache(cache_dir)
         group, colnames_group = cpa.db.group_map(group_name, reverse=True, 
                                                  filter=filter)
@@ -70,7 +70,7 @@ def profile_svm_normalvector(cache_dir, group_name, control_filter,
                       for k in keys]
 
         return Profiles.compute(keys, variables, _compute_svmnormalvector, 
-                                parameters, ipython_profile, show_progress)
+                                parameters, ipython_profile)
     
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -86,8 +86,7 @@ if __name__ == '__main__':
     properties_file, cache_dir, group, control_filter = args
 
     cpa.properties.LoadFile(properties_file)
-    profiles = profile_svm_normalvector(cache_dir, group, control_filter, 
-                                        filter=options.filter, 
-                                        ipython_profile=options.ipython_profile,
-                                        show_progress=True)
+    profiles = profile_svmnormalvector(cache_dir, group, control_filter, 
+                                       filter=options.filter, 
+                                       ipython_profile=options.ipython_profile)
     profiles.save(options.output_filename)
