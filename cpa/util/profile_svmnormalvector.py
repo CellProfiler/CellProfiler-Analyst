@@ -70,7 +70,7 @@ def profile_svmnormalvector(cache_dir, group_name, control_filter,
                       for k in keys]
 
         return Profiles.compute(keys, variables, _compute_svmnormalvector, 
-                                parameters, ipython_profile)
+                                parameters, ipython_profile, group_name=group_name)
     
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
