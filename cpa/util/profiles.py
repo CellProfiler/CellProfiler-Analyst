@@ -60,10 +60,42 @@ class Profiles(object):
                 data.append(map(float, values))
         return cls(keys, np.array(data), variables, key_size, group_name=group_name)
 
-    def save(self, filename=None):
+    @classmethod
+    def load_csv(cls, filename):
+        import csv
+        reader = csv.reader(open(filename))
+        data = []
+        keys = []
+        for i, row in enumerate(reader):
+            if i == 0:
+                headers = row
+                try:
+                    headers.index('')
+                    key_size = len(headers) - headers[::-1].index('')
+                except ValueError:
+                    key_size = 1
+                for h in headers[1:key_size]:
+                    if h != '':
+                        raise InputError(filename, 'Header should be empty for the key columns, except for the first, which should contain the group name', i + 1)
+                variables = headers[key_size:]
+                group_name = headers[0]
+            else:
+                key = tuple(row[:key_size])
+                values = row[key_size:]
+                if len(values) != len(variables):
+                    raise InputError(filename, 'Expected %d feature values, found %d' % (len(variables), len(values)), i + 1)
+                keys.append(key)
+                data.append(map(float, values))
+        return cls(keys, np.array(data), variables, key_size, group_name=group_name)
+
+    def header(self):
         header = ['' if self.group_name is None else self.group_name] + \
             [''] * (self.key_size - 1) + self.variables
         assert len(header) == self.key_size + self.data.shape[1]
+        return header
+
+    def save(self, filename=None):
+        header = self.header()
         if isinstance(filename, str):
             f = open(filename, 'w')
         elif filename is None:
@@ -74,6 +106,23 @@ class Profiles(object):
             print >>f, '\t'.join(header)
             for key, vector in zip(self._keys, self.data):
                 print >>f, '\t'.join(map(str, itertools.chain(key, vector)))
+        finally:
+            f.close()
+
+    def save_csv(self, filename=None):
+        import csv
+        header = self.header()
+        if isinstance(filename, str):
+            f = open(filename, 'w')
+        elif filename is None:
+            f = sys.stdout
+        else:
+            f = filename
+        try:
+            w = csv.writer(f)
+            w.writerow(header)
+            for key, vector in zip(self._keys, self.data):
+                w.writerow(tuple(key) + tuple(vector))
         finally:
             f.close()
 

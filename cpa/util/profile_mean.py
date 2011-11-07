@@ -49,6 +49,7 @@ if __name__ == '__main__':
     parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
+    parser.add_option('-c', dest='csv', help='output as CSV', action='store_true')
     options, args = parser.parse_args()
 
     if len(args) != 3:
@@ -59,4 +60,7 @@ if __name__ == '__main__':
 
     profiles = profile_mean(cache_dir, group, filter=options.filter, 
                             ipython_profile=options.ipython_profile)
-    profiles.save(options.output_filename)
+    if options.csv:
+        profiles.save_csv(options.output_filename)
+    else:
+        profiles.save(options.output_filename)
