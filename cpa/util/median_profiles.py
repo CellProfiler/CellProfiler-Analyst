@@ -22,7 +22,10 @@ if __name__ == '__main__':
     options, (properties_file, input_filename, output_group_name) = parse_arguments()
     cpa.properties.LoadFile(properties_file)
 
-    input_profiles = (Profiles.load, Profiles.load_csv)[options.csv](input_filename)
+    if options.csv:
+        input_profiles = Profiles.load_csv(input_filename)
+    else:
+        input_profiles = Profiles.load(input_filename)
     input_profiles.assert_not_isnan()
     input_group_r, input_colnames = cpa.db.group_map(input_profiles.group_name, reverse=True)
     output_group, output_colnames = cpa.db.group_map(output_group_name)
@@ -40,4 +43,7 @@ if __name__ == '__main__':
     output_profiles = Profiles(keys, [np.median(np.vstack(d[key]), 0)
                                       for key in keys], input_profiles.variables,
                                group_name=output_group_name)
-    (output_profiles.save, output_profiles.save_csv)[options.csv](options.output_filename)
+    if options.csv:
+        output_profiles.save_csv(options.output_filename)
+    else:
+        output_profiles.save(options.output_filename)
