@@ -16,7 +16,27 @@ from profiles import Profiles
 
 logger = logging.getLogger(__name__)
 
-def _compute_svmnormalvector((cache_dir, images, control_images)):
+def _compute_rfe(x, y, target_accuracy=1.0):
+    from sklearn.cross_validation import KFold
+    from sklearn.feature_selection import RFECV
+    from sklearn.svm import LinearSVC
+    from sklearn.metrics import zero_one
+
+    cv = KFold(len(y), 5)
+    clf = LinearSVC(C=1.0)
+    rfecv = RFECV(clf, step=0.1, cv=cv, loss_func=zero_one)
+    rfecv.fit(x, y)
+    # The percentage correct for each # of variables in the cross validation
+    perccorrect_tot = [100 - ((100 * i) / y.shape[0]) 
+                       for i in rfecv.cv_scores_]
+    threshold = min(perccorrect_tot) + target_accuracy * (max(perccorrect_tot) - min(perccorrect_tot))
+    nfeatures = min(rfecv.n_features_[np.nonzero(perccorrect_tot >= threshold)])
+
+    rfe = RFE(clf, nfeatures, step=0.1)
+    rfe.fit(x, y)
+    return rfe.support_
+
+def _compute_svmnormalvector((cache_dir, images, control_images, rfe)):
     #try:
         import numpy as np 
         import sys
@@ -29,10 +49,13 @@ def _compute_svmnormalvector((cache_dir, images, control_images)):
         assert len(control_data) >= len(normalizeddata)
         downsampled = control_data[np.random.randint(0, len(control_data), len(normalizeddata)), :]
         x = np.vstack((normalizeddata, downsampled))
-        y = [1] * len(normalizeddata) + [0] * len(downsampled)
+        y = np.array([1] * len(normalizeddata) + [0] * len(downsampled))
         clf = LinearSVC(C=1.0)
         m = clf.fit(x, y)
-        return m.coef_[0]
+        normal_vector = m.coef_[0]
+        if rfe:
+            normal_vector[~_compute_rfe(x, y)] = 0
+        return normal_vector
     #except: # catch *all* exceptions
     #    from traceback import print_exc
     #    print_exc(None, sys.stderr)
@@ -52,7 +75,7 @@ def images_by_plate(filter):
     return d
 
 def profile_svmnormalvector(cache_dir, group_name, control_filter, 
-                             filter=None, ipython_profile=None):
+                             filter=None, rfe=False, ipython_profile=None):
         cache = Cache(cache_dir)
         group, colnames_group = cpa.db.group_map(group_name, reverse=True, 
                                                  filter=filter)
@@ -66,7 +89,7 @@ def profile_svmnormalvector(cache_dir, group_name, control_filter,
                     for r in control_images_by_plate[plate_by_image[image]]]
 
         keys = group.keys()
-        parameters = [(cache_dir, group[k], control_images(group[k]))
+        parameters = [(cache_dir, group[k], control_images(group[k]), rfe)
                       for k in keys]
 
         return Profiles.compute(keys, variables, _compute_svmnormalvector, 
@@ -77,6 +100,7 @@ if __name__ == '__main__':
  
     parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] [--factors NFACTORS] PROPERTIES-FILE CACHE-DIR GROUP CONTROL-FILTER")
     parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
+    parser.add_option('--rfe', dest='rfe', help='Recursive feature elimination', action='store_true')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     options, args = parser.parse_args()
@@ -87,6 +111,6 @@ if __name__ == '__main__':
 
     cpa.properties.LoadFile(properties_file)
     profiles = profile_svmnormalvector(cache_dir, group, control_filter, 
-                                       filter=options.filter, 
+                                       filter=options.filter, rfe=options.rfe,
                                        ipython_profile=options.ipython_profile)
     profiles.save(options.output_filename)
