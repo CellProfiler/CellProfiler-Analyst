@@ -23,7 +23,6 @@ def _compute_group_mean((cache_dir, images)):
         print_exc(None, sys.stderr)
 
 def profile_mean(cache_dir, group_name, filter=None, ipython_profile=None):
-    cpa.properties.LoadFile(properties_file)
     cache = Cache(cache_dir)
 
     group, colnames_group = cpa.db.group_map(group_name, reverse=True, filter=filter)
