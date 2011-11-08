@@ -10,7 +10,7 @@ import cpa
 from .profiles import Profiles
 
 def parse_arguments():
-    parser = OptionParser("usage: %prog [-o OUTPUT-FILENAME] PROPERTIES-FILE INPUT-FILENAME OUTPUT-GROUP")
+    parser = OptionParser("usage: %prog [-c] [-o OUTPUT-FILENAME] PROPERTIES-FILE INPUT-FILENAME OUTPUT-GROUP")
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-c', dest='csv', help='input and output as CSV', action='store_true')
     options, args = parser.parse_args()
