@@ -29,7 +29,7 @@ def _compute_group_subsample((cache_dir, images)):
         print >>sys.stderr, "Error: %s" % (e,)
         return None
 
-def _subsample(cache_dir, image_sets, ipython_profile):
+def subsample(cache_dir, image_sets, ipython_profile):
     parameters = [(cache_dir, images) for images in image_sets]
 
     if ipython_profile:
@@ -86,7 +86,7 @@ def profile_factoranalysis_mean(cache_dir, group_name, filter=None,
     group, colnames_group = cpa.db.group_map(group_name, reverse=True, filter=filter)
 
     keys = group.keys()
-    subsamples = _subsample(cache_dir, [group[g] for g in keys], ipython_profile)
+    subsamples = subsample(cache_dir, [group[g] for g in keys], ipython_profile)
 
     mean = np.mean(subsamples, axis=0)   
     subsampled_data = subsamples - mean
