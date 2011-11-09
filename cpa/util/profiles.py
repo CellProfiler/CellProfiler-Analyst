@@ -141,7 +141,7 @@ class Profiles(object):
 
     @classmethod
     def compute(cls, keys, variables, function, parameters, ipython_profile=None,
-                group_name=None):
+                group_name=None, sequentially=False):
         """
         Compute profiles by applying the parameters to the function in parallel.
 
@@ -157,7 +157,10 @@ class Profiles(object):
             from multiprocessing import Pool, cpu_count
             view = Pool()
             logger.debug('Running %d jobs on %d local CPU%s' % (njobs, cpu_count(), ' s'[cpu_count() > 1]))
-        generator = view.imap(function, parameters)
+        if sequentially:
+            generator = (function(p) for p in parameters)
+        else:
+            generator = view.imap(function, parameters)
         try:
             import progressbar
             progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
