@@ -65,7 +65,7 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None):
                break
     return confusion
 
-def print_confusion(confusion):
+def confusion_matrix(confusion):
    labels = set()
    for a, b in confusion.keys():
       labels.add(a)
@@ -74,7 +74,17 @@ def print_confusion(confusion):
    cm = np.zeros((len(labels), len(labels)))
    for (a, b), count in confusion.items():
       cm[labels.index(a), labels.index(b)] = count
-   print cm
+   return cm
+
+def confusion_reduce(operation, confusions):
+   d = confusions[0].copy()
+   for c in confusions[1:]:
+      for k, v in c:
+         d[k] = operation(d[k], v)
+   return d
+
+def print_confusion(confusion):
+   cm = confusion_matrix(confusion)
    print 'Overall: %d / %d = %.0f %%' % (np.diag(cm).sum(), cm.sum(),
                                          100.0 * np.diag(cm).sum() / cm.sum())
 

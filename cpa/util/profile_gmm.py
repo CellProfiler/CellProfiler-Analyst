@@ -24,8 +24,8 @@ def _compute_mixture_probabilities((cache_dir, images, gmm, meanvector, loadings
     mixture_probabilities = gmm.predict_proba(projected)
     return mixture_probabilities.mean(0)
     
-def profile_gmm(cache_dir, group_name, filter=None, 
-                                ipython_profile=None, ncomponents=50):
+def profile_gmm(cache_dir, group_name, ncomponents=50, filter=None, 
+                ipython_profile=None):
     cache = Cache(cache_dir)
     group, colnames_group = cpa.db.group_map(group_name, reverse=True, filter=filter)
 
@@ -64,7 +64,7 @@ def profile_gmm(cache_dir, group_name, filter=None,
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
  
-    parser = OptionParser("usage: %prog [--profile FILENAME] [-o FILENAME] [-f FILTER-NAME] [--ncomponents INTEGER] PROPERTIES-FILE CACHE-DIR GROUP")
+    parser = OptionParser("usage: %prog [--ipython-profile FILENAME] [-o FILENAME] [-f FILTER-NAME] [--ncomponents INTEGER] PROPERTIES-FILE CACHE-DIR GROUP")
     parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')

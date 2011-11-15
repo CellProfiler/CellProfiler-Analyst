@@ -18,31 +18,38 @@ def parse_arguments():
         parser.error('Incorrect number of arguments')
     return options, args
 
+def aggregate_profiles(profiles, group_name, aggregator):
+    profiles.assert_not_isnan()
+    input_group_r, input_colnames = cpa.db.group_map(profiles.group_name, reverse=True)
+    output_group, output_colnames = cpa.db.group_map(group_name)
+
+    d = {}
+    for key, vector in profiles.items():
+        images = input_group_r[key]
+        groups = [output_group[image] for image in images]
+        if groups.count(groups[0]) != len(groups):
+            raise 'Error: Input group %r contains images in %d different output groups' % (key, len(set(groups)))
+        d.setdefault(groups[0], []).append(vector)
+
+    keys = d.keys()
+    return Profiles(keys, [aggregator(np.vstack(d[key]), 0)
+                           for key in keys], profiles.variables,
+                    group_name=group_name)
+
+def median_profiles(profiles, group_name):
+    return aggregate_profiles(profiles, group_name, np.median)
+
 if __name__ == '__main__':
-    options, (properties_file, input_filename, output_group_name) = parse_arguments()
+    options, (properties_file, input_filename, group_name) = parse_arguments()
     cpa.properties.LoadFile(properties_file)
 
     if options.csv:
         input_profiles = Profiles.load_csv(input_filename)
     else:
         input_profiles = Profiles.load(input_filename)
-    input_profiles.assert_not_isnan()
-    input_group_r, input_colnames = cpa.db.group_map(input_profiles.group_name, reverse=True)
-    output_group, output_colnames = cpa.db.group_map(output_group_name)
 
-    d = {}
-    for key, vector in input_profiles.items():
-        images = input_group_r[key]
-        groups = [output_group[image] for image in images]
-        if groups.count(groups[0]) != len(groups):
-            print >>sys.stderr, 'Error: Input group %r contains images in %d output groups' % (key, len(set(groups)))
-            sys.exit(1)
-        d.setdefault(groups[0], []).append(vector)
+    output_profiles = median_profiles(input_profiles, group_name)
 
-    keys = d.keys()
-    output_profiles = Profiles(keys, [np.median(np.vstack(d[key]), 0)
-                                      for key in keys], input_profiles.variables,
-                               group_name=output_group_name)
     if options.csv:
         output_profiles.save_csv(options.output_filename)
     else:
