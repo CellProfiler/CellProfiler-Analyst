@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def _compute_rfe(x, y, target_accuracy=1.0):
     from sklearn.cross_validation import KFold
-    from sklearn.feature_selection import RFECV
+    from sklearn.feature_selection import RFECV, RFE
     from sklearn.svm import LinearSVC
     from sklearn.metrics import zero_one
 
