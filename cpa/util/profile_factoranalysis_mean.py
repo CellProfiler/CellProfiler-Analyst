@@ -36,9 +36,13 @@ def subsample(cache_dir, image_sets, ipython_profile):
         from IPython.parallel import Client, LoadBalancedView
         client = Client(profile='lsf')
         lview = client.load_balanced_view()
+        generator = lview.imap(_compute_group_subsample, parameters)
+    elif ipython_profile == False:
+        generator = (_compute_group_subsample(p) for p in parameters)
     else:
         from multiprocessing import Pool
         lview = Pool()
+        generator = lview.imap(_compute_group_subsample, parameters)
     progress = progressbar.ProgressBar(widgets=['Subsampling:',
                                                 progressbar.Percentage(), ' ',
                                                 progressbar.Bar(), ' ', 
@@ -46,7 +50,7 @@ def subsample(cache_dir, image_sets, ipython_profile):
                                                 str(len(parameters)), ' ',
                                                 progressbar.ETA()],
                                        maxval=len(parameters))
-    results = list(progress(lview.imap(_compute_group_subsample, parameters)))
+    results = list(generator)
 
     subsample = []
     for i, (p, r) in enumerate(zip(parameters, results)):

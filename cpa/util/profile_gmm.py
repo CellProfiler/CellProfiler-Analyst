@@ -57,8 +57,7 @@ def profile_gmm(cache_dir, group_name, ncomponents=50, filter=None,
                   for g in keys]
     variables = ['Component %d' % i for i in range(ncomponents)]
     return Profiles.compute(keys, variables, _compute_mixture_probabilities, 
-                            parameters, ipython_profile, group_name=group_name,
-                            sequentially=True)
+                            parameters, ipython_profile, group_name=group_name)
 
     
 if __name__ == '__main__':

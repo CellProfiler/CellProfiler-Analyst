@@ -71,7 +71,7 @@ def confusion_matrix(confusion):
       labels.add(a)
       labels.add(b)
    labels = sorted(labels)
-   cm = np.zeros((len(labels), len(labels)))
+   cm = np.zeros((len(labels), len(labels)), dtype=int)
    for (a, b), count in confusion.items():
       cm[labels.index(a), labels.index(b)] = count
    return cm
@@ -83,10 +83,15 @@ def confusion_reduce(operation, confusions):
          d[k] = operation(d[k], v)
    return d
 
-def print_confusion(confusion):
+def print_confusion_matrix(confusion):
    cm = confusion_matrix(confusion)
+   print cm
    print 'Overall: %d / %d = %.0f %%' % (np.diag(cm).sum(), cm.sum(),
                                          100.0 * np.diag(cm).sum() / cm.sum())
+
+def print_confusion(confusion):
+    for (a, b), v in confusion.items():
+        print '\t'.join([' '.join(a), ' '.join(b), str(v)])
 
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [-c] [-h HOLDOUT-GROUP] PROPERTIES-FILE PROFILES-FILENAME TRUE-GROUP")
