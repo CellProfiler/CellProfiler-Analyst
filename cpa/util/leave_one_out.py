@@ -65,13 +65,13 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None):
                break
     return confusion
 
-def confusion_matrix(confusion):
+def confusion_matrix(confusion, dtype=int):
    labels = set()
    for a, b in confusion.keys():
       labels.add(a)
       labels.add(b)
    labels = sorted(labels)
-   cm = np.zeros((len(labels), len(labels)), dtype=int)
+   cm = np.zeros((len(labels), len(labels)), dtype=dtype)
    for (a, b), count in confusion.items():
       cm[labels.index(a), labels.index(b)] = count
    return cm

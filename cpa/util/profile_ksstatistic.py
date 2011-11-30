@@ -9,7 +9,6 @@ from optparse import OptionParser
 import numpy as np
 import time
 import itertools
-from IPython.parallel import Client
 import cpa
 from cpa.util.cache import Cache, RobustLinearNormalization
 from profiles import Profiles

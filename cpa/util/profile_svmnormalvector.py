@@ -5,6 +5,8 @@ import sys
 import os
 import csv
 import logging
+import hashlib
+import pickle
 from optparse import OptionParser
 import numpy as np
 import time
@@ -39,12 +41,42 @@ def _compute_rfe(x, y, target_accuracy=1.0):
     rfe.fit(x, y)
     return rfe.support_
 
+memoization_dir = None
+
+class memoized(object):
+    """Decorator that caches a function's return value each time it is called.
+    If called later with the same arguments, the cached value is returned, and
+    not re-evaluated.
+    """
+    def __init__(self, func):
+        self.func = func
+        self.dir = memoization_dir
+        if not os.path.exists(self.dir):
+            os.mkdir(self.dir)
+    def __call__(self, *args):
+        filename = os.path.join(self.dir, hashlib.sha1(pickle.dumps(args)).hexdigest())
+        try:
+            value = cpa.util.unpickle(filename)[0]
+            #logger.debug('Using cached value')
+            return value
+        except IOError:
+            value = self.func(*args)
+            cpa.util.pickle(filename, value)
+            return value
+    def __repr__(self):
+        """Return the function's docstring."""
+        return self.func.__doc__
+    def __get__(self, obj, objtype):
+        """Support instance methods."""
+        return functools.partial(self.__call__, obj)
+
 def _compute_svmnormalvector((cache_dir, images, control_images, rfe)):
     #try:
         import numpy as np 
         import sys
         from cpa.util.cache import Cache, RobustLinearNormalization
         from sklearn.svm import LinearSVC
+        from cpa.util.profile_svmnormalvector import _compute_rfe
 
         cache = Cache(cache_dir)
         normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
@@ -78,7 +110,8 @@ def images_by_plate(filter):
     return d
 
 def profile_svmnormalvector(cache_dir, group_name, control_filter, 
-                             filter=None, rfe=False, ipython_profile=None):
+                            filter=None, rfe=False, ipython_profile=None, 
+                            job=None):
         cache = Cache(cache_dir)
         group, colnames_group = cpa.db.group_map(group_name, reverse=True, 
                                                  filter=filter)
@@ -94,26 +127,33 @@ def profile_svmnormalvector(cache_dir, group_name, control_filter,
         keys = group.keys()
         parameters = [(cache_dir, group[k], control_images(group[k]), rfe)
                       for k in keys]
-
-        return Profiles.compute(keys, variables, _compute_svmnormalvector, 
-                                parameters, ipython_profile, group_name=group_name)
+        if job:
+            i = job - 1
+            memoized(_compute_svmnormalvector(parameters[i]))
+        else:
+            return Profiles.compute(keys, variables, memoized(_compute_svmnormalvector), 
+                                    parameters, ipython_profile, group_name=group_name)
     
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
  
-    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] [--factors NFACTORS] PROPERTIES-FILE CACHE-DIR GROUP CONTROL-FILTER")
+    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [--memoize DIRECTORY] [-J NUMBER] [-o OUTPUT-FILENAME] [-f FILTER] PROPERTIES-FILE CACHE-DIR GROUP CONTROL-FILTER")
     parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
+    parser.add_option('--memoize', dest='memoize', default=None, help='Store individual profiles in temporary files')
+    parser.add_option('-J', dest='job', help='Compute only one profile, 1 <= j <= n', default=None, type=int)
     parser.add_option('--rfe', dest='rfe', help='Recursive feature elimination', action='store_true')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     options, args = parser.parse_args()
+
+    memoization_dir = options.memoize
 
     if len(args) != 4:
         parser.error('Incorrect number of arguments')
     properties_file, cache_dir, group, control_filter = args
 
     cpa.properties.LoadFile(properties_file)
-    profiles = profile_svmnormalvector(cache_dir, group, control_filter, 
-                                       filter=options.filter, rfe=options.rfe,
-                                       ipython_profile=False)#options.ipython_profile)
+    profiles = profile_svmnormalvector(cache_dir, group, control_filter, filter=options.filter, 
+                                       rfe=options.rfe, ipython_profile=options.ipython_profile, 
+                                       job=options.job)
     profiles.save(options.output_filename)

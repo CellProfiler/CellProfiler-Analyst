@@ -57,8 +57,6 @@ def subsample(cache_dir, image_sets, ipython_profile):
         if r is None:
             print >>sys.stderr, '#### There was an error, recomputing locally: %s' % parameters[i][1]
             results[i] = _compute_group_subsample(p) # just to see throw the exception
-            print >>sys.stderr, '#### Exiting'
-            sys.exit(os.EX_USAGE)
         subsample.extend(r)
 
     print "the subsampling set contains %d items" % len(subsample)
@@ -83,8 +81,8 @@ def _compute_group_projection_and_mean((cache_dir, images, fa_node, mean, stdev)
         
 
     
-def profile_factoranalysis_mean(cache_dir, group_name, filter=None, 
-                                ipython_profile=None, nfactors=5):
+def profile_factoranalysis_mean(cache_dir, group_name, nfactors=5, filter=None, 
+                                ipython_profile=None, save_model=None):
     cache = Cache(cache_dir)
 
     group, colnames_group = cpa.db.group_map(group_name, reverse=True, filter=filter)
@@ -104,7 +102,9 @@ def profile_factoranalysis_mean(cache_dir, group_name, filter=None,
     fa_node.train(subsampled_data)
     fa_node.stop_training()
 
-
+    if save_model:
+        cpa.util.pickle(save_model, fa_node)
+    
     parameters = [(cache_dir, group[g], fa_node, mean, stdev)
                   for g in keys]
     return Profiles.compute(keys, variables, _compute_group_projection_and_mean, 
@@ -114,12 +114,13 @@ def profile_factoranalysis_mean(cache_dir, group_name, filter=None,
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
  
-    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] [--factors NFACTORS] PROPERTIES-FILE CACHE-DIR GROUP")
+    parser = OptionParser("usage: %prog [--ipython-profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] [--factors NFACTORS] [--save-model FILENAME] PROPERTIES-FILE CACHE-DIR GROUP")
     parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     parser.add_option('-c', dest='csv', help='output as CSV', action='store_true')
     parser.add_option('--factors', dest='nfactors', type='int', default=5, help='number of factors')
+    parser.add_option('--save-model', dest='save_model', default=None, help='save pickled model to file')
     options, args = parser.parse_args()
 
     if len(args) != 3:
@@ -129,7 +130,8 @@ if __name__ == '__main__':
 
     profiles = profile_factoranalysis_mean(cache_dir, group_name, nfactors=options.nfactors, 
                                            filter=options.filter,
-                                           ipython_profile=options.ipython_profile)
+                                           ipython_profile=options.ipython_profile,
+                                           save_model=options.save_model)
     if options.csv:
         profiles.save_csv(options.output_filename)
     else:
