@@ -16,21 +16,22 @@ def _compute_group_mean((cache_dir, images)):
         cash = cache.Cache(cache_dir)
         normalizeddata, normalized_colnames = cash.load(images,
                                         normalization=RobustLinearNormalization)
-        try:
-            # remove NaNs
-            normalizeddata = normalizeddata[
-                ~np.isnan(np.sum(normalizeddata,1)),:]
-        except:
-            from traceback import print_exc
-            import sys
-            print_exc(None, sys.stderr)
+        if len(normalizeddata) == 0:
+            return np.nan(len(normalized_colnames))
 
-        normalizeddata_mean = np.mean(normalizeddata, axis = 0)
-        return normalizeddata_mean
+        normalizeddata = normalizeddata[
+                ~np.isnan(np.sum(normalizeddata,1)),:]
+
+        if len(normalizeddata) == 0:
+            return np.nan(len(normalized_colnames))
+
+        return np.mean(normalizeddata, axis = 0)
     except: # catch *all* exceptions
         from traceback import print_exc
         import sys
         print_exc(None, sys.stderr)
+        return None
+
 
 def profile_mean(cache_dir, group_name, filter=None, ipython_profile=None):
     cache = Cache(cache_dir)

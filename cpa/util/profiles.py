@@ -24,7 +24,7 @@ class Profiles(object):
         assert all(isinstance(k, tuple) for k in keys)
         assert all(isinstance(v, str) for v in variables)
         self._keys = [tuple(map(str, t)) for t in keys]
-        data = [l for l in data if l.shape != ()]
+        assert ~np.any(np.isnan(data))
         self.data = np.array(data)
         self.variables = variables
         if key_size is None:
@@ -179,5 +179,10 @@ class Profiles(object):
             if r is None:
                 logger.info('Retrying failed computation locally')
                 data[i] = function(p)
+
+        rowmask = ~np.isnan(np.sum(data,1))
+        import itertools
+        data = list(itertools.compress(data, rowmask))
+        keys = list(itertools.compress(keys, rowmask))
 
         return cls(keys, data, variables, group_name=group_name)
