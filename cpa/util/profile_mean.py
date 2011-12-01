@@ -14,7 +14,17 @@ def _compute_group_mean((cache_dir, images)):
         import numpy as np
         from cpa.util import cache
         cash = cache.Cache(cache_dir)
-        normalizeddata, normalized_colnames = cash.load(images, normalization=RobustLinearNormalization)
+        normalizeddata, normalized_colnames = cash.load(images,
+                                        normalization=RobustLinearNormalization)
+        try:
+            # remove NaNs
+            normalizeddata = normalizeddata[
+                ~np.isnan(np.sum(normalizeddata,1)),:]
+        except:
+            from traceback import print_exc
+            import sys
+            print_exc(None, sys.stderr)
+
         normalizeddata_mean = np.mean(normalizeddata, axis = 0)
         return normalizeddata_mean
     except: # catch *all* exceptions

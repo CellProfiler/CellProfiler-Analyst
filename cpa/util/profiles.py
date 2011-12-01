@@ -24,6 +24,7 @@ class Profiles(object):
         assert all(isinstance(k, tuple) for k in keys)
         assert all(isinstance(v, str) for v in variables)
         self._keys = [tuple(map(str, t)) for t in keys]
+        data = [l for l in data if l.shape != ()]
         self.data = np.array(data)
         self.variables = variables
         if key_size is None:
