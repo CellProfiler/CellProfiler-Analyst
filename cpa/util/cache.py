@@ -151,6 +151,8 @@ class RobustLinearNormalization(object):
                     percentiles[1, j] = scoreatpercentile(features[:, j], 99)
             np.save(filename, percentiles)
 
+normalizations = dict((c.__name__, c)
+                      for c in [DummyNormalization, RobustLinearNormalization])
 
 class Cache(object):
     _cached_plate_map = None
