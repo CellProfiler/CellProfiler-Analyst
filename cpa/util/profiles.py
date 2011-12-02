@@ -180,7 +180,7 @@ class Profiles(object):
                 logger.info('Retrying failed computation locally')
                 data[i] = function(p)
 
-        rowmask = ~np.isnan(np.sum(data,1))
+        rowmask = [(l != None) and all(~np.isnan(l)) for l in data]
         import itertools
         data = list(itertools.compress(data, rowmask))
         keys = list(itertools.compress(keys, rowmask))

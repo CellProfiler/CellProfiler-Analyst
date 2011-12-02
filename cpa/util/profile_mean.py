@@ -15,15 +15,16 @@ def _compute_group_mean((cache_dir, images, normalization_name)):
         from cpa.util.cache import Cache, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
-        normalizeddata, normalized_colnames = cache.load(images, normalization=normalization)
+        normalizeddata, normalized_colnames = cache.load(images,
+                                                    normalization=normalization)
         if len(normalizeddata) == 0:
-            return np.nan(len(normalized_colnames))
+            return len(normalized_colnames)*[np.nan]
 
         normalizeddata = normalizeddata[
                 ~np.isnan(np.sum(normalizeddata,1)),:]
 
         if len(normalizeddata) == 0:
-            return np.nan(len(normalized_colnames))
+            return len(normalized_colnames)*[np.nan]
 
         return np.mean(normalizeddata, axis = 0)
     except: # catch *all* exceptions
@@ -36,11 +37,12 @@ def profile_mean(cache_dir, group_name, filter=None, ipython_profile=None,
                  normalization=RobustLinearNormalization):
     cache = Cache(cache_dir)
 
-    group, colnames_group = cpa.db.group_map(group_name, reverse=True, filter=filter)
+    group, colnames_group = cpa.db.group_map(group_name, reverse=True,
+                                             filter=filter)
     variables = normalization(cache).colnames
 
     keys = group.keys()
-    parameters = [(cache_dir, group[g], normalization.__name__) 
+    parameters = [(cache_dir, group[g], normalization.__name__)
                   for g in keys]
 
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
@@ -51,11 +53,10 @@ def profile_mean(cache_dir, group_name, filter=None, ipython_profile=None,
     #     csv_file.writerow(list(self.colnames_group) + list(self.colnames))
     #     for gp, datamean in zip(self.mapping_group_images.keys(), self.results):
     #         csv_file.writerow(list(gp) + list(datamean))
-    
-    
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
- 
+
     parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] [--normalization NORMALIZATION] PROPERTIES-FILE CACHE-DIR GROUP")
     parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
@@ -71,7 +72,7 @@ if __name__ == '__main__':
 
     cpa.properties.LoadFile(properties_file)
 
-    profiles = profile_mean(cache_dir, group, filter=options.filter, 
+    profiles = profile_mean(cache_dir, group, filter=options.filter,
                             ipython_profile=options.ipython_profile,
                             normalization=normalizations[options.normalization])
     if options.csv:
