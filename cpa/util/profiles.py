@@ -3,6 +3,10 @@ import itertools
 import logging
 import numpy as np
 
+# compress is new in Python 2.7
+if not hasattr(itertools, 'compress'):
+    itertools.compress = lambda data, selectors: (d for d, s in itertools.izip(data, selectors) if s)
+
 logger = logging.getLogger(__name__)
 
 class InputError(Exception):
