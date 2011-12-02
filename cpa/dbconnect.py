@@ -1560,7 +1560,7 @@ class DBConnect(Singleton):
                         'Missing column index', 
                         style=wx.OK|wx.ICON_EXCLAMATION).ShowModal()
         else:
-            loggin.warn('%s is a view. CheckTables will skip the index check on this table'%(p.object_table))
+            logging.warn('%s is a view. CheckTables will skip the index check on this table'%(p.object_table))
         
         # Explicitly check for TableNumber in case it was not specified in props file
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in self.GetColumnNames(p.object_table)):
