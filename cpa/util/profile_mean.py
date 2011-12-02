@@ -18,13 +18,13 @@ def _compute_group_mean((cache_dir, images, normalization_name)):
         normalizeddata, normalized_colnames = cache.load(images,
                                                     normalization=normalization)
         if len(normalizeddata) == 0:
-            return len(normalized_colnames)*[np.nan]
+            return np.empty(len(normalized_colnames)) * np.nan
 
         normalizeddata = normalizeddata[
                 ~np.isnan(np.sum(normalizeddata,1)),:]
 
         if len(normalizeddata) == 0:
-            return len(normalized_colnames)*[np.nan]
+            return np.empty(len(normalized_colnames)) * np.nan
 
         return np.mean(normalizeddata, axis = 0)
     except: # catch *all* exceptions
