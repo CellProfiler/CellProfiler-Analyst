@@ -4,7 +4,6 @@ import logging
 import sys
 import os
 from optparse import OptionParser
-import progressbar
 import numpy as np
 from scipy import linalg
 from sklearn.mixture import GMM
