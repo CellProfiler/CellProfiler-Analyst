@@ -2,6 +2,7 @@ import sys
 import itertools
 import logging
 import numpy as np
+from .lsf import LSFView
 
 # compress is new in Python 2.7
 if not hasattr(itertools, 'compress'):
@@ -153,7 +154,11 @@ class Profiles(object):
         """
         assert len(keys) == len(parameters)
         njobs = len(parameters)
-        if ipython_profile:
+        if isinstance(ipython_profile, LSFView):
+            view = ipython_profile
+            logger.debug('Running %d jobs on LSF' % view.njobs)
+            generator = view.imap(function, parameters)
+        elif ipython_profile:
             from IPython.parallel import Client, LoadBalancedView
             client = Client(profile=ipython_profile)
             view = client.load_balanced_view()
