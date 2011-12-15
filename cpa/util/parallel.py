@@ -87,3 +87,25 @@ class Uniprocessing(ParallelProcessor):
 
 class UniprocessingView(object):
     imap = itertools.imap
+
+def test_function((seconds)):
+    import time
+    time.sleep(seconds)
+    return seconds
+
+def test():
+    from optparse import OptionParser
+    import random
+
+    logging.basicConfig(level=logging.DEBUG)
+    parser = OptionParser()
+    ParallelProcessor.add_options(parser)
+    options, args = parser.parse_args()
+    parallel = ParallelProcessor.create_from_options(parser, options)
+    view = parallel.view('foo')
+    for result in view.imap(test_function, [random.randint(1, 10)
+                                            for task in range(10)]):
+        print 'Task returned', result
+    
+if __name__ == '__main__':
+    test()
