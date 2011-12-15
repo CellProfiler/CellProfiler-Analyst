@@ -21,6 +21,8 @@ def parse_arguments():
 def aggregate_profiles(profiles, group_name, aggregator):
     profiles.assert_not_isnan()
     input_group_r, input_colnames = cpa.db.group_map(profiles.group_name, reverse=True)
+    input_group_r = dict((tuple(map(str, k)), v) 
+                         for k, v in input_group_r.items())
     output_group, output_colnames = cpa.db.group_map(group_name)
 
     d = {}
