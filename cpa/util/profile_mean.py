@@ -8,6 +8,7 @@ import numpy as np
 import cpa
 from .cache import Cache, RobustLinearNormalization, normalizations
 from .profiles import Profiles
+from .parallel import ParallelProcessor, Uniprocessing
 
 def _compute_group_mean((cache_dir, images, normalization_name)):
     try:
@@ -33,7 +34,7 @@ def _compute_group_mean((cache_dir, images, normalization_name)):
         print_exc(None, sys.stderr)
         return None
 
-def profile_mean(cache_dir, group_name, filter=None, ipython_profile=None,
+def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
                  normalization=RobustLinearNormalization):
     cache = Cache(cache_dir)
 
@@ -46,7 +47,7 @@ def profile_mean(cache_dir, group_name, filter=None, ipython_profile=None,
                   for g in keys]
 
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
-                            ipython_profile, group_name=group_name)
+                            parallel=parallel, group_name=group_name)
 
     # def save_as_csv_file(self, output_file):
     #     csv_file = csv.writer(output_file)
@@ -57,14 +58,15 @@ def profile_mean(cache_dir, group_name, filter=None, ipython_profile=None,
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
-    parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [-o OUTPUT-FILENAME] [-f FILTER] [--normalization NORMALIZATION] PROPERTIES-FILE CACHE-DIR GROUP")
-    parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
+    parser = OptionParser("usage: %prog [options] PROPERTIES-FILE CACHE-DIR GROUP")
+    ParallelProcessor.add_options(parser)
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     parser.add_option('-c', dest='csv', help='output as CSV', action='store_true')
     parser.add_option('--normalization', help='normalization method (default: RobustLinearNormalization)',
                       default='RobustLinearNormalization')
     options, args = parser.parse_args()
+    parallel = ParallelProcessor.create_from_options(parser, options)
 
     if len(args) != 3:
         parser.error('Incorrect number of arguments')
@@ -73,7 +75,7 @@ if __name__ == '__main__':
     cpa.properties.LoadFile(properties_file)
 
     profiles = profile_mean(cache_dir, group, filter=options.filter,
-                            ipython_profile=options.ipython_profile,
+                            parallel=parallel,
                             normalization=normalizations[options.normalization])
     if options.csv:
         profiles.save_csv(options.output_filename)

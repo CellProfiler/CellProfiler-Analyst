@@ -11,7 +11,9 @@ import mdp.nodes as nodes
 import cpa
 from cpa.util.cache import Cache, RobustLinearNormalization
 from .profiles import Profiles
+from .lsf import LSF
 
+logger = logging.getLogger(__name__)
             
 def _compute_group_subsample((cache_dir, images)):
     try:
@@ -20,7 +22,7 @@ def _compute_group_subsample((cache_dir, images)):
         cache = Cache(cache_dir)
         normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
         np.random.shuffle(normalizeddata)
-        normalizeddata_sample = [x for i, x in enumerate(normalizeddata) if i % 100 == 0]
+        normalizeddata_sample = [x for i, x in enumerate(normalizeddata) if i % 1000 == 0]
         return normalizeddata_sample
     except: # catch *all* exceptions
         from traceback import print_exc
@@ -32,7 +34,11 @@ def _compute_group_subsample((cache_dir, images)):
 def subsample(cache_dir, image_sets, ipython_profile):
     parameters = [(cache_dir, images) for images in image_sets]
 
-    if ipython_profile:
+    if isinstance(ipython_profile, LSF):
+        view = ipython_profile.view('subsample')
+        logger.debug('Running %d jobs on LSF' % view.njobs)
+        generator = view.imap(_compute_group_subsample, parameters)
+    elif ipython_profile:
         from IPython.parallel import Client, LoadBalancedView
         client = Client(profile='lsf')
         lview = client.load_balanced_view()

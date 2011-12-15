@@ -1,15 +1,31 @@
+import types
 import errno
 import re
 import random
 import sys
 import time
 import pickle
+import marshal
 import os
 import tempfile
 import progressbar
 
+class LSF(object):
+    def __init__(self, njobs, directory=None):
+        self.njobs = njobs
+        if directory is None:
+            self.directory = tempfile.mkdtemp(dir='.')
+        else:
+            self.directory = directory
+            if not os.path.exists(self.directory):
+                os.mkdir(self.directory)
+
+    def view(self, name):
+        return LSFView(self.njobs, os.path.join(self.directory, name))
+
+
 class LSFView(object):
-    def __init__(self, njobs, directory=None, batch_size=1):
+    def __init__(self, njobs, directory=None):
         self.njobs = njobs
         if directory is None:
             self.directory = tempfile.mkdtemp(dir='.')
@@ -19,7 +35,6 @@ class LSFView(object):
             self.resuming = os.path.exists(self.directory)
             if not self.resuming:
                 os.mkdir(self.directory)
-        self.batch_size = batch_size
 
     def create_subdirectories(self):
         for subdir in ['new', 'tmp', 'cur', 'out', 'done', 'failed']:
@@ -68,10 +83,12 @@ class LSFView(object):
         self.start_workers()
         done_tasks = self.list_precomputed_results()
         # Divide the paramaters into batches (tasks).
+        batch_size = len(parameters) // 4000
+        print 'Batch size:', batch_size
         all_batches = []
         while parameters:
-            all_batches.append(parameters[:self.batch_size])
-            parameters = parameters[self.batch_size:]
+            all_batches.append(parameters[:batch_size])
+            parameters = parameters[batch_size:]
         # Remove already-computed tasks.
         batches = [(task_id, batch)
                    for task_id, batch in enumerate(all_batches) 
@@ -80,7 +97,8 @@ class LSFView(object):
         if len(batches) > 0:
             progress = self.progress('Submitting tasks: ', len(batches))
             for task_id, batch in progress(batches):
-                self.submit_task(task_id, dict(function=function, batch=batch,
+                self.submit_task(task_id, dict(function=marshal.dumps(function.func_code), 
+                                               batch=batch,
                                                task_id=task_id, attempts=3))
             self.signal_done_submitting()
         # Wait for results
@@ -88,8 +106,14 @@ class LSFView(object):
         progress.start()
         next = 0
         while True:
-            npending = len(os.listdir(os.path.join(self.directory, 'new')))
-            nrunning = len(os.listdir(os.path.join(self.directory, 'cur')))
+            try:
+                npending = len(os.listdir(os.path.join(self.directory, 'new')))
+                nrunning = len(os.listdir(os.path.join(self.directory, 'cur')))
+            except OSError, e:
+                if e.errno == errno.EIO:
+                    continue
+                else:
+                    raise
             for fn in os.listdir(os.path.join(self.directory, 'done')):
                 task_id = int(re.match('t(\d+)\.pickle$', fn).group(1))
                 if task_id not in done_tasks:
@@ -135,7 +159,9 @@ class Worker(object):
             print 'Got task', task_id
             start_time = time.time()
             try:
-                result = map(task['function'], task['batch'])
+                code = marshal.loads(task['function'])
+                function = types.FunctionType(code, globals(), "function")
+                result = map(function, task['batch'])
             except:
                 if task['attempts'] > 0:
                     task['attempts'] -= 1

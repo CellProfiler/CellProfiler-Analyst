@@ -2,7 +2,7 @@ import sys
 import itertools
 import logging
 import numpy as np
-from .lsf import LSFView
+from .parallel import ParallelProcessor
 
 # compress is new in Python 2.7
 if not hasattr(itertools, 'compress'):
@@ -146,32 +146,16 @@ class Profiles(object):
             assert not np.any(np.isnan(vector)), 'Error: Profile %r has a NaN value.' % key
 
     @classmethod
-    def compute(cls, keys, variables, function, parameters, ipython_profile=None,
-                group_name=None):
+    def compute(cls, keys, variables, function, parameters, parallel=None,
+                ipython_profile=None, group_name=None):
         """
         Compute profiles by applying the parameters to the function in parallel.
 
         """
         assert len(keys) == len(parameters)
         njobs = len(parameters)
-        if isinstance(ipython_profile, LSFView):
-            view = ipython_profile
-            logger.debug('Running %d jobs on LSF' % view.njobs)
-            generator = view.imap(function, parameters)
-        elif ipython_profile:
-            from IPython.parallel import Client, LoadBalancedView
-            client = Client(profile=ipython_profile)
-            view = client.load_balanced_view()
-            logger.debug('Running %d jobs' % njobs)
-            generator = view.imap(function, parameters)
-        elif ipython_profile == False:
-            generator = (function(p) for p in parameters)
-        else:
-            from multiprocessing import Pool, cpu_count
-            import threading
-            view = Pool()
-            logger.debug('Running %d jobs on %d local CPU%s' % (njobs, cpu_count(), ' s'[cpu_count() > 1]))
-            generator = view.imap(function, parameters)
+        parallel = parallel or ParallelProcessor.create_from_legacy(ipython_profile)
+        generator = parallel.view('profiles.compute').imap(function, parameters)
         try:
             import progressbar
             progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
