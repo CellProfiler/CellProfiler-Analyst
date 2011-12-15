@@ -1,3 +1,4 @@
+
 # -*- Encoding: utf-8 -*-
 import os
 import re
@@ -139,12 +140,12 @@ class Page2(wiz.WizardPageSimple):
             if 'TableNumber' not in indices:
                 if t.lower().endswith('per_image'):
                     perImTables += [t]
-                elif t.lower().endswith('per_object'):
+                elif t.lower().endswith('per_object') or t.lower().endswith('per_cells') or t.lower().endswith('per_nuclei') or t.lower().endswith('per_cytoplasm'):
                     perObTables += [t]
         for im in perImTables[::-1]:
             for ob in perObTables:
-                if ob[:-10] == im[:-9]: # if prefixes match, add these two tables
-                    prefix = ob[:-10].rstrip('_')
+                if ob.lower().split('per')[0] == im.lower().split('per')[0]: # if prefixes match, add these two tables
+                    prefix = ob.lower().split('per')[0].rstrip('_')
                     self.listTables.Insert(prefix+' ('+im+' / '+ob+')', 0, (im,ob))
 
     def OnSelectItem(self,evt):
