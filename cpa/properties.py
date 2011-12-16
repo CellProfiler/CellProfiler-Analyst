@@ -8,6 +8,8 @@ import logging
 import incell
 import sys
 import subprocess
+from utils import ObservableDict
+
 #
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
 #
@@ -181,12 +183,16 @@ class Properties(Singleton):
     def parse_list_value(self, list_str):
         '''parses a list property given as a string and returns it as a list
         '''
+        # If values are wrapped in backquotes (``) then split on "`,`" to
+        # allow commas within list values (needed for building SQL queries into
+        # lists)
+        if list_str.strip().startswith("`") and list_str.strip().endswith("`"):
+            return [v.strip() for v in list_str.strip()[1:-1].split("`,`") if v.strip() is not '']
         return [v.strip() for v in list_str.split(',') if v.strip() is not '']
         
     def load_file(self, filename):
         ''' Loads variables in from a properties file. '''
         from sqltools import Gate, Filter, OldFilter
-        from utils import ObservableDict
         
         self.clear()
         self._filename        = filename
@@ -289,6 +295,7 @@ class Properties(Singleton):
         else:
             self._filename = properties_filename
             self._textfile = ""
+            self._filters = ObservableDict()
 
         for incell_filename in incell_filenames:
             incell.parse_incell(sqlite_filename, incell_filename, self)
@@ -296,7 +303,7 @@ class Properties(Singleton):
         self._initialized = True
 
         if not os.path.exists(properties_filename):
-            self.SaveFile(properties_filename)
+            self.save_file(properties_filename)
         
     def save_file(self, filename):
         '''
