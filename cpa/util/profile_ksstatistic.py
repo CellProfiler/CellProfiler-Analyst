@@ -25,6 +25,7 @@ def _compute_ksstatistic((cache_dir, images, control_images)):
     cache = Cache(cache_dir)
     normalizeddata, variables = cache.load(images, normalization=RobustLinearNormalization)
     control_data, control_colnames = cache.load(control_images, normalization=RobustLinearNormalization)
+    print normalizeddata.shape, control_data.shape
     assert len(control_data) >= len(normalizeddata)
     assert variables == control_colnames
     #downsampled = control_data[np.random.randint(0, len(control_data), len(normalizeddata)), :]
@@ -56,8 +57,8 @@ def profile_ksstatistic(cache_dir, group_name, control_filter, plate_group,
         if plate_group is None:
             return control_images_by_plate[None]
         else:
-            return [r for image in treated_images
-                    for r in control_images_by_plate[plate_by_image[image]]]
+            return list(set(r for image in treated_images
+                            for r in control_images_by_plate[plate_by_image[image]]))
 
     keys = group.keys()
     parameters = [(cache_dir, group[k], control_images(group[k]))
