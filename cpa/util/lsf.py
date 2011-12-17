@@ -83,7 +83,7 @@ class LSFView(object):
         self.start_workers()
         done_tasks = self.list_precomputed_results()
         # Divide the paramaters into batches (tasks).
-        batch_size = len(parameters) // 4000
+        batch_size = 1 + len(parameters) // 4000
         print 'Batch size:', batch_size
         all_batches = []
         while parameters:
