@@ -1,4 +1,5 @@
 import os
+import sys
 import math
 import xml.etree.cElementTree as ET
 import sqlite3
@@ -118,7 +119,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
         calibration = tree.find('.//ObjectiveCalibration')
         segmentation = tree.find('.//Segmentation/NTHSegmentation')
         diameter = 2 * math.sqrt(float(segmentation.get('size')) / math.pi)
-        properties.image_tile_size = 2 * diameter / float(calibration.get('pixel_height'))
+        properties.image_tile_size = int(2 * diameter / float(calibration.get('pixel_height')))
     except:
         print "unable to find nucleus size in pixels"
         properties.image_tile_size = 50
@@ -208,7 +209,8 @@ def export_image_table(dbconn, tree, properties, well_field_to_imagenumber, next
     # wrangle Windows to whatever we're using
     path = imagestack.get('path')
     path = os.path.normpath(path.replace('\\', os.sep))
-    path = path.replace('//Gemini/', '/Volumes/') # Curie specific
+    if sys.platform == 'dawin':
+        path = path.replace('//Gemini/', '/Volumes/') # Curie specific
     platename = os.path.split(path)[1]
 
     # Fill the image table.  Separate wavelengths at the same location
@@ -233,7 +235,7 @@ def export_image_table(dbconn, tree, properties, well_field_to_imagenumber, next
             images_inserted[well, field] = imagenumber
 
         chan = channel_colname_name(image)[0]
-        cursor.execute('UPDATE Images SET %s_Filename=? WHERE well=? and field=?'%(chan), (image.get('filename'), well, field))
+        cursor.execute('UPDATE Images SET %s_Filename=? WHERE ImageNumber=?'%(chan), (image.get('filename'), images_inserted[well, field]))
 
     dbconn.commit()
 
@@ -249,7 +251,6 @@ def export_image_table(dbconn, tree, properties, well_field_to_imagenumber, next
             field = int(welldata.get('field'))
             assert field > 0
             names, values = zip(*sorted([(rewrite_feature_name(measure), float(measure.get('value'))) for measure in val.findall('Measure')]))
-            print names
             missing_features = set(names) - image_data_columns
             for mf in sorted(list(missing_features)):
                 cursor.execute('ALTER TABLE Images ADD COLUMN %s REAL'%(mf))
