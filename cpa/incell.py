@@ -209,7 +209,7 @@ def export_image_table(dbconn, tree, properties, well_field_to_imagenumber, next
     # wrangle Windows to whatever we're using
     path = imagestack.get('path')
     path = os.path.normpath(path.replace('\\', os.sep))
-    if sys.platform == 'dawin':
+    if sys.platform == 'darwin':
         path = path.replace('//Gemini/', '/Volumes/') # Curie specific
     platename = os.path.split(path)[1]
 
