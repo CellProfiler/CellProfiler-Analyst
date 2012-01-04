@@ -101,9 +101,6 @@ class LSFView(object):
                                                batch=batch,
                                                task_id=task_id, attempts=3))
             self.signal_done_submitting()
-        # Wait for results
-        progress = self.progress('Waiting for results: ', len(all_batches))
-        progress.start()
         next = 0
         while True:
             try:
@@ -118,7 +115,6 @@ class LSFView(object):
                 task_id = int(re.match('t(\d+)\.pickle$', fn).group(1))
                 if task_id not in done_tasks:
                     done_tasks.add(task_id)
-            progress.update(len(done_tasks))
             # Return results
             while next in done_tasks:
                 for r in self.read_results(next):
@@ -127,7 +123,6 @@ class LSFView(object):
             if next == len(all_batches):
                 return
             time.sleep(1)
-        progress.finish()
 
 def test_function((seconds)):
     import time
