@@ -232,7 +232,7 @@ class DataSourcePanel(wx.Panel):
         returns a dictionary mapping setting names to values encoded as strings
         '''
         d = {'x-table'     : self.x_table_choice.GetStringSelection(),
-             'y-table'     : self.x_table_choice.GetStringSelection(),
+             'y-table'     : self.y_table_choice.GetStringSelection(),
              'x-axis'      : self.x_choice.GetStringSelection(),
              'y-axis'      : self.y_choice.GetStringSelection(),
              'x-scale'     : self.x_scale_choice.GetStringSelection(),
