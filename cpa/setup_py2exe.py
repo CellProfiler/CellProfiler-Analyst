@@ -56,15 +56,11 @@ if not os.path.exists(CP_HOME):
 else:
     sys.path.append(CP_HOME)
 
-#
-# Write version to cpa_version.py so CPA.exe can determine version.
-#
-s = os.popen('svnversion')
-version = s.read()
-f = open('cpa_version.py', 'w')
-f.write('VERSION = "%s"\n'%("".join([v for v in version.strip() if v in '0123456789'])))
+# store frozen version
+import util.version
+f = open(os.path.join("util", "frozen_version.py"), "w")
+f.write("# MACHINE_GENERATED\nversion_string = '%s'" % util.version.version_string)
 f.close()
-import cpa_version
 
 if not 'py2exe' in sys.argv:
     sys.argv.append('py2exe')

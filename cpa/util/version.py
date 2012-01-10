@@ -67,7 +67,6 @@ def get_version():
 '''Code version'''
 version_string = get_version()
 version_number = int(datetime_from_isoformat(version_string.split(' ')[0]).strftime('%Y%m%d%H%M%S'))
-title_string = '%s (rev %s)' % (dotted_version, version_string.split(' ', 1)[1])
 
 if __name__ == '__main__':
     print version_string
