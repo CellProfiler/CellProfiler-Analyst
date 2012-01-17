@@ -17,7 +17,7 @@ DefaultDirName={pf}\CellProfiler Analyst
 DefaultGroupName=CellProfiler Analyst
 AllowNoIcons=yes
 LicenseFile=LICENSE.txt
-OutputDir=CPAnalyst_2.0r10646
+OutputDir=CPAnalyst_2.0r11621
 OutputBaseFilename=setup_CPAnalyst
 SetupIconFile=cpa\icons\cpa.ico
 Compression=lzma
@@ -64,4 +64,7 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\CellProfiler Analy
 
 [Run]
 Filename: "{app}\cpa.exe"; Description: "{cm:LaunchProgram,CellProfiler Analyst}"; Flags: nowait postinstall skipifsilent
+
+
+
 
