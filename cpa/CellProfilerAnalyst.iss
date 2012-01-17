@@ -28,7 +28,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: ".\dist\cpa.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: ".\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\..\CellProfiler\windows\vcredist_x86.exe"; DestDir: "{tmp}"
+Source: "..\vcredist_x86.exe"; DestDir: "{tmp}"
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
