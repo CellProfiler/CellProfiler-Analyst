@@ -1,0 +1,14 @@
+*.jar
+*~
+*.pyc
+*.pyd
+*.so
+*.dll
+*.exe
+*.properties
+*\#
+build
+dist
+output
+cpa/util/frozen_version.py
+cpa/version.iss
