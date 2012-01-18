@@ -168,6 +168,10 @@ class Profiles(object):
         except ImportError:
             data = list(generator)
 
+        if all([l is None for l in data]):
+            print "No data returned! Not generating a Profile class"
+            return
+        
         for i, (p, r) in enumerate(zip(parameters, data)):
             if r is None:
                 logger.info('Retrying failed computation locally')
