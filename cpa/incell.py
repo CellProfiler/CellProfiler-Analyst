@@ -186,7 +186,7 @@ def export_image_table(dbconn, tree, properties, well_field_to_imagenumber, next
     channel_colnames = [s[0] for s in channels_info]
     channel_realnames = [s[1] for s in channels_info]
     num_wavelengths = len(channels_info)
-                         
+
     # image paths and filenames
     if properties.image_path_cols is None:
         properties.image_path_cols = ['%s_Path'%(s) for s in channel_colnames]
@@ -209,8 +209,6 @@ def export_image_table(dbconn, tree, properties, well_field_to_imagenumber, next
     # wrangle Windows to whatever we're using
     path = imagestack.get('path')
     path = os.path.normpath(path.replace('\\', os.sep))
-    if sys.platform == 'darwin':
-        path = path.replace('//Gemini/', '/Volumes/') # Curie specific
     platename = os.path.split(path)[1]
 
     # Fill the image table.  Separate wavelengths at the same location

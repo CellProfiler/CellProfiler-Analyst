@@ -296,6 +296,7 @@ class Properties(Singleton):
             self._filename = properties_filename
             self._textfile = ""
             self._filters = ObservableDict()
+            self._groups = {}
 
         for incell_filename in incell_filenames:
             incell.parse_incell(sqlite_filename, incell_filename, self)
@@ -315,24 +316,8 @@ class Properties(Singleton):
         self._filename = filename
         
         # Write revision first
-        if hasattr(sys, 'frozen'):
-            import cpa_version
-            __version__ = cpa_version.VERSION
-            __version__ = int(re.sub("\D", "", __version__))
-        else:
-            try:
-                version, error = subprocess.Popen(["svnversion", "-n", 
-                                                   os.path.dirname(__file__)], 
-                                                  stdout=subprocess.PIPE).communicate()   
-                if error:
-                    logging.error("Failed to find svn version.")
-                    __version__ = -1
-                else:
-                    __version__ = version.split(':')[-1]
-                    __version__ = int(re.sub("\D", "", __version__))
-            except OSError:
-                logging.error("Failed to find svn version. Do you have svn installed?")
-                __version__ = -1
+        import util.version
+        __version__ = util.version.version_number
         fd.write('# CellProfiler Analyst revision: %s\n'%(__version__))
         
         fields_to_write = sorted([k for k, v in self.__dict__.items() 
@@ -614,7 +599,7 @@ class Properties(Singleton):
             logging.warn('PROPERTIES WARNING (plate_type): Field is required for plate viewer')
         else:
             if self.field_defined('plate_shape'):
-                raise Exception('PROPERTIES ERROR: You have defined plate_type and plate_shape in your properties file. Please use one or the other.')
+                assert self.plate_shape == supported_plate_types[self.__dict__['plate_type']], "Your properties file has incompatible values for plate_type and plate_shape."
             if self.__dict__['plate_type'] not in supported_plate_types.keys():
                 raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
                                 %(self.__dict__['plate_type'], ', '.join(supported_values)))

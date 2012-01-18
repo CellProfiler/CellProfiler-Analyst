@@ -199,7 +199,7 @@ class DataSourcePanel(wx.Panel):
         
     def _plotting_per_object_data(self):
         return (p.object_table and
-                p.object_table in [self.x_column.table, self.x_column.table]
+                p.object_table in [self.x_column.table, self.y_column.table]
                 or (self.x_column.table != p.image_table and db.adjacent(p.object_table, self.x_column.table))
                 or (self.y_column.table != p.image_table and db.adjacent(p.object_table, self.y_column.table))
                 )
@@ -232,7 +232,7 @@ class DataSourcePanel(wx.Panel):
         returns a dictionary mapping setting names to values encoded as strings
         '''
         d = {'x-table'     : self.x_table_choice.GetStringSelection(),
-             'y-table'     : self.x_table_choice.GetStringSelection(),
+             'y-table'     : self.y_table_choice.GetStringSelection(),
              'x-axis'      : self.x_choice.GetStringSelection(),
              'y-axis'      : self.y_choice.GetStringSelection(),
              'x-scale'     : self.x_scale_choice.GetStringSelection(),

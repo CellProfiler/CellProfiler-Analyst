@@ -11,9 +11,9 @@ pytz.zoneinfo.UTC = pytz.UTC
 import pilfix
 
 
-CP_HOME = '../../CellProfiler/'
+CP_HOME = os.getenv('CP_HOME') or '../../CellProfiler/'
 if not os.path.exists(CP_HOME):
-    raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py')
+    raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py or set the CP_HOME environment variable')
 else:
     sys.path.append(CP_HOME)
     
@@ -26,17 +26,15 @@ else:
 ##    print 'nosetests failed. Aborting setup.py'
 ##    exit(1)
 
-#
-# Store version in cpa_version.py
-# The CPA app will use this to determine version rather than svn
-#
-if sys.platform == "darwin":
-    os.system(''' svnversion | sed -e's/^/VERSION = \"/' -e 's/[0-9]*://' -e 's/M//' -e 's/$/\"/' > cpa_version.py ''')
-    
+import util.version
+f = open("util/frozen_version.py", "w")
+f.write("# MACHINE_GENERATED\nversion_string = '%s'" % util.version.version_string)
+f.close()
+
 APPNAME = 'CPAnalyst'
 APP = ['cpa.py']
-DATA_FILES = [('bioformats', [CP_HOME+'bioformats/loci_tools.jar']),
-              ('cellprofiler/icons', [CP_HOME+'cellprofiler/icons/CellProfilerIcon.png']), # needed for cpfigure used by classifier cross validation
+DATA_FILES = [('bioformats', [os.path.join(CP_HOME, 'bioformats/loci_tools.jar')]),
+              ('cellprofiler/icons', [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), # needed for cpfigure used by classifier cross validation
              ]
 OPTIONS = {'argv_emulation': True,
            'iconfile' : "icons/cpa.icns",
