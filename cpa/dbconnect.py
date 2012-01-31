@@ -751,7 +751,7 @@ class DBConnect(Singleton):
     def GetFilteredImages(self, filter_name):
         ''' Returns a list of imKeys from the given filter. '''
         try:
-            return self.execute(filter_sql(filter_name))
+            return self.execute(self.filter_sql(filter_name))
         except Exception, e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)
