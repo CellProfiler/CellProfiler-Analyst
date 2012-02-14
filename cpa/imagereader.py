@@ -235,7 +235,7 @@ class ImageReader(object):
 
     
 def ReadBitmapViaPIL(data):
-    import Image
+    import PIL.Image as Image
     from cStringIO import StringIO
     im = Image.open(StringIO(data))
 

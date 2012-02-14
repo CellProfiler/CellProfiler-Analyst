@@ -5,7 +5,7 @@ import imagetools
 import wx
 import numpy as np
 import matplotlib.cm
-import Image
+import PIL.Image as Image
 from base64 import b64decode
 from guiutils import BitmapPopup
 from StringIO import StringIO
