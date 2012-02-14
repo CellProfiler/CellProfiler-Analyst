@@ -7,22 +7,8 @@ import os
 import os.path
 import glob
 import numpy
-import shutil
 import subprocess
 import _winreg
-import util.version
-
-CP_HOME = os.getenv('CP_HOME') or '../../CellProfiler/'
-if not os.path.exists(CP_HOME):
-    raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py')
-    exit(1)
-else:
-    sys.path.append(CP_HOME)
-    
-VCREDIST = os.path.join(CP_HOME, "windows", "vcredist_x86.exe")
-if not os.path.isfile(VCREDIST):
-    raise Exception("%s does not exist" %VCREDIST)
-shutil.copyfile(VCREDIST, "../vcredist_x86.exe")
 
 class CellProfilerAnalystMSI(distutils.core.Command):
     description = "Make CellProfilerAnalyst.msi using InnoSetup"
@@ -36,17 +22,16 @@ class CellProfilerAnalystMSI(distutils.core.Command):
     def run(self):
         fd = open("version.iss", "w")
         fd.write("""
-AppVerName=CellProfiler 2.0 r%d
-OutputBaseFilename=CellProfilerAnalyst_win32_r%d
-""" % (util.version.version_number, util.version.version_number))
+AppVerName=CellProfiler 2.0 r%s
+OutputBaseFilename=CellProfilerAnalyst_win32_r%s
+""" % (cpa_version.VERSION, cpa_version.VERSION))
         fd.close()
         required_files = os.path.join("dist", "cpa.exe")
         compile_command = self.__compile_command()
         compile_command = compile_command.replace("%1", "CellProfilerAnalyst.iss")
         self.make_file(
             required_files,
-            os.path.join("Output", "CellProfilerAnalyst_win32_r%s.exe" % 
-                         util.version.version_number),
+            os.path.join("Output", "CellProfilerAnalyst_win32_r%s.exe" % cpa_version.VERSION),
             subprocess.check_call, ([compile_command]))
         
     def __compile_command(self):
@@ -64,18 +49,28 @@ OutputBaseFilename=CellProfilerAnalyst_win32_r%d
             raise DistutilsFileError, "Inno Setup does not seem to be installed properly. Specifically, there is no entry in the HKEY_CLASSES_ROOT for InnoSetupScriptFile\\shell\\Compile\\command"
 
     
-# store frozen version
-f = open(os.path.join("util", "frozen_version.py"), "w")
-f.write("# MACHINE_GENERATED\nversion_string = '%s'" % util.version.version_string)
+CP_HOME = '../../CellProfiler/'
+if not os.path.exists(CP_HOME):
+    raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py')
+    exit(1)
+else:
+    sys.path.append(CP_HOME)
+
+#
+# Write version to cpa_version.py so CPA.exe can determine version.
+#
+s = os.popen('svnversion')
+version = s.read()
+f = open('cpa_version.py', 'w')
+f.write('VERSION = "%s"\n'%("".join([v for v in version.strip() if v in '0123456789'])))
 f.close()
-
-# Copy vcredist to the base directory
-
+import cpa_version
 
 if not 'py2exe' in sys.argv:
     sys.argv.append('py2exe')
 
-setup(windows=['cpa.py'],
+setup(windows=[{'script':'cpa.py',
+				'icon_resources':[(1,'.\icons\cpa.ico')]}],
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'icons',
@@ -95,10 +90,9 @@ setup(windows=['cpa.py'],
       data_files=(
               matplotlib.get_py2exe_datafiles() +
               [('icons', glob.glob('icons\\*.png')),
-               ('bioformats', [os.path.join(CP_HOME,'bioformats/loci_tools.jar')]),
-               ('cellprofiler/icons', [os.path.join(CP_HOME,'cellprofiler/icons/CellProfilerIcon.png')]), # needed for cpfigure used by classifier cross validation
+               ('bioformats', [CP_HOME+'bioformats/loci_tools.jar']),
+               ('cellprofiler/icons', [CP_HOME+'cellprofiler/icons/CellProfilerIcon.png']), # needed for cpfigure used by classifier cross validation
               ]
             ),
       cmdclass={"msi":CellProfilerAnalystMSI}
 )
-    
