@@ -18,7 +18,10 @@ def regroup(profiles, group_name):
     d = {}
     for key in profiles.keys():
         images = input_group_r[key]
-        groups = [group[image] for image in images]
+        groups = [group[image] for image in images if image in group]
+        if len(groups) == 0:
+            # No group defined for this image.
+            continue
         if groups.count(groups[0]) != len(groups):
             print >>sys.stderr, 'Error: Input group %r contains images in %d output groups' % (key, len(set(groups)))
             sys.exit(1)
@@ -46,6 +49,8 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None):
     dist = cdist(profiles.data, profiles.data, 'cosine')
     keys = profiles.keys()
     for i, key in enumerate(keys):
+       if key not in true_labels:
+           continue
        true = true_labels[key]
        if holdouts:
           ho = tuple(holdouts[key])
@@ -58,6 +63,8 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None):
        for j in indices:
            if dist[i, j] == -1.:
                continue # Held out.
+           if keys[j] not in true_labels:
+               continue
            predictions.append(true_labels[keys[j]])
            if len(predictions) == 1:
                predicted = vote(predictions)
