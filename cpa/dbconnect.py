@@ -628,9 +628,19 @@ class DBConnect(Singleton):
     def GetObjectCoords(self, obKey, none_ok=False, silent=False):
         '''Returns the specified object's x, y coordinates in an image.
         '''
-        return self.execute('SELECT %s, %s FROM %s WHERE %s'%(
+        res = self.execute('SELECT %s, %s FROM %s WHERE %s'%(
                         p.cell_x_loc, p.cell_y_loc, p.object_table, 
-                        GetWhereClauseForObjects([obKey])), silent=silent)[0]
+                        GetWhereClauseForObjects([obKey])), silent=silent)
+        if len(res) == 0 or res[0][0] is None or res[0][1] is None:
+            message = ('Failed to load coordinates for object key %s. This may '
+                       'indicate a problem with your per-object table.\n'
+                       'You can check your per-object table "%s" in TableViewer'
+                       %(', '.join(['%s:%s'%(col, val) for col, val in 
+                                    zip(object_key_columns(), obKey)]), 
+                       p.object_table))
+            raise Exception(message)
+        else:
+            return res[0]
     
     def GetAllObjectCoordsFromImage(self, imKey):
         ''' Returns a list of lists x, y coordinates for all objects in the given image. '''
@@ -751,7 +761,7 @@ class DBConnect(Singleton):
     def GetFilteredImages(self, filter_name):
         ''' Returns a list of imKeys from the given filter. '''
         try:
-            return self.execute(filter_sql(filter_name))
+            return self.execute(self.filter_sql(filter_name))
         except Exception, e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)

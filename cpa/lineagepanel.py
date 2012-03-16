@@ -6,7 +6,7 @@ from time import time
 import icons
 import timeline
 from wx.lib.combotreebox import ComboTreeBox
-from PIL import Image
+import PIL.Image as Image
 
 # x-spacing modes for timeline and lineage panels
 SPACE_EVEN = 0

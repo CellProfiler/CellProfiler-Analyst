@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import xml.etree.ElementTree  # just to make the following work under py2exe
 import xml.etree.cElementTree as ET
 import sqlite3
 import hashlib

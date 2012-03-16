@@ -1,7 +1,7 @@
 
 
 
-import Image
+import PIL.Image as Image
 import pylab
 import numpy as np
 
