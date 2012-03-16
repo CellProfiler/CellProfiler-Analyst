@@ -166,8 +166,12 @@ class Cache(object):
 
     def _image_filename(self, plate, imKey):
         return os.path.join(self.cache_dir, unicode(plate),
-                            u'-'.join(map(unicode, imKey)) + '.npy')
+                            u'-'.join(map(unicode, imKey)) + '.npz')
 
+    def _image_filename_backward_compatible(self, plate, imKey):
+        # feature files were previously stored as npy files
+        return os.path.join(self.cache_dir, unicode(plate),
+                            u'-'.join(map(unicode, imKey)) + '.npy')
     @property
     def _plate_map(self):
         if self._cached_plate_map is None:
@@ -181,22 +185,58 @@ class Cache(object):
         images_per_plate = {}
         for imKey in image_keys:
             images_per_plate.setdefault(self._plate_map[imKey], []).append(imKey)
+
+        # check if cellids have been stored
+        plate, imKeys = images_per_plate.items()[0]
+        imf_old = self._image_filename_backward_compatible(plate, imKey)
+        imf_new = self._image_filename(plate, imKey)
+        if os.path.exists(imf_old) and os.path.exists(imf_new):
+            logger.warning('Both new and old feature files found : %s and %s. Using new feature file %s.' \ 
+                           % (imf_new, imf_old, imf_new))
+            flag_bkwd = False
+        else:
+            flag_bkwd = os.path.exists(imf_old)
+        
+        _image_filename = self._image_filename_backward_compatible if flag_bkwd else \
+            self._image_filename
+
         features = []
+        cellids = []
+
         for plate, imKeys in images_per_plate.items():
             for imKey in imKeys:
-                raw = np.array(np.load(self._image_filename(plate, imKey)),
-                               dtype=float)
-                if removeRowsWithNaN and len(raw) > 0:
-                    raw = raw[-np.any(np.isnan(raw),axis=1),:]
+                
+                raw = np.load(_image_filename(plate, imKey))
+                if flag_bkwd:
+                    _features = np.array(raw, dtype=float)
+                else:
+                    _features = np.array(raw["features"], dtype=float)
+                    _cellids = np.array(raw["cellids"], dtype=int)
 
-                if len(raw) > 0:
-                    features.append(normalizer.normalize(plate, raw))
+                if removeRowsWithNaN and len(_features) > 0:
+                    prune_rows = np.any(np.isnan(_features),axis=1)
+                    _features = _features[-prune_rows,:]
+                    if not flag_bkwd:
+                        _cellids = _cellids[-prunerows,:]
+
+                if len(_features) > 0:
+                    features.append(normalizer.normalize(plate, _features))
+                    if not flag_bkwd:
+                        cellids.append(_cellids)
 
         if(len(features) > 0):
             stackedfeatures = np.vstack(features)
+            if not flag_bkwd:
+                stackedcellids = np.vstack(cellids)
         else:
             stackedfeatures = np.array([])
-        return stackedfeatures, normalizer.colnames
+            if not flag_bkwd:
+                stackedcellids = np.array([])
+
+        if flag_bkwd:
+            return stackedfeatures, normalizer.colnames
+        else:
+            return stackedfeatures, normalizer.colnames, stackedcellids
 
     @property
     def colnames(self):
@@ -247,7 +287,10 @@ class Cache(object):
         features = cpa.db.execute("""select %s from %s where %s""" % (
                 ','.join(self.colnames), cpa.properties.object_table, 
                 cpa.dbconnect.GetWhereClauseForImages([image_key])))
-        np.save(filename, np.array(features, dtype=float))
+        cellids  = cpa.db.execute("""select %s from %s where %s""" % (
+                cpa.properties.object_id, cpa.properties.object_table, 
+                cpa.dbconnect.GetWhereClauseForImages([image_key])))
+        np.savez(filename, features=np.array(features, dtype=float), cellids=np.array(cellids))
 
 def _check_directory(dir, resume):
     if os.path.exists(dir):
