@@ -16,8 +16,10 @@ def _compute_group_mean((cache_dir, images, normalization_name)):
         from cpa.util.cache import Cache, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
-        normalizeddata, normalized_colnames = cache.load(images,
-                                                    normalization=normalization)
+        normalized = cache.load(images, normalization=normalization)
+        normalizeddata = normalized[0]
+        normalized_colnames = normalized[1]
+        
         if len(normalizeddata) == 0:
             return np.empty(len(normalized_colnames)) * np.nan
 
@@ -45,6 +47,8 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     keys = group.keys()
     parameters = [(cache_dir, group[g], normalization.__name__)
                   for g in keys]
+    #parameters = parameters[0:5]
+    #keys = keys[0:5]
 
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name)
