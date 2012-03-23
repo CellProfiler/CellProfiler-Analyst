@@ -16,7 +16,7 @@ def _transform_cell_feats((cache_dir, images, normalization_name, output_filenam
         from cpa.util.cache import Cache, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
-        normalizeddata, normalized_colnames = cache.load(images,
+        normalizeddata, normalized_colnames, _ = cache.load(images,
                                                     normalization=normalization)
         if len(normalizeddata) == 0:
             return np.empty(len(normalized_colnames)) * np.nan

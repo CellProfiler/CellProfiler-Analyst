@@ -79,8 +79,8 @@ def _compute_svmnormalvector((cache_dir, images, control_images, rfe)):
         from cpa.util.profile_svmnormalvector import _compute_rfe
 
         cache = Cache(cache_dir)
-        normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
-        control_data, control_colnames = cache.load(control_images, normalization=RobustLinearNormalization)
+        normalizeddata, normalized_colnames, _ = cache.load(images, normalization=RobustLinearNormalization)
+        control_data, control_colnames, _ = cache.load(control_images, normalization=RobustLinearNormalization)
         assert len(control_data) >= len(normalizeddata)
         downsampled = control_data[np.random.randint(0, len(control_data), len(normalizeddata)), :]
         x = np.vstack((normalizeddata, downsampled))

@@ -23,8 +23,8 @@ def _compute_ksstatistic((cache_dir, images, control_images)):
     from cpa.util.ks_2samp import ks_2samp
 
     cache = Cache(cache_dir)
-    normalizeddata, variables = cache.load(images, normalization=RobustLinearNormalization)
-    control_data, control_colnames = cache.load(control_images, normalization=RobustLinearNormalization)
+    normalizeddata, variables, _ = cache.load(images, normalization=RobustLinearNormalization)
+    control_data, control_colnames, _ = cache.load(control_images, normalization=RobustLinearNormalization)
     print normalizeddata.shape, control_data.shape
     assert len(control_data) >= len(normalizeddata)
     assert variables == control_colnames

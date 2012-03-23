@@ -16,9 +16,7 @@ def _compute_group_mean((cache_dir, images, normalization_name)):
         from cpa.util.cache import Cache, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
-        normalized = cache.load(images, normalization=normalization)
-        normalizeddata = normalized[0]
-        normalized_colnames = normalized[1]
+        normalizeddata, normalized_colnames, _ = cache.load(images, normalization=normalization)
         
         if len(normalizeddata) == 0:
             return np.empty(len(normalized_colnames)) * np.nan

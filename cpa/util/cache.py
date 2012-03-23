@@ -250,9 +250,8 @@ class Cache(object):
             pdb.post_mortem(tb)
             
         if flag_bkwd:
-            return stackedfeatures, normalizer.colnames
-        else:
-            return stackedfeatures, normalizer.colnames, stackedcellids
+            stackedcellids = None
+        return stackedfeatures, normalizer.colnames, stackedcellids
 
     @property
     def colnames(self):

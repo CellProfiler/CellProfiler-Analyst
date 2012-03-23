@@ -17,7 +17,7 @@ def _compute_mixture_probabilities((cache_dir, images, gmm, meanvector, loadings
     import numpy as np        
     from cpa.util import cache
     cache = Cache(cache_dir)
-    normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
+    normalizeddata, normalized_colnames, _ = cache.load(images, normalization=normalization)
     mean_centered = normalizeddata - meanvector
     projected = np.dot(mean_centered, loadings)
     mixture_probabilities = gmm.predict_proba(projected)
