@@ -20,7 +20,7 @@ def _compute_group_subsample((cache_dir, images)):
         import numpy as np
         from cpa.util import cache
         cache = Cache(cache_dir)
-        normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
+        normalizeddata, normalized_colnames, _ = cache.load(images, normalization=RobustLinearNormalization)
         np.random.shuffle(normalizeddata)
         normalizeddata_sample = [x for i, x in enumerate(normalizeddata) if i % 1000 == 0]
         return normalizeddata_sample

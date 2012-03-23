@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import sys
 #import csv
 import logging
@@ -16,8 +17,8 @@ def _compute_group_mean((cache_dir, images, normalization_name)):
         from cpa.util.cache import Cache, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
-        normalizeddata, normalized_colnames = cache.load(images,
-                                                    normalization=normalization)
+        normalizeddata, normalized_colnames, _ = cache.load(images, normalization=normalization)
+        
         if len(normalizeddata) == 0:
             return np.empty(len(normalized_colnames)) * np.nan
 
@@ -45,6 +46,14 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     keys = group.keys()
     parameters = [(cache_dir, group[g], normalization.__name__)
                   for g in keys]
+
+    
+    if "CPA_DEBUG" in os.environ:
+        DEBUG_NGROUPS = 5
+        logging.warning('In debug mode. Using only a few groups (n=%d) to create profile' % DEBUG_NGROUPS)
+
+        parameters = parameters[0:DEBUG_NGROUPS]
+        keys = keys[0:DEBUG_NGROUPS]
 
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name)
