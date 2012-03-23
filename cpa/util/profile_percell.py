@@ -29,6 +29,7 @@ def _transform_cell_feats((cache_dir, images, normalization_name, output_filenam
 
         # save the features to csv
         import csv
+        key = (str(k) for k in key)
         filename = output_filename + "-" + "-".join(key) + ".csv"
         f = open(filename, 'w')
         w = csv.writer(f)
