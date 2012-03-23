@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import sys
 #import csv
 import logging
@@ -45,8 +46,14 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     keys = group.keys()
     parameters = [(cache_dir, group[g], normalization.__name__)
                   for g in keys]
-    #parameters = parameters[0:5]
-    #keys = keys[0:5]
+
+    
+    if "CPA_DEBUG" in os.environ:
+        DEBUG_NGROUPS = 5
+        logging.warning('In debug mode. Using only a few groups (n=%d) to create profile' % DEBUG_NGROUPS)
+
+        parameters = parameters[0:DEBUG_NGROUPS]
+        keys = keys[0:DEBUG_NGROUPS]
 
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name)
