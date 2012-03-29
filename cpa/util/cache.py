@@ -270,7 +270,6 @@ class Cache(object):
         self._create_cache_plate_map(image_list)
 
         nimages = len(self._cached_plate_map)
-        i = 0
         for plate, image_keys in make_progress_bar('Features')(invert_dict(self._cached_plate_map).items()):
             plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
             if not os.path.exists(plate_dir):
@@ -279,7 +278,6 @@ class Cache(object):
                 if image_list is not None and image_key not in image_list:
                     continue
                 self._create_cache_image(plate, image_key, resume)
-                i += 1
 
     def _create_cache_colnames(self):
         """Create cache of column names"""
