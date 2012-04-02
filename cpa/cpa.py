@@ -388,7 +388,7 @@ def new_version_cb(new_version, new_version_info):
             cpaprefs.set_skip_version(new_version)
 
         # showing a modal dialog while the splashscreen is up causes a hang
-        try: splash.Destroy()
+        try: wx.GetApp().splash.Destroy()
         except: pass
 
         import cellprofiler.gui.newversiondialog as nvd
@@ -427,6 +427,7 @@ class CPAnalyst(wx.App):
         p = Properties.getInstance()
         if not p.is_initialized():
             from guiutils import show_load_dialog
+            splash.Destroy()
             if not show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
