@@ -423,6 +423,7 @@ class CPAnalyst(wx.App):
         dc.Destroy() # necessary to avoid a crash in splashscreen
         splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | 
                                  wx.SPLASH_TIMEOUT, 2000, None, -1)
+        self.splash = splash
 
         p = Properties.getInstance()
         if not p.is_initialized():
