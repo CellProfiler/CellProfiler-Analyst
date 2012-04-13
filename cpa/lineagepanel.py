@@ -1,12 +1,13 @@
 import experimentsettings as exp
 import wx
 import os
+import subprocess
 import numpy as np
 from time import time
 import icons
 import timeline
 from wx.lib.combotreebox import ComboTreeBox
-import PIL.Image as Image
+from PIL import Image
 
 # x-spacing modes for timeline and lineage panels
 SPACE_EVEN = 0
@@ -258,11 +259,11 @@ class TimelinePanel(wx.Panel):
                 elif stump.startswith('Perturbation|Bio'):
                     bmp = icons.dna.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
                     
-                elif stump.startswith('Labeling|Stain'):
+                elif stump.startswith('Staining|Dye'):
                     bmp = icons.stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('Labeling|Antibody'):
+                elif stump.startswith('Staining|Immuno'):
                     bmp = icons.antibody.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('Labeling|Primer'):
+                elif stump.startswith('Staining|Genetic'):
                     bmp = icons.primer.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
                     
                 elif stump.startswith('AddProcess|Spin'):
@@ -282,6 +283,13 @@ class TimelinePanel(wx.Panel):
                     bmp = icons.fcs.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
                 elif stump.startswith('DataAcquis|TLM'):
                     bmp = icons.tlm.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+                
+                elif stump.startswith('Notes|Hint'):
+                    bmp = icons.hint.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+                elif stump.startswith('Notes|Critical'):
+                    bmp = icons.critical.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+                elif stump.startswith('Notes|Rest'):
+                    bmp = icons.rest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()                 
     
                 dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
                               y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)
@@ -369,9 +377,11 @@ class LineagePanel(wx.Panel):
         timeline = meta.get_timeline()
         t0 = time()
         self.nodes_by_timepoint = timeline.get_nodes_by_timepoint()
+      
         #print 'built tree in %s seconds'%(time() - t0)
         # get the unique timpoints from the timeline
         self.timepoints = meta.get_timeline().get_unique_timepoints()
+        
         # For time-compact x-spacing
         #if len(self.timepoints) > 1:
             #self.min_time_gap = min([y-x for x,y in zip(self.timepoints[:-1], 
@@ -534,6 +544,9 @@ class LineagePanel(wx.Panel):
                         # MouseOver
                         dc.SetPen(wx.Pen(wx.BLACK, 3))
                         self.current_node = node
+                        
+                        self.SetToolTipString(self.ShowTooltipsInfo())
+                        
                     else:
                         # No MouseOver
                         dc.SetPen(wx.Pen(wx.BLACK, 1))
@@ -601,9 +614,15 @@ class LineagePanel(wx.Panel):
                                                       exp.get_tag_timepoint(tag),
                                                       well)
                     urls = meta.get_field(image_tag, [])
-                    for url in urls:
-                        im = Image.open(url)
-                        im.show()
+                    ImageJPath = r'C:\Program Files\ImageJ\ImageJ'
+                    subprocess.Popen("%s %s" % (ImageJPath, ' '.join(urls))) 
+                    #for url in urls:
+                        #im = Image.open(url)
+                        #im.show()
+                        ##TODO: make it Try with ImageJ first then Exception is Image.open(url)
+                        #ImageJPath = r'C:\Program Files\ImageJ\ImageJ'
+                        #subprocess.Popen("%s %s" % (ImageJPath, url))  
+                        
             elif tag.startswith('DataAcquis|FCS'):
                 for well in self.current_node.get_well_ids():
                     image_tag = '%s|Images|%s|%s|%s'%(exp.get_tag_stump(tag, 2),
@@ -613,7 +632,10 @@ class LineagePanel(wx.Panel):
                     urls = meta.get_field(image_tag, [])
                     for url in urls:
                         os.startfile(url)
-        
+                        
+        #print self.current_node.get_well_ids()
+        #print self.current_node.get_parent()
+                        
 ##        message = ''
 ##        for well in sorted(self.current_node.get_well_ids()):
 ##            message += ', '.join(well)
@@ -637,6 +659,30 @@ class LineagePanel(wx.Panel):
              for well in self.current_node.get_well_ids()])
         bench.update_plate_groups()
         bench.update_well_selections()
+        
+        try:
+            exptsettings = wx.GetApp().get_exptsettings()
+        except:
+            return
+        # -- Update the expt setting/metadata view --#
+        exptsettings.OnLeafSelect()
+        if self.current_node.get_tags():
+            exptsettings.ShowInstance(self.current_node.get_tags()[0])
+            
+            
+        ancestors = [exp.get_tag_stump(ptag, 2)
+                     for pnode in timeline.reverse_iter_tree(self.current_node) if pnode
+                     for ptag in pnode.tags]    
+        print ancestors
+    
+    def ShowTooltipsInfo(self):
+        info_string = ''
+        for tag in self.current_node.get_tags():
+            info_string += str(meta.get_attribute_dict(exp.get_tag_protocol(tag)))
+        return info_string  
+    
+    def get_description(self, protocol):
+        return '\n'.join(['%s=%s'%(k, v) for k, v in meta.get_attribute_dict(exp.get_tag_protocol(protocol))])           
 
         
 if __name__ == "__main__":

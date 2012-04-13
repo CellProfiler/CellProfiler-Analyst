@@ -19,9 +19,10 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
         
         meta.add_subscriber(self.update, 'CellTransfer.*')
         meta.add_subscriber(self.update, 'Perturbation.*')
-        meta.add_subscriber(self.update, 'Labeling.*')
+        meta.add_subscriber(self.update, 'Staining.*')
         meta.add_subscriber(self.update, 'AddProcess.*')
         meta.add_subscriber(self.update, 'DataAcquis.*')
+        meta.add_subscriber(self.update, 'Notes.*')
         
         self.InsertColumn(0, "Category")
         self.InsertColumn(1, "Action")

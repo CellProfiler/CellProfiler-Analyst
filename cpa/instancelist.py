@@ -106,7 +106,7 @@ class InstanceListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, listmix.Colu
         for key, data in items:
             index = self.InsertStringItem(sys.maxint, data[0])
             for col in range(len(self.columnheads)):
-                self.SetStringItem(index, col, data[col])
+                self.SetStringItem(index, col, str(data[col]))
             self.SetItemData(index, int(key))
   
     def get_selected_instances(self):
