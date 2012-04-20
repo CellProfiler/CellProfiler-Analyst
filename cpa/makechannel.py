@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
 import wx
+import wx.lib.agw.gradientbutton as GB
+import icons
 from experimentsettings import *
-
 
 class ChannelBuilder(wx.Dialog):  
     def __init__(self, parent, id, title):
@@ -12,88 +13,94 @@ class ChannelBuilder(wx.Dialog):
         self.bot_panel = wx.ScrolledWindow(self)
 	
 	meta = ExperimentSettings.getInstance()
-	
-	#self.instance = meta.get_tag_attribute(protocol)
-	#self.tag_stump = meta.get_tag_stump(protocol, 2)		
-        
+
         self.componentList = {}
         self.componentCount = 0
               
         # Header row
         self.select_chName = wx.Choice(self.top_panel, -1, choices=['FSC', 'SSC', 'FL-1', 'FL-2','FL-3','FL-4','FL-5','FL-6','FL-7','FL-8'])
 	self.select_chName.Bind(wx.EVT_CHOICE, self.OnChSelection)
-        self.select_component = wx.Choice(self.top_panel, -1, choices=['Laser', 'Dichroic Mirror', 'Filter', 'Beam Splitter',  'Dye', 'Detector'])
+        self.select_component = wx.Choice(self.top_panel, -1, choices=['Dichroic Mirror', 'Filter', 'Beam Splitter',  'Dye', 'Detector'])
 	self.select_component.Disable()
         self.select_component.Bind(wx.EVT_CHOICE, self.OnAddComponent)
-        self.select_btn = wx.Button(self.top_panel, wx.ID_OK, 'Set Channel')
 	
-	self.select_btn.SetFont(wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD, False))
-	self.select_btn.SetMinSize((100,50))
+        self.select_btn = wx.Button(self, wx.ID_OK, 'Set Channel')
 	self.select_btn.Disable()
+	self.close_btn = wx.Button(self, wx.ID_CANCEL)	
 	
 	# -- Sizers Lay out ---#
-        
         self.top_sizer = wx.BoxSizer(wx.HORIZONTAL)
 	self.top_sizer.Add(wx.StaticText(self.top_panel, -1, 'Channel Name'), 0, wx.ALL, 5)
 	self.top_sizer.Add(self.select_chName, 0, wx.HORIZONTAL, 5)
 	self.top_sizer.Add(wx.StaticText(self.top_panel, -1, 'Component'), 0, wx.ALL, 5)
 	self.top_sizer.Add(self.select_component, 0, wx.HORIZONTAL, 5)
 	self.top_sizer.Add((500, -1))
-	self.top_sizer.Add(self.select_btn, 1, wx.ALIGN_RIGHT|wx.RIGHT, 5)
+	#self.top_sizer.Add(self.select_btn, 1, wx.ALIGN_RIGHT|wx.RIGHT, 5)
 	
 	self.fgs = wx.FlexGridSizer(cols=30, hgap=10)	
 
         self.top_panel.SetSizer(self.top_sizer)
 	self.bot_panel.SetSizer(self.fgs)
         self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	btnSizer.Add(self.select_btn , 0, wx.ALL, 5)
+	btnSizer.Add(self.close_btn , 0, wx.ALL, 5)		
 
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, 5)
         self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
+	self.Sizer.Add(btnSizer)
         self.Show()         
     
     def OnChSelection(self, event):
-	self.select_component.Enable()
-	self.select_chName.Disable()
+	
+	self.select_chName.Disable()	
+	
+	self.componentCount +=1	
+
+	staticbox = wx.StaticBox(self.bot_panel, -1, "Excitation Laser")
+	staticbox.SetMaxSize((200,300))
+	
+	self.laser = wx.TextCtrl(self.bot_panel, value='', style= wx.TE_PROCESS_ENTER)
+	self.laser.Bind(wx.EVT_TEXT_ENTER, self.setLaserColor)  # increament the component count when users entered the value of Laser beam
+	
+	laserSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
+	laserSizer.Add(self.laser, 0) 	    
+	self.fgs.Add(laserSizer,  0)	
+	
+	#Add to sizers-------
+	self.bot_panel.SetSizer(self.fgs)
+	self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
+	self.Sizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, 5)
+	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
+	
+
 	
     def OnAddComponent(self, event):
-	
-	meta = ExperimentSettings.getInstance()	
-	
-	self.select_btn.Enable()
-        #check whether component beofore is a Dichroic Mirror if so then ask users whether the path 
-        if self.select_component.GetStringSelection() =='Laser':
-	    
-	    self.componentCount +=1	
+	meta = ExperimentSettings.getInstance()	    
+	self.componentCount +=1	
+	if self.componentCount != len(self.componentList)+1:
+	    dial = wx.MessageDialog(None, 'Please set previous component', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal() 
+	    self.componentCount -=1
+	    return
+		  
+	startNM, endNM = meta.getNM(self.componentList[self.componentCount-1][1])
 
-	    staticbox = wx.StaticBox(self.bot_panel, -1, "Excitation Laser")
-	    staticbox.SetMaxSize((200,300))
-	    
-            self.laser = wx.TextCtrl(self.bot_panel, value='', style= wx.TE_PROCESS_ENTER)
-            self.laser.Bind(wx.EVT_TEXT_ENTER, self.setLaserColor)  # increament the component count when users entered the value of Laser beam
-            
-            laserSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
-            laserSizer.Add(self.laser, 0) 	    
-            self.fgs.Add(laserSizer,  0)	    
-            
-        if self.select_component.GetStringSelection() == 'Dichroic Mirror':
-	    
-	    self.componentCount +=1
-	    
+        if self.select_component.GetStringSelection() == 'Dichroic Mirror':	    
 	    staticbox = wx.StaticBox(self.bot_panel, -1, "Dichroic Mirror")
-            
-            startNM, endNM = meta.getNM(self.componentList[self.componentCount-1][1])
             self.dmtTsld = wx.Slider(self.bot_panel, -1, startNM, startNM, endNM, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
             self.dmtBsld = wx.Slider(self.bot_panel, -1, endNM, startNM, endNM, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
-	
 	    self.mirrspectrum = MirrorSpectrum(self.bot_panel)
-
             self.enabled = True
             self.mirrStatus = "Reflected"
             self.passrefBut = wx.Button(self.bot_panel, -1, self.mirrStatus)
             self.Bind(wx.EVT_BUTTON, self.OnToggleMirror, self.passrefBut)
-            
             self.dmtTsld.Bind(wx.EVT_SCROLL, self.OnScrollMirror)
             self.dmtBsld.Bind(wx.EVT_SCROLL, self.OnScrollMirror)
             
@@ -107,40 +114,29 @@ class ChannelBuilder(wx.Dialog):
             dichrosetSizer.Add(self.passrefBut, 0, wx.EXPAND)
             self.fgs.Add(dichrosetSizer, 0)   
 	    
-	if self.select_component.GetStringSelection() == 'Beam Splitter':
-		   
-	    self.componentCount +=1
-	    
+	if self.select_component.GetStringSelection() == 'Beam Splitter':     
 	    staticbox = wx.StaticBox(self.bot_panel, -1, "Beam Splitter")
-	    
 	    self.sltTsld = wx.Slider(self.bot_panel, -1, 0, 0, 100, wx.DefaultPosition, (100, -1))
-	
 	    self.splitSpectrum = SplitterSpectrum(self.bot_panel)
-	    
 	    self.sltTsld.Bind(wx.EVT_SCROLL, self.OnScrollSplitter)
 	    
 	    #Sizers
 	    splitterSizer = wx.BoxSizer(wx.VERTICAL)
 	    splitterSizer.Add(self.sltTsld,0)
 	    splitterSizer.Add(self.splitSpectrum, 0)
-
 	    mainSizer = wx.StaticBoxSizer(staticbox, wx.HORIZONTAL)
 	    mainSizer.Add(splitterSizer, 0)
 	    self.fgs.Add(mainSizer, 0)   	
         
         if self.select_component.GetStringSelection() == 'Filter':
-	    self.componentCount +=1
 	    staticbox = wx.StaticBox(self.bot_panel, -1, "Filter")
-	    
-            startNM, endNM = meta.getNM(self.componentList[self.componentCount-1][1])
             self.fltTsld = wx.Slider(self.bot_panel, -1, startNM, startNM, endNM, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
             self.fltBsld = wx.Slider(self.bot_panel, -1, endNM, startNM, endNM, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
-            
             self.fltrspectrum = FilterSpectrum(self.bot_panel)
-
             self.fltTsld.Bind(wx.EVT_SCROLL, self.OnScrollFilter)
             self.fltBsld.Bind(wx.EVT_SCROLL, self.OnScrollFilter)
-            
+	    
+            #Sizers
             fltrSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
             fltrSizer.Add(self.fltTsld,0)
             fltrSizer.Add(self.fltrspectrum, 0)
@@ -148,36 +144,32 @@ class ChannelBuilder(wx.Dialog):
             self.fgs.Add(fltrSizer, 0)           
             
 	if self.select_component.GetStringSelection() == 'Dye':
-	    self.componentCount +=1
 	    staticbox = wx.StaticBox(self.bot_panel, -1, "Dye List")
-	    emLow, emHgh = meta.getNM(self.componentList[self.componentCount-1][1])
-	    dyeList = meta.setDyeList(emLow, emHgh)
-	    dyeList.append('Add Dye by double click')
-	    
+	    dyeList = meta.setDyeList(startNM, endNM)
+	    dyeList.append('Add Dye by double click')  
 	    self.dyeListBox = wx.ListBox(self.bot_panel, -1, wx.DefaultPosition, (150, 100), dyeList, wx.LB_SINGLE)
 	    self.Bind(wx.EVT_LISTBOX, self.OnDyeSelect, self.dyeListBox)
 	    self.Bind(wx.EVT_LISTBOX_DCLICK, self.OnMyDyeSelect, self.dyeListBox)
             
+            #Sizers
 	    dye_sizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
 	    dye_sizer.Add(self.dyeListBox, 0)               
 	    self.fgs.Add(dye_sizer, 0) 	    
 	    
         if self.select_component.GetStringSelection() == 'Detector':
-	    self.componentCount +=1
             staticbox = wx.StaticBox(self.bot_panel, -1, "Detector Voltage")
-	    
 	    self.detector = wx.SpinCtrl(self.bot_panel, -1, "", (30, 50))
 	    self.detector.SetRange(1,1000)
 	    self.detector.SetValue(500)
-	     
 	    self.Bind(wx.EVT_SPINCTRL, self.OnDetectorVoltSet, self.detector)	    
             
+            #Sizers
             detector_sizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
             detector_sizer.Add(self.detector, 0)
             self.fgs.Add(detector_sizer, 0)
         
         
-        #Add to sizers-------
+        #--- Sizers -------
         self.bot_panel.SetSizer(self.fgs)
         self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 	
@@ -219,7 +211,25 @@ class ChannelBuilder(wx.Dialog):
 		
 	    self.componentList[self.componentCount] = ['LSR%s'%ctrl.GetValue(), str(min(emSpect))+'-'+str(max(emSpect))]	  
         else:
-            ctrl.SetBackgroundColour((255,255,255))    
+            ctrl.SetBackgroundColour((255,255,255))  
+	    
+	#Enable users to select the component from the list
+	self.select_component.Enable()
+	self.select_btn.Enable()
+	
+	# draw the cell picture
+	bmp = icons.cpa_32.Scale(32.0, 32.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()	
+	cell_image = wx.BitmapButton(self.bot_panel, -1, bmp, (32, 32), style = wx.NO_BORDER)
+	
+	# sizers
+	self.fgs.Add(cell_image, 0)
+	self.bot_panel.SetSizer(self.fgs)
+	self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
+	self.Sizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, 5)
+	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)	
     
     def OnScrollMirror(self, event):    
         # check: there is alwasy 11 nm range for the slider
@@ -489,6 +499,18 @@ class SplitterSpectrum(wx.Panel):
     def OnSize(self, event):
         self.Refresh()
 
+class ImgPanel(wx.Panel):
+    def __init__(self, parent, image):
+        wx.Panel.__init__(self, parent)
+
+        img = wx.Image(image, wx.BITMAP_TYPE_ANY)
+        self.sBmp = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(img))
+
+        sizer = wx.BoxSizer()
+        sizer.Add(item=self.sBmp, proportion=0, flag=wx.ALL, border=10)
+        self.SetBackgroundColour('green')
+        self.SetSizerAndFit(sizer)
+	
 #class MyFrame(wx.Frame):
     #def __init__(self, parent, id, title):
         #wx.Frame.__init__(self, parent, id, title, size=(350,200))

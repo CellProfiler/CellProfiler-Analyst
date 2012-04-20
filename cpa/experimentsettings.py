@@ -1,6 +1,7 @@
+import re
+import wx
 from singleton import Singleton
 from utils import *
-import re
 from timeline import Timeline
 
 #
@@ -235,7 +236,6 @@ class ExperimentSettings(Singleton):
         f.close()
     
     def save_supp_protocol_file(self, file, protocol):
-	
 	instance = get_tag_attribute(protocol)
 	tag_stump = get_tag_stump(protocol, 2)
 		    
@@ -318,22 +318,22 @@ class ExperimentSettings(Singleton):
     def load_flowcytometer_settings(self, file, protocol):
 	instance = get_tag_attribute(protocol)
 	tag_stump = get_tag_stump(protocol, 2)	
+	f = open(file, 'r')
 	
-	lines = [line.strip() for line in open(file)]
+	lines = [line.strip() for line in f]
 	
 	if not lines:
-	    import wx
 	    dial = wx.MessageDialog(None, 'Supplementary protocol file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
 	    return	
 	
 	for line in lines:
-	    attr = line.split('=')[0]
-	    line_info = line.split('=')[1]
-	    #******** work on this eval thing to make sure that it works with WX.Choice ********#
-	    self.set_field(tag_stump+'|%s|%s'%(attr, instance), eval(line_info))
-
- 
+	    attr, value = line.split('=')
+	    attr = attr.strip()
+	    tag = tag_stump+'|%s|%s'%(attr, instance)
+	    self.set_field(tag, eval(value), notify_subscribers=False)
+	    f.close()
+	
     def add_subscriber(self, callback, match_string):
         '''callback -- the function to be called
         match_string -- a regular expression string matching the tags you want 
@@ -454,7 +454,30 @@ class ExperimentSettings(Singleton):
 		if wl in range(dyeLowNM, dyeHghNM+1):
 		    dyeList.append(dye)
 	#self.dyeListBox.Clear()	
-	return sorted(list(set(dyeList)))     
+	return sorted(list(set(dyeList)))  
+    
+    def saveData(self, ctrl, tag, settings_controls):
+	if len(tag.split('|'))>4:
+	    # get the relevant controls for this tag eg, duration, temp controls for this step
+	    subtags = []
+	    info = []
+	    for subtag in [t for t, c in settings_controls.items()]:
+		if get_tag_stump(tag, 4) == get_tag_stump(subtag, 4):
+		    subtags.append(subtag)
+	    for i in range(0, len(subtags)):
+		info.append('')
+	    for st in subtags:
+		if isinstance(settings_controls[st], wx.Choice):
+		    info[int(st.split('|')[4])]=settings_controls[st].GetStringSelection()
+		else:
+		    info[int(st.split('|')[4])]=settings_controls[st].GetValue()	
+	    self.set_field(get_tag_stump(tag, 4), info)  # get the core tag like AddProcess|Spin|Step|<instance> = [duration, description, temp]
+	else:
+	    if isinstance(ctrl, wx.Choice):
+		self.set_field(tag, ctrl.GetStringSelection())
+	    else:
+		user_input = ctrl.GetValue()
+		self.set_field(tag, user_input)	 
     
 
             
@@ -506,7 +529,18 @@ WELL_NAMES_ORDERED = [
                       '384-Well-(16x24)',
                       '1536-Well-(32x48)',
                       '5600-Well-(40x140)']
+#TO DO: make this table comprehensive
 FLUOR_SPECTRUM = {
+                   'Brilliant Violet 421': ['397-417','411-431'],
+                   'BD Horizon V450': ['394-414','438-458'],
+                   'AmCyan': ['447-467','481-501'],
+                   'PE': ['486-506','568-588'],
+                   'BD Horizon PE-CF594': ['486-506','602-622'],
+                   'PerCP': ['472-492','667-687'],
+                   'PerCP-Cy': ['472-492','685-705'],
+                   'Alexa Fluor 647': ['640-660','658-678'],
+                   'Alexa Fluor 700': ['686-706','709-729'],
+                   'APC-H7': ['640-660','775-795'],
                    'Alexa 488' : ['450-560', '510-550'],
                    'PE-Texas Red' : ['550-625', '600-650'],
                    'FITC' : ['475-510','515-545'],
