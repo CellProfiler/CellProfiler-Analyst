@@ -303,17 +303,9 @@ class OverviewPanel(wx.Panel):
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
     def OnSavingData(self, event):
-        meta = ExperimentSettings.getInstance()
-
-        ctrl = event.GetEventObject()
-        tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
-        if isinstance(ctrl, wx.Choice):
-            meta.set_field(tag, ctrl.GetStringSelection())
-        elif isinstance(ctrl, wx.DatePickerCtrl):
-            date = ctrl.GetValue()
-            meta.set_field(tag, '%02d/%02d/%4d'%(date.Day, date.Month+1, date.Year))
-        else:
-            meta.set_field(tag, ctrl.GetValue())
+	ctrl = event.GetEventObject()
+	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+	meta.saveData(ctrl, tag, self.settings_controls)
 
 
 ########################################################################        
@@ -441,12 +433,14 @@ class StockCulturePanel(wx.Panel):
         fgs.Add(self.settings_controls[acttTAG], 0, wx.EXPAND) 
         # Taxonomic ID
         taxIdTAG = 'StockCulture|Sample|Organism|%s'%str(self.stk_id)
-        self.settings_controls[taxIdTAG] = wx.Choice(self.top_panel, -1,  choices=['HomoSapiens(9606)', 'MusMusculus(10090)', 'RattusNorvegicus(10116)'])
-        if meta.get_field(taxIdTAG) is not None:
-            self.settings_controls[taxIdTAG].SetStringSelection(meta.get_field(taxIdTAG))
-        self.settings_controls[taxIdTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[taxIdTAG].SetToolTipString('Taxonomic ID of the species')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Organism'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
+	self.settings_controls[taxIdTAG]= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
+	if meta.get_field(taxIdTAG) is not None:
+	    self.settings_controls[taxIdTAG].Append(meta.get_field(taxIdTAG))
+	    self.settings_controls[taxIdTAG].SetStringSelection(meta.get_field(taxIdTAG))
+	self.settings_controls[taxIdTAG].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
+	self.settings_controls[taxIdTAG].SetToolTipString('Taxonomic ID of the species') 
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Organism'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[taxIdTAG], 0, wx.EXPAND)
         # Gender
         gendTAG = 'StockCulture|Sample|Gender|%s'%str(self.stk_id)
@@ -462,7 +456,7 @@ class StockCulturePanel(wx.Panel):
         self.settings_controls[ageTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(ageTAG, default=''))
         self.settings_controls[ageTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[ageTAG].SetToolTipString('Age of the organism in days when the cells were collected. .')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Age of organism (days)'), 0)
+        fgs.Add(wx.StaticText(self.top_panel, -1, 'Age of organism (days)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[ageTAG], 0, wx.EXPAND)
         # Organ
         organTAG = 'StockCulture|Sample|Organ|%s'%str(self.stk_id)
@@ -476,7 +470,7 @@ class StockCulturePanel(wx.Panel):
         self.settings_controls[tissueTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(tissueTAG, default=''))
         self.settings_controls[tissueTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[tissueTAG].SetToolTipString('Tissue from which the cells were collected')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Tissue'), 0)
+        fgs.Add(wx.StaticText(self.top_panel, -1, 'Tissue'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[tissueTAG], 0, wx.EXPAND)
         # Pheotype
         phtypTAG = 'StockCulture|Sample|Phenotype|%s'%str(self.stk_id)
@@ -658,17 +652,12 @@ class StockCulturePanel(wx.Panel):
 	admin_info = dict(passage_info).get('ADMIN')
 	
 	return 'Operator %s Date %s Split 1:%s Cell Count %s' %(admin_info[0], admin_info[1], admin_info[2], admin_info[3])
-    
+  
     def OnSavingData(self, event):
-        meta = ExperimentSettings.getInstance()
-
-        ctrl = event.GetEventObject()
-        tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
-        if isinstance(ctrl, wx.Choice):
-            meta.set_field(tag, ctrl.GetStringSelection())
-        else:                
-            meta.set_field(tag, ctrl.GetValue())
-
+	ctrl = event.GetEventObject()
+	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+	meta.saveData(ctrl, tag, self.settings_controls)
+	
 ########################################################################        
 ################## MICROSCOPE SETTING PANEL         ####################
 ########################################################################
@@ -791,7 +780,7 @@ class MicroscopePanel(wx.Panel):
 	self.page_counter = page_counter
 	self.sw = wx.ScrolledWindow(self)
 	self.protocol = 'Instrument|Microscope|%s'%str(self.page_counter)
-	
+
 	headfgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#  Protocol Name
 	chnameTAG = 'Instrument|Microscope|ChannelName|'+str(self.page_counter)
@@ -817,26 +806,16 @@ class MicroscopePanel(wx.Panel):
 	self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, strucpane)
 	self.strucPane(strucpane.GetPane())	
 	
-        illumpane = wx.CollapsiblePane(self.sw, label="Optics", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
-        self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, illumpane)
-        self.makeIlluminationPane(illumpane.GetPane())
-	
-	#stagepane = wx.CollapsiblePane(self.sw, label="Stage", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
-	#self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, stagepane)
-	#self.MakePaneContent(stagepane.GetPane())
-	
-	#detectpane = wx.CollapsiblePane(self.sw, label="Detector", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
-	#self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, detectpane)
-	#self.MakePaneContent(detectpane.GetPane())
+        self.illumpane = wx.CollapsiblePane(self.sw, label="Optics", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
+        self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.illumpane)
+        self.makeIlluminationPane(self.illumpane.GetPane())
 
 	#---  Sizers ---#
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(headfgs, 0, wx.ALL, 25)
 	sizer.Add(strucpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-        sizer.Add(illumpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-	#sizer.Add(stagepane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-	#sizer.Add(detectpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-	
+        sizer.Add(self.illumpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
+
         self.sw.SetSizer(sizer)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
@@ -861,21 +840,25 @@ class MicroscopePanel(wx.Panel):
 	microstandTAG = 'Instrument|Microscope|Stand|%s'%str(self.page_counter)
 	microstand = meta.get_field(microstandTAG, [])
 	
-	self.settings_controls[microstandTAG+'|0']= wx.Choice(self.pane, -1, choices=['','Wide Field','Laser Scanning Microscopy', 'Laser Scanning Confocal', 'Spinning Disk Confocal', 'Slit Scan Confocal', 'Multi Photon Microscopy', 'Structured Illumination','Single Molecule Imaging', 'Total Internal Reflection', 'Fluorescence Lifetime', 'Spectral Imaging', 'Fluorescence Correlation Spectroscopy', 'Near FieldScanning Optical Microscopy', 'Second Harmonic Generation Imaging', 'Timelapse', 'Other'])
+	stand_choices=['Wide Field','Laser Scanning Microscopy', 'Laser Scanning Confocal', 'Spinning Disk Confocal', 'Slit Scan Confocal', 'Multi Photon Microscopy', 'Structured Illumination','Single Molecule Imaging', 'Total Internal Reflection', 'Fluorescence Lifetime', 'Spectral Imaging', 'Fluorescence Correlation Spectroscopy', 'Near FieldScanning Optical Microscopy', 'Second Harmonic Generation Imaging', 'Timelapse', 'Unknown', 'Other']
+	self.settings_controls[microstandTAG+'|0']= wx.ListBox(self.pane, -1, wx.DefaultPosition, (150,30), stand_choices, wx.LB_SINGLE)
 	if len(microstand) > 0:
+	    self.settings_controls[microstandTAG+'|0'].Append(microstand[0])
 	    self.settings_controls[microstandTAG+'|0'].SetStringSelection(microstand[0])
-	self.settings_controls[microstandTAG+'|0'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
+	self.settings_controls[microstandTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
 	self.settings_controls[microstandTAG+'|0'].SetToolTipString('Type of microscope e.g. Inverted, Confocal...') 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Type'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[microstandTAG+'|0'], 0, wx.EXPAND)	
 	
-	self.settings_controls[microstandTAG+'|1']= wx.Choice(self.pane, -1, choices=['','Zeiss','Olympus','Nikon', 'MDS','GE'])
+	make_choices=['Zeiss','Olympus','Nikon', 'MDS','GE', 'Unknown', 'Other']
+	self.settings_controls[microstandTAG+'|1']= wx.ListBox(self.pane, -1, wx.DefaultPosition, (150,30), make_choices, wx.LB_SINGLE)
 	if len(microstand) > 1:
+	    self.settings_controls[microstandTAG+'|1'].Append(microstand[1])
 	    self.settings_controls[microstandTAG+'|1'].SetStringSelection(microstand[1])
-	self.settings_controls[microstandTAG+'|1'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
+	self.settings_controls[microstandTAG+'|1'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
 	self.settings_controls[microstandTAG+'|1'].SetToolTipString('Manufacturer of microscope') 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Make'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	multctrlSizer.Add(self.settings_controls[microstandTAG+'|1'], 0, wx.EXPAND)	
+	multctrlSizer.Add(self.settings_controls[microstandTAG+'|1'], 0, wx.EXPAND)		
 	
 	self.settings_controls[microstandTAG+'|2']= wx.TextCtrl(self.pane, value='') 
 	if len(microstand) > 2:
@@ -885,7 +868,7 @@ class MicroscopePanel(wx.Panel):
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Model'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[microstandTAG+'|2'], 0, wx.EXPAND)
 		
-	self.settings_controls[microstandTAG+'|3']= wx.Choice(self.pane, -1, choices=['', 'Upright', 'Inverted', 'Confocal'])
+	self.settings_controls[microstandTAG+'|3']= wx.Choice(self.pane, -1, choices=['', 'Upright', 'Inverted'])
 	if len(microstand) > 3:
 	    self.settings_controls[microstandTAG+'|3'].SetStringSelection(microstand[3])
 	self.settings_controls[microstandTAG+'|3'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
@@ -944,7 +927,6 @@ class MicroscopePanel(wx.Panel):
 	self.settings_controls[condensorTAG+'|2'].SetToolTipString('Model of condensor source')
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Model'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[condensorTAG+'|2'], 0, wx.EXPAND)
-		
 
 	condensSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
 	condensSizer.Add(multctrlSizer, 1, wx.EXPAND|wx.ALL, 5)	
@@ -983,7 +965,7 @@ class MicroscopePanel(wx.Panel):
 	self.settings_controls[stageTAG+'|3']= wx.Choice(self.pane, -1, choices=['Yes', 'No'])
 	if len(stage) > 3:
 	    self.settings_controls[stageTAG+'|3'].SetStringSelection(stage[3])
-	self.settings_controls[stageTAG+'|3'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
+	self.settings_controls[stageTAG+'|3'].Bind(wx.EVT_CHOICE, self.onEnabling)   
 	self.settings_controls[stageTAG+'|3'].SetToolTipString('Holder for the samples') 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Sample Holder'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[stageTAG+'|3'], 0, wx.EXPAND)	
@@ -993,6 +975,7 @@ class MicroscopePanel(wx.Panel):
 	    self.settings_controls[stageTAG+'|4'].SetValue(stage[4])
 	self.settings_controls[stageTAG+'|4'].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls[stageTAG+'|4'].SetToolTipString('Sample holder code')
+	self.settings_controls[stageTAG+'|4'].Disable()
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Holder Code'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[stageTAG+'|4'], 0, wx.EXPAND)	
 
@@ -1073,6 +1056,9 @@ class MicroscopePanel(wx.Panel):
 	meta = ExperimentSettings.getInstance()
 	self.pane = pane
 	
+	self.exTsld = 300
+	self.exBsld = 800	
+	
 	#-- Light Source --#
 	staticbox = wx.StaticBox(self.pane, -1, "Light")
 	multctrlSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
@@ -1117,7 +1103,7 @@ class MicroscopePanel(wx.Panel):
 	    self.settings_controls[lightsrcTAG+'|4'].SetValue(lightsrc[4])
 	self.settings_controls[lightsrcTAG+'|4'].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls[lightsrcTAG+'|4'].SetToolTipString('Power of light source')
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Power'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Measured Power (User)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[lightsrcTAG+'|4'], 0, wx.EXPAND)	
 	
 	self.settings_controls[lightsrcTAG+'|5'] = wx.TextCtrl(self.pane, value='') 	
@@ -1125,13 +1111,13 @@ class MicroscopePanel(wx.Panel):
 	    self.settings_controls[lightsrcTAG+'|5'].SetValue(lightsrc[5])
 	self.settings_controls[lightsrcTAG+'|5'].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls[lightsrcTAG+'|5'].SetToolTipString('Measured power of light source')
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Measured Power'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Measured Power (Instrument)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[lightsrcTAG+'|5'], 0, wx.EXPAND)
 	
 	self.settings_controls[lightsrcTAG+'|6']= wx.Choice(self.pane, -1, choices=['Yes', 'No'])
 	if len(lightsrc) > 6:
 	    self.settings_controls[lightsrcTAG+'|6'].SetStringSelection(lightsrc[6])
-	self.settings_controls[lightsrcTAG+'|6'].Bind(wx.EVT_CHOICE, self.shutterSelect)
+	self.settings_controls[lightsrcTAG+'|6'].Bind(wx.EVT_CHOICE, self.onEnabling)
 	self.settings_controls[lightsrcTAG+'|6'].SetToolTipString('Shutter used') 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Shutter Used'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[lightsrcTAG+'|6'], 0, wx.EXPAND)
@@ -1139,7 +1125,7 @@ class MicroscopePanel(wx.Panel):
 	self.settings_controls[lightsrcTAG+'|7']= wx.Choice(self.pane, -1, choices=['Internal', 'External'])
 	if len(lightsrc) > 7:
 	    self.settings_controls[lightsrcTAG+'|7'].SetStringSelection(lightsrc[7])
-	self.settings_controls[lightsrcTAG+'|7'].Bind(wx.EVT_CHOICE, self.shutterSelect)
+	self.settings_controls[lightsrcTAG+'|7'].Bind(wx.EVT_CHOICE, self.onEnabling)
 	self.settings_controls[lightsrcTAG+'|7'].SetToolTipString('Shutter used') 
 	self.settings_controls[lightsrcTAG+'|7'].Disable()
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Shutter Type'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -1173,27 +1159,24 @@ class MicroscopePanel(wx.Panel):
 	extfltTAG = 'Instrument|Microscope|ExtFilter|'+str(self.page_counter)
 	extfilter = meta.get_field(extfltTAG, [])
 	
-	self.startNM, self.endNM = 300, 700
+	self.startNM, self.endNM = 300, 800
 	if len(extfilter)> 1:
 	    self.startNM = int(extfilter[0])
 	    self.endNM = int(extfilter[1])
 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Wavelength\n(nm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 
-	self.settings_controls[extfltTAG +'|0'] = wx.Slider(self.pane, -1, self.startNM, 300, 700, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
-	self.settings_controls[extfltTAG +'|1'] = wx.Slider(self.pane, -1, self.endNM, 300, 700, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
-	
-	self.pane.fltTsld = self.settings_controls[extfltTAG +'|0']
-	self.pane.fltBsld = self.settings_controls[extfltTAG +'|1']
+	self.exTsld = self.settings_controls[extfltTAG +'|0'] = wx.Slider(self.pane, -1, self.startNM, 300, 800, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
+	self.exBsld = self.settings_controls[extfltTAG +'|1'] = wx.Slider(self.pane, -1, self.endNM, 300, 800, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
 	
 	self.fltrspectrum = FilterSpectrum(self.pane)
 
 	self.pane.Bind(wx.EVT_SLIDER, self.OnSavingData)
 	
 	spctrmSizer = wx.BoxSizer(wx.VERTICAL)
-	spctrmSizer.Add(self.pane.fltTsld,0)
+	spctrmSizer.Add(self.settings_controls[extfltTAG +'|0'],0)
 	spctrmSizer.Add(self.fltrspectrum, 0)
-	spctrmSizer.Add(self.pane.fltBsld,0)   
+	spctrmSizer.Add(self.settings_controls[extfltTAG +'|1'],0)   
 	
 	multctrlSizer.Add(spctrmSizer, 0)
 	
@@ -1222,15 +1205,15 @@ class MicroscopePanel(wx.Panel):
 
 	mirrorTAG = 'Instrument|Microscope|Mirror|'+str(self.page_counter)
 	mirror = meta.get_field(mirrorTAG, [])
-	self.startNM, self.endNM = 300, 700
+	self.startNM, self.endNM = 300, 800
 	if len(mirror)> 1:
 	    self.startNM = int(mirror[0])
 	    self.endNM = int(mirror[1])
 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Wavelength\n(nm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 
-	self.settings_controls[mirrorTAG +'|0'] = wx.Slider(self.pane, -1, self.startNM, 300, 700, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
-	self.settings_controls[mirrorTAG +'|1'] = wx.Slider(self.pane, -1, self.endNM, 300, 700, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
+	self.settings_controls[mirrorTAG +'|0'] = wx.Slider(self.pane, -1, self.startNM, 300, 800, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
+	self.settings_controls[mirrorTAG +'|1'] = wx.Slider(self.pane, -1, self.endNM, 300, 800, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
 	
 	self.pane.fltTsld = self.settings_controls[mirrorTAG +'|0']
 	self.pane.fltBsld = self.settings_controls[mirrorTAG +'|1']
@@ -1288,15 +1271,15 @@ class MicroscopePanel(wx.Panel):
 
 	emsfltTAG = 'Instrument|Microscope|EmsFilter|'+str(self.page_counter)
 	emsfilter = meta.get_field(emsfltTAG, [])
-	self.startNM, self.endNM = 300, 700
+	self.startNM, self.endNM = 300, 800
 	if len(emsfilter)> 1:
 	    self.startNM = int(emsfilter[0])
 	    self.endNM = int(emsfilter[1])
 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Wavelength\n(nm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 
-	self.settings_controls[emsfltTAG +'|0'] = wx.Slider(self.pane, -1, self.startNM, 300, 700, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
-	self.settings_controls[emsfltTAG +'|1'] = wx.Slider(self.pane, -1, self.endNM, 300, 700, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
+	self.settings_controls[emsfltTAG +'|0'] = wx.Slider(self.pane, -1, self.startNM, 300, 800, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
+	self.settings_controls[emsfltTAG +'|1'] = wx.Slider(self.pane, -1, self.endNM, 300, 800, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
 	
 	self.pane.fltTsld = self.settings_controls[emsfltTAG +'|0']
 	self.pane.fltBsld = self.settings_controls[emsfltTAG +'|1']
@@ -1339,7 +1322,6 @@ class MicroscopePanel(wx.Panel):
 	lensTAG = 'Instrument|Microscope|Lens|'+str(self.page_counter)
 	lens = meta.get_field(lensTAG, [])
 	
-	
 	self.settings_controls[lensTAG+'|0'] = wx.TextCtrl(self.pane, value='') 
 	if len(lens)> 0:
 	    self.settings_controls[lensTAG+'|0'].SetValue(lens[0])
@@ -1360,9 +1342,9 @@ class MicroscopePanel(wx.Panel):
 	if len(lens)> 2:
 	    self.settings_controls[lensTAG+'|2'].SetValue(lens[2])
 	self.settings_controls[lensTAG+'|2'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[lensTAG+'|2'].SetToolTipString('Aperture')
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Aperture'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	multctrlSizer.Add(self.settings_controls[lensTAG+'|2'], 0, wx.EXPAND)		
+	self.settings_controls[lensTAG+'|2'].SetToolTipString('Objective Magnification')
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Objective Magnification'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	multctrlSizer.Add(self.settings_controls[lensTAG+'|2'], 0, wx.EXPAND)
 	
 	self.settings_controls[lensTAG+'|3'] = wx.TextCtrl(self.pane, value='') 	
 	if len(lens)> 3:
@@ -1376,52 +1358,45 @@ class MicroscopePanel(wx.Panel):
 	if len(lens)> 4:
 	    self.settings_controls[lensTAG+'|4'].SetValue(lens[4])
 	self.settings_controls[lensTAG+'|4'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[lensTAG+'|4'].SetToolTipString('Objective Magnification')
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Objective Magnification'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	multctrlSizer.Add(self.settings_controls[lensTAG+'|4'], 0, wx.EXPAND)
-	
-	self.settings_controls[lensTAG+'|5'] = wx.TextCtrl(self.pane, value='') 	
-	if len(lens)> 5:
-	    self.settings_controls[lensTAG+'|5'].SetValue(lens[5])
-	self.settings_controls[lensTAG+'|5'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[lensTAG+'|5'].SetToolTipString('Calibrated Magnification')
+	self.settings_controls[lensTAG+'|4'].SetToolTipString('Calibrated Magnification')
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Calibrated Magnification'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	multctrlSizer.Add(self.settings_controls[lensTAG+'|5'], 0, wx.EXPAND)	
+	multctrlSizer.Add(self.settings_controls[lensTAG+'|4'], 0, wx.EXPAND)	
 	
-	self.settings_controls[lensTAG+'|6']= wx.Choice(self.pane, -1, choices=['','Oil', 'Water', 'Water Dipping', 'Air', 'Multi', 'Glycerol', 'Other', 'Unknown'])
+	immersion_choices=['Oil', 'Water', 'Water Dipping', 'Air', 'Multi', 'Glycerol', 'Unknown','Other']
+	self.settings_controls[lensTAG+'|5']= wx.ListBox(self.pane, -1, wx.DefaultPosition, (50,30), immersion_choices, wx.LB_SINGLE)
+	if len(lens) > 5:
+	    self.settings_controls[lensTAG+'|5'].Append(lens[5])
+	    self.settings_controls[lensTAG+'|5'].SetStringSelection(lens[5])
+	self.settings_controls[lensTAG+'|5'].Bind(wx.EVT_LISTBOX, self.OnSavingData)
+	self.settings_controls[lensTAG+'|5'].SetToolTipString('Immersion') 
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Immersion'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	multctrlSizer.Add(self.settings_controls[lensTAG+'|5'], 0, wx.EXPAND)
+	
+	self.settings_controls[lensTAG+'|6']= wx.Choice(self.pane, -1, choices=['Yes', 'No'])
 	if len(lens) > 6:
 	    self.settings_controls[lensTAG+'|6'].SetStringSelection(lens[6])
-	self.settings_controls[lensTAG+'|6'].Bind(wx.EVT_CHOICE, self.OnSavingData)
-	self.settings_controls[lensTAG+'|6'].SetToolTipString('Immersion') 
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Immersion'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	self.settings_controls[lensTAG+'|6'].Bind(wx.EVT_CHOICE, self.onEnabling)
+	self.settings_controls[lensTAG+'|6'].SetToolTipString('Correction Collar') 
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Correction Collar'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[lensTAG+'|6'], 0, wx.EXPAND)
 	
-	self.settings_controls[lensTAG+'|7']= wx.Choice(self.pane, -1, choices=['Yes', 'No'])
+	self.settings_controls[lensTAG+'|7']= wx.TextCtrl(self.pane, value='')
 	if len(lens) > 7:
-	    self.settings_controls[lensTAG+'|7'].SetStringSelection(lens[7])
-	self.settings_controls[lensTAG+'|7'].Bind(wx.EVT_CHOICE, self.shutterSelect)
-	self.settings_controls[lensTAG+'|7'].SetToolTipString('Correction Collar') 
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Correction Collar'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	multctrlSizer.Add(self.settings_controls[lensTAG+'|7'], 0, wx.EXPAND)
-	
-	self.settings_controls[lensTAG+'|8']= wx.SpinCtrl(self.pane, -1, "", (30, 50))
-	self.settings_controls[lensTAG+'|8'].SetRange(0,2)
-	if len(lens) > 8:
-	    self.settings_controls[lensTAG+'|8'].SetValue(int(lens[8]))
-	self.settings_controls[lensTAG+'|8'].Bind(wx.EVT_SPINCTRL, self.OnSavingData)
-	self.settings_controls[lensTAG+'|8'].SetToolTipString('Correction value') 
-	self.settings_controls[lensTAG+'|8'].Disable()
+	    self.settings_controls[lensTAG+'|7'].SetValue(lens[7])
+	self.settings_controls[lensTAG+'|7'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	self.settings_controls[lensTAG+'|7'].SetToolTipString('Correction value') 
+	self.settings_controls[lensTAG+'|7'].Disable()
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Correction Value'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	multctrlSizer.Add(self.settings_controls[lensTAG+'|8'], 0, wx.EXPAND) 	
+	multctrlSizer.Add(self.settings_controls[lensTAG+'|7'], 0, wx.EXPAND) 	
 	
-	self.settings_controls[lensTAG+'|9']= wx.Choice(self.pane, -1, choices=['UV', 'PlanApo', 'PlanFluor', 'SuperFluor', 'VioletCorrected', 'Unknown'])
-	if len(lens) > 9:
-	    self.settings_controls[lensTAG+'|9'].SetStringSelection(lens[9])
-	self.settings_controls[lensTAG+'|9'].Bind(wx.EVT_CHOICE, self.OnSavingData)
-	self.settings_controls[lensTAG+'|9'].SetToolTipString('Correction type') 
-	self.settings_controls[lensTAG+'|9'].Disable()
+	self.settings_controls[lensTAG+'|8']= wx.Choice(self.pane, -1, choices=['UV', 'PlanApo', 'PlanFluor', 'SuperFluor', 'VioletCorrected', 'Unknown'])
+	if len(lens) > 8:
+	    self.settings_controls[lensTAG+'|8'].SetStringSelection(lens[8])
+	self.settings_controls[lensTAG+'|8'].Bind(wx.EVT_CHOICE, self.OnSavingData)
+	self.settings_controls[lensTAG+'|8'].SetToolTipString('Correction type') 
+	self.settings_controls[lensTAG+'|8'].Disable()
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Correction Type'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	multctrlSizer.Add(self.settings_controls[lensTAG+'|9'], 0, wx.EXPAND)	
+	multctrlSizer.Add(self.settings_controls[lensTAG+'|8'], 0, wx.EXPAND)	
 		
 	lensSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
 	lensSizer.Add(multctrlSizer, 1, wx.EXPAND|wx.ALL, 5)	
@@ -1434,11 +1409,13 @@ class MicroscopePanel(wx.Panel):
 	detectorTAG = 'Instrument|Microscope|Detector|'+str(self.page_counter)
 	detector = meta.get_field(detectorTAG, [])
 	
-	self.settings_controls[detectorTAG+'|0']=  wx.Choice(self.pane, -1,  choices=['CCD', 'Intensified-CCD', 'Analog-Video', 'Spectroscopy', 'Life-time-imaging', 'Correlation-Spectroscopy', 'FTIR', 'EM-CCD', 'APD', 'CMOS'])
-	if len(detector)> 0:
+	detector_choices =['CCD', 'Intensified-CCD', 'Analog-Video', 'Spectroscopy', 'Life-time-imaging', 'Correlation-Spectroscopy', 'FTIR', 'EM-CCD', 'APD', 'CMOS', 'Unknown', 'Other']
+	self.settings_controls[detectorTAG+'|0']= wx.ListBox(self.pane, -1, wx.DefaultPosition, (120,30), detector_choices, wx.LB_SINGLE)
+	if len(detector) > 0:
+	    self.settings_controls[detectorTAG+'|0'].Append(detector[0])
 	    self.settings_controls[detectorTAG+'|0'].SetStringSelection(detector[0])
-	self.settings_controls[detectorTAG+'|0'].Bind(wx.EVT_CHOICE, self.OnSavingData) 
-	self.settings_controls[detectorTAG+'|0'].SetToolTipString('Type of the detector') 
+	self.settings_controls[detectorTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
+	self.settings_controls[detectorTAG+'|0'].SetToolTipString('Type of detector') 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Type'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[detectorTAG+'|0'], 0, wx.EXPAND)
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, ''), 0)
@@ -1475,7 +1452,7 @@ class MicroscopePanel(wx.Panel):
 	    self.settings_controls[detectorTAG+'|4'].SetValue(detector[4])
 	self.settings_controls[detectorTAG+'|4'].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls[detectorTAG+'|4'].SetToolTipString('Exposure Time')
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Exposure Time '), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Exposure Time'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[detectorTAG+'|4'], 0, wx.EXPAND)
 	
 	self.settings_controls[detectorTAG+'|5']= wx.Choice(self.pane, -1, choices=['microsecond','millisecond','second','minute'])
@@ -1485,41 +1462,36 @@ class MicroscopePanel(wx.Panel):
 	self.settings_controls[detectorTAG+'|5'].SetToolTipString('unit for exposure time') 
 	multctrlSizer.Add(self.settings_controls[detectorTAG+'|5'], 0, wx.EXPAND)
 	
-	self.startVOLT, self.endVOLT = 0, 1000
-	if len(detector)> 7:
-	    self.startVOLT = int(detector[6])
-	    self.endVOLT = int(detector[7])
+	self.settings_controls[detectorTAG+'|6'] = wx.TextCtrl(self.pane, value='') 	
+	if len(detector)> 6:
+	    self.settings_controls[detectorTAG+'|6'].SetValue(detector[6])
+	self.settings_controls[detectorTAG+'|6'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	self.settings_controls[detectorTAG+'|6'].SetToolTipString('Gain in volts')
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Gain'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	multctrlSizer.Add(self.settings_controls[detectorTAG+'|6'], 0, wx.EXPAND)
 	
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Gain\n(Volts)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	self.settings_controls[detectorTAG+'|7']= wx.Choice(self.pane, -1, choices=['microvolt','millivolt','volt'])
+	if len(detector) > 7:
+	    self.settings_controls[detectorTAG+'|7'].SetStringSelection(detector[7])
+	self.settings_controls[detectorTAG+'|7'].Bind(wx.EVT_CHOICE, self.OnSavingData)
+	self.settings_controls[detectorTAG+'|7'].SetToolTipString('unit') 
+	multctrlSizer.Add(self.settings_controls[detectorTAG+'|7'], 0, wx.EXPAND)	
 	
-	self.settings_controls[detectorTAG +'|6'] = wx.Slider(self.pane, -1, self.startVOLT, 0, 1000, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
-	self.settings_controls[detectorTAG +'|7'] = wx.Slider(self.pane, -1, self.endVOLT, 0, 1000, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
-	self.settings_controls[detectorTAG +'|6'].Bind(wx.EVT_SLIDER, self.OnSavingData)
-	self.settings_controls[detectorTAG +'|7'].Bind(wx.EVT_SLIDER, self.OnSavingData)
-		
-	rangeSizer = wx.BoxSizer(wx.VERTICAL)
-	rangeSizer.Add(self.settings_controls[detectorTAG +'|6'],0)
-	rangeSizer.Add(self.settings_controls[detectorTAG +'|7'], 0)
-	multctrlSizer.Add(rangeSizer, 0)
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, ''), 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)
+	self.settings_controls[detectorTAG+'|8'] = wx.TextCtrl(self.pane, value='') 	
+	if len(detector)> 8:
+	    self.settings_controls[detectorTAG+'|8'].SetValue(detector[8])
+	self.settings_controls[detectorTAG+'|8'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	self.settings_controls[detectorTAG+'|8'].SetToolTipString('Offset in volts')
+	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Offset'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	multctrlSizer.Add(self.settings_controls[detectorTAG+'|8'], 0, wx.EXPAND)
 	
-	self.startVOLT, self.endVOLT = 0, 1000
-	if len(detector)> 9:
-	    self.startVOLT = int(detector[8])
-	    self.endVOLT = int(detector[9])
+	self.settings_controls[detectorTAG+'|9']= wx.Choice(self.pane, -1, choices=['microvolt','millivolt','volt'])
+	if len(detector) > 9:
+	    self.settings_controls[detectorTAG+'|9'].SetStringSelection(detector[9])
+	self.settings_controls[detectorTAG+'|9'].Bind(wx.EVT_CHOICE, self.OnSavingData)
+	self.settings_controls[detectorTAG+'|9'].SetToolTipString('unit') 
+	multctrlSizer.Add(self.settings_controls[detectorTAG+'|9'], 0, wx.EXPAND)	
 	
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Offset\n(Volts)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	
-	self.settings_controls[detectorTAG +'|8'] = wx.Slider(self.pane, -1, self.startVOLT, 0, 1000, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
-	self.settings_controls[detectorTAG +'|9'] = wx.Slider(self.pane, -1, self.endVOLT, 0, 1000, wx.DefaultPosition, (100, -1), style = wx.SL_LABELS|wx.SL_TOP)
-	self.settings_controls[detectorTAG +'|8'].Bind(wx.EVT_SLIDER, self.OnSavingData)
-	self.settings_controls[detectorTAG +'|9'].Bind(wx.EVT_SLIDER, self.OnSavingData)
-		
-	rangeSizer = wx.BoxSizer(wx.VERTICAL)
-	rangeSizer.Add(self.settings_controls[detectorTAG +'|8'],0)
-	rangeSizer.Add(self.settings_controls[detectorTAG +'|9'], 0)
-	multctrlSizer.Add(rangeSizer, 0)
-	multctrlSizer.Add(wx.StaticText(self.pane, -1, ''), 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)	
 	
 	detectorSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
 	detectorSizer.Add(multctrlSizer, 1, wx.EXPAND|wx.ALL, 5)	
@@ -1551,7 +1523,7 @@ class MicroscopePanel(wx.Panel):
 	meta.saveData(ctrl, tag, self.settings_controls)   	
 	self.updateProgressBar()
 	
-    def shutterSelect(self, event):
+    def onEnabling(self, event):
 	ctrl = event.GetEventObject()
 	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]	
 
@@ -1560,9 +1532,11 @@ class MicroscopePanel(wx.Panel):
 	if self.settings_controls['Instrument|Microscope|LightSource|%s|%s'%(str(self.page_counter), '7')].GetStringSelection() == 'External':
 	    self.settings_controls['Instrument|Microscope|LightSource|%s|%s'%(str(self.page_counter), '8')].Enable()
 	    self.settings_controls['Instrument|Microscope|LightSource|%s|%s'%(str(self.page_counter), '9')].Enable()
-	if self.settings_controls['Instrument|Microscope|Lens|%s|%s'%(str(self.page_counter), '7')].GetStringSelection() == 'Yes':
+	if self.settings_controls['Instrument|Microscope|Lens|%s|%s'%(str(self.page_counter), '6')].GetStringSelection() == 'Yes':
+	    self.settings_controls['Instrument|Microscope|Lens|%s|%s'%(str(self.page_counter), '7')].Enable()
 	    self.settings_controls['Instrument|Microscope|Lens|%s|%s'%(str(self.page_counter), '8')].Enable()
-	    self.settings_controls['Instrument|Microscope|Lens|%s|%s'%(str(self.page_counter), '9')].Enable()	
+	if self.settings_controls['Instrument|Microscope|Stage|%s|%s'%(str(self.page_counter), '3')].GetStringSelection() == 'Yes':
+	    self.settings_controls['Instrument|Microscope|Stage|%s|%s'%(str(self.page_counter), '4')].Enable()	
 	    
 	meta.saveData(ctrl, tag, self.settings_controls)   
 		
@@ -1572,9 +1546,9 @@ class MicroscopePanel(wx.Panel):
 	filledCount = 0
 	
 	for tag, ctrl in self.settings_controls.items():
-	    if isinstance(ctrl, wx.Choice):
+	    if isinstance(ctrl, wx.Choice) or isinstance(ctrl, wx.ListBox):
 		if ctrl.GetStringSelection():
-		    filledCount += 1
+		    filledCount += 1	    
 	    elif isinstance(ctrl, wx.Slider):
 		if tag.endswith('0') and ctrl.GetValue() > 300:
 		    filledCount += 1
@@ -1622,7 +1596,7 @@ class FilterSpectrum(wx.Panel):
         self.parent = parent
 	self.meta = ExperimentSettings.getInstance()
 	self.startNM = 300
-	self.endNM = 700
+	self.endNM = 800
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
@@ -1634,13 +1608,13 @@ class FilterSpectrum(wx.Panel):
 	# get the component WL of the just previous one
 	nmRange =  self.meta.partition(range(self.startNM, self.endNM+1), 5)
 	
-        fltTsldVal = self.Parent.fltTsld.GetValue()
-	fltTsldMinVal = self.Parent.fltTsld.GetMin()
-        fltBsldVal = self.Parent.fltBsld.GetValue()
-	fltBsldMaxVal = self.Parent.fltBsld.GetMax()
+        #fltTsldVal = self.parent.exTsld.GetValue()
+	#fltTsldMinVal = self.parent.exTsld.GetMin()
+        #fltBsldVal = self.parent.exBsld.GetValue()
+	#fltBsldMaxVal = self.parent.exBsld.GetMax()
 	
-	fltTsldMove = (fltTsldVal-fltTsldMinVal)*100/(fltBsldMaxVal-fltTsldMinVal)  # 100 pxl is the physical size of the spectra panel
-	fltBsldMove = (fltBsldVal-fltTsldMinVal)*100/(fltBsldMaxVal-fltTsldMinVal)
+	#fltTsldMove = (fltTsldVal-fltTsldMinVal)*100/(fltBsldMaxVal-fltTsldMinVal)  # 100 pxl is the physical size of the spectra panel
+	#fltBsldMove = (fltBsldVal-fltTsldMinVal)*100/(fltBsldMaxVal-fltTsldMinVal)
 	        
         # Draw the specturm according to the spectral range
         dc.GradientFillLinear((0, 0, 20, 30), self.meta.nmToRGB(nmRange[0]), self.meta.nmToRGB(nmRange[1]), wx.EAST)
@@ -1650,11 +1624,11 @@ class FilterSpectrum(wx.Panel):
         dc.GradientFillLinear((80, 0, 20, 30), self.meta.nmToRGB(nmRange[4]), self.meta.nmToRGB(nmRange[5]), wx.EAST)
         
         # Draw the slider on the spectrum to depict the selected range within the specta
-	dc = wx.PaintDC(self)
-	dc.SetPen(wx.Pen(self.GetBackgroundColour()))
-	dc.SetBrush(wx.Brush(self.GetBackgroundColour()))
-	dc.DrawRectangle(0, 0, fltTsldMove, 30)
-	dc.DrawRectangle(fltBsldMove, 0, 100, 30) 
+	#dc = wx.PaintDC(self)
+	#dc.SetPen(wx.Pen(self.GetBackgroundColour()))
+	#dc.SetBrush(wx.Brush(self.GetBackgroundColour()))
+	#dc.DrawRectangle(0, 0, fltTsldMove, 30)
+	#dc.DrawRectangle(fltBsldMove, 0, 100, 30) 
 
        
     def OnSize(self, event):
@@ -3133,14 +3107,9 @@ class CellSeedPanel(wx.Panel):
         dia.Destroy()
 
     def OnSavingData(self, event):
-        meta = ExperimentSettings.getInstance()
-
-        ctrl = event.GetEventObject()
-        tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
-        if isinstance(ctrl, wx.Choice):
-            meta.set_field(tag, ctrl.GetStringSelection())
-        else:
-            meta.set_field(tag, ctrl.GetValue())
+	ctrl = event.GetEventObject()
+	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+	meta.saveData(ctrl, tag, self.settings_controls)
 
 
 
@@ -3257,7 +3226,7 @@ class CellHarvestPanel(wx.Panel):
             self.settings_controls[trypsTAG].SetStringSelection(meta.get_field(trypsTAG))
         self.settings_controls[trypsTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
         self.settings_controls[trypsTAG].SetToolTipString('(Y/N) After cells were loded on the exerimental vessel, i.e. time 0 of the experiment')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Trypsinization'), 0)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Trypsinization'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[trypsTAG], 0, wx.EXPAND)  
 
         #---------------Layout with sizers---------------
@@ -3268,14 +3237,9 @@ class CellHarvestPanel(wx.Panel):
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
     def OnSavingData(self, event):
-        meta = ExperimentSettings.getInstance()
-
         ctrl = event.GetEventObject()
-        tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
-        if isinstance(ctrl, wx.Choice):
-            meta.set_field(tag, ctrl.GetStringSelection())
-        else:
-            meta.set_field(tag, ctrl.GetValue())
+	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+	meta.saveData(ctrl, tag, self.settings_controls)
 
 
 
@@ -3362,7 +3326,7 @@ class ChemicalAgentPanel(wx.Panel):
             self.settings_controls[unitTAG].SetStringSelection(meta.get_field(unitTAG))
         self.settings_controls[unitTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
 
-        fgs.Add(wx.StaticText(self.sw, -1, 'Concentration'), 0)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Concentration'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[concTAG], 0, wx.EXPAND)
         fgs.Add(self.settings_controls[unitTAG], 0, wx.EXPAND)
         
@@ -3408,14 +3372,9 @@ class ChemicalAgentPanel(wx.Panel):
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
     def OnSavingData(self, event):
-        meta = ExperimentSettings.getInstance()
-
         ctrl = event.GetEventObject()
-        tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
-        if isinstance(ctrl, wx.Choice):
-            meta.set_field(tag, ctrl.GetStringSelection())
-        else:
-            meta.set_field(tag, ctrl.GetValue())
+	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+	meta.saveData(ctrl, tag, self.settings_controls)
 
 
 ########################################################################        
@@ -3546,14 +3505,9 @@ class BiologicalAgentPanel(wx.Panel):
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
     def OnSavingData(self, event):
-        meta = ExperimentSettings.getInstance()
-
         ctrl = event.GetEventObject()
-        tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
-        if isinstance(ctrl, wx.Choice):
-            meta.set_field(tag, ctrl.GetStringSelection())
-        else:
-            meta.set_field(tag, ctrl.GetValue())
+	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
+	meta.saveData(ctrl, tag, self.settings_controls)
 
 
 ########################################################################        
@@ -5451,7 +5405,7 @@ class NotePanel(wx.Panel):
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)        
 
-    def OnSavingData(self, event):
+    def OnSavingData(self, event):	
         meta = ExperimentSettings.getInstance()    
         self.noteTAG = 'Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))
         meta.set_field(self.noteTAG, self.noteDescrip.GetValue())

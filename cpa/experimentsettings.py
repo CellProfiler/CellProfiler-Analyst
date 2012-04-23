@@ -457,6 +457,12 @@ class ExperimentSettings(Singleton):
 	return sorted(list(set(dyeList)))  
     
     def saveData(self, ctrl, tag, settings_controls):
+		
+	if isinstance(ctrl, wx.ListBox) and ctrl.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    ctrl.Append(other)
+	    ctrl.SetStringSelection(other)	
+	    
 	if len(tag.split('|'))>4:
 	    # get the relevant controls for this tag eg, duration, temp controls for this step
 	    subtags = []
@@ -467,13 +473,13 @@ class ExperimentSettings(Singleton):
 	    for i in range(0, len(subtags)):
 		info.append('')
 	    for st in subtags:
-		if isinstance(settings_controls[st], wx.Choice):
+		if isinstance(settings_controls[st], wx.Choice) or isinstance(settings_controls[st], wx.ListBox):
 		    info[int(st.split('|')[4])]=settings_controls[st].GetStringSelection()
 		else:
 		    info[int(st.split('|')[4])]=settings_controls[st].GetValue()	
 	    self.set_field(get_tag_stump(tag, 4), info)  # get the core tag like AddProcess|Spin|Step|<instance> = [duration, description, temp]
 	else:
-	    if isinstance(ctrl, wx.Choice):
+	    if isinstance(ctrl, wx.Choice) or isinstance(ctrl, wx.ListBox):
 		self.set_field(tag, ctrl.GetStringSelection())
 	    else:
 		user_input = ctrl.GetValue()

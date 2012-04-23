@@ -64,6 +64,8 @@ class StepBuilder(wx.ScrolledWindow):
 	    self.Parent.settings_controls[stepTAG+'|2'] = wx.TextCtrl(self, size=(30,-1), value=step_info[2], style=wx.TE_PROCESS_ENTER)	    
 	    self.del_btn = wx.Button(self, id=stepNo, label='Del -')
 	    self.add_btn = wx.Button(self, id=stepNo, label='Add +')
+	    #--- Tooltips --#
+	    self.Parent.settings_controls[stepTAG+'|0'].SetToolTipString(step_info[0])    
 	    #-- Binding ---#
 	    self.Parent.settings_controls[stepTAG+'|0'].Bind(wx.EVT_TEXT, self.Parent.OnSavingData)
 	    self.Parent.settings_controls[stepTAG+'|1'].Bind(wx.EVT_TEXT, self.Parent.OnSavingData)

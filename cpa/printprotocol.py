@@ -121,7 +121,7 @@ class PrintProtocol(wx.Frame):
                         #self.printfile.write('<br />')
                  
         #---- Method Secion ---#
-        self.printfile.write('<h2>2. Materials and Methods</h2>')
+        self.printfile.write('<h3>2. Materials and Methods</h3>')
                                  
         for i, timepoint in enumerate(timepoints):
             for protocol in set([exp.get_tag_protocol(ev.get_welltag()) for ev in self.events_by_timepoint[timepoint]]):
@@ -155,13 +155,13 @@ class PrintProtocol(wx.Frame):
 		    
                 if exp.get_tag_event(protocol) == 'Stain': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Staining with chemical dye</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />') 
-		    
+		    self.printlocation(spatial_info) 
                 if exp.get_tag_event(protocol) == 'Antibody': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Staining with immunofluorescence</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />') 
-		    
+		    self.printlocation(spatial_info) 
                 if exp.get_tag_event(protocol) == 'Primer': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Staining with genetic materials</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />')
-		    
+		    self.printlocation(spatial_info) 
                 if exp.get_tag_event(protocol) == 'Spin':
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Spinning</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />')
 		    self.printfile.write('<i>'+protocol_info[0]+'</i><br />') # header part
@@ -176,17 +176,20 @@ class PrintProtocol(wx.Frame):
 			
                 if exp.get_tag_event(protocol) == 'Wash': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Washing</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />')
+		    self.printlocation(spatial_info) 
                 if exp.get_tag_event(protocol) == 'Dry': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Drying</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />')
+		    self.printlocation(spatial_info) 
                 if exp.get_tag_event(protocol) == 'Medium': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Addition of medium</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />')  
+		    self.printlocation(spatial_info) 
                 if exp.get_tag_event(protocol) == 'Incubator': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Incubation</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />')  
+		    self.printlocation(spatial_info) 
                 
                 if exp.get_tag_event(protocol) == 'TLM': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b>Timelapse image acquisition</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />') 
 		    self.printlocation(spatial_info)
-		    
 		    # write the image urls
 		    instance = exp.get_tag_attribute(protocol)
 		    self.printfile.write('<table border="0">')
@@ -219,7 +222,7 @@ class PrintProtocol(wx.Frame):
 		    self.printfile.write('<code>'+protocol_info[2]+'</code><br />') # footer part
 		    # for the affected wells the image location
 		    
-		    self.printlocation(spatial_info) #prints the plate well design as table and highlights the affected wells
+		    self.printlocation(spatial_info)
 		    
 		    # write the image urls
 		    instance = exp.get_tag_attribute(protocol)
@@ -240,7 +243,7 @@ class PrintProtocol(wx.Frame):
                
         
         #---- Protocol Map ---#             
-        self.printfile.write('<br />'.join(['<h2>3. Methodology Map</h2>',                                 
+        self.printfile.write('<br />'.join(['<h3>3. Methodology Map</h3>',                                 
                              '<br/><br/>',                     
                              '<center><img src=myImage.png width=500 height=600></center>',
                              '</body></html>']))
