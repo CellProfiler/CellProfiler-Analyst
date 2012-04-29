@@ -203,6 +203,11 @@ class ExperimentSettings(Singleton):
         for matchstring, callbacks in self.subscribers.items():
             for callback in callbacks:
                 callback(None)
+    def onTabClosing(self, event):
+	event.Veto()
+	dlg = wx.MessageDialog(None, 'Can not delete instance', 'Deleting..', wx.OK| wx.ICON_STOP)
+	dlg.ShowModal()
+	return    
         
     def get_timeline(self):
         return self.timeline
@@ -435,7 +440,7 @@ class ExperimentSettings(Singleton):
                 description = nm+' nm Short Pass Dichroic Mirror'            
         if component.startswith('FLT'):
             nm = component.split('FLT')[1]
-            description = nm+' Base pass Filter'
+            description = nm+' Band pass Filter'
         if component.startswith('DYE'):
             dye = component.split('_')[1]
             description = 'Dye used: %s' %dye
@@ -474,13 +479,16 @@ class ExperimentSettings(Singleton):
 		info.append('')
 	    for st in subtags:
 		if isinstance(settings_controls[st], wx.Choice) or isinstance(settings_controls[st], wx.ListBox):
-		    info[int(st.split('|')[4])]=settings_controls[st].GetStringSelection()
+		    info[int(st.split('|')[4])]=settings_controls[st].GetStringSelection()		
 		else:
 		    info[int(st.split('|')[4])]=settings_controls[st].GetValue()	
 	    self.set_field(get_tag_stump(tag, 4), info)  # get the core tag like AddProcess|Spin|Step|<instance> = [duration, description, temp]
 	else:
 	    if isinstance(ctrl, wx.Choice) or isinstance(ctrl, wx.ListBox):
 		self.set_field(tag, ctrl.GetStringSelection())
+	    elif isinstance(ctrl, wx.DatePickerCtrl):
+		date = ctrl.GetValue()
+		self.set_field(tag, '%02d/%02d/%4d'%(date.Day, date.Month+1, date.Year))
 	    else:
 		user_input = ctrl.GetValue()
 		self.set_field(tag, user_input)	 

@@ -289,7 +289,11 @@ class TimelinePanel(wx.Panel):
                 elif stump.startswith('Notes|Critical'):
                     bmp = icons.critical.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
                 elif stump.startswith('Notes|Rest'):
-                    bmp = icons.rest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()                 
+                    bmp = icons.rest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()  
+                elif stump.startswith('Notes|URL'):
+                    bmp = icons.url.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()  
+                elif stump.startswith('Notes|Video'):
+                    bmp = icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()                  
     
                 dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
                               y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)

@@ -103,25 +103,42 @@ class PrintProtocol(wx.Frame):
 	    #for node in nodes:
 		#print t, node, node.get_parent()
 	
-        ##---- Instrument Secion ---#
-        #self.printfile.write('<h2>2. Instrument Settings</h2>')
-        #for instrument in meta.get_eventtype_list('Instrument'):
-            #for instance in meta.get_field_instances('Instrument|%s'%instrument):
-                #self.printfile.write('<p><b><big>Configuration of '+instance+' instance of '+instrument+'</b></big></p><br />')
-                
-                #instrument_info = self.decode_event_description('Instrument|%s|%s'%(instrument, instance))
-                
-                #for element in instrument_info:
-                    #if isinstance(element[1], list) is False:
-                        #self.printfile.write('<dfn>'+element[0]+': </dfn><code>'+element[1]+'</code><br />')  # elements that are not channel specific like make, model, type...etc.
-                    #else:
-                        #self.printfile.write('<dfn>'+element[0]+': </dfn>') 
-                        #for component in element[1]:  #diff components of a given channel
-                            #self.printfile.write('<tt>'+meta.decode_ch_component(component[0])+' >> </tt>')
-                        #self.printfile.write('<br />')
-                 
-        #---- Method Secion ---#
-        self.printfile.write('<h3>2. Materials and Methods</h3>')
+        #---- Instrument Secion ---#
+        self.printfile.write('<h3>2. Instrument Settings</h3>')
+	
+	microscopes = meta.get_field_instances('Instrument|Microscope')
+	flowcytometers = meta.get_field_instances('Instrument|Flowcytometer')
+	
+	if microscopes:
+	    for instance in microscopes:
+		microscope_info = self.decode_event_description('Instrument|Microscope|%s'%instance)
+		self.printfile.write('<big><b>Channel Name: '+microscope_info[0]+' (microscope instance %s)'%instance+'</b></big><br />')
+		for component in microscope_info[1]:
+		    if component[0] == 'Component':
+			self.printfile.write('<strong>'+component[1]+'</strong><br />')
+		    else:			
+			self.printfile.write('<code><b>'+component[0]+': </b>'+component[1]+'</code><br />')
+		self.printfile.write('<p></p>')
+			
+	if flowcytometers:
+	    for instance in flowcytometers:
+		flowcytometer_info = self.decode_event_description('Instrument|Flowcytometer|%s'%instance)
+		self.printfile.write('<big><b>'+flowcytometer_info[0]+' </b></big><br />')
+
+		for element in flowcytometer_info[1]:  # channels
+		    self.printfile.write('<ul><li><code><b>'+element[0]+': </b>') # channel name
+		    for i, component in enumerate(element[1]):  # config of each component of this channel
+			if i == len(element[1])-1:
+			    self.printfile.write(meta.decode_ch_component(component[0]))
+			else:
+			    self.printfile.write(meta.decode_ch_component(component[0])+' >> ')
+		    self.printfile.write('</code></li></ul>')
+		self.printfile.write('<p></p>')
+	 
+	
+	
+        #---- Material and Method Secion ---#
+        self.printfile.write('<h3>3. Materials and Methods</h3>')
                                  
         for i, timepoint in enumerate(timepoints):
             for protocol in set([exp.get_tag_protocol(ev.get_welltag()) for ev in self.events_by_timepoint[timepoint]]):
@@ -208,19 +225,7 @@ class PrintProtocol(wx.Frame):
                 if exp.get_tag_event(protocol) == 'FCS': 
                     self.printfile.write('Step '+str(i+1)+':  <em><b> FCS file acquisition</b></em>         at '+exp.format_time_string(timepoint)+' hrs<br />') 
 		    
-		    self.printfile.write('<code>'+protocol_info[0]+'</code><br />') # header part	
-		    self.printfile.write('<code><i><u> Channel description </u></i></code><br />') # header part
-		    
-		    for element in protocol_info[1]:  # step description
-			self.printfile.write('<ul><li><code><b>'+element[0]+': </b>') # channel name
-			for i, component in enumerate(element[1]):  # config of each component of this channel
-			    if i == len(element[1])-1:
-				self.printfile.write(meta.decode_ch_component(component[0]))
-			    else:
-				self.printfile.write(meta.decode_ch_component(component[0])+' >> ')
-			self.printfile.write('</code></li></ul>')	
-		    self.printfile.write('<code>'+protocol_info[2]+'</code><br />') # footer part
-		    # for the affected wells the image location
+		    self.printfile.write('<code>'+protocol_info[0]+'</code><br />') # header part wrtie wich setting instance being used	
 		    
 		    self.printlocation(spatial_info)
 		    
@@ -243,7 +248,7 @@ class PrintProtocol(wx.Frame):
                
         
         #---- Protocol Map ---#             
-        self.printfile.write('<br />'.join(['<h3>3. Methodology Map</h3>',                                 
+        self.printfile.write('<br />'.join(['<h3>4. Methodology Map</h3>',                                 
                              '<br/><br/>',                     
                              '<center><img src=myImage.png width=500 height=600></center>',
                              '</body></html>']))
@@ -262,7 +267,7 @@ class PrintProtocol(wx.Frame):
 	return [int(y) if y.isdigit() else y for y in l]     
     
     def decode_event_description(self, protocol):
-        
+
         if exp.get_tag_type(protocol) == 'Overview':
             info = []
             info.append(('Title', meta.get_field('Overview|Project|Title', default='Not specified')))
@@ -273,6 +278,114 @@ class PrintProtocol(wx.Frame):
             info.append(('Institution', meta.get_field('Overview|Project|Institution', default='Not specified')))
             info.append(('Address', meta.get_field('Overview|Project|Address', default='Not specified')))
             return info
+	
+	if exp.get_tag_event(protocol) == 'Microscope':
+	    instance = exp.get_tag_attribute(protocol)
+	    header = ''
+	    footer = ''
+	    info = []
+	    
+	    header += '%s settings' %meta.get_field('Instrument|Microscope|ChannelName|%s'%instance, default = 'Not specified')
+	    
+	    if meta.get_field('Instrument|Microscope|Stand|%s'%instance) is not None:
+		info.append(('Component', 'Stand'))
+		info.append(('Type', meta.get_field('Instrument|Microscope|Stand|%s'%instance)[0]))
+		info.append(('Make', meta.get_field('Instrument|Microscope|Stand|%s'%instance)[1]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|Stand|%s'%instance)[2]))
+		info.append(('Orientation', meta.get_field('Instrument|Microscope|Stand|%s'%instance)[3]))
+		info.append(('Number of Lampss', str(meta.get_field('Instrument|Microscope|Stand|%s'%instance)[4])))
+		info.append(('Number of Detectors', str(meta.get_field('Instrument|Microscope|Stand|%s'%instance)[5])))
+	    if meta.get_field('Instrument|Microscope|Condensor|%s'%instance) is not None:
+		info.append(('Component', 'Condensor'))
+		info.append(('Type', meta.get_field('Instrument|Microscope|Condensor|%s'%instance)[0]))
+		info.append(('Make', meta.get_field('Instrument|Microscope|Condensor|%s'%instance)[1]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|Condensor|%s'%instance)[2]))
+	    if meta.get_field('Instrument|Microscope|Stage|%s'%instance) is not None:
+		info.append(('Component', 'Stage'))
+		info.append(('Type', meta.get_field('Instrument|Microscope|Stage|%s'%instance)[0]))
+		info.append(('Make', meta.get_field('Instrument|Microscope|Stage|%s'%instance)[1]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|Stage|%s'%instance)[2]))
+		info.append(('Stage Holder', meta.get_field('Instrument|Microscope|Stage|%s'%instance)[3]))
+		info.append(('Holder Code', meta.get_field('Instrument|Microscope|Stage|%s'%instance)[4]))
+	    if meta.get_field('Instrument|Microscope|Incubator|%s'%instance) is not None:
+		info.append(('Component', 'Incubator'))
+		info.append(('Make', meta.get_field('Instrument|Microscope|Incubator|%s'%instance)[0]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|Incubator|%s'%instance)[1]))
+		info.append(('Temperature(C)', meta.get_field('Instrument|Microscope|Incubator|%s'%instance)[2]))
+		info.append(('CO2%', meta.get_field('Instrument|Microscope|Incubator|%s'%instance)[3]))
+		info.append(('Humidity', meta.get_field('Instrument|Microscope|Incubator|%s'%instance)[4]))
+		info.append(('Pressure', meta.get_field('Instrument|Microscope|Incubator|%s'%instance)[5]))
+	    if meta.get_field('Instrument|Microscope|LightSource|%s'%instance) is not None:
+		info.append(('Component', 'Light Source'))
+		info.append(('Type', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[0]))
+		info.append(('Source', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[1]))
+		info.append(('Make', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[2]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[3]))
+		info.append(('Measured Power (User)', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[4]))
+		info.append(('Measured Power (Instrument)', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[5]))
+		info.append(('Shutter Used', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[6]))
+		info.append(('Shutter Type', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[7]))
+		info.append(('Shutter Make', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[8]))
+		info.append(('Shutter Model', meta.get_field('Instrument|Microscope|LightSource|%s'%instance)[9]))
+	    if meta.get_field('Instrument|Microscope|ExtFilter|%s'%instance) is not None:
+		info.append(('Component', 'Excitation Filter'))
+		info.append(('Wavelength Range (nm)', str(meta.get_field('Instrument|Microscope|ExtFilter|%s'%instance)[0])+' - '+str(meta.get_field('Instrument|Microscope|ExtFilter|%s'%instance)[1])))
+		info.append(('Make', meta.get_field('Instrument|Microscope|ExtFilter|%s'%instance)[2]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|ExtFilter|%s'%instance)[3]))
+	    if meta.get_field('Instrument|Microscope|Mirror|%s'%instance) is not None:	    
+		info.append(('Component', 'Dichroic Mirror'))
+		info.append(('Wavelength Range (nm)', str(meta.get_field('Instrument|Microscope|Mirror|%s'%instance)[0])+' - '+str(meta.get_field('Instrument|Microscope|Mirror|%s'%instance)[1])))
+		info.append(('Mode', meta.get_field('Instrument|Microscope|Mirror|%s'%instance)[2]))
+		info.append(('Make', meta.get_field('Instrument|Microscope|Mirror|%s'%instance)[3]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|Mirror|%s'%instance)[4]))
+		info.append(('Modification', meta.get_field('Instrument|Microscope|Mirror|%s'%instance)[5]))
+	    if meta.get_field('Instrument|Microscope|EmsFilter|%s'%instance) is not None:
+		info.append(('Component', 'Emission Filter'))
+		info.append(('Wavelength Range (nm)', str(meta.get_field('Instrument|Microscope|EmsFilter|%s'%instance)[0])+' - '+str(meta.get_field('Instrument|Microscope|EmsFilter|%s'%instance)[1])))
+		info.append(('Make', meta.get_field('Instrument|Microscope|EmsFilter|%s'%instance)[2]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|EmsFilter|%s'%instance)[3]))
+	    if meta.get_field('Instrument|Microscope|Lens|%s'%instance) is not None:
+		info.append(('Component', 'Lens'))
+		info.append(('Make', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[0]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[1]))
+		info.append(('Objective Magnification', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[2]))
+		info.append(('Objective NA', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[3]))
+		info.append(('Calibrated Magnification', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[4]))
+		info.append(('Immersion', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[5]))
+		info.append(('Correction Collar', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[6]))
+		info.append(('Correction Value', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[7]))
+		info.append(('Correction Type', meta.get_field('Instrument|Microscope|Lens|%s'%instance)[8]))
+	    if meta.get_field('Instrument|Microscope|Lens|%s'%instance) is not None:
+		info.append(('Component', 'Detector'))
+		info.append(('Type', meta.get_field('Instrument|Microscope|Detector|%s'%instance)[0]))
+		info.append(('Make', meta.get_field('Instrument|Microscope|Detector|%s'%instance)[1]))
+		info.append(('Model', meta.get_field('Instrument|Microscope|Detector|%s'%instance)[2]))
+		info.append(('Binning', str(meta.get_field('Instrument|Microscope|Detector|%s'%instance)[3])))
+		info.append(('Exposure Time', meta.get_field('Instrument|Microscope|Detector|%s'%instance)[4]+' '+meta.get_field('Instrument|Microscope|Detector|%s'%instance)[5]))
+		info.append(('Gain', meta.get_field('Instrument|Microscope|Detector|%s'%instance)[6]+' '+meta.get_field('Instrument|Microscope|Detector|%s'%instance)[7]))
+		info.append(('Offset', meta.get_field('Instrument|Microscope|Detector|%s'%instance)[8]+' '+meta.get_field('Instrument|Microscope|Detector|%s'%instance)[9]))
+		
+	    return (header, info, footer)
+	
+	if exp.get_tag_event(protocol) == 'Flowcytometer':
+	    instance = exp.get_tag_attribute(protocol)
+	    header = ''
+	    footer = ''
+	    info = []
+	    
+	    header += meta.get_field('Instrument|Flowcytometer|Manufacter|%s'%instance, default='')
+	    if meta.get_field('Instrument|Flowcytometer|Model|%s'%instance) is not None:
+		header += '(model: %s)' %meta.get_field('Instrument|Flowcytometer|Model|%s'%instance, default = 'not specified')
+	    header += ' was used. '
+		
+	    for attribute, description in sorted(meta.get_attribute_dict('Instrument|Flowcytometer|%s'%instance).iteritems()):
+		if attribute.startswith('Manufacter')  or attribute.startswith('Model'):
+		    continue
+		else:
+		    info.append((attribute, description))  # attribute is Ch# and description is the component list	
+
+	    return(header, info, footer)
+	    
 	
 	if exp.get_tag_event(protocol) == 'Seed':
 	    instance = exp.get_tag_attribute(protocol)
@@ -336,9 +449,9 @@ class PrintProtocol(wx.Frame):
 	    footer = ''
 	    info = []
 	
-            steps = sorted(meta.get_attribute_list_by_instance('AddProcess|Spin|Step', str(instance)), key = self.stringSplitByNumbers)
+            steps = sorted(meta.get_attribute_list_by_instance('AddProcess|Spin|Step', str(instance)), key = meta.stringSplitByNumbers)
 	    
-	    header += meta.get_field('AddProcess|Spin|SpinPrtocolTag|%s'%instance)
+	    header += meta.get_field('AddProcess|Spin|ProtocolName|%s'%instance)
 	    
 	    for step in steps:
 		info.append(meta.get_field('AddProcess|Spin|%s|%s'%(step,instance)))
@@ -357,18 +470,12 @@ class PrintProtocol(wx.Frame):
 		if meta.get_field('Instrument|Flowcytometer|Model|%s'%cytometer_instance) is not None:
 		    header += '(model: %s)' %meta.get_field('Instrument|Flowcytometer|Model|%s'%cytometer_instance, default = 'not specified')
 		header += ' was used. '
-		
-	    for attribute, description in sorted(meta.get_attribute_dict('Instrument|Flowcytometer|%s'%cytometer_instance).iteritems()):
-		if attribute.startswith('Manufacter')  or attribute.startswith('Model'):
-		    continue
-		else:
-		    info.append((attribute, description))  # attribute is Ch# and description is the component list
 	    
 	    if meta.get_field('DataAcquis|FCS|Software|%s'%instance) is not None:
-		footer += meta.get_field('DataAcquis|FCS|Software|%s'%instance)+' software was used for data acquisition. '
+		info.append(meta.get_field('DataAcquis|FCS|Software|%s'%instance)+' software was used for data acquisition. ')
 		
 	    if meta.get_field('DataAcquis|FCS|Format|%s'%instance) is not None:
-		footer += 'FCS files in %s'%meta.get_field('DataAcquis|FCS|Format|%s'%instance)+' format were saved in following location\n'
+		info.append('FCS files in %s'%meta.get_field('DataAcquis|FCS|Format|%s'%instance)+' format were saved in following location\n')
 		
 	    return (header, info, footer)
 	

@@ -6,6 +6,7 @@ import icons
 from experimentsettings import *
 from vesselpanel import VesselPanel, VesselScroller, VesselSelectionPopup
 from temporaltaglist import TemporalTagListCtrl
+import metadatainput as assay
 from wx.lib.embeddedimage import PyEmbeddedImage
 from wx.lib.masked import TimeCtrl
 

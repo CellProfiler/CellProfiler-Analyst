@@ -8,11 +8,14 @@ import operator
 import  wx.calendar
 import wx.lib.agw.flatnotebook as fnb
 import wx.lib.mixins.listctrl as listmix
+import wx.lib.filebrowsebutton
 import  wx.gizmos   as  gizmos
 import string, os
 import wx.lib.agw.foldpanelbar as fpb
 import experimentsettings as exp
 import wx.html
+import webbrowser
+import wx.media
 from functools import partial
 from experimentsettings import *
 from instancelist import *
@@ -87,19 +90,64 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
 	
 	meta =ExperimentSettings.getInstance()
 	
-	#self.settings_panel.Destroy()
-	#self.settings_container.Sizer.Clear()
+	self.settings_panel.Destroy()
+	self.settings_container.Sizer.Clear()
 	
-	if get_tag_type(tag) == 'Perturbation' and get_tag_event(tag) == 'Biological':
-	    #open the perturbation-->biological page in the notebook
-            self.settings_panel = BiologicalAgentPanel(self.settings_container)
-	    #select the appropirate tab based on the instance of the tag
+	if get_tag_type(tag) == 'CellTransfer' and get_tag_event(tag) == 'Seed':
+	    self.settings_panel = CellSeedSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'CellTransfer' and get_tag_event(tag) == 'Harvest':
+	    self.settings_panel = CellHarvestSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'Perturbation' and get_tag_event(tag) == 'Chem':
+	    self.settings_panel = ChemicalSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	if get_tag_type(tag) == 'Perturbation' and get_tag_event(tag) == 'Bio':
+            self.settings_panel = BiologicalSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Dye':
+	    self.settings_panel = DyeSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Immuno':
+	    self.settings_panel = ImmunoSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Genetic':
+	    self.settings_panel = GeneticSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Spin':
+	    self.settings_panel = SpinningSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Wash':
+	    self.settings_panel = WashSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Dry':
+	    self.settings_panel = DrySettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Medium':
+	    self.settings_panel = MediumSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Incubator':
+	    self.settings_panel = IncubatorSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'TLM':  # may link with microscope settings??
+	    self.settings_panel = TLMSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'HCS':  # may link with microscope settings??
+	    self.settings_panel = HCSSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'FCS':  # may link with flowcytometer settings??
+	    self.settings_panel = FCSSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	if get_tag_type(tag) == 'Notes':  
+	    self.settings_panel = NoteSettingPanel(self.settings_container)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
 	    
+	self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)        
+	self.settings_container.Layout()
+	self.settings_panel.ClearBackground()
+	self.settings_panel.Refresh()
 	
-	
-	print get_tag_type(tag)
-	print get_tag_event(tag)
-	print get_tag_instance(tag)
+
 
                 
     def OnSelChanged(self, event):
@@ -316,75 +364,42 @@ class StockCultureSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-        
-        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_VC8)
-        self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, self.onTabClosing)
-        
-        # Get all the previously encoded StockCulture pages and re-Add them as pages
-        stk_list = sorted(meta.get_field_instances('StockCulture|Sample'))
-        
-        for stk_id in sorted(stk_list):
-            panel = StockCulturePanel(self.notebook,stk_id)
-            self.notebook.AddPage(panel, 'StockCulture No: %s'% stk_id, True)     
-        self.addStockCulturePageBtn = wx.Button(self, label="Add StockCulture")
-        self.addStockCulturePageBtn.Bind(wx.EVT_BUTTON, self.onAddStockCulturePage)
-        # at least one instance of the stkroscope exists so uers can copy from that instead of creating a new one
-        if stk_list:
-            self.addStockCulturePageBtn.Disable()
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(self.addStockCulturePageBtn  , 0, wx.ALL, 5)
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-    
-    def onTabClosing(self, event):
-        meta = ExperimentSettings.getInstance()
-        #first check whether this is the only instnace then it cant be deleted
-        stk_list = meta.get_field_instances('StockCulture|Sample')
-        
-        if len(stk_list) == 1:
-            event.Veto()
-            dlg = wx.MessageDialog(self, 'Can not delete the only instance', 'Deleting..', wx.OK| wx.ICON_STOP)
-            dlg.ShowModal()
-            return
-        
-        tab_caption =  self.notebook.GetPageText(event.GetSelection())
-        self.stk_id = tab_caption.split(':')[1].strip()
-        
-        dlg = wx.MessageDialog(self, 'Deleting Stock Culture no %s' %self.stk_id, 'Deleting..', wx.OK| wx.ICON_WARNING)
-        if dlg.ShowModal() == wx.ID_OK:
-            #remove the instances 
-            meta.remove_field('StockCulture|Sample|CellLine|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|ATCCref|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Organism|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Gender|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Age|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Organ|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Tissue|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Phenotype|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Genotype|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Strain|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|PassageNumber|%s'%str(self.stk_id), notify_subscribers =False)
-            meta.remove_field('StockCulture|Sample|Density|%s'%str(self.stk_id))
-  
+		
+	self.protocol = 'StockCulture|Sample'	
 
-    def onAddStockCulturePage(self, event):
-        # This button is active only at the first instance
-        stk_id = 1
-        panel = StockCulturePanel(self.notebook,stk_id)
-        self.notebook.AddPage(panel, 'StockCulture No: %s'% stk_id, True)        
-        #Disable the add button
-        self.addStockCulturePageBtn.Disable()
-        
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
+
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = StockCulturePanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'StockCulture No: %s'%(instance_id), True)
+		
+	# Buttons
+	addTabBtn = wx.Button(self, label="Add StockCulture")
+	addTabBtn.Bind(wx.EVT_BUTTON, self.onAddTab)
+	#loadTabBtn = wx.Button(self, label="Load StockCulture")
+	#loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadStockCulture)        
+
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(addTabBtn  , 0, wx.ALL, 5)
+	#btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+
+	
+    def onAddTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	panel = StockCulturePanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'StockCulture No: %s'%next_tab_num, True)
+
 
 class StockCulturePanel(wx.Panel):
     def __init__(self, parent, stk_id=None):
@@ -675,6 +690,7 @@ class MicroscopeSettingPanel(wx.Panel):
 	self.protocol = 'Instrument|Microscope'
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
         self.next_page_num = 1
@@ -802,18 +818,19 @@ class MicroscopePanel(wx.Panel):
 	headfgs.Add(self.progpercent, 0)
 
 	#-- COLLAPSIBLE PANES ---#
-	strucpane= wx.CollapsiblePane(self.sw, label="Hardware", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
-	self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, strucpane)
-	self.strucPane(strucpane.GetPane())	
+	self.strucpane= wx.CollapsiblePane(self.sw, label="Hardware", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
+	self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.strucpane)
+	self.hardwarePane(self.strucpane.GetPane())
+	self.strucpane.Disable()
 	
         self.illumpane = wx.CollapsiblePane(self.sw, label="Optics", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
         self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.illumpane)
-        self.makeIlluminationPane(self.illumpane.GetPane())
+        self.opticsPane(self.illumpane.GetPane())
 
 	#---  Sizers ---#
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(headfgs, 0, wx.ALL, 25)
-	sizer.Add(strucpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
+	sizer.Add(self.strucpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
         sizer.Add(self.illumpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
 
         self.sw.SetSizer(sizer)
@@ -827,7 +844,7 @@ class MicroscopePanel(wx.Panel):
     def OnPaneChanged(self, evt=None):
         self.sw.Layout()
     
-    def strucPane(self, pane):
+    def hardwarePane(self, pane):
 	''' This pane makes the microscope stand (backbone of the microscope)'''	
 	
 	meta = ExperimentSettings.getInstance()
@@ -1049,7 +1066,7 @@ class MicroscopePanel(wx.Panel):
 
 	self.pane.SetSizer(fgs)
 
-    def makeIlluminationPane(self, pane):
+    def opticsPane(self, pane):
 	''' This pane makes the Illumination pane of the microscope. Each component of the illum pane can have mulitple components
 	which can again has multiple attributes'''
 	
@@ -1512,10 +1529,7 @@ class MicroscopePanel(wx.Panel):
 	fgs.Add(bot_fgs)
 	
 	self.pane.SetSizer(fgs)
-	   
 
-    def MakePaneContent(self, pane):
-	pass
 
     def OnSavingData(self, event):
 	ctrl = event.GetEventObject()
@@ -1580,14 +1594,8 @@ class MicroscopePanel(wx.Panel):
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
 	    self.file_path = os.path.join(dirname, filename)
-	    
-	meta.save_supp_protocol_file(self.file_path, self.protocol) 
+	    meta.save_supp_protocol_file(self.file_path, self.protocol) 
 
-
-	    
-	
-	
-	
 
 class FilterSpectrum(wx.Panel):
     def __init__(self, parent):
@@ -1649,6 +1657,7 @@ class FlowcytometerSettingPanel(wx.Panel):
 	self.protocol = 'Instrument|Flowcytometer'
        
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         
         ## Get all the previously encoded Flowcytometer pages and re-Add them as pages
         flow_list = sorted(meta.get_field_instances(self.protocol))
@@ -2032,6 +2041,7 @@ class PlateSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
         
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
          
         # Get all the previously encoded Microscope pages and re-Add them as pages
         field_ids = sorted(meta.get_field_instances('ExptVessel|Plate'))
@@ -2136,7 +2146,7 @@ class PlateConfigPanel(wx.Panel):
             self.groupname.Disable()
         fgs.Add(self.groupname, 0, wx.EXPAND)
             
-        ##--Design--#
+        #--Design--#
         fgs.Add(wx.StaticText(self.sw, -1, 'Plate Design'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         self.platedesign = wx.Choice(self.sw, -1, choices=WELL_NAMES_ORDERED, name='PlateDesign')
         for i, format in enumerate([WELL_NAMES[name] for name in WELL_NAMES_ORDERED]):
@@ -2303,6 +2313,7 @@ class FlaskSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
         
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
          
         # Get all the previously encoded Microscope pages and re-Add them as pages
         field_ids = sorted(meta.get_field_instances('ExptVessel|Flask'))
@@ -2528,8 +2539,7 @@ class DishSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
         
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
-        
-        
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
          
         # Get all the previously encoded Microscope pages and re-Add them as pages
         field_ids = sorted(meta.get_field_instances('ExptVessel|Dish'))
@@ -2755,8 +2765,7 @@ class CoverslipSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
         
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
-        
-        
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
          
         # Get all the previously encoded Microscope pages and re-Add them as pages
         field_ids = sorted(meta.get_field_instances('ExptVessel|Coverslip'))
@@ -2982,6 +2991,7 @@ class CellSeedSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         cellload_list = sorted(meta.get_field_instances('CellTransfer|Seed|'))
         self.cellload_next_page_num = 1
@@ -3128,6 +3138,7 @@ class CellHarvestSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         cellload_list = sorted(meta.get_field_instances('CellTransfer|Seed|'))
         self.cellload_next_page_num = 1
@@ -3258,6 +3269,7 @@ class ChemicalSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         chemical_list = sorted(meta.get_field_instances('Perturbation|Chem|'))
         self.chemical_next_page_num = 1
@@ -3284,6 +3296,9 @@ class ChemicalSettingPanel(wx.Panel):
         self.SetSizer(sizer)
         self.Layout()
         self.Show()
+	
+    def onShowPage(self, page_num):
+	self.notebook.SetSelection(page_num)
 
     def onAddChemAgentPage(self, event):
         panel = ChemicalAgentPanel(self.notebook, self.chemical_next_page_num)
@@ -3311,7 +3326,7 @@ class ChemicalAgentPanel(wx.Panel):
         self.settings_controls[chemnamTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemnamTAG, default=''))
         self.settings_controls[chemnamTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[chemnamTAG].SetToolTipString('Name of the Chemical agent used')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Chemical Agent Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[chemnamTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         #  Chem Concentration and Unit
@@ -3335,7 +3350,7 @@ class ChemicalAgentPanel(wx.Panel):
         self.settings_controls[chemmfgTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemmfgTAG, default=''))
         self.settings_controls[chemmfgTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[chemmfgTAG].SetToolTipString('Name of the Chemical agent Manufacturer')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Chemical Agent Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[chemmfgTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         #  Catalogue Number
@@ -3343,14 +3358,14 @@ class ChemicalAgentPanel(wx.Panel):
         self.settings_controls[chemcatTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemcatTAG, default=''))
         self.settings_controls[chemcatTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[chemcatTAG].SetToolTipString('Name of the Chemical agent Catalogue Number')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Chemical Agent Catalogue Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Catalogue Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[chemcatTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
          #  Additives
         chemaddTAG = 'Perturbation|Chem|Additives|'+str(self.page_counter)
         self.settings_controls[chemaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemaddTAG, default=''), style=wx.TE_MULTILINE)
         self.settings_controls[chemaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[chemaddTAG].SetToolTipString('Name of Additives')
+        self.settings_controls[chemaddTAG].SetToolTipString(meta.get_field(chemaddTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Additives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[chemaddTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
@@ -3358,7 +3373,7 @@ class ChemicalAgentPanel(wx.Panel):
         chemothTAG = 'Perturbation|Chem|Other|'+str(self.page_counter)
         self.settings_controls[chemothTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemothTAG, default=''), style=wx.TE_MULTILINE)
         self.settings_controls[chemothTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[chemothTAG].SetToolTipString('Other informaiton')
+        self.settings_controls[chemothTAG].SetToolTipString(meta.get_field(chemothTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Other informaiton'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[chemothTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
@@ -3392,7 +3407,7 @@ class BiologicalSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
- 
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Flowcytometer pages and re-Add them as pages
         bio_list = sorted(meta.get_field_instances('Perturbation|Bio|'))
         self.bio_next_page_num = 1
@@ -3484,7 +3499,7 @@ class BiologicalAgentPanel(wx.Panel):
         bioaddTAG = 'Perturbation|Bio|Additives|'+str(self.page_counter)
         self.settings_controls[bioaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(bioaddTAG, default=''), style=wx.TE_MULTILINE)
         self.settings_controls[bioaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[bioaddTAG].SetToolTipString('Name of Additives')
+        self.settings_controls[bioaddTAG].SetToolTipString(meta.get_field(bioaddTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Additives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[bioaddTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
@@ -3492,7 +3507,7 @@ class BiologicalAgentPanel(wx.Panel):
         bioothTAG = 'Perturbation|Bio|Other|'+str(self.page_counter)
         self.settings_controls[bioothTAG] = wx.TextCtrl(self.sw, value=meta.get_field(bioothTAG, default=''), style=wx.TE_MULTILINE)
         self.settings_controls[bioothTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[bioothTAG].SetToolTipString('Other informaiton')
+        self.settings_controls[bioothTAG].SetToolTipString(meta.get_field(bioothTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Other informaiton'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[bioothTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
@@ -3527,6 +3542,7 @@ class ImmunoSettingPanel(wx.Panel):
 	self.protocol = 'Staining|Immuno'
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
         self.next_page_num = 1
@@ -3634,59 +3650,65 @@ class ImmunoPanel(wx.Panel):
 	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
 	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
         # Primary source and associated solvent
-	primaryantiTAG = 'Staining|Immuno|Primary|'+str(self.page_counter)
+        primaryantiTAG = 'Staining|Immuno|Primary|'+str(self.page_counter)
 	primaryanti = meta.get_field(primaryantiTAG, [])
-	self.settings_controls[primaryantiTAG+'|0']= wx.Choice(self.top_panel, -1, choices=['HomoSapiens(9606)', 'MusMusculus(10090)', 'RattusNorvegicus(10116)'])
+	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
+	self.settings_controls[primaryantiTAG+'|0']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
 	if len(primaryanti) > 0:
+	    self.settings_controls[primaryantiTAG+'|0'].Append(primaryanti[0])
 	    self.settings_controls[primaryantiTAG+'|0'].SetStringSelection(primaryanti[0])
-	self.settings_controls[primaryantiTAG+'|0'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
+	self.settings_controls[primaryantiTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
 	self.settings_controls[primaryantiTAG+'|0'].SetToolTipString('Primary source species') 
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Primary Antibody'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[primaryantiTAG+'|0'], 0, wx.EXPAND)
+        fgs.Add(self.settings_controls[primaryantiTAG+'|0'], 0, wx.EXPAND)	
 	
 	self.settings_controls[primaryantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
 	if len(primaryanti)> 1:
 	    self.settings_controls[primaryantiTAG+'|1'].SetValue(primaryanti[1])
+	    self.settings_controls[primaryantiTAG+'|1'].SetToolTipString('Solvent used\n%s' %primaryanti[1])
 	self.settings_controls[primaryantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[primaryantiTAG+'|1'].SetToolTipString('Solvent')
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Solvent'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[primaryantiTAG+'|1'], 0, wx.EXPAND)	
 	
 	# Secondary source and associated solvent
 	scndantiTAG = 'Staining|Immuno|Secondary|'+str(self.page_counter)
 	scndanti = meta.get_field(scndantiTAG, [])
-	self.settings_controls[scndantiTAG+'|0']= wx.Choice(self.top_panel, -1, choices=['HomoSapiens(9606)', 'MusMusculus(10090)', 'RattusNorvegicus(10116)'])
+	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
+	self.settings_controls[scndantiTAG+'|0']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
 	if len(scndanti) > 0:
+	    self.settings_controls[scndantiTAG+'|0'].Append(scndanti[0])
 	    self.settings_controls[scndantiTAG+'|0'].SetStringSelection(scndanti[0])
-	self.settings_controls[scndantiTAG+'|0'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
+	self.settings_controls[scndantiTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
 	self.settings_controls[scndantiTAG+'|0'].SetToolTipString('Secondary source species') 
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Secondary Antibody'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[scndantiTAG+'|0'], 0, wx.EXPAND)
-	
+	fgs.Add(self.settings_controls[scndantiTAG+'|0'], 0, wx.EXPAND)		
+
 	self.settings_controls[scndantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
 	if len(scndanti)> 1:
 	    self.settings_controls[scndantiTAG+'|1'].SetValue(scndanti[1])
+	    self.settings_controls[scndantiTAG+'|1'].SetToolTipString('Solvent used\n%s' %scndanti[1])
 	self.settings_controls[scndantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[scndantiTAG+'|1'].SetToolTipString('Solvent')
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Solvent'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[scndantiTAG+'|1'], 0, wx.EXPAND)	
 	
 	# Tertiary source and associated solvent
 	tertantiTAG = 'Staining|Immuno|Tertiary|'+str(self.page_counter)
 	tertanti = meta.get_field(tertantiTAG, [])
-	self.settings_controls[tertantiTAG+'|0']= wx.Choice(self.top_panel, -1, choices=['HomoSapiens(9606)', 'MusMusculus(10090)', 'RattusNorvegicus(10116)'])
+	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
+	self.settings_controls[tertantiTAG+'|0']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
 	if len(tertanti) > 0:
+	    self.settings_controls[tertantiTAG+'|0'].Append(tertanti[0])
 	    self.settings_controls[tertantiTAG+'|0'].SetStringSelection(tertanti[0])
-	self.settings_controls[tertantiTAG+'|0'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
+	self.settings_controls[tertantiTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
 	self.settings_controls[tertantiTAG+'|0'].SetToolTipString('Tertiary source species') 
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Tertiary Antibody'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[tertantiTAG+'|0'], 0, wx.EXPAND)
+	fgs.Add(self.settings_controls[tertantiTAG+'|0'], 0, wx.EXPAND)	
 	
 	self.settings_controls[tertantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
 	if len(tertanti)> 1:
 	    self.settings_controls[tertantiTAG+'|1'].SetValue(tertanti[1])
+	    self.settings_controls[tertantiTAG+'|1'].SetToolTipString('Solvent used\n%s' %tertanti[1])
 	self.settings_controls[tertantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[tertantiTAG+'|1'].SetToolTipString('Solvent')
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Solvent'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[tertantiTAG+'|1'], 0, wx.EXPAND)		
 	
@@ -3753,6 +3775,7 @@ class GeneticSettingPanel(wx.Panel):
 	self.protocol = 'Staining|Genetic'
 
 	self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
 	# Get all the previously encoded Microscope pages and re-Add them as pages
 	supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
 	self.next_page_num = 1
@@ -3843,7 +3866,7 @@ class GeneticPanel(wx.Panel):
 	self.settings_controls[targseqTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(targseqTAG, default=''))
 	self.settings_controls[targseqTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls[targseqTAG].SetInitialSize((100, 20))
-	self.settings_controls[targseqTAG].SetToolTipString('Target Sequence')
+	self.settings_controls[targseqTAG].SetToolTipString(meta.get_field(targseqTAG, default=''))
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Target Sequence'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	top_fgs.Add(self.settings_controls[targseqTAG], 0)
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
@@ -3851,7 +3874,7 @@ class GeneticPanel(wx.Panel):
 	primseqTAG = 'Staining|Genetic|Primer|'+str(self.page_counter)
 	self.settings_controls[primseqTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(primseqTAG, default=''))
 	self.settings_controls[primseqTAG].Bind(wx.EVT_TEXT,self.OnSavingData)
-	self.settings_controls[primseqTAG].SetToolTipString('Primer Sequence')
+	self.settings_controls[primseqTAG].SetToolTipString(meta.get_field(primseqTAG, default=''))
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Primer Sequence'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	top_fgs.Add(self.settings_controls[primseqTAG], 0)
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)	
@@ -3933,6 +3956,7 @@ class DyeSettingPanel(wx.Panel):
 	self.protocol = 'Staining|Dye'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
         self.next_page_num = 1
@@ -4079,6 +4103,7 @@ class SpinningSettingPanel(wx.Panel):
 	self.protocol = 'AddProcess|Spin'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
         self.next_page_num = 1
@@ -4228,6 +4253,7 @@ class WashSettingPanel(wx.Panel):
 	self.protocol = 'AddProcess|Wash'
 	
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
         self.next_page_num = 1
@@ -4374,6 +4400,7 @@ class DrySettingPanel(wx.Panel):
 	self.protocol = 'AddProcess|Dry'
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
         self.next_page_num = 1
@@ -4518,6 +4545,7 @@ class MediumSettingPanel(wx.Panel):
 	self.protocol = 'AddProcess|Medium'
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
         self.next_page_num = 1
@@ -4609,7 +4637,7 @@ class MediumPanel(wx.Panel):
 	self.settings_controls[additiveField] = wx.TextCtrl(self.top_panel, value=meta.get_field(additiveField, default=''))
 	self.settings_controls[additiveField].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls[additiveField].SetInitialSize((250,30))
-	self.settings_controls[additiveField].SetToolTipString('List the medium additives')
+	self.settings_controls[additiveField].SetToolTipString(meta.get_field(additiveField, default=''))
 		
 	title_fgs.Add(wx.StaticText(self.top_panel, -1, 'Medium additives  '), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	title_fgs.Add(self.settings_controls[additiveField], 0, wx.EXPAND|wx.ALL, 5)
@@ -4678,6 +4706,7 @@ class IncubatorSettingPanel(wx.Panel):
 	self.protocol = 'AddProcess|Incubator'
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
 	
@@ -4873,6 +4902,7 @@ class TLMSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         tlm_list = sorted(meta.get_field_instances('DataAcquis|TLM|'))
         self.tlm_next_page_num = 1
@@ -4924,22 +4954,24 @@ class TLMPanel(wx.Panel):
         #-- Microscope selection ---#
         tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
         self.settings_controls[tlmselctTAG] = wx.TextCtrl(self.sw, value=meta.get_field(tlmselctTAG, default=''))        
-        showInstBut = wx.Button(self.sw, -1, 'Show Microscope settings', (100,100))
+        showInstBut = wx.Button(self.sw, -1, 'Show Channels', (100,100))
         showInstBut.Bind (wx.EVT_BUTTON, self.OnShowDialog)
         self.settings_controls[tlmselctTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[tlmselctTAG].SetToolTipString('Microscope used for data acquisition')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Select Microscope Instance'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Select Channel'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[tlmselctTAG], 0, wx.EXPAND)
         fgs.Add(showInstBut, 0, wx.EXPAND)
         #-- Image Format ---#
-        tlmfrmtTAG = 'DataAcquis|TLM|Format|'+str(self.page_counter)
-        self.settings_controls[tlmfrmtTAG] = wx.Choice(self.sw, -1,  choices=['tiff', 'jpeg', 'stk'])
-        if meta.get_field(tlmfrmtTAG) is not None:
-            self.settings_controls[tlmfrmtTAG].SetStringSelection(meta.get_field(tlmfrmtTAG))
-        self.settings_controls[tlmfrmtTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[tlmfrmtTAG].SetToolTipString('Image Format')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Select Image Format'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[tlmfrmtTAG], 0, wx.EXPAND)
+	tlmfrmtTAG = 'DataAcquis|TLM|Format|'+str(self.page_counter)
+	organism_choices =['tiff', 'jpeg', 'stk', 'Other']
+	self.settings_controls[tlmfrmtTAG]= wx.ListBox(self.sw, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
+	if meta.get_field(tlmfrmtTAG) is not None:
+	    self.settings_controls[tlmfrmtTAG].Append(meta.get_field(tlmfrmtTAG))
+	    self.settings_controls[tlmfrmtTAG].SetStringSelection(meta.get_field(tlmfrmtTAG))
+	self.settings_controls[tlmfrmtTAG].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
+	self.settings_controls[tlmfrmtTAG].SetToolTipString('Image Format') 
+	fgs.Add(wx.StaticText(self.sw, -1, 'Image Format'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[tlmfrmtTAG], 0, wx.EXPAND)	
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         #  Time Interval
         tlmintTAG = 'DataAcquis|TLM|TimeInterval|'+str(self.page_counter)
@@ -5036,6 +5068,7 @@ class HCSSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         hcs_list = sorted(meta.get_field_instances('DataAcquis|HCS|'))
         self.hcs_next_page_num = 1
@@ -5088,23 +5121,25 @@ class HCSPanel(wx.Panel):
         #-- Microscope selection ---#
         hcsselctTAG = 'DataAcquis|HCS|MicroscopeInstance|'+str(self.page_counter)
         self.settings_controls[hcsselctTAG] = wx.TextCtrl(self.sw, value=meta.get_field(hcsselctTAG, default=''))
-        showInstBut = wx.Button(self.sw, -1, 'Show Microscope settings', (100,100))
+        showInstBut = wx.Button(self.sw, -1, 'Show Channels', (100,100))
         showInstBut.Bind (wx.EVT_BUTTON, self.OnShowDialog) 
         self.settings_controls[hcsselctTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[hcsselctTAG].SetToolTipString('Microscope used for data acquisition')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Select Microscope'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Select Channel'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[hcsselctTAG], 0, wx.EXPAND)
         fgs.Add(showInstBut, 0, wx.EXPAND)
         #-- Image Format ---#
-        hcsfrmtTAG = 'DataAcquis|HCS|Format|'+str(self.page_counter)
-        self.settings_controls[hcsfrmtTAG] = wx.Choice(self.sw, -1,  choices=['tiff', 'jpeg', 'stk'])
-        if meta.get_field(hcsfrmtTAG) is not None:
-            self.settings_controls[hcsfrmtTAG].SetStringSelection(meta.get_field(hcsfrmtTAG))
-        self.settings_controls[hcsfrmtTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[hcsfrmtTAG].SetToolTipString('Image Format')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Select Image Format'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[hcsfrmtTAG], 0, wx.EXPAND)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	hcsfrmtTAG = 'DataAcquis|HCS|Format|'+str(self.page_counter)
+	organism_choices =['tiff', 'jpeg', 'stk', 'Other']
+	self.settings_controls[hcsfrmtTAG]= wx.ListBox(self.sw, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
+	if meta.get_field(hcsfrmtTAG) is not None:
+	    self.settings_controls[hcsfrmtTAG].Append(meta.get_field(hcsfrmtTAG))
+	    self.settings_controls[hcsfrmtTAG].SetStringSelection(meta.get_field(hcsfrmtTAG))
+	self.settings_controls[hcsfrmtTAG].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
+	self.settings_controls[hcsfrmtTAG].SetToolTipString('Image Format') 
+	fgs.Add(wx.StaticText(self.sw, -1, 'Image Format'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[hcsfrmtTAG], 0, wx.EXPAND)	
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         #  Pixel Size
         hcspxlTAG = 'DataAcquis|HCS|PixelSize|'+str(self.page_counter)
         self.settings_controls[hcspxlTAG] = wx.TextCtrl(self.sw, value=meta.get_field(hcspxlTAG, default=''))
@@ -5126,7 +5161,7 @@ class HCSPanel(wx.Panel):
         self.settings_controls[hcssoftTAG] = wx.TextCtrl(self.sw, value=meta.get_field(hcssoftTAG, default=''))
         self.settings_controls[hcssoftTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[hcssoftTAG].SetToolTipString(' Software')
-        fgs.Add(wx.StaticText(self.sw, -1, ' Software Name and Version'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Software Name and Version'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[hcssoftTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
@@ -5179,6 +5214,7 @@ class FCSSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
         # Get all the previously encoded Microscope pages and re-Add them as pages
         flow_list = sorted(meta.get_field_instances('DataAcquis|FCS|'))
         self.flow_next_page_num = 1
@@ -5254,7 +5290,7 @@ class FCSPanel(wx.Panel):
         self.settings_controls[fcssoftTAG] = wx.TextCtrl(self.sw, value=meta.get_field(fcssoftTAG, default=''))
         self.settings_controls[fcssoftTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[fcssoftTAG].SetToolTipString(' Software')
-        fgs.Add(wx.StaticText(self.sw, -1, ' Software'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Software Name and Version'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[fcssoftTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         
@@ -5305,6 +5341,8 @@ class NoteSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
+	
         nte_list = sorted(meta.get_field_instances('Notes|'))
         self.nte_next_page_num = 1
         # update the  number of existing cell loading
@@ -5346,69 +5384,140 @@ class NotePanel(wx.Panel):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
 
         self.page_counter = page_counter
-
-        # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
-        # Attach a flexi sizer for the text controler and labels
-        self.fgs = wx.FlexGridSizer(rows=2, cols=2, hgap=5, vgap=5)
+ 
+        self.top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)	
+	self.bot_fgs = wx.FlexGridSizer(cols=1, hgap=5, vgap=5)
 	
-	self.noteSelect = wx.Choice(self.sw, -1,  choices=['CriticalPoint', 'Rest', 'Hint'])
+	self.noteSelect = wx.Choice(self.sw, -1,  choices=['CriticalPoint', 'Rest', 'Hint', 'URL', 'Video'])
 	self.noteSelect.SetStringSelection('')
 	self.noteSelect.Bind(wx.EVT_CHOICE, self.onCreateNotepad)
-	self.fgs.Add(wx.StaticText(self.sw, -1, 'Note type'), 0)
-	self.fgs.Add(self.noteSelect, 0, wx.EXPAND)	
+	self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Note type'), 0)
+	self.top_fgs.Add(self.noteSelect, 0, wx.EXPAND)
+	self.top_fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 	
 	#---------------Layout with sizers---------------
-	self.sw.SetSizer(self.fgs)
+	self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+	self.mainSizer.Add(self.top_fgs)
+	self.mainSizer.Add(self.bot_fgs)
+	self.sw.SetSizer(self.mainSizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)		
+	
+	if meta.get_field_tags('Notes|', str(self.page_counter)):
+	    self.noteTAG = meta.get_field_tags('Notes|', str(self.page_counter))[0]
+	    self.noteType = exp.get_tag_event(self.noteTAG)
+	    self.noteSelect.SetStringSelection(self.noteType)
+	    self.noteSelect.Disable()
+	    self.createNotePad()	
+
+	
+
+    def onCreateNotepad(self, event):
+	ctrl = event.GetEventObject()
+	self.noteType = ctrl.GetStringSelection()
+	self.createNotePad()
+    
+    def createNotePad(self):		
+	if self.noteType=='CriticalPoint' or self.noteType=='Rest'or self.noteType=='Hint':
+	    self.noteDescrip = wx.TextCtrl(self.sw,  value=meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter)), default=''), style=wx.TE_MULTILINE)
+	    self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
+	    self.noteDescrip.SetInitialSize((250, 300))
+	    self.noteSelect.SetStringSelection(self.noteType)
+	    self.noteSelect.Disable()
+	   
+	    self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Note Description'), 0)
+	    self.top_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
+	    self.top_fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	
+
+	if self.noteType == 'URL':
+	    self.noteDescrip = wx.TextCtrl(self.sw,  value=meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter)), default='http://www.jove.com/'))
+	    self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
+	    self.noteDescrip.SetInitialSize((250, 20))
+	    self.noteSelect.SetStringSelection(self.noteType)
+	    self.noteSelect.Disable()
+	    
+	    goURLBtn = wx.Button(self.sw, -1, 'Go to URL')
+	    goURLBtn.Bind(wx.EVT_BUTTON, self.goURL)
+	    
+	    self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Paste URL'), 0)
+	    self.top_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
+	    self.top_fgs.Add(goURLBtn, 0, wx.EXPAND)
+
+	if self.noteType == 'Video':
+	    self.mediaTAG = 'Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))
+	    self.noteDescrip = wx.TextCtrl(self.sw, value=meta.get_field(self.mediaTAG, default=''))
+	    self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)	    
+	    self.browseBtn = wx.Button(self.sw, -1, 'Load Media File')
+	    self.browseBtn.Bind(wx.EVT_BUTTON, self.loadFile)
+	    self.mediaplayer = MediaPlayer(self.sw)
+	    
+	    if meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))) is not None:	
+		self.mediaplayer.mc.Load(meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))))		
+
+	    self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Media file path'), 0)
+	    self.top_fgs.Add(self.noteDescrip, 0)
+	    self.top_fgs.Add(self.browseBtn, 0)
+	    
+	    self.bot_fgs.Add(self.mediaplayer, 0)
+
+	self.sw.SetSizer(self.mainSizer)
 	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)	
-        
-        ####################################################
-        ## TODO:  Add capability to add video/image notes ##
-        ####################################################
-	if meta.get_field_tags('Notes|', str(self.page_counter)):
-	    self.noteTAG = meta.get_field_tags('Notes|', str(self.page_counter))[0]
-            self.noteType = self.noteTAG.split('|')[1]
-            self.noteSelect.SetStringSelection(self.noteType)
-            self.noteSelect.Disable()
-            
-            self.noteDescrip = wx.TextCtrl(self.sw,  value=meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))), style=wx.TE_MULTILINE)
-            self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
-            self.noteDescrip.SetInitialSize((250, 300))
-            self.fgs.Add(wx.StaticText(self.sw, -1, 'Note Description'), 0)
-            self.fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
-	    
-	    #---------------Layout with sizers---------------
-	    self.sw.SetSizer(self.fgs)
-	    self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
     
-	    self.Sizer = wx.BoxSizer(wx.VERTICAL)
-	    self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5) 	    
-
-    def onCreateNotepad(self, event):
-	
-	ctrl = event.GetEventObject()
-	self.noteType = ctrl.GetStringSelection()
-        self.noteSelect.Disable()
-        self.noteDescrip = wx.TextCtrl(self.sw,  value='', style=wx.TE_MULTILINE)
-        self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.noteDescrip.SetInitialSize((250, 300))
-        self.fgs.Add(wx.StaticText(self.sw, -1, 'Note Description'), 0)
-        self.fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
-
-        #---------------Layout with sizers---------------
-        self.sw.SetSizer(self.fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)        
+    def loadFile(self, event):
+	dlg = wx.FileDialog(None, "Select a media file",
+	                        defaultDir=os.getcwd(), wildcard='*.mp3;*.mpg;*.mid;*.wav; *.wmv;*.au;*.avi', style=wx.OPEN|wx.FD_CHANGE_DIR)
+		# read the supp protocol file
+	if dlg.ShowModal() == wx.ID_OK:
+	    filename = dlg.GetFilename()
+	    dirname = dlg.GetDirectory()
+	    file_path = os.path.join(dirname, filename)
+	    self.noteDescrip.SetValue(file_path)
+	    self.mediaplayer.mc.Load(file_path)
+		
+    def onFileLoad(self, event):
+	self.path = self.fbb.GetValue()
+	self.mediaplayer.mc.Load(self.path)    
+    
+    def goURL(self, event):
+	try:
+	    webbrowser.open(self.noteDescrip.GetValue())
+	except:
+            dial = wx.MessageDialog(None, 'Unable to launch internet browser', 'Error', wx.OK | wx.ICON_ERROR)
+            dial.ShowModal()  
+            return
 
     def OnSavingData(self, event):	
         meta = ExperimentSettings.getInstance()    
         self.noteTAG = 'Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))
         meta.set_field(self.noteTAG, self.noteDescrip.GetValue())
+
+class MediaPlayer(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent,  size=(250, 300))
+        self.SetBackgroundColour(self.GetBackgroundColour())
+
+        try:
+            self.mc = wx.media.MediaCtrl(self)
+        except:
+            dial = wx.MessageDialog(None, 'Unable to play media file', 'Error', wx.OK | wx.ICON_ERROR)
+            dial.ShowModal()  
+            return
+
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        vsizer.Add(self.mc, 0, border=10)
+        self.SetSizer(vsizer)
+        
+        self.mc.ShowPlayerControls()
+
+    #def onPlay(self):
+        #self.mc.Play()
 
         
 if __name__ == '__main__':
