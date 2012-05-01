@@ -376,29 +376,33 @@ class StockCultureSettingPanel(wx.Panel):
 
 	for instance_id in sorted(meta.get_field_instances(self.protocol)):
 	    panel = StockCulturePanel(self.notebook, int(instance_id))
-	    self.notebook.AddPage(panel, 'StockCulture No: %s'%(instance_id), True)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
 		
 	# Buttons
-	addTabBtn = wx.Button(self, label="Add StockCulture")
-	addTabBtn.Bind(wx.EVT_BUTTON, self.onAddTab)
-	#loadTabBtn = wx.Button(self, label="Load StockCulture")
-	#loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadStockCulture)        
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	#loadTabBtn = wx.Button(self, label="Load Instance")
+	#loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
 	# Sizers
 	mainsizer = wx.BoxSizer(wx.VERTICAL)
 	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-	btnSizer.Add(addTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
 	#btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
 	mainsizer.Add(btnSizer)
 	self.SetSizer(mainsizer)
 	self.Layout()
-
 	
-    def onAddTab(self, event):
+    def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
 	panel = StockCulturePanel(self.notebook, next_tab_num)
-	self.notebook.AddPage(panel, 'StockCulture No: %s'%next_tab_num, True)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
 
 
 class StockCulturePanel(wx.Panel):
@@ -471,7 +475,7 @@ class StockCulturePanel(wx.Panel):
         self.settings_controls[ageTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(ageTAG, default=''))
         self.settings_controls[ageTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[ageTAG].SetToolTipString('Age of the organism in days when the cells were collected. .')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Age of organism (days)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.top_panel, -1, 'Age of Organism (days)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[ageTAG], 0, wx.EXPAND)
         # Organ
         organTAG = 'StockCulture|Sample|Organ|%s'%str(self.stk_id)
@@ -681,108 +685,64 @@ class MicroscopeSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-	
-	self.protocol = 'Instrument|Microscope'
+		
+	self.protocol = 'Instrument|Microscope'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-        for protocol_id in supp_protocol_list:
-            panel = MicroscopePanel(self.notebook, int(protocol_id))
-            self.notebook.AddPage(panel, 'Microscope No: %s'%(protocol_id), True)
 
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Microscope Settings")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Microscope Setttings")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = MicroscopePanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = MicroscopePanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Microscope No: %s'%str(self.next_page_num), True)
-        self.next_page_num += 1
-    
-    def onLoadSuppProtocol(self, event):
-        meta = ExperimentSettings.getInstance()
-        
-        dlg = wx.FileDialog(None, "Select the file containing microscope settings...",
-                                    defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-        # read the supp protocol file
-        if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetFilename()
-            dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
 	
-	# set the panel accordingly    
-	panel = MicroscopePanel(self.notebook, self.next_page_num)
-	self.notebook.AddPage(panel, 'Microscope No: %s'%str(self.next_page_num), True)
-	self.next_page_num += 1	    
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = MicroscopePanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
-        
-    #def onTabClosing(self, event):
-        #meta = ExperimentSettings.getInstance()
-        ##first check whether this is the only instnace then it cant be deleted
-        #mic_list = meta.get_field_instances('Instrument|Microscope|')
-        
-        #if len(mic_list) == 1:
-            #event.Veto()
-            #dlg = wx.MessageDialog(self, 'Can not delete the only instance', 'Deleting..', wx.OK| wx.ICON_STOP)
-            #dlg.ShowModal()
-            #return
-        
-        #tab_caption =  self.notebook.GetPageText(event.GetSelection())
-        #self.mic_id = tab_caption.split(':')[1].strip()
-        
-        #dlg = wx.MessageDialog(self, 'Deleting Microscope no %s' %self.mic_id, 'Deleting..', wx.OK | wx.ICON_WARNING)
-        #if dlg.ShowModal() == wx.ID_OK:                    
-            ##remove the instances 
-            #meta.remove_field('Instrument|Microscope|Manufacter|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Model|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Type|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|LightSource|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Detector|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|LensApprture|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|LensCorr|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|IllumType|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Mode|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Immersion|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Correction|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|NominalMagnification|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|CalibratedMagnification|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|WorkDistance|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Filter|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Software|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Temp|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|C02|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Humidity|%s'%str(self.mic_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Microscope|Pressure|'+str(self.mic_id))
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
+	
+	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+                                    defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+	# read the supp protocol file and setup a new tab
+	if dlg.ShowModal() == wx.ID_OK:
+	    filename = dlg.GetFilename()
+	    dirname = dlg.GetDirectory()
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = MicroscopePanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
+    
 
 
 class MicroscopePanel(wx.Panel):
@@ -1650,95 +1610,64 @@ class FlowcytometerSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
-	meta = ExperimentSettings.getInstance()
+
         self.settings_controls = {}
-	self.protocol = 'Instrument|Flowcytometer'
-       
+        meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'Instrument|Flowcytometer'	
+
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        
-        ## Get all the previously encoded Flowcytometer pages and re-Add them as pages
-        flow_list = sorted(meta.get_field_instances(self.protocol))
-        
-        self.next_page_num = 1
-               # update the  number of existing cell loading
-        if flow_list: 
-            self.next_page_num  =  int(flow_list[-1])+1   
-	    for flow_id in sorted(flow_list):
-		panel = FlowcytometerPanel(self.notebook, flow_id)
-		self.notebook.AddPage(panel, 'Flowcytometer No: %s'% flow_id, True)
-            
-        self.addFlowcytometerPageBtn = wx.Button(self, label="Add Flowcytometer Settings")
-        self.addFlowcytometerPageBtn.Bind(wx.EVT_BUTTON, self.onAddFlowcytometerPage)
-        #self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, self.onTabClosing)
-	
-        self.loadFlowcytometerPageBtn = wx.Button(self, label="Load Flowcytometer Settings")
-        self.loadFlowcytometerPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSettings)        
-	
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = FlowcytometerPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(self.addFlowcytometerPageBtn  , 0, wx.ALL, 5)
-	btnSizer.Add(self.loadFlowcytometerPageBtn, 0, wx.ALL, 5)
-        
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = FlowcytometerPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
-    #def onTabClosing(self, event):
-        #meta = ExperimentSettings.getInstance()
-        ##first check whether this is the only instnace then it cant be deleted
-        #flow_list = meta.get_field_instances('Instrument|Flowcytometer|')
-        
-        #if len(flow_list) == 1:
-            #event.Veto()
-            #dlg = wx.MessageDialog(self, 'Can not delete the only instance', 'Deleting..', wx.OK| wx.ICON_STOP)
-            #dlg.ShowModal()
-            #return
-        
-        #tab_caption =  self.notebook.GetPageText(event.GetSelection())
-        #self.flow_id = tab_caption.split(':')[1].strip()
-        
-        #dlg = wx.MessageDialog(self, 'Deleting Flowcytometer no %s' %self.flow_id, 'Deleting..', wx.OK | wx.ICON_WARNING)
-        #if dlg.ShowModal() == wx.ID_OK:  
-            #meta.remove_field('Instrument|Flowcytometer|Manufacter|%s'%str(self.flow_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Flowcytometer|Model|%s'%str(self.flow_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Flowcytometer|Type|%s'%str(self.flow_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Flowcytometer|LightSource|%s'%str(self.flow_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Flowcytometer|Detector|%s'%str(self.flow_id), notify_subscribers =False)
-            #meta.remove_field('Instrument|Flowcytometer|Filter|%s'%str(self.flow_id))
-
-        
-    def onAddFlowcytometerPage(self, event):
-        # This button is active only at the first instance
-        panel = FlowcytometerPanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Flowcytometer No: %s'% self.next_page_num, True)        
-        #Disable the add button
-        self.next_page_num +=1
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
-    def onLoadSettings(self, event):
-	meta = ExperimentSettings.getInstance()
-	
-	dlg = wx.FileDialog(None, "Select the file containing your instrument settings...",
+	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_flowcytometer_settings(file_path, self.protocol+'|%s'%str(self.next_page_num))
-
-	    # set the panel accordingly    
-	    panel = FlowcytometerPanel(self.notebook, self.next_page_num)
-	    self.notebook.AddPage(panel, 'Flowcytometer No: %s'%str(self.next_page_num), True)
-	    self.next_page_num += 1	            
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = FlowcytometerPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
+   
 
 class FlowcytometerPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -2984,46 +2913,43 @@ class CellSeedSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'CellTransfer|Seed'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        cellload_list = sorted(meta.get_field_instances('CellTransfer|Seed|'))
-        self.cellload_next_page_num = 1
-        # update the  number of existing cell loading
-        if cellload_list: 
-            self.cellload_next_page_num  =  int(cellload_list[-1])+1
-        for cellload_id in cellload_list:
-            panel = CellSeedPanel(self.notebook, int(cellload_id))
-            self.notebook.AddPage(panel, 'Cell Seeding Specification No: %s'%(cellload_id), True)
 
-        addCellSeedPageBtn = wx.Button(self, label="Add Cell Seeding Specification")
-        addCellSeedPageBtn.Bind(wx.EVT_BUTTON, self.onAddCellSeedPage)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = CellSeedPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)      
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addCellSeedPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddCellSeedPage(self, event):
-        panel = CellSeedPanel(self.notebook, self.cellload_next_page_num)
-        self.notebook.AddPage(panel, 'Cell Seeding Specification No: %s'%(self.cellload_next_page_num), True)
-        self.cellload_next_page_num += 1
-
-
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = CellSeedPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+    
 class CellSeedPanel(wx.Panel):
     def __init__(self, parent, page_counter):
 
@@ -3131,48 +3057,42 @@ class CellHarvestSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'CellTransfer|Harvest'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        cellload_list = sorted(meta.get_field_instances('CellTransfer|Seed|'))
-        self.cellload_next_page_num = 1
-        # update the  number of existing cell loading
-        ## Get all the previously encoded Flowcytometer pages and re-Add them as pages
-        cellharv_list = meta.get_field_instances('CellTransfer|Harvest|')
-        self.cellharv_next_page_num = 1
-        # update the  number of existing cellharvcytometer
-        if cellharv_list:
-            self.cellharv_next_page_num =  int(cellharv_list[-1])+1
-        for cellharv_id in cellharv_list:
-            panel = CellHarvestPanel(self.notebook, int(cellharv_id))
-            self.notebook.AddPage(panel, 'Cell Harvest Specification No: %s'%(cellharv_id), True)
 
-        addCellHarvestPageBtn = wx.Button(self, label="Add Cell Harvest Specification")
-        addCellHarvestPageBtn.Bind(wx.EVT_BUTTON, self.onAddCellHarvestPage)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = CellHarvestPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)       
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addCellHarvestPageBtn , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddCellHarvestPage(self, event):
-        panel = CellHarvestPanel(self.notebook, self.cellharv_next_page_num)
-        self.notebook.AddPage(panel, 'Cell Harvest Specification No: %s'%(self.cellharv_next_page_num), True)
-        self.cellharv_next_page_num += 1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = CellHarvestPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
 
 class CellHarvestPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -3262,49 +3182,42 @@ class ChemicalSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'Perturbation|Chem'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        chemical_list = sorted(meta.get_field_instances('Perturbation|Chem|'))
-        self.chemical_next_page_num = 1
-        # update the  number of existing cell loading
-        if chemical_list: 
-            self.chemical_next_page_num  =  int(chemical_list[-1])+1
-        for chemical_id in chemical_list:
-            panel = ChemicalAgentPanel(self.notebook, int(chemical_id))
-            self.notebook.AddPage(panel, 'Chemical Agent No: %s'%(chemical_id), True)
 
-        # Add the buttons
-        addChemAgentPageBtn = wx.Button(self, label="Add Chemical Agent")
-        addChemAgentPageBtn.Bind(wx.EVT_BUTTON, self.onAddChemAgentPage)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = ChemicalAgentPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addChemAgentPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
 	
-    def onShowPage(self, page_num):
-	self.notebook.SetSelection(page_num)
-
-    def onAddChemAgentPage(self, event):
-        panel = ChemicalAgentPanel(self.notebook, self.chemical_next_page_num)
-        self.notebook.AddPage(panel, 'Chemical Agent No: %s'%(self.chemical_next_page_num), True)
-        self.chemical_next_page_num += 1 
-
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = ChemicalAgentPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
 
 class ChemicalAgentPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -3400,45 +3313,44 @@ class BiologicalSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'Perturbation|Bio'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Flowcytometer pages and re-Add them as pages
-        bio_list = sorted(meta.get_field_instances('Perturbation|Bio|'))
-        self.bio_next_page_num = 1
-        # update the  number of existing biocytometer
-        if bio_list:
-            self.bio_next_page_num =  int(bio_list[-1])+1
-        for bio_id in bio_list:
-            panel = BiologicalAgentPanel(self.notebook, int(bio_id))
-            self.notebook.AddPage(panel, 'Biological Agent No: %s'%(bio_id), True)
 
-        # Add the buttons
-        addBioAgentPageBtn = wx.Button(self, label="Add Biological Agent")
-        addBioAgentPageBtn.Bind(wx.EVT_BUTTON, self.onAddBioAgentPage)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = BiologicalAgentPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+      
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = BiologicalAgentPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
 
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addBioAgentPageBtn , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddBioAgentPage(self, event):
-        panel = BiologicalAgentPanel(self.notebook, self.bio_next_page_num)
-        self.notebook.AddPage(panel, 'Biological Agent No: %s'%(self.bio_next_page_num), True)
-        self.bio_next_page_num += 1    
         
 class BiologicalAgentPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -3533,69 +3445,63 @@ class ImmunoSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-	
-	self.protocol = 'Staining|Immuno'
+		
+	self.protocol = 'Staining|Immuno'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-        for protocol_id in supp_protocol_list:
-            panel = ImmunoPanel(self.notebook, int(protocol_id))
-            self.notebook.AddPage(panel, 'Staining Protocol No: %s'%(protocol_id), True)
 
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Staining Protocol")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Staining Protocol")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = ImmunoPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = ImmunoPanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Staining Protocol No: %s'%str(self.next_page_num), True)
-        self.next_page_num += 1
-    
-    def onLoadSuppProtocol(self, event):
-        meta = ExperimentSettings.getInstance()
-        
-        dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
-                                    defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-        # read the supp protocol file
-        if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetFilename()
-            dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
 	
-	# set the panel accordingly    
-	panel = ImmunoPanel(self.notebook, self.next_page_num)
-	self.notebook.AddPage(panel, 'Staining Protocol No: %s'%str(self.next_page_num), True)
-	self.next_page_num += 1	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = ImmunoPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+    
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
+	
+	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+                                    defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+	# read the supp protocol file and setup a new tab
+	if dlg.ShowModal() == wx.ID_OK:
+	    filename = dlg.GetFilename()
+	    dirname = dlg.GetDirectory()
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = ImmunoPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
 
 class ImmunoPanel(wx.Panel):    
@@ -3763,72 +3669,66 @@ class ImmunoPanel(wx.Panel):
 ########################################################################
 class GeneticSettingPanel(wx.Panel):
     """
-     Panel that holds parameter input panel and the buttons for more additional panel
-     """
+    Panel that holds parameter input panel and the buttons for more additional panel
+    """
     def __init__(self, parent, id=-1):
-	"""Constructor"""
-	wx.Panel.__init__(self, parent, id)
+        wx.Panel.__init__(self, parent, id)
 
-	self.settings_controls = {}
-	meta = ExperimentSettings.getInstance()
-	
-	self.protocol = 'Staining|Genetic'
+        self.settings_controls = {}
+        meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'Staining|Genetic'	
 
-	self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-	# Get all the previously encoded Microscope pages and re-Add them as pages
-	supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-	self.next_page_num = 1
-	# update the  number of existing cell loading
-	if supp_protocol_list: 
-	    self.next_page_num  =  int(supp_protocol_list[-1])+1
-	for protocol_id in supp_protocol_list:
-	    panel = GeneticPanel(self.notebook, int(protocol_id))
-	    self.notebook.AddPage(panel, 'Staining Protocol No: %s'%(protocol_id), True)
 
-	# Add the buttons
-	addPageBtn = wx.Button(self, label="Add Staining Protocol")
-	addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-	
-	loadPageBtn = wx.Button(self, label="Load Staining Protocol")
-	loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = GeneticPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-	# create some sizers
-	sizer = wx.BoxSizer(wx.VERTICAL)
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
 	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-	# layout the widgets
-	sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-	btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-	btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-	sizer.Add(btnSizer)
-	self.SetSizer(sizer)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
 	self.Layout()
-	self.Show()
-
-    def onAddPage(self, event):
-	panel = GeneticPanel(self.notebook, self.next_page_num)
-	self.notebook.AddPage(panel, 'Staining Protocol No: %s'%str(self.next_page_num), True)
-	self.next_page_num += 1
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = GeneticPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
-    def onLoadSuppProtocol(self, event):
-	meta = ExperimentSettings.getInstance()
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
-	
-	# set the panel accordingly    
-	panel = GeneticPanel(self.notebook, self.next_page_num)
-	self.notebook.AddPage(panel, 'Staining Protocol No: %s'%str(self.next_page_num), True)
-	self.next_page_num += 1	
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = GeneticPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
 class GeneticPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -3947,7 +3847,6 @@ class DyeSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
@@ -3957,59 +3856,55 @@ class DyeSettingPanel(wx.Panel):
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-	    for protocol_id in supp_protocol_list:
-		panel = DyePanel(self.notebook, int(protocol_id))
-		self.notebook.AddPage(panel, 'Staining Protocol No: %s'%(protocol_id), True)
 
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Staining Protocols")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Staining Protocols")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = DyePanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = DyePanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Staining Protocol No: %s'%(self.next_page_num), True)
-        self.next_page_num += 1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
 	
-    def onLoadSuppProtocol(self, event):
-	meta = ExperimentSettings.getInstance()
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = DyePanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+    
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = DyePanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
-	
-	    # set the panel accordingly    
-	    panel = DyePanel(self.notebook, self.next_page_num)
-	    self.notebook.AddPage(panel, 'Staining Protocol No: %s'%str(self.next_page_num), True)
-	    self.next_page_num += 1	    
 	
 class DyePanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -4094,69 +3989,63 @@ class SpinningSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
 		
-	self.protocol = 'AddProcess|Spin'	
+	self.protocol = 'AddProcess|Wash'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-	    for protocol_id in supp_protocol_list:
-		panel = SpinPanel(self.notebook, int(protocol_id))
-		self.notebook.AddPage(panel, 'Spinning Protocol No: %s'%(protocol_id), True)
 
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Spinning Protocols")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Spinning Protocols")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = SpinPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = SpinPanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Spinning Protocol No: %s'%(self.next_page_num), True)
-        self.next_page_num += 1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
 	
-    def onLoadSuppProtocol(self, event):
-	meta = ExperimentSettings.getInstance()
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = SpinPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+    
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
-	
-	    # set the panel accordingly    
-	    panel = SpinPanel(self.notebook, self.next_page_num)
-	    self.notebook.AddPage(panel, 'Spinning Protocol No: %s'%str(self.next_page_num), True)
-	    self.next_page_num += 1	    
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = SpinPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
 
 class SpinPanel(wx.Panel):
@@ -4244,69 +4133,63 @@ class WashSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-	
-	self.protocol = 'AddProcess|Wash'
-	
+		
+	self.protocol = 'AddProcess|Wash'	
+
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-	    for protocol_id in supp_protocol_list:
-		panel = WashPanel(self.notebook, int(protocol_id))
-		self.notebook.AddPage(panel, 'Washing Protocol No: %s'%(protocol_id), True)
 
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Washing Protocol")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Washing Protocol")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = WashPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = WashPanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Washing Protocol No: %s'%(self.next_page_num), True)
-        self.next_page_num += 1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = WashPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
-    def onLoadSuppProtocol(self, event):
-	meta = ExperimentSettings.getInstance()
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
-	
-	    # set the panel accordingly    
-	    panel = WashPanel(self.notebook, self.next_page_num)
-	    self.notebook.AddPage(panel, 'Washing Protocol No: %s'%str(self.next_page_num), True)
-	    self.next_page_num += 1	    
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = WashPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
 
 class WashPanel(wx.Panel):
@@ -4391,69 +4274,63 @@ class DrySettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-	
-	self.protocol = 'AddProcess|Dry'
+		
+	self.protocol = 'AddProcess|Dry'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-	    for protocol_id in supp_protocol_list:
-		panel = DryPanel(self.notebook, int(protocol_id))
-		self.notebook.AddPage(panel, 'Drying Protocol No: %s'%(protocol_id), True)
 
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Drying Protocol")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Drying Protocol")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = DryPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = DryPanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Drying Protocol No: %s'%(self.next_page_num), True)
-        self.next_page_num += 1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = DryPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
-    def onLoadSuppProtocol(self, event):
-	meta = ExperimentSettings.getInstance()
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
-	
-	    # set the panel accordingly    
-	    panel = DryPanel(self.notebook, self.next_page_num)
-	    self.notebook.AddPage(panel, 'Drying Protocol No: %s'%str(self.next_page_num), True)
-	    self.next_page_num += 1
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = DryPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
 class DryPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -4537,68 +4414,64 @@ class MediumSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-	self.protocol = 'AddProcess|Medium'
+		
+	self.protocol = 'AddProcess|Medium'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-	    for protocol_id in supp_protocol_list:
-		panel = MediumPanel(self.notebook, int(protocol_id))
-		self.notebook.AddPage(panel, 'Medium Addition Protocol No: %s'%(protocol_id), True)
 
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Medium Addition Protocol")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Medium Addition Protocol")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = MediumPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = MediumPanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Add Medium Protocol No: %s'%(self.next_page_num), True)
-        self.next_page_num += 1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = MediumPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
-    def onLoadSuppProtocol(self, event):
-	meta = ExperimentSettings.getInstance()
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
-	
-	    # set the panel accordingly    
-	    panel = MediumPanel(self.notebook, self.next_page_num)
-	    self.notebook.AddPage(panel, 'Add Medium Protocol No: %s'%str(self.next_page_num), True)
-	    self.next_page_num += 1
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = MediumPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
+
 
 
 class MediumPanel(wx.Panel):
@@ -4692,75 +4565,67 @@ class MediumPanel(wx.Panel):
 ################## INCUBATOR SETTING PANEL    ###########################
 ########################################################################            
 class IncubatorSettingPanel(wx.Panel):
-    
     """
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-
-	self.protocol = 'AddProcess|Incubator'
+		
+	self.protocol = 'AddProcess|Incubator'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        supp_protocol_list = sorted(meta.get_field_instances(self.protocol))
+
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = IncubatorPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
+
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
 	
-        self.next_page_num = 1
-        # update the  number of existing cell loading
-        if supp_protocol_list: 
-            self.next_page_num  =  int(supp_protocol_list[-1])+1
-	    for protocol_id in supp_protocol_list:
-		panel = IncubatorPanel(self.notebook, int(protocol_id))
-		self.notebook.AddPage(panel, 'Incubation Protocol No: %s'%(protocol_id), True)
-
-        # Add the buttons
-        addPageBtn = wx.Button(self, label="Add Incubation Protocol")
-        addPageBtn.Bind(wx.EVT_BUTTON, self.onAddPage)
-        
-        loadPageBtn = wx.Button(self, label="Load Incubation Protocol")
-        loadPageBtn.Bind(wx.EVT_BUTTON, self.onLoadSuppProtocol)        
-
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addPageBtn  , 0, wx.ALL, 5)
-        btnSizer.Add(loadPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPage(self, event):
-        panel = IncubatorPanel(self.notebook, self.next_page_num)
-        self.notebook.AddPage(panel, 'Incubation Protocol No: %s'%(self.next_page_num), True)
-        self.next_page_num += 1
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = IncubatorPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
-    def onLoadSuppProtocol(self, event):
-	meta = ExperimentSettings.getInstance()
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
-	                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
-	# read the supp protocol file
+                                    defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	    
-	    
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(self.next_page_num))
-	
-	    # set the panel accordingly    
-	    panel = IncubatorPanel(self.notebook, self.next_page_num)
-	    self.notebook.AddPage(panel, 'Incubation Protocol No: %s'%str(self.next_page_num), True)
-	    self.next_page_num += 1
+	    file_path = os.path.join(dirname, filename)
+	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = IncubatorPanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 	
         
 class IncubatorPanel(wx.Panel):
@@ -4895,46 +4760,46 @@ class TLMSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'DataAcquis|TLM'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        tlm_list = sorted(meta.get_field_instances('DataAcquis|TLM|'))
-        self.tlm_next_page_num = 1
-        # update the  number of existing cell loading
-        if tlm_list: 
-            self.tlm_next_page_num  =  int(tlm_list[-1])+1
-        for tlm_id in tlm_list:
-            panel = TLMPanel(self.notebook, int(tlm_id))
-            self.notebook.AddPage(panel, 'Timelapse Image Format No: %s'%(tlm_id), True)
 
-        # Add the buttons
-        addTLMPageBtn = wx.Button(self, label="Add Timelapse Image Format")
-        #addTLMPageBtn.SetBackgroundColour("#33FF33")
-        addTLMPageBtn.Bind(wx.EVT_BUTTON, self.onAddTLMPage)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = TLMPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	#loadTabBtn = wx.Button(self, label="Load Instance")
+	#loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	#btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = TLMPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
 
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addTLMPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddTLMPage(self, event):
-        panel = TLMPanel(self.notebook, self.tlm_next_page_num)
-        self.notebook.AddPage(panel, 'Timelapse Image Format No: %s'%(self.tlm_next_page_num), True)
-        self.tlm_next_page_num += 1
 
 class TLMPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -4949,7 +4814,17 @@ class TLMPanel(wx.Panel):
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+        fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Timelapse Image Format')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
+	fgs.Add(titlesizer, 0)
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #-- Microscope selection ---#
         tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
@@ -5045,7 +4920,7 @@ class TLMPanel(wx.Panel):
             if dia.listctrl.get_selected_instances() != []:
                 instance = dia.listctrl.get_selected_instances()[0]
                 tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
-                self.settings_controls[tlmselctTAG].SetValue(str(instance))
+                self.settings_controls[tlmselctTAG].SetValue(meta.get_field('Instrument|Microscope|ChannelName|%s'%str(instance)))
         dia.Destroy()
 
     def OnSavingData(self, event):
@@ -5061,47 +4936,43 @@ class HCSSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'DataAcquis|HCS'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        hcs_list = sorted(meta.get_field_instances('DataAcquis|HCS|'))
-        self.hcs_next_page_num = 1
-        # update the  number of existing cell loading
-        if hcs_list: 
-            self.hcs_next_page_num  =  int(hcs_list[-1])+1
-        for hcs_id in hcs_list:
-            panel = HCSPanel(self.notebook, int(hcs_id))
-            self.notebook.AddPage(panel, 'HCS Image Format No: %s'%(hcs_id), True)
-            
-        # Add the buttons
-        addHCSPageBtn = wx.Button(self, label="Add HCS File Format")
-        #addHCSPageBtn.SetBackgroundColour("#33FF33")
-        addHCSPageBtn.Bind(wx.EVT_BUTTON, self.onAddHCSPage)    
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = HCSPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
 
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addHCSPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddHCSPage(self, event):
-        panel = HCSPanel(self.notebook, self.hcs_next_page_num)
-        self.notebook.AddPage(panel, 'HCS Image Format No: %s'%(self.hcs_next_page_num), True)
-        self.hcs_next_page_num += 1
-
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = HCSPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+    
 
 class HCSPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -5127,7 +4998,7 @@ class HCSPanel(wx.Panel):
         self.settings_controls[hcsselctTAG].SetToolTipString('Microscope used for data acquisition')
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Channel'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[hcsselctTAG], 0, wx.EXPAND)
-        fgs.Add(showInstBut, 0, wx.EXPAND)
+        fgs.Add(showInstBut, 0, wx.EXPAND)	
         #-- Image Format ---#
 	hcsfrmtTAG = 'DataAcquis|HCS|Format|'+str(self.page_counter)
 	organism_choices =['tiff', 'jpeg', 'stk', 'Other']
@@ -5172,25 +5043,24 @@ class HCSPanel(wx.Panel):
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
-    
     def OnShowDialog(self, event):     
-        # link with the dynamic experiment settings
-        meta = ExperimentSettings.getInstance()
-        attributes = meta.get_attribute_list('Instrument|Microscope') 
-        
-        #check whether there is at least one attributes
-        if not attributes:
-            dial = wx.MessageDialog(None, 'No Instances exists!!', 'Error', wx.OK | wx.ICON_ERROR)
-            dial.ShowModal()  
-            return
-        #show the popup table 
-        dia = InstanceListDialog(self, 'Instrument|Microscope', selection_mode = False)
-        if dia.ShowModal() == wx.ID_OK:
-            if dia.listctrl.get_selected_instances() != []:
-                instance = dia.listctrl.get_selected_instances()[0]
-                hcsselctTAG = 'DataAcquis|HCS|MicroscopeInstance|'+str(self.page_counter)
-                self.settings_controls[hcsselctTAG].SetValue(str(instance))
-        dia.Destroy()
+	    # link with the dynamic experiment settings
+	    meta = ExperimentSettings.getInstance()
+	    attributes = meta.get_attribute_list('Instrument|Microscope') 
+	    
+	    #check whether there is at least one attributes
+	    if not attributes:
+		dial = wx.MessageDialog(None, 'No Instances exists!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return
+	    #show the popup table 
+	    dia = InstanceListDialog(self, 'Instrument|Microscope', selection_mode = False)
+	    if dia.ShowModal() == wx.ID_OK:
+		if dia.listctrl.get_selected_instances() != []:
+		    instance = dia.listctrl.get_selected_instances()[0]
+		    hcsselctTAG = 'DataAcquis|HCS|MicroscopeInstance|'+str(self.page_counter)
+		    self.settings_controls[hcsselctTAG].SetValue(meta.get_field('Instrument|Microscope|ChannelName|%s'%str(instance)))
+	    dia.Destroy()    
 
     def OnSavingData(self, event):
         ctrl = event.GetEventObject()
@@ -5207,47 +5077,42 @@ class FCSSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'DataAcquis|FCS'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        flow_list = sorted(meta.get_field_instances('DataAcquis|FCS|'))
-        self.flow_next_page_num = 1
-        # update the  number of existing cell loading
-        if flow_list: 
-            self.flow_next_page_num  =  int(flow_list[-1])+1
-        for flow_id in flow_list:
-            panel = FCSPanel(self.notebook, int(flow_id))
-            self.notebook.AddPage(panel, 'FCS Format No: %s'%(flow_id), True)
 
-        # Add the buttons
-        addFlowPageBtn = wx.Button(self, label="Add FCS File Format")
-        #addFlowPageBtn.SetBackgroundColour("#33FF33")
-        addFlowPageBtn.Bind(wx.EVT_BUTTON, self.onAddFlowPage)
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = FCSPanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
 
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addFlowPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddFlowPage(self, event):
-        panel = FCSPanel(self.notebook, self.flow_next_page_num)
-        self.notebook.AddPage(panel, 'FCS Format No: %s'%(self.flow_next_page_num), True)
-        self.flow_next_page_num += 1
-
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = FCSPanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
 
 class FCSPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -5334,45 +5199,43 @@ class NoteSettingPanel(wx.Panel):
     Panel that holds parameter input panel and the buttons for more additional panel
     """
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'Notes'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
+
+	for instance_id in sorted(meta.get_field_instances(self.protocol)):
+	    panel = NotePanel(self.notebook, int(instance_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(instance_id), True)
+		
+	# Buttons
+	createTabBtn = wx.Button(self, label="Create Instance")
+	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
 	
-        nte_list = sorted(meta.get_field_instances('Notes|'))
-        self.nte_next_page_num = 1
-        # update the  number of existing cell loading
-        if nte_list: 
-            self.nte_next_page_num  =  int(nte_list[-1])+1
-        for nte_id in nte_list:
-            panel = NotePanel(self.notebook, int(nte_id))
-            self.notebook.AddPage(panel, 'Note No: %s'%(nte_id), True)
-
-        # Add the buttons
-        addNTEPageBtn = wx.Button(self, label="Add Note")
-        addNTEPageBtn.Bind(wx.EVT_BUTTON, self.onAddNTEPage)
-
-        # create some sizers
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(addNTEPageBtn  , 0, wx.ALL, 5)
-
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddNTEPage(self, event):
-        panel = NotePanel(self.notebook, self.nte_next_page_num)
-        self.notebook.AddPage(panel, 'Note No: %s'%(self.nte_next_page_num), True)
-        self.nte_next_page_num += 1
+    def onCreateTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)
+	if meta.does_tag_exists(self.protocol, str(int(next_tab_num)-1)) is True:
+	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return  	    
+	
+	panel = NotePanel(self.notebook, next_tab_num)
+	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+    
 
 
 class NotePanel(wx.Panel):
@@ -5469,7 +5332,7 @@ class NotePanel(wx.Panel):
 
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)	
-    
+	
     def loadFile(self, event):
 	dlg = wx.FileDialog(None, "Select a media file",
 	                        defaultDir=os.getcwd(), wildcard='*.mp3;*.mpg;*.mid;*.wav; *.wmv;*.au;*.avi', style=wx.OPEN|wx.FD_CHANGE_DIR)
