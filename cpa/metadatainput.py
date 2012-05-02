@@ -395,11 +395,11 @@ class StockCultureSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return 	    
 	
 	panel = StockCulturePanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -434,6 +434,13 @@ class StockCulturePanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Stock Culture')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
     
         #----------- Labels and Text Controler-------        
         # Cell Line Name
@@ -540,52 +547,19 @@ class StockCulturePanel(wx.Panel):
 	self.fpbsizer = wx.FlexGridSizer(cols=1, vgap=5)	
 	
 	self.showPassages()
-
-        self.top_panel.SetSizer(fgs)
+	
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+        self.top_panel.SetSizer(swsizer)
         self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, 5)
         self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
-
 	
-        #self.Show()   	
-	
-        #self.sw.SetSizer(fgs)
-        #self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        #self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        #self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
-    
-    #def onCopyStockCulturePage(self, event):
-            
-        #meta = ExperimentSettings.getInstance()
-        ##Get the maximum microscope id from the list
-        #stk_list = meta.get_field_instances('StockCulture|Sample|')
-        
-        #if not stk_list:
-            #dial = wx.MessageDialog(None, 'No instance to duplicate', 'Error', wx.OK | wx.ICON_ERROR)
-            #dial.ShowModal()  
-            #return
-                    
-        #new_stk_id =  max(map(int, stk_list))+1
-        ##Copy all data fields from the selected instances
-        #meta.set_field('StockCulture|Sample|CellLine|%s'%str(new_stk_id),    meta.get_field('StockCulture|Sample|CellLine|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|ATCCref|%s'%str(new_stk_id),     meta.get_field('StockCulture|Sample|ATCCref|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Organism|%s'%str(new_stk_id),       meta.get_field('StockCulture|Sample|Organism|%s'%str(self.stk_id)), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Gender|%s'%str(new_stk_id),      meta.get_field('StockCulture|Sample|Gender|%s'%str(self.stk_id)), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Age|%s'%str(new_stk_id),         meta.get_field('StockCulture|Sample|Age|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Organ|%s'%str(new_stk_id),       meta.get_field('StockCulture|Sample|Organ|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Tissue|%s'%str(new_stk_id),       meta.get_field('StockCulture|Sample|Tissue|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Phenotype|%s'%str(new_stk_id),   meta.get_field('StockCulture|Sample|Phenotype|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Genotype|%s'%str(new_stk_id),    meta.get_field('StockCulture|Sample|Genotype|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Strain|%s'%str(new_stk_id),      meta.get_field('StockCulture|Sample|Strain|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|PassageNumber|%s'%str(new_stk_id), meta.get_field('StockCulture|Sample|PassageNumber|%s'%str(self.stk_id), default=''), notify_subscribers =False)
-        #meta.set_field('StockCulture|Sample|Density|%s'%str(new_stk_id),      meta.get_field('StockCulture|Sample|Density|%s'%str(self.stk_id), default=''))
-      
-        #panel = StockCulturePanel(self.Parent, new_stk_id)
-        #self.Parent.AddPage(panel, 'StockCulture No: %s'% new_stk_id, True)
     
     def onRecordPassage(self, event):
         meta = ExperimentSettings.getInstance()
@@ -670,7 +644,7 @@ class StockCulturePanel(wx.Panel):
 	passage_info = meta.get_field(self.tag_stump+'|%s|%s' %(passage, self.instance))
 	admin_info = dict(passage_info).get('ADMIN')
 	
-	return 'Operator %s Date %s Split 1:%s Cell Count %s' %(admin_info[0], admin_info[1], admin_info[2], admin_info[3])
+	return 'Operator %s Date %s Split 1:%s Cell Count %s/%s' %(admin_info[0], admin_info[1], admin_info[2], admin_info[3], admin_info[4])
   
     def OnSavingData(self, event):
 	ctrl = event.GetEventObject()
@@ -716,9 +690,9 @@ class MicroscopeSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return  	    
 	
@@ -726,9 +700,9 @@ class MicroscopeSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return 
 	
@@ -1641,19 +1615,19 @@ class FlowcytometerSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return 	    
 	
 	panel = FlowcytometerPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return 
 	
@@ -2049,11 +2023,11 @@ class PlateConfigPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)    
         
         #------- Heading ---#
-        text = wx.StaticText(self.sw, -1, 'Plate Settings')
-        font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
-        text.SetFont(font)
-        fgs.Add(text, 0)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	text = wx.StaticText(self.sw, -1, 'Plate Settings')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)
 
         #---- Plate number---#
         fgs.Add(wx.StaticText(self.sw, -1, 'Total number of plates in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -2144,12 +2118,16 @@ class PlateConfigPanel(wx.Panel):
         fgs.Add(self.deletePlategroupPageBtn, 0, wx.EXPAND)
         fgs.Add(self.createBtn, 0, wx.EXPAND)             
 
-        ##---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+        #---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
     def onCreatePlategroupPage(self, event):
         
@@ -2318,11 +2296,11 @@ class FlaskConfigPanel(wx.Panel):
                 inc_flask_ids.append(id)
         
         #------- Heading ---#
-        text = wx.StaticText(self.sw, -1, 'Flask Settings')
-        font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
-        text.SetFont(font)
-        fgs.Add(text, 0)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	text = wx.StaticText(self.sw, -1, 'Flask Settings')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)
 
         #---- Flask number---#
         fgs.Add(wx.StaticText(self.sw, -1, 'Total number of flasks in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -2380,12 +2358,16 @@ class FlaskConfigPanel(wx.Panel):
             self.createBtn.Disable()
         fgs.Add(self.createBtn, 0, wx.EXPAND)             
 
-        ##---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	#---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
     def onCreateFlaskgroupPage(self, event):
         
@@ -2544,11 +2526,11 @@ class DishConfigPanel(wx.Panel):
                 inc_dish_ids.append(id)
         
         #------- Heading ---#
-        text = wx.StaticText(self.sw, -1, 'Dish Settings')
-        font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
-        text.SetFont(font)
-        fgs.Add(text, 0)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	text = wx.StaticText(self.sw, -1, 'Dish Settings')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)
 
         #---- Dish number---#
         fgs.Add(wx.StaticText(self.sw, -1, 'Total number of dishs in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -2606,12 +2588,16 @@ class DishConfigPanel(wx.Panel):
             self.createBtn.Disable()
         fgs.Add(self.createBtn, 0, wx.EXPAND)             
 
-        ##---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+        #---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
     def onCreateDishgroupPage(self, event):
         
@@ -2770,11 +2756,11 @@ class CoverslipConfigPanel(wx.Panel):
                 inc_coverslip_ids.append(id)
         
         #------- Heading ---#
-        text = wx.StaticText(self.sw, -1, 'Coverslip Settings')
-        font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
-        text.SetFont(font)
-        fgs.Add(text, 0)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	text = wx.StaticText(self.sw, -1, 'Coverslip Settings')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)
 
         #---- Coverslip number---#
         fgs.Add(wx.StaticText(self.sw, -1, 'Total number of coverslips in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -2832,12 +2818,16 @@ class CoverslipConfigPanel(wx.Panel):
             self.createBtn.Disable()
         fgs.Add(self.createBtn, 0, wx.EXPAND)             
 
-        ##---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+        #---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
     def onCreateCoverslipgroupPage(self, event):
         
@@ -2941,9 +2931,9 @@ class CellSeedSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return  	    
 	
@@ -2963,7 +2953,13 @@ class CellSeedPanel(wx.Panel):
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5) 
+        fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Cell Seeding')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
         
         #-- Cell Line selection ---#
         celllineselcTAG = 'CellTransfer|Seed|StockInstance|'+str(self.page_counter)
@@ -3017,11 +3013,15 @@ class CellSeedPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
         
     def OnShowDialog(self, event):     
         # link with the dynamic experiment settings
@@ -3085,11 +3085,11 @@ class CellHarvestSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return   	    
 	
 	panel = CellHarvestPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -3108,6 +3108,13 @@ class CellHarvestPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Cell Harvesting')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
 
         cell_Line_instances = meta.get_field_instances('StockCulture|Sample|CellLine|')
         cell_Line_choices = []
@@ -3161,11 +3168,15 @@ class CellHarvestPanel(wx.Panel):
         fgs.Add(self.settings_controls[trypsTAG], 0, wx.EXPAND)  
 
         #---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
     def OnSavingData(self, event):
         ctrl = event.GetEventObject()
@@ -3210,12 +3221,12 @@ class ChemicalSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
-	
+	    return 		    
+	    
 	panel = ChemicalAgentPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
 
@@ -3233,6 +3244,13 @@ class ChemicalAgentPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Chemical Agent')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
 
         #  Chem Agent Name
         chemnamTAG = 'Perturbation|Chem|ChemName|'+str(self.page_counter)
@@ -3293,11 +3311,15 @@ class ChemicalAgentPanel(wx.Panel):
 
 
         #---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
     def OnSavingData(self, event):
         ctrl = event.GetEventObject()
@@ -3342,9 +3364,9 @@ class BiologicalSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return  	    
 	
@@ -3366,6 +3388,13 @@ class BiologicalAgentPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Biological Agent')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
 
         #  RNAi Sequence
         seqnamTAG = 'Perturbation|Bio|SeqName|'+str(self.page_counter)
@@ -3425,11 +3454,15 @@ class BiologicalAgentPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+        swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
     def OnSavingData(self, event):
         ctrl = event.GetEventObject()
@@ -3478,9 +3511,9 @@ class ImmunoSettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return   	    
 	
 	panel = ImmunoPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -3488,9 +3521,9 @@ class ImmunoSettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return 
+	    return   
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -3521,6 +3554,13 @@ class ImmunoPanel(wx.Panel):
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
 	top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Immuno Staining')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
 
         protnameTAG = 'Staining|Immuno|ProtocolName|'+str(self.page_counter)
         self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -3619,10 +3659,12 @@ class ImmunoPanel(wx.Panel):
 	fgs.Add(self.settings_controls[tertantiTAG+'|1'], 0, wx.EXPAND)		
 	
 	#---------------Layout with sizers---------------
-	topsizer = wx.BoxSizer(wx.VERTICAL)
-	topsizer.Add(top_fgs)
-	topsizer.Add(fgs)
-	self.top_panel.SetSizer(topsizer)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(top_fgs)
+	swsizer.Add(fgs)
+	self.top_panel.SetSizer(swsizer)
 	
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
@@ -3705,9 +3747,9 @@ class GeneticSettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return    	    
 	
 	panel = GeneticPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -3715,9 +3757,9 @@ class GeneticSettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return 
+	    return   
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -3748,6 +3790,12 @@ class GeneticPanel(wx.Panel):
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
 	top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	
+	text = wx.StaticText(self.top_panel, -1, 'Genetic Staining')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)		
 
 	protnameTAG = 'Staining|Genetic|ProtocolName|'+str(self.page_counter)
 	self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -3797,7 +3845,12 @@ class GeneticPanel(wx.Panel):
     
 		
         #---------------Layout with sizers---------------
-	self.top_panel.SetSizer(top_fgs)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(top_fgs)
+	self.top_panel.SetSizer(swsizer)	
+
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
@@ -3880,9 +3933,9 @@ class DyeSettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return   
 	
 	panel = DyePanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -3890,9 +3943,9 @@ class DyeSettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return 
+	    return   
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -3923,7 +3976,14 @@ class DyePanel(wx.Panel):
 	self.top_panel = wx.Panel(self)	
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
-	title_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Dye Staining')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)		
 
         protnameTAG = 'Staining|Dye|ProtocolName|'+str(self.page_counter)
         self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -3933,12 +3993,17 @@ class DyePanel(wx.Panel):
         self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
         self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
 	
-	title_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	title_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
-	title_fgs.Add(self.save_btn, 0, wx.ALL, 5)	
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
+	fgs.Add(self.save_btn, 0, wx.ALL, 5)	
 
-        #---------------Layout with sizers---------------	
-	self.top_panel.SetSizer(title_fgs)
+	#---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.top_panel.SetSizer(swsizer)
+	
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
@@ -3994,7 +4059,7 @@ class SpinningSettingPanel(wx.Panel):
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
 		
-	self.protocol = 'AddProcess|Wash'	
+	self.protocol = 'AddProcess|Spin'	
 
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
@@ -4022,9 +4087,9 @@ class SpinningSettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return    	    
 	
 	panel = SpinPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -4032,9 +4097,9 @@ class SpinningSettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return 
+	    return   
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -4166,9 +4231,9 @@ class WashSettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return    	    
 	
 	panel = WashPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -4176,9 +4241,9 @@ class WashSettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return 
+	    return   
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -4307,7 +4372,7 @@ class DrySettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return  	    
 	
@@ -4317,9 +4382,9 @@ class DrySettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return 
+	    return  
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -4447,7 +4512,7 @@ class MediumSettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return  	    
 	
@@ -4457,9 +4522,9 @@ class MediumSettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return 
+	    return   
 	
 	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -4602,7 +4667,7 @@ class IncubatorSettingPanel(wx.Panel):
     def onCreateTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not create next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return  	    
 	
@@ -4612,7 +4677,7 @@ class IncubatorSettingPanel(wx.Panel):
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)
 	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return 
 	
@@ -4791,9 +4856,9 @@ class TLMSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return  	    
 	
@@ -4817,14 +4882,11 @@ class TLMPanel(wx.Panel):
         fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Timelapse Image Format')
+	text = wx.StaticText(self.sw, -1, 'Image Format')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
 	titlesizer = wx.BoxSizer(wx.VERTICAL)
 	titlesizer.Add(text, 0)	
-	fgs.Add(titlesizer, 0)
-	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #-- Microscope selection ---#
         tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
@@ -4898,7 +4960,11 @@ class TLMPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+        self.sw.SetSizer(swsizer)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
@@ -4964,11 +5030,11 @@ class HCSSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return 	    
 	
 	panel = HCSPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -4988,6 +5054,13 @@ class HCSPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Image Format')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
         
         #-- Microscope selection ---#
         hcsselctTAG = 'DataAcquis|HCS|MicroscopeInstance|'+str(self.page_counter)
@@ -5036,12 +5109,16 @@ class HCSPanel(wx.Panel):
         fgs.Add(self.settings_controls[hcssoftTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
-        #---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	#---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
     def OnShowDialog(self, event):     
 	    # link with the dynamic experiment settings
@@ -5105,11 +5182,11 @@ class FCSSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return 	    
 	
 	panel = FCSPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
@@ -5128,6 +5205,13 @@ class FCSPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'FCS File Format')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
 
         #-- FlowCytometer selection ---#
         fcsselctTAG = 'DataAcquis|FCS|FlowcytInstance|'+str(self.page_counter)
@@ -5160,11 +5244,15 @@ class FCSPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         
         #---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
     def OnShowDialog(self, event):     
         # link with the dynamic experiment settings
@@ -5227,11 +5315,11 @@ class NoteSettingPanel(wx.Panel):
 	self.Layout()
 	
     def onCreateTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.does_tag_exists(self.protocol, str(int(next_tab_num)-1)) is True:
-	    dlg = wx.MessageDialog(None, 'Can not create instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Deleting..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not create the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  	    
+	    return 	    
 	
 	panel = NotePanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)

@@ -2,6 +2,7 @@ import wx
 import re
 import experimentsettings as exp
 from experimentsettings import ExperimentSettings
+from wx.lib.masked import NumCtrl
 
 meta = exp.ExperimentSettings.getInstance()
  
@@ -61,6 +62,10 @@ class StepBuilder(wx.ScrolledWindow):
 	    #-- Widgets ---#
 	    self.Parent.settings_controls[stepTAG+'|0'] = wx.TextCtrl(self, size=(200,-1), value=step_info[0], style=wx.TE_PROCESS_ENTER)
 	    self.Parent.settings_controls[stepTAG+'|1'] = wx.TextCtrl(self, size=(30,-1), value=step_info[1], style=wx.TE_PROCESS_ENTER)
+	    # Discuss about numerical input only here but the problem is 0 degree Temp means somethin??
+	    #self.Parent.settings_controls[stepTAG+'|1'] = wx.lib.masked.NumCtrl(self, size=(10,-1), style=wx.TE_PROCESS_ENTER)	
+	    #if isinstance(step_info[1], int): #it had value
+		#self.Parent.settings_controls[stepTAG+'|1'].SetValue(step_info[1])
 	    self.Parent.settings_controls[stepTAG+'|2'] = wx.TextCtrl(self, size=(30,-1), value=step_info[2], style=wx.TE_PROCESS_ENTER)	    
 	    self.del_btn = wx.Button(self, id=stepNo, label='Del -')
 	    self.add_btn = wx.Button(self, id=stepNo, label='Add +')

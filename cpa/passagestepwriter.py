@@ -7,7 +7,7 @@ from wx.lib.masked import NumCtrl
 
 meta = exp.ExperimentSettings.getInstance()
 Default_Protocol ={
-    'ADMIN' : ['Your name', '', '', ''],
+    'ADMIN' : ['Your name', '', '', '',''],
     'Step1' : ['Remove medium with a stripette','','', ''],
     'Step2' : ['Add trypsin in the following volumes - 1ml for the 60mm dish or T25 flask OR 2ml for 100mm dish or T75 flask','','', ''],
     'Step3' : ['Gently tip to ensure trypsin reaches all surfaces','','', ''],
@@ -21,7 +21,7 @@ Default_Protocol ={
  
 class PassageStepBuilder(wx.Dialog):
     def __init__(self, parent, protocol, currpassageNo):
-        wx.Dialog.__init__(self, parent, -1, size=(600,500), style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER, title = 'Passage %s' %str(currpassageNo))
+        wx.Dialog.__init__(self, parent, -1, size=(700,500), style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER, title = 'Passage %s' %str(currpassageNo))
 
 	self.protocol = protocol
 	self.currpassageNo = currpassageNo
@@ -51,19 +51,28 @@ class PassageStepBuilder(wx.Dialog):
 	
 	self.settings_controls['Admin|0'] = wx.TextCtrl(self.top_panel, size=(70,-1), value=self.curr_protocol['ADMIN'][0])
 	self.settings_controls['Admin|1'] = wx.DatePickerCtrl(self.top_panel, style = wx.DP_DROPDOWN | wx.DP_SHOWCENTURY)	
-	self.settings_controls['Admin|2'] = wx.TextCtrl(self.top_panel, size=(50,-1), value=self.curr_protocol['ADMIN'][2])
-	self.settings_controls['Admin|3'] = wx.TextCtrl(self.top_panel, size=(20,-1), value=self.curr_protocol['ADMIN'][3])
+	self.settings_controls['Admin|2'] = wx.TextCtrl(self.top_panel, size=(20,-1), value=self.curr_protocol['ADMIN'][2])
+	#self.settings_controls['Admin|3'] = wx.TextCtrl(self.top_panel, size=(20,-1), value=self.curr_protocol['ADMIN'][3])
+	self.settings_controls['Admin|3'] = wx.lib.masked.NumCtrl(self.top_panel, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	if isinstance(self.curr_protocol['ADMIN'][3], int): #it had value
+	    self.settings_controls['Admin|3'].SetValue(self.curr_protocol['ADMIN'][3])
+	unit_choices =['nM2', 'uM2', 'mM2','Other']
+	self.settings_controls['Admin|4'] = wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (50,20), unit_choices, wx.LB_SINGLE)
+	if self.curr_protocol['ADMIN'][4] is not None:
+	    self.settings_controls['Admin|4'].Append(self.curr_protocol['ADMIN'][4])
+	    self.settings_controls['Admin|4'].SetStringSelection(self.curr_protocol['ADMIN'][4])
 	
-	self.settings_controls['Admin|0'] .Bind(wx.EVT_TEXT, self.OnSavingData)
+	self.settings_controls['Admin|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls['Admin|1'].Bind(wx.EVT_DATE_CHANGED, self.OnSavingData)
 	self.settings_controls['Admin|2'].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls['Admin|3'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	self.settings_controls['Admin|4'].Bind(wx.EVT_LISTBOX, self.OnSavingData)  
 	
         self.selection_btn = wx.Button(self, wx.ID_OK, 'Record Passage')
         self.close_btn = wx.Button(self, wx.ID_CANCEL)
         
 	# Sizers and layout
-	top_fgs = wx.FlexGridSizer(cols=9, vgap=5)
+	top_fgs = wx.FlexGridSizer(cols=10, vgap=5)
 	
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Operator Name'),0, wx.RIGHT, 5)
 	top_fgs.Add(self.settings_controls['Admin|0'] , 0, wx.EXPAND)
@@ -73,8 +82,8 @@ class PassageStepBuilder(wx.Dialog):
 	top_fgs.Add(self.settings_controls['Admin|2'], 0, wx.EXPAND)
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Cell Count'),0, wx.RIGHT|wx.LEFT, 5)
 	top_fgs.Add(self.settings_controls['Admin|3'], 0, wx.EXPAND)
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'x 10,000 cells'),0)
-	
+	top_fgs.Add(wx.StaticText(self.top_panel, -1, ' cells/'),0)
+	top_fgs.Add(self.settings_controls['Admin|4'], 0, wx.EXPAND)
 		
 	self.fgs = wx.FlexGridSizer(cols=7, hgap=5, vgap=5)	
 	self.showSteps()
@@ -232,6 +241,7 @@ class PassageStepBuilder(wx.Dialog):
 
 
     def OnSavingData(self, event):
+	#TO DO: make this method coherent with other instances of this method
 	ctrl = event.GetEventObject()
 	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
 	
@@ -239,12 +249,17 @@ class PassageStepBuilder(wx.Dialog):
 	    myDate = ''
 	    if isinstance(ctrl, wx.DatePickerCtrl):
 		date = ctrl.GetValue()
-		self.myDate = '%02d/%02d/%4d'%(date.Day, date.Month+1, date.Year)	
-	 	    
+		self.myDate = '%02d/%02d/%4d'%(date.Day, date.Month+1, date.Year)
+	    if isinstance(ctrl, wx.ListBox) and ctrl.GetStringSelection() == 'Other':
+		other = wx.GetTextFromUser('Insert Other', 'Other')
+		ctrl.Append(other)
+		ctrl.SetStringSelection(other)	    
+			
 	    self.curr_protocol['ADMIN'] = [self.settings_controls['Admin|0'].GetValue(), 
 	                                   self.myDate, 
 	                                   self.settings_controls['Admin|2'].GetValue(),
-	                                   self.settings_controls['Admin|3'].GetValue()]
+	                                   self.settings_controls['Admin|3'].GetValue(),
+	                                   self.settings_controls['Admin|4'].GetStringSelection()]
 	    
 	else:   # if this is a step 
 	    step = tag.split('|')[0]
@@ -255,6 +270,8 @@ class PassageStepBuilder(wx.Dialog):
 		    c_num = int(tg.split('|')[1])
 		    if isinstance(self.settings_controls[tg], wx.Choice):
 			info.insert(c_num, self.settings_controls[tg].GetStringSelection())
+		    elif isinstance(self.settings_controls[tg], wx.ListBox):
+			info.insert(c_num, self.settings_controls[tg].GetStringSelection())		    
 		    else:
 			user_input = self.settings_controls[tg].GetValue()
 			user_input.rstrip('\n')
