@@ -4,6 +4,7 @@ import wx
 import wx.lib.agw.gradientbutton as GB
 import icons
 from experimentsettings import *
+from wx.lib.masked import NumCtrl
 
 class ChannelBuilder(wx.Dialog):  
     def __init__(self, parent, id, title):
@@ -18,11 +19,12 @@ class ChannelBuilder(wx.Dialog):
         self.componentCount = 0
               
         # Header row
-        self.select_chName = wx.Choice(self.top_panel, -1, choices=['FSC', 'SSC', 'FL-1', 'FL-2','FL-3','FL-4','FL-5','FL-6','FL-7','FL-8'])
-	self.select_chName.Bind(wx.EVT_CHOICE, self.OnChSelection)
+        choices =['FSC', 'SSC', 'FL-1', 'FL-2','FL-3','FL-4','FL-5','FL-6','FL-7','FL-8', 'Other']
+	self.select_chName= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (50,30), choices, wx.LB_SINGLE)
+	self.select_chName.Bind(wx.EVT_LISTBOX, self.OnChSelection)
         self.select_component = wx.Choice(self.top_panel, -1, choices=['Dichroic Mirror', 'Filter', 'Beam Splitter',  'Dye', 'Detector'])
 	self.select_component.Disable()
-        self.select_component.Bind(wx.EVT_CHOICE, self.OnAddComponent)
+        self.select_component.Bind(wx.EVT_CHOICE, self.OnAddComponent)	
 	
         self.select_btn = wx.Button(self, wx.ID_OK, 'Set Channel')
 	self.select_btn.Disable()
@@ -55,8 +57,11 @@ class ChannelBuilder(wx.Dialog):
         self.Show()         
     
     def OnChSelection(self, event):
-	
-	self.select_chName.Disable()	
+	if self.select_chName.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    self.select_chName.Append(other)
+	    self.select_chName.SetStringSelection(other)		
+	self.select_chName.Disable()
 	
 	self.componentCount +=1	
 
@@ -65,7 +70,8 @@ class ChannelBuilder(wx.Dialog):
 	
 	self.laser = wx.TextCtrl(self.bot_panel, value='', style= wx.TE_PROCESS_ENTER)
 	self.laser.Bind(wx.EVT_TEXT_ENTER, self.setLaserColor)  # increament the component count when users entered the value of Laser beam
-	
+	#self.laser = wx.lib.masked.NumCtrl(self.bot_panel, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	#self.laser.Bind(wx.EVT_TEXT, self.setLaserColor)
 	laserSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
 	laserSizer.Add(self.laser, 0) 	    
 	self.fgs.Add(laserSizer,  0)	
@@ -91,7 +97,13 @@ class ChannelBuilder(wx.Dialog):
 	    return
 		  
 	startNM, endNM = meta.getNM(self.componentList[self.componentCount-1][1])
-
+	if not((startNM < endNM) and (meta.belongsTo(startNM, 300, 800)) and (meta.belongsTo(startNM, 300, 800))):
+	    dial = wx.MessageDialog(None, 'Please check the wavelength of previous component', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal() 
+	    self.componentCount -=1
+	    return
+	# check whether within the valid range
+	
         if self.select_component.GetStringSelection() == 'Dichroic Mirror':	    
 	    staticbox = wx.StaticBox(self.bot_panel, -1, "Dichroic Mirror")
             self.dmtTsld = wx.Slider(self.bot_panel, -1, startNM, startNM, endNM, wx.DefaultPosition, (100, -1), wx.SL_LABELS)
@@ -180,49 +192,53 @@ class ChannelBuilder(wx.Dialog):
 
     def setLaserColor(self, event):
 	meta = ExperimentSettings.getInstance()	
-	
         ctrl = event.GetEventObject()
+	# check the validity of the input
+	if ctrl.GetValue().isdigit() is False:
+	    dial = wx.MessageDialog(None, 'Laser excitation should be integer value', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal() 
+	    return	 
+	    
+        if meta.belongsTo(int(ctrl.GetValue()), 300, 800) is False:
+	    dial = wx.MessageDialog(None, 'Laser excitation should be within 300-800 nm range', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal() 
+	    return
+	# Set the Laser colour    
+	ctrl.SetBackgroundColour(meta.nmToRGB(int(ctrl.GetValue())))
+	emSpect =[]
 	
-        if ctrl.GetValue():
-            ctrl.SetBackgroundColour(meta.nmToRGB(int(ctrl.GetValue())))
+	for dye in FLUOR_SPECTRUM:
+	    extLow, extHgh = meta.getNM(FLUOR_SPECTRUM[dye][0])	    
+	    emtLow, emtHgh = meta.getNM(FLUOR_SPECTRUM[dye][1])
 	    
-	    emSpect =[]
+	    # according to the inserted excitation laser select the emission range
+	    if meta.belongsTo(int(ctrl.GetValue()), extLow, extHgh):
+		emSpect.append(emtLow)
+		emSpect.append(emtHgh)
+		emSpect.append(int(ctrl.GetValue())-15) # Also add the scattered light from the laser
+		emSpect.append(int(ctrl.GetValue())+15)		    
+	    # adjust the emission range with previous laser emission range
+	    for component in self.componentList:
+		if  self.componentList[component][0].startswith('LSR'):
+		    emSpect.append(int(self.componentList[component][0].split('LSR')[1])-15) # Also add the scattered light from the laser
+		    emSpect.append(int(self.componentList[component][0].split('LSR')[1])+15)
+		    
+		    if meta.belongsTo(int(self.componentList[component][0].split('LSR')[1]),extLow, extHgh):                
+			emSpect.append(emtLow)
+			emSpect.append(emtHgh)
 	    
-	    for dye in FLUOR_SPECTRUM:
-		
-		extLow, extHgh = meta.getNM(FLUOR_SPECTRUM[dye][0])	    
-		emtLow, emtHgh = meta.getNM(FLUOR_SPECTRUM[dye][1])
-		
-		# according to the inserted excitation laser select the emission range
-		if meta.belongsTo(int(ctrl.GetValue()), extLow, extHgh):
-		    emSpect.append(emtLow)
-		    emSpect.append(emtHgh)
-		    emSpect.append(int(ctrl.GetValue())-15) # Also add the scattered light from the laser
-		    emSpect.append(int(ctrl.GetValue())+15)		    
-		# adjust the emission range with previous laser emission range
-		for component in self.componentList:
-		    if  self.componentList[component][0].startswith('LSR'):
-			emSpect.append(int(self.componentList[component][0].split('LSR')[1])-15) # Also add the scattered light from the laser
-			emSpect.append(int(self.componentList[component][0].split('LSR')[1])+15)
-			
-			if meta.belongsTo(int(self.componentList[component][0].split('LSR')[1]),extLow, extHgh):                
-			    emSpect.append(emtLow)
-			    emSpect.append(emtHgh)
-		
-	    self.componentList[self.componentCount] = ['LSR%s'%ctrl.GetValue(), str(min(emSpect))+'-'+str(max(emSpect))]	  
-        else:
-            ctrl.SetBackgroundColour((255,255,255))  
+	self.componentList[self.componentCount] = ['LSR%s'%ctrl.GetValue(), str(min(emSpect))+'-'+str(max(emSpect))]	   
 	    
 	#Enable users to select the component from the list
 	self.select_component.Enable()
 	self.select_btn.Enable()
 	
 	# draw the cell picture
-	bmp = icons.cpa_32.Scale(32.0, 32.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()	
-	cell_image = wx.BitmapButton(self.bot_panel, -1, bmp, (32, 32), style = wx.NO_BORDER)
+	#bmp = icons.cpa_32.Scale(32.0, 32.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()	
+	#cell_image = wx.BitmapButton(self.bot_panel, -1, bmp, (32, 32), style = wx.NO_BORDER)
 	
 	# sizers
-	self.fgs.Add(cell_image, 0)
+	#self.fgs.Add(cell_image, 0)
 	self.bot_panel.SetSizer(self.fgs)
 	self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 	
@@ -230,7 +246,7 @@ class ChannelBuilder(wx.Dialog):
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)	
-    
+	
     def OnScrollMirror(self, event):    
         # check: there is alwasy 11 nm range for the slider
         if self.dmtTsld.GetValue()+5 >= self.dmtBsld.GetValue():

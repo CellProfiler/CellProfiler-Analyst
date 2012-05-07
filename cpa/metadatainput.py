@@ -240,6 +240,13 @@ class OverviewPanel(wx.Panel):
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(rows=12, cols=2, hgap=5, vgap=5)
+	
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Overview')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)		
 
         # Experiment Title
         titleTAG = 'Overview|Project|Title'
@@ -343,10 +350,14 @@ class OverviewPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Status'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[statusTAG], 0, wx.EXPAND)
 
-        self.sw.SetSizer(fgs)
+        #---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+        self.sw.SetSizer(swsizer)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
-        # Layout with sizers
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 
@@ -536,7 +547,7 @@ class StockCulturePanel(wx.Panel):
         # Duplicate button        
         #self.copyStockCulturePageBtn = wx.Button(self.sw, -1, label="Duplicate Settings")
         #self.copyStockCulturePageBtn.Bind(wx.EVT_BUTTON, self.onCopyStockCulturePage)
-	self.recordPassageBtn = wx.Button(self.top_panel, -1, label="Record Passage steps")
+	self.recordPassageBtn = wx.Button(self.top_panel, -1, label="Record Passage History")
 	self.recordPassageBtn.Bind(wx.EVT_BUTTON, self.onRecordPassage)
         fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
         fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
@@ -732,6 +743,13 @@ class MicroscopePanel(wx.Panel):
 	self.protocol = 'Instrument|Microscope|%s'%str(self.page_counter)
 
 	headfgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	#------- Heading ---#
+	text = wx.StaticText(self.sw, -1, 'Microscope')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
+	
 	#  Protocol Name
 	chnameTAG = 'Instrument|Microscope|ChannelName|'+str(self.page_counter)
 	self.settings_controls[chnameTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chnameTAG, default=''))
@@ -755,23 +773,24 @@ class MicroscopePanel(wx.Panel):
 	self.strucpane= wx.CollapsiblePane(self.sw, label="Hardware", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
 	self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.strucpane)
 	self.hardwarePane(self.strucpane.GetPane())
-	self.strucpane.Disable()
 	
         self.illumpane = wx.CollapsiblePane(self.sw, label="Optics", style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
         self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.illumpane)
         self.opticsPane(self.illumpane.GetPane())
 
-	#---  Sizers ---#
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(headfgs, 0, wx.ALL, 25)
-	sizer.Add(self.strucpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-        sizer.Add(self.illumpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
-
-        self.sw.SetSizer(sizer)
+	#---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(headfgs, 0)
+	swsizer.Add((-1,10))
+	swsizer.Add(self.strucpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)
+	swsizer.Add(self.illumpane, 0, wx.RIGHT|wx.LEFT|wx.EXPAND, 25)	
+        self.sw.SetSizer(swsizer)
         self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)	
+        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
 	
 	self.updateProgressBar()
 
@@ -848,18 +867,18 @@ class MicroscopePanel(wx.Panel):
 	standSizer = wx.StaticBoxSizer(staticbox, wx.VERTICAL)
 	standSizer.Add(multctrlSizer, 1, wx.EXPAND|wx.ALL, 5)	
 	
-	#-- Condensor --#
-	staticbox = wx.StaticBox(self.pane, -1, "Condensor")
+	#-- Condenser --#
+	staticbox = wx.StaticBox(self.pane, -1, "Condenser")
 	multctrlSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
 
-	condensorTAG = 'Instrument|Microscope|Condensor|'+str(self.page_counter)
+	condensorTAG = 'Instrument|Microscope|Condenser|'+str(self.page_counter)
 	condensor = meta.get_field(condensorTAG, [])
 
 	self.settings_controls[condensorTAG+'|0']= wx.Choice(self.pane, -1, choices=['','White Light', 'Fluorescence'])
 	if len(condensor) > 0:
 	    self.settings_controls[condensorTAG+'|0'].SetStringSelection(condensor[0])
 	self.settings_controls[condensorTAG+'|0'].Bind(wx.EVT_CHOICE, self.OnSavingData)   
-	self.settings_controls[condensorTAG+'|0'].SetToolTipString('Type of condensor') 
+	self.settings_controls[condensorTAG+'|0'].SetToolTipString('Type of condenser') 
 	multctrlSizer.Add(wx.StaticText(self.pane, -1, 'Type'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	multctrlSizer.Add(self.settings_controls[condensorTAG+'|0'], 0, wx.EXPAND)
 
@@ -1631,14 +1650,14 @@ class FlowcytometerSettingPanel(wx.Panel):
 	    dlg.ShowModal()
 	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing your Flowcytometer settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    meta.load_flowcytometer_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = FlowcytometerPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
    
@@ -1661,7 +1680,12 @@ class FlowcytometerPanel(wx.Panel):
 	self.top_fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
 	self.bot_fgs = wx.FlexGridSizer(cols=30, hgap=5, vgap=5)
 	
-	#-- Show previously encoded channels --#
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Flowcytometer')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)
 	
 	#----------- Microscope Labels and Text Controler-------#
 	self.saveSettings = wx.Button(self.top_panel, -1, 'Save Settings')
@@ -1693,10 +1717,14 @@ class FlowcytometerPanel(wx.Panel):
 	#-- Show previously encoded channels in case of loading ch settings--#	
 	self.showChannels()
         
-        #-- Sizers --#
-	self.top_panel.SetSizer(self.top_fgs)
+	#---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(self.top_fgs)
+	self.top_panel.SetSizer(swsizer)
 	self.bot_panel.SetSizer(self.bot_fgs)
-        self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
@@ -1810,7 +1838,7 @@ class FlowcytometerPanel(wx.Panel):
 	    self.bot_fgs.Add(wx.StaticText(self.bot_panel, -1, ''), 0)
 		
 	#-- Sizers --#
-	self.top_panel.SetSizer(self.top_fgs)
+	#self.top_panel.SetSizer(self.top_fgs)
 	self.bot_panel.SetSizer(self.bot_fgs)
         self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 
@@ -2961,27 +2989,39 @@ class CellSeedPanel(wx.Panel):
 	titlesizer = wx.BoxSizer(wx.VERTICAL)
 	titlesizer.Add(text, 0)	
         
+        # Selection Button
+	showInstBut = wx.Button(self.sw, -1, 'Show Stock Cultures', (100,100))
+	showInstBut.Bind (wx.EVT_BUTTON, self.OnShowDialog) 
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0,)
+	fgs.Add(showInstBut, 0, wx.EXPAND)
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	
         #-- Cell Line selection ---#
         celllineselcTAG = 'CellTransfer|Seed|StockInstance|'+str(self.page_counter)
-        self.settings_controls[celllineselcTAG] = wx.TextCtrl(self.sw, value=meta.get_field(celllineselcTAG, default=''))
-        showInstBut = wx.Button(self.sw, -1, 'Show Stock Cultures', (100,100))
-        showInstBut.Bind (wx.EVT_BUTTON, self.OnShowDialog) 
+        self.settings_controls[celllineselcTAG] = wx.TextCtrl(self.sw, value=meta.get_field(celllineselcTAG, default=''), style=wx.TE_PROCESS_ENTER)
         self.settings_controls[celllineselcTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[celllineselcTAG].SetToolTipString('Stock culture from where cells were transferred')
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Stock Culture'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[celllineselcTAG], 0, wx.EXPAND)
-        fgs.Add(showInstBut, 0, wx.EXPAND)
-
-        # Seeding Density
-        seedTAG = 'CellTransfer|Seed|SeedingDensity|'+str(self.page_counter)
-        self.settings_controls[seedTAG] = wx.TextCtrl(self.sw, value=meta.get_field(seedTAG, default=''))
-        self.settings_controls[seedTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[seedTAG].SetToolTipString('Number of cells seeded in each well or flask')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Seeding Density'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[seedTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
-        # Medium Used
+        # Seeding Density
+       	seeddensityTAG = 'CellTransfer|Seed|SeedingDensity|'+str(self.page_counter)
+	seeddensity = meta.get_field(seeddensityTAG, [])
+	self.settings_controls[seeddensityTAG+'|0'] = wx.lib.masked.NumCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	if len(seeddensity) > 0:
+	    self.settings_controls[seeddensityTAG+'|0'].SetValue(seeddensity[0])
+	self.settings_controls[seeddensityTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Density'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[seeddensityTAG+'|0'], 0, wx.EXPAND)
+	unit_choices =['nM2', 'uM2', 'mM2','Other']
+	self.settings_controls[seeddensityTAG+'|1'] = wx.ListBox(self.sw, -1, wx.DefaultPosition, (50,20), unit_choices, wx.LB_SINGLE)
+	if len(seeddensity) > 1:
+	    self.settings_controls[seeddensityTAG+'|1'].Append(seeddensity[1])
+	    self.settings_controls[seeddensityTAG+'|1'].SetStringSelection(seeddensity[1])
+	self.settings_controls[seeddensityTAG+'|1'].Bind(wx.EVT_LISTBOX, self.OnSavingData)
+	fgs.Add(self.settings_controls[seeddensityTAG+'|1'], 0, wx.EXPAND)
+	# Medium Used
         medmTAG = 'CellTransfer|Seed|MediumUsed|'+str(self.page_counter)
         self.settings_controls[medmTAG] = wx.Choice(self.sw, -1,  choices=['Typical', 'Atypical'])
         if meta.get_field(medmTAG) is not None:
@@ -2994,7 +3034,7 @@ class CellSeedPanel(wx.Panel):
 
         #  Medium Addatives
         medaddTAG = 'CellTransfer|Seed|MediumAddatives|'+str(self.page_counter)
-        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''))
+        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''), style=wx.TE_PROCESS_ENTER)
         self.settings_controls[medaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[medaddTAG].SetToolTipString('Any medium additives used with concentration, Glutamine')
         fgs.Add(wx.StaticText(self.sw, -1, 'Medium Additives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -3107,7 +3147,7 @@ class CellHarvestPanel(wx.Panel):
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=15, cols=2, hgap=5, vgap=5)
+        fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
 	text = wx.StaticText(self.sw, -1, 'Cell Harvesting')
@@ -3130,14 +3170,24 @@ class CellHarvestPanel(wx.Panel):
         self.settings_controls[celllineselcTAG].SetToolTipString('Cell Line used for harvesting')
         fgs.Add(wx.StaticText(self.sw, -1, 'Select Cell Line'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[celllineselcTAG], 0, wx.EXPAND)
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
-        # Seeding Density
-        harvestTAG = 'CellTransfer|Harvest|HarvestingDensity|'+str(self.page_counter)
-        self.settings_controls[harvestTAG] = wx.TextCtrl(self.sw, value=meta.get_field(harvestTAG, default=''))
-        self.settings_controls[harvestTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[harvestTAG].SetToolTipString('Number of cells harvested from each well or flask')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Harvesting Density'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[harvestTAG], 0, wx.EXPAND)
+        # Harvesting Density
+	harvestdensityTAG = 'CellTransfer|Harvest|HarvestingDensity|'+str(self.page_counter)
+	harvestdensity = meta.get_field(harvestdensityTAG, [])
+	self.settings_controls[harvestdensityTAG+'|0'] = wx.lib.masked.NumCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	if len(harvestdensity) > 0:
+	    self.settings_controls[harvestdensityTAG+'|0'].SetValue(harvestdensity[0])
+	self.settings_controls[harvestdensityTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Density'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[harvestdensityTAG+'|0'], 0, wx.EXPAND)
+	unit_choices =['nM2', 'uM2', 'mM2','Other']
+	self.settings_controls[harvestdensityTAG+'|1'] = wx.ListBox(self.sw, -1, wx.DefaultPosition, (50,20), unit_choices, wx.LB_SINGLE)
+	if len(harvestdensity) > 1:
+	    self.settings_controls[harvestdensityTAG+'|1'].Append(harvestdensity[1])
+	    self.settings_controls[harvestdensityTAG+'|1'].SetStringSelection(harvestdensity[1])
+	self.settings_controls[harvestdensityTAG+'|1'].Bind(wx.EVT_LISTBOX, self.OnSavingData)
+	fgs.Add(self.settings_controls[harvestdensityTAG+'|1'], 0, wx.EXPAND)	
 
         # Medium Used
         medmTAG = 'CellTransfer|Harvest|MediumUsed|'+str(self.page_counter)
@@ -3148,14 +3198,16 @@ class CellHarvestPanel(wx.Panel):
         self.settings_controls[medmTAG].SetToolTipString('Typical/Atypical (Ref in both cases)')
         fgs.Add(wx.StaticText(self.sw, -1, 'Medium Used'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[medmTAG], 0, wx.EXPAND) 
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #  Medium Addatives
         medaddTAG = 'CellTransfer|Harvest|MediumAddatives|'+str(self.page_counter)
-        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''))
+        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''), style=wx.TE_PROCESS_ENTER)
         self.settings_controls[medaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[medaddTAG].SetToolTipString('Any medium addatives used with concentration, Glutamine')
         fgs.Add(wx.StaticText(self.sw, -1, 'Medium Addatives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[medaddTAG], 0, wx.EXPAND)
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         # Trypsinization
         trypsTAG = 'CellTransfer|Harvest|Trypsinizatiton|'+str(self.page_counter)
@@ -3166,6 +3218,7 @@ class CellHarvestPanel(wx.Panel):
         self.settings_controls[trypsTAG].SetToolTipString('(Y/N) After cells were loded on the exerimental vessel, i.e. time 0 of the experiment')
         fgs.Add(wx.StaticText(self.sw, -1, 'Trypsinization'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[trypsTAG], 0, wx.EXPAND)  
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #---------------Layout with sizers---------------
 	swsizer = wx.BoxSizer(wx.VERTICAL)
@@ -3254,31 +3307,31 @@ class ChemicalAgentPanel(wx.Panel):
 
         #  Chem Agent Name
         chemnamTAG = 'Perturbation|Chem|ChemName|'+str(self.page_counter)
-        self.settings_controls[chemnamTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemnamTAG, default=''))
+        self.settings_controls[chemnamTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemnamTAG, default=''), style=wx.TE_PROCESS_ENTER)
         self.settings_controls[chemnamTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[chemnamTAG].SetToolTipString('Name of the Chemical agent used')
         fgs.Add(wx.StaticText(self.sw, -1, 'Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[chemnamTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-        #  Chem Concentration and Unit
-        concTAG = 'Perturbation|Chem|Conc|'+str(self.page_counter)
-        self.settings_controls[concTAG] = wx.TextCtrl(self.sw, value=meta.get_field(concTAG, default='')) 
-        self.settings_controls[concTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[concTAG].SetToolTipString('Concetration of the Chemical agent used')
-        
-        unitTAG = 'Perturbation|Chem|Unit|'+str(self.page_counter)
-        self.settings_controls[unitTAG] = wx.Choice(self.sw, -1,  choices=['uM', 'nM', 'mM', 'mg/L', 'uL/L', '%w/v', '%v/v'])
-        if meta.get_field(unitTAG) is not None:
-            self.settings_controls[unitTAG].SetStringSelection(meta.get_field(unitTAG))
-        self.settings_controls[unitTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-
-        fgs.Add(wx.StaticText(self.sw, -1, 'Concentration'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[concTAG], 0, wx.EXPAND)
-        fgs.Add(self.settings_controls[unitTAG], 0, wx.EXPAND)
-        
+        #Concentration and Unit
+	concTAG = 'Perturbation|Chem|Conc|'+str(self.page_counter)
+	conc = meta.get_field(concTAG, [])
+	self.settings_controls[concTAG+'|0'] = wx.lib.masked.NumCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	if len(conc) > 0:
+	    self.settings_controls[concTAG+'|0'].SetValue(conc[0])
+	self.settings_controls[concTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Concentration'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[concTAG+'|0'], 0, wx.EXPAND)
+	unit_choices =['uM', 'nM', 'mM', 'mg/L', 'uL/L', '%w/v', '%v/v','Other']
+	self.settings_controls[concTAG+'|1'] = wx.ListBox(self.sw, -1, wx.DefaultPosition, (50,20), unit_choices, wx.LB_SINGLE)
+	if len(conc) > 1:
+	    self.settings_controls[concTAG+'|1'].Append(conc[1])
+	    self.settings_controls[concTAG+'|1'].SetStringSelection(conc[1])
+	self.settings_controls[concTAG+'|1'].Bind(wx.EVT_LISTBOX, self.OnSavingData)
+	fgs.Add(self.settings_controls[concTAG+'|1'], 0, wx.EXPAND)	
          #  Manufacturer
         chemmfgTAG = 'Perturbation|Chem|Manufacturer|'+str(self.page_counter)
-        self.settings_controls[chemmfgTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemmfgTAG, default=''))
+        self.settings_controls[chemmfgTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemmfgTAG, default=''), style=wx.TE_PROCESS_ENTER)
         self.settings_controls[chemmfgTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[chemmfgTAG].SetToolTipString('Name of the Chemical agent Manufacturer')
         fgs.Add(wx.StaticText(self.sw, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -3294,7 +3347,7 @@ class ChemicalAgentPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
          #  Additives
         chemaddTAG = 'Perturbation|Chem|Additives|'+str(self.page_counter)
-        self.settings_controls[chemaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemaddTAG, default=''), style=wx.TE_MULTILINE)
+        self.settings_controls[chemaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemaddTAG, default=''), style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
         self.settings_controls[chemaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[chemaddTAG].SetToolTipString(meta.get_field(chemaddTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Additives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -3302,7 +3355,7 @@ class ChemicalAgentPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
          #  Other informaiton
         chemothTAG = 'Perturbation|Chem|Other|'+str(self.page_counter)
-        self.settings_controls[chemothTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemothTAG, default=''), style=wx.TE_MULTILINE)
+        self.settings_controls[chemothTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemothTAG, default=''), style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
         self.settings_controls[chemothTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[chemothTAG].SetToolTipString(meta.get_field(chemothTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Other informaiton'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -3414,31 +3467,31 @@ class BiologicalAgentPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         #  Target GeneAccessNumber
         tgtgenTAG = 'Perturbation|Bio|TargetGeneAccessNum|'+str(self.page_counter)
-        self.settings_controls[tgtgenTAG] = wx.TextCtrl(self.sw, value=meta.get_field(tgtgenTAG, default=''))
+        self.settings_controls[tgtgenTAG] = wx.TextCtrl(self.sw, value=meta.get_field(tgtgenTAG, default=''), style=wx.TE_PROCESS_ENTER)
         self.settings_controls[tgtgenTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[tgtgenTAG].SetToolTipString('Target GeneAccessNumber')
         fgs.Add(wx.StaticText(self.sw, -1, 'Target Gene Accession Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[tgtgenTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-        
-        #  Bio Concentration and Unit
-        concTAG = 'Perturbation|Bio|Conc|'+str(self.page_counter)
-        self.settings_controls[concTAG] = wx.TextCtrl(self.sw, value=meta.get_field(concTAG, default='')) 
-        self.settings_controls[concTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[concTAG].SetToolTipString('Concetration of the Biological agent used')
-        
-        unitTAG = 'Perturbation|Bio|Unit|'+str(self.page_counter)
-        self.settings_controls[unitTAG] = wx.Choice(self.sw, -1,  choices=['uM', 'nM', 'mM', 'mg/L', 'uL/L', '%w/v', '%v/v'])
-        if meta.get_field(unitTAG) is not None:
-            self.settings_controls[unitTAG].SetStringSelection(meta.get_field(unitTAG))
-        self.settings_controls[unitTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-
-        fgs.Add(wx.StaticText(self.sw, -1, 'Concentration'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[concTAG], 0, wx.EXPAND)
-        fgs.Add(self.settings_controls[unitTAG], 0, wx.EXPAND)        
+        #Concentration and Unit
+	concTAG = 'Perturbation|Bio|Conc|'+str(self.page_counter)
+	conc = meta.get_field(concTAG, [])
+	self.settings_controls[concTAG+'|0'] = wx.lib.masked.NumCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	if len(conc) > 0:
+	    self.settings_controls[concTAG+'|0'].SetValue(conc[0])
+	self.settings_controls[concTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Concentration'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[concTAG+'|0'], 0, wx.EXPAND)
+	unit_choices =['uM', 'nM', 'mM', 'mg/L', 'uL/L', '%w/v', '%v/v','Other']
+	self.settings_controls[concTAG+'|1'] = wx.ListBox(self.sw, -1, wx.DefaultPosition, (50,20), unit_choices, wx.LB_SINGLE)
+	if len(conc) > 1:
+	    self.settings_controls[concTAG+'|1'].Append(conc[1])
+	    self.settings_controls[concTAG+'|1'].SetStringSelection(conc[1])
+	self.settings_controls[concTAG+'|1'].Bind(wx.EVT_LISTBOX, self.OnSavingData)
+	fgs.Add(self.settings_controls[concTAG+'|1'], 0, wx.EXPAND)	
         #  Additives
         bioaddTAG = 'Perturbation|Bio|Additives|'+str(self.page_counter)
-        self.settings_controls[bioaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(bioaddTAG, default=''), style=wx.TE_MULTILINE)
+        self.settings_controls[bioaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(bioaddTAG, default=''), style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
         self.settings_controls[bioaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[bioaddTAG].SetToolTipString(meta.get_field(bioaddTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Additives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -3446,7 +3499,7 @@ class BiologicalAgentPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
          #  Other informaiton
         bioothTAG = 'Perturbation|Bio|Other|'+str(self.page_counter)
-        self.settings_controls[bioothTAG] = wx.TextCtrl(self.sw, value=meta.get_field(bioothTAG, default=''), style=wx.TE_MULTILINE)
+        self.settings_controls[bioothTAG] = wx.TextCtrl(self.sw, value=meta.get_field(bioothTAG, default=''), style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
         self.settings_controls[bioothTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[bioothTAG].SetToolTipString(meta.get_field(bioothTAG, default=''))
         fgs.Add(wx.StaticText(self.sw, -1, 'Other informaiton'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
@@ -4130,7 +4183,13 @@ class SpinPanel(wx.Panel):
 	self.top_panel = wx.Panel(self)	
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
-	title_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Spinning')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)		
 
         protnameTAG = 'AddProcess|Spin|ProtocolName|'+str(self.page_counter)
         self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -4140,17 +4199,21 @@ class SpinPanel(wx.Panel):
         self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
         self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
 	
-	title_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	title_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
-	title_fgs.Add(self.save_btn, 0, wx.ALL, 5)	
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
+	fgs.Add(self.save_btn, 0, wx.ALL, 5)	
 
-        #---------------Layout with sizers---------------	
-	self.top_panel.SetSizer(title_fgs)
+        #---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.top_panel.SetSizer(swsizer)
+		
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
-	self.Show()       
-
+	self.Show() 
     
     def onSavingSuppProtocol(self, event):
 	# also check whether the description field has been filled by users
@@ -4274,7 +4337,13 @@ class WashPanel(wx.Panel):
 	self.top_panel = wx.Panel(self)	
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
-	title_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Washing')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)		
 
 	protnameTAG = 'AddProcess|Wash|ProtocolName|'+str(self.page_counter)
 	self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -4284,12 +4353,17 @@ class WashPanel(wx.Panel):
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
 	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
 	
-	title_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	title_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
-	title_fgs.Add(self.save_btn, 0, wx.ALL, 5)	
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
+	fgs.Add(self.save_btn, 0, wx.ALL, 5)	
 
-	#---------------Layout with sizers---------------	
-	self.top_panel.SetSizer(title_fgs)
+	#---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.top_panel.SetSizer(swsizer)
+		
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
@@ -4414,7 +4488,13 @@ class DryPanel(wx.Panel):
 	self.top_panel = wx.Panel(self)	
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
-	title_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Drying')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)		
 
 	protnameTAG = 'AddProcess|Dry|ProtocolName|'+str(self.page_counter)
 	self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -4424,17 +4504,22 @@ class DryPanel(wx.Panel):
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
 	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
 	
-	title_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	title_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
-	title_fgs.Add(self.save_btn, 0, wx.ALL, 5)	
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
+	fgs.Add(self.save_btn, 0, wx.ALL, 5)	
 
-	#---------------Layout with sizers---------------	
-	self.top_panel.SetSizer(title_fgs)
+	#---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.top_panel.SetSizer(swsizer)
+		
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
-	self.Show()       
-
+	self.Show() 
+    
     def onSavingSuppProtocol(self, event):
 	# also check whether the description field has been filled by users
 	meta = ExperimentSettings.getInstance()
@@ -4556,7 +4641,13 @@ class MediumPanel(wx.Panel):
 	self.top_panel = wx.Panel(self)	
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
-	title_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Add Medium')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
 
 	protnameTAG = 'AddProcess|Medium|ProtocolName|'+str(self.page_counter)
 	self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -4566,9 +4657,9 @@ class MediumPanel(wx.Panel):
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
 	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
 	
-	title_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	title_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
-	title_fgs.Add(self.save_btn, 0, wx.ALL, 5)	
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
+	fgs.Add(self.save_btn, 0, wx.ALL, 5)	
 	
         # Medium Additives
         additiveField = 'AddProcess|Medium|MediumAdditives|'+str(self.page_counter)
@@ -4577,17 +4668,21 @@ class MediumPanel(wx.Panel):
 	self.settings_controls[additiveField].SetInitialSize((250,30))
 	self.settings_controls[additiveField].SetToolTipString(meta.get_field(additiveField, default=''))
 		
-	title_fgs.Add(wx.StaticText(self.top_panel, -1, 'Medium additives  '), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	title_fgs.Add(self.settings_controls[additiveField], 0, wx.EXPAND|wx.ALL, 5)
-	title_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Medium additives  '), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[additiveField], 0, wx.EXPAND|wx.ALL, 5)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
 	
-	self.top_panel.SetSizer(title_fgs)
-
-        #---------------Layout with sizers---------------	
+        #---------------Layout with sizers---------------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.top_panel.SetSizer(swsizer)
+		
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
-	self.Show()       
+	self.Show()        
 
 
     def onSavingSuppProtocol(self, event):
@@ -4710,7 +4805,13 @@ class IncubatorPanel(wx.Panel):
 	self.top_panel = wx.Panel(self)	
 	self.bot_panel  = StepBuilder(self, self.protocol)
 	
-	top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
+	#------- Heading ---#
+	text = wx.StaticText(self.top_panel, -1, 'Incubation')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer.Add(text, 0)	
 
 	protnameTAG = 'AddProcess|Incubator|ProtocolName|'+str(self.page_counter)
 	self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -4720,9 +4821,9 @@ class IncubatorPanel(wx.Panel):
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
 	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
 	
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	top_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
-	top_fgs.Add(self.save_btn, 0, wx.ALL, 5)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
+	fgs.Add(self.save_btn, 0, wx.ALL, 5)
 
 	#--Manufacture--#
 	incbmfgTAG = 'AddProcess|Incubator|Manufacter|'+str(self.page_counter)
@@ -4730,56 +4831,61 @@ class IncubatorPanel(wx.Panel):
 	self.settings_controls[incbmfgTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
 	self.settings_controls[incbmfgTAG].SetInitialSize((100, 20))
 	self.settings_controls[incbmfgTAG].SetToolTipString('Manufacturer name')
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	top_fgs.Add(self.settings_controls[incbmfgTAG], 0)
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[incbmfgTAG], 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
 	#--Model--#
 	incbmdlTAG = 'AddProcess|Incubator|Model|'+str(self.page_counter)
 	self.settings_controls[incbmdlTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(incbmdlTAG, default=''))
 	self.settings_controls[incbmdlTAG].Bind(wx.EVT_TEXT,self.OnSavingData)
 	self.settings_controls[incbmdlTAG].SetToolTipString('Model number of the Incubator')
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Model'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	top_fgs.Add(self.settings_controls[incbmdlTAG], 0)
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)	
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Model'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[incbmdlTAG], 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)	
         #--Temperature--#
         incbTempTAG = 'AddProcess|Incubator|Temp|'+str(self.page_counter)
         self.settings_controls[incbTempTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(incbTempTAG, default=''))
         self.settings_controls[incbTempTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[incbTempTAG].SetToolTipString('Temperature of the incubator')
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Temperature'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	top_fgs.Add(self.settings_controls[incbTempTAG], 0)
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Temperature'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[incbTempTAG], 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
         #--Carbondioxide--#
         incbCarbonTAG = 'AddProcess|Incubator|C02|'+str(self.page_counter)
         self.settings_controls[incbCarbonTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(incbCarbonTAG, default=''))
         self.settings_controls[incbCarbonTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[incbCarbonTAG].SetToolTipString('Carbondioxide percentage at the incubator')
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'CO2%'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	top_fgs.Add(self.settings_controls[incbCarbonTAG], 0)
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)		
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'CO2%'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[incbCarbonTAG], 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)		
         #--Humidity--#
         incbHumTAG = 'AddProcess|Incubator|Humidity|'+str(self.page_counter)
         self.settings_controls[incbHumTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(incbHumTAG, default=''))
         self.settings_controls[incbHumTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[incbHumTAG].SetToolTipString('Humidity at the incubator')
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Humidity'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	top_fgs.Add(self.settings_controls[incbHumTAG], 0)
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)		
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Humidity'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[incbHumTAG], 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)		
         #--Pressure--#
         incbPressTAG = 'AddProcess|Incubator|Pressure|'+str(self.page_counter)
         self.settings_controls[incbPressTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(incbPressTAG, default=''))
         self.settings_controls[incbPressTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[incbPressTAG].SetToolTipString('Pressure at the incubator')
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Pressure'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	top_fgs.Add(self.settings_controls[incbPressTAG], 0)
-	top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)	
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Pressure'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.settings_controls[incbPressTAG], 0)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)	
 		
         #---------------Layout with sizers---------------
-	self.top_panel.SetSizer(top_fgs)
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.top_panel.SetSizer(swsizer)
+		
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
-	self.Show()       
+	self.Show()        
 
 
     def onSavingSuppProtocol(self, event):

@@ -1,10 +1,11 @@
 """Windows setup file
+Delete build and dist folder from the cpa folder
 To invoke, from the command-line type:
 python windows_setup.py py2exe msi
 
 This script will create three subdirectories
 build: contains the collection of files needed during packaging
-dist:  the contents that need to be given to the user to run WormProfiler.
+dist:  the contents that need to be given to the user to run ProtocolNavigator.
 output: contains the .msi if you did the msi commmand
 """
 from distutils.core import setup
@@ -25,7 +26,7 @@ import xml.dom.minidom
 vcredist = os.path.join("windows", "vcredist_x86.exe")
 protocol_navigator_iss = "ProtocolNavigator.iss"
 class CellProfilerMSI(distutils.core.Command):
-    description = "Make CellProfiler.msi using the CellProfiler.iss InnoSetup compiler"
+    description = "Make ProtocolNavigator.msi using the ProtocolNavigator.iss InnoSetup compiler"
     user_options = []
     
     def initialize_options(self):
