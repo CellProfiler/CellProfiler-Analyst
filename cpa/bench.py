@@ -203,6 +203,17 @@ class Bench(wx.Frame):
                                    (new_id, self.get_selected_timepoint() + 1), # For now all reseeding instances are set 1 minute after harvesting
                                    destination_wells)
                     meta.set_field('CellTransfer|Seed|HarvestInstance|%s'%(new_id), instance)
+                    h_density = meta.get_field('CellTransfer|Harvest|HarvestingDensity|%s'%instance, [])
+                    s_density = [0,'']
+                    if len(h_density) > 0:
+                        s_density[0]= h_density[0]
+                    if len(h_density) > 1:
+                        s_density[1]= h_density[1]
+                    meta.set_field('CellTransfer|Seed|SeedingDensity|%s'%(new_id), s_density)
+                    if meta.get_field('CellTransfer|Harvest|MediumAddatives|%s'%instance) is not None:
+                        meta.set_field('CellTransfer|Seed|MediumAddatives|%s'%(new_id), meta.get_field('CellTransfer|Harvest|MediumAddatives|%s'%instance))  
+                    
+                    
                 else:
                     self.vesselscroller.get_vessel(platewell_id[0]).deselect_well_id(platewell_id)
                     return

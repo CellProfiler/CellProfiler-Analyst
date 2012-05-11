@@ -95,52 +95,52 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
 	
 	if get_tag_type(tag) == 'CellTransfer' and get_tag_event(tag) == 'Seed':
 	    self.settings_panel = CellSeedSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'CellTransfer' and get_tag_event(tag) == 'Harvest':
 	    self.settings_panel = CellHarvestSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'Perturbation' and get_tag_event(tag) == 'Chem':
 	    self.settings_panel = ChemicalSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
 	if get_tag_type(tag) == 'Perturbation' and get_tag_event(tag) == 'Bio':
             self.settings_panel = BiologicalSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Dye':
 	    self.settings_panel = DyeSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Immuno':
 	    self.settings_panel = ImmunoSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Genetic':
 	    self.settings_panel = GeneticSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Spin':
 	    self.settings_panel = SpinningSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Wash':
 	    self.settings_panel = WashSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Dry':
 	    self.settings_panel = DrySettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Medium':
 	    self.settings_panel = MediumSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Incubator':
 	    self.settings_panel = IncubatorSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
 	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'TLM':  # may link with microscope settings??
 	    self.settings_panel = TLMSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'HCS':  # may link with microscope settings??
 	    self.settings_panel = HCSSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
 	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'FCS':  # may link with flowcytometer settings??
 	    self.settings_panel = FCSSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
 	if get_tag_type(tag) == 'Notes':  
 	    self.settings_panel = NoteSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
 	    
 	self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)        
 	self.settings_container.Layout()
@@ -736,7 +736,7 @@ class MicroscopePanel(wx.Panel):
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
 
-        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY )
+        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, style=wx.TAB_TRAVERSAL)
 
 	self.page_counter = page_counter
 	self.sw = wx.ScrolledWindow(self)
@@ -1972,7 +1972,6 @@ class PlateSettingPanel(wx.Panel):
         meta = ExperimentSettings.getInstance()
         
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
-	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
          
         # Get all the previously encoded Microscope pages and re-Add them as pages
         field_ids = sorted(meta.get_field_instances('ExptVessel|Plate'))
@@ -2051,14 +2050,14 @@ class PlateConfigPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)    
         
         #------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Plate Settings')
-	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
-	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
-	titlesizer.Add(text, 0)
+        text = wx.StaticText(self.sw, -1, 'Plate Settings')
+        font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
+        text.SetFont(font)
+        fgs.Add(text, 0)
+        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #---- Plate number---#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Total number of plates in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Total number of plates in the stack'), 0)
         self.platenum = wx.Choice(self.sw, -1,  choices= map(str, range(1,25)))
         if not inc_plate_ids:
             self.platenum.Enable() 
@@ -2068,7 +2067,7 @@ class PlateConfigPanel(wx.Panel):
         fgs.Add(self.platenum, 0, wx.EXPAND)
                 
         #--- Group name---#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0)
         self.groupname = wx.TextCtrl(self.sw, -1, value='')
         if not inc_plate_ids:
             self.groupname.Enable()
@@ -2077,8 +2076,8 @@ class PlateConfigPanel(wx.Panel):
             self.groupname.Disable()
         fgs.Add(self.groupname, 0, wx.EXPAND)
             
-        #--Design--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Design'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        ##--Design--#
+        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Design'), 0)
         self.platedesign = wx.Choice(self.sw, -1, choices=WELL_NAMES_ORDERED, name='PlateDesign')
         for i, format in enumerate([WELL_NAMES[name] for name in WELL_NAMES_ORDERED]):
                 self.platedesign.SetClientData(i, format)
@@ -2090,7 +2089,7 @@ class PlateConfigPanel(wx.Panel):
         fgs.Add(self.platedesign, 0, wx.EXPAND)
                 
         #--Coating--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Coating'), 0)
         self.platecoat = wx.Choice(self.sw, -1, choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin'])
         if not inc_plate_ids:
             self.platecoat.Enable()
@@ -2100,7 +2099,7 @@ class PlateConfigPanel(wx.Panel):
         fgs.Add(self.platecoat, 0, wx.EXPAND)
                     
         #--Plate Material--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Material'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Material'), 0)
         self.platematerial = wx.Choice(self.sw, -1, choices=['Plastic','Glass'])
         if not inc_plate_ids:
             self.platematerial.Enable()
@@ -2110,7 +2109,7 @@ class PlateConfigPanel(wx.Panel):
         fgs.Add(self.platematerial, 0, wx.EXPAND)
                 
         #--Well Shape--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Well Shape'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Well Shape'), 0)
         self.wellshape = wx.Choice(self.sw, -1, choices=['Square','Round','Oval'])
         if not inc_plate_ids:
             self.wellshape.Enable()
@@ -2120,7 +2119,7 @@ class PlateConfigPanel(wx.Panel):
         fgs.Add(self.wellshape, 0, wx.EXPAND)
                 
         #--Well Size--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Well Size (mm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(wx.StaticText(self.sw, -1, 'Well Size (mm)'), 0)
         self.wellsize = wx.TextCtrl(self.sw, -1, value='')
         if not inc_plate_ids:
             self.wellsize.Enable()
@@ -2131,31 +2130,20 @@ class PlateConfigPanel(wx.Panel):
 
         
         ##-------------- Buttons -----------------------
-        self.deletePlategroupPageBtn = wx.Button(self.sw, -1, label="Delete Stack")
-        self.deletePlategroupPageBtn.Bind(wx.EVT_BUTTON, self.onDeletePlategroupPage)
-        if not inc_plate_ids:
-            self.deletePlategroupPageBtn.Disable()
-        else:
-            self.deletePlategroupPageBtn.Enable()
-        
         self.createBtn = wx.Button(self.sw, -1, label="Create Stack")
         self.createBtn.Bind(wx.EVT_BUTTON, self.onCreatePlategroupPage)
         if inc_plate_ids:
             self.createBtn.Disable()
             
-        fgs.Add(self.deletePlategroupPageBtn, 0, wx.EXPAND)
+        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         fgs.Add(self.createBtn, 0, wx.EXPAND)             
 
-        #---------------Layout with sizers---------------
-	swsizer = wx.BoxSizer(wx.VERTICAL)
-	swsizer.Add(titlesizer)
-	swsizer.Add((-1,10))
-	swsizer.Add(fgs)
-	self.sw.SetSizer(swsizer)
-	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-	
-	self.Sizer = wx.BoxSizer(wx.VERTICAL)
-	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+        ##---------------Layout with sizers---------------
+        self.sw.SetSizer(fgs)
+        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
     
     def onCreatePlategroupPage(self, event):
         
@@ -2202,36 +2190,7 @@ class PlateConfigPanel(wx.Panel):
         self.wellsize.Disable()
         # make the copy and delete button active
         self.createBtn.Disable()
-        #self.copyPlategroupPageBtn.Enable()
-        self.deletePlategroupPageBtn.Enable()
         self.GrandParent.addPlateGrpPageBtn.Enable()
-         
-      
-    def onDeletePlategroupPage(self, event):
-
-        dlg = wx.MessageDialog(self, 'Do you want to delete stack '+str(self.plgrp_id)+' ?', 'Deleting..', wx.YES_NO| wx.NO_DEFAULT | wx.ICON_WARNING)
-        
-        if dlg.ShowModal() == wx.ID_YES:
-                
-            meta = ExperimentSettings.getInstance()
-       
-            for exs_plate_id in meta.get_field_instances('ExptVessel|Plate|GroupNo|'):
-            # get the set of each parameters since all parameters are same for all instances under this group so one will be same     
-                if meta.get_field('ExptVessel|Plate|GroupNo|'+str(exs_plate_id)) == self.plgrp_id:
-                    #remove the instances                    
-                    meta.remove_field('ExptVessel|Plate|GroupNo|%s'%str(exs_plate_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Plate|Number|%s'%str(exs_plate_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Plate|GroupName|%s'%str(exs_plate_id), notify_subscribers =False)                    
-                    meta.remove_field('ExptVessel|Plate|Design|%s'%str(exs_plate_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Plate|Coat|%s'%str(exs_plate_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Plate|Material|%s'%str(exs_plate_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Plate|Shape|%s'%str(exs_plate_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Plate|Size|%s'%str(exs_plate_id))
-                    
-            # remove the page
-            self.Parent.DeletePage(self.Parent.GetSelection())
-            # TO DO: Remove plates from the Bench Panel and update the lineage panel accordingly
-            
 
 #########################################################################        
 ###################     FLASK SETTING PANEL          ####################
@@ -2981,7 +2940,7 @@ class CellSeedPanel(wx.Panel):
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+        fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
 	text = wx.StaticText(self.sw, -1, 'Cell Seeding')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
@@ -2996,14 +2955,23 @@ class CellSeedPanel(wx.Panel):
 	fgs.Add(showInstBut, 0, wx.EXPAND)
 	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 	
-        #-- Cell Line selection ---#
-        celllineselcTAG = 'CellTransfer|Seed|StockInstance|'+str(self.page_counter)
-        self.settings_controls[celllineselcTAG] = wx.TextCtrl(self.sw, value=meta.get_field(celllineselcTAG, default=''), style=wx.TE_PROCESS_ENTER)
-        self.settings_controls[celllineselcTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[celllineselcTAG].SetToolTipString('Stock culture from where cells were transferred')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Select Stock Culture'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[celllineselcTAG], 0, wx.EXPAND)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	#-- Cell Line selection ---#
+	if meta.get_field('CellTransfer|Seed|HarvestInstance|%s'%self.page_counter) is not None:
+	    celllineselcTAG = 'CellTransfer|Seed|HarvestInstance|'+str(self.page_counter)
+	    self.settings_controls[celllineselcTAG] = wx.TextCtrl(self.sw, value=meta.get_field(celllineselcTAG, default=''), style=wx.TE_PROCESS_ENTER)
+	    self.settings_controls[celllineselcTAG].Disable()
+	    showInstBut.Hide()
+	    fgs.Add(wx.StaticText(self.sw, -1, 'Harvest Instance'), 0)
+	    fgs.Add(self.settings_controls[celllineselcTAG], 0, wx.EXPAND) 
+	    fgs.Add(wx.StaticText(self.sw, -1, ''), 0)	
+	else:
+	    celllineselcTAG = 'CellTransfer|Seed|StockInstance|'+str(self.page_counter)
+	    self.settings_controls[celllineselcTAG] = wx.TextCtrl(self.sw, value=meta.get_field(celllineselcTAG, default=''), style=wx.TE_PROCESS_ENTER)
+	    self.settings_controls[celllineselcTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+	    self.settings_controls[celllineselcTAG].SetToolTipString('Stock culture from where cells were transferred')
+	    fgs.Add(wx.StaticText(self.sw, -1, 'Stock Culture Instance'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	    fgs.Add(self.settings_controls[celllineselcTAG], 0, wx.EXPAND)
+	    fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         # Seeding Density
        	seeddensityTAG = 'CellTransfer|Seed|SeedingDensity|'+str(self.page_counter)
@@ -3021,35 +2989,14 @@ class CellSeedPanel(wx.Panel):
 	    self.settings_controls[seeddensityTAG+'|1'].SetStringSelection(seeddensity[1])
 	self.settings_controls[seeddensityTAG+'|1'].Bind(wx.EVT_LISTBOX, self.OnSavingData)
 	fgs.Add(self.settings_controls[seeddensityTAG+'|1'], 0, wx.EXPAND)
-	# Medium Used
-        medmTAG = 'CellTransfer|Seed|MediumUsed|'+str(self.page_counter)
-        self.settings_controls[medmTAG] = wx.Choice(self.sw, -1,  choices=['Typical', 'Atypical'])
-        if meta.get_field(medmTAG) is not None:
-            self.settings_controls[medmTAG].SetStringSelection(meta.get_field(medmTAG))
-        self.settings_controls[medmTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[medmTAG].SetToolTipString('Typical/Atypical (Ref in both cases)')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Medium Used'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[medmTAG], 0, wx.EXPAND)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #  Medium Addatives
         medaddTAG = 'CellTransfer|Seed|MediumAddatives|'+str(self.page_counter)
-        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''), style=wx.TE_PROCESS_ENTER)
+        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''), style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
         self.settings_controls[medaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[medaddTAG].SetToolTipString('Any medium additives used with concentration, Glutamine')
+        self.settings_controls[medaddTAG].SetToolTipString(meta.get_field(medaddTAG, default='Any medium additives used with concentration, Glutamine'))
         fgs.Add(wx.StaticText(self.sw, -1, 'Medium Additives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[medaddTAG], 0, wx.EXPAND)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-
-        # Trypsinization
-        trypsTAG = 'CellTransfer|Seed|Trypsinizatiton|'+str(self.page_counter)
-        self.settings_controls[trypsTAG] = wx.Choice(self.sw, -1,  choices=['Yes', 'No'])
-        if meta.get_field(trypsTAG) is not None:
-            self.settings_controls[trypsTAG].SetStringSelection(meta.get_field(trypsTAG))
-        self.settings_controls[trypsTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[trypsTAG].SetToolTipString('(Y/N) After cells were loded on the exerimental vessel, i.e. time 0 of the experiment')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Trypsinization'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[trypsTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #---------------Layout with sizers---------------
@@ -3189,37 +3136,16 @@ class CellHarvestPanel(wx.Panel):
 	self.settings_controls[harvestdensityTAG+'|1'].Bind(wx.EVT_LISTBOX, self.OnSavingData)
 	fgs.Add(self.settings_controls[harvestdensityTAG+'|1'], 0, wx.EXPAND)	
 
-        # Medium Used
-        medmTAG = 'CellTransfer|Harvest|MediumUsed|'+str(self.page_counter)
-        self.settings_controls[medmTAG] = wx.Choice(self.sw, -1,  choices=['Typical', 'Atypical'])
-        if meta.get_field(medmTAG) is not None:
-            self.settings_controls[medmTAG].SetStringSelection(meta.get_field(medmTAG))
-        self.settings_controls[medmTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[medmTAG].SetToolTipString('Typical/Atypical (Ref in both cases)')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Medium Used'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[medmTAG], 0, wx.EXPAND) 
-	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-
         #  Medium Addatives
         medaddTAG = 'CellTransfer|Harvest|MediumAddatives|'+str(self.page_counter)
-        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''), style=wx.TE_PROCESS_ENTER)
+        self.settings_controls[medaddTAG] = wx.TextCtrl(self.sw, value=meta.get_field(medaddTAG, default=''), style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
         self.settings_controls[medaddTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[medaddTAG].SetToolTipString('Any medium addatives used with concentration, Glutamine')
+        self.settings_controls[medaddTAG].SetToolTipString(meta.get_field(medaddTAG, default='Any medium addatives used with concentration, Glutamine'))
         fgs.Add(wx.StaticText(self.sw, -1, 'Medium Addatives'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[medaddTAG], 0, wx.EXPAND)
 	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
-        # Trypsinization
-        trypsTAG = 'CellTransfer|Harvest|Trypsinizatiton|'+str(self.page_counter)
-        self.settings_controls[trypsTAG] = wx.Choice(self.sw, -1,  choices=['Yes', 'No'])
-        if meta.get_field(trypsTAG) is not None:
-            self.settings_controls[trypsTAG].SetStringSelection(meta.get_field(trypsTAG))
-        self.settings_controls[trypsTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
-        self.settings_controls[trypsTAG].SetToolTipString('(Y/N) After cells were loded on the exerimental vessel, i.e. time 0 of the experiment')
-        fgs.Add(wx.StaticText(self.sw, -1, 'Trypsinization'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[trypsTAG], 0, wx.EXPAND)  
-	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-
+        
         #---------------Layout with sizers---------------
 	swsizer = wx.BoxSizer(wx.VERTICAL)
 	swsizer.Add(titlesizer)
@@ -3296,7 +3222,7 @@ class ChemicalAgentPanel(wx.Panel):
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
+        fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
 	text = wx.StaticText(self.sw, -1, 'Chemical Agent')
@@ -3316,7 +3242,7 @@ class ChemicalAgentPanel(wx.Panel):
         #Concentration and Unit
 	concTAG = 'Perturbation|Chem|Conc|'+str(self.page_counter)
 	conc = meta.get_field(concTAG, [])
-	self.settings_controls[concTAG+'|0'] = wx.lib.masked.NumCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	self.settings_controls[concTAG+'|0'] = wx.TextCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
 	if len(conc) > 0:
 	    self.settings_controls[concTAG+'|0'].SetValue(conc[0])
 	self.settings_controls[concTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
@@ -3476,7 +3402,7 @@ class BiologicalAgentPanel(wx.Panel):
         #Concentration and Unit
 	concTAG = 'Perturbation|Bio|Conc|'+str(self.page_counter)
 	conc = meta.get_field(concTAG, [])
-	self.settings_controls[concTAG+'|0'] = wx.lib.masked.NumCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
+	self.settings_controls[concTAG+'|0'] = wx.TextCtrl(self.sw, size=(20,-1), style=wx.TE_PROCESS_ENTER)
 	if len(conc) > 0:
 	    self.settings_controls[concTAG+'|0'].SetValue(conc[0])
 	self.settings_controls[concTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)

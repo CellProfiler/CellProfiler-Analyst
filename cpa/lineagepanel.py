@@ -17,7 +17,7 @@ SPACE_TIME_COMPACT = 2
 meta = exp.ExperimentSettings.getInstance()
 
 class LineageFrame(wx.Frame):
-    def __init__(self, parent, id=-1, title='Experiment Lineage', **kwargs):
+    def __init__(self, parent, id=-1, title='Visualization Panel', **kwargs):
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
         
         sw = wx.ScrolledWindow(self)
@@ -619,6 +619,8 @@ class LineagePanel(wx.Panel):
                                                       well)
                     urls = meta.get_field(image_tag, [])
                     ImageJPath = r'C:\Program Files\ImageJ\ImageJ'
+                    # check whether ImageJ exists in the path
+                    # Open an instance of ImageJ for multiple images.
                     subprocess.Popen("%s %s" % (ImageJPath, ' '.join(urls))) 
                     #for url in urls:
                         #im = Image.open(url)
@@ -664,21 +666,20 @@ class LineagePanel(wx.Panel):
         bench.update_plate_groups()
         bench.update_well_selections()
         
-        try:
-            exptsettings = wx.GetApp().get_exptsettings()
-        except:
-            return
-        # -- Update the expt setting/metadata view --#
-        exptsettings.OnLeafSelect()
-        if self.current_node.get_tags():
-            exptsettings.ShowInstance(self.current_node.get_tags()[0])
+        #try:
+            #exptsettings = wx.GetApp().get_exptsettings()
+        #except:
+            #return
+        ## -- Update the expt setting/metadata view --#
+        #exptsettings.OnLeafSelect()
+        #if self.current_node.get_tags():
+            #exptsettings.ShowInstance(self.current_node.get_tags()[0])
             
             
         ancestors = [exp.get_tag_stump(ptag, 2)
                      for pnode in timeline.reverse_iter_tree(self.current_node) if pnode
                      for ptag in pnode.tags]    
-        print ancestors
-    
+      
     def ShowTooltipsInfo(self):
         info_string = ''
         for tag in self.current_node.get_tags():

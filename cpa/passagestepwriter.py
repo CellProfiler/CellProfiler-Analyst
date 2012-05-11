@@ -141,7 +141,7 @@ class PassageStepBuilder(wx.Dialog):
 	    self.settings_controls[step+'|2'] = wx.TextCtrl(self.bot_panel, size=(30,-1), value=step_info[2], style=wx.TE_PROCESS_ENTER)	
 	    self.settings_controls[step+'|3'] = wx.TextCtrl(self.bot_panel, size=(100,-1), value=step_info[3], style=wx.TE_PROCESS_ENTER)
 	    if step_info[3]:
-		self.settings_controls[step+'|3'].SetBackgroundColour("RED")  
+		self.settings_controls[step+'|3'].SetForegroundColour(wx.RED) 
 	    self.del_btn = wx.Button(self.bot_panel, id=stepNo, label='Del -') 
 	    self.add_btn = wx.Button(self.bot_panel, id=stepNo, label='Add +')
 	    #--- Tooltips --#
