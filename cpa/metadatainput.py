@@ -3553,96 +3553,134 @@ class ImmunoPanel(wx.Panel):
 	top_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
 	top_fgs.Add(self.save_btn, 0, wx.EXPAND|wx.ALL, 5)	
 	
-	fgs = wx.FlexGridSizer(cols=4, hgap=5, vgap=5)
-	# Target Antibody 
-	trgtseqTAG = 'Staining|Immuno|Target|'+str(self.page_counter)
-	self.settings_controls[trgtseqTAG] = wx.TextCtrl(self.top_panel,  value=meta.get_field(trgtseqTAG, default=''))
-	self.settings_controls[trgtseqTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-	self.settings_controls[trgtseqTAG].SetToolTipString('Name of the target antibody')
-	fgs.Add(wx.StaticText(self.top_panel, -1, 'Target Antibody'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[trgtseqTAG], 0, wx.EXPAND)
-	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
-	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
-        # Clonality 
-	clonalityTAG = 'Staining|Immuno|Clonality|'+str(self.page_counter)
-	self.settings_controls[clonalityTAG] = wx.Choice(self.top_panel, -1,  choices=['Monoclonal', 'Polyclonal'])
-	if meta.get_field(clonalityTAG) is not None:
-	    self.settings_controls[clonalityTAG].SetStringSelection(meta.get_field(clonalityTAG))
-	self.settings_controls[clonalityTAG].Bind(wx.EVT_CHOICE, self.OnSavingData) 
-	self.settings_controls[clonalityTAG].SetToolTipString('Clonality')
-	fgs.Add(wx.StaticText(self.top_panel, -1, 'Clonality'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[clonalityTAG], 0, wx.EXPAND)
-	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
-	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
-        # Primary source and associated solvent
-        primaryantiTAG = 'Staining|Immuno|Primary|'+str(self.page_counter)
-	primaryanti = meta.get_field(primaryantiTAG, [])
-	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
-	self.settings_controls[primaryantiTAG+'|0']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
-	if len(primaryanti) > 0:
-	    self.settings_controls[primaryantiTAG+'|0'].Append(primaryanti[0])
-	    self.settings_controls[primaryantiTAG+'|0'].SetStringSelection(primaryanti[0])
-	self.settings_controls[primaryantiTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
-	self.settings_controls[primaryantiTAG+'|0'].SetToolTipString('Primary source species') 
+	fgs = wx.FlexGridSizer(cols=6, hgap=5, vgap=5)
+	#Headers
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0, wx.ALIGN_CENTER|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Manufacturer'), 0, wx.ALIGN_CENTER|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Catalogue No.'), 0, wx.ALIGN_CENTER|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Species'), 0, wx.ALIGN_CENTER|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Target'), 0, wx.ALIGN_CENTER|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(wx.StaticText(self.top_panel, -1, 'Tag'), 0, wx.ALIGN_CENTER|wx.ALIGN_CENTER_VERTICAL)
+        # Primary source and associated attributes
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Primary Antibody'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[primaryantiTAG+'|0'], 0, wx.EXPAND)	
-	
+        primaryantiTAG = 'Staining|Immuno|Primary|'+str(self.page_counter)
+	primaryanti = meta.get_field(primaryantiTAG, [])	
+	self.settings_controls[primaryantiTAG+'|0'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(primaryanti)> 0:
+	    self.settings_controls[primaryantiTAG+'|0'].SetValue(primaryanti[0])
+	    self.settings_controls[primaryantiTAG+'|0'].SetToolTipString('Manufacturer\n%s' %primaryanti[0])
+	self.settings_controls[primaryantiTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[primaryantiTAG+'|0'], 0, wx.EXPAND)	
 	self.settings_controls[primaryantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
 	if len(primaryanti)> 1:
 	    self.settings_controls[primaryantiTAG+'|1'].SetValue(primaryanti[1])
-	    self.settings_controls[primaryantiTAG+'|1'].SetToolTipString('Solvent used\n%s' %primaryanti[1])
+	    self.settings_controls[primaryantiTAG+'|1'].SetToolTipString('Catalogue Number\n%s' %primaryanti[1])
 	self.settings_controls[primaryantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	fgs.Add(wx.StaticText(self.top_panel, -1, 'Solvent'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[primaryantiTAG+'|1'], 0, wx.EXPAND)	
-	
-	# Secondary source and associated solvent
-	scndantiTAG = 'Staining|Immuno|Secondary|'+str(self.page_counter)
-	scndanti = meta.get_field(scndantiTAG, [])
 	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
-	self.settings_controls[scndantiTAG+'|0']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
-	if len(scndanti) > 0:
-	    self.settings_controls[scndantiTAG+'|0'].Append(scndanti[0])
-	    self.settings_controls[scndantiTAG+'|0'].SetStringSelection(scndanti[0])
-	self.settings_controls[scndantiTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
-	self.settings_controls[scndantiTAG+'|0'].SetToolTipString('Secondary source species') 
+	self.settings_controls[primaryantiTAG+'|2']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (100,30), organism_choices, wx.LB_SINGLE)
+	if len(primaryanti) > 2:
+	    self.settings_controls[primaryantiTAG+'|2'].Append(primaryanti[2])
+	    self.settings_controls[primaryantiTAG+'|2'].SetStringSelection(primaryanti[2])
+	self.settings_controls[primaryantiTAG+'|2'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
+	self.settings_controls[primaryantiTAG+'|2'].SetToolTipString('Primary source species') 
+        fgs.Add(self.settings_controls[primaryantiTAG+'|2'], 0, wx.EXPAND)	
+	self.settings_controls[primaryantiTAG+'|3'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(primaryanti)> 3:
+	    self.settings_controls[primaryantiTAG+'|3'].SetValue(primaryanti[3])
+	    self.settings_controls[primaryantiTAG+'|3'].SetToolTipString('Target antibody\n%s' %primaryanti[3])
+	self.settings_controls[primaryantiTAG+'|3'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[primaryantiTAG+'|3'], 0, wx.EXPAND)	
+	self.settings_controls[primaryantiTAG+'|4'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(primaryanti)> 4:
+	    self.settings_controls[primaryantiTAG+'|4'].SetValue(primaryanti[4])
+	    self.settings_controls[primaryantiTAG+'|4'].SetToolTipString('Tag used\n%s' %primaryanti[4])
+	self.settings_controls[primaryantiTAG+'|4'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[primaryantiTAG+'|4'], 0, wx.EXPAND)	
+	
+	# Secondary source and associated attributes
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Secondary Antibody'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[scndantiTAG+'|0'], 0, wx.EXPAND)		
-
-	self.settings_controls[scndantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
-	if len(scndanti)> 1:
-	    self.settings_controls[scndantiTAG+'|1'].SetValue(scndanti[1])
-	    self.settings_controls[scndantiTAG+'|1'].SetToolTipString('Solvent used\n%s' %scndanti[1])
-	self.settings_controls[scndantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	fgs.Add(wx.StaticText(self.top_panel, -1, 'Solvent'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[scndantiTAG+'|1'], 0, wx.EXPAND)	
-	
-	# Tertiary source and associated solvent
-	tertantiTAG = 'Staining|Immuno|Tertiary|'+str(self.page_counter)
-	tertanti = meta.get_field(tertantiTAG, [])
+	secondaryantiTAG = 'Staining|Immuno|Secondary|'+str(self.page_counter)
+	secondaryanti = meta.get_field(secondaryantiTAG, [])	
+	self.settings_controls[secondaryantiTAG+'|0'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(secondaryanti)> 0:
+	    self.settings_controls[secondaryantiTAG+'|0'].SetValue(secondaryanti[0])
+	    self.settings_controls[secondaryantiTAG+'|0'].SetToolTipString('Manufacturer\n%s' %secondaryanti[0])
+	self.settings_controls[secondaryantiTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[secondaryantiTAG+'|0'], 0, wx.EXPAND)	
+	self.settings_controls[secondaryantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(secondaryanti)> 1:
+	    self.settings_controls[secondaryantiTAG+'|1'].SetValue(secondaryanti[1])
+	    self.settings_controls[secondaryantiTAG+'|1'].SetToolTipString('Catalogue Number\n%s' %secondaryanti[1])
+	self.settings_controls[secondaryantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[secondaryantiTAG+'|1'], 0, wx.EXPAND)	
 	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
-	self.settings_controls[tertantiTAG+'|0']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
-	if len(tertanti) > 0:
-	    self.settings_controls[tertantiTAG+'|0'].Append(tertanti[0])
-	    self.settings_controls[tertantiTAG+'|0'].SetStringSelection(tertanti[0])
-	self.settings_controls[tertantiTAG+'|0'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
-	self.settings_controls[tertantiTAG+'|0'].SetToolTipString('Tertiary source species') 
+	self.settings_controls[secondaryantiTAG+'|2']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (100,30), organism_choices, wx.LB_SINGLE)
+	if len(secondaryanti) > 2:
+	    self.settings_controls[secondaryantiTAG+'|2'].Append(secondaryanti[2])
+	    self.settings_controls[secondaryantiTAG+'|2'].SetStringSelection(secondaryanti[2])
+	self.settings_controls[secondaryantiTAG+'|2'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
+	self.settings_controls[secondaryantiTAG+'|2'].SetToolTipString('Secondary source species') 
+	fgs.Add(self.settings_controls[secondaryantiTAG+'|2'], 0, wx.EXPAND)	
+	self.settings_controls[secondaryantiTAG+'|3'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(secondaryanti)> 3:
+	    self.settings_controls[secondaryantiTAG+'|3'].SetValue(secondaryanti[3])
+	    self.settings_controls[secondaryantiTAG+'|3'].SetToolTipString('Target antibody\n%s' %secondaryanti[3])
+	self.settings_controls[secondaryantiTAG+'|3'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[secondaryantiTAG+'|3'], 0, wx.EXPAND)	
+	self.settings_controls[secondaryantiTAG+'|4'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(secondaryanti)> 4:
+	    self.settings_controls[secondaryantiTAG+'|4'].SetValue(secondaryanti[4])
+	    self.settings_controls[secondaryantiTAG+'|4'].SetToolTipString('Tag used\n%s' %secondaryanti[4])
+	self.settings_controls[secondaryantiTAG+'|4'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[secondaryantiTAG+'|4'], 0, wx.EXPAND)			
+	# Tertiary source and associated attributes
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Tertiary Antibody'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[tertantiTAG+'|0'], 0, wx.EXPAND)	
-	
-	self.settings_controls[tertantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
-	if len(tertanti)> 1:
-	    self.settings_controls[tertantiTAG+'|1'].SetValue(tertanti[1])
-	    self.settings_controls[tertantiTAG+'|1'].SetToolTipString('Solvent used\n%s' %tertanti[1])
-	self.settings_controls[tertantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
-	fgs.Add(wx.StaticText(self.top_panel, -1, 'Solvent'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[tertantiTAG+'|1'], 0, wx.EXPAND)		
+        tertiaryantiTAG = 'Staining|Immuno|Tertiary|'+str(self.page_counter)
+	tertiaryanti = meta.get_field(tertiaryantiTAG, [])	
+	self.settings_controls[tertiaryantiTAG+'|0'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(tertiaryanti)> 0:
+	    self.settings_controls[tertiaryantiTAG+'|0'].SetValue(tertiaryanti[0])
+	    self.settings_controls[tertiaryantiTAG+'|0'].SetToolTipString('Manufacturer\n%s' %tertiaryanti[0])
+	self.settings_controls[tertiaryantiTAG+'|0'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[tertiaryantiTAG+'|0'], 0, wx.EXPAND)	
+	self.settings_controls[tertiaryantiTAG+'|1'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(tertiaryanti)> 1:
+	    self.settings_controls[tertiaryantiTAG+'|1'].SetValue(tertiaryanti[1])
+	    self.settings_controls[tertiaryantiTAG+'|1'].SetToolTipString('Catalogue Number\n%s' %tertiaryanti[1])
+	self.settings_controls[tertiaryantiTAG+'|1'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[tertiaryantiTAG+'|1'], 0, wx.EXPAND)	
+	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
+	self.settings_controls[tertiaryantiTAG+'|2']= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (100,30), organism_choices, wx.LB_SINGLE)
+	if len(tertiaryanti) > 2:
+	    self.settings_controls[tertiaryantiTAG+'|2'].Append(tertiaryanti[2])
+	    self.settings_controls[tertiaryantiTAG+'|2'].SetStringSelection(tertiaryanti[2])
+	self.settings_controls[tertiaryantiTAG+'|2'].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
+	self.settings_controls[tertiaryantiTAG+'|2'].SetToolTipString('Tertiary source species') 
+        fgs.Add(self.settings_controls[tertiaryantiTAG+'|2'], 0, wx.EXPAND)	
+	self.settings_controls[tertiaryantiTAG+'|3'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(tertiaryanti)> 3:
+	    self.settings_controls[tertiaryantiTAG+'|3'].SetValue(tertiaryanti[3])
+	    self.settings_controls[tertiaryantiTAG+'|3'].SetToolTipString('Target antibody\n%s' %tertiaryanti[3])
+	self.settings_controls[tertiaryantiTAG+'|3'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[tertiaryantiTAG+'|3'], 0, wx.EXPAND)	
+	self.settings_controls[tertiaryantiTAG+'|4'] = wx.TextCtrl(self.top_panel, value='') 
+	if len(tertiaryanti)> 4:
+	    self.settings_controls[tertiaryantiTAG+'|4'].SetValue(tertiaryanti[4])
+	    self.settings_controls[tertiaryantiTAG+'|4'].SetToolTipString('Tag used\n%s' %tertiaryanti[4])
+	self.settings_controls[tertiaryantiTAG+'|4'].Bind(wx.EVT_TEXT, self.OnSavingData)
+	fgs.Add(self.settings_controls[tertiaryantiTAG+'|4'], 0, wx.EXPAND)		
 	
 	#---------------Layout with sizers---------------
 	swsizer = wx.BoxSizer(wx.VERTICAL)
 	swsizer.Add(titlesizer)
 	swsizer.Add((-1,10))
 	swsizer.Add(top_fgs)
+	swsizer.Add((-1,10))
+	swsizer.Add(wx.StaticLine(self.top_panel), 0, wx.EXPAND|wx.ALL, 5)
 	swsizer.Add(fgs)
+	swsizer.Add(wx.StaticLine(self.top_panel), 0, wx.EXPAND|wx.ALL, 5)
+	swsizer.Add((-1,5))
 	self.top_panel.SetSizer(swsizer)
 	
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
