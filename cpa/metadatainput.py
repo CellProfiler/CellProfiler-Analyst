@@ -44,6 +44,7 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
         self.tree.AppendItem(exv, 'Flask')
         self.tree.AppendItem(exv, 'Dish')
         self.tree.AppendItem(exv, 'Coverslip')
+	self.tree.AppendItem(exv, 'Tube')
         #self.tree.AppendItem(exv, 'Culture Slide').Disable()
         stc = self.tree.AppendItem(root, 'ASSAY')
         cld = self.tree.AppendItem(stc, 'Cell Transfer')
@@ -95,52 +96,52 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
 	
 	if get_tag_type(tag) == 'CellTransfer' and get_tag_event(tag) == 'Seed':
 	    self.settings_panel = CellSeedSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'CellTransfer' and get_tag_event(tag) == 'Harvest':
 	    self.settings_panel = CellHarvestSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'Perturbation' and get_tag_event(tag) == 'Chem':
 	    self.settings_panel = ChemicalSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
 	if get_tag_type(tag) == 'Perturbation' and get_tag_event(tag) == 'Bio':
             self.settings_panel = BiologicalSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Dye':
 	    self.settings_panel = DyeSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Immuno':
 	    self.settings_panel = ImmunoSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'Staining' and get_tag_event(tag) == 'Genetic':
 	    self.settings_panel = GeneticSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Spin':
 	    self.settings_panel = SpinningSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Wash':
 	    self.settings_panel = WashSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Dry':
 	    self.settings_panel = DrySettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Medium':
 	    self.settings_panel = MediumSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'AddProcess' and get_tag_event(tag) == 'Incubator':
 	    self.settings_panel = IncubatorSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
 	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'TLM':  # may link with microscope settings??
 	    self.settings_panel = TLMSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'HCS':  # may link with microscope settings??
 	    self.settings_panel = HCSSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
 	if get_tag_type(tag) == 'DataAcquis' and get_tag_event(tag) == 'FCS':  # may link with flowcytometer settings??
 	    self.settings_panel = FCSSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)
 	if get_tag_type(tag) == 'Notes':  
 	    self.settings_panel = NoteSettingPanel(self.settings_container)
-	    self.settings_panel.notebook.SetSelection(int(get_tag_attribute(tag))-1)	
+	    self.settings_panel.notebook.SetSelection(int(get_tag_instance(tag))-1)	
 	    
 	self.settings_container.Sizer.Add(self.settings_panel, 1, wx.EXPAND)        
 	self.settings_container.Layout()
@@ -176,6 +177,8 @@ class ExperimentSettingsWindow(wx.SplitterWindow):
             self.settings_panel = CoverslipSettingPanel(self.settings_container)        
         elif self.tree.GetItemText(item) == 'Culture Slide':
             self.settings_panel = CultureslideSettingPanel(self.settings_container)
+	elif self.tree.GetItemText(item) == 'Tube':
+	    self.settings_panel = TubeSettingPanel(self.settings_container)	
         
         elif self.tree.GetItemText(item) == 'Seeding':
             self.settings_panel = CellSeedSettingPanel(self.settings_container)
@@ -417,25 +420,17 @@ class StockCultureSettingPanel(wx.Panel):
 
 
 class StockCulturePanel(wx.Panel):
-    def __init__(self, parent, stk_id=None):
-        wx.Panel.__init__(self, parent=parent)
-	
-	self.settings_controls = {}
+    def __init__(self, parent, page_counter):
+
+        self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-	
-	self.testDict = {}
-        if stk_id is None:  
-            stk_list = meta.get_field_instances('StockCulture|Sample|')
-            #Find the all instances of stkroscope
-            if stk_list:
-                stk_id =  max(map(int, stk_list))+1
-            else:
-                stk_id = 1
-        self.stk_id = stk_id
-	
-	self.protocol = 'StockCulture|Sample|%s'%str(self.stk_id)
+
+        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, style=wx.TAB_TRAVERSAL)
+
+	self.page_counter = page_counter
+	self.sw = wx.ScrolledWindow(self)
+	self.protocol = 'StockCulture|Sample|%s'%str(self.page_counter)    
 	self.tag_stump = 'StockCulture|Sample'
-	self.instance = str(self.stk_id)
 	self.currpassageNo = 0
 	
         self.top_panel = wx.Panel(self)
@@ -444,7 +439,7 @@ class StockCulturePanel(wx.Panel):
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
         # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)
+        fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
 	
 	#------- Heading ---#
 	text = wx.StaticText(self.top_panel, -1, 'Stock Culture')
@@ -453,23 +448,89 @@ class StockCulturePanel(wx.Panel):
 	titlesizer = wx.BoxSizer(wx.VERTICAL)
 	titlesizer.Add(text, 0)	
     
-        #----------- Labels and Text Controler-------        
-        # Cell Line Name
-        cellLineTAG = 'StockCulture|Sample|CellLine|%s'%str(self.stk_id)
-        self.settings_controls[cellLineTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(cellLineTAG, default=''))
-        self.settings_controls[cellLineTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
-        self.settings_controls[cellLineTAG].SetToolTipString('Cell Line selection')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Cell Line'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[cellLineTAG], 0, wx.EXPAND)               
-        # ATCC reference
-        acttTAG = 'StockCulture|Sample|ATCCref|%s'%str(self.stk_id)
+        #----------- Labels and Text Controler-------   
+	'''
+	ATCCNumber:
+	Cell Line Name/Designations
+	Depositors
+	Biosafety Level: 
+	    Shipped:
+		Medium & Serum: (Propagation/Passage)
+	Growth Properties:
+	Organism:
+	Morphology:
+	Source Organ:
+	Source Disease:
+	Cellular Products:
+	Applications
+	Receptors
+	Antigen Expression
+	DNA Profile (STR)
+	Cytogenetic Analysis
+	Isoenzymes
+	Age
+	Gender
+	Ethnicity
+	Comments
+	Related Products
+	References
+	    '''
+	
+	admin_staticbox = wx.StaticBox(self.top_panel, -1, "Administrative Information")
+	admin_fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+	
+	# Authority
+	authorityTAG = 'StockCulture|Sample|Authority|%s'%str(self.page_counter)
+	self.settings_controls[authorityTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(authorityTAG, default='ATCC'))
+	self.settings_controls[authorityTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
+	self.settings_controls[authorityTAG].SetToolTipString('Cell Line selection')
+	admin_fgs.Add(wx.StaticText(self.top_panel, -1, 'Authority'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	admin_fgs.Add(self.settings_controls[authorityTAG], 0, wx.EXPAND)	
+	# Catalogue Number
+        acttTAG = 'StockCulture|Sample|CatalogueNo|%s'%str(self.page_counter)
         self.settings_controls[acttTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(acttTAG, default=''))
         self.settings_controls[acttTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
         self.settings_controls[acttTAG].SetToolTipString('ATCC reference')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Reference'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[acttTAG], 0, wx.EXPAND) 
-        # Taxonomic ID
-        taxIdTAG = 'StockCulture|Sample|Organism|%s'%str(self.stk_id)
+        admin_fgs.Add(wx.StaticText(self.top_panel, -1, 'Reference'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        admin_fgs.Add(self.settings_controls[acttTAG], 0, wx.EXPAND)	
+	# Depositors
+	depositTAG = 'StockCulture|Sample|Depositors|%s'%str(self.page_counter)
+	self.settings_controls[depositTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(depositTAG, default=''))
+	self.settings_controls[depositTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
+	self.settings_controls[depositTAG].SetToolTipString('Depositors')
+	admin_fgs.Add(wx.StaticText(self.top_panel, -1, 'Depositors'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	admin_fgs.Add(self.settings_controls[depositTAG], 0, wx.EXPAND)	
+	# Depositors
+	biosafeTAG = 'StockCulture|Sample|Biosafety|%s'%str(self.page_counter)
+	self.settings_controls[biosafeTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(biosafeTAG, default=''))
+	self.settings_controls[biosafeTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
+	self.settings_controls[biosafeTAG].SetToolTipString('Biosafety Level')
+	admin_fgs.Add(wx.StaticText(self.top_panel, -1, 'Biosafety Level'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	admin_fgs.Add(self.settings_controls[biosafeTAG], 0, wx.EXPAND)	
+	# Shipment
+	shipmentTAG = 'StockCulture|Sample|Shipment|%s'%str(self.page_counter)
+	self.settings_controls[shipmentTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(shipmentTAG, default=''))
+	self.settings_controls[shipmentTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
+	self.settings_controls[shipmentTAG].SetToolTipString('Shipment')
+	admin_fgs.Add(wx.StaticText(self.top_panel, -1, 'Shipment'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	admin_fgs.Add(self.settings_controls[shipmentTAG], 0, wx.EXPAND)		
+	
+	# Sizer
+	adminSizer = wx.StaticBoxSizer(admin_staticbox, wx.VERTICAL)	
+	adminSizer.Add(admin_fgs,  0, wx.ALIGN_CENTRE|wx.ALL, 5 )
+        
+        
+	bio_staticbox = wx.StaticBox(self.top_panel, -1, "Biological Information")	
+	bio_fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)        
+        # Cell Line Name
+        cellLineTAG = 'StockCulture|Sample|CellLine|%s'%str(self.page_counter)
+        self.settings_controls[cellLineTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(cellLineTAG, default=''))
+        self.settings_controls[cellLineTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
+        self.settings_controls[cellLineTAG].SetToolTipString('Cell Line selection')
+        bio_fgs.Add(wx.StaticText(self.top_panel, -1, 'Cell Line/Designation'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        bio_fgs.Add(self.settings_controls[cellLineTAG], 0, wx.EXPAND) 
+	# Taxonomic ID
+        taxIdTAG = 'StockCulture|Sample|Organism|%s'%str(self.page_counter)
 	organism_choices =['Homo Sapiens', 'Mus Musculus', 'Rattus Norvegicus', 'Other']
 	self.settings_controls[taxIdTAG]= wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), organism_choices, wx.LB_SINGLE)
 	if meta.get_field(taxIdTAG) is not None:
@@ -477,82 +538,109 @@ class StockCulturePanel(wx.Panel):
 	    self.settings_controls[taxIdTAG].SetStringSelection(meta.get_field(taxIdTAG))
 	self.settings_controls[taxIdTAG].Bind(wx.EVT_LISTBOX, self.OnSavingData)   
 	self.settings_controls[taxIdTAG].SetToolTipString('Taxonomic ID of the species') 
-	fgs.Add(wx.StaticText(self.top_panel, -1, 'Organism'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[taxIdTAG], 0, wx.EXPAND)
+	bio_fgs.Add(wx.StaticText(self.top_panel, -1, 'Organism'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        bio_fgs.Add(self.settings_controls[taxIdTAG], 0, wx.EXPAND)
         # Gender
-        gendTAG = 'StockCulture|Sample|Gender|%s'%str(self.stk_id)
+        gendTAG = 'StockCulture|Sample|Gender|%s'%str(self.page_counter)
         self.settings_controls[gendTAG] = wx.Choice(self.top_panel, -1,  choices=['Male', 'Female', 'Neutral'])
         if meta.get_field(gendTAG) is not None:
             self.settings_controls[gendTAG].SetStringSelection(meta.get_field(gendTAG))
         self.settings_controls[gendTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
         self.settings_controls[gendTAG].SetToolTipString('Gender of the organism')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Gender'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[gendTAG], 0, wx.EXPAND)        
+        bio_fgs.Add(wx.StaticText(self.top_panel, -1, 'Gender'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        bio_fgs.Add(self.settings_controls[gendTAG], 0, wx.EXPAND)        
+	# Sizer
+	bioSizer = wx.StaticBoxSizer(bio_staticbox, wx.VERTICAL)	
+	bioSizer.Add(bio_fgs,  0, wx.ALIGN_CENTRE|wx.ALL, 5 )	
+	
+	prop_staticbox = wx.StaticBox(self.top_panel, -1, "Propagation")	
+	prop_fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5) 
+	
+	# Propagation
+	gmediumTAG ='StockCulture|Sample|GrowthMedium|%s'%str(self.page_counter)
+	self.settings_controls[gmediumTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER|wx.TE_MULTILINE, value=meta.get_field(gmediumTAG, default=''))
+	self.settings_controls[gmediumTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+	self.settings_controls[gmediumTAG].SetToolTipString('Age of the organism in days when the cells were collected. .')
+	prop_fgs.Add(wx.StaticText(self.top_panel, -1, 'Growth Medium'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	prop_fgs.Add(self.settings_controls[gmediumTAG], 0, wx.EXPAND)
+	
+	self.recordPassageBtn = wx.Button(self.top_panel, -1, label="Record")
+	self.recordPassageBtn.Bind(wx.EVT_BUTTON, self.onRecordPassage)	
+	prop_fgs.Add(wx.StaticText(self.top_panel, -1, 'Propagation History'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	prop_fgs.Add(self.recordPassageBtn, 0)
+	
+	# Sizer
+	propSizer = wx.StaticBoxSizer(prop_staticbox, wx.VERTICAL)	
+	propSizer.Add(prop_fgs,  0, wx.ALIGN_CENTRE|wx.ALL, 5 )	
+	
+		
+	
+	
         # Age
-        ageTAG ='StockCulture|Sample|Age|%s'%str(self.stk_id)
-        self.settings_controls[ageTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(ageTAG, default=''))
-        self.settings_controls[ageTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[ageTAG].SetToolTipString('Age of the organism in days when the cells were collected. .')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Age of Organism (days)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[ageTAG], 0, wx.EXPAND)
-        # Organ
-        organTAG = 'StockCulture|Sample|Organ|%s'%str(self.stk_id)
-        self.settings_controls[organTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(organTAG, default=''))
-        self.settings_controls[organTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
-        self.settings_controls[organTAG].SetToolTipString('Organ name from where the cell were collected. eg. Heart, Lung, Bone etc')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Organ'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[organTAG], 0, wx.EXPAND)
-        # Tissue
-        tissueTAG = 'StockCulture|Sample|Tissue|%s'%str(self.stk_id)
-        self.settings_controls[tissueTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(tissueTAG, default=''))
-        self.settings_controls[tissueTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[tissueTAG].SetToolTipString('Tissue from which the cells were collected')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Tissue'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[tissueTAG], 0, wx.EXPAND)
-        # Pheotype
-        phtypTAG = 'StockCulture|Sample|Phenotype|%s'%str(self.stk_id)
-        self.settings_controls[phtypTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(phtypTAG, default=''))
-        self.settings_controls[phtypTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[phtypTAG].SetToolTipString('Phenotypic examples Colour Height OR any other value descriptor')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Phenotype'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[phtypTAG], 0, wx.EXPAND)
-        # Genotype
-        gentypTAG = 'StockCulture|Sample|Genotype|%s'%str(self.stk_id)
-        self.settings_controls[gentypTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(gentypTAG, default=''))
-        self.settings_controls[gentypTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[gentypTAG].SetToolTipString('Wild type or mutant etc. (single word)')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Genotype'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[gentypTAG], 0, wx.EXPAND)
-        # Strain
-        strainTAG = 'StockCulture|Sample|Strain|%s'%str(self.stk_id)
-        self.settings_controls[strainTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(strainTAG, default=''))
-        self.settings_controls[strainTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
-        self.settings_controls[strainTAG].SetToolTipString('Starin of that cell line eGFP, Wild type etc')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Strain'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[strainTAG], 0, wx.EXPAND)
-        #  Passage Number
-        passTAG = 'StockCulture|Sample|OrgPassageNo|%s'%str(self.stk_id)
+        #ageTAG ='StockCulture|Sample|Age|%s'%str(self.stk_id)
+        #self.settings_controls[ageTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(ageTAG, default=''))
+        #self.settings_controls[ageTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+        #self.settings_controls[ageTAG].SetToolTipString('Age of the organism in days when the cells were collected. .')
+        #fgs.Add(wx.StaticText(self.top_panel, -1, 'Age of Organism (days)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        #fgs.Add(self.settings_controls[ageTAG], 0, wx.EXPAND)
+        ## Organ
+        #organTAG = 'StockCulture|Sample|Organ|%s'%str(self.stk_id)
+        #self.settings_controls[organTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(organTAG, default=''))
+        #self.settings_controls[organTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
+        #self.settings_controls[organTAG].SetToolTipString('Organ name from where the cell were collected. eg. Heart, Lung, Bone etc')
+        #fgs.Add(wx.StaticText(self.top_panel, -1, 'Organ'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        #fgs.Add(self.settings_controls[organTAG], 0, wx.EXPAND)
+        ## Tissue
+        #tissueTAG = 'StockCulture|Sample|Tissue|%s'%str(self.stk_id)
+        #self.settings_controls[tissueTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(tissueTAG, default=''))
+        #self.settings_controls[tissueTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+        #self.settings_controls[tissueTAG].SetToolTipString('Tissue from which the cells were collected')
+        #fgs.Add(wx.StaticText(self.top_panel, -1, 'Tissue'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        #fgs.Add(self.settings_controls[tissueTAG], 0, wx.EXPAND)
+        ## Pheotype
+        #phtypTAG = 'StockCulture|Sample|Phenotype|%s'%str(self.stk_id)
+        #self.settings_controls[phtypTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(phtypTAG, default=''))
+        #self.settings_controls[phtypTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+        #self.settings_controls[phtypTAG].SetToolTipString('Phenotypic examples Colour Height OR any other value descriptor')
+        #fgs.Add(wx.StaticText(self.top_panel, -1, 'Phenotype'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        #fgs.Add(self.settings_controls[phtypTAG], 0, wx.EXPAND)
+        ## Genotype
+        #gentypTAG = 'StockCulture|Sample|Genotype|%s'%str(self.stk_id)
+        #self.settings_controls[gentypTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(gentypTAG, default=''))
+        #self.settings_controls[gentypTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+        #self.settings_controls[gentypTAG].SetToolTipString('Wild type or mutant etc. (single word)')
+        #fgs.Add(wx.StaticText(self.top_panel, -1, 'Genotype'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        #fgs.Add(self.settings_controls[gentypTAG], 0, wx.EXPAND)
+        ## Strain
+        #strainTAG = 'StockCulture|Sample|Strain|%s'%str(self.stk_id)
+        #self.settings_controls[strainTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(strainTAG, default=''))
+        #self.settings_controls[strainTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
+        #self.settings_controls[strainTAG].SetToolTipString('Starin of that cell line eGFP, Wild type etc')
+        #fgs.Add(wx.StaticText(self.top_panel, -1, 'Strain'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        #fgs.Add(self.settings_controls[strainTAG], 0, wx.EXPAND)
+        ##  Passage Number
+        passTAG = 'StockCulture|Sample|OrgPassageNo|%s'%str(self.page_counter)
         self.settings_controls[passTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(passTAG, default=''))
         self.settings_controls[passTAG].Bind(wx.EVT_TEXT, self.OnSavingData)    
         self.settings_controls[passTAG].SetToolTipString('Numeric value of the passage of the cells under investigation')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Original Passage Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[passTAG], 0, wx.EXPAND)
-        #  Cell Density
-        densityTAG = 'StockCulture|Sample|Density|%s'%str(self.stk_id)
-        self.settings_controls[densityTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(densityTAG, default=''))
-        self.settings_controls[densityTAG].Bind(wx.EVT_TEXT, self.OnSavingData)    
-        self.settings_controls[densityTAG].SetToolTipString('Numeric value of the cell density at the culture flask')
-        fgs.Add(wx.StaticText(self.top_panel, -1, 'Cell Density'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self.settings_controls[densityTAG], 0, wx.EXPAND)
-        # Duplicate button        
-        #self.copyStockCulturePageBtn = wx.Button(self.sw, -1, label="Duplicate Settings")
-        #self.copyStockCulturePageBtn.Bind(wx.EVT_BUTTON, self.onCopyStockCulturePage)
-	self.recordPassageBtn = wx.Button(self.top_panel, -1, label="Record Passage History")
-	self.recordPassageBtn.Bind(wx.EVT_BUTTON, self.onRecordPassage)
-        fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
-        fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
-        fgs.Add(self.recordPassageBtn, 0, wx.EXPAND)
-        #fgs.Add(self.copyStockCulturePageBtn, 0, wx.EXPAND)
+        bio_fgs.Add(wx.StaticText(self.top_panel, -1, 'Original Passage Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        bio_fgs.Add(self.settings_controls[passTAG], 0, wx.EXPAND)
+        ##  Cell Density
+        #densityTAG = 'StockCulture|Sample|Density|%s'%str(self.stk_id)
+        #self.settings_controls[densityTAG] = wx.TextCtrl(self.top_panel,  style=wx.TE_PROCESS_ENTER, value=meta.get_field(densityTAG, default=''))
+        #self.settings_controls[densityTAG].Bind(wx.EVT_TEXT, self.OnSavingData)    
+        #self.settings_controls[densityTAG].SetToolTipString('Numeric value of the cell density at the culture flask')
+        #fgs.Add(wx.StaticText(self.top_panel, -1, 'Cell Density'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        #fgs.Add(self.settings_controls[densityTAG], 0, wx.EXPAND)
+        ## Duplicate button        
+        ##self.copyStockCulturePageBtn = wx.Button(self.sw, -1, label="Duplicate Settings")
+        ##self.copyStockCulturePageBtn.Bind(wx.EVT_BUTTON, self.onCopyStockCulturePage)
+	#self.recordPassageBtn = wx.Button(self.top_panel, -1, label="Record Passage History")
+	#self.recordPassageBtn.Bind(wx.EVT_BUTTON, self.onRecordPassage)
+        #fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
+        #fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
+        #fgs.Add(self.recordPassageBtn, 0, wx.EXPAND)
+        ##fgs.Add(self.copyStockCulturePageBtn, 0, wx.EXPAND)
 
         #---------------Layout with sizers---------------
 	self.fpbsizer = wx.FlexGridSizer(cols=1, vgap=5)	
@@ -562,6 +650,11 @@ class StockCulturePanel(wx.Panel):
 	swsizer = wx.BoxSizer(wx.VERTICAL)
 	swsizer.Add(titlesizer)
 	swsizer.Add((-1,10))
+	swsizer.Add(adminSizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(bioSizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(propSizer)
 	swsizer.Add(fgs)
         self.top_panel.SetSizer(swsizer)
         self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
@@ -575,9 +668,9 @@ class StockCulturePanel(wx.Panel):
     def onRecordPassage(self, event):
         meta = ExperimentSettings.getInstance()
 
-	orgPassNum = meta.get_field(self.tag_stump+'|OrgPassageNo|%s'%self.instance, default = 0)
+	orgPassNum = meta.get_field(self.tag_stump+'|OrgPassageNo|%s'%self.page_counter, default = 0)
 	
-	passages = [attr for attr in meta.get_attribute_list_by_instance(self.tag_stump, self.instance)
+	passages = [attr for attr in meta.get_attribute_list_by_instance(self.tag_stump, self.page_counter)
 		            if attr.startswith('Passage')]
 	if passages:
 	    lastpassage = sorted(passages, key = meta.stringSplitByNumbers)[-1]
@@ -588,7 +681,7 @@ class StockCulturePanel(wx.Panel):
 	# Show the passage dialog
         dia = PassageStepBuilder(self, self.protocol, self.currpassageNo)
         if dia.ShowModal() == wx.ID_OK: 
-	    meta.set_field(self.tag_stump+'|Passage%s|%s' %(self.currpassageNo, self.instance), dia.curr_protocol.items())	# set the value as a list rather than a dictionary
+	    meta.set_field(self.tag_stump+'|Passage%s|%s' %(self.currpassageNo, self.page_counter), dia.curr_protocol.items())	# set the value as a list rather than a dictionary
 	    self.showPassages()
         dia.Destroy()	
 
@@ -596,12 +689,12 @@ class StockCulturePanel(wx.Panel):
 	'''This method writes the updated passage history in a sequence fashion'''
 	meta = ExperimentSettings.getInstance()
 	
-	passages = [attr for attr in meta.get_attribute_list_by_instance(self.tag_stump, self.instance)
+	passages = [attr for attr in meta.get_attribute_list_by_instance(self.tag_stump, self.page_counter)
 		                    if attr.startswith('Passage')]
 	if passages:
 	    
 	    self.fpbsizer.Clear(deleteWindows=True)
-	    self.settings_controls[self.tag_stump+'|OrgPassageNo|%s'%self.instance].Disable()
+	    self.settings_controls[self.tag_stump+'|OrgPassageNo|%s'%self.page_counter].Disable()
 	    
 	    for passage in sorted(passages, reverse=True):
 		# make a foldable panel for each passage
@@ -626,7 +719,7 @@ class StockCulturePanel(wx.Panel):
 	meta = ExperimentSettings.getInstance()
 	self.pane = pane
 	
-	passage_info = meta.get_field(self.tag_stump+'|%s|%s' %(passage, self.instance))
+	passage_info = meta.get_field(self.tag_stump+'|%s|%s' %(passage, self.page_counter))
 	curr_protocol = dict(passage_info)
 	
 	steps = sorted([step for step in curr_protocol.keys()
@@ -652,7 +745,7 @@ class StockCulturePanel(wx.Panel):
     
     def getAdminInfo(self, passage):
 	meta = ExperimentSettings.getInstance()
-	passage_info = meta.get_field(self.tag_stump+'|%s|%s' %(passage, self.instance))
+	passage_info = meta.get_field(self.tag_stump+'|%s|%s' %(passage, self.page_counter))
 	admin_info = dict(passage_info).get('ADMIN')
 	
 	return 'Operator %s Date %s Split 1:%s Cell Count %s/%s' %(admin_info[0], admin_info[1], admin_info[2], admin_info[3], admin_info[4])
@@ -1694,10 +1787,12 @@ class FlowcytometerPanel(wx.Panel):
 	self.top_fgs.Add(self.saveSettings, 0)		
 	#--Manufacture--#
 	flowmfgTAG = 'Instrument|Flowcytometer|Manufacter|'+str(self.page_counter)
-	self.settings_controls[flowmfgTAG] = wx.Choice(self.top_panel, -1,  choices=['Beckman','BD-Biosciences'])
+	choices=['Beckman','BD-Biosciences', 'Other']
+	self.settings_controls[flowmfgTAG] = wx.ListBox(self.top_panel, -1, wx.DefaultPosition, (120,30), choices, wx.LB_SINGLE)
 	if meta.get_field(flowmfgTAG) is not None:
+	    self.settings_controls[flowmfgTAG].Append(meta.get_field(flowmfgTAG))
 	    self.settings_controls[flowmfgTAG].SetStringSelection(meta.get_field(flowmfgTAG))
-	self.settings_controls[flowmfgTAG].Bind(wx.EVT_CHOICE, self.OnSavingData)
+	self.settings_controls[flowmfgTAG].Bind(wx.EVT_LISTBOX, self.OnSavingData)
 	self.settings_controls[flowmfgTAG].SetToolTipString('Manufacturer name')
 	self.top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	self.top_fgs.Add(self.settings_controls[flowmfgTAG], 0, wx.EXPAND)
@@ -1963,389 +2058,179 @@ class DrawSpectrum(wx.Panel):
 class PlateSettingPanel(wx.Panel):
     """
     Panel that holds parameter input panel and the buttons for more additional panel
-    """
+    """   
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-        
-        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
-         
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        field_ids = sorted(meta.get_field_instances('ExptVessel|Plate'))
-        # figure out the group numbers from this list
-        plategrp = []
-        for id in field_ids:
-            plategrp.append(meta.get_field('ExptVessel|Plate|GroupNo|%s'%(id)))
-        pltgrp_list = set(plategrp)
+		
+	self.protocol = 'ExptVessel|Plate'	
 
-        for pltgrp_id in sorted(pltgrp_list):
-            panel = PlateConfigPanel(self.notebook,pltgrp_id)
-            self.notebook.AddPage(panel, 'Stack No: %s'% pltgrp_id, True)
-            
-                
-        self.addPlateGrpPageBtn = wx.Button(self, label="Add New Stack of Plates")
-        self.addPlateGrpPageBtn.Bind(wx.EVT_BUTTON, self.onAddPlateGroupPage)
-      
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(self.addPlateGrpPageBtn  , 0, wx.ALL, 5)        
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddPlateGroupPage(self, event):
-        # This function is called only for the first instance
-        meta = ExperimentSettings.getInstance()
-        # Get all the previously encoded pages 
-        field_ids = meta.get_field_instances('ExptVessel|Plate')
-        # figure out the group numbers from this list
-        plategrp = []
-        for id in field_ids:
-            plategrp.append(meta.get_field('ExptVessel|Plate|GroupNo|%s'%(id)))
-        pltgrp_list = set(plategrp)
-        
-        # find out max Group number to be assigned
-        if pltgrp_list:
-            pltgrp_id =  max(map(int, pltgrp_list))+1
-        else:
-            pltgrp_id = 1
-                    
-        # create the first page
-        panel = PlateConfigPanel(self.notebook,pltgrp_id)
-        self.notebook.AddPage(panel, 'Stack No: %s'% pltgrp_id, True)
-        # disable the add button
-        self.addPlateGrpPageBtn.Disable()
-        
-##---- Plate Configuration Panel --------#         
-class PlateConfigPanel(wx.Panel):
-    def __init__(self, parent, plgrp_id=None):
-        
-        self.settings_controls = {}
-        meta = ExperimentSettings.getInstance()
-
-        wx.Panel.__init__(self, parent=parent)
-        
-      
-        # find the Done status for this group
-        # get the group number                
-        self.plgrp_id = plgrp_id
-
-        # get all the plate instances for this group 
-        inc_plate_ids = []
-        
-        for id in meta.get_field_instances('ExptVessel|Plate'):     
-            if (meta.get_field('ExptVessel|Plate|GroupNo|%s'%(id)) == self.plgrp_id):
-                inc_plate_ids.append(id)
-        
-         # Make a scroll window
-        self.sw = wx.ScrolledWindow(self)
-        # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)    
-        
-        #------- Heading ---#
-        text = wx.StaticText(self.sw, -1, 'Plate Settings')
-        font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
-        text.SetFont(font)
-        fgs.Add(text, 0)
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-
-        #---- Plate number---#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Total number of plates in the stack'), 0)
-        self.platenum = wx.Choice(self.sw, -1,  choices= map(str, range(1,25)))
-        if not inc_plate_ids:
-            self.platenum.Enable() 
-        else:
-            self.platenum.SetStringSelection(meta.get_field('ExptVessel|Plate|Number|'+str(inc_plate_ids[0])))
-            self.platenum.Disable()            
-        fgs.Add(self.platenum, 0, wx.EXPAND)
-                
-        #--- Group name---#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0)
-        self.groupname = wx.TextCtrl(self.sw, -1, value='')
-        if not inc_plate_ids:
-            self.groupname.Enable()
-        else:
-            self.groupname = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Plate|GroupName|%s'%str(inc_plate_ids[0])))
-            self.groupname.Disable()
-        fgs.Add(self.groupname, 0, wx.EXPAND)
-            
-        ##--Design--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Design'), 0)
-        self.platedesign = wx.Choice(self.sw, -1, choices=WELL_NAMES_ORDERED, name='PlateDesign')
-        for i, format in enumerate([WELL_NAMES[name] for name in WELL_NAMES_ORDERED]):
-                self.platedesign.SetClientData(i, format)
-        if not inc_plate_ids:
-            self.platedesign.Enable()            
-        else:
-            self.platedesign.SetStringSelection(meta.get_field('ExptVessel|Plate|Design|%s'%str(inc_plate_ids[0])))
-            self.platedesign.Disable()
-        fgs.Add(self.platedesign, 0, wx.EXPAND)
-                
-        #--Coating--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Coating'), 0)
-        self.platecoat = wx.Choice(self.sw, -1, choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin'])
-        if not inc_plate_ids:
-            self.platecoat.Enable()
-        else:
-            self.platecoat.SetStringSelection(meta.get_field('ExptVessel|Plate|Coat|%s'%str(inc_plate_ids[0])))
-            self.platecoat.Disable()
-        fgs.Add(self.platecoat, 0, wx.EXPAND)
-                    
-        #--Plate Material--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Plate Material'), 0)
-        self.platematerial = wx.Choice(self.sw, -1, choices=['Plastic','Glass'])
-        if not inc_plate_ids:
-            self.platematerial.Enable()
-        else:
-            self.platematerial.SetStringSelection(meta.get_field('ExptVessel|Plate|Material|%s'%str(inc_plate_ids[0])))
-            self.platematerial.Disable()
-        fgs.Add(self.platematerial, 0, wx.EXPAND)
-                
-        #--Well Shape--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Well Shape'), 0)
-        self.wellshape = wx.Choice(self.sw, -1, choices=['Square','Round','Oval'])
-        if not inc_plate_ids:
-            self.wellshape.Enable()
-        else:
-            self.wellshape.SetStringSelection(meta.get_field('ExptVessel|Plate|Shape|%s'%str(inc_plate_ids[0])))
-            self.wellshape.Disable()
-        fgs.Add(self.wellshape, 0, wx.EXPAND)
-                
-        #--Well Size--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Well Size (mm)'), 0)
-        self.wellsize = wx.TextCtrl(self.sw, -1, value='')
-        if not inc_plate_ids:
-            self.wellsize.Enable()
-        else:
-            self.wellsize = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Plate|Size|%s'%str(inc_plate_ids[0])))
-            self.wellsize.Disable()
-        fgs.Add(self.wellsize, 0, wx.EXPAND)
-
-        
-        ##-------------- Buttons -----------------------
-        self.createBtn = wx.Button(self.sw, -1, label="Create Stack")
-        self.createBtn.Bind(wx.EVT_BUTTON, self.onCreatePlategroupPage)
-        if inc_plate_ids:
-            self.createBtn.Disable()
-            
-        fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-        fgs.Add(self.createBtn, 0, wx.EXPAND)             
-
-        ##---------------Layout with sizers---------------
-        self.sw.SetSizer(fgs)
-        self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
-
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
-    
-    def onCreatePlategroupPage(self, event):
-        
-        # get all input from the fields
-        meta = ExperimentSettings.getInstance()
-        # get the users input for number of plates requried
-        plate_count = int(self.platenum.GetStringSelection())
-        ## TO DO: check whether this value being selected, if not show message!!
-        
-        plate_list = meta.get_field_instances('ExptVessel|Plate|')
-        
-        #Find the all instances of plate
-        if plate_list:
-            max_id =  max(map(int, plate_list))+1
-        else:
-            max_id = 1
-        
-        # save the input from the max instances         
-        for plate_id in range(max_id, max_id+plate_count):
-            plate_design = self.platedesign.GetClientData(self.platedesign.GetSelection())
-            pid ='Plate'+str(plate_id)
-            if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate('Plate', str(plate_id), plate_design, self.groupname.GetValue())
-            else:
-                PlateDesign.set_plate_format(pid, plate_design)
-        
-            meta.set_field('ExptVessel|Plate|GroupNo|%s'%str(plate_id),    self.plgrp_id, notify_subscribers =False)
-            meta.set_field('ExptVessel|Plate|Number|%s'%str(plate_id),     self.platenum.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Plate|GroupName|%s'%str(plate_id),  self.groupname.GetValue(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Plate|Design|%s'%str(plate_id),     self.platedesign.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Plate|Coat|%s'%str(plate_id),       self.platecoat.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Plate|Material|%s'%str(plate_id),   self.platematerial.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Plate|Shape|%s'%str(plate_id),      self.wellshape.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Plate|Size|%s'%str(plate_id),       self.wellsize.GetValue())
-
-        
-        # make all input fields disable
-        self.platenum.Disable()
-        self.groupname.Disable()
-        self.platedesign.Disable()
-        self.platecoat.Disable()
-        self.platematerial.Disable()
-        self.wellshape.Disable()
-        self.wellsize.Disable()
-        # make the copy and delete button active
-        self.createBtn.Disable()
-        self.GrandParent.addPlateGrpPageBtn.Enable()
-
-#########################################################################        
-###################     FLASK SETTING PANEL          ####################
-#########################################################################	    
-class FlaskSettingPanel(wx.Panel):
-    """
-    Panel that holds parameter input panel and the buttons for more additional panel
-    """
-    def __init__(self, parent, id=-1):
-        """Constructor"""
-        wx.Panel.__init__(self, parent, id)
-
-        self.settings_controls = {}
-        meta = ExperimentSettings.getInstance()
-        
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-         
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        field_ids = sorted(meta.get_field_instances('ExptVessel|Flask'))
-        # figure out the group numbers from this list
-        flaskgrp = []
-        for id in field_ids:
-            flaskgrp.append(meta.get_field('ExptVessel|Flask|GroupNo|%s'%(id)))
-        flkgrp_list = set(flaskgrp)
 
-        for flkgrp_id in sorted(flkgrp_list):
-            panel = FlaskConfigPanel(self.notebook,flkgrp_id)
-            self.notebook.AddPage(panel, 'Stack No: %s'% flkgrp_id, True)
-      
-        self.addFlaskGrpPageBtn = wx.Button(self, label="Add New Stack of Flask")
-        self.addFlaskGrpPageBtn.Bind(wx.EVT_BUTTON, self.onAddFlaskGroupPage)
-        
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	stack_ids = meta.get_stack_ids(self.protocol)
+	
+	for stack_id in sorted(stack_ids):
+	    panel = PlatePanel(self.notebook, int(stack_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(stack_id), True)
+		
+	# Buttons
+	self.createTabBtn = wx.Button(self, label="Create Intance")
+	self.createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)      
 
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(self.addFlaskGrpPageBtn  , 0, wx.ALL, 5)        
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddFlaskGroupPage(self, event):
-        # This function is called only for the first instance
-        meta = ExperimentSettings.getInstance()
-        # Get all the previously encoded pages 
-        field_ids = meta.get_field_instances('ExptVessel|Flask')
-        # figure out the group numbers from this list
-        flaskgrp = []
-        for id in field_ids:
-            flaskgrp.append(meta.get_field('ExptVessel|Flask|GroupNo|%s'%(id)))
-        flkgrp_list = set(flaskgrp)
-        
-        # find out max Group number to be assigned
-        if flkgrp_list:
-            flkgrp_id =  max(map(int, flkgrp_list))+1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(self.createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	stack_ids = meta.get_stack_ids(self.protocol)
+	if stack_ids:
+            stack_id =  max(map(int, stack_ids))+1
         else:
-            flkgrp_id = 1
-                    
-        # create the first page
-        panel = FlaskConfigPanel(self.notebook,flkgrp_id)
-        self.notebook.AddPage(panel, 'Stack No: %s'% flkgrp_id, True)
-        # disable the add button
-        self.addFlaskGrpPageBtn.Disable()
+            stack_id = 1	    
+	
+	panel = PlatePanel(self.notebook, stack_id)
+	self.notebook.AddPage(panel, 'Instance No: %s'%stack_id, True) 
+	#Prevent users from clicking the 'Create Instance' button
+	self.createTabBtn.Disable()
+        
+##---- Plate Configuration Panel --------#         
+class PlatePanel(wx.Panel):
+    '''
+    Panel that displays the instance
+    '''
+    def __init__(self, parent, page_counter):
 
-##---------- Flask Config Panel----------------##
-class FlaskConfigPanel(wx.Panel):
-    def __init__(self, parent, plgrp_id=None):
-        
-        self.settings_controls = {}
-        meta = ExperimentSettings.getInstance()
+	self.settings_controls = {}
+	meta = ExperimentSettings.getInstance()
+	
+	wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+	self.sw = wx.ScrolledWindow(self)
 
-        wx.Panel.__init__(self, parent=parent)
-        
-        # Make a scroll window
-        self.sw = wx.ScrolledWindow(self)
-        # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)
-        # find the Done status for this group
-        # get the group number                
-        self.plgrp_id = plgrp_id
+	self.page_counter = page_counter
+	fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+	
+	self.protocol = 'ExptVessel|Plate'
+	
+	new_stack = True
+	stack_ids = meta.get_stack_ids(self.protocol)
+	rep_vessel_instance = None
+	for stack_id in stack_ids:
+	    if stack_id == self.page_counter:
+		rep_vessel_instance = meta.get_rep_vessel_instance(self.protocol, stack_id) #Since all vessels for a given stack have same specifications, so single instance will be used to fill the information
+	if rep_vessel_instance is not None:
+	    new_stack = False
 
-        # get all the flask instances for this group 
-        inc_flask_ids = []
-        
-        for id in meta.get_field_instances('ExptVessel|Flask'):     
-            if (meta.get_field('ExptVessel|Flask|GroupNo|%s'%(id)) == self.plgrp_id):
-                inc_flask_ids.append(id)
-        
-        #------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Flask Settings')
+        # Heading
+	text = wx.StaticText(self.sw, -1, 'Plate Specifications')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
 	titlesizer.Add(text, 0)
-
-        #---- Flask number---#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Total number of flasks in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.flasknum = wx.Choice(self.sw, -1,  choices= map(str, range(1,25)))
-        if not inc_flask_ids:
-            self.flasknum.Enable() 
+	titlesizer.Add((10,-1))
+	# CREATE button
+	self.createBtn = wx.Button(self.sw, -1, label="Put Stack on Bench")
+	self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateStack)
+	if new_stack is False:
+	    self.createBtn.Disable()        
+	titlesizer.Add(self.createBtn, 0, wx.EXPAND) 	
+	
+        # Vessel number
+        self.vessnum = wx.Choice(self.sw, -1,  choices= map(str, range(1,20)), style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.vessnum.Enable() 
         else:
-            self.flasknum.SetStringSelection(meta.get_field('ExptVessel|Flask|Number|'+str(inc_flask_ids[0])))
-            self.flasknum.Disable()            
-        fgs.Add(self.flasknum, 0, wx.EXPAND)
-                
-        #--- Group name---#
+            self.vessnum.SetStringSelection(meta.get_field('ExptVessel|Plate|Number|%s'%rep_vessel_instance))
+            self.vessnum.Disable()      
+	fgs.Add(wx.StaticText(self.sw, -1, 'Number of Plate in Stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self.vessnum, 0, wx.EXPAND)                
+        # Group name
+        self.stkname= wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.stkname.Enable()
+        else:
+            self.stkname.SetValue(meta.get_field('ExptVessel|Plate|StackName|%s'%rep_vessel_instance, default=''))
+            self.stkname.Disable()
         fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.groupname = wx.TextCtrl(self.sw, -1, value='')
-        if not inc_flask_ids:
-            self.groupname.Enable()
-        else:
-            self.groupname = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Flask|GroupName|%s'%str(inc_flask_ids[0])))
-            self.groupname.Disable()
-        fgs.Add(self.groupname, 0, wx.EXPAND)
-        
-        #--Fask Size--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Flask Size (cm2)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.flasksize = wx.Choice(self.sw, -1, choices=['12.5','25','75','150','175'])
-        if not inc_flask_ids:
-            self.flasksize.Enable()
-        else:
-            self.flasksize = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Flask|Size|%s'%str(inc_flask_ids[0])))
-            self.flasksize.Disable()
-        fgs.Add(self.flasksize, 0, wx.EXPAND)
-        
-        #--Coating--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Flask Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.flaskcoat = wx.Choice(self.sw, -1, choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin'])
-        if not inc_flask_ids:
-            self.flaskcoat.Enable()
-        else:
-            self.flaskcoat.SetStringSelection(meta.get_field('ExptVessel|Flask|Coat|%s'%str(inc_flask_ids[0])))
-            self.flaskcoat.Disable()
-        fgs.Add(self.flaskcoat, 0, wx.EXPAND)
-        
-        # DELETE button
-        self.deleteFlaskgroupPageBtn = wx.Button(self.sw, -1, label="Delete Stack")
-        self.deleteFlaskgroupPageBtn.Bind(wx.EVT_BUTTON, self.onDeleteFlaskgroupPage)
-        if not inc_flask_ids:
-            self.deleteFlaskgroupPageBtn.Disable()
-        else:
-            self.deleteFlaskgroupPageBtn.Enable()
-        fgs.Add(self.deleteFlaskgroupPageBtn, 0, wx.EXPAND)
-        
-        # CREATE button
-        self.createBtn = wx.Button(self.sw, -1, label="Create Stack")
-        self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateFlaskgroupPage)
-        if inc_flask_ids:
-            self.createBtn.Disable()
-        fgs.Add(self.createBtn, 0, wx.EXPAND)             
+        fgs.Add(self.stkname, 0, wx.EXPAND) 
+	#--Design--# **** This is different as it include different plate formats *****
+	self.vessdesign = wx.Choice(self.sw, -1, choices=WELL_NAMES_ORDERED, name='PlateDesign')
+	for i, format in enumerate([WELL_NAMES[name] for name in WELL_NAMES_ORDERED]):
+		self.vessdesign.SetClientData(i, format)
+	if new_stack is True:
+	    self.vessdesign.Enable()            
+	else:
+	    self.vessdesign.SetStringSelection(meta.get_field('ExptVessel|Plate|Design|%s'%rep_vessel_instance))
+	    self.vessdesign.Disable()  
+	fgs.Add(wx.StaticText(self.sw, -1, 'Plate Design'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessdesign, 0, wx.EXPAND)	
+	# Manufacturer
+	self.vessmfg = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vessmfg.Enable()
+	else:
+	    self.vessmfg.SetValue(meta.get_field('ExptVessel|Plate|Manufacturer|%s'%rep_vessel_instance, default=''))
+	    self.vessmfg.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessmfg, 0, wx.EXPAND) 
+	# Catalogue Number
+	self.vesscat = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesscat.Enable()
+	else:
+	    self.vesscat.SetValue(meta.get_field('ExptVessel|Plate|CatalogueNo|%s'%rep_vessel_instance, default=''))
+	    self.vesscat.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Catalogue Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscat, 0, wx.EXPAND) 	
+	# Shape
+	self.vessshape = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vessshape.Enable()
+	else:
+	    self.vessshape.SetValue(meta.get_field('ExptVessel|Plate|Shape|%s'%rep_vessel_instance, default=''))
+	    self.vessshape.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Shape'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessshape, 0, wx.EXPAND)		
+	# Size
+	self.vesssize = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesssize.Enable()
+	else:
+	    self.vesssize.SetValue(meta.get_field('ExptVessel|Plate|Size|%s'%rep_vessel_instance))
+	    self.vesssize.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Size (mm x mm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesssize, 0, wx.EXPAND)
+        # Coating
+	choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin', 'Other']
+	self.vesscoat = wx.ListBox(self.sw, -1, wx.DefaultPosition, (120,30), choices, wx.LB_SINGLE)
+	if new_stack is True:
+	    self.vesscoat.Enable()
+	else:	
+	    self.vesscoat.Append(meta.get_field('ExptVessel|Plate|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.SetStringSelection(meta.get_field('ExptVessel|Plate|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.Disable()
+	self.vesscoat.Bind(wx.EVT_LISTBOX, self.onSelectOther)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscoat, 0, wx.EXPAND)
+	# Other Information
+	self.vessother = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
+	self.vessother.SetInitialSize((-1,100))
+	if new_stack is True:
+	    self.vessother.Enable()
+	else:
+	    self.vessother.SetValue(meta.get_field('ExptVessel|Plate|OtherInfo|%s'%rep_vessel_instance, default=''))
+	    self.vessother.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Other Information'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessother, 0, wx.EXPAND) 	            
 
-	#---------------Layout with sizers---------------
+	#---  Layout with sizers  -------
 	swsizer = wx.BoxSizer(wx.VERTICAL)
 	swsizer.Add(titlesizer)
 	swsizer.Add((-1,10))
@@ -2355,227 +2240,228 @@ class FlaskConfigPanel(wx.Panel):
 	
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	
+    def onSelectOther(self, event):
+	if self.vesscoat.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    self.vesscoat.Append(other)
+	    self.vesscoat.SetStringSelection(other)	
     
-    def onCreateFlaskgroupPage(self, event):
-        
-        # get all input from the fields
-        meta = ExperimentSettings.getInstance()
-        # get the users input for number of flasks requried
-        flask_count = int(self.flasknum.GetStringSelection())
-        ## TO DO: check whether this value being selected, if not show message!!
-        
-        flask_list = meta.get_field_instances('ExptVessel|Flask|')
-        
-        #Find the all instances of flask
-        if flask_list:
-            max_id =  max(map(int, flask_list))+1
+    def onCreateStack(self, event):
+	# Checks 
+	if self.vessnum.GetStringSelection() is "":
+	    dial = wx.MessageDialog(None, 'Please select the number of vessels', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	if self.stkname.GetValue() is "":
+	    dial = wx.MessageDialog(None, 'Please select the Stack Name', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	if self.vessdesign.GetStringSelection() is "":
+	    dial = wx.MessageDialog(None, 'Please select the vessel design', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return	
+	
+	# if all checks are passed
+	self.createBtn.Disable()
+	
+        vess_list = meta.get_field_instances('ExptVessel|Plate')
+        if vess_list:
+            max_id =  max(map(int, vess_list))+1
         else:
             max_id = 1
-        
-        # save the input from the max instances         
-        for flask_id in range(max_id, max_id+flask_count):
-            id = 'Flask%s'%(flask_id)
-            plate_design = (1,1)  # since flask is alwasys a sigle entity resembling to 1x1 well plate format   
+	    
+        for v_id in range(max_id, max_id+int(self.vessnum.GetStringSelection())):
+            id = 'Plate%s'%(v_id)
+            plate_design = self.vessdesign.GetClientData(self.vessdesign.GetSelection())  
             if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate('Flask', str(flask_id), plate_design, self.groupname.GetValue())
+                PlateDesign.add_plate('Plate', str(v_id), plate_design, self.stkname.GetValue())
             else:
                 PlateDesign.set_plate_format(id, plate_design)
         
-            meta.set_field('ExptVessel|Flask|GroupNo|%s'%str(flask_id),    self.plgrp_id, notify_subscribers =False)
-            meta.set_field('ExptVessel|Flask|Number|%s'%str(flask_id),     self.flasknum.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Flask|GroupName|%s'%str(flask_id),  self.groupname.GetValue(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Flask|Size|%s'%str(flask_id),       self.flasksize.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Flask|Coat|%s'%str(flask_id),       self.flaskcoat.GetStringSelection())
-
+            meta.set_field('ExptVessel|Plate|StackNo|%s'%str(v_id),    self.page_counter, notify_subscribers =False)
+            meta.set_field('ExptVessel|Plate|Number|%s'%str(v_id),     self.vessnum.GetStringSelection(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Plate|StackName|%s'%str(v_id),  self.stkname.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Plate|Design|%s'%str(v_id),     self.vessdesign.GetStringSelection(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Plate|Manufacturer|%s'%str(v_id),  self.vessmfg.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Plate|CatalogueNo|%s'%str(v_id),  self.vesscat.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Plate|Shape|%s'%str(v_id),       self.vessshape.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Plate|Size|%s'%str(v_id),       self.vesssize.GetValue(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Plate|Coat|%s'%str(v_id),       self.vesscoat.GetStringSelection(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Plate|OtherInfo|%s'%str(v_id),  self.vessother.GetValue())
         
-        # make all input fields disable
-        self.flasknum.Disable()
-        self.groupname.Disable()
-        self.flasksize.Disable()
-        self.flaskcoat.Disable()
-
-        # make the copy and delete button active
-        self.createBtn.Disable()
-        self.deleteFlaskgroupPageBtn.Enable()
-        self.GrandParent.addFlaskGrpPageBtn.Enable()
-         
-      
-    def onDeleteFlaskgroupPage(self, event):
-
-        dlg = wx.MessageDialog(self, 'Do you want to delete stack '+str(self.plgrp_id)+' ?', 'Deleting..', wx.YES_NO| wx.NO_DEFAULT | wx.ICON_WARNING)
-        
-        if dlg.ShowModal() == wx.ID_YES:
-                
-            meta = ExperimentSettings.getInstance()
-       
-            for exs_flask_id in meta.get_field_instances('ExptVessel|Flask|GroupNo|'):
-            # get the set of each parameters since all parameters are same for all instances under this group so one will be same     
-                if meta.get_field('ExptVessel|Flask|GroupNo|'+str(exs_flask_id)) == self.plgrp_id:
-                
-                    #remove the instances                    
-                    meta.remove_field('ExptVessel|Flask|GroupNo|%s'%str(exs_flask_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Flask|Number|%s'%str(exs_flask_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Flask|GroupName|%s'%str(exs_flask_id), notify_subscribers =False)                    
-                    meta.remove_field('ExptVessel|Flask|Size|%s'%str(exs_flask_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Flask|Coat|%s'%str(exs_flask_id))
-           
-            ##remove the page
-            self.Parent.DeletePage(self.Parent.GetSelection())
-
+	#make all input fields disable
+        self.vessnum.Disable()
+	self.stkname.Disable()
+	self.vessdesign.Disable()
+	self.vessmfg.Disable()
+	self.vesscat.Disable()
+	self.vessshape.Disable()
+	self.vesssize.Disable()
+	self.vesscoat.Disable()
+	self.vessother.Disable()
+	#Enable to create new instance
+	self.GrandParent.createTabBtn.Enable()
+	
 #########################################################################        
 ###################     DISH SETTING PANEL          ####################
 #########################################################################	    
 class DishSettingPanel(wx.Panel):
     """
     Panel that holds parameter input panel and the buttons for more additional panel
-    """
+    """   
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-        
+		
+	self.protocol = 'ExptVessel|Dish'	
+
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-         
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        field_ids = sorted(meta.get_field_instances('ExptVessel|Dish'))
-        # figure out the group numbers from this list
-        dishgrp = []
-        for id in field_ids:
-            dishgrp.append(meta.get_field('ExptVessel|Dish|GroupNo|%s'%(id)))
-        flkgrp_list = set(dishgrp)
 
-        for flkgrp_id in sorted(flkgrp_list):
-            panel = DishConfigPanel(self.notebook,flkgrp_id)
-            self.notebook.AddPage(panel, 'Stack No: %s'% flkgrp_id, True)
-        
-        self.addDishGrpPageBtn = wx.Button(self, label="Add New Stack of Dish")
-        self.addDishGrpPageBtn.Bind(wx.EVT_BUTTON, self.onAddDishGroupPage)
+	stack_ids = meta.get_stack_ids(self.protocol)
+	
+	for stack_id in sorted(stack_ids):
+	    panel = DishPanel(self.notebook, int(stack_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(stack_id), True)
+		
+	# Buttons
+	self.createTabBtn = wx.Button(self, label="Create Intance")
+	self.createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)      
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(self.addDishGrpPageBtn  , 0, wx.ALL, 5)        
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddDishGroupPage(self, event):
-        # This function is called only for the first instance
-        meta = ExperimentSettings.getInstance()
-        # Get all the previously encoded pages 
-        field_ids = meta.get_field_instances('ExptVessel|Dish')
-        # figure out the group numbers from this list
-        dishgrp = []
-        for id in field_ids:
-            dishgrp.append(meta.get_field('ExptVessel|Dish|GroupNo|%s'%(id)))
-        flkgrp_list = set(dishgrp)
-        
-        # find out max Group number to be assigned
-        if flkgrp_list:
-            flkgrp_id =  max(map(int, flkgrp_list))+1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(self.createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	stack_ids = meta.get_stack_ids(self.protocol)
+	if stack_ids:
+            stack_id =  max(map(int, stack_ids))+1
         else:
-            flkgrp_id = 1
-                    
-        # create the first page
-        panel = DishConfigPanel(self.notebook,flkgrp_id)
-        self.notebook.AddPage(panel, 'Stack No: %s'% flkgrp_id, True)
-        # disable the add button
-        self.addDishGrpPageBtn.Disable()
+            stack_id = 1	    
+	
+	panel = DishPanel(self.notebook, stack_id)
+	self.notebook.AddPage(panel, 'Instance No: %s'%stack_id, True) 
+	#Prevent users from clicking the 'Create Instance' button
+	self.createTabBtn.Disable()	
 
 ##---------- Dish Config Panel----------------##
-class DishConfigPanel(wx.Panel):
-    def __init__(self, parent, plgrp_id=None):
-        
-        self.settings_controls = {}
-        meta = ExperimentSettings.getInstance()
+class DishPanel(wx.Panel):
+    '''
+    Panel that displays the instance
+    '''
+    def __init__(self, parent, page_counter):
 
-        wx.Panel.__init__(self, parent=parent)
-        
-        # Make a scroll window
-        self.sw = wx.ScrolledWindow(self)
-        # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)
-        # find the Done status for this group
-        # get the group number                
-        self.plgrp_id = plgrp_id
+	self.settings_controls = {}
+	meta = ExperimentSettings.getInstance()
+	
+	wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+	self.sw = wx.ScrolledWindow(self)
 
-        # get all the dish instances for this group 
-        inc_dish_ids = []
-        
-        for id in meta.get_field_instances('ExptVessel|Dish'):     
-            if (meta.get_field('ExptVessel|Dish|GroupNo|%s'%(id)) == self.plgrp_id):
-                inc_dish_ids.append(id)
-        
-        #------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Dish Settings')
+	self.page_counter = page_counter
+	fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+	
+	self.protocol = 'ExptVessel|Dish'
+	
+	new_stack = True
+	stack_ids = meta.get_stack_ids(self.protocol)
+	rep_vessel_instance = None
+	for stack_id in stack_ids:
+	    if stack_id == self.page_counter:
+		rep_vessel_instance = meta.get_rep_vessel_instance(self.protocol, stack_id) #Since all vessels for a given stack have same specifications, so single instance will be used to fill the information
+	if rep_vessel_instance is not None:
+	    new_stack = False
+
+        # Heading
+	text = wx.StaticText(self.sw, -1, 'Dish Specifications')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
 	titlesizer.Add(text, 0)
-
-        #---- Dish number---#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Total number of dishs in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.dishnum = wx.Choice(self.sw, -1,  choices= map(str, range(1,25)))
-        if not inc_dish_ids:
-            self.dishnum.Enable() 
+	titlesizer.Add((10,-1))
+	# CREATE button
+	self.createBtn = wx.Button(self.sw, -1, label="Put Stack on Bench")
+	self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateStack)
+	if new_stack is False:
+	    self.createBtn.Disable()        
+	titlesizer.Add(self.createBtn, 0, wx.EXPAND) 	
+	
+        # Vessel number
+        self.vessnum = wx.Choice(self.sw, -1,  choices= map(str, range(1,20)), style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.vessnum.Enable() 
         else:
-            self.dishnum.SetStringSelection(meta.get_field('ExptVessel|Dish|Number|'+str(inc_dish_ids[0])))
-            self.dishnum.Disable()            
-        fgs.Add(self.dishnum, 0, wx.EXPAND)
-                
-        #--- Group name---#
+            self.vessnum.SetStringSelection(meta.get_field('ExptVessel|Dish|Number|%s'%rep_vessel_instance))
+            self.vessnum.Disable()      
+	fgs.Add(wx.StaticText(self.sw, -1, 'Number of Dish in Stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self.vessnum, 0, wx.EXPAND)                
+        # Group name
+        self.stkname= wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.stkname.Enable()
+        else:
+            self.stkname.SetValue(meta.get_field('ExptVessel|Dish|StackName|%s'%rep_vessel_instance))
+            self.stkname.Disable()
         fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.groupname = wx.TextCtrl(self.sw, -1, value='')
-        if not inc_dish_ids:
-            self.groupname.Enable()
-        else:
-            self.groupname = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Dish|GroupName|%s'%str(inc_dish_ids[0])))
-            self.groupname.Disable()
-        fgs.Add(self.groupname, 0, wx.EXPAND)
-        
-        #--Dish Size--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Dish Size (mm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.dishsize = wx.Choice(self.sw, -1, choices=['35','60','100','150'])
-        if not inc_dish_ids:
-            self.dishsize.Enable()
-        else:
-            self.dishsize = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Dish|Size|%s'%str(inc_dish_ids[0])))
-            self.dishsize.Disable()
-        fgs.Add(self.dishsize, 0, wx.EXPAND)
-        
-        #--Coating--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Dish Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.dishcoat = wx.Choice(self.sw, -1, choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin'])
-        if not inc_dish_ids:
-            self.dishcoat.Enable()
-        else:
-            self.dishcoat.SetStringSelection(meta.get_field('ExptVessel|Dish|Coat|%s'%str(inc_dish_ids[0])))
-            self.dishcoat.Disable()
-        fgs.Add(self.dishcoat, 0, wx.EXPAND)
-        
-        # DELETE button
-        self.deleteDishgroupPageBtn = wx.Button(self.sw, -1, label="Delete Stack")
-        self.deleteDishgroupPageBtn.Bind(wx.EVT_BUTTON, self.onDeleteDishgroupPage)
-        if not inc_dish_ids:
-            self.deleteDishgroupPageBtn.Disable()
-        else:
-            self.deleteDishgroupPageBtn.Enable()
-        fgs.Add(self.deleteDishgroupPageBtn, 0, wx.EXPAND)
-        
-        # CREATE button
-        self.createBtn = wx.Button(self.sw, -1, label="Create Stack")
-        self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateDishgroupPage)
-        if inc_dish_ids:
-            self.createBtn.Disable()
-        fgs.Add(self.createBtn, 0, wx.EXPAND)             
+        fgs.Add(self.stkname, 0, wx.EXPAND) 
+	# Manufacturer
+	self.vessmfg = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vessmfg.Enable()
+	else:
+	    self.vessmfg.SetValue(meta.get_field('ExptVessel|Dish|Manufacturer|%s'%rep_vessel_instance, default=''))
+	    self.vessmfg.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessmfg, 0, wx.EXPAND) 
+	# Catalogue Number
+	self.vesscat = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesscat.Enable()
+	else:
+	    self.vesscat.SetValue(meta.get_field('ExptVessel|Dish|CatalogueNo|%s'%rep_vessel_instance, default=''))
+	    self.vesscat.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Catalogue Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscat, 0, wx.EXPAND) 	
+	# Size
+	self.vesssize = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesssize.Enable()
+	else:
+	    self.vesssize.SetValue(meta.get_field('ExptVessel|Dish|Size|%s'%rep_vessel_instance, default=''))
+	    self.vesssize.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Size (mm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesssize, 0, wx.EXPAND)
+        # Coating
+	choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin', 'Other']
+	self.vesscoat = wx.ListBox(self.sw, -1, wx.DefaultPosition, (120,30), choices, wx.LB_SINGLE)
+	if new_stack is True:
+	    self.vesscoat.Enable()
+	else:	
+	    self.vesscoat.Append(meta.get_field('ExptVessel|Dish|Coat|%s'%rep_vessel_instance, default=''))
+	    self.vesscoat.SetStringSelection(meta.get_field('ExptVessel|Dish|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.Disable()
+	self.vesscoat.Bind(wx.EVT_LISTBOX, self.onSelectOther)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscoat, 0, wx.EXPAND)
+	# Other Information
+	self.vessother = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
+	self.vessother.SetInitialSize((-1,100))
+	if new_stack is True:
+	    self.vessother.Enable()
+	else:
+	    self.vessother.SetValue(meta.get_field('ExptVessel|Dish|OtherInfo|%s'%rep_vessel_instance, default=''))
+	    self.vessother.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Other Information'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessother, 0, wx.EXPAND) 	
 
-        #---------------Layout with sizers---------------
+	#---  Layout with sizers  -------
 	swsizer = wx.BoxSizer(wx.VERTICAL)
 	swsizer.Add(titlesizer)
 	swsizer.Add((-1,10))
@@ -2585,227 +2471,232 @@ class DishConfigPanel(wx.Panel):
 	
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	
+    def onSelectOther(self, event):
+	if self.vesscoat.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    self.vesscoat.Append(other)
+	    self.vesscoat.SetStringSelection(other)	
     
-    def onCreateDishgroupPage(self, event):
-        
-        # get all input from the fields
-        meta = ExperimentSettings.getInstance()
-        # get the users input for number of dishs requried
-        dish_count = int(self.dishnum.GetStringSelection())
-        ## TO DO: check whether this value being selected, if not show message!!
-        
-        dish_list = meta.get_field_instances('ExptVessel|Dish|')
-        
-        #Find the all instances of dish
-        if dish_list:
-            max_id =  max(map(int, dish_list))+1
+    def onCreateStack(self, event):
+	# Checks 
+	if self.vessnum.GetStringSelection() is "":
+	    dial = wx.MessageDialog(None, 'Please select the number of vessels', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	if self.stkname.GetValue() is "":
+	    dial = wx.MessageDialog(None, 'Please select the Stack Name', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	#vess_design = self.vessdesign.GetStringSelection()
+	#if vess_design is None:
+	    #dial = wx.MessageDialog(None, 'Please select the vessel design', 'Error', wx.OK | wx.ICON_ERROR)
+	    #dial.ShowModal()  
+	    #return	
+	self.createBtn.Disable()
+	
+        vess_list = meta.get_field_instances('ExptVessel|Dish')
+        if vess_list:
+            max_id =  max(map(int, vess_list))+1
         else:
             max_id = 1
-        
-        # save the input from the max instances         
-        for dish_id in range(max_id, max_id+dish_count):
-            plate_design = (1,1)  # since dish is alwasys a sigle entity resembling to 1x1 well plate format   
-            id = 'Dish%s'%(dish_id)
+	    
+        for v_id in range(max_id, max_id+int(self.vessnum.GetStringSelection())):
+            id = 'Dish%s'%(v_id)
+            plate_design = (1,1)  # since flask is alwasys a sigle entity resembling to 1x1 well plate format   
             if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate('Dish', str(dish_id), plate_design, self.groupname.GetValue())
+                PlateDesign.add_plate('Dish', str(v_id), plate_design, self.stkname.GetValue())
             else:
                 PlateDesign.set_plate_format(id, plate_design)
         
-            meta.set_field('ExptVessel|Dish|GroupNo|%s'%str(dish_id),    self.plgrp_id, notify_subscribers =False)
-            meta.set_field('ExptVessel|Dish|Number|%s'%str(dish_id),     self.dishnum.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Dish|GroupName|%s'%str(dish_id),  self.groupname.GetValue(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Dish|Size|%s'%str(dish_id),       self.dishsize.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Dish|Coat|%s'%str(dish_id),       self.dishcoat.GetStringSelection())
-
+            meta.set_field('ExptVessel|Dish|StackNo|%s'%str(v_id),    self.page_counter, notify_subscribers =False)
+            meta.set_field('ExptVessel|Dish|Number|%s'%str(v_id),     self.vessnum.GetStringSelection(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Dish|StackName|%s'%str(v_id),  self.stkname.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Dish|Manufacturer|%s'%str(v_id),  self.vessmfg.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Dish|CatalogueNo|%s'%str(v_id),  self.vesscat.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Dish|Size|%s'%str(v_id),       self.vesssize.GetValue(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Dish|Coat|%s'%str(v_id),       self.vesscoat.GetStringSelection(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Dish|OtherInfo|%s'%str(v_id),  self.vessother.GetValue())
         
-        # make all input fields disable
-        self.dishnum.Disable()
-        self.groupname.Disable()
-        self.dishsize.Disable()
-        self.dishcoat.Disable()
-
-        # make the copy and delete button active
-        self.createBtn.Disable()
-        self.deleteDishgroupPageBtn.Enable()
-        self.GrandParent.addDishGrpPageBtn.Enable()
-         
-      
-    def onDeleteDishgroupPage(self, event):
-
-        dlg = wx.MessageDialog(self, 'Do you want to delete stack '+str(self.plgrp_id)+' ?', 'Deleting..', wx.YES_NO| wx.NO_DEFAULT | wx.ICON_WARNING)
-        
-        if dlg.ShowModal() == wx.ID_YES:
-                
-            meta = ExperimentSettings.getInstance()
-       
-            for exs_dish_id in meta.get_field_instances('ExptVessel|Dish|GroupNo|'):
-            # get the set of each parameters since all parameters are same for all instances under this group so one will be same     
-                if meta.get_field('ExptVessel|Dish|GroupNo|'+str(exs_dish_id)) == self.plgrp_id:
-                
-                    #remove the instances                    
-                    meta.remove_field('ExptVessel|Dish|GroupNo|%s'%str(exs_dish_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Dish|Number|%s'%str(exs_dish_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Dish|GroupName|%s'%str(exs_dish_id), notify_subscribers =False)                    
-                    meta.remove_field('ExptVessel|Dish|Size|%s'%str(exs_dish_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Dish|Coat|%s'%str(exs_dish_id))
-           
-            ##remove the page
-            self.Parent.DeletePage(self.Parent.GetSelection())
-
+	#make all input fields disable
+        self.vessnum.Disable()
+	self.stkname.Disable()
+	self.vessmfg.Disable()
+	self.vesscat.Disable()
+	self.vesssize.Disable()
+	self.vesscoat.Disable()
+	self.vessother.Disable()
+	#Enable to create new instance
+	self.GrandParent.createTabBtn.Enable()
+	
 #########################################################################        
 ###################     DISH SETTING PANEL          ####################
 #########################################################################	    
 class CoverslipSettingPanel(wx.Panel):
     """
     Panel that holds parameter input panel and the buttons for more additional panel
-    """
+    """   
     def __init__(self, parent, id=-1):
-        """Constructor"""
         wx.Panel.__init__(self, parent, id)
 
         self.settings_controls = {}
         meta = ExperimentSettings.getInstance()
-        
+		
+	self.protocol = 'ExptVessel|Coverslip'	
+
         self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
 	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
-         
-        # Get all the previously encoded Microscope pages and re-Add them as pages
-        field_ids = sorted(meta.get_field_instances('ExptVessel|Coverslip'))
-        # figure out the group numbers from this list
-        coverslipgrp = []
-        for id in field_ids:
-            coverslipgrp.append(meta.get_field('ExptVessel|Coverslip|GroupNo|%s'%(id)))
-        flkgrp_list = set(coverslipgrp)
 
-        for flkgrp_id in sorted(flkgrp_list):
-            panel = CoverslipConfigPanel(self.notebook,flkgrp_id)
-            self.notebook.AddPage(panel, 'Stack No: %s'% flkgrp_id, True)
-       
-        self.addCoverslipGrpPageBtn = wx.Button(self, label="Add New Stack of Coverslip")
-        self.addCoverslipGrpPageBtn.Bind(wx.EVT_BUTTON, self.onAddCoverslipGroupPage)
-        
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	stack_ids = meta.get_stack_ids(self.protocol)
+	
+	for stack_id in sorted(stack_ids):
+	    panel = CoverslipPanel(self.notebook, int(stack_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(stack_id), True)
+		
+	# Buttons
+	self.createTabBtn = wx.Button(self, label="Create Intance")
+	self.createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)      
 
-        # layout the widgets
-        sizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
-        btnSizer.Add(self.addCoverslipGrpPageBtn  , 0, wx.ALL, 5)        
-        sizer.Add(btnSizer)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Show()
-
-    def onAddCoverslipGroupPage(self, event):
-        # This function is called only for the first instance
-        meta = ExperimentSettings.getInstance()
-        # Get all the previously encoded pages 
-        field_ids = meta.get_field_instances('ExptVessel|Coverslip')
-        # figure out the group numbers from this list
-        coverslipgrp = []
-        for id in field_ids:
-            coverslipgrp.append(meta.get_field('ExptVessel|Coverslip|GroupNo|%s'%(id)))
-        flkgrp_list = set(coverslipgrp)
-        
-        # find out max Group number to be assigned
-        if flkgrp_list:
-            flkgrp_id =  max(map(int, flkgrp_list))+1
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(self.createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	stack_ids = meta.get_stack_ids(self.protocol)
+	if stack_ids:
+            stack_id =  max(map(int, stack_ids))+1
         else:
-            flkgrp_id = 1
-                    
-        # create the first page
-        panel = CoverslipConfigPanel(self.notebook,flkgrp_id)
-        self.notebook.AddPage(panel, 'Stack No: %s'% flkgrp_id, True)
-        # disable the add button
-        self.addCoverslipGrpPageBtn.Disable()
+            stack_id = 1	    
+	
+	panel = CoverslipPanel(self.notebook, stack_id)
+	self.notebook.AddPage(panel, 'Instance No: %s'%stack_id, True) 
+	#Prevent users from clicking the 'Create Instance' button
+	self.createTabBtn.Disable()	
 
-##---------- Coverslip Config Panel----------------##
-class CoverslipConfigPanel(wx.Panel):
-    def __init__(self, parent, plgrp_id=None):
-        
-        self.settings_controls = {}
-        meta = ExperimentSettings.getInstance()
+##---------- Coverslip Instance Panel----------------##
+class CoverslipPanel(wx.Panel):
+    '''
+    Panel that displays the instance
+    '''
+    def __init__(self, parent, page_counter):
 
-        wx.Panel.__init__(self, parent=parent)
-        
-        # Make a scroll window
-        self.sw = wx.ScrolledWindow(self)
-        # Attach a flexi sizer for the text controler and labels
-        fgs = wx.FlexGridSizer(rows=30, cols=2, hgap=5, vgap=5)
-        # find the Done status for this group
-        # get the group number                
-        self.plgrp_id = plgrp_id
+	self.settings_controls = {}
+	meta = ExperimentSettings.getInstance()
+	
+	wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+	self.sw = wx.ScrolledWindow(self)
 
-        # get all the coverslip instances for this group 
-        inc_coverslip_ids = []
-        
-        for id in meta.get_field_instances('ExptVessel|Coverslip'):     
-            if (meta.get_field('ExptVessel|Coverslip|GroupNo|%s'%(id)) == self.plgrp_id):
-                inc_coverslip_ids.append(id)
-        
-        #------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Coverslip Settings')
+	self.page_counter = page_counter
+	fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+	
+	self.protocol = 'ExptVessel|Coverslip'
+	
+	new_stack = True
+	stack_ids = meta.get_stack_ids(self.protocol)
+	rep_vessel_instance = None
+	for stack_id in stack_ids:
+	    if stack_id == self.page_counter:
+		rep_vessel_instance = meta.get_rep_vessel_instance(self.protocol, stack_id) #Since all vessels for a given stack have same specifications, so single instance will be used to fill the information
+	if rep_vessel_instance is not None:
+	    new_stack = False
+
+        # Heading
+	text = wx.StaticText(self.sw, -1, 'Coverslip Specifications')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
 	titlesizer.Add(text, 0)
-
-        #---- Coverslip number---#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Total number of coverslips in the stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.coverslipnum = wx.Choice(self.sw, -1,  choices= map(str, range(1,25)))
-        if not inc_coverslip_ids:
-            self.coverslipnum.Enable() 
+	titlesizer.Add((10,-1))
+	# CREATE button
+	self.createBtn = wx.Button(self.sw, -1, label="Put Stack on Bench")
+	self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateStack)
+	if new_stack is False:
+	    self.createBtn.Disable()        
+	titlesizer.Add(self.createBtn, 0, wx.EXPAND) 	
+	
+        # Vessel number
+        self.vessnum = wx.Choice(self.sw, -1,  choices= map(str, range(1,20)), style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.vessnum.Enable() 
         else:
-            self.coverslipnum.SetStringSelection(meta.get_field('ExptVessel|Coverslip|Number|'+str(inc_coverslip_ids[0])))
-            self.coverslipnum.Disable()            
-        fgs.Add(self.coverslipnum, 0, wx.EXPAND)
-                
-        #--- Group name---#
+            self.vessnum.SetStringSelection(meta.get_field('ExptVessel|Coverslip|Number|%s'%rep_vessel_instance))
+            self.vessnum.Disable()      
+	fgs.Add(wx.StaticText(self.sw, -1, 'Number of Coverslip in Stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self.vessnum, 0, wx.EXPAND)                
+        # Group name
+        self.stkname= wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.stkname.Enable()
+        else:
+            self.stkname.SetValue(meta.get_field('ExptVessel|Coverslip|StackName|%s'%rep_vessel_instance))
+            self.stkname.Disable()
         fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.groupname = wx.TextCtrl(self.sw, -1, value='')
-        if not inc_coverslip_ids:
-            self.groupname.Enable()
-        else:
-            self.groupname = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Coverslip|GroupName|%s'%str(inc_coverslip_ids[0])))
-            self.groupname.Disable()
-        fgs.Add(self.groupname, 0, wx.EXPAND)
-        
-        #--Coverslip Size--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Coverslip Size (mm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.coverslipsize = wx.Choice(self.sw, -1, choices=['12','22'])
-        if not inc_coverslip_ids:
-            self.coverslipsize.Enable()
-        else:
-            self.coverslipsize = wx.TextCtrl(self.sw, -1, value=meta.get_field('ExptVessel|Coverslip|Size|%s'%str(inc_coverslip_ids[0])))
-            self.coverslipsize.Disable()
-        fgs.Add(self.coverslipsize, 0, wx.EXPAND)
-        
-        #--Coating--#
-        fgs.Add(wx.StaticText(self.sw, -1, 'Coverslip Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-        self.coverslipcoat = wx.Choice(self.sw, -1, choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin'])
-        if not inc_coverslip_ids:
-            self.coverslipcoat.Enable()
-        else:
-            self.coverslipcoat.SetStringSelection(meta.get_field('ExptVessel|Coverslip|Coat|%s'%str(inc_coverslip_ids[0])))
-            self.coverslipcoat.Disable()
-        fgs.Add(self.coverslipcoat, 0, wx.EXPAND)
-        
-        # DELETE button
-        self.deleteCoverslipgroupPageBtn = wx.Button(self.sw, -1, label="Delete Stack")
-        self.deleteCoverslipgroupPageBtn.Bind(wx.EVT_BUTTON, self.onDeleteCoverslipgroupPage)
-        if not inc_coverslip_ids:
-            self.deleteCoverslipgroupPageBtn.Disable()
-        else:
-            self.deleteCoverslipgroupPageBtn.Enable()
-        fgs.Add(self.deleteCoverslipgroupPageBtn, 0, wx.EXPAND)
-        
-        # CREATE button
-        self.createBtn = wx.Button(self.sw, -1, label="Create Stack")
-        self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateCoverslipgroupPage)
-        if inc_coverslip_ids:
-            self.createBtn.Disable()
-        fgs.Add(self.createBtn, 0, wx.EXPAND)             
+        fgs.Add(self.stkname, 0, wx.EXPAND) 
+	# Manufacturer
+	self.vessmfg = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vessmfg.Enable()
+	else:
+	    self.vessmfg.SetValue(meta.get_field('ExptVessel|Coverslip|Manufacturer|%s'%rep_vessel_instance, default=''))
+	    self.vessmfg.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessmfg, 0, wx.EXPAND) 
+	# Catalogue Number
+	self.vesscat = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesscat.Enable()
+	else:
+	    self.vesscat.SetValue(meta.get_field('ExptVessel|Coverslip|CatalogueNo|%s'%rep_vessel_instance, default=''))
+	    self.vesscat.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Catalogue Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscat, 0, wx.EXPAND) 	
+	# Size
+	self.vesssize = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesssize.Enable()
+	else:
+	    self.vesssize.SetValue(meta.get_field('ExptVessel|Coverslip|Size|%s'%rep_vessel_instance, default=''))
+	    self.vesssize.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Size (mm x mm)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesssize, 0, wx.EXPAND)
+	# Thickness
+	self.vessthick = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vessthick.Enable()
+	else:
+	    self.vessthick.SetValue(meta.get_field('ExptVessel|Coverslip|Thickness|%s'%rep_vessel_instance, default=''))
+	    self.vessthick.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Thickness'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessthick, 0, wx.EXPAND)	
+        # Coating
+	choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin', 'Other']
+	self.vesscoat = wx.ListBox(self.sw, -1, wx.DefaultPosition, (120,30), choices, wx.LB_SINGLE)
+	if new_stack is True:
+	    self.vesscoat.Enable()
+	else:	
+	    self.vesscoat.Append(meta.get_field('ExptVessel|Coverslip|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.SetStringSelection(meta.get_field('ExptVessel|Coverslip|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.Disable()
+	self.vesscoat.Bind(wx.EVT_LISTBOX, self.onSelectOther)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscoat, 0, wx.EXPAND)
+	# Other Information
+	self.vessother = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
+	self.vessother.SetInitialSize((-1,100))
+	if new_stack is True:
+	    self.vessother.Enable()
+	else:
+	    self.vessother.SetValue(meta.get_field('ExptVessel|Coverslip|OtherInfo|%s'%rep_vessel_instance, default=''))
+	    self.vessother.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Other Information'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessother, 0, wx.EXPAND) 	            
 
-        #---------------Layout with sizers---------------
+	#---  Layout with sizers  -------
 	swsizer = wx.BoxSizer(wx.VERTICAL)
 	swsizer.Add(titlesizer)
 	swsizer.Add((-1,10))
@@ -2815,73 +2706,521 @@ class CoverslipConfigPanel(wx.Panel):
 	
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	
+    def onSelectOther(self, event):
+	if self.vesscoat.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    self.vesscoat.Append(other)
+	    self.vesscoat.SetStringSelection(other)	
     
-    def onCreateCoverslipgroupPage(self, event):
-        
-        # get all input from the fields
-        meta = ExperimentSettings.getInstance()
-        # get the users input for number of coverslips requried
-        coverslip_count = int(self.coverslipnum.GetStringSelection())
-        ## TO DO: check whether this value being selected, if not show message!!
-        
-        coverslip_list = meta.get_field_instances('ExptVessel|Coverslip|')
-        
-        #Find the all instances of coverslip
-        if coverslip_list:
-            max_id =  max(map(int, coverslip_list))+1
+    def onCreateStack(self, event):
+	# Checks 
+	if self.vessnum.GetStringSelection() is "":
+	    dial = wx.MessageDialog(None, 'Please select the number of vessels', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	if self.stkname.GetValue() is "":
+	    dial = wx.MessageDialog(None, 'Please select the Stack Name', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	#vess_design = self.vessdesign.GetStringSelection()
+	#if vess_design is None:
+	    #dial = wx.MessageDialog(None, 'Please select the vessel design', 'Error', wx.OK | wx.ICON_ERROR)
+	    #dial.ShowModal()  
+	    #return	
+	self.createBtn.Disable()
+	
+        vess_list = meta.get_field_instances('ExptVessel|Coverslip')
+        if vess_list:
+            max_id =  max(map(int, vess_list))+1
         else:
             max_id = 1
-        
-        # save the input from the max instances         
-        for coverslip_id in range(max_id, max_id+coverslip_count):
-            id = 'Coverslip%s'%(coverslip_id)
-            plate_design = (1,1)  # since coverslip is alwasys a sigle entity resembling to 1x1 well plate format   
+	    
+        for v_id in range(max_id, max_id+int(self.vessnum.GetStringSelection())):
+            id = 'Coverslip%s'%(v_id)
+            plate_design = (1,1)  # since flask is alwasys a sigle entity resembling to 1x1 well plate format   
             if id not in PlateDesign.get_plate_ids():
-                PlateDesign.add_plate('Coverslip', str(coverslip_id), plate_design, self.groupname.GetValue())
+                PlateDesign.add_plate('Coverslip', str(v_id), plate_design, self.stkname.GetValue())
             else:
                 PlateDesign.set_plate_format(id, plate_design)
         
-            meta.set_field('ExptVessel|Coverslip|GroupNo|%s'%str(coverslip_id),    self.plgrp_id, notify_subscribers =False)
-            meta.set_field('ExptVessel|Coverslip|Number|%s'%str(coverslip_id),     self.coverslipnum.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Coverslip|GroupName|%s'%str(coverslip_id),  self.groupname.GetValue(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Coverslip|Size|%s'%str(coverslip_id),       self.coverslipsize.GetStringSelection(), notify_subscribers =False)
-            meta.set_field('ExptVessel|Coverslip|Coat|%s'%str(coverslip_id),       self.coverslipcoat.GetStringSelection())
-
+            meta.set_field('ExptVessel|Coverslip|StackNo|%s'%str(v_id),    self.page_counter, notify_subscribers =False)
+            meta.set_field('ExptVessel|Coverslip|Number|%s'%str(v_id),     self.vessnum.GetStringSelection(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Coverslip|StackName|%s'%str(v_id),  self.stkname.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Coverslip|Manufacturer|%s'%str(v_id),  self.vessmfg.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Coverslip|CatalogueNo|%s'%str(v_id),  self.vesscat.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Coverslip|Size|%s'%str(v_id),       self.vesssize.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Coverslip|Thickness|%s'%str(v_id),       self.vessthick.GetValue(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Coverslip|Coat|%s'%str(v_id),       self.vesscoat.GetStringSelection(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Coverslip|OtherInfo|%s'%str(v_id),  self.vessother.GetValue())
         
-        # make all input fields disable
-        self.coverslipnum.Disable()
-        self.groupname.Disable()
-        self.coverslipsize.Disable()
-        self.coverslipcoat.Disable()
+	#make all input fields disable
+        self.vessnum.Disable()
+	self.stkname.Disable()
+	self.vessmfg.Disable()
+	self.vesscat.Disable()
+	self.vesssize.Disable()
+	self.vessthick.Disable()
+	self.vesscoat.Disable()
+	self.vessother.Disable()
+	#Enable to create new instance
+	self.GrandParent.createTabBtn.Enable()
+	
+#########################################################################        
+###################     FLASK SETTING PANEL          ####################
+#########################################################################	    
+class FlaskSettingPanel(wx.Panel):
+    """
+    Panel that holds parameter input panel and the buttons for more additional panel
+    """   
+    def __init__(self, parent, id=-1):
+        wx.Panel.__init__(self, parent, id)
 
-        # make the copy and delete button active
-        self.createBtn.Disable()
-        self.deleteCoverslipgroupPageBtn.Enable()
-        self.GrandParent.addCoverslipGrpPageBtn.Enable()
+        self.settings_controls = {}
+        meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'ExptVessel|Flask'	
+
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
+
+	stack_ids = meta.get_stack_ids(self.protocol)
+	
+	for stack_id in sorted(stack_ids):
+	    panel = FlaskPanel(self.notebook, int(stack_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(stack_id), True)
+		
+	# Buttons
+	self.createTabBtn = wx.Button(self, label="Create Intance")
+	self.createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)      
+
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(self.createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	stack_ids = meta.get_stack_ids(self.protocol)
+	if stack_ids:
+            stack_id =  max(map(int, stack_ids))+1
+        else:
+            stack_id = 1	    
+	
+	panel = FlaskPanel(self.notebook, stack_id)
+	self.notebook.AddPage(panel, 'Instance No: %s'%stack_id, True) 
+	#Prevent users from clicking the 'Create Instance' button
+	self.createTabBtn.Disable()
+
+##---------- Flask Config Panel----------------##
+class FlaskPanel(wx.Panel):
+    '''
+    Panel that displays the instance
+    '''
+    def __init__(self, parent, page_counter):
+
+	self.settings_controls = {}
+	meta = ExperimentSettings.getInstance()
+	
+	wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+	self.sw = wx.ScrolledWindow(self)
+
+	self.page_counter = page_counter
+	fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+	
+	self.protocol = 'ExptVessel|Flask'
+	
+	new_stack = True
+	stack_ids = meta.get_stack_ids(self.protocol)
+	rep_vessel_instance = None
+	for stack_id in stack_ids:
+	    if stack_id == self.page_counter:
+		rep_vessel_instance = meta.get_rep_vessel_instance(self.protocol, stack_id) #Since all vessels for a given stack have same specifications, so single instance will be used to fill the information
+	if rep_vessel_instance is not None:
+	    new_stack = False
+
+        # Heading
+	text = wx.StaticText(self.sw, -1, 'Flask Specifications')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(text, 0)
+	titlesizer.Add((10,-1))
+	# CREATE button
+	self.createBtn = wx.Button(self.sw, -1, label="Put Stack on Bench")
+	self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateStack)
+	if new_stack is False:
+	    self.createBtn.Disable()        
+	titlesizer.Add(self.createBtn, 0, wx.EXPAND) 	
+	
+        # Vessel number
+        self.vessnum = wx.Choice(self.sw, -1,  choices= map(str, range(1,20)), style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.vessnum.Enable() 
+        else:
+            self.vessnum.SetStringSelection(meta.get_field('ExptVessel|Flask|Number|%s'%rep_vessel_instance))
+            self.vessnum.Disable()      
+	fgs.Add(wx.StaticText(self.sw, -1, 'Number of Flask in Stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self.vessnum, 0, wx.EXPAND)                
+        # Group name
+        self.stkname= wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.stkname.Enable()
+        else:
+            self.stkname.SetValue(meta.get_field('ExptVessel|Flask|StackName|%s'%rep_vessel_instance))
+            self.stkname.Disable()
+        fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self.stkname, 0, wx.EXPAND) 
+	# Manufacturer
+	self.vessmfg = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vessmfg.Enable()
+	else:
+	    self.vessmfg.SetValue(meta.get_field('ExptVessel|Flask|Manufacturer|%s'%rep_vessel_instance, default=''))
+	    self.vessmfg.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessmfg, 0, wx.EXPAND) 
+	# Catalogue Number
+	self.vesscat = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesscat.Enable()
+	else:
+	    self.vesscat.SetValue(meta.get_field('ExptVessel|Flask|CatalogueNo|%s'%rep_vessel_instance, default=''))
+	    self.vesscat.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Catalogue Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscat, 0, wx.EXPAND) 	
+	# Size
+	self.vesssize = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesssize.Enable()
+	else:
+	    self.vesssize.SetValue(meta.get_field('ExptVessel|Flask|Size|%s'%rep_vessel_instance, default=''))
+	    self.vesssize.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Size (cm2)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesssize, 0, wx.EXPAND)
+        # Coating
+	choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin', 'Other']
+	self.vesscoat = wx.ListBox(self.sw, -1, wx.DefaultPosition, (120,30), choices, wx.LB_SINGLE)
+	if new_stack is True:
+	    self.vesscoat.Enable()
+	else:	
+	    self.vesscoat.Append(meta.get_field('ExptVessel|Flask|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.SetStringSelection(meta.get_field('ExptVessel|Flask|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.Disable()
+	self.vesscoat.Bind(wx.EVT_LISTBOX, self.onSelectOther)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscoat, 0, wx.EXPAND)
+	# Other Information
+	self.vessother = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
+	self.vessother.SetInitialSize((-1,100))
+	if new_stack is True:
+	    self.vessother.Enable()
+	else:
+	    self.vessother.SetValue(meta.get_field('ExptVessel|Flask|OtherInfo|%s'%rep_vessel_instance, default=''))
+	    self.vessother.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Other Information'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessother, 0, wx.EXPAND) 	            
+
+	#---  Layout with sizers  -------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	
+    def onSelectOther(self, event):
+	if self.vesscoat.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    self.vesscoat.Append(other)
+	    self.vesscoat.SetStringSelection(other)	
+    
+    def onCreateStack(self, event):
+	# Checks 
+	if self.vessnum.GetStringSelection() is "":
+	    dial = wx.MessageDialog(None, 'Please select the number of vessels', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	if self.stkname.GetValue() is "":
+	    dial = wx.MessageDialog(None, 'Please select the Stack Name', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	#vess_design = self.vessdesign.GetStringSelection()
+	#if vess_design is None:
+	    #dial = wx.MessageDialog(None, 'Please select the vessel design', 'Error', wx.OK | wx.ICON_ERROR)
+	    #dial.ShowModal()  
+	    #return	
+	self.createBtn.Disable()
+	
+        vess_list = meta.get_field_instances('ExptVessel|Flask')
+        if vess_list:
+            max_id =  max(map(int, vess_list))+1
+        else:
+            max_id = 1
+	    
+        for v_id in range(max_id, max_id+int(self.vessnum.GetStringSelection())):
+            id = 'Flask%s'%(v_id)
+            plate_design = (1,1)  # since flask is alwasys a sigle entity resembling to 1x1 well plate format   
+            if id not in PlateDesign.get_plate_ids():
+                PlateDesign.add_plate('Flask', str(v_id), plate_design, self.stkname.GetValue())
+            else:
+                PlateDesign.set_plate_format(id, plate_design)
+        
+            meta.set_field('ExptVessel|Flask|StackNo|%s'%str(v_id),    self.page_counter, notify_subscribers =False)
+            meta.set_field('ExptVessel|Flask|Number|%s'%str(v_id),     self.vessnum.GetStringSelection(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Flask|StackName|%s'%str(v_id),  self.stkname.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Flask|Manufacturer|%s'%str(v_id),  self.vessmfg.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Flask|CatalogueNo|%s'%str(v_id),  self.vesscat.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Flask|Size|%s'%str(v_id),       self.vesssize.GetValue(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Flask|Coat|%s'%str(v_id),       self.vesscoat.GetStringSelection(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Flask|OtherInfo|%s'%str(v_id),  self.vessother.GetValue())
+        
+	#make all input fields disable
+        self.vessnum.Disable()
+	self.stkname.Disable()
+	self.vessmfg.Disable()
+	self.vesscat.Disable()
+	self.vesssize.Disable()
+	self.vesscoat.Disable()
+	self.vessother.Disable()
+	#Enable to create new instance
+	self.GrandParent.createTabBtn.Enable()
+	
+	
+#########################################################################        
+###################     TUBE SETTING PANEL          ####################
+#########################################################################	    
+class TubeSettingPanel(wx.Panel):
+    """
+    Panel that holds parameter input panel and the buttons for more additional panel
+    """   
+    def __init__(self, parent, id=-1):
+        wx.Panel.__init__(self, parent, id)
+
+        self.settings_controls = {}
+        meta = ExperimentSettings.getInstance()
+		
+	self.protocol = 'ExptVessel|Tube'	
+
+        self.notebook = fnb.FlatNotebook(self, -1, style=fnb.FNB_NO_X_BUTTON | fnb.FNB_VC8)
+	self.notebook.Bind(fnb.EVT_FLATNOTEBOOK_PAGE_CLOSING, meta.onTabClosing)
+
+	stack_ids = meta.get_stack_ids(self.protocol)
+	
+	for stack_id in sorted(stack_ids):
+	    panel = TubePanel(self.notebook, int(stack_id))
+	    self.notebook.AddPage(panel, 'Instance No: %s'%(stack_id), True)
+		
+	# Buttons
+	self.createTabBtn = wx.Button(self, label="Create Intance")
+	self.createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)      
+
+	# Sizers
+	mainsizer = wx.BoxSizer(wx.VERTICAL)
+	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
+	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
+	btnSizer.Add(self.createTabBtn  , 0, wx.ALL, 5)
+	mainsizer.Add(btnSizer)
+	self.SetSizer(mainsizer)
+	self.Layout()
+	
+    def onCreateTab(self, event):
+	stack_ids = meta.get_stack_ids(self.protocol)
+	if stack_ids:
+            stack_id =  max(map(int, stack_ids))+1
+        else:
+            stack_id = 1	    
+	
+	panel = TubePanel(self.notebook, stack_id)
+	self.notebook.AddPage(panel, 'Instance No: %s'%stack_id, True)  
+	#Prevent users from clicking the 'Create Instance' button
+	self.createTabBtn.Disable()	
+
+##---------- Tube Instance Panel----------------##
+class TubePanel(wx.Panel):
+    '''
+    Panel that displays the instance
+    '''
+    def __init__(self, parent, page_counter):
+
+	self.settings_controls = {}
+	meta = ExperimentSettings.getInstance()
+	
+	wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+	self.sw = wx.ScrolledWindow(self)
+
+	self.page_counter = page_counter
+	fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+	
+	self.protocol = 'ExptVessel|Tube'
+	
+	new_stack = True
+	stack_ids = meta.get_stack_ids(self.protocol)
+	rep_vessel_instance = None
+	for stack_id in stack_ids:
+	    if stack_id == self.page_counter:
+		rep_vessel_instance = meta.get_rep_vessel_instance(self.protocol, stack_id) #Since all vessels for a given stack have same specifications, so single instance will be used to fill the information
+	if rep_vessel_instance is not None:
+	    new_stack = False
+
+        # Heading
+	text = wx.StaticText(self.sw, -1, 'Tube Specifications')
+	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	text.SetFont(font)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(text, 0)
+	titlesizer.Add((10,-1))
+	# CREATE button
+	self.createBtn = wx.Button(self.sw, -1, label="Put Stack on Bench")
+	self.createBtn.Bind(wx.EVT_BUTTON, self.onCreateStack)
+	if new_stack is False:
+	    self.createBtn.Disable()        
+	titlesizer.Add(self.createBtn, 0, wx.EXPAND) 	
+	
+        # Vessel number
+        self.vessnum = wx.Choice(self.sw, -1,  choices= map(str, range(1,20)), style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.vessnum.Enable() 
+        else:
+            self.vessnum.SetStringSelection(meta.get_field('ExptVessel|Tube|Number|%s'%rep_vessel_instance))
+            self.vessnum.Disable()      
+	fgs.Add(wx.StaticText(self.sw, -1, 'Number of Tube in Stack'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self.vessnum, 0, wx.EXPAND)                
+        # Group name
+        self.stkname= wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+        if new_stack is True:
+            self.stkname.Enable()
+        else:
+            self.stkname.SetValue(meta.get_field('ExptVessel|Tube|StackName|%s'%rep_vessel_instance))
+            self.stkname.Disable()
+        fgs.Add(wx.StaticText(self.sw, -1, 'Stack Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self.stkname, 0, wx.EXPAND) 
+	# Manufacturer
+	self.vessmfg = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vessmfg.Enable()
+	else:
+	    self.vessmfg.SetValue(meta.get_field('ExptVessel|Tube|Manufacturer|%s'%rep_vessel_instance, default=''))
+	    self.vessmfg.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Manufacturer'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessmfg, 0, wx.EXPAND) 
+	# Catalogue Number
+	self.vesscat = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesscat.Enable()
+	else:
+	    self.vesscat.SetValue(meta.get_field('ExptVessel|Tube|CatalogueNo|%s'%rep_vessel_instance, default=''))
+	    self.vesscat.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Catalogue Number'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscat, 0, wx.EXPAND) 	
+	# Size
+	self.vesssize = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_PROCESS_ENTER)
+	if new_stack is True:
+	    self.vesssize.Enable()
+	else:
+	    self.vesssize.SetValue(meta.get_field('ExptVessel|Tube|Size|%s'%rep_vessel_instance, default=''))
+	    self.vesssize.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Size (cm2)'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesssize, 0, wx.EXPAND)
+        # Coating
+	choices=['None','Collagen IV','Gelatin','Poly-L-Lysine','Poly-D-Lysine', 'Fibronectin', 'Laminin','Poly-D-Lysine + Laminin', 'Poly-L-Ornithine+Laminin', 'Other']
+	self.vesscoat = wx.ListBox(self.sw, -1, wx.DefaultPosition, (120,30), choices, wx.LB_SINGLE)
+	if new_stack is True:
+	    self.vesscoat.Enable()
+	else:	
+	    self.vesscoat.Append(meta.get_field('ExptVessel|Tube|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.SetStringSelection(meta.get_field('ExptVessel|Tube|Coat|%s'%rep_vessel_instance))
+	    self.vesscoat.Disable()
+	self.vesscoat.Bind(wx.EVT_LISTBOX, self.onSelectOther)
+	fgs.Add(wx.StaticText(self.sw, -1, 'Coating'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vesscoat, 0, wx.EXPAND)
+	# Other Information
+	self.vessother = wx.TextCtrl(self.sw, -1, value='', style=wx.TE_MULTILINE|wx.TE_PROCESS_ENTER)
+	self.vessother.SetInitialSize((-1,100))
+	if new_stack is True:
+	    self.vessother.Enable()
+	else:
+	    self.vessother.SetValue(meta.get_field('ExptVessel|Tube|OtherInfo|%s'%rep_vessel_instance, default=''))
+	    self.vessother.Disable()
+	fgs.Add(wx.StaticText(self.sw, -1, 'Other Information'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+	fgs.Add(self.vessother, 0, wx.EXPAND) 	
+        
+                   
+
+	#---  Layout with sizers  -------
+	swsizer = wx.BoxSizer(wx.VERTICAL)
+	swsizer.Add(titlesizer)
+	swsizer.Add((-1,10))
+	swsizer.Add(fgs)
+	self.sw.SetSizer(swsizer)
+	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
+	
+	self.Sizer = wx.BoxSizer(wx.VERTICAL)
+	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	
+    def onSelectOther(self, event):
+	if self.vesscoat.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    self.vesscoat.Append(other)
+	    self.vesscoat.SetStringSelection(other)	
+    
+    def onCreateStack(self, event):
+	# Checks 
+	if self.vessnum.GetStringSelection() is "":
+	    dial = wx.MessageDialog(None, 'Please select the number of vessels', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	if self.stkname.GetValue() is "":
+	    dial = wx.MessageDialog(None, 'Please select the Stack Name', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+	#vess_design = self.vessdesign.GetStringSelection()
+	#if vess_design is None:
+	    #dial = wx.MessageDialog(None, 'Please select the vessel design', 'Error', wx.OK | wx.ICON_ERROR)
+	    #dial.ShowModal()  
+	    #return	
+	self.createBtn.Disable()
+	
+        vess_list = meta.get_field_instances('ExptVessel|Tube')
+        if vess_list:
+            max_id =  max(map(int, vess_list))+1
+        else:
+            max_id = 1
+	    
+        for v_id in range(max_id, max_id+int(self.vessnum.GetStringSelection())):
+            id = 'Tube%s'%(v_id)
+            plate_design = (1,1)  # since flask is alwasys a sigle entity resembling to 1x1 well plate format   
+            if id not in PlateDesign.get_plate_ids():
+                PlateDesign.add_plate('Tube', str(v_id), plate_design, self.stkname.GetValue())
+            else:
+                PlateDesign.set_plate_format(id, plate_design)
+        
+            meta.set_field('ExptVessel|Tube|StackNo|%s'%str(v_id),    self.page_counter, notify_subscribers =False)
+            meta.set_field('ExptVessel|Tube|Number|%s'%str(v_id),     self.vessnum.GetStringSelection(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Tube|StackName|%s'%str(v_id),  self.stkname.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Tube|Manufacturer|%s'%str(v_id),  self.vessmfg.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Tube|CatalogueNo|%s'%str(v_id),  self.vesscat.GetValue(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Tube|Size|%s'%str(v_id),       self.vesssize.GetValue(), notify_subscribers =False)
+            meta.set_field('ExptVessel|Tube|Coat|%s'%str(v_id),       self.vesscoat.GetStringSelection(), notify_subscribers =False)
+	    meta.set_field('ExptVessel|Tube|OtherInfo|%s'%str(v_id),  self.vessother.GetValue())
+        
+	#make all input fields disable
+        self.vessnum.Disable()
+	self.stkname.Disable()
+	self.vessmfg.Disable()
+	self.vesscat.Disable()
+	self.vesssize.Disable()
+	self.vesscoat.Disable()
+	self.vessother.Disable()
+	#Enable to create new instance
+	self.GrandParent.createTabBtn.Enable()
          
-      
-    def onDeleteCoverslipgroupPage(self, event):
-
-        dlg = wx.MessageDialog(self, 'Do you want to delete stack '+str(self.plgrp_id)+' ?', 'Deleting..', wx.YES_NO| wx.NO_DEFAULT | wx.ICON_WARNING)
-        
-        if dlg.ShowModal() == wx.ID_YES:
-                
-            meta = ExperimentSettings.getInstance()
-       
-            for exs_coverslip_id in meta.get_field_instances('ExptVessel|Coverslip|GroupNo|'):
-            # get the set of each parameters since all parameters are same for all instances under this group so one will be same     
-                if meta.get_field('ExptVessel|Coverslip|GroupNo|'+str(exs_coverslip_id)) == self.plgrp_id:
-                
-                    #remove the instances                    
-                    meta.remove_field('ExptVessel|Coverslip|GroupNo|%s'%str(exs_coverslip_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Coverslip|Number|%s'%str(exs_coverslip_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Coverslip|GroupName|%s'%str(exs_coverslip_id), notify_subscribers =False)                    
-                    meta.remove_field('ExptVessel|Coverslip|Size|%s'%str(exs_coverslip_id), notify_subscribers =False)
-                    meta.remove_field('ExptVessel|Coverslip|Coat|%s'%str(exs_coverslip_id))
-           
-            ##remove the page
-            self.Parent.DeletePage(self.Parent.GetSelection())
-
 ########################################################################        
 ################## CELL SEEDING PANEL #########################
 ########################################################################

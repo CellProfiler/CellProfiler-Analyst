@@ -65,6 +65,10 @@ opts = {
               },
     'msi': {}
        }
+data_files = [('icons',
+               ['icons\\%s'%(x) 
+                for x in os.listdir('icons')
+                if x.endswith(".png") or x.endswith(".psd")])]
 
 #
 # Call setup
@@ -73,4 +77,5 @@ setup(console=[{'script':'protocolnavigator.py'}],
       name='ProtocolNavigator',
       cmdclass={'msi':CellProfilerMSI
                 },
+      data_files = data_files,
       options=opts)

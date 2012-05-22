@@ -666,14 +666,14 @@ class LineagePanel(wx.Panel):
         bench.update_plate_groups()
         bench.update_well_selections()
         
-        #try:
-            #exptsettings = wx.GetApp().get_exptsettings()
-        #except:
-            #return
-        ## -- Update the expt setting/metadata view --#
-        #exptsettings.OnLeafSelect()
-        #if self.current_node.get_tags():
-            #exptsettings.ShowInstance(self.current_node.get_tags()[0])
+        try:
+            exptsettings = wx.GetApp().get_exptsettings()
+        except:
+            return
+        # -- Update the expt setting/metadata view --#
+        exptsettings.OnLeafSelect()
+        if self.current_node.get_tags():
+            exptsettings.ShowInstance(self.current_node.get_tags()[0])
             
             
         ancestors = [exp.get_tag_stump(ptag, 2)

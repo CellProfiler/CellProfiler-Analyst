@@ -82,8 +82,8 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
             except:
                 return     
             #tag = '%s|%s|*|%s' %(exp.get_tag_type(sel[0]), exp.get_tag_event(sel[0]),exp.get_tag_attribute(sel[0]))
-            exptsettings.OnLeafSelect()
-            exptsettings.ShowInstance(sel[0])
+            #exptsettings.OnLeafSelect()
+            #exptsettings.ShowInstance(sel[0])
             
         return sel
             

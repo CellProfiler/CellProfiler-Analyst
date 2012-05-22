@@ -197,8 +197,19 @@ class ExperimentSettings(Singleton):
 	'''returns instance number given tag prefix and field value
 	'''
 	return get_tag_instance([tag for tag, value in self.global_settings.iteritems() if value == field_value][0])
-
     
+    def get_stack_ids(self, prefix):
+	'''returns the stack ids for a given type of vessels prefix  e.g. ExptVessel|Tube'''
+	return set([self.get_field(prefix+'|StackNo|%s'%instance)
+	           for instance in sorted(self.get_field_instances(prefix))])
+    
+    def get_rep_vessel_instance(self, prefix, stack_id):
+	''' returns instance number of the vessel for this stack, since all vessels of a given stack has identical settings
+	    one instance represents others'''
+	for instance in sorted(self.get_field_instances(prefix)):
+	    if self.get_field(prefix+'|StackNo|%s'%(instance)) == stack_id:
+		return instance   
+	
     def clear(self):
         self.global_settings = {}
         PlateDesign.clear()
@@ -290,14 +301,14 @@ class ExperimentSettings(Singleton):
         
         # Populate PlateDesign
         PlateDesign.clear()
-        for vessel_type in ('Plate', 'Flask', 'Dish', 'Coverslip'):
+        for vessel_type in ('Plate', 'Flask', 'Dish', 'Coverslip', 'Tube'):
             prefix = 'ExptVessel|%s'%(vessel_type)
             for inst in self.get_field_instances(prefix):
                 d = self.get_attribute_dict(prefix+'|'+inst)
                 shape = d.get('Design', None)
                 if shape is None:
                     shape = (1,1)
-                group = d.get('GroupName', None)
+                group = d.get('StackName', None)
                 PlateDesign.add_plate(vessel_type, inst, shape, group)
             
         # Update everything
@@ -456,8 +467,12 @@ class ExperimentSettings(Singleton):
             if component.endswith('SP'):
                 description = nm+' nm Short Pass Dichroic Mirror'            
         if component.startswith('FLT'):
-            nm = component.split('FLT')[1]
-            description = nm+' Band pass Filter'
+	    if component.endswith('LP'):
+		description = re.sub('\D', '', component)+' nm Long Pass Filter'
+	    if component.endswith('SP'):
+		description = re.sub('\D', '', component)+' nm Short Pass Filter'
+	    if component.endswith('BP'):
+		description = (component.split('FLT')[1]).split('BP')[0]+' nm Band pass Filter' # this needs to be adjusted
         if component.startswith('DYE'):
             dye = component.split('_')[1]
             description = 'Dye used: %s' %dye
@@ -596,7 +611,7 @@ class Vessel(object):
         else:
             self.shape = WELL_NAMES[shape]
 ##        meta.set_field('ExptVessel|%(vessel_type)|Design|%(instance)'%(locals), shape)
-##        meta.set_field('ExptVessel|%(vessel_type)|GroupName|%(instance)'%(locals), group)
+##        meta.set_field('ExptVessel|%(vessel_type)|StackName|%(instance)'%(locals), group)
         for k,v in kwargs:
             self.set_attribute(k, v)
         

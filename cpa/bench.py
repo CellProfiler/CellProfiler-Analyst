@@ -89,8 +89,8 @@ class Bench(wx.Frame):
         selected_groups = self.group_checklist.GetCheckedStrings()        
         self.vesselscroller.clear()
 
-        group_tags = meta.get_matching_tags('ExptVessel|*|GroupName|*')
-        for tag in group_tags:
+        group_tags = meta.get_matching_tags('ExptVessel|*|StackName|*')
+        for tag in sorted(group_tags, key=meta.stringSplitByNumbers):
             if meta.get_field(tag) in selected_groups:
                 group_name = meta.get_field(tag)
                 prefix = get_tag_stump(tag, 2)
@@ -299,7 +299,7 @@ class VesselGroupSelector(guiutils.CheckListComboBox):
         meta.add_subscriber(self.update_choices, 'ExptVessel.*')
         
     def update_choices(self, tag):
-        group_tags = meta.get_matching_tags('ExptVessel|*|GroupName|*')
+        group_tags = meta.get_matching_tags('ExptVessel|*|StackName|*')
         stack_names = sorted(set([meta.get_field(tag) for tag in group_tags]))
         selected_strings = self.GetCheckedStrings()
         self.SetItems(stack_names)

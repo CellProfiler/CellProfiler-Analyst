@@ -97,12 +97,6 @@ class ChannelBuilder(wx.Dialog):
 	    return
 		  
 	startNM, endNM = meta.getNM(self.componentList[self.componentCount-1][1])
-	if not((startNM < endNM) and (meta.belongsTo(startNM, 300, 800)) and (meta.belongsTo(startNM, 300, 800))):
-	    dial = wx.MessageDialog(None, 'Please check the wavelength of previous component', 'Error', wx.OK | wx.ICON_ERROR)
-	    dial.ShowModal() 
-	    self.componentCount -=1
-	    return
-	# check whether within the valid range
 	
         if self.select_component.GetStringSelection() == 'Dichroic Mirror':	    
 	    staticbox = wx.StaticBox(self.bot_panel, -1, "Dichroic Mirror")
@@ -199,8 +193,8 @@ class ChannelBuilder(wx.Dialog):
 	    dial.ShowModal() 
 	    return	 
 	    
-        if meta.belongsTo(int(ctrl.GetValue()), 300, 800) is False:
-	    dial = wx.MessageDialog(None, 'Laser excitation should be within 300-800 nm range', 'Error', wx.OK | wx.ICON_ERROR)
+        if meta.belongsTo(int(ctrl.GetValue()), 380, 800) is False:
+	    dial = wx.MessageDialog(None, 'Laser excitation should be within 380-800 nm range', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal() 
 	    return
 	# Set the Laser colour    
@@ -234,11 +228,11 @@ class ChannelBuilder(wx.Dialog):
 	self.select_btn.Enable()
 	
 	# draw the cell picture
-	#bmp = icons.cpa_32.Scale(32.0, 32.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()	
-	#cell_image = wx.BitmapButton(self.bot_panel, -1, bmp, (32, 32), style = wx.NO_BORDER)
+	bmp = icons.cpa_32.Scale(32.0, 32.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()	
+	cell_image = wx.BitmapButton(self.bot_panel, -1, bmp, (32, 32), style = wx.NO_BORDER)
 	
 	# sizers
-	#self.fgs.Add(cell_image, 0)
+	self.fgs.Add(cell_image, 0)
 	self.bot_panel.SetSizer(self.fgs)
 	self.bot_panel.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
 	
@@ -288,10 +282,14 @@ class ChannelBuilder(wx.Dialog):
             dial.ShowModal()  
             return              
     
-        midValue = int((self.fltTsld.GetValue()+self.fltBsld.GetValue())/2)
-        ranges = self.fltBsld.GetValue()-self.fltTsld.GetValue()
-        self.componentList[self.componentCount]= ['FLT'+str(midValue)+'/'+str(ranges), str(self.fltTsld.GetValue())+'-'+str(self.fltBsld.GetValue())]
-       
+	if self.fltTsld.GetValue() > self.fltTsld.GetMin() and self.fltBsld.GetValue() == self.fltBsld.GetMax():
+	    self.componentList[self.componentCount] = ['FLT%sLP'%self.fltTsld.GetValue(), str(self.fltTsld.GetValue())+'-'+str(self.fltBsld.GetMax())]
+	elif self.fltBsld.GetValue() < self.fltBsld.GetMax() and self.fltTsld.GetValue() == self.fltTsld.GetMin():
+	    self.componentList[self.componentCount] = ['FLT%sSP'%self.fltBsld.GetValue(), str(self.fltTsld.GetMin())+'-'+str(self.fltBsld.GetValue())]
+	else:  
+	    midValue = int((self.fltTsld.GetValue()+self.fltBsld.GetValue())/2)
+	    ranges = self.fltBsld.GetValue()-self.fltTsld.GetValue()
+	    self.componentList[self.componentCount]= ['FLT'+str(midValue)+'/'+str(ranges)+'BP', str(self.fltTsld.GetValue())+'-'+str(self.fltBsld.GetValue())]
 	self.fltrspectrum.Refresh()
     
     def OnToggleMirror(self, event):
