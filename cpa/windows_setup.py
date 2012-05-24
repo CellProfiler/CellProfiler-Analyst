@@ -1,5 +1,6 @@
 """Windows setup file
 Delete build and dist folder from the cpa folder
+Also delete previous version of setup.exe from the output folder
 To invoke, from the command-line type:
 python windows_setup.py py2exe msi
 
@@ -68,7 +69,7 @@ opts = {
 data_files = [('icons',
                ['icons\\%s'%(x) 
                 for x in os.listdir('icons')
-                if x.endswith(".png") or x.endswith(".psd")])]
+                if x.lower().endswith(".png") or x.lower().endswith(".psd")])]
 
 #
 # Call setup
