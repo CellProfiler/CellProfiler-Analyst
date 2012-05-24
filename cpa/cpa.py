@@ -301,7 +301,7 @@ class MainGUI(wx.Frame):
             wx.GetApp().save_workspace(dlg.GetPath())
 
     def on_load_workspace(self, evt):
-        dlg = wx.FileDialog(self, "Select the file containing your CPAnalyst workspace...",
+        dlg = wx.FileDialog(self, "Select the file containing your CPAnalyst workspace...", wildcard="Workspace file (*.workspace)|*.workspace",
                             defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().load_workspace(dlg.GetPath())
