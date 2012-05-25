@@ -273,7 +273,7 @@ class Bench(wx.Frame):
                 dlg.Destroy()
             else:
                 dlg.Destroy()
-                meta.remove_field(images_tag)
+                meta.remove_field(wells_tag)
                 vessel = self.vesselscroller.get_vessel(platewell_id[0])
                 if vessel:
                     vessel.deselect_well_at_pos(

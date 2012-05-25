@@ -3,11 +3,12 @@ import wx
 import os
 import subprocess
 import numpy as np
-from time import time
 import icons
 import timeline
+import  wx.lib.dialogs
 from wx.lib.combotreebox import ComboTreeBox
 from PIL import Image
+from time import time
 
 # x-spacing modes for timeline and lineage panels
 SPACE_EVEN = 0
@@ -618,10 +619,14 @@ class LineagePanel(wx.Panel):
                                                       exp.get_tag_timepoint(tag),
                                                       well)
                     urls = meta.get_field(image_tag, [])
-                    ImageJPath = r'C:\Program Files\ImageJ\ImageJ'
-                    # check whether ImageJ exists in the path
-                    # Open an instance of ImageJ for multiple images.
-                    subprocess.Popen("%s %s" % (ImageJPath, ' '.join(urls))) 
+                    image_viewer_path = ''
+                    if os.path.isfile('C:\Program Files\ImageJ\ImageJ.exe'):
+			ImageJPath = 'C:\Program Files\ImageJ\ImageJ.exe'
+                        subprocess.Popen("%s %s" % (ImageJPath, ' '.join(urls))) 
+                    else:
+			dlg = wx.lib.dialogs.ScrolledMessageDialog(self, str("\n".join(urls)), "ERROR!! ImageJ was not found in C\Program Files directory to show following images")
+			dlg.ShowModal()			 
+			return                        
                     #for url in urls:
                         #im = Image.open(url)
                         #im.show()
