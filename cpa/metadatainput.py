@@ -682,7 +682,7 @@ class StockCulturePanel(wx.Panel):
 	propSizer.Add(prop_fgs,  0, wx.ALIGN_CENTRE|wx.ALL, 5 )	
 	
 	# show the perviously encoded passages
-	pass_title = wx.StaticText(self.bot_panel, -1, 'Passage Hisotry')
+	pass_title = wx.StaticText(self.bot_panel, -1, 'Passage History')
 	font = wx.Font(8, wx.SWISS, wx.NORMAL, wx.BOLD)
 	pass_title.SetFont(font)
 	self.fpbsizer.Add(pass_title, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)	
@@ -737,7 +737,7 @@ class StockCulturePanel(wx.Panel):
 	    self.fpbsizer.Clear(deleteWindows=True)
 	    self.settings_controls[self.tag_stump+'|OrgPassageNo|%s'%str(self.page_counter)].Disable()
 	    
-	    pass_title = wx.StaticText(self.bot_panel, -1, 'Passage Hisotry')
+	    pass_title = wx.StaticText(self.bot_panel, -1, 'Passage History')
 	    font = wx.Font(8, wx.SWISS, wx.NORMAL, wx.BOLD)
 	    pass_title.SetFont(font)
 	    self.fpbsizer.Add(pass_title, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)	    
@@ -5951,7 +5951,7 @@ class NotePanel(wx.Panel):
 	
     def loadFile(self, event):
 	dlg = wx.FileDialog(None, "Select a media file",
-	                        defaultDir=os.getcwd(), wildcard='*.mp3;*.mpg;*.mid;*.wav; *.wmv;*.au;*.avi', style=wx.OPEN|wx.FD_CHANGE_DIR)
+	                        defaultDir=os.getcwd(), wildcard='*.mp4;*.mp3;*.mpg;*.mid;*.wav; *.wmv;*.au;*.avi', style=wx.OPEN|wx.FD_CHANGE_DIR)
 		# read the supp protocol file
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()

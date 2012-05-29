@@ -294,7 +294,7 @@ class ExperimentSettings(Singleton):
         self.clear()
         f = open(file, 'r')
         for line in f:
-            tag, value = line.split('=')
+            tag, value = line.split('=', 1)
             tag = tag.strip()
             self.set_field(tag, eval(value), notify_subscribers=False)
         f.close()

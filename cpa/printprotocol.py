@@ -106,6 +106,7 @@ class PrintProtocol(wx.Frame):
 		    self.printfile.write('<dfn>'+element[0]+': </dfn><code>'+element[1]+'</code><br />')
 		#self.printfile.write('<code>'+protocol_info[2]+' </code><br />')
 		self.printfile.write('<br />')
+		self.printfile.write('<dfn>'+protocol_info[2][0]+'</dfn><br />'
 	else:
 	    self.printfile.write('<code>No stock culture was used for this experiment</code>')
           	
@@ -358,8 +359,7 @@ class PrintProtocol(wx.Frame):
 		    
 		if exp.get_tag_event(protocol) == 'Video': 
 		    self.printfile.write('<code>For more information please watch the media file: '+meta.get_field('Notes|Video|Description|%s'%instance)+'</code><br />')
-		    
-            
+		
             self.printfile.write('<br />')   
                
         
@@ -401,25 +401,44 @@ class PrintProtocol(wx.Frame):
             return (header, info)
 	
 	if exp.get_tag_type(protocol) == 'StockCulture':
-	    header += '%s cell line (Ref: %s) was used. This will be referred as Stock Instance %s' %(meta.get_field('StockCulture|Sample|CellLine|%s'%instance, default='Not specified'), 
-	                                                 meta.get_field('StockCulture|Sample|ATCCref|%s'%instance, default='Not specified'),
+	    header += '%s cell line (Authority %s, Ref: %s) was used. This will be referred as Stock Instance %s' %(meta.get_field('StockCulture|Sample|CellLine|%s'%instance, default='Not specified'),
+	                                                meta.get_field('StockCulture|Sample|Authority|%s'%instance, default='Not specified'),
+	                                                                                                         str(instance),	                                                
+	                                                 meta.get_field('StockCulture|Sample|CatalogueNo|%s'%instance, default='Not specified'),
 	                                                 str(instance))
+	    info.append(('Depositors', meta.get_field('StockCulture|Sample|Depositors|%s'%instance, default='Not specified')))
+	    info.append(('Biosafety Level', meta.get_field('StockCulture|Sample|Biosafety|%s'%instance, default='Not specified')))
+	    info.append(('Shipment', meta.get_field('StockCulture|Sample|Shipment|%s'%instance, default='Not specified')))
+	    info.append(('Permit', meta.get_field('StockCulture|Sample|Permit|%s'%instance, default='Not specified')))
+	    info.append(('Growth Property', meta.get_field('StockCulture|Sample|GrowthProperty|%s'%instance, default='Not specified')))
 	    info.append(('Organism', meta.get_field('StockCulture|Sample|Organism|%s'%instance, default='Not specified')))
-	    info.append(('Gender', meta.get_field('StockCulture|Sample|Gender|%s'%instance, default='Not specified')))
+	    info.append(('Morphology', meta.get_field('StockCulture|Sample|Morphology|%s'%instance, default='Not specified')))
+	    info.append(('Organ', meta.get_field('StockCulture|Sample|Organ|%s'%instance, default='Not specified')))    
+	    info.append(('Disease', meta.get_field('StockCulture|Sample|Disease|%s'%instance, default='Not specified')))
+	    info.append(('Products', meta.get_field('StockCulture|Sample|Products|%s'%instance, default='Not specified')))
+	    info.append(('Applications', meta.get_field('StockCulture|Sample|Applications|%s'%instance, default='Not specified')))
+	    info.append(('Receptors', meta.get_field('StockCulture|Sample|Receptors|%s'%instance, default='Not specified')))
+	    info.append(('Antigen', meta.get_field('StockCulture|Sample|Antigen|%s'%instance, default='Not specified')))
+	    info.append(('DNA', meta.get_field('StockCulture|Sample|DNA|%s'%instance, default='Not specified')))
+	    info.append(('Cytogenetic', meta.get_field('StockCulture|Sample|Cytogenetic|%s'%instance, default='Not specified')))
+	    info.append(('Isoenzymes', meta.get_field('StockCulture|Sample|Isoenzymes|%s'%instance, default='Not specified')))
 	    info.append(('Age of Organism (days)', meta.get_field('StockCulture|Sample|Age|%s'%instance, default='Not specified')))
-	    info.append(('Organ', meta.get_field('StockCulture|Sample|Organ|%s'%instance, default='Not specified')))
-	    info.append(('Tissue', meta.get_field('StockCulture|Sample|Tissue|%s'%instance, default='Not specified')))
-	    info.append(('Phenotype', meta.get_field('StockCulture|Sample|Phenotype|%s'%instance, default='Not specified')))
-	    info.append(('Genotype', meta.get_field('StockCulture|Sample|Genotype|%s'%instance, default='Not specified')))
-	    info.append(('Strain', meta.get_field('StockCulture|Sample|Strain|%s'%instance, default='Not specified')))
-	    info.append(('Cell Density', meta.get_field('StockCulture|Sample|Density|%s'%instance, default='Not specified')))
+	    info.append(('Gender', meta.get_field('StockCulture|Sample|Gender|%s'%instance, default='Not specified')))
+	    info.append(('Ethnicity', meta.get_field('StockCulture|Sample|Ethnicity|%s'%instance, default='Not specified')))
+	    info.append(('Comments', meta.get_field('StockCulture|Sample|Comments|%s'%instance, default='Not specified')))
+	    info.append(('Publications', meta.get_field('StockCulture|Sample|Publications|%s'%instance, default='Not specified')))
+	    info.append(('Related Products', meta.get_field('StockCulture|Sample|RelProduct|%s'%instance, default='Not specified')))
 	    info.append(('Original Passage Number', meta.get_field('StockCulture|Sample|OrgPassageNo|%s'%instance, default='Not specified')))
+	    info.append(('Preservation', meta.get_field('StockCulture|Sample|Preservation|%s'%instance, default='Not specified')))
+	    info.append(('GrowthMedium', meta.get_field('StockCulture|Sample|GrowthMedium|%s'%instance, default='Not specified')))
+	    
 	    passages = [attr for attr in meta.get_attribute_list_by_instance('StockCulture|Sample', instance)
 			                        if attr.startswith('Passage')]
-	    #if passages:
-		#footer.append('During maintenance %s passages were carried out.'%str(len(passages)))
+	    
+	    if passages:
+		footer += '%s passages were carried out according to the specifications' %str(len(passages))
 		
-	    return (header, info)	    
+	    return (header, info, footer)	    
 	
 	if exp.get_tag_event(protocol) == 'Microscope':	    
 	    header += '%s settings' %meta.get_field('Instrument|Microscope|ChannelName|%s'%instance, default = 'Not specified')
