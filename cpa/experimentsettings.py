@@ -267,6 +267,24 @@ class ExperimentSettings(Singleton):
         for field, value in sorted(self.global_settings.items()):
             f.write('%s = %s\n'%(field, repr(value)))
         f.close()
+	
+    def save_settings(self, file, protocol):
+	'''
+	saves settings in text file. the settings may include instrument settings, supp protocol, stock flask
+	Format:    attr = value          where value may be text, int, list, etc.
+	'''
+	instance = get_tag_attribute(protocol)
+	tag_stump = get_tag_stump(protocol, 2)
+	setting_type = get_tag_event(protocol)
+	f = open(file,'w')
+	f.write(setting_type+'\n')
+	attributes = self.get_attribute_list_by_instance(tag_stump, instance)
+	for attr in attributes:
+	    info = self.get_field(tag_stump+'|%s|%s' %(attr, instance))
+	    print info
+	    f.write('%s = %s\n'%(attr, repr(info)))
+	f.close()	    	
+	
     
     def save_supp_protocol_file(self, file, protocol):
 	instance = get_tag_attribute(protocol)
@@ -280,7 +298,9 @@ class ExperimentSettings(Singleton):
 	    if isinstance(info, list):
 		f.write('%s|'%attr)	    		    
 		for i, val in enumerate(info):
-		    if i == len(info)-1:
+		    if isinstance(val, tuple):
+			print val
+		    elif i == len(info)-1:
 			f.write('%s'%val)
 		    else:
 			f.write('%s|'%val)
@@ -348,20 +368,15 @@ class ExperimentSettings(Singleton):
 	    else:
 		self.set_field(tag_stump+'|%s|%s'%(attr, instance), line_info[0])
     
-    def load_flowcytometer_settings(self, file, protocol):
+    def load_settings(self, file, protocol):
 	instance = get_tag_attribute(protocol)
 	tag_stump = get_tag_stump(protocol, 2)	
 	f = open(file, 'r')
 	
 	lines = [line.strip() for line in f]
-	
-	if not lines:
-	    dial = wx.MessageDialog(None, 'Supplementary protocol file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
-	    dial.ShowModal()  
-	    return	
-	
+	lines.pop(0) # takes out the first line or the header where all setting type microscope/spin etc are written	
 	for line in lines:
-	    attr, value = line.split('=')
+	    attr, value = line.split('=', 1)
 	    attr = attr.strip()
 	    tag = tag_stump+'|%s|%s'%(attr, instance)
 	    self.set_field(tag, eval(value), notify_subscribers=False)

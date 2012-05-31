@@ -395,15 +395,15 @@ class StockCultureSettingPanel(wx.Panel):
 	# Buttons
 	createTabBtn = wx.Button(self, label="Create Instance")
 	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
-	#loadTabBtn = wx.Button(self, label="Load Instance")
-	#loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
+	loadTabBtn = wx.Button(self, label="Load Instance")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)        
 
 	# Sizers
 	mainsizer = wx.BoxSizer(wx.VERTICAL)
 	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
 	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
-	#btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn , 0, wx.ALL, 5)
 	mainsizer.Add(btnSizer)
 	self.SetSizer(mainsizer)
 	self.Layout()
@@ -417,6 +417,35 @@ class StockCultureSettingPanel(wx.Panel):
 	
 	panel = StockCulturePanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+	
+    def onLoadTab(self, event):
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	    dlg.ShowModal()
+	    return 
+	
+	dlg = wx.FileDialog(None, "Select the file containing your stock culture flask settings...",
+                                    defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+	# read the supp protocol file and setup a new tab
+	if dlg.ShowModal() == wx.ID_OK:
+	    filename = dlg.GetFilename()
+	    dirname = dlg.GetDirectory()
+	    file_path = os.path.join(dirname, filename)
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    panel = StockCulturePanel(self.notebook, next_tab_num)
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True)     
 
 
 class StockCulturePanel(wx.Panel):
@@ -459,8 +488,12 @@ class StockCulturePanel(wx.Panel):
 	self.settings_controls[cellLineTAG] = wx.TextCtrl(self.top_panel, style=wx.TE_PROCESS_ENTER, value=meta.get_field(cellLineTAG, default=''))
 	self.settings_controls[cellLineTAG].Bind(wx.EVT_TEXT, self.OnSavingData)	
 	self.settings_controls[cellLineTAG].SetToolTipString('Cell Line selection')
+	self.save_btn = wx.Button(self.top_panel, -1, "Save Stock Flask")
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
+	fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
+	fgs.Add(self.save_btn, 0, wx.EXPAND)
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Cell Line/Designation'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-	fgs.Add(self.settings_controls[cellLineTAG], 0, wx.EXPAND) 	
+	fgs.Add(self.settings_controls[cellLineTAG], 0, wx.EXPAND) 
 	
 	#===== Administrative Information =====#
 	admin_staticbox = wx.StaticBox(self.top_panel, -1, "Administrative Information")
@@ -801,6 +834,23 @@ class StockCulturePanel(wx.Panel):
 	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
 	meta.saveData(ctrl, tag, self.settings_controls)
 	
+    def onSaveSettings(self, event):
+	if not meta.get_field('StockCulture|Sample|CellLine|%s'%str(self.page_counter)):
+	    dial = wx.MessageDialog(None, 'Please provide a cell line name', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+				
+	filename = meta.get_field('StockCulture|Sample|CellLine|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Stock Flask Settings...', 
+                            defaultDir=os.getcwd(), defaultFile=filename, 
+                            wildcard='.txt', 
+                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+	if dlg.ShowModal() == wx.ID_OK:
+	    dirname=dlg.GetDirectory()
+	    self.file_path = os.path.join(dirname, filename)
+	    meta.save_settings(self.file_path, self.protocol)     
+	
 ########################################################################        
 ################## MICROSCOPE SETTING PANEL         ####################
 ########################################################################
@@ -851,6 +901,7 @@ class MicroscopeSettingPanel(wx.Panel):
     
     def onLoadTab(self, event):
 	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	#Checks
 	if self.notebook.GetPageCount()+1 != int(next_tab_num):
 	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
@@ -863,10 +914,21 @@ class MicroscopeSettingPanel(wx.Panel):
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Microscope Settings File TO DO:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return			
+		
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num)) 
 	    panel = MicroscopePanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
-    
+
 
 
 class MicroscopePanel(wx.Panel):
@@ -879,7 +941,6 @@ class MicroscopePanel(wx.Panel):
 
 	self.page_counter = page_counter
 	self.sw = wx.ScrolledWindow(self)
-	self.protocol = 'Instrument|Microscope|%s'%str(self.page_counter)
 
 	headfgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
@@ -896,7 +957,7 @@ class MicroscopePanel(wx.Panel):
 	self.settings_controls[chnameTAG].SetInitialSize((250,20))
 	self.settings_controls[chnameTAG].SetToolTipString('Type a unique name for the channel')
 	self.save_btn = wx.Button(self.sw, -1, "Save Channel Settings")
-	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingChannel)
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	headfgs.Add(wx.StaticText(self.sw, -1, 'Channel Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL) 
 	headfgs.Add(self.settings_controls[chnameTAG], 0, wx.EXPAND)
 	headfgs.Add(self.save_btn, 0, wx.EXPAND)
@@ -1668,10 +1729,8 @@ class MicroscopePanel(wx.Panel):
 	self.gauge.SetValue(int(progress))
 	self.progpercent.SetLabel(str(int(progress))+' %')
 	
-    def onSavingChannel(self, event):
-        # also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()   
-		
+    def onSaveSettings(self, event):
+        #Checks
 	if not meta.get_field('Instrument|Microscope|ChannelName|%s'%str(self.page_counter)):
 	    dial = wx.MessageDialog(None, 'Please provide a channel name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
@@ -1686,7 +1745,7 @@ class MicroscopePanel(wx.Panel):
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol) 
+	    meta.save_settings(self.file_path, 'Instrument|Microscope|%s'%str(self.page_counter)) 
 
 
 class FilterSpectrum(wx.Panel):
@@ -1796,7 +1855,18 @@ class FlowcytometerSettingPanel(wx.Panel):
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_flowcytometer_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = FlowcytometerPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
    
@@ -1809,10 +1879,9 @@ class FlowcytometerPanel(wx.Panel):
 
         wx.Panel.__init__(self, parent=parent)
 	
-	self.protocol = 'Instrument|Flowcytometer'
+	self.page_counter = page_counter
+	self.protocol = 'Instrument|Flowcytometer|%s'%str(self.page_counter)
  
-        self.page_counter = page_counter
-	
 	self.top_panel = wx.Panel(self)
 	self.bot_panel = wx.ScrolledWindow(self)	
   
@@ -1828,7 +1897,7 @@ class FlowcytometerPanel(wx.Panel):
 	
 	#----------- Microscope Labels and Text Controler-------#
 	self.saveSettings = wx.Button(self.top_panel, -1, 'Save Settings')
-	self.saveSettings.Bind(wx.EVT_BUTTON, self.onSavingSettings)
+	self.saveSettings.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	self.top_fgs.Add(wx.StaticText(self.top_panel, -1, ''), 0)
 	self.top_fgs.Add(self.saveSettings, 0)		
 	#--Manufacture--#
@@ -2029,10 +2098,8 @@ class FlowcytometerPanel(wx.Panel):
 	self.bot_fgs.Clear(deleteWindows=True)
 	self.showChannels()
 	
-    def onSavingSettings(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-
+    def onSaveSettings(self, event):
+	# Checks
 	if meta.get_field('Instrument|Flowcytometer|Manufacter|%s'%str(self.page_counter)) is None:
 	    dial = wx.MessageDialog(None, 'Please select a manufacturer', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
@@ -2041,26 +2108,19 @@ class FlowcytometerPanel(wx.Panel):
 	    dial = wx.MessageDialog(None, 'Please type the model name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
 	    return
-	#TO DO check check whether there is atleast one channel optical path being filled
-		
+	#TO DO check check whether there is atleast one channel optical path being filled	
 	filename = meta.get_field('Instrument|Flowcytometer|Manufacter|%s'%str(self.page_counter))+'_'+meta.get_field('Instrument|Flowcytometer|Model|%s'%str(self.page_counter)).rstrip('\n').rstrip('\n')
 	filename = filename+'.txt'
 		
-	dlg = wx.FileDialog(None, message='Saving Flowcytometer settings...', 
-	                    defaultDir=os.getcwd(), defaultFile=filename, 
-	                    wildcard='.txt', 
-	                    style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+	dlg = wx.FileDialog(None, message='Saving Stock Flask Settings...', 
+                            defaultDir=os.getcwd(), defaultFile=filename, 
+                            wildcard='.txt', 
+                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
-	    file_path = os.path.join(dirname, filename)	
-	    f = open(file_path,'w')
-
-	    attributes = meta.get_attribute_list_by_instance('Instrument|Flowcytometer', str(self.page_counter))
-	    for attr in attributes:
-		info = meta.get_field('Instrument|Flowcytometer|%s|%s' %(attr, self.page_counter))
-		f.write('%s = %s\n'%(attr, repr(info)))
-	    f.close()	    	
-	
+	    self.file_path = os.path.join(dirname, filename)
+	    meta.save_settings(self.file_path, self.protocol) 	
+		
     def OnSavingData(self, event):
         ctrl = event.GetEventObject()
 	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
