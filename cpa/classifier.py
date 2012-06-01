@@ -420,9 +420,31 @@ class Classifier(wx.Frame):
 
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
+        
+        # Clean up existing channel menus
+        try:
+            menus = set([items[2].Menu for items in self.chMapById.values()])
+            for menu in menus:
+                for i, mbmenu in enumerate(self.MenuBar.Menus):
+                    if mbmenu[0] == menu:
+                        self.MenuBar.Remove(i)
+            for menu in menus:
+                menu.Destroy()
+            if 'imagesMenu' in self.__dict__:
+                self.MenuBar.Remove(self.MenuBar.FindMenu('Images'))
+                self.imagesMenu.Destroy()
+        except:
+            pass
+
+        # Initialize variables
+        self.imagesMenu = wx.Menu()
         chIndex=0
         self.chMapById = {}
+        self.imMapById = {}
         channel_names = []
+        startIndex = 0
+        channelIds = []
+        
         for i, chans in enumerate(p.channels_per_image):
             chans = int(chans)
             # Construct channel names, for RGB images, append a # to the end of
@@ -437,17 +459,107 @@ class Classifier(wx.Frame):
             else:
                 channel_names += ['%s [%s]'%(name,x+1) for x in range(chans)]
         
-        for channel, setColor in zip(channel_names, self.chMap):
-            channel_menu = wx.Menu()
-            for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
-                id = wx.NewId()
-                item = channel_menu.AppendRadioItem(id,color)
-                self.chMapById[id] = (chIndex,color,item,channel_menu)
-                if color.lower() == setColor.lower():
-                    item.Check()
-                self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
-            self.GetMenuBar().Append(channel_menu, channel)
-            chIndex+=1
+        # Zip channel names with channel map
+        zippedChNamesChMap = zip(channel_names, self.chMap)
+
+        # Loop over all the image names in the properties file
+        for i, chans in enumerate(p.image_names):
+            channelIds = []
+            # Loop over all the channels
+            for j in range(0, int(p.channels_per_image[i])):
+                (channel, setColor) = zippedChNamesChMap[chIndex]
+                channel_menu = wx.Menu()
+                for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
+                    id = wx.NewId()
+                    # Create a radio item that maps an id and a color. 
+                    item = channel_menu.AppendRadioItem(id,color)
+                    # Add a new chmapbyId object
+                    self.chMapById[id] = (chIndex,color,item,channel_menu)
+                    # If lowercase color matches what it was originally set to...
+                    if color.lower() == setColor.lower():
+                        # Check off the item 
+                        item.Check()
+                    # Bind
+                    self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
+                    # Add appropriate Ids to imMapById
+                    if ((int(p.channels_per_image[i]) == 1 and color == 'Gray') or 
+                        (int(p.channels_per_image[i]) > 1 and j == 0 and color == 'Red') or 
+                        (int(p.channels_per_image[i]) > 1 and j == 2 and color == 'Blue') or 
+                        (int(p.channels_per_image[i]) > 1 and j == 1 and color == 'Green')): 
+                        channelIds = channelIds + [id]
+                # Add new menu item  
+                self.GetMenuBar().Append(channel_menu, channel)
+                chIndex+=1
+            # New id for the image as a whole
+            id = wx.NewId()
+            item = self.imagesMenu.AppendRadioItem(id, p.image_names[i])
+            # Effectively this code creates a data structure that stores relevant info with ID as a key
+            self.imMapById[id] = (int(p.channels_per_image[i]), item, startIndex, channelIds) 
+            # Binds the event menu to OnFetchImage (below) and item 
+            self.Bind(wx.EVT_MENU, self.OnFetchImage, item)
+            startIndex += int(p.channels_per_image[i])
+        # Add the "none" image and check it off. 
+        id = wx.NewId()
+        item = self.imagesMenu.AppendRadioItem(id, 'None')
+        self.Bind(wx.EVT_MENU, self.OnFetchImage, item)
+        item.Check()# Add new "Images" menu bar item
+        self.GetMenuBar().Append(self.imagesMenu, 'Images')
+        
+    #######################################
+    # OnFetchImage
+    # 
+    # Allows user to display one image at a time.  If image is single channel,
+    # displays the image as gray.  If image is multichannel, displays image as
+    # RGB.
+    # @param self, evt
+    #######################################
+    def OnFetchImage(self, evt=None):
+
+        # Set every channel to black and set all the toggle options to 'none'
+        for ids in self.chMapById.keys():
+            (chIndex, color, item, channel_menu) = self.chMapById[ids] 
+            if (color.lower() == 'none'):
+                item.Check()		
+        for ids in self.imMapById.keys():
+            (cpi, itm, si, channelIds) = self.imMapById[ids]
+            if cpi == 3:
+                self.chMap[si] = 'none'
+                self.chMap[si+1] = 'none'
+                self.chMap[si+2] = 'none'
+                self.toggleChMap[si] = 'none'
+                self.toggleChMap[si+1] = 'none'
+                self.toggleChMap[si+2] = 'none'
+            else:
+                self.chMap[si] = 'none'
+                self.toggleChMap[si] = 'none'
+
+        # Determine what image was selected based on the event.  Set channel to appropriate color(s)
+        if evt.GetId() in self.imMapById.keys():
+
+            (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
+
+            if chanPerIm == 1:
+                # Set channel map and toggleChMap values. 
+                self.chMap[startIndex] = 'gray'
+                self.toggleChMap[startIndex] = 'gray'
+
+                # Toggle the option for the independent channel menu
+                (chIndex, color, item, channel_menu) = self.chMapById[channelIds[0]] 
+                item.Check()
+            else:
+                RGB = ['red', 'green', 'blue'] + ['none'] * chanPerIm
+                for i in range(chanPerIm):
+                    # Set chMap and toggleChMap values
+                    self.chMap[startIndex + i] = RGB[i]
+                    self.toggleChMap[startIndex + i] = RGB[i]                
+                    # Toggle the option in the independent channel menus
+                    (chIndex, color, item, channel_menu) = self.chMapById[channelIds[i]] 
+                    item.Check()                
+
+        self.MapChannels(self.chMap)
+        #######################################
+        # /OnFetchImage
+        #######################################
         
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
