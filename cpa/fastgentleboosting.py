@@ -6,7 +6,6 @@ import dbconnect
 import logging
 import multiclasssql
 import numpy as np
-import wx
 from sys import stdin, stdout, argv, exit
 from time import time
 
@@ -18,6 +17,7 @@ class FastGentleBoosting(object):
         self.classifier = classifier
 
     def CheckProgress(self):
+        import wx
         ''' Called when the CheckProgress Button is pressed. '''
         # get wells if available, otherwise use imagenumbers
         try:
