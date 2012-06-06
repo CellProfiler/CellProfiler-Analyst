@@ -63,7 +63,7 @@ def _compute_group_projection_and_mean((cache_dir, images, fa_node, mean, stdev)
         import numpy as np        
         from cpa.util import cache
         cache = Cache(cache_dir)
-        normalizeddata, normalized_colnames = cache.load(images, normalization=RobustLinearNormalization)
+        normalizeddata, normalized_colnames, _ = cache.load(images, normalization=RobustLinearNormalization)
         normalizeddata = (normalizeddata - mean) / stdev
         normalizeddata_projected = fa_node.execute(normalizeddata)
         normalizeddata_projected_mean = np.mean(normalizeddata_projected, axis = 0)
