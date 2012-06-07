@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sys
-#import csv
+import os
 import logging
 from optparse import OptionParser
 import numpy as np
@@ -29,7 +29,7 @@ def _transform_cell_feats((cache_dir, images, normalization_name, output_filenam
 
         # save the features to csv
         import csv
-        key = (str(k) for k in key)
+        key = [str(k) for k in key]
         filename = output_filename + "-" + "-".join(key) + ".csv"
         f = open(filename, 'w')
         w = csv.writer(f)
@@ -66,6 +66,14 @@ def cell_feats(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     parameters = [(cache_dir, group[g], normalization.__name__, output_filename, 
                    g, header)
                   for g in keys]
+
+    if "CPA_DEBUG" in os.environ:
+        DEBUG_NGROUPS = 5
+        logging.warning('In debug mode. Using only a few groups (n=%d) to create profile' % DEBUG_NGROUPS)
+
+        parameters = parameters[0:DEBUG_NGROUPS]
+        keys = keys[0:DEBUG_NGROUPS]
+    
 
     Profiles.compute(keys, variables, _transform_cell_feats, parameters,
                      parallel=parallel, group_name=group_name)
