@@ -52,7 +52,7 @@ def subsample(cache_dir, image_sets, parallel):
     for i, (p, r) in enumerate(zip(parameters, results)):
         if r is None:
             logger.info('Retrying failed computation locally')
-            results[i] = _compute_group_subsample(p) # just to see throw the exception
+            r = _compute_group_subsample(p) # just to see throw the exception
         subsample.extend(r)
 
     print "the subsampling set contains %d items" % len(subsample)
