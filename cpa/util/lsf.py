@@ -130,7 +130,7 @@ def test_function((seconds)):
     return seconds
 
 def test():
-    view = LSFView(3, 'lsf_test', 2)
+    view = LSFView(3, 'lsf_test')
     print view.directory
     for result in view.imap(test_function, [random.randint(1, 10)
                                             for task in range(10)]):

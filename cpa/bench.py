@@ -6,6 +6,7 @@ import icons
 from experimentsettings import *
 from vesselpanel import VesselPanel, VesselScroller, VesselSelectionPopup
 from temporaltaglist import TemporalTagListCtrl
+import metadatainput as assay
 from wx.lib.embeddedimage import PyEmbeddedImage
 from wx.lib.masked import TimeCtrl
 
@@ -88,8 +89,8 @@ class Bench(wx.Frame):
         selected_groups = self.group_checklist.GetCheckedStrings()        
         self.vesselscroller.clear()
 
-        group_tags = meta.get_matching_tags('ExptVessel|*|GroupName|*')
-        for tag in group_tags:
+        group_tags = meta.get_matching_tags('ExptVessel|*|StackName|*')
+        for tag in sorted(group_tags, key=meta.stringSplitByNumbers):
             if meta.get_field(tag) in selected_groups:
                 group_name = meta.get_field(tag)
                 prefix = get_tag_stump(tag, 2)
@@ -202,6 +203,17 @@ class Bench(wx.Frame):
                                    (new_id, self.get_selected_timepoint() + 1), # For now all reseeding instances are set 1 minute after harvesting
                                    destination_wells)
                     meta.set_field('CellTransfer|Seed|HarvestInstance|%s'%(new_id), instance)
+                    h_density = meta.get_field('CellTransfer|Harvest|HarvestingDensity|%s'%instance, [])
+                    s_density = [0,'']
+                    if len(h_density) > 0:
+                        s_density[0]= h_density[0]
+                    if len(h_density) > 1:
+                        s_density[1]= h_density[1]
+                    meta.set_field('CellTransfer|Seed|SeedingDensity|%s'%(new_id), s_density)
+                    if meta.get_field('CellTransfer|Harvest|MediumAddatives|%s'%instance) is not None:
+                        meta.set_field('CellTransfer|Seed|MediumAddatives|%s'%(new_id), meta.get_field('CellTransfer|Harvest|MediumAddatives|%s'%instance))  
+                    
+                    
                 else:
                     self.vesselscroller.get_vessel(platewell_id[0]).deselect_well_id(platewell_id)
                     return
@@ -261,7 +273,7 @@ class Bench(wx.Frame):
                 dlg.Destroy()
             else:
                 dlg.Destroy()
-                meta.remove_field(images_tag)
+                meta.remove_field(wells_tag)
                 vessel = self.vesselscroller.get_vessel(platewell_id[0])
                 if vessel:
                     vessel.deselect_well_at_pos(
@@ -287,7 +299,7 @@ class VesselGroupSelector(guiutils.CheckListComboBox):
         meta.add_subscriber(self.update_choices, 'ExptVessel.*')
         
     def update_choices(self, tag):
-        group_tags = meta.get_matching_tags('ExptVessel|*|GroupName|*')
+        group_tags = meta.get_matching_tags('ExptVessel|*|StackName|*')
         stack_names = sorted(set([meta.get_field(tag) for tag in group_tags]))
         selected_strings = self.GetCheckedStrings()
         self.SetItems(stack_names)

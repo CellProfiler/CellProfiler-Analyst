@@ -3,7 +3,8 @@ from metadatainput import ExperimentSettingsWindow
 from lineagepanel import LineageFrame
 from experimentsettings import ExperimentSettings
 from instancelist import *
-from printprotocol import PrintProtocol
+#from printprotocol import PrintProtocol
+from stepwiseprinter import PrintProtocol
 from utils import *
 from wx.html import HtmlEasyPrinting, HtmlWindow
 import snapshotPrinter

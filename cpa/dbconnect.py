@@ -1131,7 +1131,7 @@ class DBConnect(Singleton):
         '''
         Returns the names of each plate in the per-image table.
         '''
-        res = self.execute('SELECT DISTINCT %s FROM %s'%(p.plate_id, p.image_table))
+        res = self.execute('SELECT DISTINCT %s FROM %s ORDER BY %s'%(p.plate_id, p.image_table, p.plate_id))
         return [str(l[0]) for l in res]
 
     def GetPlatesAndWellsPerImage(self):

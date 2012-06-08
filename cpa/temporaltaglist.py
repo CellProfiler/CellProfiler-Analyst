@@ -2,6 +2,7 @@ import wx
 import sys
 import wx.lib.mixins.listctrl as listmix
 from experimentsettings import *
+import experimentsettings as exp
 
 meta = ExperimentSettings.getInstance()
 
@@ -19,9 +20,10 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
         
         meta.add_subscriber(self.update, 'CellTransfer.*')
         meta.add_subscriber(self.update, 'Perturbation.*')
-        meta.add_subscriber(self.update, 'Labeling.*')
+        meta.add_subscriber(self.update, 'Staining.*')
         meta.add_subscriber(self.update, 'AddProcess.*')
         meta.add_subscriber(self.update, 'DataAcquis.*')
+        meta.add_subscriber(self.update, 'Notes.*')
         
         self.InsertColumn(0, "Category")
         self.InsertColumn(1, "Action")
@@ -36,8 +38,14 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
         '''
         new_protocols = set([get_tag_protocol(tag) 
                              for tag in meta.get_action_tags()])
+        for new_prot in list(new_protocols):  #prevent showing seeding instances created due to harvest-seed event
+            cat, action, inst = new_prot.split('|')
+            if meta.get_field('%s|%s|HarvestInstance|%s'%(cat, action, inst )) is not None:
+                    new_protocols.remove(new_prot)  
+                
         if set(self.protocols) != new_protocols:
             self.protocols = sorted(new_protocols)
+            
             sel = self.get_selected_protocols()
             self.DeleteAllItems()
             for prot in self.protocols:
@@ -67,6 +75,16 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
             if i == -1:
                 break
             sel += [self.protocols[i]]
+        
+            # Open the relevant tab in metadata/catalogue panel
+            try:
+                exptsettings = wx.GetApp().get_exptsettings()
+            except:
+                return     
+            #tag = '%s|%s|*|%s' %(exp.get_tag_type(sel[0]), exp.get_tag_event(sel[0]),exp.get_tag_attribute(sel[0]))
+            #exptsettings.OnLeafSelect()
+            #exptsettings.ShowInstance(sel[0])
+            
         return sel
             
     def getColumnText(self, index, col):

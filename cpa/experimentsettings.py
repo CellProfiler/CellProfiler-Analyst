@@ -1,6 +1,7 @@
+import re
+import wx
 from singleton import Singleton
 from utils import *
-import re
 from timeline import Timeline
 
 #
@@ -24,6 +25,12 @@ def get_matchstring_for_subtag(pos, subtag):
 
 def get_tag_stump(tag, n_subtags=3):
     return '|'.join(tag.split('|')[:n_subtags])
+
+def get_tag_type(tag):
+    return tag.split('|')[0]
+
+def get_tag_event(tag):
+    return tag.split('|')[1]
 
 def get_tag_attribute(tag):
     return tag.split('|')[2]
@@ -83,7 +90,7 @@ class ExperimentSettings(Singleton):
         '''returns all existing TEMPORAL tags as list'''
         return [tag for tag in self.global_settings 
                 if tag.split('|')[0] in ('CellTransfer', 'Perturbation', 
-                                    'Labeling', 'AddProcess', 'DataAcquis')]
+                                    'Staining', 'AddProcess', 'DataAcquis', 'Notes')]
 
     def get_field_instances(self, tag_prefix):
         '''returns a list of unique instance ids for each tag beginning with 
@@ -98,6 +105,23 @@ class ExperimentSettings(Singleton):
         ids = set([get_tag_attribute(tag) for tag in self.global_settings
                    if tag.startswith(tag_prefix)])
         return list(ids)
+    
+    def get_attribute_list_by_instance(self, tag_prefix, instance=None):
+        '''returns a list of all attributes beginning with tag_prefix. If instance
+        is passed in, only attributes of the given instance will be returned'''
+        ids = set([get_tag_attribute(tag) for tag in self.global_settings
+                           if ((tag_prefix is None or tag.startswith(tag_prefix)) and 
+                               (instance is None or get_tag_instance(tag) == instance))])
+        return list(ids)   
+        
+        #tags = []
+        #for tag in self.global_settings:
+            #if ((tag_prefix is None or tag.startswith(tag_prefix)) and 
+                #(instance is None or get_tag_instance(tag) == instance)):
+                #tag += [tag]
+                #ids= set([get_tag_attribute(tag)])
+        #return list(ids)
+        
     
     def get_attribute_dict(self, protocol):
         '''returns a dict mapping attribute names to their values for a given
@@ -168,7 +192,24 @@ class ExperimentSettings(Singleton):
         for i in xrange(1, 100000):
             if str(i) not in instances:
                 return str(i)
+	    
+    def get_instance_by_field_value(self, prefix, field_value):
+	'''returns instance number given tag prefix and field value
+	'''
+	return get_tag_instance([tag for tag, value in self.global_settings.iteritems() if value == field_value][0])
     
+    def get_stack_ids(self, prefix):
+	'''returns the stack ids for a given type of vessels prefix  e.g. ExptVessel|Tube'''
+	return set([self.get_field(prefix+'|StackNo|%s'%instance)
+	           for instance in sorted(self.get_field_instances(prefix))])
+    
+    def get_rep_vessel_instance(self, prefix, stack_id):
+	''' returns instance number of the vessel for this stack, since all vessels of a given stack has identical settings
+	    one instance represents others'''
+	for instance in sorted(self.get_field_instances(prefix)):
+	    if self.get_field(prefix+'|StackNo|%s'%(instance)) == stack_id:
+		return instance   
+	
     def clear(self):
         self.global_settings = {}
         PlateDesign.clear()
@@ -179,9 +220,33 @@ class ExperimentSettings(Singleton):
         for matchstring, callbacks in self.subscribers.items():
             for callback in callbacks:
                 callback(None)
+		
+    def onTabClosing(self, event):
+	event.Veto()
+	dlg = wx.MessageDialog(None, 'Can not delete instance', 'Deleting..', wx.OK| wx.ICON_STOP)
+	dlg.ShowModal()
+	return    
         
     def get_timeline(self):
         return self.timeline
+    
+    def does_tag_exists(self, tag_prefix, instnace=None):
+	for tag in self.global_settings:
+	    if ((tag_prefix is None or tag.startswith(tag_prefix)) and (instnace is None or get_tag_instance(tag) == instnace)):
+		return True  
+	    else:
+		return False
+	    
+    def is_supp_protocol_filled(self, tag_prefix, instance=None):
+	'''tag_prefix is always type|event e.g. AddProcess|Wash
+	'''
+	for tag in self.global_settings:
+	    if ((tag_prefix is None or tag.startswith(tag_prefix)) and (instance is None or get_tag_instance(tag) == instance)):
+		if (self.get_field(tag_prefix+'|ProtocolName|%s'%instance) is None) or (self.get_field(tag_prefix+'|Step1|%s'%instance) == ['', '', '']):
+		    return False
+		else:
+		    return True
+		
 
     def update_timeline(self, welltag):
         '''Updates the experiment metadata timeline event associated with the
@@ -202,27 +267,68 @@ class ExperimentSettings(Singleton):
         for field, value in sorted(self.global_settings.items()):
             f.write('%s = %s\n'%(field, repr(value)))
         f.close()
+	
+    def save_settings(self, file, protocol):
+	'''
+	saves settings in text file. the settings may include instrument settings, supp protocol, stock flask
+	Format:    attr = value          where value may be text, int, list, etc.
+	'''
+	instance = get_tag_attribute(protocol)
+	tag_stump = get_tag_stump(protocol, 2)
+	setting_type = get_tag_event(protocol)
+	f = open(file,'w')
+	f.write(setting_type+'\n')
+	attributes = self.get_attribute_list_by_instance(tag_stump, instance)
+	for attr in attributes:
+	    info = self.get_field(tag_stump+'|%s|%s' %(attr, instance))
+	    print info
+	    f.write('%s = %s\n'%(attr, repr(info)))
+	f.close()	    	
+	
+    
+    def save_supp_protocol_file(self, file, protocol):
+	instance = get_tag_attribute(protocol)
+	tag_stump = get_tag_stump(protocol, 2)
+		    
+	f = open(file,'w')
+	attributes = self.get_attribute_list_by_instance(tag_stump, instance)
+    
+	for attr in attributes:
+	    info = self.get_field(tag_stump+'|%s|%s' %(attr, instance))
+	    if isinstance(info, list):
+		f.write('%s|'%attr)	    		    
+		for i, val in enumerate(info):
+		    if isinstance(val, tuple):
+			print val
+		    elif i == len(info)-1:
+			f.write('%s'%val)
+		    else:
+			f.write('%s|'%val)
+		f.write('\n')
+	    else:
+		f.write('%s|%s\n'%(attr, info))
+	f.close()	
 
     def load_from_file(self, file):
         # Populate the tag structure
         self.clear()
         f = open(file, 'r')
         for line in f:
-            tag, value = line.split('=')
+            tag, value = line.split('=', 1)
             tag = tag.strip()
             self.set_field(tag, eval(value), notify_subscribers=False)
         f.close()
         
         # Populate PlateDesign
         PlateDesign.clear()
-        for vessel_type in ('Plate', 'Flask', 'Dish', 'Coverslip'):
+        for vessel_type in ('Plate', 'Flask', 'Dish', 'Coverslip', 'Tube'):
             prefix = 'ExptVessel|%s'%(vessel_type)
             for inst in self.get_field_instances(prefix):
                 d = self.get_attribute_dict(prefix+'|'+inst)
                 shape = d.get('Design', None)
                 if shape is None:
                     shape = (1,1)
-                group = d.get('GroupName', None)
+                group = d.get('StackName', None)
                 PlateDesign.add_plate(vessel_type, inst, shape, group)
             
         # Update everything
@@ -236,7 +342,46 @@ class ExperimentSettings(Singleton):
             bench = wx.GetApp().get_bench()
             bench.set_time_interval(0, self.get_timeline().get_max_timepoint())
         except:return
-                
+	
+
+
+
+    def load_supp_protocol_file(self, file, protocol):	
+	instance = get_tag_attribute(protocol)
+	tag_stump = get_tag_stump(protocol, 2)	
+	
+	lines = [line.strip() for line in open(file)]
+	
+	if not lines:
+	    import wx
+	    dial = wx.MessageDialog(None, 'Supplementary protocol file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return	
+
+	for line in lines:
+	    #line.rstrip('\n')
+	    line_info = line.split('|')
+	    attr = line_info.pop(0)
+
+	    if len(line_info)>1:
+		self.set_field(tag_stump+'|%s|%s'%(attr, instance), line_info)
+	    else:
+		self.set_field(tag_stump+'|%s|%s'%(attr, instance), line_info[0])
+    
+    def load_settings(self, file, protocol):
+	instance = get_tag_attribute(protocol)
+	tag_stump = get_tag_stump(protocol, 2)	
+	f = open(file, 'r')
+	
+	lines = [line.strip() for line in f]
+	lines.pop(0) # takes out the first line or the header where all setting type microscope/spin etc are written	
+	for line in lines:
+	    attr, value = line.split('=', 1)
+	    attr = attr.strip()
+	    tag = tag_stump+'|%s|%s'%(attr, instance)
+	    self.set_field(tag, eval(value), notify_subscribers=False)
+	    f.close()
+	
     def add_subscriber(self, callback, match_string):
         '''callback -- the function to be called
         match_string -- a regular expression string matching the tags you want 
@@ -257,6 +402,147 @@ class ExperimentSettings(Singleton):
             if re.match(matchstring, tag):
                 for callback in callbacks:
                     callback(tag)
+                    
+    def getNM(self, nm):
+        return int(nm.split('-')[0]), int(nm.split('-')[1])
+    
+    def belongsTo(self, value, rangeStart, rangeEnd):
+                if value >= rangeStart and value <= rangeEnd:
+                        return True
+                return False    
+            
+    def partition(self, lst, n):
+        division = len(lst) / float(n)   
+        rlist = [lst[int(round(division * i)): int(round(division * (i + 1)))] [-1] for i in xrange(n) ]  
+        rlist.insert(0, lst[0])
+        return rlist	
+    
+    def stringSplitByNumbers(self, x):
+	r = re.compile('(\d+)')
+	l = r.split(x)
+	return [int(y) if y.isdigit() else y for y in l]     
+    
+    def nmToRGB(self, w):
+        # colour
+        if w >= 380 and w < 440:
+            R = -(w - 440.) / (440. - 350.)
+            G = 0.0
+            B = 1.0
+        elif w >= 440 and w < 490:
+            R = 0.0
+            G = (w - 440.) / (490. - 440.)
+            B = 1.0
+        elif w >= 490 and w < 510:
+            R = 0.0
+            G = 1.0
+            B = -(w - 510.) / (510. - 490.)
+        elif w >= 510 and w < 580:
+            R = (w - 510.) / (580. - 510.)
+            G = 1.0
+            B = 0.0
+        elif w >= 580 and w < 645:
+            R = 1.0
+            G = -(w - 645.) / (645. - 580.)
+            B = 0.0
+        elif w >= 645 and w <= 780:
+            R = 1.0
+            G = 0.0
+            B = 0.0
+        else:
+            R = 0.0
+            G = 0.0
+            B = 0.0
+        
+        # intensity correction
+        if w >= 380 and w < 420:
+            SSS = 0.3 + 0.7*(w - 350) / (420 - 350)
+        elif w >= 420 and w <= 700:
+            SSS = 1.0
+        elif w > 700 and w <= 780:
+            SSS = 0.3 + 0.7*(780 - w) / (780 - 700)
+        else:
+            SSS = 0.0
+        SSS *= 255  
+        
+        return [int(SSS*R), int(SSS*G), int(SSS*B)]    
+    
+    def decode_ch_component(self, component):
+        '''this method decofify the components of the light path for a given channel
+        'LSR488' --> Laser 488nm, 'DMR567LP' ---> Long pass Dichroic Mirror 567nm etc.. 
+        '''
+        description = ''
+        
+        if component.startswith('LSR'):
+            nm = re.sub('\D', '', component)
+            description = nm+' nm Excitation laser ' 
+        if component.startswith('DMR'):
+            nm = re.sub('\D', '', component)
+            if component.endswith('LP'):
+                description = nm+' nm Long Pass Dichroic Mirror'
+            if component.endswith('SP'):
+                description = nm+' nm Short Pass Dichroic Mirror'            
+        if component.startswith('FLT'):
+	    if component.endswith('LP'):
+		description = re.sub('\D', '', component)+' nm Long Pass Filter'
+	    if component.endswith('SP'):
+		description = re.sub('\D', '', component)+' nm Short Pass Filter'
+	    if component.endswith('BP'):
+		description = (component.split('FLT')[1]).split('BP')[0]+' nm Band pass Filter' # this needs to be adjusted
+        if component.startswith('DYE'):
+            dye = component.split('_')[1]
+            description = 'Dye used: %s' %dye
+        if component.startswith('DTC'):
+            volt = re.sub('\D', '', component)
+            description = 'PMT voltage %s volts' %volt           
+            
+        return description
+    
+    def setDyeList(self, emLow, emHgh):
+	'''This method sets the list of dye for a given spectrum range'''
+	dyeList = []
+	for dye in FLUOR_SPECTRUM: 
+	    dyeLowNM, dyeHghNM = self.getNM(FLUOR_SPECTRUM[dye][1])
+	    for wl in range(emLow, emHgh+1):
+		if wl in range(dyeLowNM, dyeHghNM+1):
+		    dyeList.append(dye)
+	#self.dyeListBox.Clear()	
+	return sorted(list(set(dyeList)))  
+    
+    def saveData(self, ctrl, tag, settings_controls):
+		
+	if isinstance(ctrl, wx.ListBox) and ctrl.GetStringSelection() == 'Other':
+	    other = wx.GetTextFromUser('Insert Other', 'Other')
+	    ctrl.Append(other)
+	    ctrl.SetStringSelection(other)	
+	    
+	if len(tag.split('|'))>4:
+	    # get the relevant controls for this tag eg, duration, temp controls for this step
+	    subtags = []
+	    info = []
+	    for subtag in [t for t, c in settings_controls.items()]:
+		if get_tag_stump(tag, 4) == get_tag_stump(subtag, 4):
+		    subtags.append(subtag)
+	    for i in range(0, len(subtags)):
+		info.append('')
+	    for st in subtags:
+		if isinstance(settings_controls[st], wx.Choice) or isinstance(settings_controls[st], wx.ListBox):
+		    info[int(st.split('|')[4])]=settings_controls[st].GetStringSelection()		
+		else:
+		    info[int(st.split('|')[4])]=settings_controls[st].GetValue()	
+	    self.set_field(get_tag_stump(tag, 4), info)  # get the core tag like AddProcess|Spin|Step|<instance> = [duration, description, temp]
+	else:
+	    if isinstance(ctrl, wx.Choice) or isinstance(ctrl, wx.ListBox):
+		self.set_field(tag, ctrl.GetStringSelection())
+	    elif isinstance(ctrl, wx.DatePickerCtrl):
+		date = ctrl.GetValue()
+		self.set_field(tag, '%02d/%02d/%4d'%(date.Day, date.Month+1, date.Year))
+	    else:
+		user_input = ctrl.GetValue()
+		self.set_field(tag, user_input)	 
+    
+
+            
+        
 
 
 ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -304,6 +590,30 @@ WELL_NAMES_ORDERED = [
                       '384-Well-(16x24)',
                       '1536-Well-(32x48)',
                       '5600-Well-(40x140)']
+#TO DO: make this table comprehensive
+FLUOR_SPECTRUM = {
+                   'Brilliant Violet 421': ['397-417','411-431'],
+                   'BD Horizon V450': ['394-414','438-458'],
+                   'AmCyan': ['447-467','481-501'],
+                   'PE': ['486-506','568-588'],
+                   'BD Horizon PE-CF594': ['486-506','602-622'],
+                   'PerCP': ['472-492','667-687'],
+                   'PerCP-Cy': ['472-492','685-705'],
+                   'Alexa Fluor 647': ['640-660','658-678'],
+                   'Alexa Fluor 700': ['686-706','709-729'],
+                   'APC-H7': ['640-660','775-795'],
+                   'Alexa 488' : ['450-560', '510-550'],
+                   'PE-Texas Red' : ['550-625', '600-650'],
+                   'FITC' : ['475-510','515-545'],
+                   'Pacific Blue' : ['390-410','440-460'],
+                   'PE-Cy5' : ['500-650','650-700'],
+                   'PE-Cy7' : ['470-550','680-785'],
+                   'APC' : ['600-670','640-670'],
+                   'APC-Cy' : ['650-730', '740-800'],
+                   'APC-Cy7' : ['620-680', '750-800'],
+                   'BD Horizon V450' : ['380-404', '410-448'],
+                   'BD Horizon V500' : ['390-450', '460-500'],
+             }
 
 
 class Vessel(object):
@@ -316,7 +626,7 @@ class Vessel(object):
         else:
             self.shape = WELL_NAMES[shape]
 ##        meta.set_field('ExptVessel|%(vessel_type)|Design|%(instance)'%(locals), shape)
-##        meta.set_field('ExptVessel|%(vessel_type)|GroupName|%(instance)'%(locals), group)
+##        meta.set_field('ExptVessel|%(vessel_type)|StackName|%(instance)'%(locals), group)
         for k,v in kwargs:
             self.set_attribute(k, v)
         

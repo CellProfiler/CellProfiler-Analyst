@@ -146,6 +146,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
     properties.object_table = 'Objects'
     properties.image_id = 'ImageNumber'
     properties.object_id = 'ObjectNumber'
+    properties._groups['Plate_Well'] = 'SELECT Images.ImageNumber, Images.PlateName, Images.Well FROM Images'
     
     try:
         plate_info = tree.find('.//AutoLeadAcquisitionProtocol/Plate')

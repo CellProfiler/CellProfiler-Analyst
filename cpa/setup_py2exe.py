@@ -75,7 +75,7 @@ setup(windows=[{'script':'cpa.py',
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'icons',
                           'bioformats', 'killjavabridge'],
-            'includes' : ['pilfix'],
+            'includes' : ['pilfix', "xml.etree.cElementTree", "xml.etree.ElementTree"],
             "excludes" : ['_gtkagg', '_tkagg', "nose",
                           "wx.tools", "pylab", "scipy.weave",
                           "Tkconstants","Tkinter","tcl",
