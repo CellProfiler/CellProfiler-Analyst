@@ -9,13 +9,14 @@ import  wx.calendar
 import wx.lib.agw.flatnotebook as fnb
 import wx.lib.mixins.listctrl as listmix
 import wx.lib.filebrowsebutton
-import  wx.gizmos   as  gizmos
+import wx.gizmos   as  gizmos
 import string, os
 import wx.lib.agw.foldpanelbar as fpb
 import experimentsettings as exp
 import wx.html
 import webbrowser
 import wx.media
+import glob
 from functools import partial
 from experimentsettings import *
 from instancelist import *
@@ -1744,6 +1745,7 @@ class MicroscopePanel(wx.Panel):
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
 	    meta.save_settings(self.file_path, 'Instrument|Microscope|%s'%str(self.page_counter)) 
 
@@ -2118,6 +2120,7 @@ class FlowcytometerPanel(wx.Panel):
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
 	    meta.save_settings(self.file_path, self.protocol) 	
 		
@@ -3634,12 +3637,15 @@ class ChemicalSettingPanel(wx.Panel):
 	# Buttons
 	createTabBtn = wx.Button(self, label="Create Instance")
 	createTabBtn.Bind(wx.EVT_BUTTON, self.onCreateTab)
+	loadTabBtn = wx.Button(self, label="Load Library")
+	loadTabBtn.Bind(wx.EVT_BUTTON, self.onLoadTab)  	
 
 	# Sizers
 	mainsizer = wx.BoxSizer(wx.VERTICAL)
 	btnSizer = wx.BoxSizer(wx.HORIZONTAL)
 	mainsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 5)
 	btnSizer.Add(createTabBtn  , 0, wx.ALL, 5)
+	btnSizer.Add(loadTabBtn, 0, wx.ALL, 5)
 	mainsizer.Add(btnSizer)
 	self.SetSizer(mainsizer)
 	self.Layout()
@@ -3653,6 +3659,30 @@ class ChemicalSettingPanel(wx.Panel):
 	    
 	panel = ChemicalAgentPanel(self.notebook, next_tab_num)
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
+    
+    def onLoadTab(self, event):		
+	dlg = wx.DirDialog(None, "Select the file containing library...",
+                                    style=wx.DD_DEFAULT_STYLE)
+	# read the supp protocol file and setup a new tab
+	if dlg.ShowModal() == wx.ID_OK:
+	    dirname = dlg.GetPath()
+	    for file_path in glob.glob( os.path.join(dirname, '*.txt') ):
+		##Check for empty file
+		if os.stat(file_path)[6] == 0:
+		    continue
+		##Check for Settings Type
+		if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		    continue
+		    
+		next_tab_num = meta.get_new_protocol_id(self.protocol)	
+		if self.notebook.GetPageCount()+1 != int(next_tab_num):
+		    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
+		    dlg.ShowModal()
+		    return 			
+		meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
+		panel = ChemicalAgentPanel(self.notebook, next_tab_num)
+		self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 	
+	
 
 class ChemicalAgentPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -3663,6 +3693,7 @@ class ChemicalAgentPanel(wx.Panel):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
 
         self.page_counter = page_counter
+	self.protocol = 'Perturbation|Chem|%s'%str(self.page_counter)
 
         # Attach the scrolling option with the panel
         self.sw = wx.ScrolledWindow(self)
@@ -3732,7 +3763,12 @@ class ChemicalAgentPanel(wx.Panel):
         fgs.Add(wx.StaticText(self.sw, -1, 'Other informaiton'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self.settings_controls[chemothTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
-
+	# Save button
+	self.save_btn = wx.Button(self.sw, -1, "Save Instance")
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)	
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	fgs.Add(self.save_btn, 0)
+	fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
 
         #---------------Layout with sizers---------------
 	swsizer = wx.BoxSizer(wx.VERTICAL)
@@ -3744,6 +3780,24 @@ class ChemicalAgentPanel(wx.Panel):
 	
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.ALL, 5)
+	
+    def onSaveSettings(self, event):
+	if not meta.get_field('Perturbation|Chem|ChemName|%s'%str(self.page_counter)):
+	    dial = wx.MessageDialog(None, 'Please provide a chemical name', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()  
+	    return
+				
+	filename = meta.get_field('Perturbation|Chem|ChemName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Chemical...', 
+                            defaultDir=os.getcwd(), defaultFile=filename, 
+                            wildcard='.txt', 
+                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+	if dlg.ShowModal() == wx.ID_OK:
+	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
+	    self.file_path = os.path.join(dirname, filename)
+	    meta.save_settings(self.file_path, self.protocol)     
 
     def OnSavingData(self, event):
         ctrl = event.GetEventObject()
@@ -3943,20 +3997,31 @@ class ImmunoSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return   
+	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = ImmunoPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
@@ -3992,7 +4057,7 @@ class ImmunoPanel(wx.Panel):
         self.settings_controls[protnameTAG].SetInitialSize((250,20))
         self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
         self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-        self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+        self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	top_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -4134,34 +4199,23 @@ class ImmunoPanel(wx.Panel):
 	self.Show()       
 
 
-    def onSavingSuppProtocol(self, event):
-        # also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-	
-	steps = sorted(meta.get_attribute_list_by_instance('Staining|Immuno|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('Staining|Immuno|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-
-	if meta.get_field('Staining|Immuno|ProtocolName|%s'%str(self.page_counter)) is None:
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+    def onSaveSettings(self, event):
+	if not meta.get_field('Staining|Immuno|ProtocolName|%s'%str(self.page_counter)):
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-        filename = meta.get_field('Staining|Immuno|ProtocolName|%s'%str(self.page_counter))+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('Staining|Immuno|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
-		    
+	    meta.save_settings(self.file_path, self.protocol) 
      
     def OnSavingData(self, event):
 	ctrl = event.GetEventObject()
@@ -4217,20 +4271,31 @@ class GeneticSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return   
+	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = GeneticPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
@@ -4265,7 +4330,7 @@ class GeneticPanel(wx.Panel):
 	self.settings_controls[protnameTAG].SetInitialSize((250,20))
 	self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	top_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -4324,36 +4389,23 @@ class GeneticPanel(wx.Panel):
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
 	self.Show()       
 
-
-    def onSavingSuppProtocol(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-	
-	steps = sorted(meta.get_attribute_list_by_instance('Staining|Genetic|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('Staining|Genetic|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-    
+    def onSaveSettings(self, event):
 	if not meta.get_field('Staining|Genetic|ProtocolName|%s'%str(self.page_counter)):
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-	filename = meta.get_field('Staining|Genetic|ProtocolName|%s'%str(self.page_counter)).rstrip('\n')
-	filename = filename+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('Staining|Genetic|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
-		    
+	    meta.save_settings(self.file_path, self.protocol) 		    
      
     def OnSavingData(self, event):
 	ctrl = event.GetEventObject()
@@ -4409,22 +4461,33 @@ class DyeSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return   
+	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = DyePanel(self.notebook, next_tab_num)
-	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
+	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True)  
 	    
 	
 class DyePanel(wx.Panel):
@@ -4459,7 +4522,7 @@ class DyePanel(wx.Panel):
         self.settings_controls[protnameTAG].SetInitialSize((250,20))
         self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
         self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-        self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+        self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	top_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -4538,39 +4601,26 @@ class DyePanel(wx.Panel):
 	self.Sizer = wx.BoxSizer(wx.VERTICAL)
 	self.Sizer.Add(self.top_panel, 0, wx.EXPAND|wx.ALL, 5)
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
-	self.Show()       
-
-    
-    def onSavingSuppProtocol(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
+	self.Show() 	
 	
-	steps = sorted(meta.get_attribute_list_by_instance('Staining|Dye|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('Staining|Dye|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-    
+    def onSaveSettings(self, event):
 	if not meta.get_field('Staining|Dye|ProtocolName|%s'%str(self.page_counter)):
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-	filename = meta.get_field('Staining|Dye|ProtocolName|%s'%str(self.page_counter)).rstrip('\n')
-	filename = filename+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('Staining|Dye|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
-		    
-    
+	    meta.save_settings(self.file_path, self.protocol)     
+
     def OnSavingData(self, event):
 	ctrl = event.GetEventObject()
 	tag = [t for t, c in self.settings_controls.items() if c==ctrl][0]
@@ -4626,23 +4676,33 @@ class SpinningSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return   
+	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = SpinPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
-
 
 class SpinPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -4675,7 +4735,7 @@ class SpinPanel(wx.Panel):
         self.settings_controls[protnameTAG].SetInitialSize((250,20))
         self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
         self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-        self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+        self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -4693,34 +4753,23 @@ class SpinPanel(wx.Panel):
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
 	self.Show() 
     
-    def onSavingSuppProtocol(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-	
-	steps = sorted(meta.get_attribute_list_by_instance('AddProcess|Spin|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('AddProcess|Spin|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-    
+    def onSaveSettings(self, event):
 	if not meta.get_field('AddProcess|Spin|ProtocolName|%s'%str(self.page_counter)):
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-	filename = meta.get_field('AddProcess|Spin|ProtocolName|%s'%str(self.page_counter)).rstrip('\n')
-	filename = filename+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('AddProcess|Spin|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
+	    meta.save_settings(self.file_path, self.protocol) 	
 		    
      
     def OnSavingData(self, event):
@@ -4780,23 +4829,33 @@ class WashSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return   
+	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = WashPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
-
 
 class WashPanel(wx.Panel):
     def __init__(self, parent, page_counter):
@@ -4829,7 +4888,7 @@ class WashPanel(wx.Panel):
 	self.settings_controls[protnameTAG].SetInitialSize((250,20))
 	self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -4847,34 +4906,23 @@ class WashPanel(wx.Panel):
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
 	self.Show()       
 
-    def onSavingSuppProtocol(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-	
-	steps = sorted(meta.get_attribute_list_by_instance('AddProcess|Wash|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('AddProcess|Wash|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-    
+    def onSaveSettings(self, event):
 	if not meta.get_field('AddProcess|Wash|ProtocolName|%s'%str(self.page_counter)):
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-	filename = meta.get_field('AddProcess|Wash|ProtocolName|%s'%str(self.page_counter)).rstrip('\n')
-	filename = filename+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('AddProcess|Wash|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
+	    meta.save_settings(self.file_path, self.protocol) 	
 		    
      
     def OnSavingData(self, event):
@@ -4932,20 +4980,31 @@ class DrySettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return  
+	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = DryPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
@@ -4980,7 +5039,7 @@ class DryPanel(wx.Panel):
 	self.settings_controls[protnameTAG].SetInitialSize((250,20))
 	self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -4998,34 +5057,23 @@ class DryPanel(wx.Panel):
 	self.Sizer.Add(self.bot_panel, 1, wx.EXPAND|wx.ALL, 10)
 	self.Show() 
     
-    def onSavingSuppProtocol(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-	
-	steps = sorted(meta.get_attribute_list_by_instance('AddProcess|Dry|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('AddProcess|Dry|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-    
+    def onSaveSettings(self, event):
 	if not meta.get_field('AddProcess|Dry|ProtocolName|%s'%str(self.page_counter)):
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-	filename = meta.get_field('AddProcess|Dry|ProtocolName|%s'%str(self.page_counter)).rstrip('\n')
-	filename = filename+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('AddProcess|Dry|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
+	    meta.save_settings(self.file_path, self.protocol) 
 		    
      
     def OnSavingData(self, event):
@@ -5083,20 +5131,31 @@ class MediumSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
-	    return   
+	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = MediumPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 
@@ -5133,7 +5192,7 @@ class MediumPanel(wx.Panel):
 	self.settings_controls[protnameTAG].SetInitialSize((250,20))
 	self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -5163,34 +5222,23 @@ class MediumPanel(wx.Panel):
 	self.Show()        
 
 
-    def onSavingSuppProtocol(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-	
-	steps = sorted(meta.get_attribute_list_by_instance('AddProcess|Medium|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('AddProcess|Medium|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-    
+    def onSaveSettings(self, event):
 	if not meta.get_field('AddProcess|Medium|ProtocolName|%s'%str(self.page_counter)):
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-	filename = meta.get_field('AddProcess|Medium|ProtocolName|%s'%str(self.page_counter)).rstrip('\n')
-	filename = filename+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('AddProcess|Medium|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
+	    meta.save_settings(self.file_path, self.protocol) 
 		    
      
     def OnSavingData(self, event):
@@ -5248,20 +5296,31 @@ class IncubatorSettingPanel(wx.Panel):
 	self.notebook.AddPage(panel, 'Instance No: %s'%next_tab_num, True)
     
     def onLoadTab(self, event):
-	next_tab_num = meta.get_new_protocol_id(self.protocol)
-	if meta.is_supp_protocol_filled(self.protocol, str(int(next_tab_num)-1)) is False:
-	    dlg = wx.MessageDialog(None, 'Can not load next instance\nPlease fill information in Instance No: %s'%str(int(next_tab_num)-1), 'Creating Instance..', wx.OK| wx.ICON_STOP)
+	next_tab_num = meta.get_new_protocol_id(self.protocol)	
+	if self.notebook.GetPageCount()+1 != int(next_tab_num):
+	    dlg = wx.MessageDialog(None, 'Can not load the next instance\nPlease fill information in Instance No: %s'%next_tab_num, 'Creating Instance..', wx.OK| wx.ICON_STOP)
 	    dlg.ShowModal()
 	    return 
 	
-	dlg = wx.FileDialog(None, "Select the file containing your supplementary protocol...",
+	dlg = wx.FileDialog(None, "Select the file containing settings...",
                                     defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
 	# read the supp protocol file and setup a new tab
 	if dlg.ShowModal() == wx.ID_OK:
 	    filename = dlg.GetFilename()
 	    dirname = dlg.GetDirectory()
 	    file_path = os.path.join(dirname, filename)
-	    meta.load_supp_protocol_file(file_path, self.protocol+'|%s'%str(next_tab_num))  
+	    #Check for empty file
+	    if os.stat(file_path)[6] == 0:
+		dial = wx.MessageDialog(None, 'Settings file is empty!!', 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return	
+	    #Check for Settings Type:	
+	    if open(file_path).readline().rstrip() != exp.get_tag_event(self.protocol):
+		dial = wx.MessageDialog(None, 'The file is not %s settings!!'%exp.get_tag_event(self.protocol), 'Error', wx.OK | wx.ICON_ERROR)
+		dial.ShowModal()  
+		return		    
+	    
+	    meta.load_settings(file_path, self.protocol+'|%s'%str(next_tab_num))  
 	    panel = IncubatorPanel(self.notebook, next_tab_num)
 	    self.notebook.AddPage(panel, 'Instance No: %s'%str(next_tab_num), True) 
 	
@@ -5297,7 +5356,7 @@ class IncubatorPanel(wx.Panel):
 	self.settings_controls[protnameTAG].SetInitialSize((250,20))
 	self.settings_controls[protnameTAG].SetToolTipString('Type a unique name for identifying the protocol')
 	self.save_btn = wx.Button(self.top_panel, -1, "Save Protocol")
-	self.save_btn.Bind(wx.EVT_BUTTON, self.onSavingSuppProtocol)
+	self.save_btn.Bind(wx.EVT_BUTTON, self.onSaveSettings)
 	
 	top_fgs.Add(wx.StaticText(self.top_panel, -1, 'Protocol Title/Name'), 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
 	top_fgs.Add(self.settings_controls[protnameTAG], 0, wx.EXPAND|wx.ALL, 5) 
@@ -5370,34 +5429,23 @@ class IncubatorPanel(wx.Panel):
 	self.Show()        
 
 
-    def onSavingSuppProtocol(self, event):
-	# also check whether the description field has been filled by users
-	meta = ExperimentSettings.getInstance()
-	
-	steps = sorted(meta.get_attribute_list_by_instance('AddProcess|Incubator|Step', str(self.page_counter)), key = meta.stringSplitByNumbers)
-	for step in steps:
-	    step_info = meta.get_field('AddProcess|Incubator|%s|%s' %(step, str(self.page_counter)))
-	    if not step_info[0]:
-		dial = wx.MessageDialog(None, 'Please fill the description in %s !!' %step, 'Error', wx.OK | wx.ICON_ERROR)
-		dial.ShowModal()  
-		return	
-    
+    def onSaveSettings(self, event):
 	if not meta.get_field('AddProcess|Incubator|ProtocolName|%s'%str(self.page_counter)):
-	    dial = wx.MessageDialog(None, 'Please type a name for the supplementary protocol', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'Please provide a protocol name', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()  
-	    return	
-		
-	filename = meta.get_field('AddProcess|Incubator|ProtocolName|%s'%str(self.page_counter)).rstrip('\n')
-	filename = filename+'.txt'
-		
-	dlg = wx.FileDialog(None, message='Saving Supplementary protocol...', 
+	    return
+				
+	filename = meta.get_field('AddProcess|Incubator|ProtocolName|%s'%str(self.page_counter))+'.txt'
+	
+	dlg = wx.FileDialog(None, message='Saving Settings...', 
                             defaultDir=os.getcwd(), defaultFile=filename, 
                             wildcard='.txt', 
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
 	if dlg.ShowModal() == wx.ID_OK:
 	    dirname=dlg.GetDirectory()
+	    filename=dlg.GetFilename()
 	    self.file_path = os.path.join(dirname, filename)
-	    meta.save_supp_protocol_file(self.file_path, self.protocol)
+	    meta.save_settings(self.file_path, self.protocol) 
 		    
      
     def OnSavingData(self, event):
