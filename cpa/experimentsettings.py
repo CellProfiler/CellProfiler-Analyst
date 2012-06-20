@@ -380,6 +380,7 @@ class ExperimentSettings(Singleton):
 	    attr = attr.strip()
 	    tag = tag_stump+'|%s|%s'%(attr, instance)
 	    self.set_field(tag, eval(value), notify_subscribers=False)
+	    self.notify_subscribers(tag)
 	    f.close()
 	
     def add_subscriber(self, callback, match_string):
