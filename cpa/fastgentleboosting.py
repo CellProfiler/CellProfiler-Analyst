@@ -6,7 +6,6 @@ import dbconnect
 import logging
 import multiclasssql
 import numpy as np
-import wx
 from sys import stdin, stdout, argv, exit
 from time import time
 
@@ -18,6 +17,7 @@ class FastGentleBoosting(object):
         self.classifier = classifier
 
     def CheckProgress(self):
+        import wx
         ''' Called when the CheckProgress Button is pressed. '''
         # get wells if available, otherwise use imagenumbers
         try:
@@ -84,7 +84,7 @@ class FastGentleBoosting(object):
             sp.hold(True)
             sp.plot(range(1, nRules + 1), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
             sp.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
-            chance_level = 1.0 / len(self.classBins)
+            chance_level = 1.0 / len(self.classifier.trainingSet.labels)
             sp.plot([1, nRules + 1], [chance_level, chance_level], 'k--', label='accuracy of random classifier')
             sp.legend(loc='lower right')
             sp.set_xlabel('Rule #')
