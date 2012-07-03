@@ -9,7 +9,8 @@ import numpy as np
 import mdp.nodes as nodes
 
 import cpa
-from cpa.util.cache import Cache, RobustLinearNormalization
+import cpa.util
+from cpa.profiling.cache import Cache, RobustLinearNormalization
 from .profiles import Profiles
 from .parallel import ParallelProcessor, Uniprocessing
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 def _compute_group_subsample((cache_dir, images)):
     try:
         import numpy as np
-        from cpa.util.cache import Cache, RobustLinearNormalization
+        from cpa.profiling.cache import Cache, RobustLinearNormalization
         cache = Cache(cache_dir)
         normalizeddata, normalized_colnames, _ = cache.load(images, normalization=RobustLinearNormalization)
         np.random.shuffle(normalizeddata)
@@ -61,7 +62,7 @@ def subsample(cache_dir, image_sets, parallel):
 def _compute_group_projection_and_mean((cache_dir, images, fa_node, mean, stdev)):
     try:
         import numpy as np        
-        from cpa.util.cache import Cache, RobustLinearNormalization
+        from cpa.profiling.cache import Cache, RobustLinearNormalization
         cache = Cache(cache_dir)
         normalizeddata, normalized_colnames, _ = cache.load(images, normalization=RobustLinearNormalization)
         normalizeddata = (normalizeddata - mean) / stdev

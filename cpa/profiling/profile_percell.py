@@ -13,7 +13,7 @@ from .parallel import ParallelProcessor, Uniprocessing
 def _transform_cell_feats((cache_dir, images, normalization_name, output_filename, key, header)):
     try:
         import numpy as np
-        from cpa.util.cache import Cache, normalizations
+        from cpa.profiling.cache import Cache, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
         normalizeddata, normalized_colnames, _ = cache.load(images,

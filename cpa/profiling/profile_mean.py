@@ -14,7 +14,7 @@ from .parallel import ParallelProcessor, Uniprocessing
 def _compute_group_mean((cache_dir, images, normalization_name)):
     try:
         import numpy as np
-        from cpa.util.cache import Cache, normalizations
+        from cpa.profiling.cache import Cache, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
         normalizeddata, normalized_colnames, _ = cache.load(images, normalization=normalization)

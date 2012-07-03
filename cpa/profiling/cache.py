@@ -3,12 +3,12 @@ Cache of per-well block of per-cell feature data.
 
 Example usage as a script (builds cache and precomputes normalizations):
 
-$ python -m cpa.util.cache CDP2.properties /imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache "Image_Metadata_ASSAY_WELL_ROLE = 'mock'"
+$ python -m cpa.profiling.cache CDP2.properties /imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache "Image_Metadata_ASSAY_WELL_ROLE = 'mock'"
 
 Example usage as module:
 
 >>> import cpa
->>> from cpa.util.cache import Cache, RobustLinearNormalization
+>>> from cpa.profiling.cache import Cache, RobustLinearNormalization
 >>> cpa.properties.LoadFile('CDP2.properties')
 >>> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
 >>> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
