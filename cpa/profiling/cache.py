@@ -31,6 +31,13 @@ import cpa.util
 
 logger = logging.getLogger(__name__)
 
+def np_load(filename):
+    "Work around bug in numpy that causes file handles to be left open."
+    with open(filename, 'rb') as f:
+        x = np.load(f)
+        f.close()
+    return x
+
 def make_progress_bar(text=None):
     widgets = (['%s: ' % text] if text else []) + [progressbar.Percentage(), ' ', 
                                                    progressbar.Bar(), ' ', 
@@ -72,7 +79,7 @@ class RobustLinearNormalization(object):
     @property
     def _colmask(self):
         if self._cached_colmask is None:
-            self._cached_colmask = np.load(self._colmask_filename)
+            self._cached_colmask = np_load(self._colmask_filename)
         return self._cached_colmask
 
     def normalize(self, plate, data):
@@ -83,7 +90,7 @@ class RobustLinearNormalization(object):
         if normalizing them is impossible.
 
         """
-        percentiles = np.load(self._percentiles_filename(plate))
+        percentiles = np_load(self._percentiles_filename(plate))
         assert data.shape[1] == percentiles.shape[1]
         data = data[:, self._colmask]
         percentiles = percentiles[:, self._colmask]
@@ -121,7 +128,7 @@ class RobustLinearNormalization(object):
     def _create_cache_colmask(self, predicate):
         colmask = None
         for plate, imKeys in self._get_controls(predicate).items():
-            percentiles = np.load(self._percentiles_filename(plate))
+            percentiles = np_load(self._percentiles_filename(plate))
             if len(percentiles) == 0:
                 continue # No DMSO wells, so no percentiles
             nonzero = percentiles[0] != percentiles[1]
@@ -216,13 +223,15 @@ class Cache(object):
 
             for plate, imKeys in images_per_plate.items():
                 for imKey in imKeys:
-
-                    raw = np.load(_image_filename(plate, imKey))
-                    if flag_bkwd:
-                        _features = np.array(raw, dtype=float)
-                    else:
-                        _features = np.array(raw["features"], dtype=float)
-                        _cellids = np.array(raw["cellids"], dtype=int)
+                    # Work around bug in numpy that causes file
+                    # handles to be left open.
+                    with open(_image_filename(plate, imKey), 'rb') as file:
+                        raw = np.load(file)
+                        if flag_bkwd:
+                            _features = np.array(raw, dtype=float)
+                        else:
+                            _features = np.array(raw["features"], dtype=float)
+                            _cellids = np.array(raw["cellids"], dtype=int)
 
                     #import pdb
                     #pdb.set_trace()
