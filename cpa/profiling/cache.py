@@ -131,6 +131,24 @@ class RobustLinearNormalization(object):
                 colmask &= nonzero
         np.save(self._colmask_filename, colmask)
 
+    @staticmethod
+    def _compute_percentiles(features):
+        m = features.shape[1]
+        percentiles = np.ones((2, m)) * np.nan
+        for j in xrange(m):
+            percentiles[0, j] = scoreatpercentile(features[:, j], 1)
+            percentiles[1, j] = scoreatpercentile(features[:, j], 99)
+        return percentiles
+
+    def _create_cache_percentiles_1(self, plate, imKeys, filename):
+            features = self.cache.load(imKeys)[0]
+            if len(features) == 0:
+                logger.warning('No DMSO features for plate %s' % str(plate))
+                percentiles = np.zeros((0, len(self.cache.colnames)))
+            else:
+                percentiles = self._compute_percentiles(features)
+            np.save(filename, percentiles)
+
     def _create_cache_percentiles(self, predicate, resume=False):
         controls = self._get_controls(predicate)
         for i, (plate, imKeys) in enumerate(make_progress_bar('Percentiles')(controls.items())):
@@ -139,17 +157,8 @@ class RobustLinearNormalization(object):
                 _check_directory(os.path.dirname(filename), resume)
             if resume and os.path.exists(filename):
                 continue
-            features = self.cache.load(imKeys)[0]
-            if len(features) == 0:
-                logger.warning('No DMSO features for plate %s' % str(plate))
-                percentiles = np.zeros((0, len(self.cache.colnames)))
-            else:
-                m = features.shape[1]
-                percentiles = np.ones((2, m)) * np.nan
-                for j in xrange(m):
-                    percentiles[0, j] = scoreatpercentile(features[:, j], 1)
-                    percentiles[1, j] = scoreatpercentile(features[:, j], 99)
-            np.save(filename, percentiles)
+            self._create_cache_percentiles_1(plate, imKeys)
+
 
 normalizations = dict((c.__name__, c)
                       for c in [DummyNormalization, RobustLinearNormalization])
