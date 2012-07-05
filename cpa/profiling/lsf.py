@@ -44,7 +44,7 @@ class LSFView(object):
     def start_workers(self):
         cmd = ' '.join(['bsub', '-J', '"CPA[1-%d]"' % self.njobs, '-o', 
                         '"%s/out/j%%Ja%%I.out"' % self.directory, 
-                        sys.executable, '-m', 'cpa.util.lsf', 
+                        sys.executable, '-m', 'cpa.profiling.lsf', 
                         self.directory])
         print cmd
         os.system(cmd)

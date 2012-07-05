@@ -3,12 +3,12 @@ Cache of per-well block of per-cell feature data.
 
 Example usage as a script (builds cache and precomputes normalizations):
 
-$ python -m cpa.util.cache CDP2.properties /imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache "Image_Metadata_ASSAY_WELL_ROLE = 'mock'"
+$ python -m cpa.profiling.cache CDP2.properties /imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache "Image_Metadata_ASSAY_WELL_ROLE = 'mock'"
 
 Example usage as module:
 
 >>> import cpa
->>> from cpa.util.cache import Cache, RobustLinearNormalization
+>>> from cpa.profiling.cache import Cache, RobustLinearNormalization
 >>> cpa.properties.LoadFile('CDP2.properties')
 >>> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
 >>> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
@@ -30,6 +30,13 @@ import cpa.dbconnect
 import cpa.util
 
 logger = logging.getLogger(__name__)
+
+def np_load(filename):
+    "Work around bug in numpy that causes file handles to be left open."
+    with open(filename, 'rb') as f:
+        x = np.load(f)
+        f.close()
+    return x
 
 def make_progress_bar(text=None):
     widgets = (['%s: ' % text] if text else []) + [progressbar.Percentage(), ' ', 
@@ -72,7 +79,7 @@ class RobustLinearNormalization(object):
     @property
     def _colmask(self):
         if self._cached_colmask is None:
-            self._cached_colmask = np.load(self._colmask_filename)
+            self._cached_colmask = np_load(self._colmask_filename)
         return self._cached_colmask
 
     def normalize(self, plate, data):
@@ -83,7 +90,7 @@ class RobustLinearNormalization(object):
         if normalizing them is impossible.
 
         """
-        percentiles = np.load(self._percentiles_filename(plate))
+        percentiles = np_load(self._percentiles_filename(plate))
         assert data.shape[1] == percentiles.shape[1]
         data = data[:, self._colmask]
         percentiles = percentiles[:, self._colmask]
@@ -121,7 +128,7 @@ class RobustLinearNormalization(object):
     def _create_cache_colmask(self, predicate):
         colmask = None
         for plate, imKeys in self._get_controls(predicate).items():
-            percentiles = np.load(self._percentiles_filename(plate))
+            percentiles = np_load(self._percentiles_filename(plate))
             if len(percentiles) == 0:
                 continue # No DMSO wells, so no percentiles
             nonzero = percentiles[0] != percentiles[1]
@@ -131,6 +138,24 @@ class RobustLinearNormalization(object):
                 colmask &= nonzero
         np.save(self._colmask_filename, colmask)
 
+    @staticmethod
+    def _compute_percentiles(features):
+        m = features.shape[1]
+        percentiles = np.ones((2, m)) * np.nan
+        for j in xrange(m):
+            percentiles[0, j] = scoreatpercentile(features[:, j], 1)
+            percentiles[1, j] = scoreatpercentile(features[:, j], 99)
+        return percentiles
+
+    def _create_cache_percentiles_1(self, plate, imKeys, filename):
+            features = self.cache.load(imKeys)[0]
+            if len(features) == 0:
+                logger.warning('No DMSO features for plate %s' % str(plate))
+                percentiles = np.zeros((0, len(self.cache.colnames)))
+            else:
+                percentiles = self._compute_percentiles(features)
+            np.save(filename, percentiles)
+
     def _create_cache_percentiles(self, predicate, resume=False):
         controls = self._get_controls(predicate)
         for i, (plate, imKeys) in enumerate(make_progress_bar('Percentiles')(controls.items())):
@@ -139,17 +164,8 @@ class RobustLinearNormalization(object):
                 _check_directory(os.path.dirname(filename), resume)
             if resume and os.path.exists(filename):
                 continue
-            features = self.cache.load(imKeys)[0]
-            if len(features) == 0:
-                logger.warning('No DMSO features for plate %s' % str(plate))
-                percentiles = np.zeros((0, len(self.cache.colnames)))
-            else:
-                m = features.shape[1]
-                percentiles = np.ones((2, m)) * np.nan
-                for j in xrange(m):
-                    percentiles[0, j] = scoreatpercentile(features[:, j], 1)
-                    percentiles[1, j] = scoreatpercentile(features[:, j], 99)
-            np.save(filename, percentiles)
+            self._create_cache_percentiles_1(plate, imKeys)
+
 
 normalizations = dict((c.__name__, c)
                       for c in [DummyNormalization, RobustLinearNormalization])
@@ -207,13 +223,15 @@ class Cache(object):
 
             for plate, imKeys in images_per_plate.items():
                 for imKey in imKeys:
-
-                    raw = np.load(_image_filename(plate, imKey))
-                    if flag_bkwd:
-                        _features = np.array(raw, dtype=float)
-                    else:
-                        _features = np.array(raw["features"], dtype=float)
-                        _cellids = np.array(raw["cellids"], dtype=int)
+                    # Work around bug in numpy that causes file
+                    # handles to be left open.
+                    with open(_image_filename(plate, imKey), 'rb') as file:
+                        raw = np.load(file)
+                        if flag_bkwd:
+                            _features = np.array(raw, dtype=float)
+                        else:
+                            _features = np.array(raw["features"], dtype=float)
+                            _cellids = np.array(raw["cellids"], dtype=int)
 
                     #import pdb
                     #pdb.set_trace()

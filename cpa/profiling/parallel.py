@@ -20,7 +20,7 @@ class ParallelProcessor(object):
                          help='use iPython.parallel')
         group.add_option('--lsf-directory', dest='lsf_directory', 
                          metavar='/path/to/control/directory',
-                         help='use the cpa.util.lsf interface to LSF')
+                         help='use the cpa.profiling.lsf interface to LSF')
         group.add_option('--multiprocessing', dest='multiprocessing', 
                          help='use multiprocessing on the local machine', 
                          action='store_true')

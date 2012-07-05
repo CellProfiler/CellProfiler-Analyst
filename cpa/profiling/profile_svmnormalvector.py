@@ -13,7 +13,8 @@ import time
 import itertools
 from IPython.parallel import Client
 import cpa
-from cpa.util.cache import Cache, RobustLinearNormalization
+import cpa.util
+from .cache import Cache, RobustLinearNormalization
 from profiles import Profiles
 
 logger = logging.getLogger(__name__)
@@ -74,9 +75,9 @@ def _compute_svmnormalvector((cache_dir, images, control_images, rfe)):
     #try:
         import numpy as np 
         import sys
-        from cpa.util.cache import Cache, RobustLinearNormalization
+        from cpa.profiling.cache import Cache, RobustLinearNormalization
         from sklearn.svm import LinearSVC
-        from cpa.util.profile_svmnormalvector import _compute_rfe
+        from cpa.profiling.profile_svmnormalvector import _compute_rfe
 
         cache = Cache(cache_dir)
         normalizeddata, normalized_colnames, _ = cache.load(images, normalization=RobustLinearNormalization)

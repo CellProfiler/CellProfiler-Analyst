@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# python -m cpa.util.median_profiles -o treatment_profiles_mean.txt ~/src/az/properties/supplement.properties well_profiles_mean.txt Well CompoundConcentration
+# python -m cpa.profiling.median_profiles -o treatment_profiles_mean.txt ~/src/az/properties/supplement.properties well_profiles_mean.txt Well CompoundConcentration
 
 import itertools
 import sys
