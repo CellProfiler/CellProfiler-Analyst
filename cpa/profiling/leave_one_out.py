@@ -90,7 +90,7 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
     profiles.assert_not_isnan()
     keys = profiles.keys()
     true_labels = regroup(profiles, true_group_name)
-    labels = true_labels.values()
+    labels = list(set(true_labels.values()))
 
     if holdout_group_name:
         holdouts = regroup(profiles, holdout_group_name)
@@ -105,7 +105,6 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
         test_features = profiles.data[test_set_mask, :]
         training_labels = [labels.index(true_labels[tuple(k)]) 
                            for k, m in zip(keys, ~test_set_mask) if m]
-
         if sva:
             import pyRserve
             conn = pyRserve.connect()
@@ -120,15 +119,16 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
             conn.r('testData <- as.matrix(testData)')
             conn.r('trainpheno <- data.frame(label=traininglabels)')
             #conn.r('write.table(trainData, "/tmp/trainData.txt")')
+            #conn.r('write.table(testData, "/tmp/testData.txt")')
             #conn.r('write.table(trainpheno, "/tmp/trainpheno.txt")')
             conn.r('trainMod <- model.matrix(~as.factor(label), trainpheno)')
             nsv = conn.r('num.sv(trainData, trainMod)')
             print nsv, 'surrogate variables'
             conn.r('trainMod0 <- model.matrix(~1, trainpheno)')
-            conn.r('trainSv <- sva(trainData, trainMod, trainMod0)')
+            conn.r('trainSv <- sva(trainData, trainMod, trainMod0, B=1)')
             conn.r('fsvaobj <- fsva(trainData, trainMod, trainSv, testData)')
-            filtered_train = getattr(conn.r, 'fsvaobj$db')
-            filtered_test = getattr(conn.r, 'fsvaobj$new')
+            filtered_train = getattr(conn.r, 'fsvaobj$db').T
+            filtered_test = getattr(conn.r, 'fsvaobj$new').T
         else:
             filtered_train = training_features
             filtered_test = test_features
