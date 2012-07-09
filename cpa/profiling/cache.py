@@ -21,6 +21,7 @@ Example usage as module:
 import sys
 import os
 import logging
+import json
 from optparse import OptionParser
 import progressbar
 import numpy as np
@@ -179,6 +180,7 @@ class Cache(object):
         self._plate_map_filename = os.path.join(self.cache_dir, 
                                                 'image_to_plate.pickle')
         self._colnames_filename = os.path.join(self.cache_dir, 'colnames.txt')
+        self._counts_filename = os.path.join(self.cache_dir, 'counts.npy')
 
     def _image_filename(self, plate, imKey):
         return os.path.join(self.cache_dir, unicode(plate),
@@ -279,33 +281,36 @@ class Cache(object):
                                                       'rU').readlines()]
         return self._cached_colnames
 
+    def get_cell_counts(self):
+        #if not os.path.exists(self._counts_filename):
+        #    self._create_cache_counts()
+        a = np.load(self._counts_filename)
+        return dict((tuple(row[:-1]), row[-1]) for row in a)
+
+
     #
     # Methods to create the cache
     #
 
     def _create_cache(self, resume=False, image_list=None):
-        self._create_cache_colnames()
-        self._create_cache_plate_map(image_list)
+        self._create_cache_colnames(resume)
+        self._create_cache_plate_map(image_list, resume)
+        self._create_cache_features(resume)
+        self._create_cache_counts(resume)
 
-        nimages = len(self._cached_plate_map)
-        for plate, image_keys in make_progress_bar('Features')(invert_dict(self._cached_plate_map).items()):
-            plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
-            if not os.path.exists(plate_dir):
-                os.mkdir(plate_dir)
-            for image_key in image_keys:
-                if image_list is not None and image_key not in image_list:
-                    continue
-                self._create_cache_image(plate, image_key, resume)
-
-    def _create_cache_colnames(self):
+    def _create_cache_colnames(self, resume):
         """Create cache of column names"""
+        if resume and os.path.exists(self._colnames_filename):
+            return
         cols = cpa.db.GetColnamesForClassifier()
         with open(self._colnames_filename, 'w') as f:
             for col in cols:
                 print >>f, col
 
-    def _create_cache_plate_map(self, image_list=None):
+    def _create_cache_plate_map(self, image_list, resume):
         """Create cache of map from image key to plate name"""
+        if resume and os.path.exists(self._plate_map_filename):
+            return
         if image_list is None:
             self._cached_plate_map = dict((tuple(row[1:]), row[0])
                                           for row in cpa.db.execute('select distinct %s, %s from %s'%
@@ -327,6 +332,16 @@ class Cache(object):
                 pdb.post_mortem(tb)
         cpa.util.pickle(self._plate_map_filename, self._cached_plate_map)
 
+    def _create_cache_features(self, resume):
+        nimages = len(self._plate_map)
+        for plate, image_keys in make_progress_bar('Features')(invert_dict(self._plate_map).items()):
+            plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
+            if not os.path.exists(plate_dir):
+                os.mkdir(plate_dir)
+            for image_key in image_keys:
+                if image_list is not None and image_key not in image_list:
+                    continue
+                self._create_cache_image(plate, image_key, resume)
                 
     def _create_cache_image(self, plate, image_key, resume=False):
         filename = self._image_filename(plate, image_key)
@@ -339,6 +354,17 @@ class Cache(object):
                 cpa.properties.object_id, cpa.properties.object_table, 
                 cpa.dbconnect.GetWhereClauseForImages([image_key])))
         np.savez(filename, features=np.array(features, dtype=float), cellids=np.squeeze(np.array(cellids)))
+
+    def _create_cache_counts(self, resume):
+        if resume and os.path.exists(self._counts_filename):
+            return
+        result = cpa.db.execute("""select {0}, count(*) from {1} group by {0}""".format(
+                cpa.dbconnect.UniqueImageClause(), 
+                cpa.properties.object_table))
+        counts = np.array(result, dtype='i4')
+        with cpa.util.replace_atomically(self._counts_filename) as f:
+            np.save(f, counts)
+
 
 def _check_directory(dir, resume):
     if os.path.exists(dir):

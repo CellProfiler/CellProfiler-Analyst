@@ -3,8 +3,10 @@ Module for various code that is useful for several projects, even if
 it is not used by the CPA application itself.
 """
 
+import os
 import operator
 import cPickle
+from contextlib import contextmanager
 import numpy as np
 # This module should be usable on systems without wx.
 
@@ -176,3 +178,15 @@ class sample(object):
                 return e
             if self.m == self.n:
                 raise StopIteration
+
+@contextmanager
+def replace_atomically(filename):
+    tmp = filename + '.tmp'
+    with open(tmp, 'w') as f:
+        try:
+            yield f
+            os.rename(tmp, filename)
+        except:
+            os.remove(tmp)
+            raise
+
