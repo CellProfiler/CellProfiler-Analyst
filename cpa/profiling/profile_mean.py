@@ -40,7 +40,8 @@ def _compute_group_mean((cache_dir, images, normalization_name,
         return None
 
 def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
-                 normalization=RobustLinearNormalization, preprocess_file=None):
+                 normalization=RobustLinearNormalization, preprocess_file=None,
+                 show_progress=True):
     cache = Cache(cache_dir)
 
     group, colnames_group = cpa.db.group_map(group_name, reverse=True,
@@ -63,7 +64,8 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     else:
         variables = normalization(cache).colnames
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
-                            parallel=parallel, group_name=group_name)
+                            parallel=parallel, group_name=group_name,
+                            show_progress=show_progress)
 
     # def save_as_csv_file(self, output_file):
     #     csv_file = csv.writer(output_file)
