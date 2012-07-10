@@ -221,53 +221,46 @@ class Cache(object):
         features = []
         cellids = []
 
-        try:
+        for plate, imKeys in images_per_plate.items():
+            for imKey in imKeys:
+                # Work around bug in numpy that causes file
+                # handles to be left open.
+                with open(_image_filename(plate, imKey), 'rb') as file:
+                    raw = np.load(file)
+                    if flag_bkwd:
+                        _features = np.array(raw, dtype=float)
+                    else:
+                        _features = np.array(raw["features"], dtype=float)
+                        _cellids = np.array(raw["cellids"], dtype=int)
 
-            for plate, imKeys in images_per_plate.items():
-                for imKey in imKeys:
-                    # Work around bug in numpy that causes file
-                    # handles to be left open.
-                    with open(_image_filename(plate, imKey), 'rb') as file:
-                        raw = np.load(file)
-                        if flag_bkwd:
-                            _features = np.array(raw, dtype=float)
+                #import pdb
+                #pdb.set_trace()
+
+                if removeRowsWithNaN and len(_features) > 0:
+                    prune_rows = np.any(np.isnan(_features),axis=1)
+                    _features = _features[-prune_rows,:]
+                    if not flag_bkwd:
+                        if _cellids.shape != ():
+                            _cellids = _cellids[-prune_rows,:]
                         else:
-                            _features = np.array(raw["features"], dtype=float)
-                            _cellids = np.array(raw["cellids"], dtype=int)
+                            # This is redundant but put in here
+                            # for sake of completeness
+                            if prune_rows[0]:
+                                _cellids = np.array([])
 
-                    #import pdb
-                    #pdb.set_trace()
-                    
-                    if removeRowsWithNaN and len(_features) > 0:
-                        prune_rows = np.any(np.isnan(_features),axis=1)
-                        _features = _features[-prune_rows,:]
-                        if not flag_bkwd:
-                            if _cellids.shape != ():
-                                _cellids = _cellids[-prune_rows,:]
-                            else:
-                                # This is redundant but put in here
-                                # for sake of completeness
-                                if prune_rows[0]:
-                                    _cellids = np.array([])
-
-                    if len(_features) > 0:
-                        features.append(normalizer.normalize(plate, _features))
-                        if not flag_bkwd:
-                            cellids.append(_cellids)
-
-                if(len(features) > 0):
-                    stackedfeatures = np.vstack(features)
+                if len(_features) > 0:
+                    features.append(normalizer.normalize(plate, _features))
                     if not flag_bkwd:
-                        stackedcellids = np.squeeze(np.hstack(cellids))
-                else:
-                    stackedfeatures = np.array([])
-                    if not flag_bkwd:
-                        stackedcellids = np.array([])
-                     
-        except:
-            import pdb, sys
-            e, m, tb = sys.exc_info()
-            pdb.post_mortem(tb)
+                        cellids.append(_cellids)
+
+            if(len(features) > 0):
+                stackedfeatures = np.vstack(features)
+                if not flag_bkwd:
+                    stackedcellids = np.squeeze(np.hstack(cellids))
+            else:
+                stackedfeatures = np.array([])
+                if not flag_bkwd:
+                    stackedcellids = np.array([])
             
         if flag_bkwd:
             stackedcellids = None
