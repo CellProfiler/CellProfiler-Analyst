@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
-def _compute_group_subsample((cache_dir, image_key, indices)):
+def _compute_group_subsample((cache_dir, normalization_name, image_key, 
+                              indices)):
     import numpy as np
-    from .cache import Cache, RobustLinearNormalization
+    from .cache import Cache, normalizations
     cache = Cache(cache_dir)
-    normalizeddata, normalized_colnames, _ = cache.load([image_key], normalization=RobustLinearNormalization)
+    normalizeddata, normalized_colnames, _ = cache.load([image_key], 
+                                                        normalization=normalizations[normalization_name])
     return normalizeddata[indices]
 
 import operator
@@ -13,7 +15,7 @@ import logging
 from optparse import OptionParser
 import numpy as np
 import cpa
-from .cache import Cache
+from .cache import Cache, RobustLinearNormalization, normalizations
 from .parallel import ParallelProcessor, Uniprocessing
 
 def _break_indices(indices, image_keys, counts):
@@ -29,14 +31,16 @@ def _break_indices(indices, image_keys, counts):
         start = end
         a += c
 
-def _make_parameters(cache_dir, image_keys, per_image_indices):
-    return [(cache_dir, image_key, indices)
+def _make_parameters(cache_dir, normalization_name, image_keys, 
+                     per_image_indices):
+    return [(cache_dir, normalization_name, image_key, indices)
             for image_key, indices in zip(image_keys, per_image_indices)]
 
 def _combine_subsample(generator):
     return np.vstack([a for a in generator if len(a.shape) == 2])
 
 def subsample(cache_dir, sample_size, filter=None, 
+              normalization=RobustLinearNormalization,
               parallel=Uniprocessing(), show_progress=True, verbose=True):
     cache = Cache(cache_dir)
     counts = cache.get_cell_counts()
@@ -49,7 +53,8 @@ def subsample(cache_dir, sample_size, filter=None,
     indices = np.array(random.sample(xrange(ncells), sample_size))
     image_keys = cpa.db.GetAllImageKeys()
     per_image_indices = _break_indices(indices, image_keys, counts)
-    parameters = _make_parameters(cache_dir, image_keys, per_image_indices)
+    parameters = _make_parameters(cache_dir, normalization.__name__, 
+                                  image_keys, per_image_indices)
 
     njobs = len(parameters)
     generator = parallel.view('profile_factor_analysis_mean.subsample').imap(_compute_group_subsample, parameters)
@@ -74,6 +79,8 @@ def _parse_arguments():
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     parser.add_option('-p', dest='progress', action='store_true', help='show progress bar')
     parser.add_option('-v', dest='verbose', action='store_true', help='print additional information')
+    parser.add_option('--normalization', help='normalization method (default: RobustLinearNormalization)',
+                      default='RobustLinearNormalization')
     options, args = parser.parse_args()
     parallel = ParallelProcessor.create_from_options(parser, options)
     if len(args) < 3 or len(args) > 4:
@@ -90,5 +97,6 @@ if __name__ == '__main__':
     cpa.properties.LoadFile(properties_file)
     sample = subsample(cache_dir, sample_size, filter=options.filter, 
                        parallel=parallel, show_progress=options.progress,
-                       verbose=options.verbose)
+                       verbose=options.verbose, 
+                       normalization=normalizations[options.normalization])
     np.save(output_filename, sample)
