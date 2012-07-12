@@ -249,6 +249,20 @@ class CacheTestCase(unittest.TestCase):
 
     # TODO: test_create_cache_plate_map
 
+    @patch('cpa.profiling.cache.make_progress_bar')
+    @patch.object(cache.Cache, '_plate_map')
+    def test_create_cache_features(self, plate_map, make_progress_bar):
+        cache_dir = tempfile.mkdtemp()
+        c = cache.Cache(cache_dir)
+        plate_map.__get__ = Mock(return_value={(0L, 42L): 'p1', (1L, 23L): 'p2'})
+        make_progress_bar.return_value = lambda x: x
+        c._create_cache_image = Mock()
+        c._create_cache_features(None, False)
+        calls = c._create_cache_image.call_args_list
+        assert len(calls) == 2
+        assert call('p1', (0L, 42L), False) in calls
+        assert call('p2', (1L, 23L), False) in calls
+
     # TODO: test_create_image
 
     # TODO: test_check_directory

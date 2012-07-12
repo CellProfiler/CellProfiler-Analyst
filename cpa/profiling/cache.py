@@ -288,7 +288,7 @@ class Cache(object):
     def _create_cache(self, resume=False, image_list=None):
         self._create_cache_colnames(resume)
         self._create_cache_plate_map(image_list, resume)
-        self._create_cache_features(resume)
+        self._create_cache_features(image_list, resume)
         self._create_cache_counts(resume)
 
     def _create_cache_colnames(self, resume):
@@ -325,7 +325,7 @@ class Cache(object):
                 pdb.post_mortem(tb)
         cpa.util.pickle(self._plate_map_filename, self._cached_plate_map)
 
-    def _create_cache_features(self, resume):
+    def _create_cache_features(self, image_list, resume):
         nimages = len(self._plate_map)
         for plate, image_keys in make_progress_bar('Features')(invert_dict(self._plate_map).items()):
             plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
