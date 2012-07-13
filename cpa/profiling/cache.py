@@ -21,6 +21,7 @@ Example usage as module:
 import sys
 import os
 import logging
+import json
 from optparse import OptionParser
 import progressbar
 import numpy as np
@@ -164,7 +165,7 @@ class RobustLinearNormalization(object):
                 _check_directory(os.path.dirname(filename), resume)
             if resume and os.path.exists(filename):
                 continue
-            self._create_cache_percentiles_1(plate, imKeys)
+            self._create_cache_percentiles_1(plate, imKeys, filename)
 
 
 normalizations = dict((c.__name__, c)
@@ -179,6 +180,7 @@ class Cache(object):
         self._plate_map_filename = os.path.join(self.cache_dir, 
                                                 'image_to_plate.pickle')
         self._colnames_filename = os.path.join(self.cache_dir, 'colnames.txt')
+        self._counts_filename = os.path.join(self.cache_dir, 'counts.npy')
 
     def _image_filename(self, plate, imKey):
         return os.path.join(self.cache_dir, unicode(plate),
@@ -219,53 +221,46 @@ class Cache(object):
         features = []
         cellids = []
 
-        try:
+        for plate, imKeys in images_per_plate.items():
+            for imKey in imKeys:
+                # Work around bug in numpy that causes file
+                # handles to be left open.
+                with open(_image_filename(plate, imKey), 'rb') as file:
+                    raw = np.load(file)
+                    if flag_bkwd:
+                        _features = np.array(raw, dtype=float)
+                    else:
+                        _features = np.array(raw["features"], dtype=float)
+                        _cellids = np.array(raw["cellids"], dtype=int)
 
-            for plate, imKeys in images_per_plate.items():
-                for imKey in imKeys:
-                    # Work around bug in numpy that causes file
-                    # handles to be left open.
-                    with open(_image_filename(plate, imKey), 'rb') as file:
-                        raw = np.load(file)
-                        if flag_bkwd:
-                            _features = np.array(raw, dtype=float)
+                #import pdb
+                #pdb.set_trace()
+
+                if removeRowsWithNaN and len(_features) > 0:
+                    prune_rows = np.any(np.isnan(_features),axis=1)
+                    _features = _features[-prune_rows,:]
+                    if not flag_bkwd:
+                        if _cellids.shape != ():
+                            _cellids = _cellids[-prune_rows,:]
                         else:
-                            _features = np.array(raw["features"], dtype=float)
-                            _cellids = np.array(raw["cellids"], dtype=int)
+                            # This is redundant but put in here
+                            # for sake of completeness
+                            if prune_rows[0]:
+                                _cellids = np.array([])
 
-                    #import pdb
-                    #pdb.set_trace()
-                    
-                    if removeRowsWithNaN and len(_features) > 0:
-                        prune_rows = np.any(np.isnan(_features),axis=1)
-                        _features = _features[-prune_rows,:]
-                        if not flag_bkwd:
-                            if _cellids.shape != ():
-                                _cellids = _cellids[-prune_rows,:]
-                            else:
-                                # This is redundant but put in here
-                                # for sake of completeness
-                                if prune_rows[0]:
-                                    _cellids = np.array([])
-
-                    if len(_features) > 0:
-                        features.append(normalizer.normalize(plate, _features))
-                        if not flag_bkwd:
-                            cellids.append(_cellids)
-
-                if(len(features) > 0):
-                    stackedfeatures = np.vstack(features)
+                if len(_features) > 0:
+                    features.append(normalizer.normalize(plate, _features))
                     if not flag_bkwd:
-                        stackedcellids = np.squeeze(np.hstack(cellids))
-                else:
-                    stackedfeatures = np.array([])
-                    if not flag_bkwd:
-                        stackedcellids = np.array([])
-                     
-        except:
-            import pdb, sys
-            e, m, tb = sys.exc_info()
-            pdb.post_mortem(tb)
+                        cellids.append(_cellids)
+
+            if(len(features) > 0):
+                stackedfeatures = np.vstack(features)
+                if not flag_bkwd:
+                    stackedcellids = np.squeeze(np.hstack(cellids))
+            else:
+                stackedfeatures = np.array([])
+                if not flag_bkwd:
+                    stackedcellids = np.array([])
             
         if flag_bkwd:
             stackedcellids = None
@@ -279,54 +274,51 @@ class Cache(object):
                                                       'rU').readlines()]
         return self._cached_colnames
 
+    def get_cell_counts(self):
+        #if not os.path.exists(self._counts_filename):
+        #    self._create_cache_counts()
+        a = np.load(self._counts_filename)
+        return dict((tuple(row[:-1]), row[-1]) for row in a)
+
+
     #
     # Methods to create the cache
     #
 
-    def _create_cache(self, resume=False, image_list=None):
-        self._create_cache_colnames()
-        self._create_cache_plate_map(image_list)
+    def _create_cache(self, resume=False):
+        self._create_cache_colnames(resume)
+        self._create_cache_plate_map(resume)
+        self._create_cache_features(resume)
+        self._create_cache_counts(resume)
 
-        nimages = len(self._cached_plate_map)
-        for plate, image_keys in make_progress_bar('Features')(invert_dict(self._cached_plate_map).items()):
-            plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
-            if not os.path.exists(plate_dir):
-                os.mkdir(plate_dir)
-            for image_key in image_keys:
-                if image_list is not None and image_key not in image_list:
-                    continue
-                self._create_cache_image(plate, image_key, resume)
-
-    def _create_cache_colnames(self):
+    def _create_cache_colnames(self, resume):
         """Create cache of column names"""
+        if resume and os.path.exists(self._colnames_filename):
+            return
         cols = cpa.db.GetColnamesForClassifier()
         with open(self._colnames_filename, 'w') as f:
             for col in cols:
                 print >>f, col
 
-    def _create_cache_plate_map(self, image_list=None):
+    def _create_cache_plate_map(self, resume):
         """Create cache of map from image key to plate name"""
-        if image_list is None:
-            self._cached_plate_map = dict((tuple(row[1:]), row[0])
-                                          for row in cpa.db.execute('select distinct %s, %s from %s'%
-                                                                    (cpa.properties.plate_id, 
-                                                                     ', '.join(cpa.dbconnect.image_key_columns()),
-                                                                     cpa.properties.image_table)))
-        else:
-            try:
-                self._cached_plate_map = {}
-                for imkey in image_list:
-                    q = 'select %s from %s where ' % (cpa.properties.plate_id, cpa.properties.image_table)
-                    for i, term in enumerate(cpa.dbconnect.image_key_columns()):
-                        q = q + term + " = %s and " % imkey[i]
-                    q = q[0:-5]
-                    self._cached_plate_map[imkey] = cpa.db.execute(q)[0][0]
-            except:
-                import pdb, sys
-                e, m, tb = sys.exc_info()
-                pdb.post_mortem(tb)
+        if resume and os.path.exists(self._plate_map_filename):
+            return
+        self._cached_plate_map = dict((tuple(row[1:]), row[0])
+                                      for row in cpa.db.execute('select distinct %s, %s from %s'%
+                                                                (cpa.properties.plate_id, 
+                                                                 ', '.join(cpa.dbconnect.image_key_columns()),
+                                                                 cpa.properties.image_table)))
         cpa.util.pickle(self._plate_map_filename, self._cached_plate_map)
 
+    def _create_cache_features(self, resume):
+        nimages = len(self._plate_map)
+        for plate, image_keys in make_progress_bar('Features')(invert_dict(self._plate_map).items()):
+            plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
+            if not os.path.exists(plate_dir):
+                os.mkdir(plate_dir)
+            for image_key in image_keys:
+                self._create_cache_image(plate, image_key, resume)
                 
     def _create_cache_image(self, plate, image_key, resume=False):
         filename = self._image_filename(plate, image_key)
@@ -339,6 +331,17 @@ class Cache(object):
                 cpa.properties.object_id, cpa.properties.object_table, 
                 cpa.dbconnect.GetWhereClauseForImages([image_key])))
         np.savez(filename, features=np.array(features, dtype=float), cellids=np.squeeze(np.array(cellids)))
+
+    def _create_cache_counts(self, resume):
+        if resume and os.path.exists(self._counts_filename):
+            return
+        result = cpa.db.execute("""select {0}, count(*) from {1} group by {0}""".format(
+                cpa.dbconnect.UniqueImageClause(), 
+                cpa.properties.object_table))
+        counts = np.array(result, dtype='i4')
+        with cpa.util.replace_atomically(self._counts_filename) as f:
+            np.save(f, counts)
+
 
 def _check_directory(dir, resume):
     if os.path.exists(dir):
@@ -353,8 +356,6 @@ if __name__ == '__main__':
 
     parser = OptionParser("usage: %prog [-r] PROPERTIES-FILE CACHE-DIR PREDICATE")
     parser.add_option('-r', dest='resume', action='store_true', help='resume')
-    parser.add_option('-s', default=None, dest='filename_image_keys', help='file containing list of image keys to be cached')
-
     options, args = parser.parse_args()
     if len(args) != 3:
         parser.error('Incorrect number of arguments')
@@ -365,16 +366,6 @@ if __name__ == '__main__':
     _check_directory(cache_dir, options.resume)
 
     cache = Cache(cache_dir)
-    
-    # if specified, read the file containing image keys
-    if options.filename_image_keys is not None:
-        with open(options.filename_image_keys, "r") as f:
-            l = f.readlines()
-        image_list = [eval(ll.strip()) for ll in l]
-    else:
-        image_list = None
 
-    cache._create_cache(options.resume, image_list)
-
-    if image_list is None:
-        RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
+    cache._create_cache(options.resume)
+    RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
