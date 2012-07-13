@@ -5,13 +5,16 @@ from cpa.profiling import subsample
 def test_compute_group_subsample():
     cache = Mock()
     cache_module = Mock()
+    cache_module.normalizations = {None: lambda x: x}
     cache_module.Cache.return_value = cache
     data = np.array([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.0]])
     colnames = ['f1', 'f2', 'f3']
     cache.load.return_value = data, colnames, None
     indices = np.array([0, 2], dtype='i4')
     with patch.dict('sys.modules', {'cpa.profiling.cache': cache_module}):
-        r = subsample._compute_group_subsample(('my_cache_dir', (0, 42), indices))
+        r = subsample._compute_group_subsample(('my_cache_dir', 
+                                                None,
+                                                (0, 42), indices))
     assert np.array_equal(r, np.array([[1.1, 2.2, 3.3], [7.7, 8.8, 9.0]]))
 
 def test_break_indices():
@@ -31,3 +34,11 @@ def test_combine_subsample():
                  np.array([[7, 8, 9]])]
     r = subsample._combine_subsample(generator)
     assert np.array_equal(r, np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
+
+# TODO: SubsampleTestCase
+# TODO: test_init
+# TODO: test_compute
+
+# TODO: test_parse_arguments
+
+# TODO: test_main

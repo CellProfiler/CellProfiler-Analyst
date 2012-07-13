@@ -37,6 +37,7 @@ def _transform_cell_feats((cache_dir, images, normalization_name, output_filenam
         for vector in normalizeddata:
             w.writerow(tuple(key) + tuple(vector))
         f.close()
+        return [-1]
 
     except: # catch *all* exceptions
         from traceback import print_exc
