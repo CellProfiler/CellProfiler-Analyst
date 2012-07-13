@@ -285,10 +285,10 @@ class Cache(object):
     # Methods to create the cache
     #
 
-    def _create_cache(self, resume=False, image_list=None):
+    def _create_cache(self, resume=False):
         self._create_cache_colnames(resume)
-        self._create_cache_plate_map(image_list, resume)
-        self._create_cache_features(image_list, resume)
+        self._create_cache_plate_map(resume)
+        self._create_cache_features(resume)
         self._create_cache_counts(resume)
 
     def _create_cache_colnames(self, resume):
@@ -300,40 +300,24 @@ class Cache(object):
             for col in cols:
                 print >>f, col
 
-    def _create_cache_plate_map(self, image_list, resume):
+    def _create_cache_plate_map(self, resume):
         """Create cache of map from image key to plate name"""
         if resume and os.path.exists(self._plate_map_filename):
             return
-        if image_list is None:
-            self._cached_plate_map = dict((tuple(row[1:]), row[0])
-                                          for row in cpa.db.execute('select distinct %s, %s from %s'%
-                                                                    (cpa.properties.plate_id, 
-                                                                     ', '.join(cpa.dbconnect.image_key_columns()),
-                                                                     cpa.properties.image_table)))
-        else:
-            try:
-                self._cached_plate_map = {}
-                for imkey in image_list:
-                    q = 'select %s from %s where ' % (cpa.properties.plate_id, cpa.properties.image_table)
-                    for i, term in enumerate(cpa.dbconnect.image_key_columns()):
-                        q = q + term + " = %s and " % imkey[i]
-                    q = q[0:-5]
-                    self._cached_plate_map[imkey] = cpa.db.execute(q)[0][0]
-            except:
-                import pdb, sys
-                e, m, tb = sys.exc_info()
-                pdb.post_mortem(tb)
+        self._cached_plate_map = dict((tuple(row[1:]), row[0])
+                                      for row in cpa.db.execute('select distinct %s, %s from %s'%
+                                                                (cpa.properties.plate_id, 
+                                                                 ', '.join(cpa.dbconnect.image_key_columns()),
+                                                                 cpa.properties.image_table)))
         cpa.util.pickle(self._plate_map_filename, self._cached_plate_map)
 
-    def _create_cache_features(self, image_list, resume):
+    def _create_cache_features(self, resume):
         nimages = len(self._plate_map)
         for plate, image_keys in make_progress_bar('Features')(invert_dict(self._plate_map).items()):
             plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
             if not os.path.exists(plate_dir):
                 os.mkdir(plate_dir)
             for image_key in image_keys:
-                if image_list is not None and image_key not in image_list:
-                    continue
                 self._create_cache_image(plate, image_key, resume)
                 
     def _create_cache_image(self, plate, image_key, resume=False):
@@ -372,8 +356,6 @@ if __name__ == '__main__':
 
     parser = OptionParser("usage: %prog [-r] PROPERTIES-FILE CACHE-DIR PREDICATE")
     parser.add_option('-r', dest='resume', action='store_true', help='resume')
-    parser.add_option('-s', default=None, dest='filename_image_keys', help='file containing list of image keys to be cached')
-
     options, args = parser.parse_args()
     if len(args) != 3:
         parser.error('Incorrect number of arguments')
@@ -384,16 +366,6 @@ if __name__ == '__main__':
     _check_directory(cache_dir, options.resume)
 
     cache = Cache(cache_dir)
-    
-    # if specified, read the file containing image keys
-    if options.filename_image_keys is not None:
-        with open(options.filename_image_keys, "r") as f:
-            l = f.readlines()
-        image_list = [eval(ll.strip()) for ll in l]
-    else:
-        image_list = None
 
-    cache._create_cache(options.resume, image_list)
-
-    if image_list is None:
-        RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
+    cache._create_cache(options.resume)
+    RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
