@@ -1,7 +1,7 @@
 import tempfile
 import numpy as np
 import unittest
-from mock import Mock, patch, call
+from mock import Mock, patch, call, sentinel
 import cpa.util
 from cpa.profiling import cache
 
@@ -247,7 +247,24 @@ class CacheTestCase(unittest.TestCase):
 
     # TODO: test_create_cache_colnames
 
-    # TODO: test_create_cache_plate_map
+    @patch.object(cache.Cache, '__init__')
+    @patch('cpa.util.pickle')
+    @patch('cpa.db.execute')
+    @patch('cpa.dbconnect.image_key_columns')
+    def test_create_cache_plate_map(self, image_key_columns, execute, pickle, 
+                                    init):
+        image_key_columns = ('TableNumber', 'ImageNumber')
+        execute.return_value = [['p1', 1, 42],
+                                ['p2', 0, 11],
+                                ['p1', 3, 14]]
+        init.return_value = None
+        c = cache.Cache('my_cache_dir')
+        c._plate_map_filename = sentinel.plate_map_filename
+        c._create_cache_plate_map(False)
+        pickle.assert_called_once_with(sentinel.plate_map_filename,
+                                       {(1, 42): 'p1',
+                                        (0, 11): 'p2',
+                                        (3, 14): 'p1'})
 
     @patch('cpa.profiling.cache.make_progress_bar')
     @patch.object(cache.Cache, '_plate_map')
@@ -257,7 +274,7 @@ class CacheTestCase(unittest.TestCase):
         plate_map.__get__ = Mock(return_value={(0L, 42L): 'p1', (1L, 23L): 'p2'})
         make_progress_bar.return_value = lambda x: x
         c._create_cache_image = Mock()
-        c._create_cache_features(None, False)
+        c._create_cache_features(False)
         calls = c._create_cache_image.call_args_list
         assert len(calls) == 2
         assert call('p1', (0L, 42L), False) in calls
