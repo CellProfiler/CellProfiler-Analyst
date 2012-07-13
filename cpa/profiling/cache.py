@@ -165,7 +165,7 @@ class RobustLinearNormalization(object):
                 _check_directory(os.path.dirname(filename), resume)
             if resume and os.path.exists(filename):
                 continue
-            self._create_cache_percentiles_1(plate, imKeys)
+            self._create_cache_percentiles_1(plate, imKeys, filename)
 
 
 normalizations = dict((c.__name__, c)
