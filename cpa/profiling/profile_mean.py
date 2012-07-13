@@ -8,7 +8,7 @@ from optparse import OptionParser
 import numpy as np
 import cpa
 from .cache import Cache, RobustLinearNormalization, normalizations
-from .profiles import Profiles
+from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
 def _compute_group_mean((cache_dir, images, normalization_name, 
@@ -42,8 +42,6 @@ def _compute_group_mean((cache_dir, images, normalization_name,
 def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
                  normalization=RobustLinearNormalization, preprocess_file=None,
                  show_progress=True):
-    cache = Cache(cache_dir)
-
     group, colnames_group = cpa.db.group_map(group_name, reverse=True,
                                              filter=filter)
 
@@ -62,6 +60,7 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
         preprocessor = cpa.util.unpickle1(preprocess_file)
         variables = preprocessor.variables
     else:
+        cache = Cache(cache_dir)
         variables = normalization(cache).colnames
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
@@ -81,10 +80,7 @@ if __name__ == '__main__':
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     parser.add_option('-c', dest='csv', help='output as CSV', action='store_true')
-    parser.add_option('--normalization', help='normalization method (default: RobustLinearNormalization)',
-                      default='RobustLinearNormalization')
-    parser.add_option('--preprocess', dest='preprocess_file', 
-                      help='model to preprocess with (default: none)')
+    add_common_options(parser)
     options, args = parser.parse_args()
     parallel = ParallelProcessor.create_from_options(parser, options)
 

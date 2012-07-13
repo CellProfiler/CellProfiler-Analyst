@@ -11,11 +11,11 @@ from optparse import OptionParser
 import numpy as np
 import time
 import itertools
-from IPython.parallel import Client
 import cpa
 import cpa.util
-from .cache import Cache, RobustLinearNormalization
-from profiles import Profiles
+from .cache import Cache, RobustLinearNormalization, normalizations
+from .profiles import Profiles, add_common_options
+from .parallel import ParallelProcessor, Uniprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -111,12 +111,12 @@ def images_by_plate(filter):
     return d
 
 def profile_svmnormalvector(cache_dir, group_name, control_filter, 
-                            filter=None, rfe=False, ipython_profile=None, 
-                            job=None):
-        cache = Cache(cache_dir)
+                            filter=None, rfe=False, job=None,
+                            parallel=Uniprocessing(),
+                            normalization=RobustLinearNormalization, 
+                            preprocess_file=None):
         group, colnames_group = cpa.db.group_map(group_name, reverse=True, 
                                                  filter=filter)
-        variables = RobustLinearNormalization(cache).colnames
         control_images_by_plate = images_by_plate(control_filter)
         plate_by_image = dict((row[:-2], row[-2])
                               for row in cpa.db.GetPlatesAndWellsPerImage())
@@ -128,33 +128,51 @@ def profile_svmnormalvector(cache_dir, group_name, control_filter,
         keys = group.keys()
         parameters = [(cache_dir, group[k], control_images(group[k]), rfe)
                       for k in keys]
+
+        if preprocess_file:
+            preprocessor = cpa.util.unpickle1(preprocess_file)
+            variables = preprocessor.variables
+        else:
+            cache = Cache(cache_dir)
+            variables = normalization(cache).colnames
+
         if job:
             i = job - 1
-            memoized(_compute_svmnormalvector(parameters[i]))
+            memoize(_compute_svmnormalvector)
         else:
-            return Profiles.compute(keys, variables, memoized(_compute_svmnormalvector), 
-                                    parameters, ipython_profile, group_name=group_name)
+            if memoization_dir is None:
+                fn = _compute_svmnormalvector
+            else:
+                fn = memoizer(_compute_svmnormalvector)
+            return Profiles.compute(keys, variables, fn, parameters, 
+                                    parallel=parallel, group_name=group_name)
     
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
  
     parser = OptionParser("usage: %prog [--profile PROFILE-NAME] [--memoize DIRECTORY] [-J NUMBER] [-o OUTPUT-FILENAME] [-f FILTER] PROPERTIES-FILE CACHE-DIR GROUP CONTROL-FILTER")
-    parser.add_option('--ipython-profile', dest='ipython_profile', help='iPython.parallel profile')
-    parser.add_option('--memoize', dest='memoize', default=None, help='Store individual profiles in temporary files')
+    ParallelProcessor.add_options(parser)
+    parser.add_option('--memoize', dest='memoize', default=None, help='Checkpoint individual profiles in temporary files')
     parser.add_option('-J', dest='job', help='Compute only one profile, 1 <= j <= n', default=None, type=int)
     parser.add_option('--rfe', dest='rfe', help='Recursive feature elimination', action='store_true')
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
+    add_common_options(parser)
     options, args = parser.parse_args()
-
-    memoization_dir = options.memoize
+    parallel = ParallelProcessor.create_from_options(parser, options)
 
     if len(args) != 4:
         parser.error('Incorrect number of arguments')
     properties_file, cache_dir, group, control_filter = args
 
+    if options.job and not options.memoize:
+        parser.error("-J can only be used with --memoize")
+    memoization_dir = options.memoize
+
     cpa.properties.LoadFile(properties_file)
-    profiles = profile_svmnormalvector(cache_dir, group, control_filter, filter=options.filter, 
-                                       rfe=options.rfe, ipython_profile=options.ipython_profile, 
-                                       job=options.job)
+    profiles = profile_svmnormalvector(cache_dir, group, control_filter, 
+                                       filter=options.filter, rfe=options.rfe, 
+                                       parallel=parallel, job=options.job,
+                                       normalization=normalizations[options.normalization],
+                                       preprocess_file=options.preprocess_file)
     profiles.save(options.output_filename)
