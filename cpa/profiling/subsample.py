@@ -9,12 +9,14 @@ def _compute_group_subsample((cache_dir, normalization_name, image_key,
                                                         normalization=normalizations[normalization_name])
     return normalizeddata[indices]
 
+import cPickle as pickle
 import operator
 import random
 import logging
 from optparse import OptionParser
 import numpy as np
 import cpa
+from cpa.util import replace_atomically
 from .cache import Cache, RobustLinearNormalization, normalizations
 from .parallel import ParallelProcessor, Uniprocessing
 
@@ -39,37 +41,46 @@ def _make_parameters(cache_dir, normalization_name, image_keys,
 def _combine_subsample(generator):
     return np.vstack([a for a in generator if len(a.shape) == 2])
 
-def subsample(cache_dir, sample_size, filter=None, 
-              normalization=RobustLinearNormalization,
-              parallel=Uniprocessing(), show_progress=True, verbose=True):
-    cache = Cache(cache_dir)
-    counts = cache.get_cell_counts()
-    ncells = reduce(operator.add, counts.values())
-    if sample_size is None:
-        sample_size = round(0.001 * ncells)
-    if verbose:
-        print 'Subsampling {0} of {1} cells'.format(sample_size, ncells)
+class Subsample(object):
+    def __init__(self, cache_dir, sample_size, filter=None, 
+                 normalization=RobustLinearNormalization,
+                 parallel=Uniprocessing(), show_progress=True, verbose=True):
+        self.cache_dir = cache_dir
+        self.normalization_name = normalization.__name__
+        cache = Cache(self.cache_dir)
+        self.variables = normalization(cache).colnames
+        self.data = self._compute(sample_size, filter, parallel, show_progress,
+                                  verbose)
 
-    indices = np.array(random.sample(xrange(ncells), sample_size))
-    image_keys = cpa.db.GetAllImageKeys()
-    per_image_indices = _break_indices(indices, image_keys, counts)
-    parameters = _make_parameters(cache_dir, normalization.__name__, 
-                                  image_keys, per_image_indices)
+    def _compute(self, sample_size, filter, parallel, show_progress, verbose):
+        cache = Cache(self.cache_dir)
+        counts = cache.get_cell_counts()
+        ncells = reduce(operator.add, counts.values())
+        if sample_size is None:
+            sample_size = round(0.001 * ncells)
+        if verbose:
+            print 'Subsampling {0} of {1} cells'.format(sample_size, ncells)
 
-    njobs = len(parameters)
-    generator = parallel.view('profile_factor_analysis_mean.subsample').imap(_compute_group_subsample, parameters)
-    if show_progress:
-        import progressbar
-        progress = progressbar.ProgressBar(widgets=['Subsampling:',
-                                                    progressbar.Percentage(), ' ',
-                                                    progressbar.Bar(), ' ', 
-                                                    progressbar.Counter(), '/', 
-                                                    str(njobs), ' ',
-                                                    progressbar.ETA()],
-                                           maxval=njobs)
-    else:
-        progress = lambda x: x
-    return _combine_subsample(progress(generator))
+        indices = np.array(random.sample(xrange(ncells), sample_size))
+        image_keys = cpa.db.GetAllImageKeys()
+        per_image_indices = _break_indices(indices, image_keys, counts)
+        parameters = _make_parameters(self.cache_dir, self.normalization_name, 
+                                      image_keys, per_image_indices)
+
+        njobs = len(parameters)
+        generator = parallel.view('profile_factor_analysis_mean.subsample').imap(_compute_group_subsample, parameters)
+        if show_progress:
+            import progressbar
+            progress = progressbar.ProgressBar(widgets=['Subsampling:',
+                                                        progressbar.Percentage(), ' ',
+                                                        progressbar.Bar(), ' ', 
+                                                        progressbar.Counter(), '/', 
+                                                        str(njobs), ' ',
+                                                        progressbar.ETA()],
+                                               maxval=njobs)
+        else:
+            progress = lambda x: x
+        return _combine_subsample(progress(generator))
 
 def _parse_arguments():
     global options, parallel
@@ -95,8 +106,13 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     _parse_arguments()
     cpa.properties.LoadFile(properties_file)
-    sample = subsample(cache_dir, sample_size, filter=options.filter, 
-                       parallel=parallel, show_progress=options.progress,
-                       verbose=options.verbose, 
-                       normalization=normalizations[options.normalization])
-    np.save(output_filename, sample)
+    normalization = normalizations[options.normalization]
+    # Import the module under its full name so the class can be found
+    # when unpickling.
+    import cpa.profiling.subsample
+    subsample = cpa.profiling.subsample.Subsample(
+        cache_dir, sample_size, filter=options.filter, parallel=parallel, 
+        show_progress=options.progress, verbose=options.verbose, 
+        normalization=normalization)
+    with replace_atomically(output_filename) as f:
+        pickle.dump(subsample, f)

@@ -34,3 +34,11 @@ def test_combine_subsample():
                  np.array([[7, 8, 9]])]
     r = subsample._combine_subsample(generator)
     assert np.array_equal(r, np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
+
+# TODO: SubsampleTestCase
+# TODO: test_init
+# TODO: test_compute
+
+# TODO: test_parse_arguments
+
+# TODO: test_main
