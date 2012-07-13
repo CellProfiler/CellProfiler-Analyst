@@ -181,12 +181,13 @@ class RobustLinearNormalizationTestCase(unittest.TestCase):
         progress = Mock(return_value=controls.items())
         make_progress_bar.return_value = progress
         self.n._get_controls = Mock(return_value=controls)
-        self.n._percentiles_filename = Mock(return_value='foo/bar.npy')
+        self.n._percentiles_filename = lambda p: 'foo/%s.npy' % p
         self.n._create_cache_percentiles_1 = Mock()
         self.n._create_cache_percentiles('predicate', False)
         check_directory.assert_called_once_with('foo', False)
         self.assertEqual(self.n._create_cache_percentiles_1.call_args_list,
-                         [call(*item) for item in controls.items()])
+                         [call(plate, image_keys, 'foo/%s.npy' % plate) 
+                          for plate, image_keys in controls.items()])
 
 
 def test_normalizations():
