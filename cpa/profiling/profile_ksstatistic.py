@@ -10,7 +10,7 @@ import numpy as np
 import time
 import itertools
 import cpa
-from cpa.util.cache import Cache, RobustLinearNormalization
+from .cache import Cache, RobustLinearNormalization
 from profiles import Profiles
 from .parallel import ParallelProcessor, Uniprocessing
 
@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 def _compute_ksstatistic((cache_dir, images, control_images)):
     import numpy as np 
     import sys
-    from cpa.util.cache import Cache, RobustLinearNormalization
-    from cpa.util.ks_2samp import ks_2samp
+    from cpa.profiling.cache import Cache, RobustLinearNormalization
+    from cpa.profiling.ks_2samp import ks_2samp
 
     cache = Cache(cache_dir)
     normalizeddata, variables, _ = cache.load(images, normalization=RobustLinearNormalization)

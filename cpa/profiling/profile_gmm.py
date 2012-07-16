@@ -9,13 +9,13 @@ from scipy import linalg
 from sklearn.mixture import GMM
 
 import cpa
-from cpa.util.cache import Cache, RobustLinearNormalization
+from .cache import Cache, RobustLinearNormalization
 from .profiles import Profiles
 from .profile_factoranalysis_mean import subsample
             
 def _compute_mixture_probabilities((cache_dir, images, gmm, meanvector, loadings)):
     import numpy as np        
-    from cpa.util import cache
+    from cpa.profiling import cache
     cache = Cache(cache_dir)
     normalizeddata, normalized_colnames, _ = cache.load(images, normalization=normalization)
     mean_centered = normalizeddata - meanvector
