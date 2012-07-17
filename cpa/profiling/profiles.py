@@ -183,3 +183,10 @@ class Profiles(object):
         keys = list(itertools.compress(keys, rowmask))
 
         return cls(keys, data, variables, group_name=group_name)
+
+
+def add_common_options(parser):
+    parser.add_option('--normalization', help='normalization method (default: RobustLinearNormalization)',
+                      default='RobustLinearNormalization')
+    parser.add_option('--preprocess', dest='preprocess_file', 
+                      help='model to preprocess with (default: none)')
