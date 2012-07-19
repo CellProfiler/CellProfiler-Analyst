@@ -3,6 +3,7 @@ import sys
 import wx.lib.mixins.listctrl as listmix
 from experimentsettings import *
 import experimentsettings as exp
+import icons
 
 meta = ExperimentSettings.getInstance()
 
@@ -25,10 +26,14 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
         meta.add_subscriber(self.update, 'DataAcquis.*')
         meta.add_subscriber(self.update, 'Notes.*')
         
-        self.InsertColumn(0, "Category")
-        self.InsertColumn(1, "Action")
-        self.InsertColumn(2, "Instance No")
-        self.InsertColumn(3, "Description")
+        #self.InsertColumn(0, "Category")
+        #self.InsertColumn(1, "Action")
+        #self.InsertColumn(2, "Instance No")
+        #self.InsertColumn(3, "Description")
+        
+        self.InsertColumn(0, "Action")
+        self.InsertColumn(1, "Instance No")
+        self.InsertColumn(2, "Description")        
         
     def get_description(self, protocol):
         return '; '.join(['%s=%s'%(k, v) for k, v in meta.get_attribute_dict(protocol).items()])
@@ -48,16 +53,32 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
             
             sel = self.get_selected_protocols()
             self.DeleteAllItems()
+            
+            self._il = wx.ImageList(16, 16)
+            self.SetImageList(self._il, wx.IMAGE_LIST_SMALL)           
+            
+            
+            #for prot in self.protocols:
+                #cat, action, inst = prot.split('|')
+                #i = self.InsertStringItem(sys.maxint, cat)
+                #self.SetStringItem(i, 1, action)
+                #self.SetStringItem(i, 2, inst)
+                #self.SetStringItem(i, 3, self.get_description(prot))
+            #self.set_selected_protocols(sel)
+        #else:
+            #for i, prot in enumerate(self.protocols):
+                #self.SetStringItem(i, 3, self.get_description(prot))
+                
             for prot in self.protocols:
                 cat, action, inst = prot.split('|')
-                i = self.InsertStringItem(sys.maxint, cat)
-                self.SetStringItem(i, 1, action)
-                self.SetStringItem(i, 2, inst)
-                self.SetStringItem(i, 3, self.get_description(prot))
+                i = self.InsertStringItem(sys.maxint, action)
+                self.setActionImage(action)                   
+                self.SetStringItem(i, 1, inst)
+                self.SetStringItem(i, 2, self.get_description(prot))
             self.set_selected_protocols(sel)
         else:
             for i, prot in enumerate(self.protocols):
-                self.SetStringItem(i, 3, self.get_description(prot))
+                self.SetStringItem(i, 2, self.get_description(prot))            
             
             
     def set_selected_protocols(self, protocol_list):
@@ -86,6 +107,56 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
             #exptsettings.ShowInstance(sel[0])
             
         return sel
+    
+    def setActionImage(self, act):
+        
+        ICON_SIZE = 16.0
+        
+        if act == 'Seed':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Harvest':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.harvest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+            
+        elif act =='Chem':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Bio':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.dna.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+            
+        elif act =='Dye':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Immuno':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.antibody.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Genetic':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.primer.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+            
+        elif act =='Spin':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Wash':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.wash.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Dry':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.dry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Medium':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.medium.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='Incubator':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.incubator.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+            
+        elif act =='HCS':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.staticimage.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='FCS':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.fcs.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        elif act =='TLM':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.tlm.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())) 
+        
+        elif act =='Hint':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.hint.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()))  
+        elif act =='Critical':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.critical.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()))  
+        elif act =='Rest':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.rest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()))   
+        elif act =='URL':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.url.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()))   
+        elif act =='Video':
+            self.SetItemImage(self.GetItemCount() - 1, self._il.Add(icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()))                         
             
     def getColumnText(self, index, col):
         return self.GetItem(index, col).GetText()

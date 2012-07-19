@@ -17,6 +17,7 @@ import wx.html
 import webbrowser
 import wx.media
 import glob
+import icons
 from functools import partial
 from experimentsettings import *
 from instancelist import *
@@ -3393,8 +3394,10 @@ class CellSeedPanel(wx.Panel):
 	text = wx.StaticText(self.sw, -1, 'Cell Seeding')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
 	titlesizer.Add(text, 0)	
+	#bmp = icons.seed.Scale(16.0, 16.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	#titlesizer.Add(wx.Bitmap(icons.seed.Scale(16.0, 16.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()), 0)
         
         # Selection Button
 	showInstBut = wx.Button(self.sw, -1, 'Show Stock Cultures', (100,100))
