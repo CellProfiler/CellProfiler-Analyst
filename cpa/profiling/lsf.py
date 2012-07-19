@@ -11,8 +11,9 @@ import tempfile
 import progressbar
 
 class LSF(object):
-    def __init__(self, njobs, directory=None):
+    def __init__(self, njobs, directory=None, memory=None):
         self.njobs = njobs
+        self.memory = memory
         if directory is None:
             self.directory = tempfile.mkdtemp(dir='.')
         else:
@@ -21,12 +22,13 @@ class LSF(object):
                 os.mkdir(self.directory)
 
     def view(self, name):
-        return LSFView(self.njobs, os.path.join(self.directory, name))
+        return LSFView(self.njobs, os.path.join(self.directory, name), self.memory)
 
 
 class LSFView(object):
-    def __init__(self, njobs, directory=None):
+    def __init__(self, njobs, directory=None, memory=None):
         self.njobs = njobs
+        self.memory = memory
         if directory is None:
             self.directory = tempfile.mkdtemp(dir='.')
             self.resuming = False
@@ -42,10 +44,13 @@ class LSFView(object):
             os.mkdir(path)
 
     def start_workers(self):
-        cmd = ' '.join(['bsub', '-J', '"CPA[1-%d]"' % self.njobs, '-o', 
-                        '"%s/out/j%%Ja%%I.out"' % self.directory, 
-                        sys.executable, '-m', 'cpa.util.lsf', 
-                        self.directory])
+        args = ['bsub']
+        if self.memory:
+            args.extend(['-R', 'rusage[mem=%d]' % int(self.memory)])
+        args.extend(['-J', '"CPA[1-%d]"' % self.njobs, '-o', 
+                     '"%s/out/j%%Ja%%I.out"' % self.directory, sys.executable,
+                     '-m', 'cpa.profiling.lsf', self.directory])
+        cmd = ' '.join(args)
         print cmd
         os.system(cmd)
 
@@ -130,7 +135,7 @@ def test_function((seconds)):
     return seconds
 
 def test():
-    view = LSFView(3, 'lsf_test', 2)
+    view = LSFView(3, 'lsf_test')
     print view.directory
     for result in view.imap(test_function, [random.randint(1, 10)
                                             for task in range(10)]):

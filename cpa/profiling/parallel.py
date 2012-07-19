@@ -20,10 +20,12 @@ class ParallelProcessor(object):
                          help='use iPython.parallel')
         group.add_option('--lsf-directory', dest='lsf_directory', 
                          metavar='/path/to/control/directory',
-                         help='use the cpa.util.lsf interface to LSF')
+                         help='use the cpa.profiling.lsf interface to LSF')
         group.add_option('--multiprocessing', dest='multiprocessing', 
                          help='use multiprocessing on the local machine', 
                          action='store_true')
+        group.add_option('--memory', dest='memory',
+                         help='main memory requirement in gigabytes')
         parser.add_option_group(group)
 
     @classmethod
@@ -52,7 +54,7 @@ class ParallelProcessor(object):
             parser.error('You can only specify one of --ipython-profile, --lsf-directory, and --multiprocessing.')
         if options.lsf_directory:
             import lsf
-            return lsf.LSF(50, options.lsf_directory)
+            return lsf.LSF(50, options.lsf_directory, memory=options.memory)
         elif options.ipython_profile:
             from IPython.parallel import Client, LoadBalancedView
             client = Client(profile=options.ipython_profile)

@@ -147,7 +147,7 @@ class Profiles(object):
 
     @classmethod
     def compute(cls, keys, variables, function, parameters, parallel=None,
-                ipython_profile=None, group_name=None):
+                ipython_profile=None, group_name=None, show_progress=True):
         """
         Compute profiles by applying the parameters to the function in parallel.
 
@@ -156,7 +156,7 @@ class Profiles(object):
         njobs = len(parameters)
         parallel = parallel or ParallelProcessor.create_from_legacy(ipython_profile)
         generator = parallel.view('profiles.compute').imap(function, parameters)
-        try:
+        if show_progress:
             import progressbar
             progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
                                                         progressbar.Bar(), ' ', 
@@ -164,9 +164,9 @@ class Profiles(object):
                                                         str(njobs), ' ',
                                                         progressbar.ETA()],
                                                maxval=njobs)
-            data = list(progress(generator))
-        except ImportError:
-            data = list(generator)
+        else:
+            progress = lambda x: x
+        data = list(progress(generator))
 
         if all([l is None for l in data]):
             print "No data returned! Not generating a Profile class"
@@ -183,3 +183,10 @@ class Profiles(object):
         keys = list(itertools.compress(keys, rowmask))
 
         return cls(keys, data, variables, group_name=group_name)
+
+
+def add_common_options(parser):
+    parser.add_option('--normalization', help='normalization method (default: RobustLinearNormalization)',
+                      default='RobustLinearNormalization')
+    parser.add_option('--preprocess', dest='preprocess_file', 
+                      help='model to preprocess with (default: none)')
