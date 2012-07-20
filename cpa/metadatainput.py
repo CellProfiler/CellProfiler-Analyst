@@ -26,6 +26,8 @@ from makechannel import ChannelBuilder
 from stepbuilder import StepBuilder
 from passagestepwriter import *
 
+ICON_SIZE = 22.0
+
 
 class ExperimentSettingsWindow(wx.SplitterWindow):
     def __init__(self, parent, id=-1, **kwargs):
@@ -3391,13 +3393,15 @@ class CellSeedPanel(wx.Panel):
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Cell Seeding')
+	pic=wx.StaticBitmap(self.sw)
+	pic.SetBitmap(icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.sw, -1, 'Seed')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
 	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
-	#bmp = icons.seed.Scale(16.0, 16.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-	#titlesizer.Add(wx.Bitmap(icons.seed.Scale(16.0, 16.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()), 0)
         
         # Selection Button
 	showInstBut = wx.Button(self.sw, -1, 'Show Stock Cultures', (100,100))
@@ -3548,10 +3552,14 @@ class CellHarvestPanel(wx.Panel):
         fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Cell Harvesting')
+	pic=wx.StaticBitmap(self.sw)
+	pic.SetBitmap(icons.harvest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.sw, -1, 'Harvest')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
 
         cell_Line_instances = meta.get_field_instances('StockCulture|Sample|CellLine|')
@@ -3703,13 +3711,16 @@ class ChemicalAgentPanel(wx.Panel):
         # Attach a flexi sizer for the text controler and labels
         fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
-	#------- Heading ---#
+	#------- Heading ------#	
+	pic=wx.StaticBitmap(self.sw)
+	pic.SetBitmap(icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
 	text = wx.StaticText(self.sw, -1, 'Chemical Agent')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
-
         #  Chem Agent Name
         chemnamTAG = 'Perturbation|Chem|ChemName|'+str(self.page_counter)
         self.settings_controls[chemnamTAG] = wx.TextCtrl(self.sw, value=meta.get_field(chemnamTAG, default=''), style=wx.TE_PROCESS_ENTER)
@@ -3871,12 +3882,16 @@ class BiologicalAgentPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
+	pic=wx.StaticBitmap(self.sw)
+	pic.SetBitmap(icons.dna.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
 	text = wx.StaticText(self.sw, -1, 'Biological Agent')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
-	titlesizer.Add(text, 0)	
-
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
+	titlesizer.Add(text, 0)		
+	
         #  RNAi Sequence
         seqnamTAG = 'Perturbation|Bio|SeqName|'+str(self.page_counter)
         self.settings_controls[seqnamTAG] = wx.TextCtrl(self.sw, value=meta.get_field(seqnamTAG, default=''))
@@ -4048,10 +4063,14 @@ class ImmunoPanel(wx.Panel):
 	top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
-	text = wx.StaticText(self.top_panel, -1, 'Immuno Staining')
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.antibody.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Immunofluorscence Staining Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
 
         protnameTAG = 'Staining|Immuno|ProtocolName|'+str(self.page_counter)
@@ -4321,10 +4340,15 @@ class GeneticPanel(wx.Panel):
 	
 	top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
-	text = wx.StaticText(self.top_panel, -1, 'Genetic Staining')
+	#------- Heading ---#
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.primer.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Genetic (Primer) Staining Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)		
 
 	protnameTAG = 'Staining|Genetic|ProtocolName|'+str(self.page_counter)
@@ -4513,10 +4537,14 @@ class DyePanel(wx.Panel):
 	top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
-	text = wx.StaticText(self.top_panel, -1, 'Dye Staining')
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Dye (Chemical) Staining Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)		
 
         protnameTAG = 'Staining|Dye|ProtocolName|'+str(self.page_counter)
@@ -4726,10 +4754,14 @@ class SpinPanel(wx.Panel):
 	
 	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
-	text = wx.StaticText(self.top_panel, -1, 'Spinning')
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Spining Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)		
 
         protnameTAG = 'AddProcess|Spin|ProtocolName|'+str(self.page_counter)
@@ -4879,11 +4911,15 @@ class WashPanel(wx.Panel):
 	
 	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
-	text = wx.StaticText(self.top_panel, -1, 'Washing')
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.wash.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Washing Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
-	titlesizer.Add(text, 0)		
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
+	titlesizer.Add(text, 0)			
 
 	protnameTAG = 'AddProcess|Wash|ProtocolName|'+str(self.page_counter)
 	self.settings_controls[protnameTAG] = wx.TextCtrl(self.top_panel, value=meta.get_field(protnameTAG, default=''))
@@ -5030,10 +5066,14 @@ class DryPanel(wx.Panel):
 	
 	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
-	text = wx.StaticText(self.top_panel, -1, 'Drying')
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.dry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Drying Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)		
 
 	protnameTAG = 'AddProcess|Dry|ProtocolName|'+str(self.page_counter)
@@ -5183,10 +5223,14 @@ class MediumPanel(wx.Panel):
 	
 	fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
-	text = wx.StaticText(self.top_panel, -1, 'Add Medium')
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.medium.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Add Medium Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
 
 	protnameTAG = 'AddProcess|Medium|ProtocolName|'+str(self.page_counter)
@@ -5347,10 +5391,14 @@ class IncubatorPanel(wx.Panel):
 	
 	top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	#------- Heading ---#
-	text = wx.StaticText(self.top_panel, -1, 'Incubation')
+	pic=wx.StaticBitmap(self.top_panel)
+	pic.SetBitmap(icons.incubator.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.top_panel, -1, 'Incubation Protocol')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
 
 	protnameTAG = 'AddProcess|Incubator|ProtocolName|'+str(self.page_counter)
@@ -5521,10 +5569,14 @@ class TLMPanel(wx.Panel):
         fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Image Format')
+	pic=wx.StaticBitmap(self.sw)
+	pic.SetBitmap(icons.tlm.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.sw, -1, 'Timelapse Image Format')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
 
         #-- Microscope selection ---#
@@ -5695,10 +5747,14 @@ class HCSPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
-	text = wx.StaticText(self.sw, -1, 'Image Format')
+	pic=wx.StaticBitmap(self.sw)
+	pic.SetBitmap(icons.staticimage.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	text = wx.StaticText(self.sw, -1, 'Static Image Format')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
 	titlesizer.Add(text, 0)	
         
         #-- Microscope selection ---#
@@ -5846,11 +5902,15 @@ class FCSPanel(wx.Panel):
         fgs = wx.FlexGridSizer(rows=15, cols=3, hgap=5, vgap=5)
 	
 	#------- Heading ---#
+	pic=wx.StaticBitmap(self.sw)
+	pic.SetBitmap(icons.fcs.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
 	text = wx.StaticText(self.sw, -1, 'FCS File Format')
 	font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
 	text.SetFont(font)
-	titlesizer = wx.BoxSizer(wx.VERTICAL)
-	titlesizer.Add(text, 0)	
+	titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	titlesizer.Add(pic)
+	titlesizer.AddSpacer((5,-1))	
+	titlesizer.Add(text, 0)		
 
         #-- FlowCytometer selection ---#
         fcsselctTAG = 'DataAcquis|FCS|FlowcytInstance|'+str(self.page_counter)
@@ -5976,19 +6036,24 @@ class NotePanel(wx.Panel):
         self.page_counter = page_counter
         self.sw = wx.ScrolledWindow(self)
  
-        self.top_fgs = wx.FlexGridSizer(cols=3, hgap=5, vgap=5)	
+        self.titlesizer = wx.BoxSizer(wx.HORIZONTAL)
+	self.top_fgs = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)	
 	self.bot_fgs = wx.FlexGridSizer(cols=1, hgap=5, vgap=5)
-	
+		
 	self.noteSelect = wx.Choice(self.sw, -1,  choices=['CriticalPoint', 'Rest', 'Hint', 'URL', 'Video'])
+	self.note_label = wx.StaticText(self.sw, -1, 'Note type')
 	self.noteSelect.SetStringSelection('')
 	self.noteSelect.Bind(wx.EVT_CHOICE, self.onCreateNotepad)
-	self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Note type'), 0)
-	self.top_fgs.Add(self.noteSelect, 0, wx.EXPAND)
-	self.top_fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	self.titlesizer.Add(self.note_label)
+	self.titlesizer.AddSpacer((10,-1))
+	self.titlesizer.Add(self.noteSelect, 0, wx.EXPAND)
 	
 	#---------------Layout with sizers---------------
 	self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+	self.mainSizer.Add(self.titlesizer)
+	self.mainSizer.AddSpacer((-1,5))	
 	self.mainSizer.Add(self.top_fgs)
+	self.mainSizer.AddSpacer((-1,5))
 	self.mainSizer.Add(self.bot_fgs)
 	self.sw.SetSizer(self.mainSizer)
 	self.sw.SetScrollbars(20, 20, self.Size[0]+20, self.Size[1]+20, 0, 0)
@@ -6010,33 +6075,79 @@ class NotePanel(wx.Panel):
 	self.noteType = ctrl.GetStringSelection()
 	self.createNotePad()
     
-    def createNotePad(self):		
-	if self.noteType=='CriticalPoint' or self.noteType=='Rest'or self.noteType=='Hint':
+    def createNotePad(self):	
+	
+	self.note_label.Hide()
+	self.noteSelect.Hide()	
+	
+	if self.noteType=='CriticalPoint':
 	    self.noteDescrip = wx.TextCtrl(self.sw,  value=meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter)), default=''), style=wx.TE_MULTILINE)
 	    self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
 	    self.noteDescrip.SetInitialSize((250, 300))
-	    self.noteSelect.SetStringSelection(self.noteType)
-	    self.noteSelect.Disable()
-	   
-	    self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Note Description'), 0)
-	    self.top_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
-	    self.top_fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	
+	    pic=wx.StaticBitmap(self.sw)
+	    pic.SetBitmap(icons.critical.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	    text = wx.StaticText(self.sw, -1, 'Critical Note')
+	    font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	    text.SetFont(font)
+
+	    self.titlesizer.Add(pic)
+	    self.titlesizer.Add(text, 0) 
+	    self.bot_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
+	    self.bot_fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
+	    
+	if self.noteType=='Hint':
+	    self.noteDescrip = wx.TextCtrl(self.sw,  value=meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter)), default=''), style=wx.TE_MULTILINE)
+	    self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
+	    self.noteDescrip.SetInitialSize((250, 300))
+	
+	    pic=wx.StaticBitmap(self.sw)
+	    pic.SetBitmap(icons.hint.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	    text = wx.StaticText(self.sw, -1, 'Hint')
+	    font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	    text.SetFont(font)
+
+	    self.titlesizer.Add(pic)
+	    self.titlesizer.Add(text, 0) 
+	    self.bot_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
+	    self.bot_fgs.Add(wx.StaticText(self.sw, -1, ''), 0)	
+	    
+	if self.noteType=='Rest':
+	    self.noteDescrip = wx.TextCtrl(self.sw,  value=meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter)), default=''), style=wx.TE_MULTILINE)
+	    self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
+	    self.noteDescrip.SetInitialSize((250, 300))
+	
+	    pic=wx.StaticBitmap(self.sw)
+	    pic.SetBitmap(icons.rest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	    text = wx.StaticText(self.sw, -1, 'Rest')
+	    font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	    text.SetFont(font)
+
+	    self.titlesizer.Add(pic)
+	    self.titlesizer.Add(text, 0) 
+	    self.bot_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
+	    self.bot_fgs.Add(wx.StaticText(self.sw, -1, ''), 0)	
 	
 
 	if self.noteType == 'URL':
 	    self.noteDescrip = wx.TextCtrl(self.sw,  value=meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter)), default='http://www.jove.com/'))
 	    self.noteDescrip.Bind(wx.EVT_TEXT, self.OnSavingData)
 	    self.noteDescrip.SetInitialSize((250, 20))
-	    self.noteSelect.SetStringSelection(self.noteType)
-	    self.noteSelect.Disable()
 	    
 	    goURLBtn = wx.Button(self.sw, -1, 'Go to URL')
 	    goURLBtn.Bind(wx.EVT_BUTTON, self.goURL)
-	    
-	    self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Paste URL'), 0)
-	    self.top_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
-	    self.top_fgs.Add(goURLBtn, 0, wx.EXPAND)
+	
+	    pic=wx.StaticBitmap(self.sw)
+	    pic.SetBitmap(icons.url.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	    text = wx.StaticText(self.sw, -1, 'URL')
+	    font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	    text.SetFont(font)
 
+	    self.titlesizer.Add(pic)
+	    self.titlesizer.Add(text, 0) 
+	    self.top_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
+	    self.top_fgs.Add(goURLBtn, 0)	    
+	    
 	if self.noteType == 'Video':
 	    self.mediaTAG = 'Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))
 	    self.noteDescrip = wx.TextCtrl(self.sw, value=meta.get_field(self.mediaTAG, default=''))
@@ -6045,13 +6156,19 @@ class NotePanel(wx.Panel):
 	    self.browseBtn.Bind(wx.EVT_BUTTON, self.loadFile)
 	    self.mediaplayer = MediaPlayer(self.sw)
 	    
+	    pic=wx.StaticBitmap(self.sw)
+	    pic.SetBitmap(icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap())
+	    text = wx.StaticText(self.sw, -1, 'Video')
+	    font = wx.Font(9, wx.SWISS, wx.NORMAL, wx.BOLD)
+	    text.SetFont(font)	    
+	    
 	    if meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))) is not None:	
 		self.mediaplayer.mc.Load(meta.get_field('Notes|%s|Description|%s' %(self.noteType, str(self.page_counter))))		
-
-	    self.top_fgs.Add(wx.StaticText(self.sw, -1, 'Media file path'), 0)
-	    self.top_fgs.Add(self.noteDescrip, 0)
-	    self.top_fgs.Add(self.browseBtn, 0)
-	    
+    
+	    self.titlesizer.Add(pic)
+	    self.titlesizer.Add(text, 0) 
+	    self.top_fgs.Add(self.noteDescrip, 0,  wx.EXPAND)
+	    self.top_fgs.Add(self.browseBtn, 0)	    	
 	    self.bot_fgs.Add(self.mediaplayer, 0)
 
 	self.sw.SetSizer(self.mainSizer)
