@@ -26,7 +26,7 @@ class CellProfilerAnalystMSI(distutils.core.Command):
         fd.write("""
 AppVerName=CellProfiler 2.0 r%s
 OutputBaseFilename=CellProfilerAnalyst_win32_r%s
-""" % (util.version.version_string, util.version.version_string))
+""" % (util.version.get_version(), util.version.get_version()))
         fd.close()
         required_files = os.path.join("dist", "cpa.exe")
         compile_command = self.__compile_command()
@@ -34,7 +34,7 @@ OutputBaseFilename=CellProfilerAnalyst_win32_r%s
         self.make_file(
             required_files,
             os.path.join("Output", "CellProfilerAnalyst_win32_r%s.exe" % 
-                         util.version.version_string),
+                         util.version.get_version()),
             subprocess.check_call, ([compile_command]))
         
     def __compile_command(self):
