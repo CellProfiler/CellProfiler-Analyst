@@ -48,8 +48,10 @@ OutputBaseFilename=CellProfilerAnalyst_win32_r%s
                 key.Close()
             raise DistutilsFileError, "Inno Setup does not seem to be installed properly. Specifically, there is no entry in the HKEY_CLASSES_ROOT for InnoSetupScriptFile\\shell\\Compile\\command"
 
-    
-CP_HOME = '../../CellProfiler/'
+if 'CP_HOME' in os.environ:
+    CP_HOME = os.environ['CP_HOME']
+else:
+    CP_HOME = '../../CellProfiler/'
 if not os.path.exists(CP_HOME):
     raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py')
     exit(1)
