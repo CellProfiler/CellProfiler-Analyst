@@ -24,17 +24,17 @@ class CellProfilerAnalystMSI(distutils.core.Command):
     def run(self):
         fd = open("version.iss", "w")
         fd.write("""
-AppVerName=CellProfiler 2.0 r%s
-OutputBaseFilename=CellProfilerAnalyst_win32_r%s
-""" % (util.version.get_version(), util.version.get_version()))
+AppVerName=CellProfiler 2.0 r%d
+OutputBaseFilename=CellProfilerAnalyst_win32_r%d
+""" % (util.version.version_number, util.version.version_number))
         fd.close()
         required_files = os.path.join("dist", "cpa.exe")
         compile_command = self.__compile_command()
         compile_command = compile_command.replace("%1", "CellProfilerAnalyst.iss")
         self.make_file(
             required_files,
-            os.path.join("Output", "CellProfilerAnalyst_win32_r%s.exe" % 
-                         util.version.get_version()),
+            os.path.join("Output", "CellProfilerAnalyst_win32_r%d.exe" % 
+                         util.version.version_number),
             subprocess.check_call, ([compile_command]))
         
     def __compile_command(self):
