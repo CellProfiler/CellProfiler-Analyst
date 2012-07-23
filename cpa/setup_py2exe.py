@@ -59,14 +59,12 @@ else:
     sys.path.append(CP_HOME)
 
 #
-# Write version to cpa_version.py so CPA.exe can determine version.
+# Write the frozen version
 #
-s = os.popen('svnversion')
-version = s.read()
-f = open('cpa_version.py', 'w')
-f.write('VERSION = "%s"\n'%("".join([v for v in version.strip() if v in '0123456789'])))
+import util.version
+f = open("util/frozen_version.py", "w")
+f.write("# MACHINE_GENERATED\nversion_string = '%s'" % util.version.version_string)
 f.close()
-import cpa_version
 
 if not 'py2exe' in sys.argv:
     sys.argv.append('py2exe')
@@ -82,7 +80,7 @@ setup(windows=[{'script':'cpa.py',
                           "wx.tools", "pylab", "scipy.weave",
                           "Tkconstants","Tkinter","tcl",
                           "Cython", "imagej", 'h5py', 'vigra',
-                          'PyQt4'],
+                          'PyQt4', 'zmq'],
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
                              'libgobject-2.0-0.dll', 
                              'libgdk_pixbuf-2.0-0.dll',
