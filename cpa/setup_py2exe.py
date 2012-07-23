@@ -33,7 +33,8 @@ OutputBaseFilename=CellProfilerAnalyst_win32_r%s
         compile_command = compile_command.replace("%1", "CellProfilerAnalyst.iss")
         self.make_file(
             required_files,
-            os.path.join("Output", "CellProfilerAnalyst_win32_r%s.exe" % cpa_version.VERSION),
+            os.path.join("Output", "CellProfilerAnalyst_win32_r%s.exe" % 
+                         util.version.version_string),
             subprocess.check_call, ([compile_command]))
         
     def __compile_command(self):
