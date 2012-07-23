@@ -51,7 +51,7 @@ OutputBaseFilename=CellProfilerAnalyst_win32_r%s
 if 'CP_HOME' in os.environ:
     CP_HOME = os.environ['CP_HOME']
 else:
-    CP_HOME = '../../CellProfiler/'
+    CP_HOME = '../../CellProfiler'
 if not os.path.exists(CP_HOME):
     raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py')
     exit(1)
@@ -84,14 +84,14 @@ setup(windows=[{'script':'cpa.py',
             "dll_excludes": ['libgdk-win32-2.0-0.dll',
                              'libgobject-2.0-0.dll', 
                              'libgdk_pixbuf-2.0-0.dll',
-                             'tcl84.dll', 'tk84.dll', 'jvm.dll'],
+                             'tcl84.dll', 'tk84.dll', 'jvm.dll', 'MSVCP90.dll'],
             }
         },
       data_files=(
               matplotlib.get_py2exe_datafiles() +
               [('icons', glob.glob('icons\\*.png')),
-               ('bioformats', [CP_HOME+'bioformats/loci_tools.jar']),
-               ('cellprofiler/icons', [CP_HOME+'cellprofiler/icons/CellProfilerIcon.png']), # needed for cpfigure used by classifier cross validation
+               ('bioformats', [os.path.join(CP_HOME, 'bioformats/loci_tools.jar')]),
+               ('cellprofiler/icons', [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), # needed for cpfigure used by classifier cross validation
               ]
             ),
       cmdclass={"msi":CellProfilerAnalystMSI}
