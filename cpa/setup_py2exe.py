@@ -10,6 +10,8 @@ import numpy
 import subprocess
 import _winreg
 
+import util.version
+
 class CellProfilerAnalystMSI(distutils.core.Command):
     description = "Make CellProfilerAnalyst.msi using InnoSetup"
     user_options = []
@@ -24,7 +26,7 @@ class CellProfilerAnalystMSI(distutils.core.Command):
         fd.write("""
 AppVerName=CellProfiler 2.0 r%s
 OutputBaseFilename=CellProfilerAnalyst_win32_r%s
-""" % (cpa_version.VERSION, cpa_version.VERSION))
+""" % (util.version.version_string, util.version.version_string))
         fd.close()
         required_files = os.path.join("dist", "cpa.exe")
         compile_command = self.__compile_command()
@@ -61,7 +63,6 @@ else:
 #
 # Write the frozen version
 #
-import util.version
 f = open("util/frozen_version.py", "w")
 f.write("# MACHINE_GENERATED\nversion_string = '%s'" % util.version.version_string)
 f.close()
