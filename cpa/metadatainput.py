@@ -5610,7 +5610,7 @@ class TLMPanel(wx.Panel):
         fgs.Add(self.settings_controls[tlmintTAG], 0, wx.EXPAND)
         fgs.Add(wx.StaticText(self.sw, -1, ''), 0)
         #  Total Frame/Pane Number
-        tlmfrmTAG = 'DataAcquis|TLM|FrameNumber|'
+        tlmfrmTAG = 'DataAcquis|TLM|FrameNumber|'+str(self.page_counter)
         self.settings_controls[tlmfrmTAG] = wx.TextCtrl(self.sw, value=meta.get_field(tlmfrmTAG, default=''))
         self.settings_controls[tlmfrmTAG].Bind(wx.EVT_TEXT, self.OnSavingData)
         self.settings_controls[tlmfrmTAG].SetToolTipString('Total Frame/Pane Number')
