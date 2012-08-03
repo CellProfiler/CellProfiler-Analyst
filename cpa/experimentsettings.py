@@ -4,7 +4,6 @@ from singleton import Singleton
 from utils import *
 from timeline import Timeline
 
-#
 # TODO: Updating PlateDesign could be done entirely within 
 #       set_field and remove_field.
 #
@@ -539,8 +538,73 @@ class ExperimentSettings(Singleton):
 		self.set_field(tag, '%02d/%02d/%4d'%(date.Day, date.Month+1, date.Year))
 	    else:
 		user_input = ctrl.GetValue()
-		self.set_field(tag, user_input)	 
+		self.set_field(tag, user_input)	
+	    
+    def get_seeded_sample(self, platewell_id):
+	'''this method returns sample or cell line information for the selected well
+	'''
+	timeline = self.get_timeline()
+	timepoints = timeline.get_unique_timepoints()
+	events_by_timepoint = timeline.get_events_by_timepoint()   
+	
+	seeding_instances = []
+	for i, timepoint in enumerate(timepoints):
+	    for ev in events_by_timepoint[timepoint]:
+		for well_id in ev.get_well_ids():
+		    if well_id == platewell_id and ev.get_welltag().startswith('CellTransfer|Seed'):
+			seeding_instances.append(ev.get_welltag())
+			
+	return seeding_instances
     
+    def get_sampleInstance(self, seed_tag):
+	'''This method returns the stock culutre or sample instance for a given seeding tag CellTransfer|Seed|Wells|<instance>
+	'''
+	instance = get_tag_instance(seed_tag)
+	# if seed from stock culture
+	if self.global_settings.has_key('CellTransfer|Seed|StockInstance|%s'%instance):
+	    return self.get_field('CellTransfer|Seed|StockInstance|%s'%instance)
+	elif self.global_settings.has_key('CellTransfer|Seed|HarvestInstance|%s'%instance):
+	    return self.get_field('CellTransfer|Harvest|StockInstance|%s'
+	                          %str(self.get_field('CellTransfer|Seed|HarvestInstance|%s'%instance)))	
+	    
+    #----------------------------------------------------------------------
+    def getNodeRGB(self, trackTags):
+	"""This method returns the colour of the node given the history of the ancestor nodes events"""
+	currRGB = (255, 255, 255, 100)
+	for tag in trackTags:
+	    event = get_tag_event(tag)
+	    if event.startswith('Notes') or event.startswith('DataAcquis'): # since these are measurements or notes
+		continue
+	    currRGB = (int((currRGB[0]+EVENT_RGB[event][0])/2), int((currRGB[1]+EVENT_RGB[event][1])/2), int((currRGB[2]+EVENT_RGB[event][2])/2), 100)
+	return currRGB
+        
+	    
+EVENT_RGB ={
+    'Seed': (255,255,0,100),
+    'Harvest': (227,205,41,100),
+    'Chem': (255,51,102,100),
+    'Bio': (102,102,255,100),
+    'Dye': (27,188,224,100),
+    'Immuno': (27,224,43,100),
+    'Genetic': (27,224,181,100),
+    'Spin': (224,27,198,100),
+    'Incubator': (224,27,224,100),
+    'Wash': (175,27,224,100),
+    'Dry': (168,27224,100),
+    'Medium': (122,27,224,100),
+    'TLM': (224,194,27,100),
+    'HCS': (224,178,27,100),
+    'FCS': (224,142,27,100),
+    'CriticalPoint': (224,103,27,100),
+    'Hint': (224,86,27,100),
+    'Rest': (224,73,27,100),
+    'URL': (224,53,27,100),
+    'Video': (224,40,27,100),
+    
+
+}
+
+	
 
             
         

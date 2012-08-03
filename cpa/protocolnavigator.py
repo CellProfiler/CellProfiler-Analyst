@@ -11,6 +11,7 @@ import snapshotPrinter
 import wx
 import os
 
+
 class LineageProfiler(wx.App):
     '''The ProtocolNavigator Application
     This launches the main UI, and keeps track of the session.

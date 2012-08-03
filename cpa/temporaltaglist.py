@@ -43,10 +43,12 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
         '''
         new_protocols = set([get_tag_protocol(tag) 
                              for tag in meta.get_action_tags()])
-        for new_prot in list(new_protocols):  #prevent showing seeding instances created due to harvest-seed event
+        for new_prot in list(new_protocols):  #prevent showing harvest & seeding instances created due to harvest-seed (cell transfer) event
             cat, action, inst = new_prot.split('|')
+            if cat=='CellTransfer' and action=='Harvest':
+                new_protocols.remove(new_prot)
             if meta.get_field('%s|%s|HarvestInstance|%s'%(cat, action, inst )) is not None:
-                    new_protocols.remove(new_prot)  
+                new_protocols.remove(new_prot)  
                 
         if set(self.protocols) != new_protocols:
             self.protocols = sorted(new_protocols)
