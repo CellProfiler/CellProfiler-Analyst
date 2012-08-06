@@ -92,7 +92,7 @@ class Bench(wx.Frame):
         group_tags = meta.get_matching_tags('ExptVessel|*|StackName|*')
         for tag in sorted(group_tags, key=meta.stringSplitByNumbers):
             if meta.get_field(tag) in selected_groups:
-                group_name = meta.get_field(tag)
+                stack_name = meta.get_field(tag)
                 prefix = get_tag_stump(tag, 2)
                 vessel_type = tag.split('|')[1]
                 inst = get_tag_instance(tag)

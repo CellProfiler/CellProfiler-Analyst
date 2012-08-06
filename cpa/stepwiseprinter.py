@@ -78,8 +78,8 @@ class PrintProtocol(wx.Frame):
         
         self.printfile = file('screenshot.htm', 'w')
       
-        timepoints = meta.get_timeline().get_unique_timepoints()
         timeline = meta.get_timeline()
+	timepoints = timeline.get_unique_timepoints()
         self.events_by_timepoint = timeline.get_events_by_timepoint()
         
         

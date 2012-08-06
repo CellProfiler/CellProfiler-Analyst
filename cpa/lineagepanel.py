@@ -35,15 +35,15 @@ class LineageFrame(wx.Frame):
         sw.SetScrollbars(20, 20, self.Size[0]/20, self.Size[1]/20, 0, 0)
         sw.Fit()
         
-        tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
-        tb.AddControl(wx.StaticText(tb, -1, 'zoom'))
-        self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS)).GetControl()
-        self.zoom.SetRange(1, 30)
-        self.zoom.SetValue(8)
-        #x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
-        #x_spacing.GetControl().SetValue(0)
-        #generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
-        tb.Realize()
+        #tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
+        #tb.AddControl(wx.StaticText(tb, -1, 'zoom'))
+        #self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS|wx.VERTICAL)).GetControl()
+        #self.zoom.SetRange(1, 30)
+        #self.zoom.SetValue(8)
+        ##x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
+        ##x_spacing.GetControl().SetValue(0)
+        ##generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
+        #tb.Realize()
         
         #from f import TreeCtrlComboPopup
         #cc = wx.combo.ComboCtrl(sw)
@@ -52,7 +52,7 @@ class LineageFrame(wx.Frame):
         #sw.Sizer.Add(cc)
         #meta.add_subscriber(self.on_metadata_changed, '')
         
-        self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
+        #self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
         #self.Bind(wx.EVT_CHECKBOX, self.on_change_spacing, x_spacing)
         #self.Bind(wx.EVT_BUTTON, self.generate_random_data, generate)
         
@@ -115,11 +115,13 @@ class TimelinePanel(wx.Panel):
     PAD = 0.0
     ICON_SIZE = 16.0
     MIN_X_GAP = ICON_SIZE + 2
-    TIC_SIZE = 2
+    TIC_SIZE = 4
     FONT_SIZE = (5,10)
+    
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
+	self.SetBackgroundColour('#F5E8CE')
 
         meta.add_subscriber(self.on_timeline_updated, exp.get_matchstring_for_subtag(2, 'Well'))
         self.timepoints = None
@@ -157,12 +159,12 @@ class TimelinePanel(wx.Panel):
         timeline = meta.get_timeline()
         self.events_by_timepoint = timeline.get_events_by_timepoint()
         self.timepoints = timeline.get_unique_timepoints()
-        # for time compact x-spacing
-        #if len(self.timepoints) > 1:
-            #self.min_time_gap = min([y-x for x,y in zip(self.timepoints[:-1], 
-                                                        #self.timepoints[1:])])
-        #else:
-            #self.min_time_gap = 1
+         #for time compact x-spacing
+        if len(self.timepoints) > 1:
+            self.min_time_gap = min([y-x for x,y in zip(self.timepoints[:-1], 
+                                                        self.timepoints[1:])])
+        else:
+            self.min_time_gap = 1
         self._recalculate_min_size()
         self.Refresh()
         self.Parent.FitInside()
@@ -194,6 +196,7 @@ class TimelinePanel(wx.Panel):
         TIC_SIZE = self.TIC_SIZE
         FONT_SIZE = self.FONT_SIZE
         MAX_TIMEPOINT = self.timepoints[-1]
+	PERCENT_TIME_GAP = 10
         self.hover_timepoint = None
 
         dc = wx.PaintDC(self)
@@ -218,12 +221,33 @@ class TimelinePanel(wx.Panel):
         y = h_win - PAD - FONT_SIZE[1] - TIC_SIZE - 1
 
         # draw the timeline
-        if self.time_x:
+        if self.time_x:	    
             dc.DrawLine(PAD, y, 
                         px_per_time * MAX_TIMEPOINT + PAD, y)
-        else:            
-            dc.DrawLine(PAD, y, 
-                        x_gap * (len(self.timepoints) - 1) + PAD, y)
+        else:   
+	    x = PAD
+	    for i, timepoint in enumerate(self.timepoints):
+		if i > 0:
+		    if int(100*float((self.timepoints[i]-self.timepoints[i-1]))/float(MAX_TIMEPOINT)) > PERCENT_TIME_GAP: # TO DO: make this global variable and put multiple grades of time intervals
+			dc.SetPen(wx.Pen('#8C8085', 1, wx.SOLID))
+			
+			dxs = meta.partition(range(x, x+x_gap), 20)
+			
+			for p, dx in enumerate(dxs[:-1]):
+			    if p%2==0:
+				dc.DrawLine(dxs[p], y, dxs[p+1], y+2)
+				dc.DrawLine(dxs[p+1], y+2, dxs[p+1], y-2)
+			    else:
+				dc.DrawLine(dxs[p], y-2, dxs[p+1], y)
+			
+			    
+			#dc.DrawLine(x, y, x+x_gap, y)
+		    else:
+			dc.SetPen(wx.Pen('#8C8085', 2, wx.SOLID))
+			dc.DrawLine(x, y, x+x_gap, y)
+		    x += x_gap
+            #dc.DrawLine(PAD, y, 
+                        #x_gap * (len(self.timepoints) - 1) + PAD, y)
 
         font = dc.Font
         font.SetPixelSize(FONT_SIZE)
@@ -303,6 +327,10 @@ class TimelinePanel(wx.Panel):
             time_string = exp.format_time_string(timepoint)
             wtext = FONT_SIZE[0] * len(time_string)
             dc.DrawText(time_string, x - wtext/2.0, y + TIC_SIZE + 1)
+	    # Draw the notes icon at the bottom of the tick
+	    #notebmp = icons.hint.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	    #dc.DrawBitmap(notebmp, x - 8.0 / 2.0, 
+			                  #y + 8.0 + TIC_SIZE + 1)	    
         
         dc.EndDrawing()
 
@@ -498,14 +526,25 @@ class LineagePanel(wx.Panel):
                 
             # LEAF NODES
             elif i == 0:
-                for node in nodes_by_tp[t]:
+                for node in sorted(nodes_by_tp[t], key=self.order_nodes):
+		#for node in nodes_by_tp[t]:
+		    ancestor_tags = self.get_ancestral_tags(node)
+		    #if not ancestor_tags and 'CellTransfer|Seed' in node.get_tags():
+			#for tag in node.get_tags():
+			    #print meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag))
+			
+		    track_tags = [tags for tags in reversed(ancestor_tags)]+node.get_tags()
+		    nodeRGB = meta.getNodeRGB(track_tags)
+		   
                     empty_path = False # whether this path follows a harvesting
                     if len(node.get_tags()) > 0:
                         # Event occurred
-                        dc.SetBrush(wx.Brush('YELLOW'))
+                        #dc.SetBrush(wx.Brush('YELLOW'))
+			dc.SetBrush(wx.Brush(nodeRGB))
                     else:
                         # No event
-                        dc.SetBrush(wx.Brush('WHITE'))
+                        #dc.SetBrush(wx.Brush('WHITE'))
+			dc.SetBrush(wx.Brush(nodeRGB))
                         if 'CellTransfer|Harvest' in [exp.get_tag_stump(ptag, 2)
                                                       for pnode in timeline.reverse_iter_tree(node) if pnode
                                                       for ptag in pnode.tags]:
@@ -527,23 +566,29 @@ class LineagePanel(wx.Panel):
                     
             # INTERNAL NODES
             else:
-                for node in nodes_by_tp[t]:
+                for node in nodes_by_tp[t]:	
+		    ancestor_tags = self.get_ancestral_tags(node)
+		    track_tags = [tags for tags in reversed(ancestor_tags)]+node.get_tags()
+		    nodeRGB = meta.getNodeRGB(track_tags)	
+		    
                     empty_path = False # whether this path follows a harvesting
                     ys = []
                     for child in node.get_children():
                         ys.append(nodeY[child.id])
                     Y = (min(ys) + max(ys)) / 2
+		    
+		    dc.SetBrush(wx.Brush(nodeRGB))
 
-                    if len(node.get_tags()) > 0:
+                    #if len(node.get_tags()) > 0:
                         # Event occurred
-                        dc.SetBrush(wx.Brush('YELLOW'))
-                    else:
+                        #dc.SetBrush(wx.Brush('YELLOW'))
+                    #else:
                         # No event
-                        dc.SetBrush(wx.Brush('WHITE'))
-                        if 'CellTransfer|Harvest' in [exp.get_tag_stump(ptag, 2)
-                                                      for pnode in timeline.reverse_iter_tree(node) if pnode
-                                                      for ptag in pnode.tags]:
-                            empty_path = True
+                        #dc.SetBrush(wx.Brush('WHITE'))
+		
+			
+		    if 'CellTransfer|Harvest' in self.get_ancestral_tags(node):
+			empty_path = True
 
                     if hover(self.cursor_pos, (X,Y), self.NODE_R):
                         # MouseOver
@@ -561,7 +606,7 @@ class LineagePanel(wx.Panel):
                     else:
                         if not empty_path:
                             dc.DrawCircle(X, Y, NODE_R)
-##                            dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
+                            #dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                         
                     # DRAW LINES CONNECTING THIS NODE TO ITS CHILDREN
                     dc.SetBrush(wx.Brush('#FAF9F7'))
@@ -692,7 +737,18 @@ class LineagePanel(wx.Panel):
         return info_string  
     
     def get_description(self, protocol):
-        return '\n'.join(['%s=%s'%(k, v) for k, v in meta.get_attribute_dict(exp.get_tag_protocol(protocol))])           
+        return '\n'.join(['%s=%s'%(k, v) for k, v in meta.get_attribute_dict(exp.get_tag_protocol(protocol))])  
+    
+    def get_ancestral_tags(self, node):
+	return [exp.get_tag_stump(ptag, 2)
+	        for pnode in timeline.reverse_iter_tree(node) if pnode
+	        for ptag in pnode.tags]
+    
+    #----------------------------------------------------------------------
+    def order_nodes(self, node):
+	"""Sort the node according to the Plate_Well ids"""
+	x = node.get_well_ids()
+	return tuple(sorted([("PTFCD".find(item[0][0]), item[0], item[1]) for item in x]))	
 
         
 if __name__ == "__main__":
