@@ -35,15 +35,15 @@ class LineageFrame(wx.Frame):
         sw.SetScrollbars(20, 20, self.Size[0]/20, self.Size[1]/20, 0, 0)
         sw.Fit()
         
-        tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
-        tb.AddControl(wx.StaticText(tb, -1, 'zoom'))
-        self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS)).GetControl()
-        self.zoom.SetRange(1, 30)
-        self.zoom.SetValue(8)
-        #x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
-        #x_spacing.GetControl().SetValue(0)
-        #generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
-        tb.Realize()
+        #tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
+        #tb.AddControl(wx.StaticText(tb, -1, 'zoom'))
+        #self.zoom = tb.AddControl(wx.Slider(tb, -1, style=wx.SL_AUTOTICKS|wx.VERTICAL)).GetControl()
+        #self.zoom.SetRange(1, 30)
+        #self.zoom.SetValue(8)
+        ##x_spacing = tb.AddControl(wx.CheckBox(tb, -1, 'Time-relative branches'))
+        ##x_spacing.GetControl().SetValue(0)
+        ##generate = tb.AddControl(wx.Button(tb, -1, '+data'))        
+        #tb.Realize()
         
         #from f import TreeCtrlComboPopup
         #cc = wx.combo.ComboCtrl(sw)
@@ -52,7 +52,7 @@ class LineageFrame(wx.Frame):
         #sw.Sizer.Add(cc)
         #meta.add_subscriber(self.on_metadata_changed, '')
         
-        self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
+        #self.Bind(wx.EVT_SLIDER, self.on_zoom, self.zoom)
         #self.Bind(wx.EVT_CHECKBOX, self.on_change_spacing, x_spacing)
         #self.Bind(wx.EVT_BUTTON, self.generate_random_data, generate)
         
@@ -115,11 +115,13 @@ class TimelinePanel(wx.Panel):
     PAD = 0.0
     ICON_SIZE = 16.0
     MIN_X_GAP = ICON_SIZE + 2
-    TIC_SIZE = 2
+    TIC_SIZE = 4
     FONT_SIZE = (5,10)
+    
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
+	self.SetBackgroundColour('#F5E8CE')
 
         meta.add_subscriber(self.on_timeline_updated, exp.get_matchstring_for_subtag(2, 'Well'))
         self.timepoints = None
@@ -194,6 +196,7 @@ class TimelinePanel(wx.Panel):
         TIC_SIZE = self.TIC_SIZE
         FONT_SIZE = self.FONT_SIZE
         MAX_TIMEPOINT = self.timepoints[-1]
+	PERCENT_TIME_GAP = 10
         self.hover_timepoint = None
 
         dc = wx.PaintDC(self)
@@ -222,19 +225,29 @@ class TimelinePanel(wx.Panel):
             dc.DrawLine(PAD, y, 
                         px_per_time * MAX_TIMEPOINT + PAD, y)
         else:   
-	    #x = 0
-	    #for i, timepoint in enumerate(self.timepoints):
-		#if i > 0:
-		    #if int(100*float((self.timepoints[i]-self.timepoints[i-1]))/float(MAX_TIMEPOINT)) > 10: # TO DO: make this global variable and put multiple grades of time intervals
-			#dc.SetPen(wx.Pen('blue', 3, wx.SOLID))
-			#dc.DrawLine(PAD, y, x+PAD, y)
-			#x += x_gap
-		    #else:
-			#dc.SetPen(wx.Pen('black', 1, wx.SOLID))
-			#dc.DrawLine(PAD, y, x+PAD, y)	
-			#x += x_gap
-            dc.DrawLine(PAD, y, 
-                        x_gap * (len(self.timepoints) - 1) + PAD, y)
+	    x = PAD
+	    for i, timepoint in enumerate(self.timepoints):
+		if i > 0:
+		    if int(100*float((self.timepoints[i]-self.timepoints[i-1]))/float(MAX_TIMEPOINT)) > PERCENT_TIME_GAP: # TO DO: make this global variable and put multiple grades of time intervals
+			dc.SetPen(wx.Pen('#8C8085', 1, wx.SOLID))
+			
+			dxs = meta.partition(range(x, x+x_gap), 20)
+			
+			for p, dx in enumerate(dxs[:-1]):
+			    if p%2==0:
+				dc.DrawLine(dxs[p], y, dxs[p+1], y+2)
+				dc.DrawLine(dxs[p+1], y+2, dxs[p+1], y-2)
+			    else:
+				dc.DrawLine(dxs[p], y-2, dxs[p+1], y)
+			
+			    
+			#dc.DrawLine(x, y, x+x_gap, y)
+		    else:
+			dc.SetPen(wx.Pen('#8C8085', 2, wx.SOLID))
+			dc.DrawLine(x, y, x+x_gap, y)
+		    x += x_gap
+            #dc.DrawLine(PAD, y, 
+                        #x_gap * (len(self.timepoints) - 1) + PAD, y)
 
         font = dc.Font
         font.SetPixelSize(FONT_SIZE)
@@ -314,6 +327,10 @@ class TimelinePanel(wx.Panel):
             time_string = exp.format_time_string(timepoint)
             wtext = FONT_SIZE[0] * len(time_string)
             dc.DrawText(time_string, x - wtext/2.0, y + TIC_SIZE + 1)
+	    # Draw the notes icon at the bottom of the tick
+	    #notebmp = icons.hint.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	    #dc.DrawBitmap(notebmp, x - 8.0 / 2.0, 
+			                  #y + 8.0 + TIC_SIZE + 1)	    
         
         dc.EndDrawing()
 
