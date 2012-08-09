@@ -1,23 +1,10 @@
 #!/usr/bin/env python
 
-import sys
-import os.path
 from optparse import OptionParser
 import numpy as np
 import cpa
 from scipy.spatial.distance import cdist, cosine
 from .profiles import Profiles
-
-def limit_classes(profiles, true_group_name, nclasses):
-    true_labels = regroup(profiles, true_group_name)
-    labels_to_keep = list(set(true_labels[k] for k in profiles.keys()))[:nclasses]
-    keys_to_keep = set(k for k, v in true_labels.items()
-                       if v in labels_to_keep)
-    mask = np.array([key in keys_to_keep
-                     for key in profiles.keys()], dtype=bool)
-    return Profiles([key for key, keep in zip(profiles.keys(), mask) if keep],
-                    profiles.data[mask,:], profiles.variables,
-                    profiles.key_size, profiles.group_name)
 
 def regroup(profiles, group_name):
     input_group_r, input_colnames = cpa.db.group_map(profiles.group_name, 
@@ -97,9 +84,11 @@ class NNClassifier(object):
         distances = np.array([cosine(f, feature) for f in self.features])
         return self.labels[np.argmin(distances)]
 
-
+# A second implementation, originally written to make it possible to
+# incorporate SVA (now removed, but kept in the sva branch), but kept
+# for now because it may be clearer than the implementation above.
 def crossvalidate(profiles, true_group_name, holdout_group_name=None, 
-                  sva=False, train=NNClassifier):
+                  train=NNClassifier):
     profiles.assert_not_isnan()
     keys = profiles.keys()
     true_labels = regroup(profiles, true_group_name)
@@ -115,53 +104,15 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
         test_set_mask = np.array([tuple(holdouts[k]) == ho for k in keys], 
                                  dtype=bool)
         training_features = profiles.data[~test_set_mask, :]
-        test_features = profiles.data[test_set_mask, :]
-        training_labels = [labels.index(true_labels[tuple(k)]) # FOO
+        training_labels = [labels.index(true_labels[tuple(k)]) 
                            for k, m in zip(keys, ~test_set_mask) if m]
-        if sva:
-            import pyRserve
-            conn = pyRserve.connect()
-            conn.r.traininglabels = np.array(training_labels, dtype='i4')
-            conn.r.trainData = training_features.ravel().reshape(training_features.shape, order='F').T
-            conn.r.testData = test_features.ravel().reshape(test_features.shape, order='F').T
-            #import pdb; pdb.set_trace()
-            #assert conn.r('trainData[1,2]') == training_features[1, 0]
-            #assert conn.r('testData[1,2]') == test_features[1, 0]
-            conn.r('library(sva)')
-            conn.r('source("~/src/sva2/R/sva.R")')
-            conn.r('trainData <- as.matrix(trainData)')
-            conn.r('testData <- as.matrix(testData)')
-            conn.r('trainpheno <- data.frame(label=traininglabels)')
-            conn.r('write.table(trainData, "/tmp/trainData.txt")')
-            conn.r('write.table(testData, "/tmp/testData.txt")')
-            conn.r('write.table(trainpheno, "/tmp/trainpheno.txt")')
-            conn.r('trainMod <- model.matrix(~as.factor(label), trainpheno)')
-            conn.r('trainMod0 <- model.matrix(~1, trainpheno)')
-            conn.r('n.sv <- num.sv(trainData, trainMod, method="leek")')
-            nsv = conn.r('n.sv')
-            print >>sys.stderr, nsv, 'surrogate variables'
-            if nsv == 0:
-                continue
-            conn.r('trainSv <- sva(trainData, trainMod, trainMod0, n.sv=n.sv, B=1)')
-            if conn.r.trainSv == True: # really NA on the R side
-                print >>sys.stderr, 'SVA failed'
-                continue
-            else:
-                conn.r('fsvaobj <- fsva(trainData, trainMod, trainSv, testData)')
-                filtered_train = getattr(conn.r, 'fsvaobj$db').T
-                filtered_test = getattr(conn.r, 'fsvaobj$new').T
-                print >>sys.stderr, filtered_train.shape, training_features.shape, filtered_test.shape, test_features.shape
-        else:
-            filtered_train = training_features
-            filtered_test = test_features
 
-        model = train(filtered_train, training_labels)
+        model = train(training_features, training_labels)
         for k, f, m in zip(keys, profiles.data, test_set_mask):
             if not m:
                 continue
-            true = labels[labels.index(true_labels[tuple(k)])] # FOO
-            #true = true_labels[tuple(k)]
-            predicted = labels[model.classify(f)] # FOO
+            true = true_labels[k]
+            predicted = labels[model.classify(f)]
             confusion[true, predicted] = confusion.get((true, predicted), 0) + 1
     return confusion
 
@@ -196,9 +147,7 @@ def print_confusion(confusion):
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [-c] [-h HOLDOUT-GROUP] PROPERTIES-FILE PROFILES-FILENAME TRUE-GROUP")
     parser.add_option('-c', dest='csv', help='input and output as CSV', action='store_true')
-    parser.add_option('-s', dest='sva', help='surrogate variable analysis', action='store_true')
     parser.add_option('-H', dest='holdout_group', help='hold out all that map to the same holdout group', action='store')
-    parser.add_option('--limit-classes', dest='limit_classes', help='exclude all but a few classes', action='store', type='int')
     options, args = parser.parse_args()
     if len(args) != 3:
         parser.error('Incorrect number of arguments')
@@ -210,10 +159,5 @@ if __name__ == '__main__':
     else:
        profiles = Profiles.load(profiles_filename)
 
-    if options.limit_classes:
-        profiles = limit_classes(profiles, true_group_name, 
-                                 options.limit_classes)
-
-    confusion = crossvalidate(profiles, true_group_name,
-                              options.holdout_group, sva=options.sva)
+    confusion = crossvalidate(profiles, true_group_name, options.holdout_group)
     print_confusion(confusion)
