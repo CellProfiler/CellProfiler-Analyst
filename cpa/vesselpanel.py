@@ -53,7 +53,43 @@ class VesselPanel(wx.Panel):
         item = self.popupmenu.Append(-1, 'Harvest')
         self.Bind(wx.EVT_MENU, self.OnPopupItemSelected, item)
         self.Bind(wx.EVT_CONTEXT_MENU, self.OnShowPopup)
+	
+        self.rect = None
+        self.Bind(wx.EVT_LEFT_DOWN, self.on_mouse_down)
+        self.Bind(wx.EVT_LEFT_UP, self.on_mouse_up)
+        self.Bind(wx.EVT_MOTION, self.on_mouse_move)
+	self.Bind(wx.EVT_MOUSE_CAPTURE_LOST, self.on_mouse_capture_lost)
+        
+    def on_mouse_down(self, event):
+        self.rect = (event.GetPosition().x,
+                     event.GetPosition().y,
+                     event.GetPosition().x,
+                     event.GetPosition().y)
+	self.CaptureMouse()
     
+    def on_mouse_move(self, event):
+        if self.rect is None:
+            return
+        x0, y0 = self.rect[:2]
+        x1 = event.GetPosition().x
+        y1 = event.GetPosition().y
+        self.rect = (x0, y0, x1, y1)
+        self.Refresh(eraseBackground=False)
+    
+    def on_mouse_up(self, event):
+	if self.rect is None:
+	    return
+        x0, y0, x1, y1 = self.rect
+        print x0, y0, x1, y1
+        # Do something
+        self.rect = None
+        self.Refresh(eraseBackground=False)
+	self.ReleaseMouse()
+    
+    def on_mouse_capture_lost(self, event):
+	self.rect = None
+	self.Refresh(eraseBackground=False)
+	
     def OnShowPopup(self, event):
         self.rclick_pos = event.GetPosition()
         self.rclick_pos = self.ScreenToClient(self.rclick_pos)
@@ -193,7 +229,7 @@ class VesselPanel(wx.Panel):
                 for pos in self.selection]
     
     def _on_paint(self, evt=None):
-        dc = wx.PaintDC(self)
+        dc = wx.BufferedPaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
 
@@ -259,6 +295,15 @@ class VesselPanel(wx.Panel):
                     elif self.well_disp == SQUARE:
                         dc.DrawRectangle(px, py, R*2, R*2)
             
+	if self.rect is not None:
+	    x0, y0, x1, y1 = self.rect
+	    x = min(x0, x1)
+	    y = min(y0, y1)
+	    w = max(x0, x1) - x
+	    h = max(y0, y1) - y    
+	    dc.SetBrush(wx.Brush(wx.Color(0, 0, 0), wx.TRANSPARENT))
+	    dc.SetPen(wx.BLACK_PEN)
+	    dc.DrawRectangle(x, y, w, h)    
         dc.EndDrawing()
 
     def _on_size(self, evt):

@@ -106,6 +106,10 @@ class LineageFrame(wx.Frame):
                 #timeline.add_event(t, 'event%d'%(t), well_ids)
                 etype = event_types[np.random.randint(0,len(event_types))]
                 meta.set_field('%s%s'%(etype, t), well_ids)
+		
+    def set_hover_timepoint(self, hover_timepoint):
+	self.timeline_panel.hover_timepoint = hover_timepoint
+	self.lineage_panel.set_timepoint(hover_timepoint)
 
 
 class TimelinePanel(wx.Panel):
@@ -141,7 +145,7 @@ class TimelinePanel(wx.Panel):
         if icon_size is not None:
             self.ICON_SIZE = icon_size
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def set_x_spacing(self, mode):
@@ -150,7 +154,7 @@ class TimelinePanel(wx.Panel):
         elif mode == SPACE_EVEN:
             self.time_x = False
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
 
     def on_timeline_updated(self, tag):
@@ -164,7 +168,7 @@ class TimelinePanel(wx.Panel):
         else:
             self.min_time_gap = 1
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def _recalculate_min_size(self):
@@ -196,7 +200,7 @@ class TimelinePanel(wx.Panel):
         MAX_TIMEPOINT = self.timepoints[-1]
         self.hover_timepoint = None
 
-        dc = wx.PaintDC(self)
+        dc = wx.BufferedPaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
 
@@ -319,11 +323,11 @@ class TimelinePanel(wx.Panel):
 
     def _on_mouse_motion(self, evt):
         self.cursor_pos = evt.X
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def _on_mouse_exit(self, evt):
         self.cursor_pos = None
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         
     def _on_click(self, evt):
         if self.hover_timepoint is not None:
@@ -353,6 +357,7 @@ class LineagePanel(wx.Panel):
         self.time_x = False
         self.cursor_pos = None
         self.current_node = None
+	self.timepoint_cursor = None
         
         meta.add_subscriber(self.on_timeline_updated, 
                             exp.get_matchstring_for_subtag(2, 'Well'))
@@ -362,13 +367,17 @@ class LineagePanel(wx.Panel):
         self.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_exit)
         self.Bind(wx.EVT_LEFT_UP, self._on_mouse_click)
         
+    def set_timepoint(self, timepoint):
+	self.timepoint_cursor = timepoint
+	self.Refresh(eraseBackground=False)
+	
     def set_x_spacing(self, mode):
         if mode == SPACE_TIME:
             self.time_x = True
         elif mode == SPACE_EVEN:
             self.time_x = False
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def set_style(self, padding=None, xgap=None, ygap=None, node_radius=None,
@@ -384,7 +393,7 @@ class LineagePanel(wx.Panel):
         if flask_gap is not None:
             self.FLASK_GAP = flask_gap
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
      
     def on_timeline_updated(self, tag):
@@ -408,7 +417,7 @@ class LineagePanel(wx.Panel):
         self.timepoints.append(-1)
 
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def _recalculate_min_size(self):
@@ -447,6 +456,8 @@ class LineagePanel(wx.Panel):
             else:
                 px_per_time = max((w_win - PAD * 2 - FLASK_GAP) / MAX_TIMEPOINT,
                                   MIN_X_GAP)
+	else:
+	    px_per_time = 1
                 
         if len(nodes_by_tp) == 2:
             x_gap = 1
@@ -466,7 +477,7 @@ class LineagePanel(wx.Panel):
         Y = PAD
         X = w_win - PAD
         
-        dc = wx.PaintDC(self)
+        dc = wx.BufferedPaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
         #dc.SetPen(wx.Pen("BLACK",1))
@@ -624,16 +635,21 @@ class LineagePanel(wx.Panel):
                                                 X + x_gap - NODE_R,
                                                 nodeY[child.id])
                     nodeY[node.id] = Y
+	if self.timepoint_cursor is not None:
+	    h = self.GetClientRect().Height
+	    x = self.timepoint_cursor * px_per_time
+	    dc.DrawLine(x, 0, x, h)
+	
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
         
     def _on_mouse_motion(self, evt):
         self.cursor_pos = (evt.X, evt.Y)
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def _on_mouse_exit(self, evt):
         self.cursor_pos = None
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def _on_mouse_click(self, evt):
         if self.current_node is None:

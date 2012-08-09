@@ -13,8 +13,9 @@ from wx.lib.masked import TimeCtrl
 meta = ExperimentSettings.getInstance()
 
 class Bench(wx.Frame):
-    def __init__(self, parent, id=-1, title='Bench', **kwargs):
-        wx.Frame.__init__(self, parent, id, title=title, **kwargs)
+    def __init__(self, protocol_navigator, id=-1, title='Bench', **kwargs):
+        wx.Frame.__init__(self, None, id, title=title, **kwargs)
+        self.protocol_navigator = protocol_navigator
 
         # --- FRAME IS SPLIT INTO 2 PARTS (top, bottom) ---
         
@@ -127,6 +128,7 @@ class Bench(wx.Frame):
             self.time_slider.SetRange(0, timepoint)
         self.time_slider.Value = timepoint
         self.time_text_box.Value = format_time_string(timepoint)
+        self.protocol_navigator.get_lineage().set_hover_timepoint(timepoint)
         self.update_well_selections()
 
     def on_increment_time(self, evt):
