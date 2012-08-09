@@ -53,6 +53,51 @@ class VesselPanel(wx.Panel):
         item = self.popupmenu.Append(-1, 'Harvest')
         self.Bind(wx.EVT_MENU, self.OnPopupItemSelected, item)
         self.Bind(wx.EVT_CONTEXT_MENU, self.OnShowPopup)
+	
+	# drag mouse selection
+	self.panel = wx.Panel(self, size=self.Parent.GetSize())
+	self.panel.SetTransparent(80)
+        self.rect = None
+        self.panel.Bind(wx.EVT_LEFT_DOWN, self.on_mouse_down)
+        self.panel.Bind(wx.EVT_LEFT_UP, self.on_mouse_up)
+        self.panel.Bind(wx.EVT_MOTION, self.on_mouse_move)
+        self.panel.Bind(wx.EVT_PAINT, self.on_paint_select_area)
+	
+	
+        
+    def on_mouse_down(self, event):
+        self.rect = (event.GetPosition().x,
+                     event.GetPosition().y,
+                     event.GetPosition().x,
+                     event.GetPosition().y)
+    
+    def on_mouse_move(self, event):
+        if not event.Dragging():
+            return
+        x0, y0 = self.rect[:2]
+        x1 = event.GetPosition().x
+        y1 = event.GetPosition().y
+        self.rect = (x0, y0, x1, y1)
+        self.Refresh(eraseBackground=False)
+    
+    def on_mouse_up(self, event):
+        x0, y0, x1, y1 = self.rect
+        print x0, y0, x1, y1
+        # Do something
+        self.rect = None
+        self.Refresh(eraseBackground=False)
+    
+    def on_paint_select_area(self, event):
+        dc = wx.BufferedPaintDC(self.panel)
+        dc.Clear()
+        if self.rect is not None:
+            x0, y0, x1, y1 = self.rect
+            x = min(x0, x1)
+            y = min(y0, y1)
+            w = max(x0, x1) - x
+            h = max(y0, y1) - y    
+	    dc.SetBrush(wx.Brush(wx.Color(0, 0, 0), wx.TRANSPARENT))
+            dc.DrawRectangle(x, y, w, h)    
     
     def OnShowPopup(self, event):
         self.rclick_pos = event.GetPosition()
