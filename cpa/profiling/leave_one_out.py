@@ -6,28 +6,6 @@ import cpa
 from scipy.spatial.distance import cdist, cosine
 from .profiles import Profiles
 
-def regroup(profiles, group_name):
-    input_group_r, input_colnames = cpa.db.group_map(profiles.group_name, 
-                                                     reverse=True)
-    input_group_r = dict((tuple(map(str, k)), v) 
-                         for k, v in input_group_r.items())
-
-    group, colnames = cpa.db.group_map(group_name)
-    #group = dict((v, tuple(map(str, k))) 
-    #             for v, k in group.items())
-    d = {}
-    for key in profiles.keys():
-        images = input_group_r[key]
-        groups = [group[image] for image in images if image in group]
-        if len(groups) == 0:
-            # No group defined for this image.
-            continue
-        if groups.count(groups[0]) != len(groups):
-            print >>sys.stderr, 'Error: Input group %r contains images in %d output groups' % (key, len(set(groups)))
-            sys.exit(1)
-        d[key] = groups[0]
-    return d
-
 def vote(predictions):
     votes = {}
     for i, prediction in enumerate(predictions):
@@ -38,10 +16,10 @@ def vote(predictions):
 def crossvalidate(profiles, true_group_name, holdout_group_name=None):
     profiles.assert_not_isnan()
 
-    true_labels = regroup(profiles, true_group_name)
+    true_labels = profiles.regroup(true_group_name)
 
     if holdout_group_name:
-       holdouts = regroup(profiles, holdout_group_name)
+       holdouts = profiles.regroup(holdout_group_name)
     else:
        holdouts = None
 
@@ -91,11 +69,11 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
                   train=NNClassifier):
     profiles.assert_not_isnan()
     keys = profiles.keys()
-    true_labels = regroup(profiles, true_group_name)
+    true_labels = profiles.regroup(true_group_name)
     labels = list(set(true_labels.values()))
 
     if holdout_group_name:
-        holdouts = regroup(profiles, holdout_group_name)
+        holdouts = profiles.regroup(holdout_group_name)
     else:
         holdouts = dict((k, k) for k in keys)
 
@@ -146,7 +124,7 @@ def print_confusion(confusion):
 
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [-c] [-h HOLDOUT-GROUP] PROPERTIES-FILE PROFILES-FILENAME TRUE-GROUP")
-    parser.add_option('-c', dest='csv', help='input and output as CSV', action='store_true')
+    parser.add_option('-c', dest='csv', help='input as CSV', action='store_true')
     parser.add_option('-H', dest='holdout_group', help='hold out all that map to the same holdout group', action='store')
     options, args = parser.parse_args()
     if len(args) != 3:
