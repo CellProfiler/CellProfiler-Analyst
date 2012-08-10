@@ -234,7 +234,8 @@ class ExperimentSettings(Singleton):
 	    if ((tag_prefix is None or tag.startswith(tag_prefix)) and (instnace is None or get_tag_instance(tag) == instnace)):
 		return True  
 	    else:
-		return False
+		return False	
+	
 	    
     def is_supp_protocol_filled(self, tag_prefix, instance=None):
 	'''tag_prefix is always type|event e.g. AddProcess|Wash

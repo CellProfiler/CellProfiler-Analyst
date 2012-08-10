@@ -59,6 +59,8 @@ class VesselPanel(wx.Panel):
         self.Bind(wx.EVT_LEFT_UP, self.on_mouse_up)
         self.Bind(wx.EVT_MOTION, self.on_mouse_move)
 	self.Bind(wx.EVT_MOUSE_CAPTURE_LOST, self.on_mouse_capture_lost)
+	
+	self.SetCursor(wx.StockCursor(wx.CURSOR_PENCIL))
         
     def on_mouse_down(self, event):
         self.rect = (event.GetPosition().x,
@@ -80,7 +82,7 @@ class VesselPanel(wx.Panel):
 	if self.rect is None:
 	    return
         x0, y0, x1, y1 = self.rect
-        print x0, y0, x1, y1
+	self.on_well_selection(x0, y0, x1, y1)
         # Do something
         self.rect = None
         self.Refresh(eraseBackground=False)
@@ -321,7 +323,25 @@ class VesselPanel(wx.Panel):
         selected is a boolean for whether the well is now selected.
         '''
         self.well_selection_handlers += [handler]
-            
+    #----------------------------------------------------------------------
+    def on_well_selection(self, x0, y0, x1, y1):
+	"""get all plate well ids for the selected region"""
+	if self.selection_enabled == False:
+		    return	
+	
+	wells = set([ self.get_well_pos_at_xy(X, Y)
+	 for X in range(x0, x1+1)
+	    for Y in range(y0, y1+1)
+	     if self.get_well_pos_at_xy(X, Y) is not None])
+	print wells
+	if not wells:
+	    return
+	for well in wells:
+	    selected = self.toggle_selected(well)
+	    for handler in self.well_selection_handlers:
+		handler(self.get_selected_platewell_ids(), selected) 	
+		
+
     def _on_click(self, evt):
         if self.selection_enabled == False:
             return
@@ -512,24 +532,8 @@ class VesselSelectionPopup(wx.Dialog):
         
 if __name__ == "__main__":
     app = wx.PySimpleApp()
-        
     f = wx.Frame(None, size=(900.,800.))
-    
-    #from experimentsettings import P12, P96
-    #ps = VesselScroller(f)
-    
-    #PlateDesign.add_plate('1', P12)
-    #vp = VesselPanel(ps, '1')
-    #ps.add_vessel_panel(vp, '1')
-    
-    #PlateDesign.add_plate('2', P96)
-    #vp = VesselPanel(ps, '2')
-
-    #ps.add_vessel_panel(vp, '2')
-##    f.Show()
-
     VesselSelectionPopup(None, size=(600,400)).ShowModal()
-
     app.MainLoop()
 
 

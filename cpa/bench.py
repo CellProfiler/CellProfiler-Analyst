@@ -238,10 +238,10 @@ class Bench(wx.Frame):
         wells_tag = '%s|Wells|%s|%s'%(prefix, instance, self.get_selected_timepoint())
         platewell_ids = set(meta.get_field(wells_tag, []))
         if selected:
-            platewell_ids.update([platewell_id])
+            platewell_ids.update(platewell_id)
             meta.set_field(wells_tag, list(platewell_ids))
         else:
-            platewell_ids.remove(platewell_id)
+            platewell_ids.discard(platewell_id)
             if len(platewell_ids) > 0:
                 meta.set_field(wells_tag, list(platewell_ids))
             else:
@@ -258,7 +258,8 @@ class Bench(wx.Frame):
                                     defaultDir=os.getcwd(), defaultFile='', 
                                     style=wx.OPEN|wx.MULTIPLE)
             elif prefix == 'DataAcquis|FCS':
-                dlg = wx.FileDialog(self,message='Select the FCS files for flask %s'%(platewell_id[0]),
+                #dlg = wx.FileDialog(self,message='Select the FCS files for flask %s'%(platewell_id[0].strip('[]')),
+                dlg = wx.FileDialog(self,message='Select the FCS files for flask',
                                     defaultDir=os.getcwd(), defaultFile='', wildcard = "Adobe PDF files (*.pdf)|*.pdf|",
                                     style=wx.OPEN|wx.MULTIPLE)
             elif prefix == 'DataAcquis|TLM':

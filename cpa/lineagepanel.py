@@ -213,6 +213,8 @@ class TimelinePanel(wx.Panel):
             else:
                 px_per_time = max((w_win - PAD * 2.0) / MAX_TIMEPOINT,
                                   MIN_X_GAP)
+	else:
+	    px_per_time = 1
         
         if len(self.timepoints) == 1:
             x_gap = 1
@@ -344,6 +346,7 @@ class LineagePanel(wx.Panel):
     # Drawing parameters
     PAD = 30
     NODE_R = 8
+    SM_NODE_R = 3
     MIN_X_GAP = NODE_R*2 + 2
     MIN_Y_GAP = NODE_R*2 + 2
     FLASK_GAP = MIN_X_GAP
@@ -441,6 +444,7 @@ class LineagePanel(wx.Panel):
         t0 = time()
         PAD = self.PAD + self.NODE_R
         NODE_R = self.NODE_R
+	SM_NODE_R = self.SM_NODE_R 
         MIN_X_GAP = self.MIN_X_GAP
         MIN_Y_GAP = self.MIN_Y_GAP
         FLASK_GAP = self.FLASK_GAP
@@ -506,23 +510,10 @@ class LineagePanel(wx.Panel):
             else:
                 X = PAD + FLASK_GAP + (len(timepoints) - i - 2) * x_gap
             
-            # NO EVENTS. JUST DRAW THE STOCK, CENTERED.
-            if len(nodes_by_tp) == 1:
-                X = w_win / 2
-                Y = h_win / 2
-                if hover(self.cursor_pos, (X,Y), self.NODE_R): 
-                    dc.SetBrush(wx.Brush('#FFFFAA'))
-                    self.current_node = nodes_by_tp.values()[t][0]
-                else:
-                    dc.SetBrush(wx.Brush('#FAF9F7'))
-                    self.current_node = None
-                dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
-##                dc.DrawText(str(nodes_by_tp[t][0].get_timepoint()), X, Y+NODE_R)
-                
             # LEAF NODES
-            elif i == 0:
+            if i == 0:
                 for node in sorted(nodes_by_tp[t], key=self.order_nodes):
-		    ancestor_tags = self.get_ancestral_tags(node)			
+		    ancestor_tags = self.get_ancestral_tags(node)	
 		    node_tags = node.get_tags()
 		    stateRGB = meta.getStateRGB([tags for tags in reversed(ancestor_tags)]+node_tags)# reverse the ancestal line so that it become progeny + curr node			    
 		    if node_tags:
@@ -531,30 +522,35 @@ class LineagePanel(wx.Panel):
 			eventRGB = (255, 255, 255, 100)
 		   
                     empty_path = False # whether this path follows a harvesting
+		    event_status = False # whether any event occured to this node		    
+		    
                     if len(node.get_tags()) > 0:
                         # Event occurred
-                        #dc.SetBrush(wx.Brush('YELLOW'))
 			dc.SetBrush(wx.Brush(eventRGB))
 			dc.SetPen(wx.Pen(stateRGB, 3))
+			event_status = True
+			
                     else:
                         # No event
-                        #dc.SetBrush(wx.Brush('WHITE'))
-			dc.SetBrush(wx.Brush(eventRGB))
-			dc.SetPen(wx.Pen(stateRGB, 3))
+			if eventRGB == (255,255,255,100) and stateRGB == (255,255,255,100):
+			    dc.SetBrush(wx.Brush(wx.WHITE))
+			    dc.SetPen(wx.Pen(wx.WHITE))	
                         if 'CellTransfer|Harvest' in self.get_ancestral_tags(node):
                             empty_path = True
 
                     if hover(self.cursor_pos, (X,Y), self.NODE_R):
                         # MouseOver
-                        dc.SetPen(wx.Pen(stateRGB, 1))
-                        self.current_node = node
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 1))
+			    self.current_node = node
                     else:
                         # No MouseOver
-                        dc.SetPen(wx.Pen(stateRGB, 3))
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 3))
                     
-                    if not empty_path:
-                        dc.DrawCircle(X, Y, NODE_R)
-##                        dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
+                    if not empty_path and event_status:
+			dc.DrawCircle(X, Y, NODE_R)
+##                      dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                     nodeY[node.id] = Y
                     Y += y_gap
                     
@@ -562,6 +558,7 @@ class LineagePanel(wx.Panel):
             else:
                 for node in sorted(nodes_by_tp[t], key=self.order_nodes):
 		    ancestor_tags = self.get_ancestral_tags(node)
+		    children_tags = self.get_children_tags(node)
 		    node_tags = node.get_tags()
 		    stateRGB = meta.getStateRGB([tags for tags in reversed(ancestor_tags)]+node_tags)# reverse the ancestal line so that it become progeny + curr node			    
 		    if node_tags:
@@ -570,6 +567,12 @@ class LineagePanel(wx.Panel):
 			eventRGB = (255, 255, 255, 100)
 		
                     empty_path = False # whether this path follows a harvesting
+		    event_status = False # whether this node has event
+		    children_status = False # whether the children nodes have any events associated
+		    
+		    if children_tags:
+			children_status = True
+		    
                     ys = []
                     for child in node.get_children():
                         ys.append(nodeY[child.id])
@@ -579,30 +582,43 @@ class LineagePanel(wx.Panel):
 			#Event occurred
                         dc.SetBrush(wx.Brush(eventRGB))
 			dc.SetPen(wx.Pen(stateRGB, 3))
+			event_status = True
                     else:
 			#No event
-                        dc.SetBrush(wx.Brush(eventRGB))
-			dc.SetPen(wx.Pen(stateRGB, 3))
+			if eventRGB == (255,255,255,100) and stateRGB == (255,255,255,100):
+			    dc.SetBrush(wx.Brush(wx.WHITE))
+			    dc.SetPen(wx.Pen(wx.WHITE))
+			else:
+			    if children_status:
+				dc.SetBrush(wx.Brush(wx.BLACK))
+				dc.SetPen(wx.Pen(wx.BLACK))	
+			    else:
+				dc.SetBrush(wx.Brush(wx.WHITE))
+				dc.SetPen(wx.Pen(wx.WHITE))			    
+			    
 			if 'CellTransfer|Harvest' in self.get_ancestral_tags(node):
 			    empty_path = True
 		
                     if hover(self.cursor_pos, (X,Y), self.NODE_R):
                         # MouseOver
-                        dc.SetPen(wx.Pen(stateRGB, 1))
-                        self.current_node = node
-                        
-                        self.SetToolTipString(self.ShowTooltipsInfo())
-                        
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 1))
+			    self.current_node = node                        
+			    self.SetToolTipString(self.ShowTooltipsInfo())
                     else:
                         # No MouseOver
-                        dc.SetPen(wx.Pen(stateRGB, 3))
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 3))
                     
-                    if t == -1:
-                        dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
-                    else:
-                        if not empty_path:
-                            dc.DrawCircle(X, Y, NODE_R)
-                            #dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
+                    #if t == -1:
+                        #dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
+                    #else:
+		    if not empty_path:
+			if event_status:
+			    dc.DrawCircle(X, Y, NODE_R)
+			else:
+			    dc.DrawCircle(X-NODE_R,Y, SM_NODE_R)
+			#dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                         
                     # DRAW LINES CONNECTING THIS NODE TO ITS CHILDREN
                     dc.SetBrush(wx.Brush('#FAF9F7'))
@@ -613,42 +629,39 @@ class LineagePanel(wx.Panel):
                             harvest_tag = tag
 		    # for children of this node check whether furhter event had occured to them if not do not draw the line 
                     for child in node.get_children():
-                        if t == -1:
-			    dc.SetPen(wx.Pen(wx.WHITE,1))
-                            if self.time_x:
-                                dc.DrawLine(X + NODE_R, Y, 
-                                            X + FLASK_GAP + px_per_time * timepoints[i-1] - NODE_R ,nodeY[child.id])
-                            else:
-                                dc.DrawLine(X + NODE_R, Y, 
-                                            X + FLASK_GAP - NODE_R ,nodeY[child.id])
-                        else:
-                            if harvest_tag:
-                                # TODO: improve performance by caching reseed 
-                                #       events from the previous timepoint
-                                for nn in nodes_by_tp[timepoints[i-1]]:
-                                    for tag in nn.get_tags():
-                                        if (tag.startswith('CellTransfer|Seed') and 
-                                            meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag)) == exp.get_tag_instance(harvest_tag)):
-                                            dc.SetPen(wx.Pen('#948BB3', 1, wx.SHORT_DASH))
-                                            dc.DrawLine(X + NODE_R, Y, 
-                                                        X + x_gap - NODE_R ,nodeY[nn.id])
-                            else:
-                                if not empty_path:
-				    if eventRGB == (255,255,255,100) and stateRGB == (255,255,255,100):
-					dc.SetPen(wx.Pen(wx.WHITE,1))
+			if harvest_tag:
+			    # TODO: improve performance by caching reseed 
+			    #       events from the previous timepoint
+			    for nn in nodes_by_tp[timepoints[i-1]]:
+				for tag in nn.get_tags():
+				    if (tag.startswith('CellTransfer|Seed') and 
+				        meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag)) == exp.get_tag_instance(harvest_tag)):
+					dc.SetPen(wx.Pen('#948BB3', 1, wx.SHORT_DASH))
 					dc.DrawLine(X + NODE_R, Y, 
-					            X + x_gap - NODE_R,
-					            nodeY[child.id])					
-				    else:
-					dc.SetPen(wx.Pen(wx.BLACK, 1))
+				                    X + x_gap - NODE_R ,nodeY[nn.id])
+			else:
+			    if not empty_path:
+				if event_status:
+				    if children_status:
 					dc.DrawLine(X + NODE_R, Y, 
-					            X + x_gap - NODE_R,
-					            nodeY[child.id])
+					            X + x_gap - NODE_R, nodeY[child.id])	
+				else:
+				    if children_status and stateRGB != (255,255,255,100):
+					    dc.SetPen(wx.Pen(wx.BLACK,1))
+					    dc.DrawLine(X - NODE_R, Y,
+						        X + x_gap - NODE_R, nodeY[child.id])
+			
                     nodeY[node.id] = Y
+		    
 	if self.timepoint_cursor is not None:
-	    h = self.GetClientRect().Height
-	    x = self.timepoint_cursor * px_per_time
-	    dc.DrawLine(x, 0, x, h)
+	    tpx_per_time = max((w_win - PAD * 2 - FLASK_GAP) / MAX_TIMEPOINT,
+			                      MIN_X_GAP)	    
+	    
+	    tx = self.timepoint_cursor * tpx_per_time
+	    
+	    	    
+	    dc.SetPen(wx.Pen(wx.BLACK, 3))
+	    dc.DrawLine(PAD+FLASK_GAP+tx, 0, PAD+FLASK_GAP+tx, h_win)
 	
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
@@ -747,6 +760,16 @@ class LineagePanel(wx.Panel):
     
     def get_description(self, protocol):
         return '\n'.join(['%s=%s'%(k, v) for k, v in meta.get_attribute_dict(exp.get_tag_protocol(protocol))])  
+    
+    #----------------------------------------------------------------------
+    def get_children_tags(self, node):
+	"""returns the children node tags"""
+	
+	    
+	return [exp.get_tag_stump(ctag, 2)
+	        for cnodes in timeline.get_progeny(node) if cnodes
+	        for ctag in cnodes.tags]	
+	
     
     def get_ancestral_tags(self, node):
 	#ancestral_tags = []
