@@ -7,6 +7,7 @@ import icons
 import timeline
 import  wx.lib.dialogs
 import math
+import bisect
 from wx.lib.combotreebox import ComboTreeBox
 from PIL import Image
 from time import time
@@ -224,6 +225,17 @@ class TimelinePanel(wx.Panel):
 
         # y pos of line
         y = h_win - PAD - FONT_SIZE[1] - TIC_SIZE - 1
+	
+	
+	def icon_hover(mouse_pos, icon_pos, icon_size):
+	    '''returns whether the mouse is hovering over an icon
+	    '''
+	    if mouse_pos is None:
+		return False
+	    MX,MY = mouse_pos
+	    X,Y = icon_pos
+	    return (X - icon_size/2.0 < MX < X + icon_size/2.0 and 
+	            Y - icon_size/2.0 < MY < Y + icon_size/2.0)	
 
 	# draw the timeline
 	if self.time_x:	    
@@ -255,7 +267,7 @@ class TimelinePanel(wx.Panel):
                 x = i * x_gap + PAD
                 
             if (self.cursor_pos is not None and 
-                x - ICON_SIZE/2 < self.cursor_pos < x + ICON_SIZE/2):
+                x - ICON_SIZE/2 < self.cursor_pos[0] < x + ICON_SIZE/2):
                 dc.SetPen(wx.Pen(wx.BLACK, 3))
                 self.hover_timepoint = timepoint
             else:
@@ -311,20 +323,28 @@ class TimelinePanel(wx.Panel):
                 elif stump.startswith('Notes|URL'):
                     bmp = icons.url.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()  
                 elif stump.startswith('Notes|Video'):
-                    bmp = icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()                  
+                    bmp = icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+		
+		# draw the icon/image
+		dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
+	                                          y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)		
     
-                dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
-                              y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)
+		if icon_hover(self.cursor_pos, (x , y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1), self.ICON_SIZE):                
+		    dc.SetPen(wx.Pen(wx.RED))
+		    dc.SetBrush(wx.Brush("grey", wx.TRANSPARENT))
+		    dc.DrawRectangle(x - ICON_SIZE / 2.0, y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1, self.ICON_SIZE, self.ICON_SIZE) 
                 
             # draw the timepoint beneath the line
             time_string = exp.format_time_string(timepoint)
             wtext = FONT_SIZE[0] * len(time_string)
             dc.DrawText(time_string, x - wtext/2.0, y + TIC_SIZE + 1)
+	    
+	  
         
         dc.EndDrawing()
 
     def _on_mouse_motion(self, evt):
-        self.cursor_pos = evt.X
+        self.cursor_pos = evt.X, evt.Y
         self.Refresh(eraseBackground=False)
 
     def _on_mouse_exit(self, evt):
@@ -616,6 +636,9 @@ class LineagePanel(wx.Panel):
 		    if not empty_path:
 			if event_status:
 			    dc.DrawCircle(X, Y, NODE_R)
+			    dc.SetPen(wx.Pen('BLACK'))
+			    dc.DrawCircle(X, Y, NODE_R-3/2)
+			    
 			else:
 			    dc.DrawCircle(X-NODE_R,Y, SM_NODE_R)
 			#dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
@@ -653,15 +676,21 @@ class LineagePanel(wx.Panel):
 			
                     nodeY[node.id] = Y
 		    
-	if self.timepoint_cursor is not None:
-	    tpx_per_time = max((w_win - PAD * 2 - FLASK_GAP) / MAX_TIMEPOINT,
-			                      MIN_X_GAP)	    
+	#if self.timepoint_cursor is not None:
+	    #timepoints = meta.get_timeline().get_unique_timepoints()	    
+	    #ti = bisect.bisect_left(timepoints, self.timepoint_cursor)
 	    
-	    tx = self.timepoint_cursor * tpx_per_time
+	    #time_interval =  timepoints[ti]-timepoints[ti-1]
+	    ##according to the time interval calculate the px per time.
+	    
+	    #tpx_per_time = (w_win - PAD * 2 - FLASK_GAP) / time_interval
+	    
+	    
+	    #tx = self.timepoint_cursor * tpx_per_time
 	    
 	    	    
-	    dc.SetPen(wx.Pen(wx.BLACK, 3))
-	    dc.DrawLine(PAD+FLASK_GAP+tx, 0, PAD+FLASK_GAP+tx, h_win)
+	    #dc.SetPen(wx.Pen(wx.BLACK, 3))
+	    #dc.DrawLine(PAD+FLASK_GAP+tx, 0, PAD+FLASK_GAP+tx, h_win)
 	
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
@@ -737,6 +766,7 @@ class LineagePanel(wx.Panel):
              for well in self.current_node.get_well_ids()])
         bench.update_plate_groups()
         bench.update_well_selections()
+	bench.del_evt_button.Enable()
         
         try:
             exptsettings = wx.GetApp().get_exptsettings()
