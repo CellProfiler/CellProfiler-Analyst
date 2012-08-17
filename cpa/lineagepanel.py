@@ -6,6 +6,8 @@ import numpy as np
 import icons
 import timeline
 import  wx.lib.dialogs
+import math
+import bisect
 from wx.lib.combotreebox import ComboTreeBox
 from PIL import Image
 from time import time
@@ -106,6 +108,10 @@ class LineageFrame(wx.Frame):
                 #timeline.add_event(t, 'event%d'%(t), well_ids)
                 etype = event_types[np.random.randint(0,len(event_types))]
                 meta.set_field('%s%s'%(etype, t), well_ids)
+		
+    def set_hover_timepoint(self, hover_timepoint):
+	self.timeline_panel.hover_timepoint = hover_timepoint
+	self.lineage_panel.set_timepoint(hover_timepoint)
 
 
 class TimelinePanel(wx.Panel):
@@ -115,13 +121,11 @@ class TimelinePanel(wx.Panel):
     PAD = 0.0
     ICON_SIZE = 16.0
     MIN_X_GAP = ICON_SIZE + 2
-    TIC_SIZE = 4
+    TIC_SIZE = 10
     FONT_SIZE = (5,10)
-    
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
-	self.SetBackgroundColour('#F5E8CE')
 
         meta.add_subscriber(self.on_timeline_updated, exp.get_matchstring_for_subtag(2, 'Well'))
         self.timepoints = None
@@ -143,7 +147,7 @@ class TimelinePanel(wx.Panel):
         if icon_size is not None:
             self.ICON_SIZE = icon_size
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def set_x_spacing(self, mode):
@@ -152,7 +156,7 @@ class TimelinePanel(wx.Panel):
         elif mode == SPACE_EVEN:
             self.time_x = False
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
 
     def on_timeline_updated(self, tag):
@@ -166,7 +170,7 @@ class TimelinePanel(wx.Panel):
         else:
             self.min_time_gap = 1
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def _recalculate_min_size(self):
@@ -196,10 +200,10 @@ class TimelinePanel(wx.Panel):
         TIC_SIZE = self.TIC_SIZE
         FONT_SIZE = self.FONT_SIZE
         MAX_TIMEPOINT = self.timepoints[-1]
-	PERCENT_TIME_GAP = 10
+	WIGGEL_NUM = 100
         self.hover_timepoint = None
 
-        dc = wx.PaintDC(self)
+        dc = wx.BufferedPaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
 
@@ -210,6 +214,8 @@ class TimelinePanel(wx.Panel):
             else:
                 px_per_time = max((w_win - PAD * 2.0) / MAX_TIMEPOINT,
                                   MIN_X_GAP)
+	else:
+	    px_per_time = 1
         
         if len(self.timepoints) == 1:
             x_gap = 1
@@ -219,39 +225,38 @@ class TimelinePanel(wx.Panel):
 
         # y pos of line
         y = h_win - PAD - FONT_SIZE[1] - TIC_SIZE - 1
+	
+	
+	def icon_hover(mouse_pos, icon_pos, icon_size):
+	    '''returns whether the mouse is hovering over an icon
+	    '''
+	    if mouse_pos is None:
+		return False
+	    MX,MY = mouse_pos
+	    X,Y = icon_pos
+	    return (X - icon_size/2.0 < MX < X + icon_size/2.0 and 
+	            Y - icon_size/2.0 < MY < Y + icon_size/2.0)	
 
-        # draw the timeline
-        if self.time_x:	    
-            dc.DrawLine(PAD, y, 
-                        px_per_time * MAX_TIMEPOINT + PAD, y)
-        else:   
+	# draw the timeline
+	if self.time_x:	    
+	    dc.DrawLine(PAD, y, 
+	                px_per_time * MAX_TIMEPOINT + PAD, y)
+	else:   
+	    dxs = range(WIGGEL_NUM+1)
+	    dxs = [float(dx)/WIGGEL_NUM for dx in dxs]
+
 	    x = PAD
 	    for i, timepoint in enumerate(self.timepoints):
 		if i > 0:
-		    if int(100*float((self.timepoints[i]-self.timepoints[i-1]))/float(MAX_TIMEPOINT)) > PERCENT_TIME_GAP: # TO DO: make this global variable and put multiple grades of time intervals
-			dc.SetPen(wx.Pen('#8C8085', 1, wx.SOLID))
-			
-			dxs = meta.partition(range(x, x+x_gap), 20)
-			
-			for p, dx in enumerate(dxs[:-1]):
-			    if p%2==0:
-				dc.DrawLine(dxs[p], y, dxs[p+1], y+2)
-				dc.DrawLine(dxs[p+1], y+2, dxs[p+1], y-2)
-			    else:
-				dc.DrawLine(dxs[p], y-2, dxs[p+1], y)
-			
-			    
-			#dc.DrawLine(x, y, x+x_gap, y)
-		    else:
-			dc.SetPen(wx.Pen('#8C8085', 2, wx.SOLID))
-			dc.DrawLine(x, y, x+x_gap, y)
+		    n = math.sqrt(((self.timepoints[i]-self.timepoints[i-1])))  #instead of log can use square root
+		    ys = [5*(math.sin((math.pi)*dx))*math.sin(2*math.pi*dx*n) for dx in dxs] # 10 is px height fow wiggles can change it
+		    for p, dx in enumerate(dxs[:-1]):
+			dc.DrawLine(x+x_gap*dxs[p], y+ys[p], x+x_gap*dxs[p+1], y+ys[p+1])
 		    x += x_gap
-            #dc.DrawLine(PAD, y, 
-                        #x_gap * (len(self.timepoints) - 1) + PAD, y)
 
-        font = dc.Font
-        font.SetPixelSize(FONT_SIZE)
-        dc.SetFont(font)
+	font = dc.Font
+	font.SetPixelSize(FONT_SIZE)
+	dc.SetFont(font)
 
         # draw event icons
         for i, timepoint in enumerate(self.timepoints):
@@ -262,7 +267,7 @@ class TimelinePanel(wx.Panel):
                 x = i * x_gap + PAD
                 
             if (self.cursor_pos is not None and 
-                x - ICON_SIZE/2 < self.cursor_pos < x + ICON_SIZE/2):
+                x - ICON_SIZE/2 < self.cursor_pos[0] < x + ICON_SIZE/2):
                 dc.SetPen(wx.Pen(wx.BLACK, 3))
                 self.hover_timepoint = timepoint
             else:
@@ -318,29 +323,33 @@ class TimelinePanel(wx.Panel):
                 elif stump.startswith('Notes|URL'):
                     bmp = icons.url.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()  
                 elif stump.startswith('Notes|Video'):
-                    bmp = icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()                  
+                    bmp = icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+		
+		# draw the icon/image
+		dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
+	                                          y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)		
     
-                dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
-                              y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)
+		if icon_hover(self.cursor_pos, (x , y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1), self.ICON_SIZE):                
+		    dc.SetPen(wx.Pen(wx.RED))
+		    dc.SetBrush(wx.Brush("grey", wx.TRANSPARENT))
+		    dc.DrawRectangle(x - ICON_SIZE / 2.0, y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1, self.ICON_SIZE, self.ICON_SIZE) 
                 
             # draw the timepoint beneath the line
             time_string = exp.format_time_string(timepoint)
             wtext = FONT_SIZE[0] * len(time_string)
             dc.DrawText(time_string, x - wtext/2.0, y + TIC_SIZE + 1)
-	    # Draw the notes icon at the bottom of the tick
-	    #notebmp = icons.hint.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
-	    #dc.DrawBitmap(notebmp, x - 8.0 / 2.0, 
-			                  #y + 8.0 + TIC_SIZE + 1)	    
+	    
+	  
         
         dc.EndDrawing()
 
     def _on_mouse_motion(self, evt):
-        self.cursor_pos = evt.X
-        self.Refresh()
+        self.cursor_pos = evt.X, evt.Y
+        self.Refresh(eraseBackground=False)
 
     def _on_mouse_exit(self, evt):
         self.cursor_pos = None
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         
     def _on_click(self, evt):
         if self.hover_timepoint is not None:
@@ -357,6 +366,7 @@ class LineagePanel(wx.Panel):
     # Drawing parameters
     PAD = 30
     NODE_R = 8
+    SM_NODE_R = 3
     MIN_X_GAP = NODE_R*2 + 2
     MIN_Y_GAP = NODE_R*2 + 2
     FLASK_GAP = MIN_X_GAP
@@ -370,6 +380,7 @@ class LineagePanel(wx.Panel):
         self.time_x = False
         self.cursor_pos = None
         self.current_node = None
+	self.timepoint_cursor = None
         
         meta.add_subscriber(self.on_timeline_updated, 
                             exp.get_matchstring_for_subtag(2, 'Well'))
@@ -379,13 +390,17 @@ class LineagePanel(wx.Panel):
         self.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_exit)
         self.Bind(wx.EVT_LEFT_UP, self._on_mouse_click)
         
+    def set_timepoint(self, timepoint):
+	self.timepoint_cursor = timepoint
+	self.Refresh(eraseBackground=False)
+	
     def set_x_spacing(self, mode):
         if mode == SPACE_TIME:
             self.time_x = True
         elif mode == SPACE_EVEN:
             self.time_x = False
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def set_style(self, padding=None, xgap=None, ygap=None, node_radius=None,
@@ -401,7 +416,7 @@ class LineagePanel(wx.Panel):
         if flask_gap is not None:
             self.FLASK_GAP = flask_gap
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
      
     def on_timeline_updated(self, tag):
@@ -425,7 +440,7 @@ class LineagePanel(wx.Panel):
         self.timepoints.append(-1)
 
         self._recalculate_min_size()
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
         
     def _recalculate_min_size(self):
@@ -444,11 +459,12 @@ class LineagePanel(wx.Panel):
         '''
         if self.nodes_by_timepoint == {}:
             evt.Skip()
-            return
+            return	
 
         t0 = time()
         PAD = self.PAD + self.NODE_R
         NODE_R = self.NODE_R
+	SM_NODE_R = self.SM_NODE_R 
         MIN_X_GAP = self.MIN_X_GAP
         MIN_Y_GAP = self.MIN_Y_GAP
         FLASK_GAP = self.FLASK_GAP
@@ -457,13 +473,15 @@ class LineagePanel(wx.Panel):
         nodes_by_tp = self.nodes_by_timepoint
         self.current_node = None           # Node with the mouse over it
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
-                    
+	
         if self.time_x:
             if timepoints[0] == 0:
                 px_per_time = 1
             else:
                 px_per_time = max((w_win - PAD * 2 - FLASK_GAP) / MAX_TIMEPOINT,
                                   MIN_X_GAP)
+	else:
+	    px_per_time = 1
                 
         if len(nodes_by_tp) == 2:
             x_gap = 1
@@ -483,7 +501,7 @@ class LineagePanel(wx.Panel):
         Y = PAD
         X = w_win - PAD
         
-        dc = wx.PaintDC(self)
+        dc = wx.BufferedPaintDC(self)
         dc.Clear()
         dc.BeginDrawing()
         #dc.SetPen(wx.Pen("BLACK",1))
@@ -499,7 +517,8 @@ class LineagePanel(wx.Panel):
             MX,MY = mouse_pos
             X,Y = node_pos
             return (X - node_r < MX < X + node_r and 
-                    Y - node_r < MY < Y + node_r)
+                    Y - node_r < MY < Y + node_r)	
+	
 
         # Iterate from leaf nodes up to the root, and draw R->L, Top->Bottom
         for i, t in enumerate(timepoints):
@@ -511,102 +530,118 @@ class LineagePanel(wx.Panel):
             else:
                 X = PAD + FLASK_GAP + (len(timepoints) - i - 2) * x_gap
             
-            # NO EVENTS. JUST DRAW THE STOCK, CENTERED.
-            if len(nodes_by_tp) == 1:
-                X = w_win / 2
-                Y = h_win / 2
-                if hover(self.cursor_pos, (X,Y), self.NODE_R): 
-                    dc.SetBrush(wx.Brush('#FFFFAA'))
-                    self.current_node = nodes_by_tp.values()[t][0]
-                else:
-                    dc.SetBrush(wx.Brush('#FAF9F7'))
-                    self.current_node = None
-                dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
-##                dc.DrawText(str(nodes_by_tp[t][0].get_timepoint()), X, Y+NODE_R)
-                
             # LEAF NODES
-            elif i == 0:
+            if i == 0:
                 for node in sorted(nodes_by_tp[t], key=self.order_nodes):
-		#for node in nodes_by_tp[t]:
-		    ancestor_tags = self.get_ancestral_tags(node)
-		    #if not ancestor_tags and 'CellTransfer|Seed' in node.get_tags():
-			#for tag in node.get_tags():
-			    #print meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag))
-			
-		    track_tags = [tags for tags in reversed(ancestor_tags)]+node.get_tags()
-		    nodeRGB = meta.getNodeRGB(track_tags)
+		    ancestor_tags = self.get_ancestral_tags(node)	
+		    node_tags = node.get_tags()
+		    stateRGB = meta.getStateRGB([tags for tags in reversed(ancestor_tags)]+node_tags)# reverse the ancestal line so that it become progeny + curr node			    
+		    if node_tags:
+			eventRGB = meta.getEventRGB(node_tags[0]) #get all event tags for the passed node and returns the colour associated with the last event** Need to change
+		    else:
+			eventRGB = (255, 255, 255, 100)
 		   
                     empty_path = False # whether this path follows a harvesting
+		    event_status = False # whether any event occured to this node		    
+		    
                     if len(node.get_tags()) > 0:
                         # Event occurred
-                        #dc.SetBrush(wx.Brush('YELLOW'))
-			dc.SetBrush(wx.Brush(nodeRGB))
+			dc.SetBrush(wx.Brush(eventRGB))
+			dc.SetPen(wx.Pen(stateRGB, 3))
+			event_status = True
+			
                     else:
                         # No event
-                        #dc.SetBrush(wx.Brush('WHITE'))
-			dc.SetBrush(wx.Brush(nodeRGB))
-                        if 'CellTransfer|Harvest' in [exp.get_tag_stump(ptag, 2)
-                                                      for pnode in timeline.reverse_iter_tree(node) if pnode
-                                                      for ptag in pnode.tags]:
+			if eventRGB == (255,255,255,100) and stateRGB == (255,255,255,100):
+			    dc.SetBrush(wx.Brush(wx.WHITE))
+			    dc.SetPen(wx.Pen(wx.WHITE))	
+                        if 'CellTransfer|Harvest' in self.get_ancestral_tags(node):
                             empty_path = True
 
                     if hover(self.cursor_pos, (X,Y), self.NODE_R):
                         # MouseOver
-                        dc.SetPen(wx.Pen('#000000', 3))
-                        self.current_node = node
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 1))
+			    self.current_node = node
                     else:
                         # No MouseOver
-                        dc.SetPen(wx.Pen('#000000', 1))
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 3))
                     
-                    if not empty_path:
-                        dc.DrawCircle(X, Y, NODE_R)
-##                        dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
+                    if not empty_path and event_status:
+			dc.DrawCircle(X, Y, NODE_R)
+##                      dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                     nodeY[node.id] = Y
                     Y += y_gap
                     
             # INTERNAL NODES
             else:
-                for node in nodes_by_tp[t]:	
+                for node in sorted(nodes_by_tp[t], key=self.order_nodes):
 		    ancestor_tags = self.get_ancestral_tags(node)
-		    track_tags = [tags for tags in reversed(ancestor_tags)]+node.get_tags()
-		    nodeRGB = meta.getNodeRGB(track_tags)	
-		    
+		    children_tags = self.get_children_tags(node)
+		    node_tags = node.get_tags()
+		    stateRGB = meta.getStateRGB([tags for tags in reversed(ancestor_tags)]+node_tags)# reverse the ancestal line so that it become progeny + curr node			    
+		    if node_tags:
+			eventRGB = meta.getEventRGB(node_tags[0]) #get all event tags for the passed node and returns the colour associated with the last event** Need to change
+		    else:
+			eventRGB = (255, 255, 255, 100)
+		
                     empty_path = False # whether this path follows a harvesting
+		    event_status = False # whether this node has event
+		    children_status = False # whether the children nodes have any events associated
+		    
+		    if children_tags:
+			children_status = True
+		    
                     ys = []
                     for child in node.get_children():
                         ys.append(nodeY[child.id])
                     Y = (min(ys) + max(ys)) / 2
 		    
-		    dc.SetBrush(wx.Brush(nodeRGB))
-
-                    #if len(node.get_tags()) > 0:
-                        # Event occurred
-                        #dc.SetBrush(wx.Brush('YELLOW'))
-                    #else:
-                        # No event
-                        #dc.SetBrush(wx.Brush('WHITE'))
+                    if len(node.get_tags()) > 0:
+			#Event occurred
+                        dc.SetBrush(wx.Brush(eventRGB))
+			dc.SetPen(wx.Pen(stateRGB, 3))
+			event_status = True
+                    else:
+			#No event
+			if eventRGB == (255,255,255,100) and stateRGB == (255,255,255,100):
+			    dc.SetBrush(wx.Brush(wx.WHITE))
+			    dc.SetPen(wx.Pen(wx.WHITE))
+			else:
+			    if children_status:
+				dc.SetBrush(wx.Brush(wx.BLACK))
+				dc.SetPen(wx.Pen(wx.BLACK))	
+			    else:
+				dc.SetBrush(wx.Brush(wx.WHITE))
+				dc.SetPen(wx.Pen(wx.WHITE))			    
+			    
+			if 'CellTransfer|Harvest' in self.get_ancestral_tags(node):
+			    empty_path = True
 		
-			
-		    if 'CellTransfer|Harvest' in self.get_ancestral_tags(node):
-			empty_path = True
-
                     if hover(self.cursor_pos, (X,Y), self.NODE_R):
                         # MouseOver
-                        dc.SetPen(wx.Pen(wx.BLACK, 3))
-                        self.current_node = node
-                        
-                        self.SetToolTipString(self.ShowTooltipsInfo())
-                        
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 1))
+			    self.current_node = node                        
+			    self.SetToolTipString(self.ShowTooltipsInfo())
                     else:
                         # No MouseOver
-                        dc.SetPen(wx.Pen(wx.BLACK, 1))
+			if event_status:
+			    dc.SetPen(wx.Pen(stateRGB, 3))
                     
-                    if t == -1:
-                        dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
-                    else:
-                        if not empty_path:
-                            dc.DrawCircle(X, Y, NODE_R)
-                            #dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
+                    #if t == -1:
+                        #dc.DrawRectangle(X-NODE_R, Y-NODE_R, NODE_R*2, NODE_R*2)
+                    #else:
+		    if not empty_path:
+			if event_status:
+			    dc.DrawCircle(X, Y, NODE_R)
+			    dc.SetPen(wx.Pen('BLACK'))
+			    dc.DrawCircle(X, Y, NODE_R-3/2)
+			    
+			else:
+			    dc.DrawCircle(X-NODE_R,Y, SM_NODE_R)
+			#dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                         
                     # DRAW LINES CONNECTING THIS NODE TO ITS CHILDREN
                     dc.SetBrush(wx.Brush('#FAF9F7'))
@@ -615,42 +650,58 @@ class LineagePanel(wx.Panel):
                     for tag in node.get_tags():
                         if tag.startswith('CellTransfer|Harvest'):
                             harvest_tag = tag
+		    # for children of this node check whether furhter event had occured to them if not do not draw the line 
                     for child in node.get_children():
-                        if t == -1:
-                            if self.time_x:
-                                dc.DrawLine(X + NODE_R, Y, 
-                                            X + FLASK_GAP + px_per_time * timepoints[i-1] - NODE_R ,nodeY[child.id])
-                            else:
-                                dc.DrawLine(X + NODE_R, Y, 
-                                            X + FLASK_GAP - NODE_R ,nodeY[child.id])
-                        else:
-                            if harvest_tag:
-                                # TODO: improve performance by caching reseed 
-                                #       events from the previous timepoint
-                                for nn in nodes_by_tp[timepoints[i-1]]:
-                                    for tag in nn.get_tags():
-                                        if (tag.startswith('CellTransfer|Seed') and 
-                                            meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag)) == exp.get_tag_instance(harvest_tag)):
-                                            dc.SetPen(wx.Pen('BLACK', 1, wx.SHORT_DASH))
-                                            dc.DrawLine(X + NODE_R, Y, 
-                                                        X + x_gap - NODE_R ,nodeY[nn.id])
-                            else:
-                                if not empty_path:
-                                    dc.SetPen(wx.Pen(wx.BLACK, 1))
-                                    dc.DrawLine(X + NODE_R, Y, 
-                                                X + x_gap - NODE_R,
-                                                nodeY[child.id])
+			if harvest_tag:
+			    # TODO: improve performance by caching reseed 
+			    #       events from the previous timepoint
+			    for nn in nodes_by_tp[timepoints[i-1]]:
+				for tag in nn.get_tags():
+				    if (tag.startswith('CellTransfer|Seed') and 
+				        meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag)) == exp.get_tag_instance(harvest_tag)):
+					dc.SetPen(wx.Pen('#948BB3', 1, wx.SHORT_DASH))
+					dc.DrawLine(X + NODE_R, Y, 
+				                    X + x_gap - NODE_R ,nodeY[nn.id])
+			else:
+			    if not empty_path:
+				if event_status:
+				    if children_status:
+					dc.DrawLine(X + NODE_R, Y, 
+					            X + x_gap - NODE_R, nodeY[child.id])	
+				else:
+				    if children_status and stateRGB != (255,255,255,100):
+					    dc.SetPen(wx.Pen(wx.BLACK,1))
+					    dc.DrawLine(X - NODE_R, Y,
+						        X + x_gap - NODE_R, nodeY[child.id])
+			
                     nodeY[node.id] = Y
+		    
+	#if self.timepoint_cursor is not None:
+	    #timepoints = meta.get_timeline().get_unique_timepoints()	    
+	    #ti = bisect.bisect_left(timepoints, self.timepoint_cursor)
+	    
+	    #time_interval =  timepoints[ti]-timepoints[ti-1]
+	    ##according to the time interval calculate the px per time.
+	    
+	    #tpx_per_time = (w_win - PAD * 2 - FLASK_GAP) / time_interval
+	    
+	    
+	    #tx = self.timepoint_cursor * tpx_per_time
+	    
+	    	    
+	    #dc.SetPen(wx.Pen(wx.BLACK, 3))
+	    #dc.DrawLine(PAD+FLASK_GAP+tx, 0, PAD+FLASK_GAP+tx, h_win)
+	
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
         
     def _on_mouse_motion(self, evt):
         self.cursor_pos = (evt.X, evt.Y)
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def _on_mouse_exit(self, evt):
         self.cursor_pos = None
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def _on_mouse_click(self, evt):
         if self.current_node is None:
@@ -715,6 +766,7 @@ class LineagePanel(wx.Panel):
              for well in self.current_node.get_well_ids()])
         bench.update_plate_groups()
         bench.update_well_selections()
+	bench.del_evt_button.Enable()
         
         try:
             exptsettings = wx.GetApp().get_exptsettings()
@@ -739,7 +791,39 @@ class LineagePanel(wx.Panel):
     def get_description(self, protocol):
         return '\n'.join(['%s=%s'%(k, v) for k, v in meta.get_attribute_dict(exp.get_tag_protocol(protocol))])  
     
+    #----------------------------------------------------------------------
+    def get_children_tags(self, node):
+	"""returns the children node tags"""
+	
+	    
+	return [exp.get_tag_stump(ctag, 2)
+	        for cnodes in timeline.get_progeny(node) if cnodes
+	        for ctag in cnodes.tags]	
+	
+    
     def get_ancestral_tags(self, node):
+	#ancestral_tags = []
+	#for pnode in timeline.reverse_iter_tree(node):
+	    #if pnode:
+		#if 'CellTransfer|Seed' in node.tags:
+		    #for tag in node.tags:
+			##if (tag.startswith('CellTransfer|Seed') and 
+			    ##meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag)) is not None):
+			    #h_instance = meta.get_field('CellTransfer|Seed|HarvestInstance|'+exp.get_tag_instance(tag))
+			    #for tpnode in self.nodes_by_timepoint[node.get_timepoint()-1]:
+				#if tpnode:
+				    #for tptag in tpnode.tags:	       
+					#if exp.get_tag_protocol(tptag) == 'CellTransfer|Harvest|'+h_instance:
+					    #for npnode in timeline.reverse_iter_tree(tpnode):
+						#if npnode:
+						    #for nptag in npnode.tags:
+							#ancestral_tags.append(exp.get_tag_stump(nptag, 2))
+		#else:
+		    #for ptag in pnode.tags:
+			#ancestral_tags.append(exp.get_tag_stump(ptag, 2))
+	
+	#return ancestral_tags
+
 	return [exp.get_tag_stump(ptag, 2)
 	        for pnode in timeline.reverse_iter_tree(node) if pnode
 	        for ptag in pnode.tags]

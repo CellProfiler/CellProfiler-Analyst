@@ -234,7 +234,8 @@ class ExperimentSettings(Singleton):
 	    if ((tag_prefix is None or tag.startswith(tag_prefix)) and (instnace is None or get_tag_instance(tag) == instnace)):
 		return True  
 	    else:
-		return False
+		return False	
+	
 	    
     def is_supp_protocol_filled(self, tag_prefix, instance=None):
 	'''tag_prefix is always type|event e.g. AddProcess|Wash
@@ -568,7 +569,7 @@ class ExperimentSettings(Singleton):
 	                          %str(self.get_field('CellTransfer|Seed|HarvestInstance|%s'%instance)))	
 	    
     #----------------------------------------------------------------------
-    def getNodeRGB(self, trackTags):
+    def getStateRGB(self, trackTags):
 	"""This method returns the colour of the node given the history of the ancestor nodes events"""
 	currRGB = (255, 255, 255, 100)
 	for tag in trackTags:
@@ -577,6 +578,20 @@ class ExperimentSettings(Singleton):
 		continue
 	    currRGB = (int((currRGB[0]+EVENT_RGB[event][0])/2), int((currRGB[1]+EVENT_RGB[event][1])/2), int((currRGB[2]+EVENT_RGB[event][2])/2), 100)
 	return currRGB
+    #----------------------------------------------------------------------
+    def getEventRGB(self, tag):
+	"""get all event tags for the passed node and returns the colour associated with the last event** Need to change**"""
+	#currRGB = (255, 255, 255, 100)	
+	#if nodeTags:
+	    #tag = nodeTags.pop()
+	event = get_tag_event(tag)
+	if not event.startswith('Notes') or not event.startswith('DataAcquis'): # since these are measurements or notes
+	    return (EVENT_RGB[event][0], EVENT_RGB[event][1], EVENT_RGB[event][2], 100)
+	else:
+	    return (255, 255, 255, 100)
+	
+	
+	
         
 	    
 EVENT_RGB ={

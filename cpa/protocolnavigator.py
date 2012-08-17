@@ -35,7 +35,7 @@ class LineageProfiler(wx.App):
         self.settings_frame.Bind(wx.EVT_MENU, self.on_print_protocol, printExperimentMenuItem)
         self.settings_frame.GetMenuBar().Append(fileMenu, 'File')
         
-        self.bench_frame = Bench(None, size=(600,450), pos=(0, self.settings_frame.Position[1]+410))
+        self.bench_frame = Bench(self, size=(600,450), pos=(0, self.settings_frame.Position[1]+410))
         self.bench_frame.Show()
         
         self.lineage_frame = LineageFrame(None, size=(700, 800), pos=(610, -1))
