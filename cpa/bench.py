@@ -3,10 +3,11 @@ import os
 import numpy as np
 import guiutils
 import icons
+import metadatainput as assay
+import re
 from experimentsettings import *
 from vesselpanel import VesselPanel, VesselScroller, VesselSelectionPopup
 from temporaltaglist import TemporalTagListCtrl
-import metadatainput as assay
 from wx.lib.embeddedimage import PyEmbeddedImage
 from wx.lib.masked import TimeCtrl
 
@@ -55,6 +56,7 @@ class Bench(wx.Frame):
         self.taglistctrl.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_instance_selected)
         self.del_evt_button.Bind(wx.EVT_BUTTON, self.on_del_event)
 	self.del_evt_button.Disable()
+	self.add_note_button.Bind(wx.EVT_BUTTON, self.on_add_note)
         self.group_checklist.GetCheckList().Bind(wx.EVT_CHECKLISTBOX, self.update_plate_groups)
 
         # --- LAY OUT THE FRAME ---
@@ -149,6 +151,7 @@ class Bench(wx.Frame):
         self.time_text_box.Value = format_time_string(timepoint)
         self.protocol_navigator.get_lineage().set_hover_timepoint(timepoint)
         self.update_well_selections()
+	self.update_well_state_status()
 
     def on_increment_time(self, evt):
         self.set_timepoint(self.time_slider.Value + 1)
@@ -169,15 +172,66 @@ class Bench(wx.Frame):
         except:
             self.time_text_box.SetForegroundColour(wx.RED)
     
+    def on_add_note(self, evt):
+	# first check whether any event occured at the selected timepoint
+	
+	plate_well_ids = [meta.get_field(tag) for tag in meta.global_settings if re.match(get_matchstring_for_subtag(2, 'Well'), tag) if get_tag_timepoint(tag)==self.get_selected_timepoint()]
+	if plate_well_ids == []:
+	    dial = wx.MessageDialog(None, 'Notes need to be associated with events!!', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()              
+	    return
+	# TO DO: give users option to select which event the note get associated with
+	# for now assumes that users are associating with the first event in the well_tag list
+	print plate_well_ids
+	
+	
+	#instance = max(meta.get_field_instances('Notes'))
+	#dia = NoteDialog(self, instance)
+	
+	#if dia.ShowModal() == wx.ID_OK:
+	
+	    
+  
+  
+  
+    #def OnShowDialog(self, event):     
+        ## link with the dynamic experiment settings
+        #meta = ExperimentSettings.getInstance()
+        #attributes = meta.get_attribute_list('Instrument|Microscope') 
+        
+        ##check whether there is at least one attributes
+        #if not attributes:
+            #dial = wx.MessageDialog(None, 'No Instances exists!!', 'Error', wx.OK | wx.ICON_ERROR)
+            #dial.ShowModal()  
+            #return
+        ##show the popup table 
+        #dia = InstanceListDialog(self, 'Instrument|Microscope', selection_mode = False)
+        #if dia.ShowModal() == wx.ID_OK:
+            #if dia.listctrl.get_selected_instances() != []:
+                #instance = dia.listctrl.get_selected_instances()[0]
+                #tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
+                #self.settings_controls[tlmselctTAG].SetValue(meta.get_field('Instrument|Microscope|ChannelName|%s'%str(instance)))
+        #dia.Destroy()  
+  
+  
+
+	meta.set_field('Notes|Hint|Wells|%s|%s'%(get_tag_instance(tag), str(self.get_selected_timepoint())), plate_well_ids)
+	    
+	# if multiple events - ask users which event they need the note to get assoicated ALSO if multiple instance being applied
+	# Choose from the type of event, and accordingly make the GUI
+	# get the wells for the event and assign that to the Note TAG
+	# request visualization panel to show the node in the time point
+    
     def on_del_event(self, evt):
         protocols = self.taglistctrl.get_selected_protocols()
         if protocols == []:
-	    dial = wx.MessageDialog(None, 'No event was found for deletion', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial = wx.MessageDialog(None, 'No event was found for deletion\nor\nCan not undo cell transfer event', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()              
             return
         
         protocol = protocols[0]
         prefix, instance = protocol.rsplit('|',1)   
+	
         wells_tag = '%s|Wells|%s|%s'%(prefix, instance, self.get_selected_timepoint())
         meta.remove_field(wells_tag)
         self.update_well_selections()
@@ -205,6 +259,15 @@ class Bench(wx.Frame):
                 plate.enable_selection()
                 selected_well_ids = [pw_id for pw_id in selected_ids if pw_id[0]==plate.get_plate_id()]
                 plate.set_selected_well_ids(selected_well_ids)
+    
+    def update_well_state_status(self):
+	timeline = meta.get_timeline()	
+	selected_ids = [timeline.get_well_ids(utp) for utp in timeline.get_unique_timepoints() if utp <= self.get_selected_timepoint()]
+
+	for plate in self.vesselscroller.get_vessels():
+	    plate.enable_selection()
+	    selected_well_ids = [pw_id for pw_ids in selected_ids for pw_id in pw_ids if pw_id[0]==plate.get_plate_id()]
+	    plate.set_well_ids_state(selected_well_ids)
 
     def on_update_well(self, platewell_id, selected):
         '''Called when a well is clicked.

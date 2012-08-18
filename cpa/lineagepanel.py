@@ -179,7 +179,9 @@ class TimelinePanel(wx.Panel):
             max_event_types_per_timepoint = \
                     max([len(set([exp.get_tag_stump(evt.get_welltag()) for evt in evts]))
                          for t, evts in self.events_by_timepoint.items()])
-            min_h = (max_event_types_per_timepoint+1) * self.ICON_SIZE + self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
+            #min_h = (max_event_types_per_timepoint+1) * self.ICON_SIZE + self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
+	    #calculate the number of NOTE icons only
+	    min_h = self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
             if self.time_x:
                 self.SetMinSize((self.PAD * 2 + self.MIN_X_GAP * self.timepoints[-1],
                                  min_h))
@@ -227,15 +229,15 @@ class TimelinePanel(wx.Panel):
         y = h_win - PAD - FONT_SIZE[1] - TIC_SIZE - 1
 	
 	
-	def icon_hover(mouse_pos, icon_pos, icon_size):
-	    '''returns whether the mouse is hovering over an icon
-	    '''
-	    if mouse_pos is None:
-		return False
-	    MX,MY = mouse_pos
-	    X,Y = icon_pos
-	    return (X - icon_size/2.0 < MX < X + icon_size/2.0 and 
-	            Y - icon_size/2.0 < MY < Y + icon_size/2.0)	
+	#def icon_hover(mouse_pos, icon_pos, icon_size):
+	    #'''returns whether the mouse is hovering over an icon
+	    #'''
+	    #if mouse_pos is None:
+		#return False
+	    #MX,MY = mouse_pos
+	    #X,Y = icon_pos
+	    #return (X - icon_size/2.0 < MX < X + icon_size/2.0 and 
+	            #Y - icon_size/2.0 < MY < Y + icon_size/2.0)	
 
 	# draw the timeline
 	if self.time_x:	    
@@ -257,9 +259,14 @@ class TimelinePanel(wx.Panel):
 	font = dc.Font
 	font.SetPixelSize(FONT_SIZE)
 	dc.SetFont(font)
-
-        # draw event icons
+	
+	# draw the ticks
         for i, timepoint in enumerate(self.timepoints):
+	    # if data acquisition is the only event in this timepoint skip it
+	    #evt_categories = list(set([exp.get_tag_stump(ev.get_welltag(), 1) for ev in self.events_by_timepoint[timepoint]]))
+	    #if all(evt_categories[0] == cat and cat == 'DataAcquis' for cat in evt_categories):
+		#continue
+	
             # x position of timepoint on the line
             if self.time_x:
                 x = timepoint * px_per_time + PAD
@@ -274,73 +281,15 @@ class TimelinePanel(wx.Panel):
                 dc.SetPen(wx.Pen(wx.BLACK, 1))
             # Draw tic marks
             dc.DrawLine(x, y - TIC_SIZE, 
-                        x, y + TIC_SIZE)
-            #dc.DrawRectangle(x, y, ICON_SIZE, ICON_SIZE)
-            
-            prefixes = set([exp.get_tag_stump(ev.get_welltag(), 2) for ev in self.events_by_timepoint[timepoint]])
-            for i, stump in enumerate(prefixes):
-                if stump.startswith('CellTransfer|Seed'):
-                    bmp = icons.seed.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('CellTransfer|Harvest'):
-                    bmp = icons.harvest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                    
-                elif stump.startswith('Perturbation|Chem'):
-                    bmp = icons.treat.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('Perturbation|Bio'):
-                    bmp = icons.dna.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                    
-                elif stump.startswith('Staining|Dye'):
-                    bmp = icons.stain.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('Staining|Immuno'):
-                    bmp = icons.antibody.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('Staining|Genetic'):
-                    bmp = icons.primer.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                    
-                elif stump.startswith('AddProcess|Spin'):
-                    bmp = icons.spin.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('AddProcess|Wash'):
-                    bmp = icons.wash.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('AddProcess|Dry'):
-                    bmp = icons.dry.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('AddProcess|Medium'):
-                    bmp = icons.medium.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('AddProcess|Incubator'):
-                    bmp = icons.incubator.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                    
-                elif stump.startswith('DataAcquis|HCS'):
-                    bmp = icons.staticimage.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('DataAcquis|FCS'):
-                    bmp = icons.fcs.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                elif stump.startswith('DataAcquis|TLM'):
-                    bmp = icons.tlm.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
-                
-                elif stump.startswith('Notes|Hint'):
-                    bmp = icons.hint.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
-                elif stump.startswith('Notes|Critical'):
-                    bmp = icons.critical.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
-                elif stump.startswith('Notes|Rest'):
-                    bmp = icons.rest.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()  
-                elif stump.startswith('Notes|URL'):
-                    bmp = icons.url.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()  
-                elif stump.startswith('Notes|Video'):
-                    bmp = icons.video.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
-		
-		# draw the icon/image
-		dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
-	                                          y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)		
-    
-		if icon_hover(self.cursor_pos, (x , y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1), self.ICON_SIZE):                
-		    dc.SetPen(wx.Pen(wx.RED))
-		    dc.SetBrush(wx.Brush("grey", wx.TRANSPARENT))
-		    dc.DrawRectangle(x - ICON_SIZE / 2.0, y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1, self.ICON_SIZE, self.ICON_SIZE) 
-                
+                        x, y + TIC_SIZE)    
+            		
             # draw the timepoint beneath the line
             time_string = exp.format_time_string(timepoint)
             wtext = FONT_SIZE[0] * len(time_string)
+	    htext = FONT_SIZE[1]
             dc.DrawText(time_string, x - wtext/2.0, y + TIC_SIZE + 1)
-	    
-	  
-        
+	    dc.DrawLine(x, y + TIC_SIZE + 1 + htext,  x, h_win) 
+		   
         dc.EndDrawing()
 
     def _on_mouse_motion(self, evt):
@@ -522,13 +471,18 @@ class LineagePanel(wx.Panel):
 
         # Iterate from leaf nodes up to the root, and draw R->L, Top->Bottom
         for i, t in enumerate(timepoints):
-            if t == -1:
+            if t == -1:  # for the root node which is not shown
                 X = PAD
             elif self.time_x:
                 X = PAD + FLASK_GAP + t * px_per_time
                 x_gap = PAD + FLASK_GAP + timepoints[i-1] * px_per_time - X
             else:
                 X = PAD + FLASK_GAP + (len(timepoints) - i - 2) * x_gap
+		
+	    # Draw longitudinal time lines
+	    if t != -1:
+		dc.SetPen(wx.Pen('#E1E2ED', 1, wx.DOT))
+		dc.DrawLine(X, 0, X, h_win)	    
             
             # LEAF NODES
             if i == 0:
@@ -569,7 +523,15 @@ class LineagePanel(wx.Panel):
 			    dc.SetPen(wx.Pen(stateRGB, 3))
                     
                     if not empty_path and event_status:
-			dc.DrawCircle(X, Y, NODE_R)
+			#dc.DrawCircle(X, Y, NODE_R)
+			#evt_categories = list(set([exp.get_tag_stump(tag, 1) for tag in node.get_tags()]))
+			#if all(evt_categories[0] == cat and cat == 'DataAcquis' for cat in evt_categories):
+			if 'CellTransfer|Seed|StockInstance' in node_tags:
+			    event = 'Stock'
+			else:
+			    event = exp.get_tag_event(node_tags[0])
+			
+			dc.DrawBitmap(meta.getEventIcon(16.0, event), X - 16.0 / 2.0, Y - 16.0 / 2.0)
 ##                      dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                     nodeY[node.id] = Y
                     Y += y_gap
@@ -602,7 +564,7 @@ class LineagePanel(wx.Panel):
 			#Event occurred
                         dc.SetBrush(wx.Brush(eventRGB))
 			dc.SetPen(wx.Pen(stateRGB, 3))
-			event_status = True
+			event_status = True			
                     else:
 			#No event
 			if eventRGB == (255,255,255,100) and stateRGB == (255,255,255,100):
@@ -610,8 +572,10 @@ class LineagePanel(wx.Panel):
 			    dc.SetPen(wx.Pen(wx.WHITE))
 			else:
 			    if children_status:
-				dc.SetBrush(wx.Brush(wx.BLACK))
-				dc.SetPen(wx.Pen(wx.BLACK))	
+				#dc.SetBrush(wx.Brush(wx.BLACK))
+				#dc.SetPen(wx.Pen(wx.BLACK))
+				dc.SetBrush(wx.Brush('#D1CDCF'))
+				dc.SetPen(wx.Pen('#D1CDCF'))
 			    else:
 				dc.SetBrush(wx.Brush(wx.WHITE))
 				dc.SetPen(wx.Pen(wx.WHITE))			    
@@ -635,17 +599,27 @@ class LineagePanel(wx.Panel):
                     #else:
 		    if not empty_path:
 			if event_status:
-			    dc.DrawCircle(X, Y, NODE_R)
-			    dc.SetPen(wx.Pen('BLACK'))
-			    dc.DrawCircle(X, Y, NODE_R-3/2)
-			    
+			    if (node_tags[0].startswith('CellTransfer|Seed') and 
+				        meta.get_field('CellTransfer|Seed|StockInstance|'+exp.get_tag_instance(node_tags[0])) is not None):
+				event = 'Stock'
+			    else:
+				event = exp.get_tag_event(node_tags[0])
+			    #dc.DrawCircle(X, Y, NODE_R)
+			    #dc.SetPen(wx.Pen('BLACK'))
+			    #dc.DrawCircle(X, Y, NODE_R-3/2)
+			    dc.DrawBitmap(meta.getEventIcon(16.0, event), X - 16.0 / 2.0, Y - 16.0 / 2.0)
+				
 			else:
-			    dc.DrawCircle(X-NODE_R,Y, SM_NODE_R)
+			    #dc.DrawCircle(X-NODE_R,Y, SM_NODE_R) # draws the node slightly left hand side on the furcation point
+			    #dc.SetBrush(wx.Brush(stateRGB))
+			    dc.DrawCircle(X,Y, SM_NODE_R)
 			#dc.DrawText(str(node.get_tags()), X, Y+NODE_R)
                         
                     # DRAW LINES CONNECTING THIS NODE TO ITS CHILDREN
                     dc.SetBrush(wx.Brush('#FAF9F7'))
-                    dc.SetPen(wx.Pen(wx.BLACK, 1))
+                    #dc.SetPen(wx.Pen(wx.BLACK, 1))
+		    dc.SetPen(wx.Pen('#D1CDCF'))
+		    #dc.SetPen(wx.Pen(stateRGB))
                     harvest_tag = False
                     for tag in node.get_tags():
                         if tag.startswith('CellTransfer|Harvest'):
@@ -670,28 +644,29 @@ class LineagePanel(wx.Panel):
 					            X + x_gap - NODE_R, nodeY[child.id])	
 				else:
 				    if children_status and stateRGB != (255,255,255,100):
-					    dc.SetPen(wx.Pen(wx.BLACK,1))
-					    dc.DrawLine(X - NODE_R, Y,
-						        X + x_gap - NODE_R, nodeY[child.id])
+					    dc.SetPen(wx.Pen('#D1CDCF'))
+					    #dc.SetPen(wx.Pen(stateRGB))
+					    dc.DrawLine(X, Y,
+						        X + x_gap, nodeY[child.id])
 			
                     nodeY[node.id] = Y
 		    
-	#if self.timepoint_cursor is not None:
-	    #timepoints = meta.get_timeline().get_unique_timepoints()	    
-	    #ti = bisect.bisect_left(timepoints, self.timepoint_cursor)
-	    
-	    #time_interval =  timepoints[ti]-timepoints[ti-1]
-	    ##according to the time interval calculate the px per time.
-	    
-	    #tpx_per_time = (w_win - PAD * 2 - FLASK_GAP) / time_interval
-	    
-	    
-	    #tx = self.timepoint_cursor * tpx_per_time
-	    
-	    	    
-	    #dc.SetPen(wx.Pen(wx.BLACK, 3))
-	    #dc.DrawLine(PAD+FLASK_GAP+tx, 0, PAD+FLASK_GAP+tx, h_win)
-	
+		    
+	if self.timepoint_cursor is not None:
+	    timepoints = meta.get_timeline().get_unique_timepoints()	
+	    ti = bisect.bisect_left(timepoints, self.timepoint_cursor)
+	    time_interval =  timepoints[ti]-timepoints[ti-1]
+	    #according to the time interval calculate the px per time.
+	    #px_per_time = max((w_win - PAD * 2 - FLASK_GAP) / MAX_TIMEPOINT,
+			                      #MIN_X_GAP)	
+	    px_per_ti = (w_win - PAD * 2 - FLASK_GAP) /(len(timepoints)-1)
+	    adjusted_factor = px_per_ti/time_interval
+	   
+	    X = PAD + FLASK_GAP +px_per_ti*(ti-1)+(self.timepoint_cursor - timepoints[ti-1])* adjusted_factor
+	   
+	    dc.SetPen(wx.Pen(wx.BLACK, 3))
+	    dc.DrawLine(X, 0, X, h_win)
+	  
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
         
