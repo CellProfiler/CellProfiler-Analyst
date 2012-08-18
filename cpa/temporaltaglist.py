@@ -24,7 +24,7 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
         meta.add_subscriber(self.update, 'Staining.*')
         meta.add_subscriber(self.update, 'AddProcess.*')
         meta.add_subscriber(self.update, 'DataAcquis.*')
-        meta.add_subscriber(self.update, 'Notes.*')
+        #meta.add_subscriber(self.update, 'Notes.*')
         
         #self.InsertColumn(0, "Category")
         #self.InsertColumn(1, "Action")
@@ -49,6 +49,8 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
                 new_protocols.remove(new_prot)
             if meta.get_field('%s|%s|HarvestInstance|%s'%(cat, action, inst )) is not None:
                 new_protocols.remove(new_prot)  
+            if cat=='Notes':
+                new_protocols.remove(new_prot)
                 
         if set(self.protocols) != new_protocols:
             self.protocols = sorted(new_protocols)
@@ -74,7 +76,7 @@ class TemporalTagListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):#, listmi
             for prot in self.protocols:
                 cat, action, inst = prot.split('|')
                 i = self.InsertStringItem(sys.maxint, action)
-                self.setActionImage(action)                   
+                self.SetItemImage(self.GetItemCount() - 1, self._il.Add(meta.getEventIcon(16.0, action)))                   
                 self.SetStringItem(i, 1, inst)
                 self.SetStringItem(i, 2, self.get_description(prot))
             self.set_selected_protocols(sel)

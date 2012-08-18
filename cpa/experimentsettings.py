@@ -1,5 +1,6 @@
 import re
 import wx
+import icons
 from singleton import Singleton
 from utils import *
 from timeline import Timeline
@@ -589,6 +590,59 @@ class ExperimentSettings(Singleton):
 	    return (EVENT_RGB[event][0], EVENT_RGB[event][1], EVENT_RGB[event][2], 100)
 	else:
 	    return (255, 255, 255, 100)
+    #----------------------------------------------------------------------
+    def getEventIcon(self, icon_size, act):
+	"""get the associated icon for the given action/event"""
+	if act == 'Seed':
+	    icon = icons.seed.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act == 'Stock':
+	    icon = icons.stock.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Harvest':
+	    icon = icons.harvest.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	    
+	elif act =='Chem':
+	    icon = icons.treat.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='Bio':
+	    icon = icons.dna.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	    
+	elif act =='Dye':
+	    icon = icons.stain.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='Immuno':
+	    icon = icons.antibody.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Genetic':
+	    icon = icons.primer.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	    
+	elif act =='Spin':
+	    icon = icons.spin.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='Wash':
+	    icon = icons.wash.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Dry':
+	    icon = icons.dry.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Medium':
+	    icon = icons.medium.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Incubator':
+	    icon = icons.incubator.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	    
+	elif act =='HCS':
+	    icon = icons.staticimage.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='FCS':
+	    icon = icons.arrow_up.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='TLM':
+	    icon = icons.tlm.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	
+	elif act =='Hint':
+	    icon = icons.hint.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='CriticalPoint':
+	    icon = icons.critical.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='Rest':
+	    icon = icons.rest.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
+	elif act =='URL':
+	    icon = icons.url.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
+	elif act =='Video':
+	    icon = icons.video.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	    
+	return icon
+    
 	
 	
 	

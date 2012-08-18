@@ -21,11 +21,12 @@ class VesselPanel(wx.Panel):
         plate_id -- a plate_id registered in the PlateDesign class
         well_disp -- ROUNDED, CIRCLE, SQUARE, THUMBNAIL or IMAGE
         '''
-        wx.Panel.__init__(self, parent, **kwargs)
+        wx.Panel.__init__(self, parent, style=wx.BORDER_SUNKEN, **kwargs)
         
         self.vessel = PlateDesign.get_vessel(plate_id)
         self.well_disp = well_disp
         self.selection = set()           # list of (row,col) tuples
+	self.wells_with_status = set()     # list of (row, col) where at least one event occured before the current timepoint
         self.marked = set()
         self.selection_enabled = True
         self.repaint = False
@@ -34,6 +35,7 @@ class VesselPanel(wx.Panel):
         self.PAD = 10.0
         self.GAP = 0.5
         self.WELL_R = 1.0
+	self.vpanel = VesselScroller(self)
         
         self.row_labels = PlateDesign.get_row_labels(self.vessel.shape)
         self.col_labels = PlateDesign.get_col_labels(self.vessel.shape)
@@ -60,8 +62,6 @@ class VesselPanel(wx.Panel):
         self.Bind(wx.EVT_MOTION, self.on_mouse_move)
 	self.Bind(wx.EVT_MOUSE_CAPTURE_LOST, self.on_mouse_capture_lost)
 	
-	self.SetCursor(wx.StockCursor(wx.CURSOR_PENCIL))
-        
     def on_mouse_down(self, event):
         self.rect = (event.GetPosition().x,
                      event.GetPosition().y,
@@ -142,7 +142,7 @@ class VesselPanel(wx.Panel):
         
                 
     def get_plate_id(self):
-        return self.vessel.vessel_id
+        return self.vessel.vessel_id  
 
     def set_well_display(self, well_disp):
         '''well_disp in PlatMapPanel.ROUNDED,
@@ -150,15 +150,17 @@ class VesselPanel(wx.Panel):
                         PlatMapPanel.SQUARE
         '''
         self.well_disp = well_disp
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def enable_selection(self, enabled=True):
         self.selection_enabled = enabled
-        self.Refresh()
+	self.SetCursor(wx.StockCursor(wx.CURSOR_PENCIL))
+        self.Refresh(eraseBackground=False)
         
     def disable_selection(self):
         self.selection_enabled = False
-        self.Refresh()
+	self.SetCursor(wx.StockCursor(wx.CURSOR_BLANK))
+        self.Refresh(eraseBackground=False)
         
     def set_selected_well_ids(self, wellids):
         '''selects the wells corresponding to the specified wellids or 
@@ -166,7 +168,14 @@ class VesselPanel(wx.Panel):
         '''
         self.selection = set([PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid)
                               for wellid in wellids])
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
+	
+    def set_well_ids_state(self, wellids):
+	'''set the well ids (row, col) tuples as the filled with event 
+	'''
+	self.wells_with_status = set([PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid)
+                              for wellid in wellids])
+	self.Refresh(eraseBackground=False)	
         
     def set_marked_well_ids(self, wellids):
         '''selects the wells corresponding to the specified wellids or 
@@ -174,7 +183,7 @@ class VesselPanel(wx.Panel):
         '''
         self.marked = set([PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid)
                            for wellid in wellids])
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def select_well_id(self, wellid):
         self.select_well_at_pos(PlateDesign.get_pos_for_wellid(self.vessel.shape, wellid))
@@ -184,11 +193,11 @@ class VesselPanel(wx.Panel):
         
     def select_well_at_pos(self, (wellx, welly)):
         self.selection.add((wellx, welly))
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def deselect_well_at_pos(self, (wellx, welly)):
         self.selection.remove((wellx, welly))
-        self.Refresh()
+        self.Refresh(eraseBackground=False)
 
     def toggle_selected(self, (wellx, welly)):
         ''' well: 2-tuple of integers indexing a well position (row,col)'''
@@ -230,6 +239,21 @@ class VesselPanel(wx.Panel):
         return [(self.vessel.vessel_id, PlateDesign.get_well_id_at_pos(self.vessel.shape, pos)) 
                 for pos in self.selection]
     
+    def get_current_timepoint(self):
+	try:
+	    bench = wx.GetApp().get_bench()
+	except: return
+	return bench.time_slider.GetValue()
+    
+    def get_platewell_state(self):
+	'''state: whether any event e.g sample, perturbation occured to the wells of this plate before the timepoint'''
+	all_pw_ids = PlateDesign.get_all_platewell_ids()
+	timeline = meta.get_timeline()
+	
+	return [set(timeline.get_well_ids(utp)) & set(all_pw_ids) for utp in timeline.get_unique_timepoints()
+	 if utp <= self.get_current_timepoint()]
+
+    
     def _on_paint(self, evt=None):
         dc = wx.BufferedPaintDC(self)
         dc.Clear()
@@ -238,6 +262,7 @@ class VesselPanel(wx.Panel):
         PAD = self.PAD
         GAP = self.GAP
         ROWS, COLS = self.vessel.shape
+	
 
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
         # calculate the well radius
@@ -248,7 +273,7 @@ class VesselPanel(wx.Panel):
         # Set font size to fit
         font = dc.GetFont()
         if R > 40:
-            font.SetPixelSize((R-10, (R-10)*2))
+            font.SetPixelSize((R-10, f(R-10)*2))
         elif R > 6:
             font.SetPixelSize((R-2, (R-2)*2))
         else:
@@ -262,13 +287,18 @@ class VesselPanel(wx.Panel):
         else:
             dc.SetBrush(wx.Brush((230,230,230)))
         
-        # for each well time independently find out whether it had been affect by any event if so
-        # color it dc.SetBrush(wx.Brush((255,255,204)))
-        
+        # get the affected plate_well ids upto the current timepoint
+	#self.set_selected_well_ids(list(self.get_platewell_state()[0]))	
+	
+	
         for x in range(COLS + 1):
             for y in range(ROWS + 1):
                 px = PAD + GAP/2. + (x * R*2)
                 py = PAD + GAP/2. + (y * R*2) 
+		
+		# instead of selection, we define the well state whether they have cells/sample/at least one event occured before this timepoint 
+		# dc.SetBrush(wx.Brush('<Yellow/White>', wx.CROSSDIAG_HATCH))
+		#### change here for the defining the well state ###
                 if self.selection_enabled:
                     if (y-1, x-1) in self.selection:
                         dc.SetPen(wx.Pen("BLACK", 2))
@@ -279,6 +309,9 @@ class VesselPanel(wx.Panel):
                     else:
                         dc.SetPen(wx.Pen((210,210,210), 1))
                         dc.SetBrush(wx.Brush("WHITE"))
+			
+		    if (y-1, x-1) in self.wells_with_status:
+			dc.SetBrush(wx.Brush('RED', wx.CROSSDIAG_HATCH))
                 else:
                     dc.SetPen(wx.Pen("GRAY", 0))
                     dc.SetBrush(wx.Brush("LIGHT GRAY"))
@@ -313,7 +346,7 @@ class VesselPanel(wx.Panel):
 
     def _on_idle(self, evt):
         if self.repaint:
-            self.Refresh()
+            self.Refresh(eraseBackground=False)
             self.repaint = False
 
     def add_well_selection_handler(self, handler):
@@ -333,7 +366,6 @@ class VesselPanel(wx.Panel):
 	 for X in range(x0, x1+1)
 	    for Y in range(y0, y1+1)
 	     if self.get_well_pos_at_xy(X, Y) is not None])
-	print wells
 	if not wells:
 	    return
 	for well in wells:
