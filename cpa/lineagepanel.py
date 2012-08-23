@@ -8,9 +8,12 @@ import timeline
 import  wx.lib.dialogs
 import math
 import bisect
+import csv
 from wx.lib.combotreebox import ComboTreeBox
 from PIL import Image
 from time import time
+from datalinkList import *
+from notepad import NotePad
 
 # x-spacing modes for timeline and lineage panels
 SPACE_EVEN = 0
@@ -123,6 +126,7 @@ class TimelinePanel(wx.Panel):
     MIN_X_GAP = ICON_SIZE + 2
     TIC_SIZE = 10
     FONT_SIZE = (5,10)
+    NOTE_ICON_FACTOR = 0.0
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
@@ -172,22 +176,28 @@ class TimelinePanel(wx.Panel):
         self._recalculate_min_size()
         self.Refresh(eraseBackground=False)
         self.Parent.FitInside()
-        
+	
+    def on_note_icon_add(self):
+	note_num = {}
+	for tag in meta.global_settings: 
+	    if tag.startswith('Notes'):
+		timepoint = exp.get_tag_attribute(tag)
+		if not timepoint in note_num:
+		    note_num[timepoint] = 1
+		else:
+		    note_num[timepoint] += 1	
+	self.NOTE_ICON_FACTOR = (max(note_num.values())+1) * self.ICON_SIZE
+	self._recalculate_min_size()
+	self.Refresh(eraseBackground=False)
+	self.Parent.FitInside()	
+	
     def _recalculate_min_size(self):
         if self.timepoints is not None and len(self.timepoints) > 0:
-            timeline = exp.ExperimentSettings.getInstance().get_timeline()
-            max_event_types_per_timepoint = \
-                    max([len(set([exp.get_tag_stump(evt.get_welltag()) for evt in evts]))
-                         for t, evts in self.events_by_timepoint.items()])
-            #min_h = (max_event_types_per_timepoint+1) * self.ICON_SIZE + self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
-	    #calculate the number of NOTE icons only
-	    min_h = self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
+	    min_h = self.NOTE_ICON_FACTOR + self.PAD * 2 + self.FONT_SIZE[1] + self.TIC_SIZE * 2 + 1
             if self.time_x:
-                self.SetMinSize((self.PAD * 2 + self.MIN_X_GAP * self.timepoints[-1],
-                                 min_h))
+                self.SetMinSize((self.PAD * 2 + self.MIN_X_GAP * self.timepoints[-1], min_h))
             else:
-                self.SetMinSize((len(self.timepoints) * self.MIN_X_GAP + self.PAD * 2,
-                                 min_h))
+                self.SetMinSize((len(self.timepoints) * self.MIN_X_GAP + self.PAD * 2, min_h))
 
     def _on_paint(self, evt=None):
         '''Handler for paint events.
@@ -204,6 +214,7 @@ class TimelinePanel(wx.Panel):
         MAX_TIMEPOINT = self.timepoints[-1]
 	WIGGEL_NUM = 100
         self.hover_timepoint = None
+	self.current_ntag = None
 
         dc = wx.BufferedPaintDC(self)
         dc.Clear()
@@ -229,15 +240,15 @@ class TimelinePanel(wx.Panel):
         y = h_win - PAD - FONT_SIZE[1] - TIC_SIZE - 1
 	
 	
-	#def icon_hover(mouse_pos, icon_pos, icon_size):
-	    #'''returns whether the mouse is hovering over an icon
-	    #'''
-	    #if mouse_pos is None:
-		#return False
-	    #MX,MY = mouse_pos
-	    #X,Y = icon_pos
-	    #return (X - icon_size/2.0 < MX < X + icon_size/2.0 and 
-	            #Y - icon_size/2.0 < MY < Y + icon_size/2.0)	
+	def icon_hover(mouse_pos, icon_pos, icon_size):
+	    '''returns whether the mouse is hovering over an icon
+	    '''
+	    if mouse_pos is None:
+		return False
+	    MX,MY = mouse_pos
+	    X,Y = icon_pos
+	    return (X - icon_size/2.0 < MX < X + icon_size/2.0 and 
+	            Y - icon_size/2.0 < MY < Y + icon_size/2.0)	
 
 	# draw the timeline
 	if self.time_x:	    
@@ -282,14 +293,27 @@ class TimelinePanel(wx.Panel):
             # Draw tic marks
             dc.DrawLine(x, y - TIC_SIZE, 
                         x, y + TIC_SIZE)    
+	    
+	    # Draw the note icon above the tick
+	    note_tags = [ tag for tag in meta.global_settings
+	                  if tag.startswith('Notes') and exp.get_tag_attribute(tag) == str(timepoint)] 
+	    for i, ntag in enumerate(note_tags):
+		    bmp = icons.note.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 		
+		    dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
+		                    y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1)	
+		    
+		    if icon_hover(self.cursor_pos, (x - ICON_SIZE / 2.0, 
+		                    y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1), ICON_SIZE):
+			self.current_ntag = ntag
+				    #highlight the note icon		    
             		
             # draw the timepoint beneath the line
             time_string = exp.format_time_string(timepoint)
             wtext = FONT_SIZE[0] * len(time_string)
 	    htext = FONT_SIZE[1]
             dc.DrawText(time_string, x - wtext/2.0, y + TIC_SIZE + 1)
-	    dc.DrawLine(x, y + TIC_SIZE + 1 + htext,  x, h_win) 
-		   
+	    dc.DrawLine(x, y + TIC_SIZE + 1 + htext,  x, h_win)  # extension of tick towards the lineage panel
+	    		   
         dc.EndDrawing()
 
     def _on_mouse_motion(self, evt):
@@ -307,7 +331,17 @@ class TimelinePanel(wx.Panel):
             except: return
             bench.set_timepoint(self.hover_timepoint)
             bench.update_well_selections()
-
+	
+	if self.current_ntag is not None:
+	    note_type = exp.get_tag_event(self.current_ntag)	    
+	    timepoint = exp.get_tag_attribute(self.current_ntag)
+	    self.page_counter = exp.get_tag_instance(self.current_ntag)
+	    
+	    
+	    note_dia = NotePad(self, note_type, timepoint, self.page_counter)
+	    if note_dia.ShowModal() == wx.ID_OK:
+		    # Notes|<type>|<timepoint>|<instance> = value
+		meta.set_field('Notes|%s|%s|%s' %(note_dia.noteType, timepoint, str(self.page_counter)), note_dia.noteDescrip.GetValue())   	    
 
 class LineagePanel(wx.Panel):
     '''A Panel that displays a lineage tree.
@@ -652,20 +686,20 @@ class LineagePanel(wx.Panel):
                     nodeY[node.id] = Y
 		    
 		    
-	if self.timepoint_cursor is not None:
-	    timepoints = meta.get_timeline().get_unique_timepoints()	
-	    ti = bisect.bisect_left(timepoints, self.timepoint_cursor)
-	    time_interval =  timepoints[ti]-timepoints[ti-1]
-	    #according to the time interval calculate the px per time.
-	    #px_per_time = max((w_win - PAD * 2 - FLASK_GAP) / MAX_TIMEPOINT,
-			                      #MIN_X_GAP)	
-	    px_per_ti = (w_win - PAD * 2 - FLASK_GAP) /(len(timepoints)-1)
-	    adjusted_factor = px_per_ti/time_interval
+	#if self.timepoint_cursor is not None:  # BUG: New addition of 24hr will not work, i.e. the timeline cant hover over no event time zone****
+	    #timepoints = meta.get_timeline().get_unique_timepoints()	
+	    #ti = bisect.bisect_left(timepoints, self.timepoint_cursor)
+	    #time_interval =  timepoints[ti]-timepoints[ti-1]
+	    ##according to the time interval calculate the px per time.
+	    ##px_per_time = max((w_win - PAD * 2 - FLASK_GAP) / MAX_TIMEPOINT,
+			                      ##MIN_X_GAP)	
+	    #px_per_ti = (w_win - PAD * 2 - FLASK_GAP) /(len(timepoints)-1)
+	    #adjusted_factor = px_per_ti/time_interval
 	   
-	    X = PAD + FLASK_GAP +px_per_ti*(ti-1)+(self.timepoint_cursor - timepoints[ti-1])* adjusted_factor
+	    #X = PAD + FLASK_GAP +px_per_ti*(ti-1)+(self.timepoint_cursor - timepoints[ti-1])* adjusted_factor
 	   
-	    dc.SetPen(wx.Pen(wx.BLACK, 3))
-	    dc.DrawLine(X, 0, X, h_win)
+	    #dc.SetPen(wx.Pen(wx.BLACK, 3))
+	    #dc.DrawLine(X, 0, X, h_win)
 	  
         dc.EndDrawing()
         #print 'rendered lineage in %.2f seconds'%(time() - t0)
@@ -681,58 +715,13 @@ class LineagePanel(wx.Panel):
     def _on_mouse_click(self, evt):
         if self.current_node is None:
             return
-        for tag in self.current_node.get_tags():
-            if (tag.startswith('DataAcquis|TLM') or 
-                tag.startswith('DataAcquis|HCS')):
-                for well in self.current_node.get_well_ids():
-                    image_tag = '%s|Images|%s|%s|%s'%(exp.get_tag_stump(tag, 2),
-                                                      exp.get_tag_instance(tag),
-                                                      exp.get_tag_timepoint(tag),
-                                                      well)
-                    urls = meta.get_field(image_tag, [])
-                    image_viewer_path = ''
-                    if os.path.isfile('C:\Program Files\ImageJ\ImageJ.exe'):
-			ImageJPath = 'C:\Program Files\ImageJ\ImageJ.exe'
-                        subprocess.Popen("%s %s" % (ImageJPath, ' '.join(urls))) 
-                    else:
-			dlg = wx.lib.dialogs.ScrolledMessageDialog(self, str("\n".join(urls)), "ERROR!! ImageJ was not found in C\Program Files directory to show following images")
-			dlg.ShowModal()			 
-			return                        
-                    #for url in urls:
-                        #im = Image.open(url)
-                        #im.show()
-                        ##TODO: make it Try with ImageJ first then Exception is Image.open(url)
-                        #ImageJPath = r'C:\Program Files\ImageJ\ImageJ'
-                        #subprocess.Popen("%s %s" % (ImageJPath, url))  
-                        
-            elif tag.startswith('DataAcquis|FCS'):
-                for well in self.current_node.get_well_ids():
-                    image_tag = '%s|Images|%s|%s|%s'%(exp.get_tag_stump(tag, 2),
-                                                  exp.get_tag_instance(tag),
-                                                  exp.get_tag_timepoint(tag),
-                                                  well)
-                    urls = meta.get_field(image_tag, [])
-                    for url in urls:
-                        os.startfile(url)
-                        
-        #print self.current_node.get_well_ids()
-        #print self.current_node.get_parent()
-                        
-##        message = ''
-##        for well in sorted(self.current_node.get_well_ids()):
-##            message += ', '.join(well)
-##            message += '\n'
-##        msg = wx.MessageDialog(self, message, caption='Info', style=wx.OK | wx.ICON_INFORMATION | wx.STAY_ON_TOP, pos=(200,200))
-##        msg.ShowModal()
-##        msg.Destroy()
         
-        
+        # --- Update the Bench view ---
         try:
             bench = wx.GetApp().get_bench()
         except: 
             return
-        
-        # --- Update the Bench view ---
+	
         bench.set_timepoint(self.current_node.get_timepoint())
         bench.taglistctrl.set_selected_protocols(
             [exp.get_tag_protocol(tag) for tag in self.current_node.get_tags()])
@@ -742,20 +731,75 @@ class LineagePanel(wx.Panel):
         bench.update_plate_groups()
         bench.update_well_selections()
 	bench.del_evt_button.Enable()
-        
+	
+        # -- Update the expt setting/metadata view --#
         try:
             exptsettings = wx.GetApp().get_exptsettings()
         except:
             return
-        # -- Update the expt setting/metadata view --#
+	
         exptsettings.OnLeafSelect()
         if self.current_node.get_tags():
             exptsettings.ShowInstance(self.current_node.get_tags()[0])
             
-            
         ancestors = [exp.get_tag_stump(ptag, 2)
                      for pnode in timeline.reverse_iter_tree(self.current_node) if pnode
-                     for ptag in pnode.tags]    
+                     for ptag in pnode.tags]   
+	
+	# -- show the data url list --- #
+        data_acquis = False
+
+        for tag in self.current_node.get_tags():
+	    if tag.startswith('DataAcquis'):
+		data_acquis = True
+		break
+	    
+	if data_acquis:
+	    dia = DataLinkListDialog(self, self.current_node.get_well_ids())
+	    if dia.ShowModal() == wx.ID_OK:
+		if dia.output_options.GetSelection() == 0:
+		    file_dlg = wx.FileDialog(None, message='Exporting Data URL...', 
+		                             defaultDir=os.getcwd(), defaultFile='data urls', 
+		                             wildcard='.csv', 
+		                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+		    if file_dlg.ShowModal() == wx.ID_OK:
+			os.chdir(os.path.split(file_dlg.GetPath())[0])
+			myfile = open(file_dlg.GetPath(), 'wb')
+			wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+			for row in dia.listctrl.get_selected_urls():
+			    wr.writerow(row)
+			myfile.close()	
+			file_dlg.Destroy()
+		if dia.output_options.GetSelection() == 1:
+		    file_dlg = wx.FileDialog(None, message='Exporting Data URL...', 
+		                            defaultDir=os.getcwd(), defaultFile='data urls', 
+		                            wildcard='.csv', 
+		                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+		    if file_dlg.ShowModal() == wx.ID_OK:
+			os.chdir(os.path.split(file_dlg.GetPath())[0])
+			myfile = open(file_dlg.GetPath(), 'wb')
+			wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+			for row in dia.listctrl.get_all_urls():
+			    wr.writerow(row)
+			myfile.close()	
+			file_dlg.Destroy()
+		
+		if dia.output_options.GetSelection() == 2:
+		    image_urls = []
+		    for row in dia.listctrl.get_selected_urls():
+			image_urls.append(row[2])
+		    if os.path.isfile('C:\Program Files\ImageJ\ImageJ.exe') is False:
+			#err_dlg = wx.lib.dialogs.ScrolledMessageDialog(self, str("\n".join(urls)), "ERROR!! ImageJ was not found in C\Program Files directory to show following images")
+			err_dlg = wx.MessageDialog(None, 'ImageJ was not found in C\Program Files directory to show images!!', 'Error', wx.OK | wx.ICON_ERROR)
+			err_dlg.ShowModal()			 
+			return 			
+		    else:
+			#TO DO: check the image format to be shown in ImageJ    
+			ImageJPath = 'C:\Program Files\ImageJ\ImageJ.exe'
+			subprocess.Popen("%s %s" % (ImageJPath, ' '.join(image_urls)))		    
+			
+	    dia.Destroy()	
+	    
       
     def ShowTooltipsInfo(self):
         info_string = ''
