@@ -186,10 +186,11 @@ class TimelinePanel(wx.Panel):
 		    note_num[timepoint] = 1
 		else:
 		    note_num[timepoint] += 1	
-	self.NOTE_ICON_FACTOR = (max(note_num.values())+1) * self.ICON_SIZE
-	self._recalculate_min_size()
-	self.Refresh(eraseBackground=False)
-	self.Parent.FitInside()	
+	if note_num:
+	    self.NOTE_ICON_FACTOR = (max(note_num.values())+1) * self.ICON_SIZE
+	    self._recalculate_min_size()
+	    self.Refresh(eraseBackground=False)
+	    self.Parent.FitInside()	
 	
     def _recalculate_min_size(self):
         if self.timepoints is not None and len(self.timepoints) > 0:
@@ -215,6 +216,7 @@ class TimelinePanel(wx.Panel):
 	WIGGEL_NUM = 100
         self.hover_timepoint = None
 	self.current_ntag = None
+	self.on_note_icon_add()
 
         dc = wx.BufferedPaintDC(self)
         dc.Clear()
@@ -297,6 +299,8 @@ class TimelinePanel(wx.Panel):
 	    # Draw the note icon above the tick
 	    note_tags = [ tag for tag in meta.global_settings
 	                  if tag.startswith('Notes') and exp.get_tag_attribute(tag) == str(timepoint)] 
+	    #if note_tags:
+		#self.on_note_icon_add()  #update the min_h of the panel
 	    for i, ntag in enumerate(note_tags):
 		    bmp = icons.note.Scale(ICON_SIZE, ICON_SIZE, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 		
 		    dc.DrawBitmap(bmp, x - ICON_SIZE / 2.0, 
@@ -305,7 +309,7 @@ class TimelinePanel(wx.Panel):
 		    if icon_hover(self.cursor_pos, (x - ICON_SIZE / 2.0, 
 		                    y - ((i+1)*ICON_SIZE) - TIC_SIZE - 1), ICON_SIZE):
 			self.current_ntag = ntag
-				    #highlight the note icon		    
+					#highlight the note icon		    
             		
             # draw the timepoint beneath the line
             time_string = exp.format_time_string(timepoint)

@@ -22,7 +22,7 @@ import _winreg
 import matplotlib
 import tempfile
 import xml.dom.minidom
-
+import util.version
 
 vcredist = os.path.join("windows", "vcredist_x86.exe")
 protocol_navigator_iss = "ProtocolNavigator.iss"
