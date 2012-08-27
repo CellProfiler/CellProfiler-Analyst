@@ -3,18 +3,22 @@ import os
 import numpy as np
 import guiutils
 import icons
+import metadatainput as assay
+import re
 from experimentsettings import *
 from vesselpanel import VesselPanel, VesselScroller, VesselSelectionPopup
+from lineagepanel import TimelinePanel
 from temporaltaglist import TemporalTagListCtrl
-import metadatainput as assay
+from notepad import NotePad
 from wx.lib.embeddedimage import PyEmbeddedImage
 from wx.lib.masked import TimeCtrl
 
 meta = ExperimentSettings.getInstance()
 
 class Bench(wx.Frame):
-    def __init__(self, parent, id=-1, title='Bench', **kwargs):
-        wx.Frame.__init__(self, parent, id, title=title, **kwargs)
+    def __init__(self, protocol_navigator, id=-1, title='Bench', **kwargs):
+        wx.Frame.__init__(self, None, id, title=title, **kwargs)
+        self.protocol_navigator = protocol_navigator
 
         # --- FRAME IS SPLIT INTO 2 PARTS (top, bottom) ---
         
@@ -34,6 +38,10 @@ class Bench(wx.Frame):
         self.add24_button = wx.Button(self.top_panel, -1, "Add 24h")
         self.taglistctrl = TemporalTagListCtrl(self.top_panel)
         # BOTTOM
+	undo_bmp = icons.undo.Scale(24.0, 24.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+        self.del_evt_button = wx.BitmapButton(self.bot_panel, -1, undo_bmp, style=0)
+	note_bmp = icons.note.Scale(24.0, 24.0, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	self.add_note_button = wx.BitmapButton(self.bot_panel, -1, note_bmp, style=0)
         self.group_checklist = VesselGroupSelector(self.bot_panel)
         self.group_checklist.update_choices(self.bot_panel)
         self.vesselscroller = VesselScroller(self.bot_panel)
@@ -48,6 +56,9 @@ class Bench(wx.Frame):
         self.add24_button.Bind(wx.EVT_BUTTON, lambda(evt):self.set_time_interval(0, self.time_slider.GetMax()+1440))
         self.taglistctrl.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_instance_selected)
         self.taglistctrl.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_instance_selected)
+        self.del_evt_button.Bind(wx.EVT_BUTTON, self.on_del_event)
+	self.del_evt_button.Disable()
+	self.add_note_button.Bind(wx.EVT_BUTTON, self.on_add_note)
         self.group_checklist.GetCheckList().Bind(wx.EVT_CHECKLISTBOX, self.update_plate_groups)
 
         # --- LAY OUT THE FRAME ---
@@ -58,10 +69,23 @@ class Bench(wx.Frame):
         time_sizer.Add(self.time_text_box, 0, wx.ALL, 5)
         time_sizer.Add(self.time_spin, 0, wx.ALL, 5)
         time_sizer.Add(self.add24_button, 0, wx.ALL, 5)
-        
+	
+	#menu_sizer = wx.BoxSizer(wx.HORIZONTAL)
+	edit_staticbox = wx.StaticBox(self.bot_panel, -1, "Edit")
+	edit_flex = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+	edit_flex.Add(wx.StaticText(self.bot_panel, -1, 'Undo Event'), 0, wx.CENTER)
+	edit_flex.Add(self.del_evt_button, 0)
+	edit_flex.Add(wx.StaticText(self.bot_panel, -1, 'Add Note'), 0, wx.CENTER)
+	edit_flex.Add(self.add_note_button, 0)
+	
+	editSizer = wx.StaticBoxSizer(edit_staticbox, wx.VERTICAL)
+	editSizer.Add(edit_flex,  1, wx.EXPAND|wx.ALL, 2)
+
         stack_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        stack_sizer.Add(wx.StaticText(self.bot_panel, -1, 'Select Vessel Stack(s)'), 0, wx.TOP, 3)
-        stack_sizer.Add(self.group_checklist, 1, wx.EXPAND)
+        stack_sizer.Add(wx.StaticText(self.bot_panel, -1, 'Select Vessel Stack(s)'), 0, wx.LEFT|wx.CENTER, 3)
+        stack_sizer.Add(self.group_checklist, 1, wx.LEFT|wx.CENTER, 5)
+	stack_sizer.AddSpacer((10,-1))
+	stack_sizer.Add(editSizer, 0, wx.RIGHT|wx.CENTER)
                 
         self.top_panel.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.top_panel.Sizer.Add(time_sizer, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 10)
@@ -92,7 +116,7 @@ class Bench(wx.Frame):
         group_tags = meta.get_matching_tags('ExptVessel|*|StackName|*')
         for tag in sorted(group_tags, key=meta.stringSplitByNumbers):
             if meta.get_field(tag) in selected_groups:
-                group_name = meta.get_field(tag)
+                stack_name = meta.get_field(tag)
                 prefix = get_tag_stump(tag, 2)
                 vessel_type = tag.split('|')[1]
                 inst = get_tag_instance(tag)
@@ -127,7 +151,9 @@ class Bench(wx.Frame):
             self.time_slider.SetRange(0, timepoint)
         self.time_slider.Value = timepoint
         self.time_text_box.Value = format_time_string(timepoint)
+        self.protocol_navigator.get_lineage().set_hover_timepoint(timepoint)
         self.update_well_selections()
+	self.update_well_state_status()
 
     def on_increment_time(self, evt):
         self.set_timepoint(self.time_slider.Value + 1)
@@ -147,6 +173,49 @@ class Bench(wx.Frame):
             self.time_text_box.SetForegroundColour(wx.BLACK)
         except:
             self.time_text_box.SetForegroundColour(wx.RED)
+    
+    def on_add_note(self, evt):
+	# check whether any event occured at this timepoint
+	timeline = meta.get_timeline()
+	self.events_by_timepoint = timeline.get_events_by_timepoint()	
+	prefixes = set([get_tag_stump(ev.get_welltag(), 2) for ev in self.events_by_timepoint[self.get_selected_timepoint()]])	    
+		
+	if not prefixes:
+	    dial = wx.MessageDialog(None, 'Notes need to be associated with events!!', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()              
+	    return
+	
+	try:
+	    lineage_panel = wx.GetApp().get_lineage()
+	except: 
+	    return	
+		
+	self.page_counter = meta.get_new_protocol_id('Notes')	
+	if int(self.page_counter) > 1:
+	    lineage_panel.timeline_panel.on_note_icon_add()
+
+	note_dia = NotePad(self, None, None, None) # timepoint and instance number as none because users might click Cancel
+	if note_dia.ShowModal() == wx.ID_OK:
+	    # Notes|<type>|<timepoint>|<instance> = value
+	    meta.set_field('Notes|%s|%s|%s' %(note_dia.noteType, str(self.get_selected_timepoint()), str(self.page_counter)), note_dia.noteDescrip.GetValue())   	    
+	    lineage_panel.timeline_panel.on_note_icon_add()
+
+    
+    def on_del_event(self, evt):
+        protocols = self.taglistctrl.get_selected_protocols()
+        if protocols == []:
+	    dial = wx.MessageDialog(None, 'No event was found for deletion\nor\nCan not undo cell transfer event', 'Error', wx.OK | wx.ICON_ERROR)
+	    dial.ShowModal()              
+            return
+        
+        protocol = protocols[0]
+        prefix, instance = protocol.rsplit('|',1)   
+	
+        wells_tag = '%s|Wells|%s|%s'%(prefix, instance, self.get_selected_timepoint())
+        meta.remove_field(wells_tag)
+        self.update_well_selections()
+	self.del_evt_button.Disable()
+        
 
     def update_well_selections(self):
         '''Updates the selected vessels based on the currently selected 
@@ -169,6 +238,15 @@ class Bench(wx.Frame):
                 plate.enable_selection()
                 selected_well_ids = [pw_id for pw_id in selected_ids if pw_id[0]==plate.get_plate_id()]
                 plate.set_selected_well_ids(selected_well_ids)
+    
+    def update_well_state_status(self):
+	timeline = meta.get_timeline()	
+	selected_ids = [timeline.get_well_ids(utp) for utp in timeline.get_unique_timepoints() if utp <= self.get_selected_timepoint()]
+
+	for plate in self.vesselscroller.get_vessels():
+	    plate.enable_selection()
+	    selected_well_ids = [pw_id for pw_ids in selected_ids for pw_id in pw_ids if pw_id[0]==plate.get_plate_id()]
+	    plate.set_well_ids_state(selected_well_ids)
 
     def on_update_well(self, platewell_id, selected):
         '''Called when a well is clicked.
@@ -181,6 +259,10 @@ class Bench(wx.Frame):
         
         protocol = protocols[0]
         prefix, instance = protocol.rsplit('|',1)
+        
+        wells_tag = '%s|Wells|%s|%s'%(prefix, instance, self.get_selected_timepoint())
+        #platewell_ids = set(meta.get_field(wells_tag, [])) 
+        
         
         # SPECIAL CASE: For harvesting, we prompt the user to specify the 
         # destination well(s) for each harvested well.
@@ -232,18 +314,19 @@ class Bench(wx.Frame):
                             meta.remove_field(seed_tag)
                 
         
-        # Update the Wells tag
+        # GENERIC CASE: Associate or dissociate event with selected wells
         wells_tag = '%s|Wells|%s|%s'%(prefix, instance, self.get_selected_timepoint())
         platewell_ids = set(meta.get_field(wells_tag, []))
+        
         if selected:
-            platewell_ids.update([platewell_id])
+            platewell_ids.update(platewell_id)
             meta.set_field(wells_tag, list(platewell_ids))
-        else:
-            platewell_ids.remove(platewell_id)
-            if len(platewell_ids) > 0:
-                meta.set_field(wells_tag, list(platewell_ids))
-            else:
-                meta.remove_field(wells_tag)
+        #else:
+            #platewell_ids.discard(platewell_id)  
+            #if len(platewell_ids) > 0:
+                #meta.set_field(wells_tag, list(platewell_ids))
+            #else:
+                #meta.remove_field(wells_tag)
 
         # Update the Images tags
         if selected and prefix.startswith('DataAcquis'):
@@ -251,19 +334,15 @@ class Bench(wx.Frame):
             images_tag = '%s|Images|%s|%s|%s'%(prefix, instance, self.get_selected_timepoint(), repr(platewell_id))
             
             if prefix == 'DataAcquis|HCS':
-                dlg = wx.FileDialog(self,message='Select the images for Plate %s, '
-                                    'Well %s'%(platewell_id[0], platewell_id[1]),
-                                    defaultDir=os.getcwd(), defaultFile='', 
-                                    style=wx.OPEN|wx.MULTIPLE)
+                dlg = wx.FileDialog(self,message='Select the images files',
+                                    defaultDir=os.getcwd(), defaultFile='', style=wx.OPEN|wx.MULTIPLE)
             elif prefix == 'DataAcquis|FCS':
-                dlg = wx.FileDialog(self,message='Select the FCS files for flask %s'%(platewell_id[0]),
-                                    defaultDir=os.getcwd(), defaultFile='', wildcard = "Adobe PDF files (*.pdf)|*.pdf|",
-                                    style=wx.OPEN|wx.MULTIPLE)
+                #dlg = wx.FileDialog(self,message='Select the FCS files for flask %s'%(platewell_id[0].strip('[]')),
+                dlg = wx.FileDialog(self,message='Select the FCS (pdf) files for flask',
+                                    defaultDir=os.getcwd(), defaultFile='', wildcard = "Adobe PDF files (*.pdf)|*.pdf|", style=wx.OPEN|wx.MULTIPLE)
             elif prefix == 'DataAcquis|TLM':
-                dlg = wx.FileDialog(self,message='Select the images for Plate %s, '
-                                    'Well %s'%(platewell_id[0], platewell_id[1]),
-                                    defaultDir=os.getcwd(), defaultFile='', 
-                                    style=wx.OPEN|wx.MULTIPLE)
+                dlg = wx.FileDialog(self,message='Select the images files',
+                                    defaultDir=os.getcwd(), defaultFile='', style=wx.OPEN|wx.MULTIPLE)
             else:
                 raise Exception('unrecognized tag prefix')
             

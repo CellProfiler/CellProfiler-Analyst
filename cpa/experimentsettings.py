@@ -1,10 +1,10 @@
 import re
 import wx
+import icons
 from singleton import Singleton
 from utils import *
 from timeline import Timeline
 
-#
 # TODO: Updating PlateDesign could be done entirely within 
 #       set_field and remove_field.
 #
@@ -15,7 +15,7 @@ def format_time_string(timepoint):
     '''formats the given time as a string
     '''
     hours = int(timepoint) / 60
-    mins = timepoint - 60 * hours
+    mins = int(timepoint) - 60 * hours
     return '%s:%02d'%(hours, mins)
 
 def get_matchstring_for_subtag(pos, subtag):
@@ -45,7 +45,7 @@ def get_tag_well(tag):
     '''Returns the well subtag from image tags of the form:
     DataAcquis|<type>|Images|<inst>|<timepoint>|<well> = [channel_urls, ...]
     '''
-    return int(tag.split('|')[5])
+    return tag.split('|')[5]
 
 def get_tag_protocol(tag):
     '''returns the tag prefix and instance that define a unique protocol
@@ -235,7 +235,8 @@ class ExperimentSettings(Singleton):
 	    if ((tag_prefix is None or tag.startswith(tag_prefix)) and (instnace is None or get_tag_instance(tag) == instnace)):
 		return True  
 	    else:
-		return False
+		return False	
+	
 	    
     def is_supp_protocol_filled(self, tag_prefix, instance=None):
 	'''tag_prefix is always type|event e.g. AddProcess|Wash
@@ -267,6 +268,7 @@ class ExperimentSettings(Singleton):
         for field, value in sorted(self.global_settings.items()):
             f.write('%s = %s\n'%(field, repr(value)))
         f.close()
+    
 	
     def save_settings(self, file, protocol):
 	'''
@@ -539,8 +541,140 @@ class ExperimentSettings(Singleton):
 		self.set_field(tag, '%02d/%02d/%4d'%(date.Day, date.Month+1, date.Year))
 	    else:
 		user_input = ctrl.GetValue()
-		self.set_field(tag, user_input)	 
+		self.set_field(tag, user_input)	
+	    
+    def get_seeded_sample(self, platewell_id):
+	'''this method returns sample or cell line information for the selected well
+	'''
+	timeline = self.get_timeline()
+	timepoints = timeline.get_unique_timepoints()
+	events_by_timepoint = timeline.get_events_by_timepoint()   
+	
+	seeding_instances = []
+	for i, timepoint in enumerate(timepoints):
+	    for ev in events_by_timepoint[timepoint]:
+		for well_id in ev.get_well_ids():
+		    if well_id == platewell_id and ev.get_welltag().startswith('CellTransfer|Seed'):
+			seeding_instances.append(ev.get_welltag())
+			
+	return seeding_instances
     
+    def get_sampleInstance(self, seed_tag):
+	'''This method returns the stock culutre or sample instance for a given seeding tag CellTransfer|Seed|Wells|<instance>
+	'''
+	instance = get_tag_instance(seed_tag)
+	# if seed from stock culture
+	if self.global_settings.has_key('CellTransfer|Seed|StockInstance|%s'%instance):
+	    return self.get_field('CellTransfer|Seed|StockInstance|%s'%instance)
+	elif self.global_settings.has_key('CellTransfer|Seed|HarvestInstance|%s'%instance):
+	    return self.get_field('CellTransfer|Harvest|StockInstance|%s'
+	                          %str(self.get_field('CellTransfer|Seed|HarvestInstance|%s'%instance)))	
+	    
+    #----------------------------------------------------------------------
+    def getStateRGB(self, trackTags):
+	"""This method returns the colour of the node given the history of the ancestor nodes events"""
+	currRGB = (255, 255, 255, 100)
+	for tag in trackTags:
+	    event = get_tag_event(tag)
+	    if event.startswith('Notes') or event.startswith('DataAcquis'): # since these are measurements or notes
+		continue
+	    currRGB = (int((currRGB[0]+EVENT_RGB[event][0])/2), int((currRGB[1]+EVENT_RGB[event][1])/2), int((currRGB[2]+EVENT_RGB[event][2])/2), 100)
+	return currRGB
+    #----------------------------------------------------------------------
+    def getEventRGB(self, tag):
+	"""get all event tags for the passed node and returns the colour associated with the last event** Need to change**"""
+	#currRGB = (255, 255, 255, 100)	
+	#if nodeTags:
+	    #tag = nodeTags.pop()
+	event = get_tag_event(tag)
+	if not event.startswith('Notes') or not event.startswith('DataAcquis'): # since these are measurements or notes
+	    return (EVENT_RGB[event][0], EVENT_RGB[event][1], EVENT_RGB[event][2], 100)
+	else:
+	    return (255, 255, 255, 100)
+    #----------------------------------------------------------------------
+    def getEventIcon(self, icon_size, act):
+	"""get the associated icon for the given action/event"""
+	if act == 'Seed':
+	    icon = icons.seed.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act == 'Stock':
+	    icon = icons.stock.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Harvest':
+	    icon = icons.harvest.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	    
+	elif act =='Chem':
+	    icon = icons.treat.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='Bio':
+	    icon = icons.dna.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	    
+	elif act =='Dye':
+	    icon = icons.stain.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='Immuno':
+	    icon = icons.antibody.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Genetic':
+	    icon = icons.primer.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	    
+	elif act =='Spin':
+	    icon = icons.spin.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	elif act =='Wash':
+	    icon = icons.wash.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Dry':
+	    icon = icons.dry.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Medium':
+	    icon = icons.medium.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='Incubator':
+	    icon = icons.incubator.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	    
+	elif act =='HCS':
+	    icon = icons.staticimage.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='FCS':
+	    icon = icons.arrow_up.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	elif act =='TLM':
+	    icon = icons.tlm.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	
+	#elif act =='Hint':
+	    #icon = icons.hint.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	#elif act =='CriticalPoint':
+	    #icon = icons.critical.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	#elif act =='Rest':
+	    #icon = icons.rest.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
+	#elif act =='URL':
+	    #icon = icons.url.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
+	#elif act =='Video':
+	    #icon = icons.video.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	    
+	return icon
+    
+	
+	
+	
+        
+	    
+EVENT_RGB ={
+    'Seed': (255,255,0,100),
+    'Harvest': (227,205,41,100),
+    'Chem': (255,51,102,100),
+    'Bio': (102,102,255,100),
+    'Dye': (27,188,224,100),
+    'Immuno': (27,224,43,100),
+    'Genetic': (27,224,181,100),
+    'Spin': (224,27,198,100),
+    'Incubator': (224,27,224,100),
+    'Wash': (175,27,224,100),
+    'Dry': (168,27224,100),
+    'Medium': (122,27,224,100),
+    'TLM': (224,194,27,100),
+    'HCS': (224,178,27,100),
+    'FCS': (224,142,27,100),
+    'CriticalPoint': (224,103,27,100),
+    'Hint': (224,86,27,100),
+    'Rest': (224,73,27,100),
+    'URL': (224,53,27,100),
+    'Video': (224,40,27,100),
+    
+
+}
+
+	
 
             
         

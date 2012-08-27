@@ -223,8 +223,13 @@ def reverse_iter_tree(node):
     while node is not None:
         yield node.parent
         node = node.parent
-    
-    
+        
+def get_progeny(node):
+    for child in node.get_children():
+        yield child
+        for grandchild in get_progeny(child):
+            yield grandchild        
+
 class LineageNode(object):
     '''A lineage node represents a unique state in a subset of wells at a given
     timepoint. For example: the set of wells that were seeded at density X at t0,
@@ -275,40 +280,40 @@ class LineageNode(object):
 #
 # Test code here
 #
-if __name__ == '__main__':
-    import numpy as np
+#if __name__ == '__main__':
+    ##import numpy as np
     
-    N_FURCATIONS = 2
-    N_TIMEPOINTS = 5
-    MAX_TIMEPOINT = 10
-    PLATE_TYPE = exp.P6
+    #N_FURCATIONS = 2
+    #N_TIMEPOINTS = 5
+    #MAX_TIMEPOINT = 10
+    #PLATE_TYPE = exp.P6
 
-    def generate_random_data():
-        meta = exp.ExperimentSettings.getInstance()
-        exp.PlateDesign.add_plate('test', PLATE_TYPE)
-        allwells = exp.PlateDesign.get_well_ids(exp.PlateDesign.get_plate_format('test'))
-        event_types = ['AddProcess|Stain|Wells|0|',
-                       'AddProcess|Wash|Wells|0|',
-                       'AddProcess|Dry|Wells|0|',
-                       'AddProcess|Spin|Wells|0|',
-                       'Perturbation|Chem|Wells|0|',
-                       'Perturbation|Bio|Wells|0|',
-                       'DataAcquis|TLM|Wells|0|',
-                       'DataAcquis|FCS|Wells|0|',
-                       'DataAcquis|HCS|Wells|0|',
-                       'CellTransfer|Seed|Wells|0|',
-                       'CellTransfer|Harvest|Wells|0|']
-        # GENERATE RANDOM EVENTS ON RANDOM WELLS
-        for t in list(np.random.random_integers(0, MAX_TIMEPOINT, N_TIMEPOINTS)):
-            for j in range(np.random.randint(1, N_FURCATIONS)):
-                np.random.shuffle(allwells)
-                well_ids = [('test', well) for well in allwells[:np.random.randint(1, len(allwells)+1)]]
-                #timeline.add_event(t, 'event%d'%(t), well_ids)
-                etype = event_types[np.random.randint(0,len(event_types))]
-                meta.set_field('%s%s'%(etype, t), well_ids)
+    #def generate_random_data():
+        #meta = exp.ExperimentSettings.getInstance()
+        #exp.PlateDesign.add_plate('test', PLATE_TYPE)
+        #allwells = exp.PlateDesign.get_well_ids(exp.PlateDesign.get_plate_format('test'))
+        #event_types = ['AddProcess|Stain|Wells|0|',
+                       #'AddProcess|Wash|Wells|0|',
+                       #'AddProcess|Dry|Wells|0|',
+                       #'AddProcess|Spin|Wells|0|',
+                       #'Perturbation|Chem|Wells|0|',
+                       #'Perturbation|Bio|Wells|0|',
+                       #'DataAcquis|TLM|Wells|0|',
+                       #'DataAcquis|FCS|Wells|0|',
+                       #'DataAcquis|HCS|Wells|0|',
+                       #'CellTransfer|Seed|Wells|0|',
+                       #'CellTransfer|Harvest|Wells|0|']
+        ## GENERATE RANDOM EVENTS ON RANDOM WELLS
+        #for t in list(np.random.random_integers(0, MAX_TIMEPOINT, N_TIMEPOINTS)):
+            #for j in range(np.random.randint(1, N_FURCATIONS)):
+                #np.random.shuffle(allwells)
+                #well_ids = [('test', well) for well in allwells[:np.random.randint(1, len(allwells)+1)]]
+                ##timeline.add_event(t, 'event%d'%(t), well_ids)
+                #etype = event_types[np.random.randint(0,len(event_types))]
+                #meta.set_field('%s%s'%(etype, t), well_ids)
 
-    generate_random_data()
-    meta = exp.ExperimentSettings.getInstance()
-    t = meta.get_timeline()
-    tree = t.get_lineage_tree()
+    #generate_random_data()
+    #meta = exp.ExperimentSettings.getInstance()
+    #t = meta.get_timeline()
+    #tree = t.get_lineage_tree()
     

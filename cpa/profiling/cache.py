@@ -368,4 +368,7 @@ if __name__ == '__main__':
     cache = Cache(cache_dir)
 
     cache._create_cache(options.resume)
-    RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
+    if predicate != '':
+        RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
+    else:
+        print 'Not performing normalization because not predicate was specified.'
