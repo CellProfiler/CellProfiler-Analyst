@@ -2,6 +2,7 @@ import sys
 import itertools
 import logging
 import numpy as np
+import cpa
 from .parallel import ParallelProcessor
 
 # compress is new in Python 2.7
@@ -183,6 +184,29 @@ class Profiles(object):
         keys = list(itertools.compress(keys, rowmask))
 
         return cls(keys, data, variables, group_name=group_name)
+
+    def regroup(self, group_name):
+        input_group_r, input_colnames = cpa.db.group_map(self.group_name, 
+                                                         reverse=True)
+        input_group_r = dict((tuple(map(str, k)), v) 
+                             for k, v in input_group_r.items())
+
+        group, colnames = cpa.db.group_map(group_name)
+        #group = dict((v, tuple(map(str, k))) 
+        #             for v, k in group.items())
+        d = {}
+        for key in self.keys():
+            images = input_group_r[key]
+            groups = [group[image] for image in images if image in group]
+            if len(groups) == 0:
+                # No group defined for this image.
+                continue
+            if groups.count(groups[0]) != len(groups):
+                print >>sys.stderr, 'Error: Input group %r contains images in %d output groups' % (key, len(set(groups)))
+                sys.exit(1)
+            d[key] = groups[0]
+        return d
+
 
 
 def add_common_options(parser):

@@ -5,6 +5,7 @@ import cPickle
 import base64
 import zlib
 import wx
+import collections
 
 from dbconnect import *
 from singleton import Singleton
@@ -77,7 +78,7 @@ class TrainingSet:
         lines = f.read()
 #        lines = lines.replace('\r', '\n')    # replace CRs with LFs
         lines = lines.split('\n')
-        labelDict = {}
+        labelDict = collections.OrderedDict()
         for l in lines:
             try:
                 if l.strip()=='': continue

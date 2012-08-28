@@ -54,15 +54,20 @@ class Subsample(object):
 
     def _compute(self, sample_size, filter, parallel, show_progress, verbose):
         cache = Cache(self.cache_dir)
+        if filter is None:
+            image_keys = cpa.db.GetAllImageKeys()
+        else:
+            image_keys = cpa.db.GetFilteredImages(filter)
         counts = cache.get_cell_counts()
-        ncells = reduce(operator.add, counts.values())
+        ncells = reduce(operator.add, 
+                        (counts.get(tuple(map(int, k)), 0) 
+                         for k in image_keys))
         if sample_size is None:
             sample_size = round(0.001 * ncells)
         if verbose:
             print 'Subsampling {0} of {1} cells'.format(sample_size, ncells)
 
         indices = np.array(random.sample(xrange(ncells), sample_size))
-        image_keys = cpa.db.GetAllImageKeys()
         per_image_indices = _break_indices(indices, image_keys, counts)
         parameters = _make_parameters(self.cache_dir, self.normalization_name, 
                                       image_keys, per_image_indices)

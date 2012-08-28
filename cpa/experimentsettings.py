@@ -15,7 +15,7 @@ def format_time_string(timepoint):
     '''formats the given time as a string
     '''
     hours = int(timepoint) / 60
-    mins = timepoint - 60 * hours
+    mins = int(timepoint) - 60 * hours
     return '%s:%02d'%(hours, mins)
 
 def get_matchstring_for_subtag(pos, subtag):
@@ -45,7 +45,7 @@ def get_tag_well(tag):
     '''Returns the well subtag from image tags of the form:
     DataAcquis|<type>|Images|<inst>|<timepoint>|<well> = [channel_urls, ...]
     '''
-    return int(tag.split('|')[5])
+    return tag.split('|')[5]
 
 def get_tag_protocol(tag):
     '''returns the tag prefix and instance that define a unique protocol
@@ -268,6 +268,7 @@ class ExperimentSettings(Singleton):
         for field, value in sorted(self.global_settings.items()):
             f.write('%s = %s\n'%(field, repr(value)))
         f.close()
+    
 	
     def save_settings(self, file, protocol):
 	'''
@@ -630,16 +631,16 @@ class ExperimentSettings(Singleton):
 	elif act =='TLM':
 	    icon = icons.tlm.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
 	
-	elif act =='Hint':
-	    icon = icons.hint.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
-	elif act =='CriticalPoint':
-	    icon = icons.critical.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
-	elif act =='Rest':
-	    icon = icons.rest.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
-	elif act =='URL':
-	    icon = icons.url.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
-	elif act =='Video':
-	    icon = icons.video.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+	#elif act =='Hint':
+	    #icon = icons.hint.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	#elif act =='CriticalPoint':
+	    #icon = icons.critical.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap() 
+	#elif act =='Rest':
+	    #icon = icons.rest.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
+	#elif act =='URL':
+	    #icon = icons.url.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()   
+	#elif act =='Video':
+	    #icon = icons.video.Scale(icon_size, icon_size, quality=wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
 	    
 	return icon
     

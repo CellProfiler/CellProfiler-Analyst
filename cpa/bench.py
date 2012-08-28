@@ -7,7 +7,9 @@ import metadatainput as assay
 import re
 from experimentsettings import *
 from vesselpanel import VesselPanel, VesselScroller, VesselSelectionPopup
+from lineagepanel import TimelinePanel
 from temporaltaglist import TemporalTagListCtrl
+from notepad import NotePad
 from wx.lib.embeddedimage import PyEmbeddedImage
 from wx.lib.masked import TimeCtrl
 
@@ -173,54 +175,31 @@ class Bench(wx.Frame):
             self.time_text_box.SetForegroundColour(wx.RED)
     
     def on_add_note(self, evt):
-	# first check whether any event occured at the selected timepoint
-	
-	plate_well_ids = [meta.get_field(tag) for tag in meta.global_settings if re.match(get_matchstring_for_subtag(2, 'Well'), tag) if get_tag_timepoint(tag)==self.get_selected_timepoint()]
-	if plate_well_ids == []:
+	# check whether any event occured at this timepoint
+	timeline = meta.get_timeline()
+	self.events_by_timepoint = timeline.get_events_by_timepoint()	
+	prefixes = set([get_tag_stump(ev.get_welltag(), 2) for ev in self.events_by_timepoint[self.get_selected_timepoint()]])	    
+		
+	if not prefixes:
 	    dial = wx.MessageDialog(None, 'Notes need to be associated with events!!', 'Error', wx.OK | wx.ICON_ERROR)
 	    dial.ShowModal()              
 	    return
-	# TO DO: give users option to select which event the note get associated with
-	# for now assumes that users are associating with the first event in the well_tag list
-	print plate_well_ids
 	
-	
-	#instance = max(meta.get_field_instances('Notes'))
-	#dia = NoteDialog(self, instance)
-	
-	#if dia.ShowModal() == wx.ID_OK:
-	
-	    
-  
-  
-  
-    #def OnShowDialog(self, event):     
-        ## link with the dynamic experiment settings
-        #meta = ExperimentSettings.getInstance()
-        #attributes = meta.get_attribute_list('Instrument|Microscope') 
-        
-        ##check whether there is at least one attributes
-        #if not attributes:
-            #dial = wx.MessageDialog(None, 'No Instances exists!!', 'Error', wx.OK | wx.ICON_ERROR)
-            #dial.ShowModal()  
-            #return
-        ##show the popup table 
-        #dia = InstanceListDialog(self, 'Instrument|Microscope', selection_mode = False)
-        #if dia.ShowModal() == wx.ID_OK:
-            #if dia.listctrl.get_selected_instances() != []:
-                #instance = dia.listctrl.get_selected_instances()[0]
-                #tlmselctTAG = 'DataAcquis|TLM|MicroscopeInstance|'+str(self.page_counter)
-                #self.settings_controls[tlmselctTAG].SetValue(meta.get_field('Instrument|Microscope|ChannelName|%s'%str(instance)))
-        #dia.Destroy()  
-  
-  
+	try:
+	    lineage_panel = wx.GetApp().get_lineage()
+	except: 
+	    return	
+		
+	self.page_counter = meta.get_new_protocol_id('Notes')	
+	if int(self.page_counter) > 1:
+	    lineage_panel.timeline_panel.on_note_icon_add()
 
-	meta.set_field('Notes|Hint|Wells|%s|%s'%(get_tag_instance(tag), str(self.get_selected_timepoint())), plate_well_ids)
-	    
-	# if multiple events - ask users which event they need the note to get assoicated ALSO if multiple instance being applied
-	# Choose from the type of event, and accordingly make the GUI
-	# get the wells for the event and assign that to the Note TAG
-	# request visualization panel to show the node in the time point
+	note_dia = NotePad(self, None, None, None) # timepoint and instance number as none because users might click Cancel
+	if note_dia.ShowModal() == wx.ID_OK:
+	    # Notes|<type>|<timepoint>|<instance> = value
+	    meta.set_field('Notes|%s|%s|%s' %(note_dia.noteType, str(self.get_selected_timepoint()), str(self.page_counter)), note_dia.noteDescrip.GetValue())   	    
+	    lineage_panel.timeline_panel.on_note_icon_add()
+
     
     def on_del_event(self, evt):
         protocols = self.taglistctrl.get_selected_protocols()
