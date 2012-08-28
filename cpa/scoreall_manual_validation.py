@@ -14,7 +14,6 @@ import numpy as np
 import os
 import sys
 import wx
-import boosting
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 #import util.crossvalidation as xval
@@ -24,14 +23,29 @@ ABOUT:
 This script will train a classifier for a given properties file and training
 set and output a confusion matrix, indicating how well the classifier learned
 from the initial trainingset (trainingset_initial) applies to a fresh, non-iterated
-traiing set (trainingset_manual).
+training set (trainingset_manual).
 
 USAGE:
 python scoreall_manual_validation.py <propertiesfile> <trainingset_initial> <trainingset_manual>
 
 trainingset_initial = training set created by the traditional CPA iterative process
-trainingset_manual = training set generated as a manual ground truth to test CPA's classification against
+trainingset_manual = training set generated as a manual ground truth to test against CPA's classification 
 '''
+## per_cell_scores code copied from https://svn.broadinstitute.org/imaging/2007_05_16_HCS_AstraZeneca/src/boosting.py
+## because it was not in this repository -- DL
+def per_cell_scores(learners, test, colnames):
+    assert test.shape[1] == len(colnames)
+    scores = np.zeros(len(test), dtype=float)
+    for colname, thresh, a, b, expected_worst_margin in learners:
+        try:
+            col = colnames.index(colname)
+        except ValueError:
+            warnings.warn('Skipping %s'%colname)
+            continue
+        above_threshold = np.array(test)[:,col] > thresh
+        scores[above_threshold] += a[0]
+        scores[np.logical_not(above_threshold)] += b[0]
+    return scores
 
 def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
           show_results=False, results_table=None, overwrite=False):
@@ -93,7 +107,7 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
         #logging.info('%d%% '%(frac*100.,))
 
     ## Score Ground Truth using established classifier
-    gt_predicted_scores = boosting.per_cell_scores(weaklearners, gt.values, gt.colnames)
+    gt_predicted_scores = per_cell_scores(weaklearners, gt.values, gt.colnames)
     #plt.hist(gt_predicted_scores)
     #plt.show()
     gt_predicted_signs = np.sign(gt_predicted_scores)
@@ -113,28 +127,17 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
 
     ############
     ## Confusion Matrix code from here: http://stackoverflow.com/questions/5821125/how-to-plot-confusion-matrix-with-string-axis-rather-than-integer-in-python
-    
-    #conf_arr = [[33,2,0,0,0,0,0,0,0,1,3], 
-                #[3,31,0,0,0,0,0,0,0,0,0], 
-                #[0,4,41,0,0,0,0,0,0,0,1], 
-                #[0,1,0,30,0,6,0,0,0,0,1], 
-                #[0,0,0,0,38,10,0,0,0,0,0], 
-                #[0,0,0,3,1,39,0,0,0,0,4], 
-                #[0,2,2,0,4,1,31,0,0,0,2],
-                #[0,1,0,0,0,0,0,36,0,2,0], 
-                #[0,0,0,0,0,0,1,5,37,5,1], 
-                #[3,0,0,0,0,0,0,0,0,39,0], 
-                #[0,0,0,0,0,0,0,0,0,0,38]]
     conf_arr = cm
-    
     norm_conf = []
-    for i in conf_arr:
-        a = 0
-        tmp_arr = []
-        a = sum(i, 0)
-        for j in i:
-            tmp_arr.append(float(j)/float(a))
-        norm_conf.append(tmp_arr)
+    ## This normalizes each *row* to the color map, but I chose to normalize the whole confusion matrix to the same scale
+    ##for i in conf_arr:
+        ##a = 0
+        ##tmp_arr = []
+        ##a = sum(i, 0)
+        ##for j in i:
+            ##tmp_arr.append(float(j)/float(a))
+        ##norm_conf.append(tmp_arr)
+    norm_conf = conf_arr / float(np.max(conf_arr))
     
     fig = plt.figure()
     plt.clf()
@@ -157,6 +160,7 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
     plt.xticks(range(width), alphabet[:width])
     plt.yticks(range(height), alphabet[:height])
     plt.show()
+    print 'Done'
     #plt.savefig('confusion_matrix.png', format='png')    
 ######
 #
