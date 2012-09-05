@@ -156,7 +156,8 @@ class Profiles(object):
         assert len(keys) == len(parameters)
         njobs = len(parameters)
         parallel = parallel or ParallelProcessor.create_from_legacy(ipython_profile)
-        generator = parallel.view('profiles.compute').imap(function, parameters)
+        view = parallel.view('profiles.compute')
+        generator = view.imap(function, parameters)
         if show_progress:
             import progressbar
             progress = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
