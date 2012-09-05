@@ -76,12 +76,17 @@ class IPython(ParallelProcessor):
         return self.client.load_balanced_view()
 
 
-class Multiprocessing(ParallelProcessor):
+class Multiprocessing(ParallelProcessor): 
+    def __init__(self, *args, **kwargs):
+        super(Multiprocessing, self).__init__(*args, **kwargs)
+        from multiprocessing import Pool
+        # Instantiate Pool here instead of in the view method to
+        # prevent it from being finalized while imap is running.
+        # See http://stackoverflow.com/questions/5481104/multiprocessing-pool-imap-broken
+        self.pool = Pool()
+
     def view(self, name=None):
-        from multiprocessing import Pool, cpu_count
-        import threading
-        logging.debug('%s: %d multiprocessing processes' % (name, cpu_count()))
-        return Pool()
+        return self.pool
 
 
 class Uniprocessing(ParallelProcessor):
