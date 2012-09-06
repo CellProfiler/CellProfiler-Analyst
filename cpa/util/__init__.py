@@ -190,3 +190,18 @@ def replace_atomically(filename):
             os.remove(tmp)
             raise
 
+def auc(positives, negatives):
+    queue = sorted([(v, True) for v in positives] + 
+                   [(v, False) for v in negatives])
+    auc = 0
+    tp = len(positives)
+    for v, is_positive in queue:
+        if is_positive:
+            tp -= 1
+        else:
+            auc += tp
+    n = len(positives) * len(negatives)
+    if n:
+        return auc * 1.0 / n
+    else:
+        return np.nan
