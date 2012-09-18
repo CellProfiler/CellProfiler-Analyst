@@ -69,6 +69,7 @@ def plot_profiles(profiles, output_group_name=None):
 def parse_arguments():
     parser = OptionParser("usage: %prog PROPERTIES-FILE INPUT-FILENAME GROUP")
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
+    parser.add_option('-z', dest='standardize', help='standardize columns', action='store_true')
     options, args = parser.parse_args()
     if len(args) != 3:
         parser.error('Incorrect number of arguments')
@@ -78,6 +79,9 @@ if __name__ == '__main__':
     options, (properties_file, input_filename, group_name) = parse_arguments()
     cpa.properties.LoadFile(properties_file)
     profiles = Profiles.load(input_filename)
+    if options.standardize:
+        profiles.data = profiles.data - profiles.data.mean(0)
+        profiles.data = profiles.data / profiles.data.std(0)
     plot_profiles(profiles, group_name)
     if options.output_filename:
         pylab.savefig(options.output_filename)
