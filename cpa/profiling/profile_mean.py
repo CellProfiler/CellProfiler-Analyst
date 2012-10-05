@@ -6,16 +6,18 @@ import sys
 import logging
 from optparse import OptionParser
 import numpy as np
+from scipy.stats import mode
 import cpa
 from .cache import Cache, RobustLinearNormalization, normalizations
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
 def _compute_group_mean((cache_dir, images, normalization_name, 
-                         preprocess_file)):
+                         preprocess_file, method)):
     try:
         import numpy as np
         from cpa.profiling.cache import Cache, normalizations
+        from scipy.stats import norm as Gaussian
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
         data, colnames, _ = cache.load(images, normalization=normalization)
@@ -32,7 +34,18 @@ def _compute_group_mean((cache_dir, images, normalization_name,
             preprocessor = cpa.util.unpickle1(preprocess_file)
             data = preprocessor(data)
 
-        return np.mean(data, axis = 0)
+        if method == 'mean':
+            return np.mean(data, axis=0)
+        elif method == 'mean+std':
+            return np.hstack((np.mean(data, axis=0), np.std(data, axis=0)))
+        elif method == 'mode':
+            return mode(data, axis=0)
+        elif method == 'median':
+            return np.median(data, axis=0)
+        elif method == 'median+mad':
+            c = Gaussian.ppf(3/4.)
+            return np.hstack((np.median(data, axis=0),
+                              np.median((np.fabs(data)) / c, axis=0)))
     except: # catch *all* exceptions
         from traceback import print_exc
         import sys
@@ -41,12 +54,12 @@ def _compute_group_mean((cache_dir, images, normalization_name,
 
 def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
                  normalization=RobustLinearNormalization, preprocess_file=None,
-                 show_progress=True):
+                 show_progress=True, method='mean'):
     group, colnames_group = cpa.db.group_map(group_name, reverse=True,
                                              filter=filter)
 
     keys = group.keys()
-    parameters = [(cache_dir, group[g], normalization.__name__, preprocess_file)
+    parameters = [(cache_dir, group[g], normalization.__name__, preprocess_file, method)
                   for g in keys]
 
     if "CPA_DEBUG" in os.environ:
@@ -62,6 +75,10 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     else:
         cache = Cache(cache_dir)
         variables = normalization(cache).colnames
+    if method == 'mean+std':
+        variables = variables + ['std_' + v for v in variables]
+    elif method == 'median+mad':
+        variables = variables + ['mad_' + v for v in variables]
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
                             show_progress=show_progress)
@@ -80,6 +97,8 @@ if __name__ == '__main__':
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     parser.add_option('-c', dest='csv', help='output as CSV', action='store_true')
+    parser.add_option('--method', dest='method', help='method: mean (default), mean+std, mode, median, median+mad', 
+                      action='store', default='mean')
     add_common_options(parser)
     options, args = parser.parse_args()
     parallel = ParallelProcessor.create_from_options(parser, options)
@@ -93,7 +112,8 @@ if __name__ == '__main__':
     profiles = profile_mean(cache_dir, group, filter=options.filter,
                             parallel=parallel, 
                             normalization=normalizations[options.normalization],
-                            preprocess_file=options.preprocess_file)
+                            preprocess_file=options.preprocess_file,
+                            method=options.method)
     if options.csv:
         profiles.save_csv(options.output_filename)
     else:
