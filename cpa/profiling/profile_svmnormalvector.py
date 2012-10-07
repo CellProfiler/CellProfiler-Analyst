@@ -71,7 +71,8 @@ class memoized(object):
         """Support instance methods."""
         return functools.partial(self.__call__, obj)
 
-def _compute_svmnormalvector((cache_dir, images, control_images, rfe)):
+def _compute_svmnormalvector((cache_dir, images, control_images, 
+                              normalization_name, preprocess_file, rfe)):
     #try:
         import numpy as np 
         import sys
@@ -80,8 +81,13 @@ def _compute_svmnormalvector((cache_dir, images, control_images, rfe)):
         from cpa.profiling.profile_svmnormalvector import _compute_rfe
 
         cache = Cache(cache_dir)
-        normalizeddata, normalized_colnames, _ = cache.load(images, normalization=RobustLinearNormalization)
-        control_data, control_colnames, _ = cache.load(control_images, normalization=RobustLinearNormalization)
+        normalization = normalizations[normalization_name]
+        normalizeddata, normalized_colnames, _ = cache.load(images, normalization=normalization)
+        control_data, control_colnames, _ = cache.load(control_images, normalization=normalization)
+        if preprocess_file:
+            preprocessor = cpa.util.unpickle1(preprocess_file)
+            normalizeddata = preprocessor(normalizeddata)
+            control_data = preprocessor(control_data)
         assert len(control_data) >= len(normalizeddata)
         downsampled = control_data[np.random.randint(0, len(control_data), len(normalizeddata)), :]
         x = np.vstack((normalizeddata, downsampled))
@@ -126,7 +132,8 @@ def profile_svmnormalvector(cache_dir, group_name, control_filter,
                     for r in control_images_by_plate[plate_by_image[image]]]
 
         keys = group.keys()
-        parameters = [(cache_dir, group[k], control_images(group[k]), rfe)
+        parameters = [(cache_dir, group[k], control_images(group[k]), 
+                       normalization.__name__, preprocess_file, rfe)
                       for k in keys]
 
         if preprocess_file:
