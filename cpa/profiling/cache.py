@@ -275,6 +275,12 @@ class Cache(object):
         return self._cached_colnames
 
     def get_cell_counts(self):
+        """
+        The counts include rows with NaNs, which may be removed by
+        the load() method depending on the removeRowsWithNaN
+        keyword.
+        """
+        
         #if not os.path.exists(self._counts_filename):
         #    self._create_cache_counts()
         a = np.load(self._counts_filename)

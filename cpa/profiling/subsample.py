@@ -6,7 +6,8 @@ def _compute_group_subsample((cache_dir, normalization_name, image_key,
     from .cache import Cache, normalizations
     cache = Cache(cache_dir)
     normalizeddata, normalized_colnames, _ = cache.load([image_key], 
-                                                        normalization=normalizations[normalization_name])
+                                                        normalization=normalizations[normalization_name],
+                                                        removeRowsWithNaN=False)
     return normalizeddata[indices]
 
 import cPickle as pickle
