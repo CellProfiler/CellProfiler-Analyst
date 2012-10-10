@@ -28,6 +28,8 @@ class ParallelProcessor(object):
                          help='main memory requirement in gigabytes')
         group.add_option('--njobs', dest='njobs', type='int', default=50,
                          help='number of jobs to start on LSF')
+        group.add_option('--jobname', dest='jobname', default='CPA',
+                         help='job name on LSF')
         parser.add_option_group(group)
 
     @classmethod
@@ -56,7 +58,7 @@ class ParallelProcessor(object):
             parser.error('You can only specify one of --ipython-profile, --lsf-directory, and --multiprocessing.')
         if options.lsf_directory:
             import lsf
-            return lsf.LSF(options.njobs, options.lsf_directory, memory=options.memory)
+            return lsf.LSF(options.njobs, options.lsf_directory, memory=options.memory, job_array_name = options.jobname)
         elif options.ipython_profile:
             from IPython.parallel import Client, LoadBalancedView
             client = Client(profile=options.ipython_profile)
