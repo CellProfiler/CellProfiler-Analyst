@@ -46,6 +46,17 @@ def _compute_group_mean((cache_dir, images, normalization_name,
             c = Gaussian.ppf(3/4.)
             return np.hstack((np.median(data, axis=0),
                               np.median((np.fabs(data)) / c, axis=0)))
+        elif method == 'gmm2':
+            max_sample_size = 2000
+            if data.shape[0] > max_sample_size:
+                data = data[np.random.random_integers(0,data.shape[0]-1,size=max_sample_size),:]
+            from sklearn.decomposition import PCA
+            from sklearn.mixture import GMM
+            pca = PCA(n_components=0.99).fit(data)
+            pca_data = pca.transform(data)
+            #gmm = GMM(2, covariance_type='full', n_iter=100000, thresh=1e-7).fit(pca_data)
+            gmm = GMM(2, covariance_type='full').fit(pca_data)
+            return pca.inverse_transform(gmm.means_).flatten()
     except: # catch *all* exceptions
         from traceback import print_exc
         import sys
@@ -79,6 +90,8 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
         variables = variables + ['std_' + v for v in variables]
     elif method == 'median+mad':
         variables = variables + ['mad_' + v for v in variables]
+    elif method == 'gmm2':
+        variables = ['m1_' + v for v in variables] + ['m2_' + v for v in variables]
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
                             show_progress=show_progress)
