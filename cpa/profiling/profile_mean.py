@@ -110,6 +110,7 @@ if __name__ == '__main__':
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     parser.add_option('-c', dest='csv', help='output as CSV', action='store_true')
+    parser.add_option('--no-progress', dest='no_progress', help='Do not show progress bar', action='store_true')
     parser.add_option('--method', dest='method', help='method: mean (default), mean+std, mode, median, median+mad', 
                       action='store', default='mean')
     add_common_options(parser)
@@ -126,7 +127,8 @@ if __name__ == '__main__':
                             parallel=parallel, 
                             normalization=normalizations[options.normalization],
                             preprocess_file=options.preprocess_file,
-                            method=options.method)
+                            method=options.method,
+                            show_progress=not options.no_progress)
     if options.csv:
         profiles.save_csv(options.output_filename)
     else:
