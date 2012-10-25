@@ -6,7 +6,8 @@ def _compute_group_subsample((cache_dir, normalization_name, image_key,
     from .cache import Cache, normalizations
     cache = Cache(cache_dir)
     normalizeddata, normalized_colnames, _ = cache.load([image_key], 
-                                                        normalization=normalizations[normalization_name])
+                                                        normalization=normalizations[normalization_name],
+                                                        removeRowsWithNaN=False)
     return normalizeddata[indices]
 
 import cPickle as pickle
@@ -63,7 +64,7 @@ class Subsample(object):
                         (counts.get(tuple(map(int, k)), 0) 
                          for k in image_keys))
         if sample_size is None:
-            sample_size = round(0.001 * ncells)
+            sample_size = int(round(0.001 * ncells))
         if verbose:
             print 'Subsampling {0} of {1} cells'.format(sample_size, ncells)
 

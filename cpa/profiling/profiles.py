@@ -101,6 +101,9 @@ class Profiles(object):
         assert len(header) == self.key_size + self.data.shape[1]
         return header
 
+    def get_as_nparray(self):
+        return np.vstack((self.header(),np.hstack((self._keys,self.data))))
+
     def save(self, filename=None):
         header = self.header()
         if isinstance(filename, str):

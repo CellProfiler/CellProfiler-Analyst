@@ -11,9 +11,10 @@ import tempfile
 import progressbar
 
 class LSF(object):
-    def __init__(self, njobs, directory=None, memory=None):
+    def __init__(self, njobs, directory=None, memory=None, job_array_name = 'CPA'):
         self.njobs = njobs
         self.memory = memory
+        self.job_array_name = job_array_name
         if directory is None:
             self.directory = tempfile.mkdtemp(dir='.')
         else:
@@ -22,13 +23,14 @@ class LSF(object):
                 os.mkdir(self.directory)
 
     def view(self, name):
-        return LSFView(self.njobs, os.path.join(self.directory, name), self.memory)
+        return LSFView(self.njobs, os.path.join(self.directory, name), self.memory, self.job_array_name)
 
 
 class LSFView(object):
-    def __init__(self, njobs, directory=None, memory=None):
+    def __init__(self, njobs, directory=None, memory=None, job_array_name = 'CPA'):
         self.njobs = njobs
         self.memory = memory
+        self.job_array_name = job_array_name
         if directory is None:
             self.directory = tempfile.mkdtemp(dir='.')
             self.resuming = False
@@ -47,7 +49,7 @@ class LSFView(object):
         args = ['bsub']
         if self.memory:
             args.extend(['-R', 'rusage[mem=%d]' % int(self.memory)])
-        args.extend(['-J', '"CPA[1-%d]"' % self.njobs, '-o', 
+        args.extend(['-J', '"%s[1-%d]"' % (self.job_array_name, self.njobs), '-o', 
                      '"%s/out/j%%Ja%%I.out"' % self.directory, sys.executable,
                      '-m', 'cpa.profiling.lsf', self.directory])
         cmd = ' '.join(args)
