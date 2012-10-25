@@ -96,6 +96,8 @@ def _compute_svmnormalvector((cache_dir, images, control_images,
         m = clf.fit(x, y)
         normal_vector = m.coef_[0]
         if rfe:
+            # Copy because it is immutable (normal_vector.flags.weriteable == False)
+            normal_vector = np.array(normal_vector)
             normal_vector[~_compute_rfe(x, y)] = 0
         return normal_vector
     #except: # catch *all* exceptions
