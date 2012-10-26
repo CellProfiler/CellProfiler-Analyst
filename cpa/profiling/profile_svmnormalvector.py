@@ -76,7 +76,7 @@ def _compute_svmnormalvector((cache_dir, images, control_images,
     #try:
         import numpy as np 
         import sys
-        from cpa.profiling.cache import Cache, RobustLinearNormalization
+        from cpa.profiling.cache import Cache, RobustLinearNormalization, normalizations
         from sklearn.svm import LinearSVC
         from cpa.profiling.profile_svmnormalvector import _compute_rfe
 
