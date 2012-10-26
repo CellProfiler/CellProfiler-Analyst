@@ -9,6 +9,7 @@ import marshal
 import os
 import tempfile
 import progressbar
+import traceback
 
 class LSF(object):
     def __init__(self, njobs, directory=None, memory=None, job_array_name = 'CPA'):
@@ -165,6 +166,7 @@ class Worker(object):
                 function = types.FunctionType(code, globals(), "function")
                 result = map(function, task['batch'])
             except:
+                traceback.print_exc(None, sys.stderr)
                 if task['attempts'] > 0:
                     task['attempts'] -= 1
                     with open(self.filename('cur', task_id), 'w') as f:
