@@ -5,6 +5,7 @@ import numpy as np
 import cpa
 from scipy.spatial.distance import cdist, cosine
 from .profiles import Profiles
+from .confusion import confusion_matrix, write_confusion
 
 def vote(predictions):
     votes = {}
@@ -96,33 +97,11 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
             confusion[true, predicted] = confusion.get((true, predicted), 0) + 1
     return confusion
 
-def confusion_matrix(confusion, dtype=int):
-   labels = set()
-   for a, b in confusion.keys():
-      labels.add(a)
-      labels.add(b)
-   labels = sorted(labels)
-   cm = np.zeros((len(labels), len(labels)), dtype=dtype)
-   for (a, b), count in confusion.items():
-      cm[labels.index(a), labels.index(b)] = count
-   return cm
-
-def confusion_reduce(operation, confusions):
-   d = confusions[0].copy()
-   for c in confusions[1:]:
-      for k, v in c:
-         d[k] = operation(d[k], v)
-   return d
-
 def print_confusion_matrix(confusion):
    cm = confusion_matrix(confusion)
    print cm
    print 'Overall: %d / %d = %.0f %%' % (np.diag(cm).sum(), cm.sum(),
                                          100.0 * np.diag(cm).sum() / cm.sum())
-
-def print_confusion(confusion):
-    for (a, b), v in confusion.items():
-        print '\t'.join([' '.join(a), ' '.join(b), str(v)])
 
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [-c] [-h HOLDOUT-GROUP] PROPERTIES-FILE PROFILES-FILENAME TRUE-GROUP")
@@ -140,4 +119,4 @@ if __name__ == '__main__':
        profiles = Profiles.load(profiles_filename)
 
     confusion = crossvalidate(profiles, true_group_name, options.holdout_group)
-    print_confusion(confusion)
+    write_confusion(confusion, sys.stdout)
