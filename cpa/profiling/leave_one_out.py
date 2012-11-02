@@ -59,7 +59,9 @@ class NNClassifier(object):
         self.labels = labels
 
     def classify(self, feature):
-        distances = np.array([cosine(f, feature) for f in self.features])
+        all_zero = np.all(self.features == 0, 1)
+        distances = np.array([cosine(f, feature) if not z else np.inf
+                              for f, z in zip(self.features, all_zero)])
         return self.labels[np.argmin(distances)]
 
 # A second implementation, originally written to make it possible to
