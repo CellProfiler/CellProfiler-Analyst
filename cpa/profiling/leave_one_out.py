@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 from optparse import OptionParser
 import numpy as np
 import cpa

@@ -3,6 +3,7 @@
 def _compute_ksstatistic((cache_dir, images, control_images, preprocess_file)):
     import numpy as np 
     import sys
+    import cpa
     from cpa.profiling.cache import Cache, RobustLinearNormalization
     from cpa.profiling.ks_2samp import ks_2samp
 
