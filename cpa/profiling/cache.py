@@ -279,6 +279,8 @@ class Cache(object):
         The counts include rows with NaNs, which may be removed by
         the load() method depending on the removeRowsWithNaN
         keyword.
+        
+        Image with zero object won't have their key stored in this dictionary.
         """
         
         #if not os.path.exists(self._counts_filename):
@@ -339,6 +341,9 @@ class Cache(object):
         np.savez(filename, features=np.array(features, dtype=float), cellids=np.squeeze(np.array(cellids)))
 
     def _create_cache_counts(self, resume):
+        """
+        Does not create a key for images with zero objects
+        """
         if resume and os.path.exists(self._counts_filename):
             return
         result = cpa.db.execute("""select {0}, count(*) from {1} group by {0}""".format(
