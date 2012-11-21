@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import sys
 from optparse import OptionParser
 import numpy as np
 import cpa
 from scipy.spatial.distance import cdist, cosine
 from .profiles import Profiles
+from .confusion import confusion_matrix, write_confusion
 
 def vote(predictions):
     votes = {}
@@ -59,7 +61,9 @@ class NNClassifier(object):
         self.labels = labels
 
     def classify(self, feature):
-        distances = np.array([cosine(f, feature) for f in self.features])
+        all_zero = np.all(self.features == 0, 1)
+        distances = np.array([cosine(f, feature) if not z else np.inf
+                              for f, z in zip(self.features, all_zero)])
         return self.labels[np.argmin(distances)]
 
 # A second implementation, originally written to make it possible to
@@ -94,33 +98,11 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
             confusion[true, predicted] = confusion.get((true, predicted), 0) + 1
     return confusion
 
-def confusion_matrix(confusion, dtype=int):
-   labels = set()
-   for a, b in confusion.keys():
-      labels.add(a)
-      labels.add(b)
-   labels = sorted(labels)
-   cm = np.zeros((len(labels), len(labels)), dtype=dtype)
-   for (a, b), count in confusion.items():
-      cm[labels.index(a), labels.index(b)] = count
-   return cm
-
-def confusion_reduce(operation, confusions):
-   d = confusions[0].copy()
-   for c in confusions[1:]:
-      for k, v in c:
-         d[k] = operation(d[k], v)
-   return d
-
 def print_confusion_matrix(confusion):
    cm = confusion_matrix(confusion)
    print cm
    print 'Overall: %d / %d = %.0f %%' % (np.diag(cm).sum(), cm.sum(),
                                          100.0 * np.diag(cm).sum() / cm.sum())
-
-def print_confusion(confusion):
-    for (a, b), v in confusion.items():
-        print '\t'.join([' '.join(a), ' '.join(b), str(v)])
 
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [-c] [-h HOLDOUT-GROUP] PROPERTIES-FILE PROFILES-FILENAME TRUE-GROUP")
@@ -138,4 +120,4 @@ if __name__ == '__main__':
        profiles = Profiles.load(profiles_filename)
 
     confusion = crossvalidate(profiles, true_group_name, options.holdout_group)
-    print_confusion(confusion)
+    write_confusion(confusion, sys.stdout)
