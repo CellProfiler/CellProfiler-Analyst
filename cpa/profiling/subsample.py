@@ -8,7 +8,7 @@ def _compute_group_subsample((cache_dir, normalization_name, image_key,
     normalizeddata, normalized_colnames, _ = cache.load([image_key], 
                                                         normalization=normalizations[normalization_name],
                                                         removeRowsWithNaN=False)
-    return normalizeddata[indices]
+    return normalizeddata[indices], np.hstack((np.array([image_key]*indices.shape[0]), _[indices][:,np.newaxis]))
 
 import cPickle as pickle
 import operator
@@ -36,11 +36,12 @@ def _break_indices(indices, image_keys, counts):
 
 def _make_parameters(cache_dir, normalization_name, image_keys, 
                      per_image_indices):
-    return [(cache_dir, normalization_name, image_key, indices)
+    parameters = [(cache_dir, normalization_name, image_key, indices)
             for image_key, indices in zip(image_keys, per_image_indices)]
+    return [(a,b,c,d) for (a,b,c,d) in parameters if d.shape[0]>0] # remove images with no indices
 
 def _combine_subsample(generator):
-    return np.vstack([a for a in generator if len(a.shape) == 2])
+    return np.vstack([a for a in generator])
 
 class Subsample(object):
     def __init__(self, cache_dir, sample_size, filter=None, 
@@ -50,7 +51,7 @@ class Subsample(object):
         self.normalization_name = normalization.__name__
         cache = Cache(self.cache_dir)
         self.variables = normalization(cache).colnames
-        self.data = self._compute(sample_size, filter, parallel, show_progress,
+        self.data, self.objkeys = self._compute(sample_size, filter, parallel, show_progress,
                                   verbose)
 
     def _compute(self, sample_size, filter, parallel, show_progress, verbose):
@@ -86,7 +87,10 @@ class Subsample(object):
                                                maxval=njobs)
         else:
             progress = lambda x: x
-        return _combine_subsample(progress(generator))
+        results = list(progress(generator))
+        data = _combine_subsample([a for (a,b) in results])
+        objkey = _combine_subsample([b for (a,b) in results])
+        return data, objkey
 
 def _parse_arguments():
     global options, parallel
