@@ -44,8 +44,9 @@ def _compute_group_mean((cache_dir, images, normalization_name,
             return np.median(data, axis=0)
         elif method == 'median+mad':
             c = Gaussian.ppf(3/4.)
-            return np.hstack((np.median(data, axis=0),
-                              np.median((np.fabs(data)) / c, axis=0)))
+            d = np.median(data, axis=0)
+            return np.hstack((d,
+                              np.median((np.fabs(data-d)) / c, axis=0)))
         elif method == 'gmm2':
             max_sample_size = 2000
             if data.shape[0] > max_sample_size:
