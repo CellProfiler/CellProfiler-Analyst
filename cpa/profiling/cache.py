@@ -29,6 +29,7 @@ from scipy.stats.stats import scoreatpercentile
 import cpa
 import cpa.dbconnect
 import cpa.util
+from .normalization import DummyNormalization
 
 logger = logging.getLogger(__name__)
 
@@ -52,124 +53,6 @@ def invert_dict(d):
     return inverted
 
 
-class DummyNormalization(object):
-    def __init__(self, cache):
-        self.cache = cache
-
-    def normalize(self, plate, data):
-        return data
-
-    @property
-    def colnames(self):
-        """Return the names of the columns returned by normalize()"""
-        return self.cache.colnames
-
-
-class RobustLinearNormalization(object):
-    _cached_colmask = None
-
-    def __init__(self, cache):
-        self.cache = cache
-        self.dir = os.path.join(cache.cache_dir, 'robust_linear')
-        self._colmask_filename = os.path.join(self.dir, 'colmask.npy')
-
-    def _percentiles_filename(self, plate):
-        return os.path.join(self.dir, 'percentiles', 
-                            unicode(plate) + '.npy')
-
-    @property
-    def _colmask(self):
-        if self._cached_colmask is None:
-            self._cached_colmask = np_load(self._colmask_filename)
-        return self._cached_colmask
-
-    def normalize(self, plate, data):
-        """
-        Normalize the data according to the precomputed normalization
-        for the specified plate. The normalized data may have fewer
-        columns that the unnormalized data, as columns may be removed
-        if normalizing them is impossible.
-
-        """
-        percentiles = np_load(self._percentiles_filename(plate))
-        assert data.shape[1] == percentiles.shape[1]
-        data = data[:, self._colmask]
-        percentiles = percentiles[:, self._colmask]
-        divisor = (percentiles[1] - percentiles[0])
-        assert np.all(divisor > 0)
-        return (data - percentiles[0]) / divisor
-
-    @property
-    def colnames(self):
-        """Return the names of the columns returned by normalize()"""
-        return [col
-                for col, keep in zip(self.cache.colnames, self._colmask) 
-                if keep]
-
-    #
-    # Methods to precompute the normalizations
-    #
-
-    def _create_cache(self, predicate, resume=False):
-        self._create_cache_percentiles(predicate, resume)
-        self._create_cache_colmask(predicate)
-
-    def _get_controls(self, predicate):
-        """Return a dictionary mapping plate names to lists of control wells"""
-        plates_and_images = {}
-        for row in cpa.db.execute("select distinct %s, %s from %s where %s"%
-                                  (cpa.properties.plate_id, 
-                                   ', '.join(cpa.dbconnect.image_key_columns()),
-                                   cpa.properties.image_table, predicate)):
-            plate = row[0]
-            imKey = tuple(row[1:])
-            plates_and_images.setdefault(plate, []).append(imKey)
-        return plates_and_images
-
-    def _create_cache_colmask(self, predicate):
-        colmask = None
-        for plate, imKeys in self._get_controls(predicate).items():
-            percentiles = np_load(self._percentiles_filename(plate))
-            if len(percentiles) == 0:
-                continue # No DMSO wells, so no percentiles
-            nonzero = percentiles[0] != percentiles[1]
-            if colmask is None:
-                colmask = nonzero
-            else:
-                colmask &= nonzero
-        np.save(self._colmask_filename, colmask)
-
-    @staticmethod
-    def _compute_percentiles(features):
-        m = features.shape[1]
-        percentiles = np.ones((2, m)) * np.nan
-        for j in xrange(m):
-            percentiles[0, j] = scoreatpercentile(features[:, j], 1)
-            percentiles[1, j] = scoreatpercentile(features[:, j], 99)
-        return percentiles
-
-    def _create_cache_percentiles_1(self, plate, imKeys, filename):
-            features = self.cache.load(imKeys)[0]
-            if len(features) == 0:
-                logger.warning('No DMSO features for plate %s' % str(plate))
-                percentiles = np.zeros((0, len(self.cache.colnames)))
-            else:
-                percentiles = self._compute_percentiles(features)
-            np.save(filename, percentiles)
-
-    def _create_cache_percentiles(self, predicate, resume=False):
-        controls = self._get_controls(predicate)
-        for i, (plate, imKeys) in enumerate(make_progress_bar('Percentiles')(controls.items())):
-            filename = self._percentiles_filename(plate)
-            if i == 0:
-                _check_directory(os.path.dirname(filename), resume)
-            if resume and os.path.exists(filename):
-                continue
-            self._create_cache_percentiles_1(plate, imKeys, filename)
-
-
-normalizations = dict((c.__name__, c)
-                      for c in [DummyNormalization, RobustLinearNormalization])
 
 class Cache(object):
     _cached_plate_map = None

@@ -8,7 +8,8 @@ from optparse import OptionParser
 import numpy as np
 from scipy.stats import mode
 import cpa
-from .cache import Cache, RobustLinearNormalization, normalizations
+from .cache import Cache
+from .normalization import DummyNormalization, RobustLinearNormalization, RobustStdNormalization, normalizations
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
@@ -16,7 +17,8 @@ def _compute_group_mean((cache_dir, images, normalization_name,
                          preprocess_file, method)):
     try:
         import numpy as np
-        from cpa.profiling.cache import Cache, normalizations
+        from cpa.profiling.cache import Cache
+        from cpa.profiling.normalization import normalizations
         from scipy.stats import norm as Gaussian
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
@@ -130,6 +132,7 @@ if __name__ == '__main__':
                             preprocess_file=options.preprocess_file,
                             method=options.method,
                             show_progress=not options.no_progress)
+    print profiles
     if options.csv:
         profiles.save_csv(options.output_filename)
     else:
