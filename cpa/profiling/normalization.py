@@ -150,9 +150,9 @@ class DummyNormalization(BaseNormalization):
     def normalize(self, plate, data):
         return data
 
-class RobustStdNormalization(BaseNormalization):
-    def __init__(self, cache, param_dir='robust_std'):
-        super(RobustStdNormalization, self).__init__(cache, param_dir)
+class StdNormalization(BaseNormalization):
+    def __init__(self, cache, param_dir='std'):
+        super(StdNormalization, self).__init__(cache, param_dir)
 
     def normalize(self, plate, data):
         params = np_load(self._params_filename(plate))
@@ -167,11 +167,9 @@ class RobustStdNormalization(BaseNormalization):
     def _compute_params(self, features):
         m = features.shape[1]
         params = np.ones((2, m)) * np.nan
-        c = Gaussian.ppf(3/4.)
         for j in xrange(m):
-            d = np.median(features[:, j])
-            params[0, j] = d
-            params[1, j] = np.median(np.fabs(features[:, j] - d) / c)
+            params[0, j] = np.mean(features[:, j])
+            params[1, j] = np.std(features[:, j])
         return params                   
 
     def _null_param(self):
@@ -180,6 +178,19 @@ class RobustStdNormalization(BaseNormalization):
     def _check_param_zero(self, params):
         return params[1] != 0    
 
+class RobustStdNormalization(StdNormalization):
+    def __init__(self, cache, param_dir='robust_std'):
+        super(RobustStdNormalization, self).__init__(cache, param_dir)
+        
+    def _compute_params(self, features):
+        m = features.shape[1]
+        params = np.ones((2, m)) * np.nan
+        c = Gaussian.ppf(3/4.)
+        for j in xrange(m):
+            d = np.median(features[:, j])
+            params[0, j] = d
+            params[1, j] = np.median(np.fabs(features[:, j] - d) / c)
+        return params                   
 
 class RobustLinearNormalization(BaseNormalization):
     def __init__(self, cache, param_dir='robust_linear'):
