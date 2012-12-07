@@ -1,11 +1,13 @@
 from __future__ import with_statement
+import sys
 try:
     # Important. Do this up front to make bioformats work
     # in windows executables. Otherwise it will look for
     # loci_tools.jar in the directory where your properties
     # were loaded from (presumably because this is set to
     # the cwd).
-    import bioformats
+    if sys.platform == 'win32':
+        import bioformats
 except: pass
 import sys
 import os
@@ -364,6 +366,11 @@ class MainGUI(wx.Frame):
             response = dlg.ShowModal()
             if response != wx.ID_YES:
                 return
+        try:
+            from cellprofiler.utilities.jutil import kill_vm
+            kill_vm()
+        except:
+            print "Failed to kill the Java VM"
         # Blow up EVVVVERYTHIIINGGG!!! Muahahahahhahahah!
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
@@ -512,7 +519,8 @@ if __name__ == "__main__":
     # Initialize the app early because the fancy exception handler
     # depends on it in order to show a dialog.
     app = CPAnalyst(redirect=False)
-    
+    if sys.platform=='darwin':
+        import bioformats
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
@@ -520,14 +528,4 @@ if __name__ == "__main__":
         sys.excepthook = show_exception_as_dialog
     
     app.MainLoop()
-    
-    #
-    # Kill the Java VM
-    #
-    try:
-        from bioformats import jutil
-        jutil.kill_vm()
-    except:
-        import traceback
-        traceback.print_exc()
-        print "Caught exception while killing VM"
+    os._exit(0)

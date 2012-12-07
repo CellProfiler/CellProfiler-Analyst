@@ -9,6 +9,7 @@ import pytz
 pytz.zoneinfo = pytz.tzinfo
 pytz.zoneinfo.UTC = pytz.UTC
 import pilfix
+from subprocess import call
 
 
 CP_HOME = os.getenv('CP_HOME') or '../../CellProfiler/'
@@ -34,11 +35,20 @@ f.close()
 APPNAME = 'CPAnalyst'
 APP = ['cpa.py']
 DATA_FILES = [('bioformats', [os.path.join(CP_HOME, 'bioformats/loci_tools.jar')]),
-              ('cellprofiler/icons', [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), # needed for cpfigure used by classifier cross validation
+              ('cellprofiler/utilities', 
+               [os.path.join(CP_HOME, 'cellprofiler', 'utilities', "js.jar")]), 
+              ('cellprofiler/utilities',
+               [os.path.join(CP_HOME, 'cellprofiler', 'utilities', "runnablequeue-1.0.0.jar")]),
+              # needed for cpfigure used by classifier cross validation
+              ('cellprofiler/icons', 
+               [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), 
              ]
+for dest, paths in DATA_FILES:
+    for path in paths:
+        assert os.path.isfile(path), "%s does not exist" % path
 OPTIONS = {'argv_emulation': True,
            'iconfile' : "icons/cpa.icns",
-           'includes' : [ ],
+           'includes' : [ 'scipy.sparse'],
            'packages' : ['numpy', './icons', 'bioformats', 'killjavabridge', ],
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
                          'scipy.weave', 'imagej'],
@@ -50,6 +60,9 @@ setup(
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
-    name = "CPAnalyst",
+    name = APPNAME,
 )
+if sys.argv[-1] == 'py2app':
+    call('find dist/%(APPNAME)s.app -name tests -type d | xargs rm -rf'%globals(), shell=True)
+    call('lipo dist/%(APPNAME)s.app/Contents/MacOS/%(APPNAME)s -thin i386 -output dist/%(APPNAME)s.app/Contents/MacOS/%(APPNAME)s' % globals(), shell=True)
 

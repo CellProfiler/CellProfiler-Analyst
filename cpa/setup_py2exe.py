@@ -61,6 +61,10 @@ if not os.path.exists(CP_HOME):
 else:
     sys.path.append(CP_HOME)
 
+if os.path.exists('build'):
+    raise Exception("Please delete the build directory before running setup.")
+if os.path.exists('dist'):
+    raise Exception("Please delete the dist directory before running setup.")
 #
 # Write the frozen version
 #
@@ -93,6 +97,9 @@ setup(windows=[{'script':'cpa.py',
               matplotlib.get_py2exe_datafiles() +
               [('icons', glob.glob('icons\\*.png')),
                ('bioformats', [os.path.join(CP_HOME, 'bioformats/loci_tools.jar')]),
+               ('cellprofiler/utilities', 
+                [os.path.join(CP_HOME, 'cellprofiler', 'utilities', x) 
+                 for x in ('js.jar', 'runnablequeue-1.0.0.jar')]),
                ('cellprofiler/icons', [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), # needed for cpfigure used by classifier cross validation
               ]
             ),
