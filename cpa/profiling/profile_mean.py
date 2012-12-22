@@ -68,7 +68,8 @@ def _compute_group_mean((cache_dir, images, normalization_name,
 
 def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
                  normalization=RobustLinearNormalization, preprocess_file=None,
-                 show_progress=True, method='mean'):
+                 show_progress=True, method='mean',
+                 full_group_header=False):
     group, colnames_group = cpa.db.group_map(group_name, reverse=True,
                                              filter=filter)
 
@@ -97,7 +98,8 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
         variables = ['m1_' + v for v in variables] + ['m2_' + v for v in variables]
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
-                            show_progress=show_progress)
+                            show_progress=show_progress, 
+                            group_header=colnames_group if full_group_header else None)
 
     # def save_as_csv_file(self, output_file):
     #     csv_file = csv.writer(output_file)
@@ -114,6 +116,8 @@ if __name__ == '__main__':
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
     parser.add_option('-c', dest='csv', help='output as CSV', action='store_true')
     parser.add_option('--no-progress', dest='no_progress', help='Do not show progress bar', action='store_true')
+    parser.add_option('-g', '--full-group-header', dest='full_group_header', default=False, 
+                      help='Include full group header in csv file', action='store_true')
     parser.add_option('--method', dest='method', help='method: mean (default), mean+std, mode, median, median+mad', 
                       action='store', default='mean')
     add_common_options(parser)
@@ -131,7 +135,8 @@ if __name__ == '__main__':
                             normalization=normalizations[options.normalization],
                             preprocess_file=options.preprocess_file,
                             method=options.method,
-                            show_progress=not options.no_progress)
+                            show_progress=not options.no_progress,
+                            full_group_header=options.full_group_header)
     print profiles
     if options.csv:
         profiles.save_csv(options.output_filename)

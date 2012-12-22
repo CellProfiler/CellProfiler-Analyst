@@ -25,7 +25,7 @@ class InputError(Exception):
                                                       self.message)
 
 class Profiles(object):
-    def __init__(self, keys, data, variables, key_size=None, group_name=None):
+    def __init__(self, keys, data, variables, key_size=None, group_name=None, group_header=None):
         assert isinstance(keys, list)
         assert all(isinstance(k, tuple) for k in keys)
         assert all(isinstance(v, str) for v in variables)
@@ -33,6 +33,7 @@ class Profiles(object):
         assert ~np.any(np.isnan(data))
         self.data = np.array(data)
         self.variables = variables
+        self.group_header = group_header
         if key_size is None:
             self.key_size = len(keys[0])
         else:
@@ -96,8 +97,11 @@ class Profiles(object):
         return cls(keys, np.array(data), variables, key_size, group_name=group_name)
 
     def header(self):
-        header = ['' if self.group_name is None else self.group_name] + \
-            [''] * (self.key_size - 1) + self.variables
+        if self.group_header is None:
+            header = ['' if self.group_name is None else self.group_name] + \
+                [''] * (self.key_size - 1) + self.variables
+        else:
+            header = self.group_header + self.variables
         assert len(header) == self.key_size + self.data.shape[1]
         return header
 
@@ -151,7 +155,7 @@ class Profiles(object):
 
     @classmethod
     def compute(cls, keys, variables, function, parameters, parallel=None,
-                ipython_profile=None, group_name=None, show_progress=True):
+                ipython_profile=None, group_name=None, show_progress=True, group_header=None):
         """
         Compute profiles by applying the parameters to the function in parallel.
 
@@ -186,7 +190,7 @@ class Profiles(object):
         data = list(itertools.compress(data, rowmask))
         keys = list(itertools.compress(keys, rowmask))
 
-        return cls(keys, data, variables, group_name=group_name)
+        return cls(keys, data, variables, group_name=group_name, group_header=group_header)
 
     def regroup(self, group_name):
         input_group_r, input_colnames = cpa.db.group_map(self.group_name, 
