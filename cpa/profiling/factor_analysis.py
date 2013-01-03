@@ -51,6 +51,11 @@ class FactorAnalysisPreprocessor(Preprocessor):
                          for i in xrange(self.nvariables)])
         return VariableSelector(mask, self.input_variables)
 
+def kaiser(data):
+    c = np.corrcoef(data.T)
+    w, v = np.linalg.eig(c)
+    return (w >= 1).sum()
+
 def _main(args=None):
     # Import the module under its full name so the class can be found
     # when unpickling.
@@ -70,6 +75,7 @@ def _main(args=None):
     output_file = args[2]
 
     subsample = cpa.util.unpickle1(subsample_file)
+    print kaiser(subsample.data)
     preprocessor = cpa.profiling.factor_analysis.FactorAnalysisPreprocessor(
         standardize(subsample.data), subsample.variables, nfactors)
     if options.variable_selection_only:
