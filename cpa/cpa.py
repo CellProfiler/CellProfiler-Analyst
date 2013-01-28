@@ -15,6 +15,7 @@ import os.path
 import logging
 import re
 from properties import Properties
+from dbconnect import DBConnect
 
 import util.version
 __version__ = util.version.version_number
@@ -526,6 +527,10 @@ if __name__ == "__main__":
     if sys.excepthook == sys.__excepthook__:
         from classifier import show_exception_as_dialog
         sys.excepthook = show_exception_as_dialog
+
+    # Black magic: Bus errors occur on certain Macs if we wait until
+    # later to connect, so we'll do it here.
+    DBConnect.getInstance().connect()
     
     app.MainLoop()
     os._exit(0)
