@@ -196,6 +196,18 @@ class Cache(object):
             self._cached_plate_map = cpa.util.unpickle1(self._plate_map_filename)
         return self._cached_plate_map
 
+    def load_objects(self, object_keys, normalization=DummyNormalization, removeRowsWithNaN=True):
+        objects_by_image = {}
+        for object_key in object_keys:
+            objects_by_image.setdefault(object_key[:-1], []).append(object_key[-1])
+        results = []
+        for image_key, cell_ids in objects_by_image.items():
+            stackedfeatures, colnames, stackedcellids = self.load([image_key], normalization, removeRowsWithNaN)
+            stackedcellids = list(stackedcellids)
+            indices = [stackedcellids.index(cell_id) for cell_id in cell_ids]
+            results.append(stackedfeatures[indices, :])
+        return np.vstack(results)
+
     def load(self, image_keys, normalization=DummyNormalization, removeRowsWithNaN=True):
         """Load the raw features of all the cells in a particular well and
         return them as a ncells x nfeatures numpy array."""
