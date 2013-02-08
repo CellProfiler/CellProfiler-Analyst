@@ -33,7 +33,7 @@ def plot_profiles(profiles, output_group_name=None):
         ordering = [i for k in sorted(d.keys()) for i in d[k]]
         labels = list(np.array(labels)[ordering])
     else:
-        ordering = np.arange(len(profiles.keys))
+        ordering = np.arange(len(profiles.keys()))
         labels = list(np.array(profiles.keys())[ordering])
     labels = [' '.join(map(str, k)) for k in labels]
     data = profiles.data[ordering]
