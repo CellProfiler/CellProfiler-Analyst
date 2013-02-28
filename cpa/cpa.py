@@ -15,7 +15,6 @@ import os.path
 import logging
 import re
 from properties import Properties
-from dbconnect import DBConnect
 
 import util.version
 __version__ = util.version.version_number
@@ -84,6 +83,7 @@ from histogram import Histogram
 from density import Density
 from querymaker import QueryMaker
 from normalizationtool import NormalizationUI
+from lineagetool import LineageTool
 import icons
 import cpaprefs
 from cpatool import CPATool
@@ -104,6 +104,7 @@ ID_HISTOGRAM = wx.NewId()
 ID_DENSITY = wx.NewId()
 ID_BOXPLOT = wx.NewId()
 ID_NORMALIZE = wx.NewId()
+ID_TIMELAPSE_VIEWER = wx.NewId()
 
 def get_cpatool_subclasses():
     '''returns a list of CPATool subclasses.
@@ -135,7 +136,7 @@ class MainGUI(wx.Frame):
         #
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
-        tb.SetSize((-1,132))
+        tb.SetSize((-1,200))
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
         tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
         tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
@@ -144,6 +145,7 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
+        tb.AddLabelTool(ID_TIMELAPSE_VIEWER, 'Time-lapse', icons.timelapse_viewer.ConvertToBitmap(), shortHelp='Time-lapse Viewer', longHelp='Launch time-lapse Viewer')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs
         #self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
@@ -173,6 +175,7 @@ class MainGUI(wx.Frame):
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
         boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
+        tlmMenuItem         = toolsMenu.Append(ID_TIMELAPSE_VIEWER, 'Time-lapse Viewer\tCtrl+Shift+L', help='Launches the Time-lapse Viewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()        
@@ -234,6 +237,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
         self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
+        self.Bind(wx.EVT_TOOL, self.launch_timelapse_viewer, id=ID_TIMELAPSE_VIEWER)
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
@@ -276,6 +280,10 @@ class MainGUI(wx.Frame):
     def launch_box_plot(self, evt=None):
         boxplot = BoxPlot(parent=self)
         boxplot.Show(True)
+        
+    def launch_timelapse_viewer(self, evt=None):
+        lineagetool = LineageTool(parent=self)
+        lineagetool.Show(True)        
         
     def launch_query_maker(self, evt=None):
         querymaker = QueryMaker(parent=self)
@@ -527,10 +535,6 @@ if __name__ == "__main__":
     if sys.excepthook == sys.__excepthook__:
         from classifier import show_exception_as_dialog
         sys.excepthook = show_exception_as_dialog
-
-    # Black magic: Bus errors occur on certain Macs if we wait until
-    # later to connect, so we'll do it here.
-    DBConnect.getInstance().connect()
     
     app.MainLoop()
     os._exit(0)
