@@ -39,6 +39,7 @@ from traitsui.api import View, Item, Group
 from mayavi import mlab
 from mayavi.core.ui.api import MlabSceneModel, SceneEditor
 from tvtk.pyface.scene import Scene
+from tvtk.api import tvtk
 
 use_matplotlib = False
 
@@ -65,7 +66,7 @@ all_colormaps.sort()
 
 props = Properties.getInstance()
 # Temp declarations; these will be retrieved from the properties file directly
-props.series_id = ["Image_Group_Number"]
+#props.series_id = ["Image_Group_Number"]
 props.series_id = ["Image_Metadata_Plate"]
 props.group_id = "Image_Group_Number"
 props.timepoint_id = "Image_Group_Index"
@@ -492,7 +493,7 @@ class LineageTool(wx.Frame, CPATool):
         # Assuming that the x-location on the graph for a given timepoint is unique, collect and sort them so they can be mapped into later
         node_x_locs = sorted(np.unique([i[0] for i in node_positions.values()]))
         
-        # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
+        # Adjust the y-spacing between trajectories so the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
         # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
         origin_y = 0 
         spacing_y = round( (max(node_x_locs) - min(node_x_locs))/len(self.connected_nodes) )
@@ -541,11 +542,9 @@ class LineageTool(wx.Frame, CPATool):
                     self.selected_node = None 
                 else:
                     self.selected_node = picked_node
-                    outline = mlab.outline(line_width=3)
-                    outline.outline_mode = 'cornered'
                     # Move the outline to the data point
                     s = 5
-                    outline.bounds = (x-s, x+s,
+                    self.selection_outline.bounds = (x-s, x+s,
                                       y-s, y+s,
                                       0, 0)
             else:
@@ -564,10 +563,6 @@ class LineageTool(wx.Frame, CPATool):
         t1 = time.clock()
         
         G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
-        edges = G.edges()
-        start_idx, end_idx = np.array(list(edges)).T
-        start_idx = start_idx.astype(np.int)
-        end_idx   = end_idx.astype(np.int)
         xy = np.array([self.node_positions[i] for i in sorted(self.directed_graph)])
         node_scalars = np.array(G.nodes())
         pts = mlab.points3d(xy[:,0], xy[:,1], np.zeros_like(xy[:,0]),
@@ -576,9 +571,10 @@ class LineageTool(wx.Frame, CPATool):
                             line_width = 0.5, 
                             scale_mode = 'none',
                             colormap = self.selected_colormap,
-                            resolution = 8) 
+                            resolution = 8,
+                            figure = self.mayavi_view.scene.mayavi_scene) 
         pts.glyph.color_mode = 'color_by_scalar'
-        pts.mlab_source.dataset.lines = np.array(edges)
+        pts.mlab_source.dataset.lines = np.array(G.edges())
         self.node_collection = pts
         
         tube = mlab.pipeline.tube(pts, tube_radius=2.0) # Default tube_radius results in v. thin lines: tube.filter.radius = 0.05
@@ -608,9 +604,13 @@ class LineageTool(wx.Frame, CPATool):
         #current_text_scaling = self.text_collection[0].actor.actor.scale
         #for t in self.text_collection:
             #t.actor.actor.scale = current_text_scaling*self.axis_scaling
-
-        mlab.outline()
+        
+        # Add outline to be used later when selecting points
+        self.selection_outline = mlab.outline(line_width=3)
+        self.selection_outline.outline_mode = 'cornered'
+        
         self.mayavi_view.scene.reset_zoom()
+        self.mayavi_view.scene.interactor.interactor_style = tvtk.InteractorStyleImage()
         
         # Make the graph clickable
         self.trajectory_picker = self.mayavi_view.scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint_mayavi)
