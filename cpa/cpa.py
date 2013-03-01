@@ -83,7 +83,7 @@ from histogram import Histogram
 from density import Density
 from querymaker import QueryMaker
 from normalizationtool import NormalizationUI
-from lineagetool import LineageTool
+from timelapsetool import TimeLapseTool
 import icons
 import cpaprefs
 from cpatool import CPATool
@@ -282,7 +282,7 @@ class MainGUI(wx.Frame):
         boxplot.Show(True)
         
     def launch_timelapse_viewer(self, evt=None):
-        lineagetool = LineageTool(parent=self)
+        lineagetool = TimeLapseTool(parent=self)
         lineagetool.Show(True)        
         
     def launch_query_maker(self, evt=None):
