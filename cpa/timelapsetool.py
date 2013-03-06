@@ -119,7 +119,7 @@ class TimeLapseControlPanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Define widgets
-        self.dataset_choice = ComboBox(self, -1, choices=[str(i) for i in all_datasets], size=(200,-1), style=wx.CB_READONLY)
+        self.dataset_choice = ComboBox(self, -1, choices=[str(item) for item in all_datasets], size=(200,-1), style=wx.CB_READONLY)
         self.dataset_choice.Select(0)
         self.dataset_choice.SetHelpText("Select the time-lapse data set to visualize.")
         self.measurement_choice = ComboBox(self, -1, choices=fields, style=wx.CB_READONLY)
@@ -132,6 +132,7 @@ class TimeLapseControlPanel(wx.Panel):
         self.trajectory_selection_button.SetHelpText("Select the trajectories to show or hide in both panels.")
         self.update_plot_button = wx.Button(self, -1, "Update")
         self.update_plot_button.SetHelpText("Press this button after making selections to update the panels.")
+        self.help_button = wx.ContextHelpButton(self)
 
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
@@ -155,13 +156,14 @@ class TimeLapseControlPanel(wx.Panel):
         sz.Add(self.colormap_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
         sz.Add(self.update_plot_button)
+        sz.AddSpacer((4,-1))
+        sz.Add(self.help_button)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))
 
         self.SetSizer(sizer)
         self.Show(True)
-
-   
+        
 ################################################################################
 class MayaviView(HasTraits):
     """ Create a mayavi scene"""
@@ -170,12 +172,12 @@ class MayaviView(HasTraits):
     
     # The layout of the dialog created
     view = View(HSplit(Group(Item('trajectory_scene',
-                                  #editor = SceneEditor(scene_class = Scene),
-                                  editor = SceneEditor(scene_class=MayaviScene),
+                                  editor = SceneEditor(scene_class = Scene),
+                                  #editor = SceneEditor(scene_class=MayaviScene),
                                   resizable=True, show_label=False)),
                        Group(Item('lineage_scene',
-                                  #editor = SceneEditor(scene_class = Scene),
-                                  editor = SceneEditor(scene_class=MayaviScene),
+                                  editor = SceneEditor(scene_class = Scene),
+                                  #editor = SceneEditor(scene_class=MayaviScene),
                                   resizable=True, show_label=False))),
                 resizable=True)
     
@@ -212,16 +214,35 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.plot_updated = False
         self.trajectory_selected = False
         self.selected_node = None
-        self.do_plots_need_updating = {"dataset":0,"colormap":0,"measurement":0, "trajectories":0}
+        self.axes_opacity = 0.25
+        self.do_plots_need_updating = {"dataset":True,"colormap":True,"measurement":True, "trajectories":True}
         
         self.mayavi_view = MayaviView()
         self.figure_panel = self.mayavi_view.edit_traits(
                                             parent=self,
-                                            kind='subpanel').control 
-        self.generate_graph(True)
-
-        self.draw_lineage(True)
-        self.draw_trajectories(True)
+                                            kind='subpanel').control
+        navigation_help_text = ("Tips on navigating the plots:\n"
+                                "Rotating the 3-D visualization: Place the mouse pointer over the visualization"
+                                "window. Then left-click and drag the mouse pointer in the direction you want to rotate"
+                                "the scene, much like rotating an actual object.\n\n"
+                                "Zooming in and out: Place the mouse pointer over the visualization"
+                                "window. To zoom into the scene, keep the right mouse button pressed and"
+                                "drags the mouse upwards. To zoom out of the scene,  keep the right mouse button pressed"
+                                "and drags the mouse downwards.\n\n"
+                                "Panning: This can be done in one in two ways:\n"
+                                "1. Keep the left mouse button pressed and simultaneously holding down the Shift key"
+                                "and dragging the mouse in the appropriate direction.\n"
+                                "2. Keep the middle mouse button pressed and dragging the mouse in the appropriate"
+                                "direction\n\n"
+                                "Please note that while the lineage panel can be rotated, zoomed and panned, it is a 2-D"
+                                "plot so the top-down view is fixed.")
+        self.figure_panel.SetHelpText(navigation_help_text)
+        
+        self.update_plot() 
+        #self.obtain_tracking_data()
+        #self.generate_graph()
+        #self.draw_lineage()
+        #self.draw_trajectories()
             
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.figure_panel, 1, wx.EXPAND)
@@ -240,6 +261,7 @@ class TimeLapseTool(wx.Frame, CPATool):
     def on_show_all_trajectories(self, event = None):
         all_labels = self.trajectory_info.keys()
         self.trajectory_selection = dict.fromkeys(all_labels,1)
+        self.do_plots_need_updating["trajectories"] = True
         self.update_plot()    
 
     def on_show_popup_menu(self, event = None):   
@@ -280,8 +302,8 @@ class TimeLapseTool(wx.Frame, CPATool):
 
     def show_selection_in_table(self, event = None):
         '''Callback for "Show selection in a table" popup item.'''
-        containing_trajectory = [i for i in self.connected_nodes if self.selected_node in i][0]
-        keys, ypoints, xpoints, data = zip(*[[self.directed_graph.node[i]["db_key"],i[0],i[1],self.directed_graph.node[i]["s"]] for i in containing_trajectory])
+        containing_trajectory = [nodes for nodes in self.connected_nodes if self.selected_node in nodes][0]
+        keys, ypoints, xpoints, data = zip(*[[self.directed_graph.node[key]["db_key"],key[0],key[1],self.directed_graph.node[key]["s"]] for key in containing_trajectory])
         table_data = np.hstack((np.array(keys), np.array((xpoints,ypoints,data)).T))
         column_labels = list(object_key_columns())
         key_col_indices = list(xrange(len(column_labels)))
@@ -295,8 +317,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         grid.Show()
         
     def show_cell_montage(self, event = None):
-        containing_trajectory = [i for i in self.connected_nodes if self.selected_node in i][0]
-        keys = [self.directed_graph.node[i]["db_key"] for i in containing_trajectory]
+        containing_trajectory = [nodes for nodes in self.connected_nodes if self.selected_node in nodes][0]
+        keys = [self.directed_graph.node[key]["db_key"] for key in containing_trajectory]
         montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage containing %s %d"%(props.object_name[0],self.selected_node[0]))
         montage_frame.Show()
         montage_frame.add_objects(keys)
@@ -304,27 +326,28 @@ class TimeLapseTool(wx.Frame, CPATool):
     
     def on_dataset_selected(self, event = None):
         # Disable trajectory selection button until plot updated or the currently plotted dataset is selected
+        self.do_plots_need_updating["dataset"] = False
         if self.selected_dataset == self.control_panel.dataset_choice.GetStringSelection():
             self.control_panel.trajectory_selection_button.Enable()
         else:
             self.control_panel.trajectory_selection_button.Disable()
             self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
-            self.do_plots_need_updating["dataset"] = 1
+            self.do_plots_need_updating["dataset"] = True
             
     def on_measurement_selected(self, event = None):
-        self.do_plots_need_updating["measurement"] = 0
+        self.do_plots_need_updating["measurement"] = False
         if self.selected_measurement == self.control_panel.measurement_choice.GetStringSelection():
             self.control_panel.trajectory_selection_button.Enable()
         else:
             self.selected_measurement = self.control_panel.measurement_choice.GetStringSelection()            
             self.control_panel.trajectory_selection_button.Disable()  
-            self.do_plots_need_updating["measurement"] = 1
+            self.do_plots_need_updating["measurement"] = True
 
     def on_colormap_selected(self, event = None):
-        self.do_plots_need_updating["colormap"] = 0
+        self.do_plots_need_updating["colormap"] = False
         if self.selected_colormap != self.control_panel.colormap_choice.GetStringSelection():
             self.selected_colormap = self.control_panel.colormap_choice.GetStringSelection()    
-            self.do_plots_need_updating["colormap"] = 1
+            self.do_plots_need_updating["colormap"] = True
         
     def update_trajectory_selection(self, event = None):
         
@@ -382,24 +405,29 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.trajectory_selection = dict.fromkeys(all_labels,0)
             for x in current_selection:
                 self.trajectory_selection[all_labels[x]] = 1
-            self.do_plots_need_updating["trajectories"] = 1
+            self.do_plots_need_updating["trajectories"] = True
             self.update_plot()                    
     
     def update_plot(self, event = None):
-        self.generate_graph(False)
-        self.draw_lineage(False)
-        self.draw_trajectories(False)
+        self.obtain_tracking_data()
+        self.generate_graph()
+        self.draw_lineage()
+        self.draw_trajectories()
         self.control_panel.trajectory_selection_button.Enable()
-        self.do_plots_need_updating = {"dataset":0,"colormap":0,"measurement":0, "trajectories":0}
+        self.do_plots_need_updating = {"dataset":False,"colormap":False,"measurement":False, "trajectories":False}
             
-    def generate_graph(self, init = False):
-        # Generate data
-        
-        if init:
+    def obtain_tracking_data(self):
+        # Only read from database if a new dataset or new measurement is needed
+        if self.do_plots_need_updating["dataset"] or self.do_plots_need_updating["measurement"]:
             self.trajectory_info = retrieve_trajectories(self.selected_dataset,self.selected_measurement) # switch to dict() later
-            self.trajectory_selection = dict.fromkeys(self.trajectory_info.keys(),1)          
         
-        if init or self.do_plots_need_updating["dataset"]:           
+        # When visualizing a new dataset, select all trajectories by default
+        if self.do_plots_need_updating["dataset"]:
+            self.trajectory_selection = dict.fromkeys(self.trajectory_info.keys(),1)          
+    
+    def generate_graph(self):
+        # Generate the graph relationship if the dataset has been updated
+        if self.do_plots_need_updating["dataset"]:           
             logging.info("Retrieved %d %s from dataset %s"%(len(self.trajectory_info.keys()),props.object_name[1],self.selected_dataset))
             
             self.directed_graph = nx.DiGraph()
@@ -450,8 +478,8 @@ class TimeLapseTool(wx.Frame, CPATool):
             p = np.array(node_positions.values())
             p = np.fliplr(p) # Rotate layout from vertical to horizontal
             p[:,0] = np.max(p[:,0])-p[:,0] + np.min(p[:,0])# Flip layout left/right
-            for i,key in enumerate(node_positions.keys()):
-                node_positions[key] = (p[i,0],p[i,1]) 
+            for index,key in enumerate(node_positions.keys()):
+                node_positions[key] = (p[index,0],p[index,1]) 
             
             # Problem: Since the graph is a dict, the order the nodes are added is not preserved. This is not
             # a problem until the graph is drawn; graphviz orders the root nodes by the node order in the graph object.
@@ -469,10 +497,10 @@ class TimeLapseTool(wx.Frame, CPATool):
                 y_min[n[0]] = min(y_min[n[0]],node_positions[n][1])
                 y_max[n[0]] = max(y_max[n[0]],node_positions[n][1])
             
-            self.connected_nodes = [sorted(i) for i in sorted(nx.connected_components(self.directed_graph.to_undirected()))]
+            self.connected_nodes = [sorted(nodes) for nodes in sorted(nx.connected_components(self.directed_graph.to_undirected()))]
     
             # Assuming that the x-location on the graph for a given timepoint is unique, collect and sort them so they can be mapped into later
-            node_x_locs = sorted(np.unique([i[0] for i in node_positions.values()]))
+            node_x_locs = sorted(np.unique([pos[0] for pos in node_positions.values()]))
             
             # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
             # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
@@ -520,13 +548,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                 self.selected_node = picked_node
                 
         elif picker.actor in self.trajectory_node_collection.actor.actors:
-            # Retrieve to which point corresponds the picked point. 
-            # Here, we grab the points describing the individual glyph, to figure
-            # out how many points are in an individual glyph.                
             n_glyph = self.trajectory_node_collection.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]  
-            # Find which data point corresponds to the point picked:
-            # we have to account for the fact that each data point is
-            # represented by a glyph with several points      
             point_id = picker.point_id/n_glyph            
             x_traj,y_traj,t_traj = self.trajectory_node_collection.mlab_source.points[point_id,:]
             l = self.trajectory_labels[point_id]
@@ -543,7 +565,10 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.selected_node = None  
             self.selected_trajectories = None
 
-        if self.selected_node:
+        # If the picked node is not one of the selected trajectories, then don't select it 
+        nodes_in_selected_trajectories = [self.connected_nodes[index] for index,val in enumerate(self.trajectory_selection.values()) if val == 1]
+        nodes_in_selected_trajectories = [item for sublist in nodes_in_selected_trajectories for item in sublist]
+        if self.selected_node in nodes_in_selected_trajectories:
             # Move the outline to the data point
             s = 10
             self.lineage_selection_outline.bounds = (x_lineage-s, x_lineage+s,
@@ -555,8 +580,11 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                         y_traj-s, y_traj+s,
                                                         t_traj-s, t_traj+s)
             self.trajectory_selection_outline.actor.actor.visibility = 1
+        else:
+            self.selected_node = None  
+            self.selected_trajectories = None            
     
-    def draw_lineage(self,init = False):
+    def draw_lineage(self):
         # Rendering temporarily disabled
         self.mayavi_view.lineage_scene.disable_render = True 
 
@@ -565,7 +593,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         # https://groups.google.com/forum/?fromgroups=#!topic/networkx-discuss/wdhYIPeuilo
         # http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00727.html        
 
-        if init or self.do_plots_need_updating["dataset"]:
+        # Draw the lineage tree if the dataset has been updated
+        if self.do_plots_need_updating["dataset"]:
             # Clear the scene
             logging.info("Drawing lineage graph...")
             self.mayavi_view.lineage_scene.mlab.clf(figure = self.mayavi_view.lineage_scene.mayavi_scene)
@@ -575,7 +604,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             t1 = time.clock()
             
             G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
-            xys = np.array([self.lineage_node_positions[i]+(self.directed_graph.node[i]["s"],) for i in sorted(self.directed_graph)])
+            xys = np.array([self.lineage_node_positions[key]+(self.directed_graph.node[key]["s"],) for key in sorted(self.directed_graph)])
             pts = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
                                 scale_factor = 10.0, # scale_factor = 'auto' results in huge pts: pts.glyph.glpyh.scale_factor = 147
                                 line_width = 0.5, 
@@ -597,11 +626,11 @@ class TimeLapseTool(wx.Frame, CPATool):
             
             # Add object label text to the left
             dx = np.diff(self.lineage_node_x_locations)[0]
-            first_nodes = [i[0] for i in self.connected_nodes]
-            x = [self.lineage_node_positions[i][0]-0.75*dx for i in first_nodes]
-            y = [self.lineage_node_positions[i][1] for i in first_nodes]
+            first_nodes = [nodes[0] for nodes in self.connected_nodes]
+            x = [self.lineage_node_positions[node][0]-0.75*dx for node in first_nodes]
+            y = [self.lineage_node_positions[node][1] for node in first_nodes]
             z = list(np.array(y)*0)
-            s = [str(i[0]) for i in first_nodes]
+            s = [str(node[0]) for node in first_nodes]
             self.lineage_label_collection = [mlab.text3d(*xyzs,
                                                          line_width = 20,
                                                          scale = 20,
@@ -615,6 +644,13 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.lineage_selection_outline.outline_mode = 'cornered'
             self.lineage_selection_outline.actor.actor.visibility = 0
             
+            mlab.pipeline.outline(self.lineage_node_collection,
+                                  opacity = self.axes_opacity,
+                                  #color = self.axes_color,
+                                  figure = self.mayavi_view.lineage_scene.mayavi_scene) 
+            mlab.axes(self.lineage_node_collection, xlabel='T', ylabel='',
+                      opacity = self.axes_opacity,
+                      x_axis_visibility=True, y_axis_visibility=False, z_axis_visibility=False)             
             self.mayavi_view.lineage_scene.reset_zoom()
             
             # Constrain view to 2D
@@ -655,11 +691,14 @@ class TimeLapseTool(wx.Frame, CPATool):
         # Re-enable the rendering
         self.mayavi_view.lineage_scene.disable_render = False
 
-    def draw_trajectories(self,init = False):
+    def draw_trajectories(self):
         # Rendering temporarily disabled
         self.mayavi_view.trajectory_scene.disable_render = True  
         
-        if init or self.do_plots_need_updating["dataset"]:
+        # Draw the lineage tree if either (1) all the controls indicate that updating is needed (e.g., initial condition) or
+        # (2) if the dataset has been updated        
+        if self.do_plots_need_updating["dataset"]:
+
             logging.info("Drawing trajectories...")
             # Clear the scene
             self.mayavi_view.trajectory_scene.mlab.clf(figure = self.mayavi_view.trajectory_scene.mayavi_scene)
@@ -670,10 +709,10 @@ class TimeLapseTool(wx.Frame, CPATool):
             
             G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
     
-            xyts = np.array([(self.directed_graph.node[i]["x"],
-                              self.directed_graph.node[i]["y"],
-                              self.directed_graph.node[i]["t"],
-                              self.directed_graph.node[i]["s"]) for i in sorted(self.directed_graph)])
+            xyts = np.array([(self.directed_graph.node[key]["x"],
+                              self.directed_graph.node[key]["y"],
+                              self.directed_graph.node[key]["t"],
+                              self.directed_graph.node[key]["s"]) for key in sorted(self.directed_graph)])
             
             # Compute reasonable scaling factor according to the data limits.
             # We want the plot to be roughly square, to avoid nasty Mayavi axis scaling issues later.
@@ -696,7 +735,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                     colormap=self.selected_colormap,
                                                                     figure = self.mayavi_view.trajectory_scene.mayavi_scene)         
     
-            self.trajectory_labels = np.array([self.directed_graph.node[i]["l"] for i in sorted(self.directed_graph)])
+            self.trajectory_labels = np.array([self.directed_graph.node[key]["l"] for key in sorted(self.directed_graph)])
             
             # Generate the corresponding set of nodes
             pts = mlab.points3d(xyts[:,0], xyts[:,1], xyts[:,2], xyts[:,3],
@@ -709,15 +748,15 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.trajectory_node_collection = pts    
     
             # Add object label text
-            self.trajectory_label_collection = [mlab.text3d(self.directed_graph.node[i[-1]]["x"],
-                                                            self.directed_graph.node[i[-1]]["y"],
-                                                            self.directed_graph.node[i[-1]]["t"]*t_scaling,
-                                                            str(i[-1][0]),
+            self.trajectory_label_collection = [mlab.text3d(self.directed_graph.node[nodes[-1]]["x"],
+                                                            self.directed_graph.node[nodes[-1]]["y"],
+                                                            self.directed_graph.node[nodes[-1]]["t"]*t_scaling,
+                                                            str(nodes[-1][0]),
                                                             line_width = 20,
                                                             scale = 10,
-                                                            name = str(i[-1][0]),
+                                                            name = str(nodes[-1][0]),
                                                             figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
-                                                for i in self.connected_nodes]
+                                                for nodes in self.connected_nodes]
             
             # Add outline to be used later when selecting points
             self.trajectory_selection_outline = mlab.outline(line_width = 3,
@@ -727,17 +766,27 @@ class TimeLapseTool(wx.Frame, CPATool):
             
             # Using axes doesn't work until the scene is avilable: 
             # http://docs.enthought.com/mayavi/mayavi/building_applications.html#making-the-visualization-live
-            #mlab.axes()
+            mlab.pipeline.outline(self.trajectory_line_source,
+                                  opacity = self.axes_opacity,
+                                  figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
+            mlab.axes(self.trajectory_line_source, 
+                      xlabel='X', ylabel='Y',zlabel='T',
+                      opacity = self.axes_opacity,
+                      x_axis_visibility=True, y_axis_visibility=True, z_axis_visibility=True) 
+            # Set axes to MATLAB's default 3d view
+            mlab.view(azimuth = 322.5,elevation = 30.0,
+                      figure = self.mayavi_view.trajectory_scene.mayavi_scene)
             self.mayavi_view.trajectory_scene.reset_zoom()
             
             # An trajectory picker object is created to trigger an event when a trajectory is picked.       
             # TODO: Figure out how to re-activate picker on scene refresh
             #  E.g., (not identical problem) http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00583.html
-            self.mayavi_view.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint)
+            picker = self.mayavi_view.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint)
+            picker.tolerance = 0.01
             
             # Figure decorations
             # Orientation axes
-            mlab.orientation_axes(zlabel = "t", 
+            mlab.orientation_axes(zlabel = "T", 
                                   line_width = 5,
                                   figure = self.mayavi_view.trajectory_scene.mayavi_scene )
             # Colormap
