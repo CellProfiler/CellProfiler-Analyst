@@ -1,28 +1,14 @@
 '''
 Dependencies:
 NetworkX: http://www.lfd.uci.edu/~gohlke/pythonlibs/#networkx
-PyGraphviz: http://www.lfd.uci.edu/~gohlke/pythonlibs/#pygraphviz
-Graphviz 2.28, from here: http://www.graphviz.org/pub/graphviz/stable/windows/
 configobj: https://pypi.python.org/pypi/configobj
-
-To get PyGraphViz working with PyGraphviz, needed to do the following:
-* Use DOS-paths in Graphviz installation, i.e., C:\Progra~2\ instead of C:\Program Files (x86)\
-* No spaces in Graphviz folder, i.e, .\Graphviz\ instead of .\Graphviz 2.28\
-* Add Graphviz bin folder to Windows path
-otherwise will get error msg "Program dot not found in path."
 '''
 import wx
 from wx.combo import OwnerDrawnComboBox as ComboBox
 import networkx as nx
 import numpy as np
 from operator import itemgetter
-#import matplotlib
-#matplotlib.use('WXAgg')
-
-#from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-#from matplotlib.backends.backend_wx import NavigationToolbar2Wx
-#from matplotlib import pyplot, rcParams
-#rcParams['font.size'] = 10
+import glayout
 
 import logging
 import time
@@ -43,12 +29,6 @@ from mayavi.core.ui.api import MlabSceneModel, SceneEditor
 from mayavi.core.ui.mayavi_scene import MayaviScene
 from tvtk.pyface.scene import Scene
 from tvtk.api import tvtk
-
-# Modiying sys.path doesn't seem to work for some reason; b/c it's the search path for *modules*?
-#import sys
-#sys.path.append("C:\\Progra~2\\Graphviz\\bin") 
-import os
-os.environ["PATH"] = os.environ["PATH"] + ";C:\\Progra~2\\Graphviz\\bin" 
 
 # Colormap names from an error msg (http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00615.html)
 # TODO(?): Find a better way to captures these names
@@ -267,7 +247,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_BUTTON(self.control_panel.update_plot_button, -1, self.update_plot)
         
     def on_show_all_trajectories(self, event = None):
-        all_labels = self.trajectory_info.keys()
+        all_labels = self.connected_nodes.keys()
         self.trajectory_selection = dict.fromkeys(all_labels,1)
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot()    
@@ -402,25 +382,35 @@ class TimeLapseTool(wx.Frame, CPATool):
         trajectory_selection_dlg = TrajectoryMultiChoiceDialog(self, 
                                                     message = 'Select the objects you would like to show',
                                                     caption = 'Select trajectories to visualize', 
-                                                    choices = [str(x) for x in self.trajectory_info.keys()])
+                                                    choices = [str(x) for x in self.connected_nodes.keys()])
                 
         current_selection = np.nonzero(self.trajectory_selection.values())[0]
         trajectory_selection_dlg.SetSelections(current_selection)
         
         if (trajectory_selection_dlg.ShowModal() == wx.ID_OK):
             current_selection = trajectory_selection_dlg.GetSelections()
-            all_labels = self.trajectory_info.keys()
+            all_labels = self.connected_nodes.keys()
             self.trajectory_selection = dict.fromkeys(all_labels,0)
             for x in current_selection:
                 self.trajectory_selection[all_labels[x]] = 1
             self.do_plots_need_updating["trajectories"] = True
+            
+            # Alter lines between the points that we have previously created by
+            # directly modifying the VTK dataset.                
+            nodes_to_remove = [self.connected_nodes[index+1] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
+            nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
+            mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
+            nodes_to_remove = [mapping[item] for item in nodes_to_remove]
+            G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
+            G.remove_nodes_from(nodes_to_remove)
+            self.altered_directed_graph = G
             self.update_plot()                    
     
     def update_plot(self, event = None):
         self.obtain_tracking_data()
         self.generate_graph()
-        self.draw_lineage()
         self.draw_trajectories()
+        self.draw_lineage()
         self.control_panel.trajectory_selection_button.Enable()
         self.do_plots_need_updating = {"dataset":False,"colormap":False,"measurement":False, "trajectories":False}
             
@@ -454,68 +444,37 @@ class TimeLapseTool(wx.Frame, CPATool):
             
             logging.info("Constructed lineage graph consisting of %d nodes and %d edges"%(self.directed_graph.number_of_nodes(),self.directed_graph.number_of_edges()))
             
-            # Hierarchical graph creation: http://stackoverflow.com/questions/11479624/is-there-a-way-to-guarantee-hierarchical-output-from-networkx        
-            # Call graphviz to generate the node positional information
             t1 = time.clock()
-            node_positions = nx.graphviz_layout(self.directed_graph, prog='dot') 
-            t2 = time.clock()
-            logging.info("Computed lineage layout (%.2f sec)"%(t2-t1))
-            
-            # TODO(?): Check into whether I can use arguments into dot to do these spatial flips
-            # List of  available graphviz attributes: http://www.graphviz.org/content/attrs        
-            p = np.array(node_positions.values())
-            p = np.fliplr(p) # Rotate layout from vertical to horizontal
-            p[:,0] = np.max(p[:,0])-p[:,0] + np.min(p[:,0])# Flip layout left/right
-            for index,key in enumerate(node_positions.keys()):
-                node_positions[key] = (p[index,0],p[index,1]) 
-            
-            # Problem: Since the graph is a dict, the order the nodes are added is not preserved. This is not
-            # a problem until the graph is drawn; graphviz orders the root nodes by the node order in the graph object.
-            # We want the graph to be ordered by object number.
-            # Using G.add_nodes_from or G.subgraph using an ordered dict doesn't solve this.
-            # There are a couple of webpages on this issue, which doesn't seem like it will be addressed anytime soon:
-            #  https://networkx.lanl.gov/trac/ticket/445
-            #  https://networkx.lanl.gov/trac/ticket/711
-            
-            # So we need to reorder y-locations by the label name.
-            # Also, graphviz places the root node at t = 0 for all trajectories. We need to offset the x-locations by the actual timepoint.
-            
-            connected_nodes = nx.connected_component_subgraphs(self.directed_graph.to_undirected()) #[sorted(nodes) for nodes in sorted(nx.connected_components(self.directed_graph.to_undirected()))]
-            self.connected_nodes = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
-            y_min = dict.fromkeys(self.connected_nodes.keys(), np.inf)
-            y_max = dict.fromkeys(self.connected_nodes.keys(), -np.inf)
-            for (key,trajectory) in self.connected_nodes.items():
-                pos = [node_positions[node][1] for node in trajectory.nodes()]
-                y_min[key] = min(pos)
-                y_max[key] = max(pos)       
-
-            # Assuming that the x-location on the graph for a given timepoint is unique, collect and sort them so they can be mapped into later
-            node_x_locs = sorted(np.unique([pos[0] for pos in node_positions.values()]))
+            G = nx.convert_node_labels_to_integers(self.directed_graph,
+                                                   first_label=0,
+                                                   ordering="default")
+            mapping = dict(zip(G.nodes(),self.directed_graph.nodes()))
+            glayout.layer_layout(G, level_attribute = "t")
+            nx.relabel_nodes(G, mapping,copy=False)
+            node_positions = dict(zip(G.nodes(),[[G.node[key]["t"],G.node[key]["y"]] for key in G.nodes()]))
             
             # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
             # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
-            # Set the x-origin to give room for the labels
-            origin_x = 0 #round(1.0*np.diff(node_x_locs)[0])
-            origin_y = origin_x
-            spacing_y = round( (max(node_x_locs) - min(node_x_locs))/len(self.end_nodes) )
-            offset_y = 0
-            for (key,trajectory) in self.connected_nodes.items():
-                dy = y_max[key] - y_min[key]
-                for node in trajectory.nodes():
-                    node_positions[node] = (node_x_locs[self.directed_graph.node[node]["t"]-1] + origin_x, origin_y + offset_y) # (pos[frame][0], origin + offset)
-                offset_y += dy + spacing_y
+            xy = np.array([node_positions[key] for key in G.nodes()])
+            scaling_y = 1.0/float(max(xy[:,1]) - min(xy[:,1]))*float(max(xy[:,0]) - min(xy[:,0]))
+            for key in G.nodes(): node_positions[key][1] *= scaling_y
+            
+            t2 = time.clock()
+            logging.info("Computed lineage layout (%.2f sec)"%(t2-t1))
+            
+            connected_nodes = nx.connected_component_subgraphs(self.directed_graph.to_undirected())
+            self.connected_nodes = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
             
             self.lineage_node_positions = node_positions
-            self.lineage_node_x_locations = node_x_locs
             
             # When visualizing a new dataset, select all trajectories by default
             self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)              
         else:
-            for current_object in self.trajectory_info.keys():
-                t = self.trajectory_info[current_object]["t"]
-                s = self.trajectory_info[current_object]["s"]
-                for current_scalar, current_time in zip(s,t):
-                    self.directed_graph.node[self.trajectory_info[current_object]["db_key"]]["s"] = current_scalar
+            key_length = len(object_key_columns())
+            indices = range(0,key_length)
+            node_ids = map(itemgetter(*indices),self.trajectory_info)
+            attr = dict(zip(node_ids,[item for item in map(itemgetter(len(self.trajectory_info[0])-1),self.trajectory_info)]))            
+            nx.set_node_attributes(self.directed_graph,"s",attr)
             
         self.scalar_data = np.array([self.directed_graph.node[key]["s"] for key in sorted(self.directed_graph)])
 
@@ -598,10 +557,14 @@ class TimeLapseTool(wx.Frame, CPATool):
             t1 = time.clock()
             
             G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
-            xys = np.array([self.lineage_node_positions[key]+(self.directed_graph.node[key]["s"],) for key in sorted(self.directed_graph)])
+            xys = np.array([self.lineage_node_positions[key]+[self.directed_graph.node[key]["s"]] for key in sorted(self.directed_graph)])
+            dt = np.median(np.diff(np.unique(nx.get_node_attributes(self.directed_graph,"t").values())))
+            # The scale factor defaults to the typical interpoint distance, which may not be appropriate. 
+            # So I set it explicitly here to a fraction of delta_x
+            # To inspect the value, see pts.glyph.glpyh.scale_factor
+            node_scale_factor = 0.5*dt
             pts = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
-                                scale_factor = 10.0, # scale_factor = 'auto' results in huge pts: pts.glyph.glpyh.scale_factor = 147
-                                line_width = 0.5, 
+                                scale_factor = node_scale_factor, 
                                 scale_mode = 'none',
                                 colormap = self.selected_colormap,
                                 resolution = 8,
@@ -611,24 +574,24 @@ class TimeLapseTool(wx.Frame, CPATool):
 
             self.lineage_node_collection = pts
             
+            tube_radius = node_scale_factor/10.0
             tube = mlab.pipeline.tube(pts, 
-                                      tube_radius = 2.0, # Default tube_radius results in v. thin lines: tube.filter.radius = 0.05
+                                      tube_radius = tube_radius, # Default tube_radius results in v. thin lines: tube.filter.radius = 0.05
                                       figure = self.mayavi_view.lineage_scene.mayavi_scene)
             self.lineage_edge_collection = mlab.pipeline.surface(tube, 
                                                                  color=(0.8, 0.8, 0.8),
                                                                  figure = self.mayavi_view.lineage_scene.mayavi_scene)
             
             # Add object label text to the left
-            dx = np.diff(self.lineage_node_x_locations)[0]
-            x = [self.lineage_node_positions[node][0]-0.75*dx for node in self.start_nodes]
+            t = [self.lineage_node_positions[node][0]-0.75*dt for node in self.start_nodes]
             y = [self.lineage_node_positions[node][1] for node in self.start_nodes]
             z = list(np.array(y)*0)
             s = [str(self.directed_graph.node[node]["label"]) for node in self.start_nodes]
-            self.lineage_label_collection = [mlab.text3d(*xyzs,
-                                                         line_width = 20,
-                                                         scale = 20,
+            text_scale_factor = node_scale_factor/1.0 
+            self.lineage_label_collection = [mlab.text3d(*tyzs,
+                                                         scale = text_scale_factor,
                                                          figure = self.mayavi_view.lineage_scene.mayavi_scene) 
-                                             for xyzs in zip(x,y,z,s)] 
+                                             for tyzs in zip(t,y,z,s)] 
             
             
             # Add outline to be used later when selecting points
@@ -663,15 +626,16 @@ class TimeLapseTool(wx.Frame, CPATool):
             logging.info("Re-drawing lineage tree...")
             
             if self.do_plots_need_updating["trajectories"]:
-                # Alter lines between the points that we have previously created by
-                # directly modifying the VTK dataset.                
-                nodes_to_remove = [self.connected_nodes[index] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
-                nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
-                mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
-                nodes_to_remove = [mapping[item] for item in nodes_to_remove]
-                G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
-                G.remove_nodes_from(nodes_to_remove)
-                self.lineage_node_collection.mlab_source.dataset.lines = np.array(G.edges())
+                ## Alter lines between the points that we have previously created by
+                ## directly modifying the VTK dataset.                
+                #nodes_to_remove = [self.connected_nodes[index+1] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
+                #nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
+                #mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
+                #nodes_to_remove = [mapping[item] for item in nodes_to_remove]
+                #G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
+                #G.remove_nodes_from(nodes_to_remove)
+                #self.lineage_node_collection.mlab_source.dataset.lines = np.array(G.edges())
+                self.lineage_node_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
                 self.lineage_node_collection.mlab_source.update()
                 #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(G.edges())
                 #self.lineage_edge_collection.mlab_source.update()
@@ -736,8 +700,12 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.trajectory_labels = np.array([self.directed_graph.node[key]["label"] for key in sorted(self.directed_graph)])
             
             # Generate the corresponding set of nodes
+            dt = np.median(np.diff(np.unique(nx.get_node_attributes(self.directed_graph,"t").values())))
+            # Try to scale the nodes in a reasonable way
+            # To inspect, see pts.glyph.glpyh.scale_factor 
+            node_scale_factor = 0.5*dt
             pts = mlab.points3d(xyts[:,0], xyts[:,1], xyts[:,2], xyts[:,3],
-                                scale_factor = 0.0, # scale_factor = 'auto' results in huge pts: pts.glyph.glpyh.scale_factor = 147
+                                scale_factor = 0.0,
                                 scale_mode = 'none',
                                 colormap = self.selected_colormap,
                                 figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
@@ -746,12 +714,12 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.trajectory_node_collection = pts    
     
             # Add object label text at end of trajectory
+            text_scale_factor = node_scale_factor*5 
             self.trajectory_label_collection = [mlab.text3d(self.directed_graph.node[sorted(subgraph)[-1]]["x"],
                                                             self.directed_graph.node[sorted(subgraph)[-1]]["y"],
                                                             self.directed_graph.node[sorted(subgraph)[-1]]["t"]*t_scaling,
                                                             str(key),
-                                                            line_width = 20,
-                                                            scale = 10,
+                                                            scale = text_scale_factor,
                                                             name = str(key),
                                                             figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
                                                 for (key,subgraph) in self.connected_nodes.items()]
@@ -801,18 +769,22 @@ class TimeLapseTool(wx.Frame, CPATool):
             logging.info("Re-drawing trajectories...")
             
             if self.do_plots_need_updating["trajectories"]:
-                # Alter lines between the points that we have previously created by
-                # directly modifying the VTK dataset.                
-                nodes_to_remove = [self.connected_nodes[index] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
-                nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
-                mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
-                nodes_to_remove = [mapping[item] for item in nodes_to_remove]
-                G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
-                G.remove_nodes_from(nodes_to_remove)
-                self.trajectory_line_collection.mlab_source.dataset.lines = np.array(G.edges())
+                ## Alter lines between the points that we have previously created by
+                ## directly modifying the VTK dataset.                
+                #nodes_to_remove = [self.connected_nodes[index+1] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
+                #nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
+                #mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
+                #nodes_to_remove = [mapping[item] for item in nodes_to_remove]
+                #G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
+                #G.remove_nodes_from(nodes_to_remove)
+                #self.trajectory_line_collection.mlab_source.dataset.lines = np.array(G.edges())
+                #self.trajectory_line_collection.mlab_source.update()
+                #self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())
+                #self.trajectory_line_source.mlab_source.update()
+                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
                 self.trajectory_line_collection.mlab_source.update()
-                self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())
-                self.trajectory_line_source.mlab_source.update()
+                #self.trajectory_line_source.mlab_source.dataset.lines = np.array(altered_directed_graph.edges())
+                self.trajectory_line_source.mlab_source.update()                
                 
                 for index,item in enumerate(self.trajectory_label_collection):
                     item.actor.actor.visibility = self.trajectory_selection[index+1]
