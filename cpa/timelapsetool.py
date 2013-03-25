@@ -92,27 +92,23 @@ def retrieve_trajectories(selected_dataset, selected_measurement):
         return [x.strip() for x in s.split(',') if x.strip() is not '']
     
     selection_list = parse_dataset_selection(selected_dataset)
-    dataset_clause = " AND ".join(["I.%s = '%s'"%(x[0], x[1]) for x in zip(props.series_id, selection_list)])
-    query = ["SELECT O.%s, O.%s, O.%s, O.%s, O.%s, I.%s, O.%s, %s"%(
-        props.object_tracking_label, props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, selected_measurement, ",".join(["O.%s"%item for item in props.parent_fields]) )]
-    query.append("FROM %s AS I, %s AS O"%(props.image_table, props.object_table))
-    query.append("WHERE I.%s = O.%s AND %s"%(props.image_id, props.image_id, dataset_clause))
+    dataset_clause = " AND ".join(["%s = '%s'"%(x[0], x[1]) for x in zip([props.image_table+"."+item for item in props.series_id], selection_list)])
+    
+    columns_to_retrieve = list(object_key_columns(props.object_table))    # Node IDs
+    columns_to_retrieve += [props.object_table+"."+item for item in props.parent_fields]    # Parent node IDs
+    columns_to_retrieve += [props.object_table+"."+props.object_tracking_label] # Label assigned by TrackObjects
+    columns_to_retrieve += [props.object_table+"."+props.cell_x_loc, props.object_table+"."+props.cell_y_loc] # x,y coordinates
+    columns_to_retrieve += [props.image_table+"."+props.timepoint_id] # Timepoint/frame
+    columns_to_retrieve += [props.object_table+"."+selected_measurement] # Measured feature
+    query = ["SELECT %s"%(",".join(columns_to_retrieve))]
+    query.append("FROM %s, %s"%(props.image_table, props.object_table))
+    query.append("WHERE %s = %s AND %s"%(props.image_table+"."+props.image_id, props.object_table+"."+props.image_id, dataset_clause))
     #query.append("AND I.%s <= 5 "%props.timepoint_id)
     #query.append("GROUP BY I.%s, O.%s "%(props.timepoint_id,props.object_tracking_label)) # The Brugge data has the same label in multiple locations in the same image (?!) This line filters them out.
-    query.append("ORDER BY O.%s, I.%s"%(props.object_tracking_label, props.timepoint_id))
+    query.append("ORDER BY %s, %s"%(props.object_tracking_label, props.timepoint_id))
     data = db.execute(" ".join(query))
     columns = [props.object_tracking_label, props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, selected_measurement, props.parent_fields]
-    #all_labels = np.unique([item[0] for item in locations])
-    #trajectory_info = dict( (x,{"label":[],"db_key":[],"x":[],"y":[],"t":[],"s":[],"parent":[]}) for x in all_labels ) # Wanted to use fromkeys, but it leads to incorrect behavior since it passes by reference not by value
-    #for d in data:
-        #trajectory_info[d[0]]["label"].append(d[0])
-        #trajectory_info[d[0]]["db_key"].append((d[1],d[2]))
-        #trajectory_info[d[0]]["x"].append(d[3])
-        #trajectory_info[d[0]]["y"].append(d[4])
-        #trajectory_info[d[0]]["t"].append(d[5])
-        #trajectory_info[d[0]]["s"].append(d[6])
-        #trajectory_info[d[0]]["parent"].append((d[7],d[8]))
-    #return trajectory_info
+    
     return columns,data
 
 ################################################################################
@@ -254,11 +250,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                                 "plot so the top-down view is fixed.")
         self.figure_panel.SetHelpText(navigation_help_text)
         
-        self.update_plot() 
-        #self.obtain_tracking_data()
-        #self.generate_graph()
-        #self.draw_lineage()
-        #self.draw_trajectories()
+        self.update_plot()
             
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.figure_panel, 1, wx.EXPAND)
@@ -444,24 +436,18 @@ class TimeLapseTool(wx.Frame, CPATool):
             logging.info("Retrieved %d %s from dataset %s"%(len(self.trajectory_info),props.object_name[1],self.selected_dataset))
             
             self.directed_graph = nx.DiGraph()
-            node_ids = map(itemgetter(0),self.trajectory_info)
-            self.directed_graph.add_nodes_from(node_ids)
+            key_length = len(object_key_columns())
+            indices = range(0,key_length)
+            node_ids = map(itemgetter(*indices),self.trajectory_info)
+            indices = range(key_length,key_length+2)
+            parent_node_ids = map(itemgetter(*indices),self.trajectory_info) 
+            indices = range(key_length+2,len(self.trajectory_info[0]))
+            attr = [dict(zip(["label","x","y","t","s"],item)) for item in map(itemgetter(*indices),self.trajectory_info)]
+            # Add nodes
+            self.directed_graph.add_nodes_from(zip(node_ids,attr))
+            # Add edges as list of tuples (exclude those that have no parent, i.e, (0,0)
+            self.directed_graph.add_edges_from([(parent,node) for (node,parent) in zip(node_ids,parent_node_ids) if parent in node_ids])
             
-            for current_object in self.trajectory_info.keys():
-                node_ids = self.trajectory_info[current_object]["db_key"]
-                # Add nodes
-                self.directed_graph.add_nodes_from(zip(node_ids,
-                                                       [{"x":self.trajectory_info[current_object]["x"][index],
-                                                         "y":self.trajectory_info[current_object]["y"][index],
-                                                         "t":self.trajectory_info[current_object]["t"][index],
-                                                         "label":self.trajectory_info[current_object]["label"][index],
-                                                         "s":self.trajectory_info[current_object]["s"][index],
-                                                         "parent":self.trajectory_info[current_object]["parent"][index]} for index,item in enumerate(node_ids)]))
-                
-                # Add edges as list of tuples
-                p = nx.get_node_attributes(self.directed_graph,'p') 
-                self.directed_graph.add_edges_from([(p[node],node) for node in node_ids if p[node] in node_ids])
-                
             # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
             self.start_nodes = [node for (node,value) in self.directed_graph.in_degree().items() if value == 0]
             self.end_nodes = [node for (node,value) in self.directed_graph.out_degree().items() if value == 0]
@@ -523,7 +509,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.lineage_node_x_locations = node_x_locs
             
             # When visualizing a new dataset, select all trajectories by default
-            self.trajectory_selection = dict.fromkeys(self.trajectory_info.keys(),1)              
+            self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)              
         else:
             for current_object in self.trajectory_info.keys():
                 t = self.trajectory_info[current_object]["t"]
@@ -759,7 +745,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             pts.mlab_source.dataset.lines = np.array(G.edges())
             self.trajectory_node_collection = pts    
     
-            # Add object label text
+            # Add object label text at end of trajectory
             self.trajectory_label_collection = [mlab.text3d(self.directed_graph.node[sorted(subgraph)[-1]]["x"],
                                                             self.directed_graph.node[sorted(subgraph)[-1]]["y"],
                                                             self.directed_graph.node[sorted(subgraph)[-1]]["t"]*t_scaling,
