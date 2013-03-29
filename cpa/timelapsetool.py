@@ -45,8 +45,6 @@ all_colormaps = ['Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'Dark2',
                  'pink', 'prism', 'spectral', 'spring', 'summer','winter']
 all_colormaps.sort()
 
-props = Properties.getInstance()
-
 required_fields = ['series_id', 'group_id', 'timepoint_id','object_tracking_label']
 
 db = DBConnect.getInstance()
@@ -67,7 +65,7 @@ def retrieve_datasets():
     all_datasets = [x[0] for x in db.execute("SELECT %s FROM %s GROUP BY %s"%(series_list,props.image_table,series_list))]
     return all_datasets
 
-def retrieve_trajectories(selected_dataset, selected_measurement):
+def obtain_tracking_data(selected_dataset, selected_measurement):
     def parse_dataset_selection(s):
         return [x.strip() for x in s.split(',') if x.strip() is not '']
     
@@ -164,8 +162,8 @@ class MayaviView(HasTraits):
     
     # The layout of the dialog created
     view = View(HSplit(Group(Item('trajectory_scene',
-                                  editor = SceneEditor(scene_class = Scene),
-                                  #editor = SceneEditor(scene_class=MayaviScene),
+                                  #editor = SceneEditor(scene_class = Scene),
+                                  editor = SceneEditor(scene_class=MayaviScene),
                                   resizable=True, show_label=False)),
                        Group(Item('lineage_scene',
                                   editor = SceneEditor(scene_class = Scene),
@@ -197,7 +195,9 @@ class TimeLapseTool(wx.Frame, CPATool):
             #logging.error(message)
         #if fail:    
             #self.Destroy()
-            #return        
+            #return   
+        props = Properties.getInstance()
+        props = add_props_field(props)
 
         self.control_panel = TimeLapseControlPanel(self)
         self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
@@ -247,8 +247,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_BUTTON(self.control_panel.update_plot_button, -1, self.update_plot)
         
     def on_show_all_trajectories(self, event = None):
-        all_labels = self.connected_nodes.keys()
-        self.trajectory_selection = dict.fromkeys(all_labels,1)
+        self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot()    
 
@@ -290,14 +289,15 @@ class TimeLapseTool(wx.Frame, CPATool):
 
     def show_selection_in_table(self, event = None):
         '''Callback for "Show selection in a table" popup item.'''
-        containing_trajectory = [nodes for nodes in self.connected_nodes if self.selected_node in nodes][0]
-        keys, ypoints, xpoints, data = zip(*[[self.directed_graph.node[key]["db_key"],key[0],key[1],self.directed_graph.node[key]["s"]] for key in containing_trajectory])
-        table_data = np.hstack((np.array(keys), np.array((xpoints,ypoints,data)).T))
+        keys = [self.connected_nodes[item].nodes() for item in self.selected_trajectory]
+        keys = [item for sublist in keys for item in sublist]
+        tracking_label,timepoint,data = zip(*np.array([(self.directed_graph.node[node]["label"],self.directed_graph.node[node]["t"],self.directed_graph.node[node]["s"]) for node in keys]))
+        table_data = np.hstack((np.array(keys), np.array((tracking_label,timepoint,data)).T))
         column_labels = list(object_key_columns())
         key_col_indices = list(xrange(len(column_labels)))
         column_labels += [props.object_tracking_label,props.timepoint_id,self.selected_measurement]
         group = 'Object'
-        grid = tableviewer.TableViewer(self, title='Trajectory data containing %s %d'%(props.object_name[0],self.selected_node[0]))
+        grid = tableviewer.TableViewer(self, title='Data table from trajectory %d containing %s %s'%(self.selected_trajectory[0],props.object_name[0],self.selected_node))
         grid.table_from_array(table_data, column_labels, group, key_col_indices)
         # TODO: Confirm that hiding the key columns is actually neccesary. Also, an error gets thrown when the user tries to scrool horizontally.
         grid.grid.Table.set_shown_columns(list(xrange(len(key_col_indices),len(column_labels))))
@@ -305,12 +305,13 @@ class TimeLapseTool(wx.Frame, CPATool):
         grid.Show()
         
     def show_cell_montage(self, event = None):
-        containing_trajectory = [nodes for nodes in self.connected_nodes if self.selected_node in nodes][0]
-        keys = [self.directed_graph.node[key]["db_key"] for key in containing_trajectory]
-        montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage containing %s %d"%(props.object_name[0],self.selected_node[0]))
-        montage_frame.Show()
-        montage_frame.add_objects(keys)
-        [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey == self.directed_graph.node[self.selected_node]["db_key"]]
+        # TODO: In this piece of code, it assumes there can be multiple trajectories selected but only one node selected. Should make consistent.
+        selected_trajectories = [self.connected_nodes[item].nodes() for item in self.selected_trajectory]
+        for index, current_trajectory_keys in enumerate(selected_trajectories):
+            montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s"%(self.selected_trajectory[index], props.object_name[0],self.selected_node))
+            montage_frame.Show()
+            montage_frame.add_objects(current_trajectory_keys)
+            [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey == self.selected_node]
     
     def on_dataset_selected(self, event = None):
         # Disable trajectory selection button until plot updated or the currently plotted dataset is selected
@@ -395,54 +396,44 @@ class TimeLapseTool(wx.Frame, CPATool):
                 self.trajectory_selection[all_labels[x]] = 1
             self.do_plots_need_updating["trajectories"] = True
             
-            # Alter lines between the points that we have previously created by
-            # directly modifying the VTK dataset.                
-            nodes_to_remove = [self.connected_nodes[index+1] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
+            # Alter lines between the points that we have previously created by directly modifying the VTK dataset.                
+            nodes_to_remove = [self.connected_nodes[key] for (key,value)in self.trajectory_selection.items() if value == 0]
             nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
             mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
             nodes_to_remove = [mapping[item] for item in nodes_to_remove]
-            G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
-            G.remove_nodes_from(nodes_to_remove)
-            self.altered_directed_graph = G
+            self.altered_directed_graph = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
+            self.altered_directed_graph.remove_nodes_from(nodes_to_remove)
             self.update_plot()                    
     
     def update_plot(self, event = None):
-        self.obtain_tracking_data()
         self.generate_graph()
         self.draw_trajectories()
         self.draw_lineage()
         self.control_panel.trajectory_selection_button.Enable()
         self.do_plots_need_updating = {"dataset":False,"colormap":False,"measurement":False, "trajectories":False}
             
-    def obtain_tracking_data(self):
-        # Only read from database if a new dataset or new measurement is needed
-        if self.do_plots_need_updating["dataset"] or self.do_plots_need_updating["measurement"]:
-            self.column_names, self.trajectory_info = retrieve_trajectories(self.selected_dataset,self.selected_measurement)
-           
-    
     def generate_graph(self):
         # Generate the graph relationship if the dataset has been updated
+        
+        column_names,trajectory_info = obtain_tracking_data(self.selected_dataset,self.selected_measurement)
+        
         if self.do_plots_need_updating["dataset"]:           
-            logging.info("Retrieved %d %s from dataset %s"%(len(self.trajectory_info),props.object_name[1],self.selected_dataset))
+            logging.info("Retrieved %d %s from dataset %s"%(len(trajectory_info),props.object_name[1],self.selected_dataset))
             
             self.directed_graph = nx.DiGraph()
             key_length = len(object_key_columns())
             indices = range(0,key_length)
-            node_ids = map(itemgetter(*indices),self.trajectory_info)
+            node_ids = map(itemgetter(*indices),trajectory_info)
             indices = range(key_length,key_length+2)
-            parent_node_ids = map(itemgetter(*indices),self.trajectory_info) 
-            indices = range(key_length+2,len(self.trajectory_info[0]))
-            attr = [dict(zip(["label","x","y","t","s"],item)) for item in map(itemgetter(*indices),self.trajectory_info)]
+            parent_node_ids = map(itemgetter(*indices),trajectory_info) 
+            indices = range(key_length+2,len(trajectory_info[0]))
+            attr = [dict(zip(["label","x","y","t","s"],item)) for item in map(itemgetter(*indices),trajectory_info)]
             # Add nodes
             self.directed_graph.add_nodes_from(zip(node_ids,attr))
             # Add edges as list of tuples (exclude those that have no parent, i.e, (0,0)
             self.directed_graph.add_edges_from([(parent,node) for (node,parent) in zip(node_ids,parent_node_ids) if parent in node_ids])
             
-            # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
-            self.start_nodes = [node for (node,value) in self.directed_graph.in_degree().items() if value == 0]
-            self.end_nodes = [node for (node,value) in self.directed_graph.out_degree().items() if value == 0]
-            
-            logging.info("Constructed lineage graph consisting of %d nodes and %d edges"%(self.directed_graph.number_of_nodes(),self.directed_graph.number_of_edges()))
+            logging.info("Constructed graph consisting of %d nodes and %d edges"%(self.directed_graph.number_of_nodes(),self.directed_graph.number_of_edges()))
             
             t1 = time.clock()
             G = nx.convert_node_labels_to_integers(self.directed_graph,
@@ -450,7 +441,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                    ordering="default")
             mapping = dict(zip(G.nodes(),self.directed_graph.nodes()))
             glayout.layer_layout(G, level_attribute = "t")
-            nx.relabel_nodes(G, mapping,copy=False)
+            nx.relabel_nodes(G, mapping,copy=False) # Map back to original graph labels
             node_positions = dict(zip(G.nodes(),[[G.node[key]["t"],G.node[key]["y"]] for key in G.nodes()]))
             
             # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
@@ -462,9 +453,16 @@ class TimeLapseTool(wx.Frame, CPATool):
             t2 = time.clock()
             logging.info("Computed lineage layout (%.2f sec)"%(t2-t1))
             
+            # Each track gets its own indexed subgraph. Later operations to the graphs are referenced to this key.
             connected_nodes = nx.connected_component_subgraphs(self.directed_graph.to_undirected())
             self.connected_nodes = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
             
+            # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
+            start_nodes = [node for (node,value) in self.directed_graph.in_degree().items() if value == 0]
+            end_nodes = [node for (node,value) in self.directed_graph.out_degree().items() if value == 0]
+            self.start_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in start_nodes if node in value ])
+            self.end_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in end_nodes if node in value ])
+
             self.lineage_node_positions = node_positions
             
             # When visualizing a new dataset, select all trajectories by default
@@ -472,11 +470,11 @@ class TimeLapseTool(wx.Frame, CPATool):
         else:
             key_length = len(object_key_columns())
             indices = range(0,key_length)
-            node_ids = map(itemgetter(*indices),self.trajectory_info)
-            attr = dict(zip(node_ids,[item for item in map(itemgetter(len(self.trajectory_info[0])-1),self.trajectory_info)]))            
+            node_ids = map(itemgetter(*indices),trajectory_info)
+            attr = dict(zip(node_ids,[item for item in map(itemgetter(len(trajectory_info[0])-1),trajectory_info)]))            
             nx.set_node_attributes(self.directed_graph,"s",attr)
             
-        self.scalar_data = np.array([self.directed_graph.node[key]["s"] for key in sorted(self.directed_graph)])
+        self.scalar_data = np.array([self.directed_graph.node[key]["s"] for key in sorted(self.directed_graph)]).astype(float)
 
     def on_pick_one_timepoint(self,picker):
         """ Picker callback: this gets called upon pick events.
@@ -494,49 +492,45 @@ class TimeLapseTool(wx.Frame, CPATool):
             # represented by a glyph with several points      
             point_id = picker.point_id/n_glyph
             x_lineage,y_lineage,_ = self.lineage_node_collection.mlab_source.points[point_id,:]
-            picked_node = sorted(self.directed_graph)[point_id]
             x_traj,y_traj,t_traj = self.trajectory_node_collection.mlab_source.points[point_id,:]
-            if picked_node == self.selected_node:
-                self.selected_node = None 
-            else:
-                self.selected_node = picked_node
+            picked_node = sorted(self.directed_graph)[point_id]
                 
         elif picker.actor in self.trajectory_node_collection.actor.actors:
             n_glyph = self.trajectory_node_collection.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]  
             point_id = picker.point_id/n_glyph            
             x_traj,y_traj,t_traj = self.trajectory_node_collection.mlab_source.points[point_id,:]
-            l = self.trajectory_labels[point_id]
-            self.selected_trajectories = l
-            picked_node = sorted(self.directed_graph)[point_id]
             x_lineage,y_lineage,_ = self.lineage_node_collection.mlab_source.points[point_id,:]
-            # If the node was already picked, then deselect it
+            picked_node = sorted(self.directed_graph)[point_id]
+        else:
+            picked_node = None
+
+        if picked_node != None:
+            # If the picked node is not one of the selected trajectories, then don't select it 
             if picked_node == self.selected_node:
                 self.selected_node = None
-                self.selected_trajectories = None
+                self.selected_trajectory = None      
+                self.lineage_selection_outline.actor.actor.visibility = 0
+                self.trajectory_selection_outline.actor.actor.visibility = 0
             else:
-                self.selected_node = picked_node  
+                self.selected_node = picked_node
+                self.selected_trajectory = [key for key in self.connected_nodes.keys() if self.selected_node in self.connected_nodes[key]]
                 
-        else:
-            self.selected_node = None  
-            self.selected_trajectories = None
-
-        # If the picked node is not one of the selected trajectories, then don't select it 
-        if self.selected_node != None and self.selected_node in self.connected_nodes[self.selected_trajectories].nodes():
-            # Move the outline to the data point
-            s = 10
-            self.lineage_selection_outline.bounds = (x_lineage-s, x_lineage+s,
-                                                     y_lineage-s, y_lineage+s,
-                                                     0, 0)
-            self.lineage_selection_outline.actor.actor.visibility = 1
-            s = 3
-            self.trajectory_selection_outline.bounds = (x_traj-s, x_traj+s,
-                                                        y_traj-s, y_traj+s,
-                                                        t_traj-s, t_traj+s)
-            self.trajectory_selection_outline.actor.actor.visibility = 1
-        else:
-            self.selected_node = None  
-            self.selected_trajectories = None            
-    
+                # Move the outline to the data point
+                dx = np.diff(self.lineage_selection_outline.bounds[:2])[0]/2
+                dy = np.diff(self.lineage_selection_outline.bounds[2:4])[0]/2           
+                self.lineage_selection_outline.bounds = (x_lineage-dx, x_lineage+dx,
+                                                         y_lineage-dy, y_lineage+dy,
+                                                         0, 0)
+                self.lineage_selection_outline.actor.actor.visibility = 1
+                
+                dx = np.diff(self.trajectory_selection_outline.bounds[:2])[0]/2
+                dy = np.diff(self.trajectory_selection_outline.bounds[2:4])[0]/2
+                dt = np.diff(self.trajectory_selection_outline.bounds[4:6])[0]/2
+                self.trajectory_selection_outline.bounds = (x_traj-dx, x_traj+dx,
+                                                            y_traj-dy, y_traj+dy,
+                                                            t_traj-dt, t_traj+dt)
+                self.trajectory_selection_outline.actor.actor.visibility = 1
+                  
     def draw_lineage(self):
         # Rendering temporarily disabled
         self.mayavi_view.lineage_scene.disable_render = True 
@@ -557,10 +551,10 @@ class TimeLapseTool(wx.Frame, CPATool):
             t1 = time.clock()
             
             G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
-            xys = np.array([self.lineage_node_positions[key]+[self.directed_graph.node[key]["s"]] for key in sorted(self.directed_graph)])
+            xys = np.array([self.lineage_node_positions[node]+[self.directed_graph.node[node]["s"]] for node in sorted(self.directed_graph.nodes())])
             dt = np.median(np.diff(np.unique(nx.get_node_attributes(self.directed_graph,"t").values())))
             # The scale factor defaults to the typical interpoint distance, which may not be appropriate. 
-            # So I set it explicitly here to a fraction of delta_x
+            # So I set it explicitly here to a fraction of delta_t
             # To inspect the value, see pts.glyph.glpyh.scale_factor
             node_scale_factor = 0.5*dt
             pts = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
@@ -583,22 +577,24 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                  figure = self.mayavi_view.lineage_scene.mayavi_scene)
             
             # Add object label text to the left
-            t = [self.lineage_node_positions[node][0]-0.75*dt for node in self.start_nodes]
-            y = [self.lineage_node_positions[node][1] for node in self.start_nodes]
-            z = list(np.array(y)*0)
-            s = [str(self.directed_graph.node[node]["label"]) for node in self.start_nodes]
             text_scale_factor = node_scale_factor/1.0 
-            self.lineage_label_collection = [mlab.text3d(*tyzs,
-                                                         scale = text_scale_factor,
-                                                         figure = self.mayavi_view.lineage_scene.mayavi_scene) 
-                                             for tyzs in zip(t,y,z,s)] 
-            
-            
+            self.lineage_label_collection = dict(zip(self.connected_nodes.keys(),
+                                                     [mlab.text3d(self.lineage_node_positions[self.start_nodes[key]][0]-0.75*dt,
+                                                                  self.lineage_node_positions[self.start_nodes[key]][1],
+                                                                  0,
+                                                                  str(key),
+                                                                  scale = text_scale_factor,
+                                                                  figure = self.mayavi_view.lineage_scene.mayavi_scene)
+                                                      for key in self.connected_nodes.keys()]))
+
             # Add outline to be used later when selecting points
             self.lineage_selection_outline = mlab.outline(line_width=3,
                                                           figure = self.mayavi_view.lineage_scene.mayavi_scene)
             self.lineage_selection_outline.outline_mode = 'cornered'
             self.lineage_selection_outline.actor.actor.visibility = 0
+            self.lineage_selection_outline.bounds = (-node_scale_factor,node_scale_factor,
+                                                     -node_scale_factor,node_scale_factor,
+                                                     -node_scale_factor,node_scale_factor)            
             
             # Add axes outlines
             extent = np.array(self.lineage_node_positions.values())
@@ -626,23 +622,14 @@ class TimeLapseTool(wx.Frame, CPATool):
             logging.info("Re-drawing lineage tree...")
             
             if self.do_plots_need_updating["trajectories"]:
-                ## Alter lines between the points that we have previously created by
-                ## directly modifying the VTK dataset.                
-                #nodes_to_remove = [self.connected_nodes[index+1] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
-                #nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
-                #mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
-                #nodes_to_remove = [mapping[item] for item in nodes_to_remove]
-                #G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
-                #G.remove_nodes_from(nodes_to_remove)
-                #self.lineage_node_collection.mlab_source.dataset.lines = np.array(G.edges())
                 self.lineage_node_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
                 self.lineage_node_collection.mlab_source.update()
-                #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(G.edges())
+                #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
                 #self.lineage_edge_collection.mlab_source.update()
                 
-                for index,item in enumerate(self.lineage_label_collection):
-                    item.actor.actor.visibility = self.trajectory_selection[index+1]                
-                
+                for key in self.connected_nodes.keys():
+                    self.lineage_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]
+
             if self.do_plots_need_updating["measurement"]:
                 self.lineage_node_collection.mlab_source.set(scalars = self.scalar_data)
             
@@ -687,7 +674,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             # Create the lines
             self.trajectory_line_source = mlab.pipeline.scalar_scatter(xyts[:,0], xyts[:,1], xyts[:,2], xyts[:,3], \
                                                                        figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-            # Connect them
+            # Connect them using the graph edge matrix
             self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())     
             
             # Finally, display the set of lines by using the surface module. Using a wireframe
@@ -697,8 +684,6 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                     colormap=self.selected_colormap,
                                                                     figure = self.mayavi_view.trajectory_scene.mayavi_scene)         
     
-            self.trajectory_labels = np.array([self.directed_graph.node[key]["label"] for key in sorted(self.directed_graph)])
-            
             # Generate the corresponding set of nodes
             dt = np.median(np.diff(np.unique(nx.get_node_attributes(self.directed_graph,"t").values())))
             # Try to scale the nodes in a reasonable way
@@ -715,19 +700,23 @@ class TimeLapseTool(wx.Frame, CPATool):
     
             # Add object label text at end of trajectory
             text_scale_factor = node_scale_factor*5 
-            self.trajectory_label_collection = [mlab.text3d(self.directed_graph.node[sorted(subgraph)[-1]]["x"],
-                                                            self.directed_graph.node[sorted(subgraph)[-1]]["y"],
-                                                            self.directed_graph.node[sorted(subgraph)[-1]]["t"]*t_scaling,
-                                                            str(key),
-                                                            scale = text_scale_factor,
-                                                            name = str(key),
-                                                            figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
-                                                for (key,subgraph) in self.connected_nodes.items()]
+            self.trajectory_label_collection = dict(zip(self.connected_nodes.keys(),
+                                                        [mlab.text3d(self.directed_graph.node[sorted(subgraph)[-1]]["x"],
+                                                                     self.directed_graph.node[sorted(subgraph)[-1]]["y"],
+                                                                     self.directed_graph.node[sorted(subgraph)[-1]]["t"]*t_scaling,
+                                                                     str(key),
+                                                                     scale = text_scale_factor,
+                                                                     name = str(key),
+                                                                     figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
+                                                         for (key,subgraph) in self.connected_nodes.items()]))
             
             # Add outline to be used later when selecting points
             self.trajectory_selection_outline = mlab.outline(line_width = 3,
                                                              figure = self.mayavi_view.trajectory_scene.mayavi_scene)
             self.trajectory_selection_outline.outline_mode = 'cornered'
+            self.trajectory_selection_outline.bounds = (-node_scale_factor,node_scale_factor,
+                                                        -node_scale_factor,node_scale_factor,
+                                                        -node_scale_factor,node_scale_factor)
             self.trajectory_selection_outline.actor.actor.visibility = 0
             
             # Using axes doesn't work until the scene is avilable: 
@@ -738,7 +727,8 @@ class TimeLapseTool(wx.Frame, CPATool):
             mlab.axes(self.trajectory_line_source, 
                       xlabel='X', ylabel='Y',zlabel='T',
                       opacity = self.axes_opacity,
-                      x_axis_visibility=True, y_axis_visibility=True, z_axis_visibility=True) 
+                      x_axis_visibility=True, y_axis_visibility=True, z_axis_visibility=True)
+            
             # Set axes to MATLAB's default 3d view
             mlab.view(azimuth = 322.5,elevation = 30.0,
                       figure = self.mayavi_view.trajectory_scene.mayavi_scene)
@@ -769,25 +759,12 @@ class TimeLapseTool(wx.Frame, CPATool):
             logging.info("Re-drawing trajectories...")
             
             if self.do_plots_need_updating["trajectories"]:
-                ## Alter lines between the points that we have previously created by
-                ## directly modifying the VTK dataset.                
-                #nodes_to_remove = [self.connected_nodes[index+1] for index,val in enumerate(self.trajectory_selection.values()) if val == 0]
-                #nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
-                #mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
-                #nodes_to_remove = [mapping[item] for item in nodes_to_remove]
-                #G = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
-                #G.remove_nodes_from(nodes_to_remove)
-                #self.trajectory_line_collection.mlab_source.dataset.lines = np.array(G.edges())
-                #self.trajectory_line_collection.mlab_source.update()
-                #self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())
-                #self.trajectory_line_source.mlab_source.update()
                 self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
                 self.trajectory_line_collection.mlab_source.update()
-                #self.trajectory_line_source.mlab_source.dataset.lines = np.array(altered_directed_graph.edges())
                 self.trajectory_line_source.mlab_source.update()                
                 
-                for index,item in enumerate(self.trajectory_label_collection):
-                    item.actor.actor.visibility = self.trajectory_selection[index+1]
+                for key in self.connected_nodes.keys():
+                    self.trajectory_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]  
 
             if self.do_plots_need_updating["measurement"]:
                 self.trajectory_line_collection.mlab_source.set(scalars = self.scalar_data)
@@ -806,6 +783,8 @@ if __name__ == "__main__":
     import sys
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
+    
+    props = Properties.getInstance()
 
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
