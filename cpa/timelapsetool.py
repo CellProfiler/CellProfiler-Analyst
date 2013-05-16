@@ -1,5 +1,7 @@
 '''
 Dependencies:
+Enthought Tool Suite (for Mayavi2): http://www.lfd.uci.edu/~gohlke/pythonlibs/#ets
+VTK: http://www.lfd.uci.edu/~gohlke/pythonlibs/#vtk
 NetworkX: http://www.lfd.uci.edu/~gohlke/pythonlibs/#networkx
 configobj: https://pypi.python.org/pypi/configobj
 '''
