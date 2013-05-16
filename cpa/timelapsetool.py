@@ -56,8 +56,10 @@ def add_props_field(props):
     props.group_id = "Image_Group_Number"
     props.timepoint_id = "Image_Group_Index"
     obj = props.cell_x_loc.split('_')[0]
+    #props.object_tracking_label = obj + "_TrackObjects_Label_10"
+    #props.parent_fields = ["%s_%s"%(obj,item) for item in ["TrackObjects_ParentImageNumber_10","TrackObjects_ParentObjectNumber_10"]]
     props.object_tracking_label = obj + "_TrackObjects_Label"
-    props.parent_fields = ["%s_%s"%(obj,item) for item in ["TrackObjects_ParentImageNumber","TrackObjects_ParentObjectNumber"]]
+    props.parent_fields = ["%s_%s"%(obj,item) for item in ["TrackObjects_ParentImageNumber","TrackObjects_ParentObjectNumber"]]    
     return props
 
 def retrieve_datasets():
@@ -430,8 +432,14 @@ class TimeLapseTool(wx.Frame, CPATool):
             attr = [dict(zip(["label","x","y","t","s"],item)) for item in map(itemgetter(*indices),trajectory_info)]
             # Add nodes
             self.directed_graph.add_nodes_from(zip(node_ids,attr))
-            # Add edges as list of tuples (exclude those that have no parent, i.e, (0,0)
-            self.directed_graph.add_edges_from([(parent,node) for (node,parent) in zip(node_ids,parent_node_ids) if parent in node_ids])
+            # Add edges as list of tuples (exclude those that have no parent, i.e, (0,0))
+            null_node_id = (0,0)
+            # TODO: Check if this is faster
+            # z = np.array(zip(parent_node_ids,node_ids))
+            # index = np.all(z[:,0] != np.array(null_node_id),axis=1)
+            # z = z[index,:]
+            # self.directed_graph.add_edges_from(zip([tuple(x) for x in z[:,0]],[tuple(x) for x in z[:,1]]))
+            self.directed_graph.add_edges_from([(parent,node) for (node,parent) in zip(node_ids,parent_node_ids) if parent != null_node_id])
             
             logging.info("Constructed graph consisting of %d nodes and %d edges"%(self.directed_graph.number_of_nodes(),self.directed_graph.number_of_edges()))
             
