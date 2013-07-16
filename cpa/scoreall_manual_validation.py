@@ -15,7 +15,7 @@ import os
 import sys
 import wx
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+from sklearn import metrics
 #import util.crossvalidation as xval
 
 USAGE = '''
@@ -33,6 +33,9 @@ trainingset_manual = training set generated as a manual ground truth to test aga
 '''
 ## per_cell_scores code copied from https://svn.broadinstitute.org/imaging/2007_05_16_HCS_AstraZeneca/src/boosting.py
 ## because it was not in this repository -- DL
+
+DISPLAY_CONFUSION_MATRIX = 1
+
 def per_cell_scores(learners, test, colnames):
     assert test.shape[1] == len(colnames)
     scores = np.zeros(len(test), dtype=float)
@@ -116,7 +119,12 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
     ## Compare Ground Truth score signs with the actual ground truth values
     numclasses = ts.labels.size
     gt_actual_signs = gt.label_matrix[:,0]
-    cm = confusion_matrix(gt_actual_signs,gt_predicted_signs)
+    cm_unrotated = metrics.confusion_matrix(gt_actual_signs,gt_predicted_signs)
+    ## sklearn.metrics.confusion_matrix -- 2D confusion matrix is inverted from convention.
+    ## https://github.com/scikit-learn/scikit-learn/issues/1664
+    cm = np.rot90(np.rot90(cm_unrotated))
+    fpr, sens, thresholds = metrics.roc_curve(gt_actual_signs,gt_predicted_signs)
+    spec = 1-fpr
     s = np.sum(cm,axis=1)
     percent = [100*cm[i,i]/float(s[i]) for i in range(len(s))]
     avg = np.mean(percent)
@@ -124,7 +132,16 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
     print 'accuracy = %f' % avgTotal
     print 'Confusion Matrix = ... '
     print cm
-
+    my_sens = cm[0,0] / float(cm[0,0] + cm[0,1]) #TP/(TP+FN)
+    my_spec = cm[1,1] / float(cm[1,1] + cm[1,0]) #TN/(TN+FP)
+    print 'My_Sensitivity = %f' % my_sens
+    print 'My_Specificity = %f' % my_spec
+    print 'Sensitivity = ...'
+    print sens
+    print 'Specificity = ...'
+    print spec
+    print 'Done calculating'
+    
     ############
     ## Confusion Matrix code from here: http://stackoverflow.com/questions/5821125/how-to-plot-confusion-matrix-with-string-axis-rather-than-integer-in-python
     conf_arr = cm
@@ -139,27 +156,33 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
         ##norm_conf.append(tmp_arr)
     norm_conf = conf_arr / float(np.max(conf_arr))
     
-    fig = plt.figure()
-    plt.clf()
-    ax = fig.add_subplot(111)
-    ax.set_aspect(1)
-    res = ax.imshow(np.array(norm_conf), cmap=plt.cm.jet, 
-                    interpolation='nearest')
-    
-    width = len(conf_arr)
-    height = len(conf_arr[0])
-    
-    for x in xrange(width):
-        for y in xrange(height):
-            ax.annotate(str(conf_arr[x][y]), xy=(y, x), 
-                        horizontalalignment='center',
-                        verticalalignment='center')
-    cb = fig.colorbar(res)
-    #cb.set_cmap = [0,1]
-    alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    plt.xticks(range(width), alphabet[:width])
-    plt.yticks(range(height), alphabet[:height])
-    plt.show()
+    if DISPLAY_CONFUSION_MATRIX:
+        fig = plt.figure()
+        plt.clf()
+        ax = fig.add_subplot(111)
+        ax.set_aspect(1)
+        res = ax.imshow(np.array(norm_conf), cmap=plt.cm.jet, 
+                        interpolation='nearest')
+        
+        width = len(conf_arr)
+        height = len(conf_arr[0])
+        
+        for x in xrange(width):
+            for y in xrange(height):
+                ax.annotate(str(conf_arr[x][y]), xy=(y, x), 
+                            horizontalalignment='center',
+                            verticalalignment='center')
+        cb = fig.colorbar(res)
+        #cb.set_cmap = [0,1]
+        if width == 2 and height == 2:
+            plt.xticks([0,1],['FP','TN'])
+            plt.yticks([0,1],['TP','FP'])
+        else:
+            alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            plt.xticks(range(width), alphabet[:width])
+            plt.yticks(range(height), alphabet[:height])
+        plt.show()
+            
     print 'Done'
     #plt.savefig('confusion_matrix.png', format='png')    
 ######
