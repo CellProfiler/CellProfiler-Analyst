@@ -200,13 +200,16 @@ class Cache(object):
         objects_by_image = {}
         for object_key in object_keys:
             objects_by_image.setdefault(object_key[:-1], []).append(object_key[-1])
-        results = []
+        results = {}
         for image_key, cell_ids in objects_by_image.items():
             stackedfeatures, colnames, stackedcellids = self.load([image_key], normalization, removeRowsWithNaN)
             stackedcellids = list(stackedcellids)
-            indices = [stackedcellids.index(cell_id) for cell_id in cell_ids]
-            results.append(stackedfeatures[indices, :])
-        return np.vstack(results)
+            for cell_id in cell_ids:
+                index = stackedcellids.index(cell_id)
+                fv = stackedfeatures[index, :]
+                object_key = tuple(list(image_key) + [cell_id])
+                results[object_key] = fv
+        return np.array([results[object_key] for object_key in object_keys])
 
     def load(self, image_keys, normalization=DummyNormalization, removeRowsWithNaN=True):
         """Load the raw features of all the cells in a particular well and
