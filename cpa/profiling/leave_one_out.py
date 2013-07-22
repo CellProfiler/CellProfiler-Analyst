@@ -4,7 +4,7 @@ import sys
 from optparse import OptionParser
 import numpy as np
 import cpa
-from scipy.spatial.distance import cdist, cosine
+from scipy.spatial.distance import cdist, cosine, euclidean, cityblock
 from .profiles import Profiles
 from .confusion import confusion_matrix, write_confusion
 
@@ -54,15 +54,17 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None):
 
 
 class NNClassifier(object):
-    def __init__(self, features, labels):
+    def __init__(self, features, labels, distance='cosine'):
         assert isinstance(labels, list)
         assert len(labels) == features.shape[0]
         self.features = features
         self.labels = labels
+        self.distance = {'cosine': cosine, 'euclidean': euclidean,
+                         'cityblock': cityblock}[distance]
 
     def classify(self, feature):
         all_zero = np.all(self.features == 0, 1)
-        distances = np.array([cosine(f, feature) if not z else np.inf
+        distances = np.array([self.distance(f, feature) if not z else np.inf
                               for f, z in zip(self.features, all_zero)])
         return self.labels[np.argmin(distances)]
 
@@ -70,7 +72,7 @@ class NNClassifier(object):
 # incorporate SVA (now removed, but kept in the sva branch), but kept
 # for now because it may be clearer than the implementation above.
 def crossvalidate(profiles, true_group_name, holdout_group_name=None, 
-                  train=NNClassifier):
+                  train=NNClassifier, distance='cosine'):
     profiles.assert_not_isnan()
     keys = profiles.keys()
     true_labels = profiles.regroup(true_group_name)
@@ -89,7 +91,7 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
         training_labels = [labels.index(true_labels[tuple(k)]) 
                            for k, m in zip(keys, ~test_set_mask) if m]
 
-        model = train(training_features, training_labels)
+        model = train(training_features, training_labels, distance=distance)
         for k, f, m in zip(keys, profiles.data, test_set_mask):
             if not m:
                 continue
@@ -107,6 +109,7 @@ def print_confusion_matrix(confusion):
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [-c] [-h HOLDOUT-GROUP] PROPERTIES-FILE PROFILES-FILENAME TRUE-GROUP")
     parser.add_option('-c', dest='csv', help='input as CSV', action='store_true')
+    parser.add_option('-d', dest='distance', help='distance metric', default='cosine', action='store')
     parser.add_option('-H', dest='holdout_group', help='hold out all that map to the same holdout group', action='store')
     options, args = parser.parse_args()
     if len(args) != 3:
@@ -119,5 +122,6 @@ if __name__ == '__main__':
     else:
        profiles = Profiles.load(profiles_filename)
 
-    confusion = crossvalidate(profiles, true_group_name, options.holdout_group)
+    confusion = crossvalidate(profiles, true_group_name, options.holdout_group,
+                              distance=options.distance)
     write_confusion(confusion, sys.stdout)
