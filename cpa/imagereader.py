@@ -2,11 +2,17 @@ import wx
 import numpy as np
 import urllib2
 import urllib
+import urlparse
 import os.path
 import logging
 from properties import Properties
+from errors import ClearException
 
 p = Properties.getInstance()
+
+class ThrowingURLopener(urllib.URLopener):
+    def http_error_default(*args, **kwargs):
+        return urllib.URLopener.http_error_default(*args, **kwargs)
 
 class ImageReader(object):
     def __init__(self):
@@ -29,65 +35,84 @@ class ImageReader(object):
             return self.read_images_via_cp(fds)
         else:
             return self.read_images_old_way(fds)
+
+    def _read_image_via_cp(self, filename_or_url):
+        # The opener's destructor deletes the temprary files, so the
+        # opener must not be GC'ed until the image has been loaded.
+        opener = ThrowingURLopener()
+        if p.image_url_prepend:
+            parsed = urlparse.urlparse(p.image_url_prepend + filename_or_url)
+            if parsed.scheme:
+                try:
+                    filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
+                except IOError, e:
+                    if e.args[0] == 'http error':
+                        status_code, message = e.args[1:3]
+                        raise ClearException(
+                            'Failed to load image from %s' % parsed.geturl(),
+                            '%d %s' % (status_code, message))
+                    else:
+                        raise
+        logging.info('Loading image from "%s"' % filename_or_url)
+        image = self.load_using_bioformats(filename_or_url)
+        return image
+
+    def _extract_channels(self, filename_or_url, image, image_name, channels_per_image):
+        if image.ndim == 2 and channels_per_image != 1:
+            # Got 1 channel, expected more
+            raise Exception('CPA found %d channels in the "%s" image at '
+                            '%s, but it was expecting %s as specified '
+                            'by properties field channels_per_image. '
+                            'Please update the channels_per_image field '
+                            'in your properties file, or make sure your '
+                            'images are in the right format.'
+                            %(1, 
+                              image_name,
+                              filename_or_url,
+                              channels_per_image))
+        if image.ndim > 2 and image.shape[2] < channels_per_image:
+            # Got fewer channels than expected
+            raise Exception('CPA found %d channels in the "%s" image at '
+                            '%s, but it was expecting %s as specified '
+                            'by properties field channels_per_image. '
+                            'Please update the channels_per_image field '
+                            'in your properties file, or make sure your '
+                            'images are in the right format.'
+                            %(image.shape[2], 
+                              image_name,
+                              filename_or_url,
+                              channels_per_image))
+        if image.ndim > 2 and image.shape[2] > channels_per_image:
+            # Got more channels than expected (load the first ones & warn)
+            logging.warn('WARNING: CPA found %d channels in the "%s" image '
+                         'at %s, but it will only load the first %s as '
+                         'specified by properties field channels_per_image.'
+                         %(image.shape[2], 
+                           image_name,
+                           filename_or_url,
+                           channels_per_image))
+            return [image[:, :, j] 
+                    for j in range(int(channels_per_image))]
+        else:
+            # Got as many channels as expected
+            if image.ndim == 2:
+                return [image]
+            else:
+                return [image[:, :, j] 
+                        for j in range(image.shape[2])]
         
-    def read_images_via_cp(self, fds):
+    def read_images_via_cp(self, filenames_or_urls):
         '''Uses CellProfiler's LoadImagesImageProvider to load images.
-        fds -- list of file descriptors (filenames or urls)
+        filenames_or_urls -- list
         returns a list of channels as numpy float32 arrays
         '''
         assert self.load_using_bioformats is not None
         channels = []
-        for i, fd in enumerate(fds):
-            if p.image_url_prepend and p.image_url_prepend.lower().startswith('http://'):
-                url, ignored_headers = urllib.urlretrieve('http://' + urllib2.quote(p.image_url_prepend[7:]) + urllib2.quote(fd))
-            else:
-                url = fd
-            logging.info('Loading image from "%s"'%(url))
-            image = self.load_using_bioformats(url)
-
-            # Got 1 channel, expected more
-            if image.ndim == 2 and p.channels_per_image[i] != '1':
-                raise Exception('CPA found %d channels in the "%s" image at '
-                                '%s, but it was expecting %s as specified '
-                                'by properties field channels_per_image. '
-                                'Please update the channels_per_image field '
-                                'in your properties file, or make sure your '
-                                'images are in the right format.'
-                                %(1, 
-                                  p.image_names[i],
-                                  fd,
-                                  p.channels_per_image[i]))
-            
-            # Got fewer channels than expected
-            elif image.ndim > 2 and image.shape[2] < int(p.channels_per_image[i]):
-                raise Exception('CPA found %d channels in the "%s" image at '
-                                '%s, but it was expecting %s as specified '
-                                'by properties field channels_per_image. '
-                                'Please update the channels_per_image field '
-                                'in your properties file, or make sure your '
-                                'images are in the right format.'
-                                %(image.shape[2], 
-                                  p.image_names[i],
-                                  fd,
-                                  p.channels_per_image[i]))
-            
-            # Got more channels than expected (load the first ones & warn)
-            elif image.ndim > 2 and image.shape[2] > int(p.channels_per_image[i]):
-                logging.warn('WARNING: CPA found %d channels in the "%s" image '
-                             'at %s, but it will only load the first %s as '
-                             'specified by properties field channels_per_image.'
-                             %(image.shape[2], 
-                               p.image_names[i],
-                               fd,
-                               p.channels_per_image[i]))
-                channels += [image[:,:,i] for i in range(int(p.channels_per_image[i]))]
-
-            # Got as many channels as expected
-            else:
-                if image.ndim == 2:
-                    channels += [image]
-                else:
-                    channels += [image[:,:,i] for i in range(image.shape[2])]
+        for i, filename_or_url in enumerate(filenames_or_urls):
+            image = self._read_image_via_cp(filename_or_url)
+            channels += self._extract_channels(filename_or_url, image, 
+                                               p.image_names[i],
+                                               int(p.channels_per_image[i]))
                 
         # Check if any images need to be rescaled, and if they are the same
         # aspect ratio. If so, do the scaling.

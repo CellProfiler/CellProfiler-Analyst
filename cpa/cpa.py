@@ -525,7 +525,7 @@ if __name__ == "__main__":
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
-        from classifier import show_exception_as_dialog
+        from errors import show_exception_as_dialog
         sys.excepthook = show_exception_as_dialog
 
     # Black magic: Bus errors occur on certain Macs if we wait until

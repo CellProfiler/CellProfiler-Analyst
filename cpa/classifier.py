@@ -1539,27 +1539,12 @@ class StopCalculating(Exception):
     pass
 
 
-def show_exception_as_dialog(type, value, tb):
-    """Exception handler that show a dialog."""
-    import traceback
-    from wx.lib.dialogs import ScrolledMessageDialog
-    if tb:
-        print traceback.format_tb(tb)
-    lines = ['An error occurred in the program:\n']
-    lines += traceback.format_exception_only(type, value)
-    lines += ['\nTraceback (most recent call last):\n']
-    if tb:
-        lines += traceback.format_tb(tb)
-    dlg = ScrolledMessageDialog(None, "".join(lines), 'Error', style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
-    dlg.ShowModal()
-    raise value
-
-
 # ----------------- Run -------------------
 
 if __name__ == "__main__":
     import sys
     import logging
+    from errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG,)
     
