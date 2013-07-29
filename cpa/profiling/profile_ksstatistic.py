@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-def _compute_ksstatistic((cache_dir, images, control_images, preprocess_file)):
+def _compute_ksstatistic((cache_dir, images, control_images, normalization_name,
+                          preprocess_file)):
     import numpy as np 
     import sys
     import cpa
-    from cpa.profiling.cache import Cache, RobustLinearNormalization
+    from cpa.profiling.cache import Cache, normalizations
     from cpa.profiling.ks_2samp import ks_2samp
 
     cache = Cache(cache_dir)
-    normalizeddata, variables, _ = cache.load(images, normalization=RobustLinearNormalization)
-    control_data, control_colnames, _ = cache.load(control_images, normalization=RobustLinearNormalization)
+    normalization = normalizations[normalization_name]
+    normalizeddata, variables, _ = cache.load(images, normalization=normalization)
+    control_data, control_colnames, _ = cache.load(control_images, normalization=normalization)
     assert len(control_data) >= len(normalizeddata)
     assert variables == control_colnames
     if preprocess_file:
@@ -64,7 +66,8 @@ def profile_ksstatistic(cache_dir, group_name, control_filter, plate_group,
                             for r in control_images_by_plate[plate_by_image[image]]))
 
     keys = group.keys()
-    parameters = [(cache_dir, group[k], control_images(group[k]), preprocess_file)
+    parameters = [(cache_dir, group[k], control_images(group[k]), 
+                   normalization.__name__, preprocess_file)
                   for k in keys]
 
     if preprocess_file:
