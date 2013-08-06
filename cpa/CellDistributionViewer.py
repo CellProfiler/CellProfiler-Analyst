@@ -98,7 +98,7 @@ class DataSourcePanel(wx.Panel):
 
 
     def loadproperties(self, event):
-        dlg = wx.FileDialog(None, "Select a the file containing your properties.", style=wx.OPEN)
+        dlg = wx.FileDialog(None, "Select the file containing your properties.", style=wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly

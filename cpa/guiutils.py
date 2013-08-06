@@ -796,7 +796,7 @@ def show_load_dialog():
     '''
     if not wx.GetApp():
         raise Exception("Can't display load dialog without a wx App.")
-    dlg = wx.FileDialog(None, 'Select a the file containing your properties.', '', '', 
+    dlg = wx.FileDialog(None, 'Select the file containing your properties.', '', '', 
                     'Properties file (*.properties, *.txt)|*.properties;*.txt|'
                     'Columbus MeasurementIndex file (*.ColumbusIDX.xml)|*.ColumbusIDX.xml|'
                     'Harmony PlateResults file (*.xml)|*.xml',
