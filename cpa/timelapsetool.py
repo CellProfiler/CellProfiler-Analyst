@@ -1,8 +1,9 @@
 '''
 Dependencies:
 Enthought Tool Suite (for Mayavi2): http://www.lfd.uci.edu/~gohlke/pythonlibs/#ets
-VTK: http://www.lfd.uci.edu/~gohlke/pythonlibs/#vtk
-NetworkX: http://www.lfd.uci.edu/~gohlke/pythonlibs/#networkx
+VTK (5.10+): http://www.lfd.uci.edu/~gohlke/pythonlibs/#vtk
+NetworkX (1.7+): http://www.lfd.uci.edu/~gohlke/pythonlibs/#networkx
+NumPy-MKL (1.71+): http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
 configobj: https://pypi.python.org/pypi/configobj
 '''
 import wx
@@ -50,6 +51,7 @@ all_colormaps.sort()
 required_fields = ['series_id', 'group_id', 'timepoint_id','object_tracking_label']
 
 db = DBConnect.getInstance()
+props = Properties.getInstance()
 
 def add_props_field(props):
     # Temp declarations; these will be retrieved from the properties file directly
