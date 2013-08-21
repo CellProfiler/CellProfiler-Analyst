@@ -1,3 +1,7 @@
+# CellProfiler is distributed under the GNU General Public License,
+# but this file is licensed under the more permissive BSD license.
+# See the accompanying file LICENSE for details.
+
 from numpy import *
 from scipy.integrate import quadrature, romberg, fixed_quad
 from scipy.special import gammaln, betaln, digamma, polygamma, betainc, gamma
