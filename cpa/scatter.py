@@ -20,7 +20,7 @@ from time import time
 import wx
 import wx.combo
 from matplotlib.widgets import Lasso
-from matplotlib.nxutils import points_inside_poly
+from matplotlib import __version__ as mpl_version     
 from matplotlib.colors import colorConverter
 from matplotlib.pyplot import cm
 from matplotlib.figure import Figure
@@ -431,7 +431,12 @@ class ScatterPanel(FigureCanvasWxAgg):
         for c, collection in enumerate(self.subplot.collections):
             # Build the selection
             if len(self.xys[c]) > 0:
-                new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
+                if mpl_version.split('.')[1] >= '2':
+                    from matplotlib.path import Path
+                    new_sel = np.nonzero(Path(verts).contains_points(self.xys[c]))[0]
+                else:
+                    from matplotlib.nxutils import points_inside_poly                
+                    new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
             else:
                 new_sel = []
             if self.selection_key == None:
@@ -952,8 +957,11 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
     '''
     def __init__(self, canvas):
         super(NavigationToolbar2WxAgg, self).__init__(canvas)
-        self.pan_tool  = self.FindById(self._NTB2_PAN)
-        self.zoom_tool = self.FindById(self._NTB2_ZOOM)
+        from matplotlib import __version__ as mpl_version
+        self.PAN = self.wx_ids['Pan']  if mpl_version.split('.')[1] >= '2' else self._NTB2_PAN
+        self.ZOOM =  self.wx_ids['Zoom'] if mpl_version.split('.')[1] >= '2' else self._NTB2_ZOOM
+        self.pan_tool  = self.FindById(self.PAN)
+        self.zoom_tool = self.FindById(self.ZOOM)
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.pan_tool)
 
@@ -996,15 +1004,15 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         if self.pan_tool.IsToggled():
             wx.PostEvent(
                 self.GetEventHandler(), 
-                wx.CommandEvent(wx.EVT_TOOL.typeId, self._NTB2_PAN)
+                wx.CommandEvent(wx.EVT_TOOL.typeId, self.PAN)
             )
-            self.ToggleTool(self._NTB2_PAN, False)
+            self.ToggleTool(self.PAN, False)
         elif self.zoom_tool.IsToggled():
             wx.PostEvent(
                 self.GetEventHandler(),
-                wx.CommandEvent(wx.EVT_TOOL.typeId, self._NTB2_ZOOM)
+                wx.CommandEvent(wx.EVT_TOOL.typeId, self.ZOOM)
             )
-            self.ToggleTool(self._NTB2_ZOOM, False)
+            self.ToggleTool(self.ZOOM, False)
             
     def toggle_user_tool(self, mode_name, state):
         '''mode_name -- the mode name given to the tool when added with
