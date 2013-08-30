@@ -119,6 +119,41 @@ def create_perobject_class_table(classnames, rules):
     case_expr2 = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, n+1) for n in range(nClasses)]) + " END"
     db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, case_expr2, p.object_table))
     db.Commit()
+
+def _objectify(p, field):
+    return "%s.%s"%(p.object_table, field)
+
+def _where_clauses(p, dm, filter_name):
+    imkeys = dm.GetAllImageKeys(filter_name)
+    imkeys.sort()
+    stepsize = max(len(imkeys) / 100, 50)
+    key_thresholds = imkeys[-1:1:-stepsize]
+    key_thresholds.reverse()
+    if len(key_thresholds) == 0:
+        return ['(1 = 1)']
+    if p.table_id:
+        # split each table independently
+        def splitter():
+            yield "(%s = %d) AND (%s <= %d)"%(_objectify(p, p.table_id), key_thresholds[0][0], 
+                                              _objectify(p, p.image_id), key_thresholds[0][1])
+            for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:]):
+                if lo[0] == hi[0]:
+                    # block within one table
+                    yield "(%s = %d) AND (%s > %d) AND (%s <= %d)"%(_objectify(p, p.table_id), lo[0], 
+                                                                    _objectify(p, p.image_id), lo[1], 
+                                                                    _objectify(p, p.image_id), hi[1])
+                else:
+                    # query spans a table boundary
+                    yield "(%s >= %d) AND (%s > %d)"%(_objectify(p, p.table_id), lo[0], 
+                                                     _objectify(p, p.image_id), lo[1])
+                    yield "(%s <= %d) AND (%s <= %d)"%(_objectify(p, p.table_id), hi[0], 
+                                                      _objectify(p, p.image_id), hi[1])
+        return list(splitter())
+    else:
+        return (["(%s <= %d)"%(_objectify(p, p.image_id), key_thresholds[0][0])] + 
+                ["(%s > %d) AND (%s <= %d)"
+                 %(_objectify(p, p.image_id), lo[0], _objectify(p, p.image_id), hi[0])
+                 for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
     
 def PerImageCounts(weaklearners, filter_name=None, cb=None):
     '''
@@ -133,39 +168,6 @@ def PerImageCounts(weaklearners, filter_name=None, cb=None):
         the object scores.
     '''
 
-    def objectify(field):
-        return "%s.%s"%(p.object_table, field)
-
-    def where_clauses():
-        imkeys = dm.GetAllImageKeys(filter_name)
-        imkeys.sort()
-        stepsize = max(len(imkeys) / 100, 50)
-        key_thresholds = imkeys[-1:1:-stepsize]
-        key_thresholds.reverse()
-        if p.table_id:
-            # split each table independently
-            def splitter():
-                yield "(%s = %d) AND (%s <= %d)"%(objectify(p.table_id), key_thresholds[0][0], 
-                                                  objectify(p.image_id), key_thresholds[0][1])
-                for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:]):
-                    if lo[0] == hi[0]:
-                        # block within one table
-                        yield "(%s = %d) AND (%s > %d) AND (%s <= %d)"%(objectify(p.table_id), lo[0], 
-                                                                        objectify(p.image_id), lo[1], 
-                                                                        objectify(p.image_id), hi[1])
-                    else:
-                        # query spans a table boundary
-                        yield "(%s >= %d) AND (%s > %d)"%(objectify(p.table_id), lo[0], 
-                                                         objectify(p.image_id), lo[1])
-                        yield "(%s <= %d) AND (%s <= %d)"%(objectify(p.table_id), hi[0], 
-                                                          objectify(p.image_id), hi[1])
-            return list(splitter())
-        else:
-            return (["(%s <= %d)"%(objectify(p.image_id), key_thresholds[0][0])] + 
-                    ["(%s > %d) AND (%s <= %d)"
-                     %(objectify(p.image_id), lo[0], objectify(p.image_id), hi[0])
-                     for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
-                                                            
     # I'm pretty sure this would be even faster if we were to run two
     # or more parallel threads and split the work between them.
     def do_by_steps(class_query, tables, filter_name, result_clauses):
@@ -178,7 +180,7 @@ def PerImageCounts(weaklearners, filter_name=None, cb=None):
             tables += ', ' + ', '.join(p._filters[filter_name].get_tables())
         if cb:
             result =  []
-            wheres = where_clauses()
+            wheres = _where_clauses(p, dm, filter_name)
             num_clauses = len(wheres)
             
             for idx, wc in enumerate(wheres):
@@ -208,7 +210,7 @@ def PerImageCounts(weaklearners, filter_name=None, cb=None):
     if p.area_scoring_column is None:
         result_clauses = 'COUNT(*)'
     else:
-        result_clauses = 'COUNT(*), SUM(%s)'%(objectify(p.area_scoring_column))
+        result_clauses = 'COUNT(*), SUM(%s)'%(_objectify(p, p.area_scoring_column))
 
     class_query = translate(weaklearners)
     results = do_by_steps(class_query, p.object_table, filter_name, result_clauses)
