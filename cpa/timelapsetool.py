@@ -96,6 +96,100 @@ def obtain_tracking_data(selected_dataset, selected_measurement):
     return columns,data
 
 ################################################################################
+class MeasurementFilter(wx.Panel):
+    def __init__(self, parent, allow_delete=True, **kwargs):
+        wx.Panel.__init__(self, parent, **kwargs)        
+        
+        self.colChoice = ComboBox(self, choices=db.GetColumnNames(props.object_table), size=(150,-1), style=wx.CB_READONLY)
+        self.colChoice.Select(0)
+        self.comparatorChoice = ComboBox(self, size=(80,-1))
+        self.update_comparator_choice()
+        self.valueField = wx.ComboBox(self, -1, value='')
+        if allow_delete:
+            self.minus_button = wx.Button(self, -1, '-', size=(30,-1))
+            self.minus_button.Bind(wx.EVT_BUTTON, lambda event: self.Parent.on_remove_filter(event,self))              
+        self.plus_button = wx.Button(self, -1, '+', size=(30,-1))   
+        self.plus_button.Bind(wx.EVT_BUTTON, lambda event: self.Parent.on_add_filter(event,self))     
+        
+        colSizer = wx.BoxSizer(wx.HORIZONTAL)
+        colSizer.Add(self.colChoice, 1, wx.EXPAND)
+        colSizer.AddSpacer((5,-1))
+        colSizer.Add(self.comparatorChoice, 0.5, wx.EXPAND)
+        colSizer.AddSpacer((5,-1))
+        colSizer.Add(self.valueField, 1, wx.EXPAND)
+        colSizer.AddSpacer((5,-1))
+        colSizer.Add(self.plus_button, 0, wx.EXPAND)        
+        if allow_delete:
+            colSizer.AddSpacer((5,-1))
+            colSizer.Add(self.minus_button, 0, wx.EXPAND)
+        self.SetSizer(colSizer)
+        self.colChoice.Bind(wx.EVT_COMBOBOX, self.on_select_column)
+
+    def on_select_column(self, evt):
+        self.update_comparator_choice()
+        self.update_value_choice()
+
+    def _get_column_type(self):
+        return db.GetColumnTypes(props.object_table)[self.colChoice.GetSelection()]
+
+    def update_comparator_choice(self):
+        coltype = self._get_column_type()
+        comparators = []
+        if coltype in [str, unicode]:
+            comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT']
+        if coltype in [int, float, long]:
+            comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT']
+        self.comparatorChoice.SetItems(comparators)
+        self.comparatorChoice.Select(0)
+        
+    def update_value_choice(self):
+        column = self.colChoice.Value
+        column_type = db.GetColumnTypes(props.object_table)[self.colChoice.GetSelection()]
+        vals = []
+        if column_type == str:# or coltype == int or coltype == long:
+            res = db.execute('SELECT DISTINCT %s FROM %s ORDER BY %s'%(column, table, column))
+            vals = [str(row[0]) for row in res]
+        self.valueField.SetItems(vals)         
+
+################################################################################
+class FilterPanel(wx.Panel):
+    '''
+    Panel for measurement filtering.
+    '''
+    def __init__(self, parent, **kwargs):
+        wx.Panel.__init__(self, parent, **kwargs)
+
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.scrolledwindow = wx.ScrolledWindow(self)
+        self.filters = [MeasurementFilter(self, False)]
+        self.scrolledwindow.Sizer = wx.BoxSizer(wx.VERTICAL)
+        (w,h) = self.scrolledwindow.Sizer.GetSize()
+        self.scrolledwindow.SetScrollbars(20,20,w/20,h/20,0,0)
+        self.scrolledwindow.Sizer.Add(self.filters[0], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
+        self.Sizer.Add(self.scrolledwindow, 1, wx.EXPAND)
+        
+    def on_add_filter(self,event,selected_filter):
+        self.filters += [MeasurementFilter(self, True)]
+        self.scrolledwindow.Sizer.Add(self.filters[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
+        self.scrolledwindow.FitInside()   
+        #self.resize_to_fit()
+        
+    def on_remove_filter(self,event,selected_filter):
+        i = self.filters.index(selected_filter)
+        self.Sizer.Remove(selected_filter)
+        self.panels.remove(selected_filter)
+        selected_filter.Destroy()
+        self.scrolledwindow.FitInside()
+        #self.resize_to_fit()
+        
+    def resize_to_fit(self):
+        w = min(self.scrolledwindow.Sizer.MinSize[0] + self.Sizer.MinSize[0], 
+                wx.GetDisplaySize()[0] - self.Position[0])
+        h = min(self.scrolledwindow.Sizer.MinSize[1] + self.Sizer.MinSize[1],
+                wx.GetDisplaySize()[1] - self.Position[1])
+        self.SetSize((w,h+7))        
+
+################################################################################
 class TimeLapseControlPanel(wx.Panel):
     '''
     A panel with controls for selecting the data for a visual
@@ -129,6 +223,8 @@ class TimeLapseControlPanel(wx.Panel):
         self.update_plot_button = wx.Button(self, -1, "Update")
         self.update_plot_button.SetHelpText("Press this button after making selections to update the panels.")
         self.help_button = wx.ContextHelpButton(self)
+        self.filter_choice = ComboBox(self, -1, choices=fields, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)        
 
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
@@ -157,6 +253,15 @@ class TimeLapseControlPanel(wx.Panel):
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))
 
+        # Row #3: Filter selection
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.Add(wx.StaticText(self, -1, "Filter:"), 0, wx.TOP, 4)
+        sz.AddSpacer((4,-1))
+        self.filterpanel = FilterPanel(self)
+        sz.Add(self.filterpanel,0, wx.TOP, 4)
+        sizer.Add(sz, 1, wx.EXPAND) 
+        sizer.AddSpacer((-1,2))
+        
         self.SetSizer(sizer)
         self.Show(True)
         
@@ -301,12 +406,16 @@ class TimeLapseTool(wx.Frame, CPATool):
         table_data = np.hstack((np.array(keys), np.array((tracking_label,timepoint,data)).T))
         column_labels = list(object_key_columns())
         key_col_indices = list(xrange(len(column_labels)))
-        column_labels += [props.object_tracking_label,props.timepoint_id,self.selected_measurement]
+        column_labels += ['Tracking Label','Timepoint ID',self.selected_measurement]
         group = 'Object'
         grid = tableviewer.TableViewer(self, title='Data table from trajectory %d containing %s %s'%(self.selected_trajectory[0],props.object_name[0],self.selected_node))
         grid.table_from_array(table_data, column_labels, group, key_col_indices)
-        # TODO: Confirm that hiding the key columns is actually neccesary. Also, an error gets thrown when the user tries to scrool horizontally.
+        # Sort by label first, then by timepoint
+        grid.grid.Table.set_sort_col(len(key_col_indices)+1)
+        grid.grid.Table.set_sort_col(len(key_col_indices)+2,add=True) 
+        # Hide the object key columns
         grid.grid.Table.set_shown_columns(list(xrange(len(key_col_indices),len(column_labels))))
+        grid.grid.Table.ResetView(grid.grid)
         grid.set_fitted_col_widths()
         grid.Show()
         
@@ -771,7 +880,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             logging.info("Re-drawing trajectories...")
             
             if self.do_plots_need_updating["trajectories"]:
-                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
+                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(self.directed_graph.edges())
                 self.trajectory_line_collection.mlab_source.update()
                 self.trajectory_line_source.mlab_source.update()                
                 
