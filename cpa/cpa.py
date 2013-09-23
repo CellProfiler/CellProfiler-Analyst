@@ -448,7 +448,7 @@ class CPAnalyst(wx.App):
             if not show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
-        self.frame = MainGUI(p, None, size=(860,-1))
+        self.frame = MainGUI(p, None, size=(1000,-1))
         self.frame.Show(True)
         db = dbconnect.DBConnect.getInstance()
         db.register_gui_parent(self.frame)
