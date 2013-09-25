@@ -150,6 +150,19 @@ class DummyNormalization(BaseNormalization):
     def normalize(self, plate, data):
         return data
 
+    def _null_param(self):
+        return NotImplemented
+        
+    def _check_param_zero(self, params):
+        return NotImplemented
+
+    def _compute_params(self, features):
+        return NotImplemented
+        
+    @property
+    def colnames(self):
+        return self.cache.colnames
+    
 class StdNormalization(BaseNormalization):
     def __init__(self, cache, param_dir='std'):
         super(StdNormalization, self).__init__(cache, param_dir)
@@ -193,8 +206,10 @@ class RobustStdNormalization(StdNormalization):
         return params                   
 
 class RobustLinearNormalization(BaseNormalization):
-    def __init__(self, cache, param_dir='robust_linear'):
+    def __init__(self, cache, param_dir='robust_linear', lower_q=1, upper_q=99):
         super(RobustLinearNormalization, self).__init__(cache, param_dir)
+        self.lower_q = lower_q
+        self.upper_q = upper_q
         
     def normalize(self, plate, data):
         percentiles = np_load(self._params_filename(plate))
@@ -209,8 +224,8 @@ class RobustLinearNormalization(BaseNormalization):
         m = features.shape[1]
         percentiles = np.ones((2, m)) * np.nan
         for j in xrange(m):
-            percentiles[0, j] = scoreatpercentile(features[:, j], 1)
-            percentiles[1, j] = scoreatpercentile(features[:, j], 99)
+            percentiles[0, j] = scoreatpercentile(features[:, j], self.lower_q)
+            percentiles[1, j] = scoreatpercentile(features[:, j], self.upper_q)
         return percentiles
 
     def _null_param(self):
@@ -220,6 +235,7 @@ class RobustLinearNormalization(BaseNormalization):
         return params[1] != params[0]
 
 normalizations = dict((c.__name__, c)
-                      for c in [DummyNormalization,
-                                RobustLinearNormalization,
-                                RobustStdNormalization])
+                      for c in [RobustLinearNormalization,
+                                RobustStdNormalization,
+                                StdNormalization,
+                                DummyNormalization])
