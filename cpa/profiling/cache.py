@@ -29,7 +29,7 @@ from scipy.stats.stats import scoreatpercentile
 import cpa
 import cpa.dbconnect
 import cpa.util
-from .normalization import DummyNormalization
+from .normalization import DummyNormalization, normalizations
 
 logger = logging.getLogger(__name__)
 
@@ -278,6 +278,7 @@ if __name__ == '__main__':
 
     cache._create_cache(options.resume)
     if predicate != '':
-        RobustLinearNormalization(cache)._create_cache(predicate, options.resume)
+        for Normalization in normalizations.values():
+            Normalization(cache)._create_cache(predicate, options.resume)
     else:
         print 'Not performing normalization because not predicate was specified.'
