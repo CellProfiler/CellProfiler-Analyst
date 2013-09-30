@@ -20,13 +20,13 @@ from time import time
 import wx
 import wx.combo
 from matplotlib.widgets import Lasso
-from matplotlib.nxutils import points_inside_poly
+from matplotlib import __version__ as mpl_version     
 from matplotlib.colors import colorConverter
 from matplotlib.pyplot import cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
-    
+
 p = Properties.getInstance()
 db = DBConnect.getInstance()
 
@@ -431,7 +431,12 @@ class ScatterPanel(FigureCanvasWxAgg):
         for c, collection in enumerate(self.subplot.collections):
             # Build the selection
             if len(self.xys[c]) > 0:
-                new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
+                if mpl_version.split('.')[1] >= '2':
+                    from matplotlib.path import Path
+                    new_sel = np.nonzero(Path(verts).contains_points(self.xys[c]))[0]
+                else:
+                    from matplotlib.nxutils import points_inside_poly                
+                    new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
             else:
                 new_sel = []
             if self.selection_key == None:
