@@ -1,0 +1,404 @@
+CellProfiler Pipeline: http://www.cellprofiler.org
+Version:3
+DateRevision:20130830204909
+ModuleCount:13
+HasImagePlaneDetails:True
+
+Images:[module_num:1|svn_version:\'Unknown\'|variable_revision_number:1|show_window:False|notes:\x5B\'To begin creating your workspace, use the Images module to compile a list of files and/or folders that you want to analyze. You can also specify a set of rules to include only the desired files in your selected folders.\'\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    :
+    Filter images based on matching rules?:Yes
+    Select the rule criteria:and (extension does isimage) (directory doesnot startwith ".")
+
+Metadata:[module_num:2|svn_version:\'Unknown\'|variable_revision_number:3|show_window:False|notes:\x5B\'The Metadata module optionally allows you to extract information describing your images (i.e, metadata) which will be stored along with your measurements. This information can be contained in the file name and/or location, or in an external file.\'\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Extract metadata?:Yes
+    Extraction method count:1
+    Metadata extraction method:Extract from file/folder names
+    Metadata source:Folder name
+    Regular expression:^(?P<Plate>.*)_(?P<Well>\x5BA-P\x5D\x5B0-9\x5D{2})_s(?P<Site>\x5B0-9\x5D)_w(?P<ChannelNumber>\x5B0-9\x5D)
+    Regular expression:\x5B\\\\\\\\/\x5D(?P<Dataset>\x5B0-9\x5D)\x5B\\\\\\\\/\x5DCh1$
+    Extract metadata from:All images
+    Select the filtering criteria:and (file does contain "")
+    Metadata file location:
+    Match file and image metadata:\x5B\x5D
+    Use case insensitive matching?:No
+
+NamesAndTypes:[module_num:3|svn_version:\'Unknown\'|variable_revision_number:3|show_window:False|notes:\x5B\'The NamesAndTypes module allows you to assign a meaningful name to each image by which other modules will refer to it.\'\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Assign a name to:All images
+    Select the image type:Grayscale image
+    Name to assign these images:DNA
+    :\x5B\x5D
+    Image set matching method:Order
+    Set intensity range from:Image metadata
+    Assignments count:1
+    Select the rule criteria:and (file does contain "")
+    Name to assign these images:DNA
+    Name to assign these objects:Cell
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+
+Groups:[module_num:4|svn_version:\'Unknown\'|variable_revision_number:2|show_window:False|notes:\x5B\'The Groups module optionally allows you to split your list of images into image subsets (groups) which will be processed independently of each other. Examples of groupings include screening batches, microtiter plates, time-lapse movies, etc.\'\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Do you want to group your images?:Yes
+    grouping metadata count:1
+    Metadata category:Dataset
+
+Crop:[module_num:5|svn_version:\'Unknown\'|variable_revision_number:2|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Select the input image:DNA
+    Name the output image:Cropped
+    Select the cropping shape:Rectangle
+    Select the cropping method:Coordinates
+    Apply which cycle\'s cropping pattern?:First
+    Left and right rectangle positions:825,1000
+    Top and bottom rectangle positions:50,325
+    Coordinates of ellipse center:500,500
+    Ellipse radius, X direction:400
+    Ellipse radius, Y direction:200
+    Use Plate Fix?:No
+    Remove empty rows and columns?:All
+    Select the masking image:None
+    Select the image with a cropping mask:None
+    Select the objects:None
+
+IdentifyPrimaryObjects:[module_num:6|svn_version:\'Unknown\'|variable_revision_number:10|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Select the input image:Cropped
+    Name the primary objects to be identified:AllObjects
+    Typical diameter of objects, in pixel units (Min,Max):5,40
+    Discard objects outside the diameter range?:No
+    Try to merge too small objects with nearby larger objects?:No
+    Discard objects touching the border of the image?:Yes
+    Method to distinguish clumped objects:Intensity
+    Method to draw dividing lines between clumped objects:Intensity
+    Size of smoothing filter:1
+    Suppress local maxima that are closer than this minimum allowed distance:2
+    Speed up by using lower-resolution image to find local maxima?:Yes
+    Name the outline image:PrimaryOutlines
+    Fill holes in identified objects?:Yes
+    Automatically calculate size of smoothing filter for declumping?:No
+    Automatically calculate minimum allowed distance between local maxima?:No
+    Retain outlines of the identified objects?:No
+    Automatically calculate the threshold using the Otsu method?:Yes
+    Enter Laplacian of Gaussian threshold:0.5
+    Automatically calculate the size of objects for the Laplacian of Gaussian filter?:Yes
+    Enter LoG filter diameter:5
+    Handling of objects if excessive number of objects identified:Continue
+    Maximum number of objects:500
+    Threshold setting version:1
+    Threshold strategy:Global
+    Thresholding method:Otsu
+    Select the smoothing method for thresholding:Automatic
+    Threshold smoothing scale:1.0
+    Threshold correction factor:2
+    Lower and upper bounds on threshold:0.000000,1.000000
+    Approximate fraction of image covered by objects?:0.01
+    Manual threshold:0.0
+    Select the measurement to threshold with:None
+    Select binary image:None
+    Masking objects:None
+    Two-class or three-class thresholding?:Three classes
+    Minimize the weighted variance or the entropy?:Weighted variance
+    Assign pixels in the middle intensity class to the foreground or the background?:Background
+    Method to calculate adaptive window size:Image size
+    Size of adaptive window:10
+
+ReassignObjectNumbers:[module_num:7|svn_version:\'Unknown\'|variable_revision_number:3|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Select the input objects:AllObjects
+    Name the new objects:Nuclei
+    Operation:Unify
+    Maximum distance within which to unify objects:0
+    Unify using a grayscale image?:Yes
+    Select the grayscale image to guide unification:Cropped
+    Minimum intensity fraction:0.95
+    Method to find object intensity:Centroids
+    Retain outlines of the relabeled objects?:Yes
+    Name the outlines:NucleiOutlines
+    Unification method:Distance
+    Select the parent object:None
+
+TrackObjects:[module_num:8|svn_version:\'Unknown\'|variable_revision_number:5|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Choose a tracking method:LAP
+    Select the objects to track:Nuclei
+    Select object measurement to use for tracking:None
+    Maximum pixel distance to consider matches:50
+    Select display option:Color and Number
+    Save color-coded image?:No
+    Name the output image:TrackedCells
+    Select the motion model:Both
+    Number of standard deviations for search radius:3
+    Search radius limit, in pixel units (Min,Max):2.000000,10.000000
+    Run the second phase of the LAP algorithm?:Yes
+    Gap cost:40
+    Split alternative cost:40
+    Merge alternative cost:40
+    Maximum gap displacement:50
+    Maximum split score:50
+    Maximum merge score:50
+    Maximum gap:1
+    Filter objects by lifetime?:No
+    Filter using a minimum lifetime?:Yes
+    Minimum lifetime:1
+    Filter using a maximum lifetime?:No
+    Maximum lifetime:100
+
+OverlayOutlines:[module_num:9|svn_version:\'Unknown\'|variable_revision_number:2|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Display outlines on a blank image?:No
+    Select image on which to display outlines:Cropped
+    Name the output image:OrigOverlay
+    Outline display mode:Color
+    Select method to determine brightness of outlines:Max of image
+    Width of outlines:1
+    Select outlines to display:NucleiOutlines
+    Select outline color:Yellow
+
+SaveImages:[module_num:10|svn_version:\'Unknown\'|variable_revision_number:10|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Select the type of image to save:Image
+    Select the image to save:NucleiOutlines
+    Select the objects to save:None
+    Select the module display window to save:None
+    Select method for constructing file names:From image filename
+    Select image name for file prefix:DNA
+    Enter single file name:OrigBlue
+    Number of digits:4
+    Append a suffix to the image file name?:No
+    Text to append to the image name:
+    Saved file format:png
+    Output file location:Elsewhere...\x7CC\x3A\\\\\\\\Trunk\\\\\\\\Testing\\\\\\\\CellProfiler-Analyst\\\\\\\\data\\\\\\\\outlines\\\\\\\\\\\\g<Dataset>
+    Image bit depth:8
+    Overwrite existing files without warning?:Yes
+    When to save:Every cycle
+    Rescale the images? :No
+    Save as grayscale or color image?:Grayscale
+    Select colormap:gray
+    Record the file and path information to the saved image?:Yes
+    Create subfolders in the output folder?:No
+    Base image folder:Elsewhere...\x7CNone
+
+SaveImages:[module_num:11|svn_version:\'Unknown\'|variable_revision_number:10|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Select the type of image to save:Image
+    Select the image to save:Cropped
+    Select the objects to save:None
+    Select the module display window to save:None
+    Select method for constructing file names:From image filename
+    Select image name for file prefix:DNA
+    Enter single file name:OrigBlue
+    Number of digits:4
+    Append a suffix to the image file name?:No
+    Text to append to the image name:
+    Saved file format:png
+    Output file location:Elsewhere...\x7CC\x3A\\\\\\\\Trunk\\\\\\\\Testing\\\\\\\\CellProfiler-Analyst\\\\\\\\data\\\\\\\\cropped\\\\\\\\\\\\g<Dataset>
+    Image bit depth:8
+    Overwrite existing files without warning?:Yes
+    When to save:Every cycle
+    Rescale the images? :No
+    Save as grayscale or color image?:Grayscale
+    Select colormap:gray
+    Record the file and path information to the saved image?:Yes
+    Create subfolders in the output folder?:No
+    Base image folder:Elsewhere...\x7CNone
+
+SaveImages:[module_num:12|svn_version:\'Unknown\'|variable_revision_number:10|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Select the type of image to save:Image
+    Select the image to save:OrigOverlay
+    Select the objects to save:None
+    Select the module display window to save:None
+    Select method for constructing file names:From image filename
+    Select image name for file prefix:DNA
+    Enter single file name:OrigBlue
+    Number of digits:4
+    Append a suffix to the image file name?:No
+    Text to append to the image name:_O
+    Saved file format:png
+    Output file location:Elsewhere...\x7CC\x3A\\\\\\\\Trunk\\\\\\\\Testing\\\\\\\\CellProfiler-Analyst\\\\\\\\data\\\\\\\\overlay\\\\\\\\\\\\g<Dataset>
+    Image bit depth:8
+    Overwrite existing files without warning?:Yes
+    When to save:Every cycle
+    Rescale the images? :No
+    Save as grayscale or color image?:Grayscale
+    Select colormap:gray
+    Record the file and path information to the saved image?:Yes
+    Create subfolders in the output folder?:No
+    Base image folder:Elsewhere...\x7CNone
+
+ExportToDatabase:[module_num:13|svn_version:\'Unknown\'|variable_revision_number:25|show_window:False|notes:\x5B\x5D|batch_state:array(\x5B\x5D, dtype=uint8)|enabled:True]
+    Database type:SQLite
+    Database name:2011_01_04_NSF_RIG
+    Add a prefix to table names?:No
+    Table prefix:Ramaswamy_1_Ch1_Cropped_
+    SQL file prefix:SQL_
+    Output file location:Elsewhere...\x7CC\x3A\\\\\\\\Trunk\\\\\\\\Testing\\\\\\\\CellProfiler-Analyst\\\\\\\\data
+    Create a CellProfiler Analyst properties file?:Yes
+    Database host:imgdb02
+    Username:cpadmin
+    Password:cPus3r
+    Name the SQLite database file:Example.db
+    Calculate the per-image mean values of object measurements?:No
+    Calculate the per-image median values of object measurements?:No
+    Calculate the per-image standard deviation values of object measurements?:No
+    Calculate the per-well mean values of object measurements?:No
+    Calculate the per-well median values of object measurements?:No
+    Calculate the per-well standard deviation values of object measurements?:No
+    Export measurements for all objects to the database?:Select...
+    Select the objects:Nuclei
+    Maximum # of characters in a column name:64
+    Create one table per object, a single object table or a single object view?:Single object table
+    Enter an image url prepend if you plan to access your files via http:
+    Write image thumbnails directly to the database?:No
+    Select the images for which you want to save thumbnails:
+    Auto-scale thumbnail pixel intensities?:Yes
+    Select the plate type:None
+    Select the plate metadata:None
+    Select the well metadata:None
+    Include information for all images, using default values?:No
+    Properties image group count:2
+    Properties group field count:1
+    Properties filter field count:0
+    Workspace measurement count:1
+    Experiment name:Experiment
+    Which objects should be used for locations?:Nuclei
+    Enter a phenotype class table name if using the classifier tool:
+    Export object relationships?:Yes
+    Overwrite without warning?:Never
+    Select an image to include:Cropped
+    Use the image name for the display?:No
+    Image name:DNA
+    Channel color:gray
+    Select an image to include:NucleiOutlines
+    Use the image name for the display?:No
+    Image name:Nuclei
+    Channel color:yellow
+    Do you want to add group fields?:No
+    Enter the name of the group:
+    Enter the per-image columns which define the group, separated by commas:ImageNumber, Image_Metadata_Plate, Image_Metadata_Well
+    Do you want to add filter fields?:No
+    Automatically create a filter for each plate?:No
+    Create a CellProfiler Analyst workspace file?:No
+    Select the measurement display tool:ScatterPlot
+    Type of measurement to plot on the X-axis:Image
+    Enter the object name:None
+    Select the X-axis measurement:None
+    Select the X-axis index:ImageNumber
+    Type of measurement to plot on the Y-axis:Image
+    Enter the object name:None
+    Select the Y-axis measurement:None
+    Select the Y-axis index:ImageNumber
+
+"Version":"1","PlaneCount":"120"
+"URL","Series","Index","Channel","Dataset"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10001.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10002.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10003.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10004.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10005.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10006.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10007.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10008.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10009.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10010.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10011.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10012.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10013.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10014.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10015.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10016.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10017.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10018.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10019.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10020.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10021.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10022.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10023.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10024.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10025.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10026.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10027.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10028.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10029.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10030.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10031.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10032.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10033.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10034.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10035.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10036.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10037.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10038.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10039.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10040.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10041.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10042.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10043.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10044.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10045.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10046.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10047.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10048.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10049.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10050.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10051.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10052.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10053.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10054.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10055.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10056.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10057.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10058.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10059.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/1/Ch1/Ch10060.tif",,,,"1"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10001.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10002.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10003.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10004.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10005.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10006.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10007.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10008.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10009.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10010.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10011.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10012.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10013.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10014.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10015.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10016.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10017.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10018.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10019.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10020.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10021.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10022.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10023.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10024.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10025.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10026.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10027.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10028.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10029.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10030.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10031.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10032.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10033.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10034.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10035.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10036.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10037.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10038.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10039.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10040.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10041.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10042.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10043.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10044.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10045.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10046.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10047.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10048.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10049.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10050.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10051.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10052.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10053.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10054.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10055.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10056.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10057.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10058.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10059.tif",,,,"5"
+"file:////iodine/imaging_analysis/2007_12_21_CancerProliferation_SridharRamaswamy/2011_12_01/Images/5/Ch1/Ch10060.tif",,,,"5"
