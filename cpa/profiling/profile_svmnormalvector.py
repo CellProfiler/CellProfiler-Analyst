@@ -110,7 +110,7 @@ def images_by_plate(filter):
     d = {}
     for row in cpa.db.execute("""
         SELECT %s, %s FROM %s 
-        WHERE substr(Image_Metadata_Well_DAPI from 2 for 2) IN ('02', '11')""" % (
+        WHERE substr(Image_Metadata_Well from 2 for 2) IN ('02', '11')""" % (
             cpa.dbconnect.UniqueImageClause(), cpa.properties.plate_id,
             cpa.properties.image_table)):
         plate_name = row[-1]

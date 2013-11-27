@@ -8,7 +8,12 @@ def _compute_group_subsample((cache_dir, normalization_name, image_key,
     normalizeddata, normalized_colnames, _ = cache.load([image_key], 
                                                         normalization=normalizations[normalization_name],
                                                         removeRowsWithNaN=False)
-    return normalizeddata[indices]
+    normalizeddata_idx = normalizeddata[indices]
+    prune_rows = np.any(np.isnan(normalizeddata_idx),axis=1)
+    if len(prune_rows) > 0:
+        normalizeddata_idx = normalizeddata_idx[-prune_rows,:]
+    return normalizeddata_idx
+
 
 import cPickle as pickle
 import operator
