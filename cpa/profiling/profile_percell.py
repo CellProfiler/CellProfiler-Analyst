@@ -6,14 +6,16 @@ import logging
 from optparse import OptionParser
 import numpy as np
 import cpa
-from .cache import Cache, RobustLinearNormalization, normalizations
+from .cache import Cache
+from .normalization import DummyNormalization, RobustLinearNormalization, RobustStdNormalization, normalizations
 from .profiles import Profiles
 from .parallel import ParallelProcessor, Uniprocessing
 
 def _transform_cell_feats((cache_dir, images, normalization_name, output_filename, key, header)):
     try:
         import numpy as np
-        from cpa.profiling.cache import Cache, normalizations
+        from .cache import Cache
+        from .normalization import DummyNormalization, RobustLinearNormalization, RobustStdNormalization, normalizations
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
         normalizeddata, normalized_colnames, cell_ids = cache.load(images,
