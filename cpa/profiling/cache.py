@@ -241,7 +241,7 @@ class Cache(object):
                     _features = _features[-prune_rows,:]
                     if not flag_bkwd:
                         if _cellids.shape != ():
-                            _cellids = _cellids[-prune_rows,:]
+                            _cellids = _cellids[-prune_rows]
                         else:
                             # This is redundant but put in here
                             # for sake of completeness
