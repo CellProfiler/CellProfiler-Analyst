@@ -151,13 +151,13 @@ class DummyNormalization(BaseNormalization):
         return data
 
     def _null_param(self):
-        return NotImplemented
+        return np.zeros((0, len(self.cache.colnames)))
         
     def _check_param_zero(self, params):
-        return NotImplemented
+        return False
 
     def _compute_params(self, features):
-        return NotImplemented
+        return np.zeros((0, len(features)))
         
     @property
     def colnames(self):
