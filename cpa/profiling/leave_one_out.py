@@ -76,6 +76,9 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
     profiles.assert_not_isnan()
     keys = profiles.keys()
     true_labels = profiles.regroup(true_group_name)
+    profiles.data = np.array([d for k, d in zip(keys, profiles.data) if tuple(k) in true_labels])
+    profiles._keys = [k for k in keys if tuple(k) in true_labels]
+    keys = profiles.keys()
     labels = list(set(true_labels.values()))
 
     if holdout_group_name:
