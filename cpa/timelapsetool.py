@@ -8,6 +8,7 @@ configobj: https://pypi.python.org/pypi/configobj
 '''
 import wx
 from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.lib.scrolledpanel import ScrolledPanel
 import networkx as nx
 import numpy as np
 from operator import itemgetter
@@ -50,6 +51,8 @@ all_colormaps.sort()
 
 required_fields = ['series_id', 'group_id', 'timepoint_id','object_tracking_label']
 
+track_attributes = ["label","x","y","t","s","f"]
+
 db = DBConnect.getInstance()
 props = Properties.getInstance()
 
@@ -71,7 +74,7 @@ def retrieve_datasets():
     all_datasets = [x[0] for x in db.execute("SELECT %s FROM %s GROUP BY %s"%(series_list,props.image_table,series_list))]
     return all_datasets
 
-def obtain_tracking_data(selected_dataset, selected_measurement):
+def obtain_tracking_data(selected_dataset, selected_measurement, selected_filter):
     def parse_dataset_selection(s):
         return [x.strip() for x in s.split(',') if x.strip() is not '']
     
@@ -83,47 +86,52 @@ def obtain_tracking_data(selected_dataset, selected_measurement):
     columns_to_retrieve += [props.object_table+"."+props.object_tracking_label] # Label assigned by TrackObjects
     columns_to_retrieve += [props.object_table+"."+props.cell_x_loc, props.object_table+"."+props.cell_y_loc] # x,y coordinates
     columns_to_retrieve += [props.image_table+"."+props.timepoint_id] # Timepoint/frame
-    columns_to_retrieve += [props.object_table+"."+selected_measurement] # Measured feature
+    columns_to_retrieve += [props.object_table+"."+selected_measurement if selected_measurement is not None else 'NULL'] # Measured feature, insert NULL as placeholder if derived
+    columns_to_retrieve += [" AND ".join(selected_filter)] if selected_filter is not None else ['1'] # Filter
     query = ["SELECT %s"%(",".join(columns_to_retrieve))]
     query.append("FROM %s, %s"%(props.image_table, props.object_table))
     query.append("WHERE %s = %s AND %s"%(props.image_table+"."+props.image_id, props.object_table+"."+props.image_id, dataset_clause))
-    #query.append("AND I.%s <= 5 "%props.timepoint_id)
-    #query.append("GROUP BY I.%s, O.%s "%(props.timepoint_id,props.object_tracking_label)) # The Brugge data has the same label in multiple locations in the same image (?!) This line filters them out.
     query.append("ORDER BY %s, %s"%(props.object_tracking_label, props.timepoint_id))
     data = db.execute(" ".join(query))
-    columns = [props.object_tracking_label, props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, selected_measurement, props.parent_fields]
+    columns = [props.object_tracking_label, props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, "Filter", props.parent_fields]
     
     return columns,data
 
 ################################################################################
 class MeasurementFilter(wx.Panel):
+    '''
+    Widget for creating lists of filters
+    '''    
     def __init__(self, parent, allow_delete=True, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)        
         
-        self.colChoice = ComboBox(self, choices=db.GetColumnNames(props.object_table), size=(150,-1), style=wx.CB_READONLY)
+        self.measurement_choices = db.GetColumnNames(props.object_table)
+        self.colChoice = ComboBox(self, choices=self.measurement_choices, size=(-1,-1), style=wx.CB_READONLY)
         self.colChoice.Select(0)
-        self.comparatorChoice = ComboBox(self, size=(80,-1))
+        self.colChoice.Bind(wx.EVT_COMBOBOX, self.on_select_column)
+        
+        self.comparatorChoice = ComboBox(self, size=(-1,-1))
         self.update_comparator_choice()
+        
         self.valueField = wx.ComboBox(self, -1, value='')
+        
         if allow_delete:
-            self.minus_button = wx.Button(self, -1, '-', size=(30,-1))
+            self.minus_button = wx.Button(self, -1, label='-', size=(30,-1))
             self.minus_button.Bind(wx.EVT_BUTTON, lambda event: self.Parent.on_remove_filter(event,self))              
-        self.plus_button = wx.Button(self, -1, '+', size=(30,-1))   
+        self.plus_button = wx.Button(self, -1, label='+', size=(30,-1))   
         self.plus_button.Bind(wx.EVT_BUTTON, lambda event: self.Parent.on_add_filter(event,self))     
         
         colSizer = wx.BoxSizer(wx.HORIZONTAL)
         colSizer.Add(self.colChoice, 1, wx.EXPAND)
         colSizer.AddSpacer((5,-1))
-        colSizer.Add(self.comparatorChoice, 0.5, wx.EXPAND)
+        colSizer.Add(self.comparatorChoice, 1, wx.EXPAND)
         colSizer.AddSpacer((5,-1))
         colSizer.Add(self.valueField, 1, wx.EXPAND)
         colSizer.AddSpacer((5,-1))
-        colSizer.Add(self.plus_button, 0, wx.EXPAND)        
-        if allow_delete:
-            colSizer.AddSpacer((5,-1))
-            colSizer.Add(self.minus_button, 0, wx.EXPAND)
-        self.SetSizer(colSizer)
-        self.colChoice.Bind(wx.EVT_COMBOBOX, self.on_select_column)
+        colSizer.Add(self.plus_button, 0, wx.EXPAND) 
+        colSizer.AddSpacer((5,-1))        
+        colSizer.Add(self.minus_button if allow_delete else wx.StaticText(self,-1,size=(30,-1)), 0, wx.EXPAND)
+        self.SetSizerAndFit(colSizer)
 
     def on_select_column(self, evt):
         self.update_comparator_choice()
@@ -136,9 +144,9 @@ class MeasurementFilter(wx.Panel):
         coltype = self._get_column_type()
         comparators = []
         if coltype in [str, unicode]:
-            comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT']
+            comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT', 'IS NULL']
         if coltype in [int, float, long]:
-            comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT']
+            comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT', 'IS NULL']
         self.comparatorChoice.SetItems(comparators)
         self.comparatorChoice.Select(0)
         
@@ -152,47 +160,48 @@ class MeasurementFilter(wx.Panel):
         self.valueField.SetItems(vals)         
 
 ################################################################################
-class FilterPanel(wx.Panel):
+class FilterPanel(ScrolledPanel):
     '''
     Panel for measurement filtering.
     '''
     def __init__(self, parent, **kwargs):
-        wx.Panel.__init__(self, parent, **kwargs)
+        ScrolledPanel.__init__(self, parent, **kwargs)
+        
+        self.panel_sizer = wx.BoxSizer( wx.VERTICAL )
+        self.filters = []
+        filt = MeasurementFilter(self, False)
+        self.panel_sizer.Add(filt, 0, wx.EXPAND)
+        self.filters.append(filt)
 
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.scrolledwindow = wx.ScrolledWindow(self)
-        self.filters = [MeasurementFilter(self, False)]
-        self.scrolledwindow.Sizer = wx.BoxSizer(wx.VERTICAL)
-        (w,h) = self.scrolledwindow.Sizer.GetSize()
-        self.scrolledwindow.SetScrollbars(20,20,w/20,h/20,0,0)
-        self.scrolledwindow.Sizer.Add(self.filters[0], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
-        self.Sizer.Add(self.scrolledwindow, 1, wx.EXPAND)
+        self.SetSizer(self.panel_sizer)
+        self.SetAutoLayout(1)
+        self.SetupScrolling(False,True)
+        self.Disable()
         
     def on_add_filter(self,event,selected_filter):
-        self.filters += [MeasurementFilter(self, True)]
-        self.scrolledwindow.Sizer.Add(self.filters[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
-        self.scrolledwindow.FitInside()   
-        #self.resize_to_fit()
+        self.filters.append(MeasurementFilter(self, True))
+        self.panel_sizer.Add(self.filters[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
+        self.SetupScrolling(False,True)
+        self.panel_sizer.SetMinSize(self.panel_sizer.GetMinSize())
+        self.SetSizerAndFit(self.panel_sizer)        
+        self.SetAutoLayout(1)
+        self.Refresh()
+        self.Layout() 
         
     def on_remove_filter(self,event,selected_filter):
         i = self.filters.index(selected_filter)
-        self.Sizer.Remove(selected_filter)
-        self.panels.remove(selected_filter)
+        self.filters.remove(selected_filter)
+        self.panel_sizer.Remove(selected_filter)
         selected_filter.Destroy()
-        self.scrolledwindow.FitInside()
-        #self.resize_to_fit()
-        
-    def resize_to_fit(self):
-        w = min(self.scrolledwindow.Sizer.MinSize[0] + self.Sizer.MinSize[0], 
-                wx.GetDisplaySize()[0] - self.Position[0])
-        h = min(self.scrolledwindow.Sizer.MinSize[1] + self.Sizer.MinSize[1],
-                wx.GetDisplaySize()[1] - self.Position[1])
-        self.SetSize((w,h+7))        
+        self.SetupScrolling(False,len(self.filters) < 3 )  
+        self.Refresh()
+        self.Layout()          
 
 ################################################################################
 class TimeLapseControlPanel(wx.Panel):
     '''
     A panel with controls for selecting the data for a visual
+    Some helpful tips on using sizers for layout: http://zetcode.com/wxpython/layout/
     '''
 
     def __init__(self, parent, **kwargs):
@@ -205,14 +214,15 @@ class TimeLapseControlPanel(wx.Panel):
         measurements = db.GetColumnNames(props.object_table)
         coltypes = db.GetColumnTypes(props.object_table)
         fields = [m for m,t in zip(measurements, coltypes) if t in [float, int, long]]
-
+        self.dataset_measurement_choices = fields
+        
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Define widgets
         self.dataset_choice = ComboBox(self, -1, choices=[str(item) for item in all_datasets], size=(200,-1), style=wx.CB_READONLY)
         self.dataset_choice.Select(0)
         self.dataset_choice.SetHelpText("Select the time-lapse data set to visualize.")
-        self.measurement_choice = ComboBox(self, -1, choices=fields, style=wx.CB_READONLY)
+        self.measurement_choice = ComboBox(self, -1, choices=self.dataset_measurement_choices, style=wx.CB_READONLY)
         self.measurement_choice.Select(0)
         self.measurement_choice.SetHelpText("Select the per-%s measurement to visualize the data with. The lineages and (xyt) trajectories will be color-coded by this measurement."%props.object_name[0])
         self.colormap_choice = ComboBox(self, -1, choices=all_colormaps, style=wx.CB_READONLY)
@@ -220,16 +230,14 @@ class TimeLapseControlPanel(wx.Panel):
         self.colormap_choice.SetHelpText("Select the colormap to use for color-coding the data.")
         self.trajectory_selection_button = wx.Button(self, -1, "Select Tracks to Visualize...")
         self.trajectory_selection_button.SetHelpText("Select the trajectories to show or hide in both panels.")
-        self.update_plot_button = wx.Button(self, -1, "Update")
-        self.update_plot_button.SetHelpText("Press this button after making selections to update the panels.")
+        self.update_plot_color_button = wx.Button(self, -1, "Update Color")
+        self.update_plot_color_button.SetHelpText("Press this button after making selections to update the panels.")
         self.help_button = wx.ContextHelpButton(self)
-        self.filter_choice = ComboBox(self, -1, choices=fields, style=wx.CB_READONLY)
-        self.filter_choice.Select(0)        
 
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "Data source:"), 0, wx.TOP, 4)
+        sz.Add(wx.StaticText(self, -1, "Data Source:"), 0, wx.TOP, 4)
         sz.AddSpacer((4,-1))
         sz.Add(self.dataset_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
@@ -237,9 +245,9 @@ class TimeLapseControlPanel(wx.Panel):
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))
 
-        # Row #2: Measurement selection, colormap, update button
+        # Row #2: Measurement color selection, colormap, update button
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "Measurement:"), 0, wx.TOP, 4)
+        sz.Add(wx.StaticText(self, -1, "Color by Measurement:"), 0, wx.TOP, 4)
         sz.AddSpacer((4,-1))
         sz.Add(self.measurement_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
@@ -247,22 +255,26 @@ class TimeLapseControlPanel(wx.Panel):
         sz.AddSpacer((4,-1))
         sz.Add(self.colormap_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
-        sz.Add(self.update_plot_button)
+        sz.Add(self.update_plot_color_button)
         sz.AddSpacer((4,-1))
         sz.Add(self.help_button)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))
 
-        # Row #3: Filter selection
+        # Row #3: Measurement filter selection
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "Filter:"), 0, wx.TOP, 4)
+        self.enable_filtering_checkbox = wx.CheckBox(self, -1, label="Enable filtering")
+        self.enable_filtering_checkbox.SetValue(0)
+        sz.Add(self.enable_filtering_checkbox, 0, wx.TOP, 4)
         sz.AddSpacer((4,-1))
-        self.filterpanel = FilterPanel(self)
-        sz.Add(self.filterpanel,0, wx.TOP, 4)
+        self.filter_panel = FilterPanel(self)
+        sz.Add(self.filter_panel,1, wx.TOP, 4)
+        sz.Layout()
         sizer.Add(sz, 1, wx.EXPAND) 
         sizer.AddSpacer((-1,2))
-        
+        sizer.Layout()
         self.SetSizer(sizer)
+        self.Layout()
         self.Show(True)
         
 ################################################################################
@@ -312,13 +324,19 @@ class TimeLapseTool(wx.Frame, CPATool):
 
         self.control_panel = TimeLapseControlPanel(self)
         self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
+        self.dataset_measurement_choices = self.control_panel.measurement_choice.GetItems()
         self.selected_measurement = self.control_panel.measurement_choice.GetStringSelection()
         self.selected_colormap  = self.control_panel.colormap_choice.GetStringSelection()
+        self.selected_filter = None
         self.plot_updated = False
         self.trajectory_selected = False
         self.selected_node = None
         self.axes_opacity = 0.25
-        self.do_plots_need_updating = {"dataset":True,"colormap":True,"measurement":True, "trajectories":True}
+        self.do_plots_need_updating = {"dataset":True,
+                                       "colormap":True,
+                                       "measurement":True, 
+                                       "trajectories":True,
+                                       "filter":None}
         
         self.mayavi_view = MayaviView()
         self.figure_panel = self.mayavi_view.edit_traits(
@@ -355,7 +373,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_COMBOBOX(self.control_panel.measurement_choice, -1, self.on_measurement_selected)
         wx.EVT_BUTTON(self.control_panel.trajectory_selection_button, -1, self.update_trajectory_selection)
         wx.EVT_COMBOBOX(self.control_panel.colormap_choice, -1, self.on_colormap_selected)
-        wx.EVT_BUTTON(self.control_panel.update_plot_button, -1, self.update_plot)
+        wx.EVT_BUTTON(self.control_panel.update_plot_color_button, -1, self.update_plot)
+        wx.EVT_CHECKBOX(self.control_panel.enable_filtering_checkbox, -1, self.enable_filtering)
         
     def on_show_all_trajectories(self, event = None):
         self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)
@@ -452,7 +471,14 @@ class TimeLapseTool(wx.Frame, CPATool):
         if self.selected_colormap != self.control_panel.colormap_choice.GetStringSelection():
             self.selected_colormap = self.control_panel.colormap_choice.GetStringSelection()    
             self.do_plots_need_updating["colormap"] = True
-        
+    
+    #def on_filter_selected(self, event = None):
+        #self.do_plots_need_updating["filter"] = []
+        #for current_filter in self.control_panel.filter_panel.filters:
+            #self.do_plots_need_updating["filter"].append(" ".join((current_filter.colChoice.GetStringSelection(), 
+                                                                   #current_filter.comparatorChoice.GetStringSelection(),
+                                                                   #current_filter.valueField.GetStringSelection())))
+            
     def update_trajectory_selection(self, event = None):
         
         class TrajectoryMultiChoiceDialog (wx.Dialog):
@@ -520,17 +546,39 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.altered_directed_graph.remove_nodes_from(nodes_to_remove)
             self.update_plot()                    
     
-    def update_plot(self, event = None):
+    def enable_filtering(self, event=None):
+        if self.control_panel.enable_filtering_checkbox.GetValue():
+            self.control_panel.filter_panel.Enable()
+        else:
+            self.control_panel.filter_panel.Disable()
+    
+    def update_plot(self, event=None):
+        self.do_plots_need_updating["filter"] = self.control_panel.enable_filtering_checkbox.IsChecked()   
         self.generate_graph()
         self.draw_trajectories()
         self.draw_lineage()
         self.control_panel.trajectory_selection_button.Enable()
-        self.do_plots_need_updating = {"dataset":False,"colormap":False,"measurement":False, "trajectories":False}
-            
+        
+        self.do_plots_need_updating["dataset"] = False
+        self.do_plots_need_updating["colormap"] = False
+        self.do_plots_need_updating["measurement"] = False
+        self.do_plots_need_updating["trajectories"] = False
+        
     def generate_graph(self):
         # Generate the graph relationship if the dataset has been updated
         
-        column_names,trajectory_info = obtain_tracking_data(self.selected_dataset,self.selected_measurement)
+        if not self.do_plots_need_updating["filter"]:
+            self.selected_filter = None
+        else:
+            self.selected_filter = []
+            for current_filter in self.control_panel.filter_panel.filters:
+                self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetStringSelection(), 
+                                                      current_filter.comparatorChoice.GetStringSelection(),
+                                                      current_filter.valueField.GetValue())))
+                
+        column_names,trajectory_info = obtain_tracking_data(self.selected_dataset,
+                                                            self.selected_measurement if self.selected_measurement in self.dataset_measurement_choices else None, 
+                                                            self.selected_filter)
         
         if self.do_plots_need_updating["dataset"]:           
             logging.info("Retrieved %d %s from dataset %s"%(len(trajectory_info),props.object_name[1],self.selected_dataset))
@@ -542,7 +590,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             indices = range(key_length,key_length+2)
             parent_node_ids = map(itemgetter(*indices),trajectory_info) 
             indices = range(key_length+2,len(trajectory_info[0]))
-            attr = [dict(zip(["label","x","y","t","s"],item)) for item in map(itemgetter(*indices),trajectory_info)]
+            attr = [dict(zip(track_attributes,item)) for item in map(itemgetter(*indices),trajectory_info)]
             # Add nodes
             self.directed_graph.add_nodes_from(zip(node_ids,attr))
             # Add edges as list of tuples (exclude those that have no parent, i.e, (0,0))
@@ -578,12 +626,14 @@ class TimeLapseTool(wx.Frame, CPATool):
             connected_nodes = nx.connected_component_subgraphs(self.directed_graph.to_undirected())
             self.connected_nodes = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
             
-            # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
-            start_nodes = [node for (node,value) in self.directed_graph.in_degree().items() if value == 0]
-            end_nodes = [node for (node,value) in self.directed_graph.out_degree().items() if value == 0]
-            self.start_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in start_nodes if node in value ])
-            self.end_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in end_nodes if node in value ])
-
+            self.add_derived_measurements()
+            
+            # Insert derived measurements and update current selection
+            measurement_choices = self.control_panel.dataset_measurement_choices + self.derived_measurements.keys()
+            current_measurement_choice = self.control_panel.measurement_choice.GetSelection() 
+            self.control_panel.measurement_choice.SetItems(measurement_choices)
+            self.control_panel.measurement_choice.SetSelection(current_measurement_choice)
+            
             self.lineage_node_positions = node_positions
             
             # When visualizing a new dataset, select all trajectories by default
@@ -591,12 +641,73 @@ class TimeLapseTool(wx.Frame, CPATool):
         else:
             key_length = len(object_key_columns())
             indices = range(0,key_length)
-            node_ids = map(itemgetter(*indices),trajectory_info)
-            attr = dict(zip(node_ids,[item for item in map(itemgetter(len(trajectory_info[0])-1),trajectory_info)]))            
+            if self.selected_measurement in self.dataset_measurement_choices:
+                node_ids = map(itemgetter(*indices),trajectory_info)
+                getitem = itemgetter(len(trajectory_info[0])-2) # Measurement values                
+                attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)]))        
+            else:
+                node_ids = sorted(self.directed_graph)
+                attr = dict(zip(node_ids,self.derived_measurements[self.selected_measurement]))
             nx.set_node_attributes(self.directed_graph,"s",attr)
+            getitem = itemgetter(len(trajectory_info[0])-1) # Filter values
+            attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)])) 
+            nx.set_node_attributes(self.directed_graph,"f",attr)
             
         self.scalar_data = np.array([self.directed_graph.node[key]["s"] for key in sorted(self.directed_graph)]).astype(float)
 
+    def add_derived_measurements(self):
+        logging.info("Calculating derived measurements")
+                    
+        t1 = time.clock()   
+        # TODO: Allow for user choice to add derived measurements
+        # Create dict for QC measurements derived from graph properities
+        self.derived_measurements = {}      
+        
+        # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
+        start_nodes = [node for (node,value) in self.directed_graph.in_degree().items() if value == 0]
+        end_nodes = [node for (node,value) in self.directed_graph.out_degree().items() if value == 0]
+        self.start_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in start_nodes if node in value ])
+        self.end_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in end_nodes if node in value ])
+        max_timepoint = max([item[0] for item in end_nodes])
+        self.terminal_nodes = [item for item in end_nodes if item[0] == max_timepoint]
+        
+        # Find branchpoints and nodes with a distance threshold from them (for later pruning if desired)
+        branch_node_list = [node for (node,value) in self.directed_graph.out_degree().items() if value > 1]
+        subgraph_branch_nodes = [(key,node) for (key,value) in self.connected_nodes.items() for node in branch_node_list if node in value ]
+        self.branch_nodes = {k: [] for k in self.connected_nodes.keys()}
+        [self.branch_nodes[key].append(value) for (key,value) in subgraph_branch_nodes]
+        cutoff_dist_from_branch = 4 # TODO: Allow for user-selected distance cutoff
+        end_nodes_for_pruning = set()
+        for source_node in branch_node_list:
+            # Find out-degrees for all nodes within N nodes of branchpoint
+            out_degrees = self.directed_graph.out_degree(nx.single_source_shortest_path_length(self.directed_graph,
+                                                                                               source_node,
+                                                                                               cutoff_dist_from_branch).keys())
+            # Find all nodes for which the out-degree is 0 (i.e, all terminal nodes (leaves)) and not at end of movie
+            branch_to_leaf_endpoints = [(source_node,path_node) for (path_node,degree) in out_degrees.items() if degree == 0 and path_node not in self.terminal_nodes]
+            if len(branch_to_leaf_endpoints) > 0:
+                for current_branch in branch_to_leaf_endpoints:
+                    shortest_path = nx.shortest_path(self.directed_graph,current_branch[0],current_branch[1]) 
+                    shortest_path.remove(source_node) # Remove the intital branchpoint
+                    # Skip this path if another branchpoint exists, since it will get caught later
+                    if all(np.array(self.directed_graph.out_degree(shortest_path).values()) <= 1): 
+                        # Add nodes on the path from the branchpoint to the leaf
+                        end_nodes_for_pruning.update(shortest_path)
+        # TODO: This page (http://stackoverflow.com/questions/740287/python-check-if-one-of-the-following-items-is-in-a-list)
+        #  indicates that using numpy might be faster than the set approach below. Check to confirm.
+        # end_nodes_for_pruning = list(end_nodes_for_pruning.difference(set(branch_node_list)))
+        branch_node_list = np.array(branch_node_list,dtype=[('i',int),('j',int)])
+        end_nodes_for_pruning = np.array(list(end_nodes_for_pruning),dtype=[('i',int),('j',int)])
+        end_nodes_for_pruning = list(end_nodes_for_pruning[-np.in1d(end_nodes_for_pruning,branch_node_list)])
+        end_nodes_for_pruning = [tuple(item) for item in end_nodes_for_pruning] # Convert numpy.void elements back to tuples
+        self.derived_measurements["NodesWithinDistanceCutoff"] = np.array([key in end_nodes_for_pruning for key in sorted(self.directed_graph) ]).astype(float)
+        
+        singletons = set(start_nodes).intersection(set(end_nodes))
+        self.derived_measurements["Singletons"] = np.array([key in singletons for key in sorted(self.directed_graph) ]).astype(float)
+        
+        t2 = time.clock()
+        logging.info("Computed derived measurements (%.2f sec)"%(t2-t1))        
+        
     def on_pick_one_timepoint(self,picker):
         """ Picker callback: this gets called upon pick events.
         """
@@ -672,7 +783,10 @@ class TimeLapseTool(wx.Frame, CPATool):
             t1 = time.clock()
             
             G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
-            xys = np.array([self.lineage_node_positions[node]+[self.directed_graph.node[node]["s"]] for node in sorted(self.directed_graph.nodes())])
+            xys = np.array([self.lineage_node_positions[node]+[self.directed_graph.node[node]["s"]] for node in sorted(self.directed_graph.nodes()) ])
+            #xys = np.array([self.lineage_node_positions[node]+[self.directed_graph.node[node]["s"]] for node in sorted(self.directed_graph.nodes()) if self.directed_graph.node[node]["f"]==0])
+            #if len(xys) == 0:
+                #xys = np.array(3*[np.NaN],ndmin=2)
             dt = np.median(np.diff(np.unique(nx.get_node_attributes(self.directed_graph,"t").values())))
             # The scale factor defaults to the typical interpoint distance, which may not be appropriate. 
             # So I set it explicitly here to a fraction of delta_t
