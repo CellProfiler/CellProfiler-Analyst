@@ -1,11 +1,9 @@
-try:
-    import cellprofiler.gui.cpfigure as cpfig
-except: pass
 import re
 import dbconnect
 import logging
 import multiclasssql
 import numpy as np
+import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
 from time import time
 
@@ -78,20 +76,20 @@ class FastGentleBoosting(object):
             # JK - End Modification
 
             dlg.Destroy()
-            figure = cpfig.create_or_find(self.classifier, -1, 'Cross-validation accuracy', subplots=(1,1), name='Cross-validation accuracy')
-            sp = figure.subplot(0,0)
-            sp.clear()
-            sp.hold(True)
-            sp.plot(range(1, nRules + 1), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
-            sp.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
+            figure = plt.figure()
+            plt.clf()
+            plt.hold(True)
+            plt.plot(range(1, nRules + 1), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
+            plt.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
             chance_level = 1.0 / len(self.classifier.trainingSet.labels)
-            sp.plot([1, nRules + 1], [chance_level, chance_level], 'k--', label='accuracy of random classifier')
-            sp.legend(loc='lower right')
-            sp.set_xlabel('Rule #')
-            sp.set_ylabel('Accuracy')
-            sp.set_xlim(1, max(nRules,2))
-            sp.set_ylim(-0.05, 1.05)
-            figure.Refresh()
+            plt.plot([1, nRules + 1], [chance_level, chance_level], 'k--', label='accuracy of random classifier')
+            plt.legend(loc='lower right')
+            plt.xlabel('Rule #')
+            plt.ylabel('Accuracy')
+            plt.xlim(1, max(nRules,2))
+            plt.ylim(-0.05, 1.05)
+            plt.title('Cross-validation accuracy')
+            plt.show()
             self.classifier.PostMessage('Cross-validation complete in %.1fs.'%(time()-t1))
         except StopXValidation:
             dlg.Destroy()

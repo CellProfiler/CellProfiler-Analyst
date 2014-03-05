@@ -34,12 +34,7 @@ f.close()
 
 APPNAME = 'CPAnalyst'
 APP = ['cpa.py']
-DATA_FILES = [('bioformats', [os.path.join(CP_HOME, 'bioformats/loci_tools.jar')]),
-              ('cellprofiler/utilities', 
-               [os.path.join(CP_HOME, 'cellprofiler', 'utilities', "js.jar")]), 
-              ('cellprofiler/utilities',
-               [os.path.join(CP_HOME, 'cellprofiler', 'utilities', "runnablequeue-1.0.0.jar")]),
-              # needed for cpfigure used by classifier cross validation
+DATA_FILES = [# needed for cpfigure used by classifier cross validation
               ('cellprofiler/icons', 
                [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), 
              ]
@@ -49,7 +44,7 @@ for dest, paths in DATA_FILES:
 OPTIONS = {'argv_emulation': True,
            'iconfile' : "icons/cpa.icns",
            'includes' : [ 'scipy.sparse'],
-           'packages' : ['numpy', './icons', 'bioformats', 'killjavabridge', ],
+           'packages' : ['numpy', './icons', 'killjavabridge', ],
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
                          'scipy.weave', 'imagej'],
            'resources' : [],

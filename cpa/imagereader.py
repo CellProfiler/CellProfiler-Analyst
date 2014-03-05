@@ -18,25 +18,26 @@ class ImageReader(object):
     def __init__(self):
         self.load_using_bioformats = None
         try:
-            from bioformats import load_using_bioformats
+            import java
+            import bioformats
             logging.debug('ImageReader will use load_using_bioformats from CellProfiler.')
-            self.load_using_bioformats = load_using_bioformats
+            self.load_using_bioformats = bioformats.load_image
         except ImportError:
             import traceback
             logging.error(traceback.format_exc())
-            logging.error('ImageReader failed to import load_using_bioformats from '
-                          'CellProfiler, will fall back on PIL and TiffFile.')
+            logging.error('ImageReader failed to import Bioformats; '
+                          'will fall back on PIL and TiffFile.')
 
     def ReadImages(self, fds):
         '''fds -- list of file descriptors (filenames or urls)
         returns a list of channels as numpy float32 arrays
         '''
         if self.load_using_bioformats is not None:
-            return self.read_images_via_cp(fds)
+            return self.read_images_via_bioformats(fds)
         else:
             return self.read_images_old_way(fds)
 
-    def _read_image_via_cp(self, filename_or_url):
+    def _read_image_via_bioformats(self, filename_or_url):
         # The opener's destructor deletes the temprary files, so the
         # opener must not be GC'ed until the image has been loaded.
         opener = ThrowingURLopener()
@@ -101,15 +102,17 @@ class ImageReader(object):
                 return [image[:, :, j] 
                         for j in range(image.shape[2])]
         
-    def read_images_via_cp(self, filenames_or_urls):
-        '''Uses CellProfiler's LoadImagesImageProvider to load images.
+    def read_images_via_bioformats(self, filenames_or_urls):
+        '''Uses Bioformats to load images.
+
         filenames_or_urls -- list
         returns a list of channels as numpy float32 arrays
+
         '''
         assert self.load_using_bioformats is not None
         channels = []
         for i, filename_or_url in enumerate(filenames_or_urls):
-            image = self._read_image_via_cp(filename_or_url)
+            image = self._read_image_via_bioformats(filename_or_url)
             channels += self._extract_channels(filename_or_url, image, 
                                                p.image_names[i],
                                                int(p.channels_per_image[i]))

@@ -368,8 +368,8 @@ class MainGUI(wx.Frame):
             if response != wx.ID_YES:
                 return
         try:
-            from cellprofiler.utilities.jutil import kill_vm
-            kill_vm()
+            import javabridge
+            javabridge.kill_vm()
         except:
             print "Failed to kill the Java VM"
         # Blow up EVVVVERYTHIIINGGG!!! Muahahahahhahahah!

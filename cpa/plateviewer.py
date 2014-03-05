@@ -768,8 +768,8 @@ if __name__ == "__main__":
     # Kill the Java VM
     #
     try:
-        from bioformats import jutil
-        jutil.kill_vm()
+        import javavbridge
+        javabridge.kill_vm()
     except:
         import traceback
         traceback.print_exc()

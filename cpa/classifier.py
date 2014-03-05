@@ -178,17 +178,11 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add(self.nRulesTxt)
         self.find_rules_sizer.Add((5,20))
         self.find_rules_sizer.Add(self.trainClassifierBtn)
-        try:
-            import cellprofiler.gui.cpfigure as cpfig
-            self.checkProgressBtn = wx.Button(self.find_rules_panel, -1, 'Check Progress')
-            self.checkProgressBtn.Disable()
-            self.find_rules_sizer.Add((5,20))
-            self.find_rules_sizer.Add(self.checkProgressBtn)
-            self.Bind(wx.EVT_BUTTON, self.OnCheckProgress, self.checkProgressBtn)
-        except:
-            import traceback
-            traceback.print_exc()
-            logging.debug("Could not import cpfigure, will not display Margin vs. Iteration plot.")
+        self.checkProgressBtn = wx.Button(self.find_rules_panel, -1, 'Check Progress')
+        self.checkProgressBtn.Disable()
+        self.find_rules_sizer.Add((5,20))
+        self.find_rules_sizer.Add(self.checkProgressBtn)
+        self.Bind(wx.EVT_BUTTON, self.OnCheckProgress, self.checkProgressBtn)
         self.find_rules_sizer.Add((5,20))
         self.find_rules_sizer.Add(self.scoreAllBtn)
         self.find_rules_sizer.Add((5,20))
@@ -1591,8 +1585,8 @@ if __name__ == "__main__":
     # Kill the Java VM
     #
     try:
-        from bioformats import jutil
-        jutil.kill_vm()
+        import javabridge
+        javabridge.kill_vm()
     except:
         import traceback
         traceback.print_exc()

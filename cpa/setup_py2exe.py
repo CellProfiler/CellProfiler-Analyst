@@ -80,7 +80,7 @@ setup(windows=[{'script':'cpa.py',
       options={
         'py2exe': {
             'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'icons',
-                          'bioformats', 'killjavabridge'],
+                          'killjavabridge'],
             'includes' : ['pilfix', "xml.etree.cElementTree", "xml.etree.ElementTree"],
             "excludes" : ['_gtkagg', '_tkagg', "nose",
                           "wx.tools", "pylab", "scipy.weave",
@@ -96,10 +96,6 @@ setup(windows=[{'script':'cpa.py',
       data_files=(
               matplotlib.get_py2exe_datafiles() +
               [('icons', glob.glob('icons\\*.png')),
-               ('bioformats', [os.path.join(CP_HOME, 'bioformats/loci_tools.jar')]),
-               ('cellprofiler/utilities', 
-                [os.path.join(CP_HOME, 'cellprofiler', 'utilities', x) 
-                 for x in ('js.jar', 'runnablequeue-1.0.0.jar')]),
                ('cellprofiler/icons', [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), # needed for cpfigure used by classifier cross validation
               ]
             ),

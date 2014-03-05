@@ -9,6 +9,7 @@ import logging
 import numpy
 import threading
 import wx
+import os
 
 db = DBConnect.getInstance()
 p = Properties.getInstance()
@@ -106,9 +107,7 @@ class TileLoader(threading.Thread):
     
     def run(self):
         try:
-            from bioformats import jutil
-            jutil.start_vm([])
-            jutil.attach()
+            from . import java
         except:
             import traceback
             logging.error('Error occurred while starting VM.')
