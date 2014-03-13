@@ -23,7 +23,7 @@ P_WIN_TYPE = 'win_type'
 P_CONSTANT = 'constant'
 
 def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_type, constant):
-    '''Aply a single normalization step
+    '''Apply a single normalization step
     input_data -- a numpy array of raw data to normalize. This array MUST be in the same
                   shape as your plate data if you are applying a spacially dependent
                   grouping.
