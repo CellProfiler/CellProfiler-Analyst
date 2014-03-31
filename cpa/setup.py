@@ -21,7 +21,7 @@ APP = ['cpa.py']
 OPTIONS = {'argv_emulation': True,
            'iconfile' : "icons/cpa.icns",
            'includes' : [ 'scipy.sparse'],
-           'packages' : ['numpy', 'icons', ],
+           'packages' : ['numpy', 'icons', 'javabridge', 'bioformats'],
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
                          'scipy.weave', 'imagej'],
            'resources' : [],
