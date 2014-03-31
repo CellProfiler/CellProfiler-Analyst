@@ -10,8 +10,7 @@ import javabridge
 import bioformats
 
 def start_cpa_jvm():
-    class_path = os.pathsep.join(bioformats.JARS)
-    javabridge.start_vm(['-Djava.class.path=' + class_path],
+    javabridge.start_vm(class_path=bioformats.JARS,
                         run_headless=True)
     javabridge.attach()
 
