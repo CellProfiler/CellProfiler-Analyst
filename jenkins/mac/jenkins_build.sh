@@ -50,7 +50,8 @@ version="${short_branch}-${hash}"
 
 . /Users/build/cpahomebrew/bin/activate-cpdev
 rm -rf build dist
-arch -i386 python setup.py py2app
+(cd cpa; arch -i386 python setup.py py2app)
+mv cpa/dist dist
 
 unsigned_zip="CellProfiler-Analyst-${version}-unsigned.zip"
 (cd dist; zip -r "$unsigned_zip" CellProfiler\ Analyst.app)
@@ -61,7 +62,7 @@ ssh ${signer} mkdir -p "$signdir"
 scp dist/"$unsigned_zip" "${signer}:${signdir}/${unsigned_zip}"
 signed_zip="CellProfiler-Analyst-${version}.zip"
 ssh ${signer} jenkins/sign.sh "${signdir}" "${unsigned_zip}" "${signed_zip}"
-scp ${signer}:"${signdir}/${signed_zip}" dist/
+scp ${signer}:"${signdir}/${signed_zip}" .
 rm -rf dist/"$unsigned_zip" dist/CellProfiler\ Analyst.app
 (cd dist; unzip "${signed_zip}")
 #hdiutil create -ov -volname CellProfiler\ Analyst -srcfolder dist/CellProfiler\ Analyst.app CellProfiler\ Analyst.dmg
