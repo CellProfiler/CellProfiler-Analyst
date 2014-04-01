@@ -62,9 +62,10 @@ ssh ${signer} mkdir -p "$signdir"
 scp dist/"$unsigned_zip" "${signer}:${signdir}/${unsigned_zip}"
 signed_zip="CellProfiler-Analyst-${version}.zip"
 ssh ${signer} jenkins/sign.sh "${signdir}" "${unsigned_zip}" "${signed_zip}"
-scp ${signer}:"${signdir}/${signed_zip}" .
+scp ${signer}:"${signdir}/${signed_zip}" dist/
 rm -rf dist/"$unsigned_zip" dist/CellProfiler\ Analyst.app
 (cd dist; unzip "${signed_zip}")
+mv dist/"${signed_zip}" .
 #hdiutil create -ov -volname CellProfiler\ Analyst -srcfolder dist/CellProfiler\ Analyst.app CellProfiler\ Analyst.dmg
 pkgbuild --analyze --root dist CellProfilerAnalystComponents.plist
 /usr/libexec/PlistBuddy -c "Set :0:BundleHasStrictIdentifier 0" CellProfilerAnalystComponents.plist
