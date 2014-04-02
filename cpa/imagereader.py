@@ -267,10 +267,6 @@ def ReadBitmapViaPIL(data):
     from cStringIO import StringIO
     im = Image.open(StringIO(data))
 
-    # Handle 16 and 12 bit images
-    if im.mode == 'I':
-        raise "Can't handle 32 bit grayscale yet"
-
     if im.mode == 'I;16':
         # deal with the endianness explicitly... I'm not sure
         # why PIL doesn't get this right.
@@ -325,7 +321,7 @@ def ReadBitmapViaPIL(data):
             imdata = imd
 
     else:
-        raise Exception('Image mode not supported.')
+        raise Exception('Image mode %s not supported.' % im.mode)
 
     return imdata
 
