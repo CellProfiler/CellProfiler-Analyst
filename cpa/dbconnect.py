@@ -475,6 +475,10 @@ class DBConnect(Singleton):
         the current thread.  Returns the results as a list of rows
         unless return_result is false.
         '''
+        if p.db_type.lower() == 'sqlite':
+            if args:
+                raise TypeError('Can\'t pass args to sqlite execute!')
+
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
         if not connID in self.connections.keys():
@@ -489,9 +493,8 @@ class DBConnect(Singleton):
         try:
             if verbose and not silent: 
                 logging.debug('[%s] %s'%(connID, query))
-            if p.db_type.lower()=='sqlite':
-                if args:
-                    raise 'Can\'t pass args to sqlite execute!'
+            if p.db_type.lower() == 'sqlite':
+                assert args is None
                 cursor.execute(query)
             else:
                 cursor.execute(query, args=args)
