@@ -6,8 +6,8 @@
 *.dll
 *.exe
 *\#
-/cpa/build
-/cpa/dist
+/build
+/dist
 output
 /cpa/util/frozen_version.py
 /cpa/version.iss

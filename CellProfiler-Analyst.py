@@ -14,11 +14,11 @@ import os
 import os.path
 import logging
 import re
-from properties import Properties
-from dbconnect import DBConnect
+from cpa.properties import Properties
+from cpa.dbconnect import DBConnect
 
-import util.version
-__version__ = util.version.version_number
+import cpa.util.version
+__version__ = cpa.util.version.version_number
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -74,24 +74,24 @@ if len(sys.argv) > 1:
         p.LoadFile(sys.argv[1])
 
 import threading
-from classifier import Classifier
-from tableviewer import TableViewer
-from plateviewer import PlateViewer
-from imageviewer import ImageViewer
-from boxplot import BoxPlot
-from scatter import Scatter
-from histogram import Histogram
-from density import Density
-from querymaker import QueryMaker
-from normalizationtool import NormalizationUI
-import icons
-import cpaprefs
-from cpatool import CPATool
+from cpa.classifier import Classifier
+from cpa.tableviewer import TableViewer
+from cpa.plateviewer import PlateViewer
+from cpa.imageviewer import ImageViewer
+from cpa.boxplot import BoxPlot
+from cpa.scatter import Scatter
+from cpa.histogram import Histogram
+from cpa.density import Density
+from cpa.querymaker import QueryMaker
+from cpa.normalizationtool import NormalizationUI
+import cpa.icons
+import cpa.cpaprefs
+from cpa.cpatool import CPATool
 import inspect
 
-from icons import get_cpa_icon
-import dbconnect
-import multiclasssql
+from cpa.icons import get_cpa_icon
+import cpa.dbconnect
+import cpa.multiclasssql
 # ---
 import wx
 
@@ -136,14 +136,14 @@ class MainGUI(wx.Frame):
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
-        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
-        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
-        tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
-        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
-        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
-        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
-        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
-        tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
+        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
+        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
+        tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
+        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
+        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
+        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
+        tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs
         #self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
@@ -419,7 +419,7 @@ class CPAnalyst(wx.App):
         self.user_tables = []
 
         # splashscreen
-        splashimage = icons.cpa_splash.ConvertToBitmap()
+        splashimage = cpa.icons.cpa_splash.ConvertToBitmap()
         # If the splash image has alpha, it shows up transparently on
         # windows, so we blend it into a white background.
         splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(), 
@@ -435,14 +435,14 @@ class CPAnalyst(wx.App):
 
         p = Properties.getInstance()
         if not p.is_initialized():
-            from guiutils import show_load_dialog
+            from cpa.guiutils import show_load_dialog
             splash.Destroy()
             if not show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
         self.frame = MainGUI(p, None, size=(860,-1))
         self.frame.Show(True)
-        db = dbconnect.DBConnect.getInstance()
+        db = cpa.dbconnect.DBConnect.getInstance()
         db.register_gui_parent(self.frame)
 
         try:
@@ -520,13 +520,15 @@ if __name__ == "__main__":
     # Initialize the app early because the fancy exception handler
     # depends on it in order to show a dialog.
     app = CPAnalyst(redirect=False)
-    if sys.platform=='darwin':
-        import bioformats
+
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
-        from errors import show_exception_as_dialog
+        from cpa.errors import show_exception_as_dialog
         sys.excepthook = show_exception_as_dialog
+
+    # Start the Java JVM so that it runs in the correct thread on Mac.
+    import cpa.java
 
     # Black magic: Bus errors occur on certain Macs if we wait until
     # later to connect, so we'll do it here.

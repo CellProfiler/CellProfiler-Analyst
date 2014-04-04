@@ -30,8 +30,8 @@ def get_version():
     the current time and "unkown".'''
 
     if not hasattr(sys, 'frozen'):
-        import util
-        cpa_basedir = os.path.abspath(os.path.join(os.path.dirname(util.__file__), '..', '..'))
+        import cpa.util
+        cpa_basedir = os.path.abspath(os.path.join(os.path.dirname(cpa.util.__file__), '..', '..'))
 
         # GIT
         try:
@@ -61,8 +61,8 @@ def get_version():
         # Give up
         return '%s Unknown rev.' % (datetime.datetime.utcnow().isoformat('T').split('.')[0])
     else:
-        import util.frozen_version
-        return util.frozen_version.version_string
+        import cpa.util.frozen_version
+        return cpa.util.frozen_version.version_string
 
 '''Code version'''
 version_string = get_version()

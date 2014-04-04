@@ -8,20 +8,20 @@ import numpy
 import pytz
 pytz.zoneinfo = pytz.tzinfo
 pytz.zoneinfo.UTC = pytz.UTC
-import pilfix
+import cpa.pilfix
 from subprocess import call
 
-import util.version
-f = open("util/frozen_version.py", "w")
-f.write("# MACHINE_GENERATED\nversion_string = '%s'" % util.version.version_string)
+import cpa.util.version
+f = open("cpa/util/frozen_version.py", "w")
+f.write("# MACHINE_GENERATED\nversion_string = '%s'" % cpa.util.version.version_string)
 f.close()
 
 APPNAME = 'CellProfiler Analyst'
-APP = ['cpa.py']
+APP = ['CellProfiler-Analyst.py']
 OPTIONS = {'argv_emulation': True,
-           'iconfile' : "icons/cpa.icns",
+           'iconfile' : "cpa/icons/cpa.icns",
            'includes' : [ 'scipy.sparse'],
-           'packages' : ['numpy', 'icons', 'javabridge', 'bioformats'],
+           'packages' : ['numpy', 'cpa', 'javabridge', 'bioformats'],
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
                          'scipy.weave', 'imagej'],
            'resources' : [],
