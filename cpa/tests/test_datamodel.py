@@ -27,4 +27,10 @@ class PopulatePlateMapsTestCase(unittest.TestCase):
             self.p.well_format = value
             self.assertRaises(ValueError, lambda: self.dm.populate_plate_maps())
 
-        
+    @patch('cpa.datamodel.db')
+    def test_A01_over_52_rows(self, db):
+        # Need at least one well to trigger the code.
+        db.execute.return_value = [('A01',),] 
+        self.p.well_format = 'A01'
+        self.p.plate_shape = (53, 1)
+        self.assertRaises(ValueError, lambda: self.dm.populate_plate_maps())

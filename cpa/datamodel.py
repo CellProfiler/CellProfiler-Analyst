@@ -287,7 +287,7 @@ class DataModel(Singleton):
                     row = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.index(well[0])
                     col = int(well[1:]) - 1
                 else:
-                    raise 'Plates with over 52 rows cannot have well format "A01" Check your properties file.'
+                    raise ValueError('Plates with over 52 rows cannot have well format "A01" Check your properties file.')
                 self.plate_map[well] = (row, col)
                 self.rev_plate_map[(row, col)] = well
             elif p.well_format == '123':
