@@ -258,7 +258,7 @@ class DataModel(Singleton):
         elif p.well_format == '123':
             well_re = r'^\d+$'
         else:
-            raise 'Unknown well format'
+            raise ValueError('Unknown well format: %s' % repr(p.well_format))
         
         pshape = p.plate_shape
         
