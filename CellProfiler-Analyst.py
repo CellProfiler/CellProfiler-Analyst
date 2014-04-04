@@ -1,19 +1,12 @@
 from __future__ import with_statement
 import sys
-try:
-    # Important. Do this up front to make bioformats work
-    # in windows executables. Otherwise it will look for
-    # loci_tools.jar in the directory where your properties
-    # were loaded from (presumably because this is set to
-    # the cwd).
-    if sys.platform == 'win32':
-        import bioformats
-except: pass
 import sys
 import os
 import os.path
 import logging
 import re
+import javabridge
+import bioformats
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
 
@@ -443,7 +436,18 @@ class CPAnalyst(wx.App):
         self.frame = MainGUI(p, None, size=(860,-1))
         self.frame.Show(True)
         db = cpa.dbconnect.DBConnect.getInstance()
+        # Black magic: Bus errors occur on Mac OS X if we wait until
+        # the JVM or the wx event look has started to connect. But it
+        # has to be done after we have read the properties file. So we
+        # do it here.
+        db.connect()
         db.register_gui_parent(self.frame)
+
+        # The JVM has to be started after db.connect(), otherwise bus errors
+        # occur on Mac OS X.
+        javabridge.start_vm(class_path=bioformats.JARS, run_headless=False)
+        javabridge.attach()
+        javabridge.activate_awt()
 
         try:
             if __version__ != -1:
@@ -524,15 +528,8 @@ if __name__ == "__main__":
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
-        from cpa.errors import show_exception_as_dialog
-        sys.excepthook = show_exception_as_dialog
-
-    # Start the Java JVM so that it runs in the correct thread on Mac.
-    import cpa.java
-
-    # Black magic: Bus errors occur on certain Macs if we wait until
-    # later to connect, so we'll do it here.
-    DBConnect.getInstance().connect()
+       from cpa.errors import show_exception_as_dialog
+       sys.excepthook = show_exception_as_dialog
     
     app.MainLoop()
-    os._exit(0)
+#    os._exit(0)

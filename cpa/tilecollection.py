@@ -106,12 +106,6 @@ class TileLoader(threading.Thread):
         self.start()
     
     def run(self):
-        try:
-            from . import java
-        except:
-            import traceback
-            logging.error('Error occurred while starting VM.')
-            traceback.print_exc()
         while 1:            
             self.tile_collection.cv.acquire()
             # If there are no objects in the queue then wait
