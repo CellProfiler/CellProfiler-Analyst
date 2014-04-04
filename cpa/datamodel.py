@@ -305,7 +305,7 @@ class DataModel(Singleton):
         if well_name in self.plate_map.keys():
             return self.plate_map[well_name]
         else:
-            raise 'Well name "%s" could not be mapped to a plate position.'%(well_name)
+            raise KeyError('Well name "%s" could not be mapped to a plate position.' % well_name)
 
     def get_well_name_from_position(self, (row, col)):
         '''returns the well name (eg: "A01") corresponding to the given 
@@ -316,7 +316,7 @@ class DataModel(Singleton):
         if (row, col) in self.rev_plate_map.keys():
             return self.rev_plate_map[(row, col)]
         else:
-            raise 'Plate position "%s" could not be mapped to a well key.'%(str((row,col)))
+            raise KeyError('Plate position "%s" could not be mapped to a well key.' % str((row,col)))
 
 
 if __name__ == "__main__":
