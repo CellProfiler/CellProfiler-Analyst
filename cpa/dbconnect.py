@@ -1194,9 +1194,9 @@ class DBConnect(Singleton):
         The column name must begin with "User_" and contain only A-Za-z0-9_
         '''
         if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
-            raise 'Column name must begin with "User_" when appending to the image or object tables'
+            raise ValueError('Column name must begin with "User_" when appending to the image or object tables')
         if not re.match('^[A-Za-z]\w*$', colname):
-            raise 'Column name may contain only alphanumeric characters and underscore, and must begin with a letter.'
+            raise ValueError('Column name may contain only alphanumeric characters and underscore, and must begin with a letter.')
         self.execute('ALTER TABLE %s ADD %s %s'%(table, colname, coltype))
         
     def UpdateWells(self, table, colname, value, wellkeys):
