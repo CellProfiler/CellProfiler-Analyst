@@ -50,8 +50,7 @@ version="${short_branch}-${hash}"
 
 . /Users/build/cpahomebrew/bin/activate-cpdev
 rm -rf build dist
-(cd cpa; arch -i386 python setup.py py2app)
-mv cpa/dist dist
+arch -i386 python setup.py py2app
 
 unsigned_zip="CellProfiler-Analyst-${version}-unsigned.zip"
 (cd dist; zip -r "$unsigned_zip" CellProfiler\ Analyst.app)
