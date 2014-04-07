@@ -1,5 +1,6 @@
 
-from .util.version import version_number as __version__
+import cpa.util.version
+__version__ = cpa.util.version.get_normalized_version()
 import properties
 import dbconnect
 

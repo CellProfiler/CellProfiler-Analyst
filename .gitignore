@@ -9,5 +9,5 @@
 /build
 /dist
 output
-/cpa/util/frozen_version.py
+/cpa/_description.py
 /cpa/version.iss

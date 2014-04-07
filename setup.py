@@ -12,9 +12,6 @@ import cpa.pilfix
 from subprocess import call
 
 import cpa.util.version
-f = open("cpa/util/frozen_version.py", "w")
-f.write("# MACHINE_GENERATED\nversion_string = '%s'" % cpa.util.version.version_string)
-f.close()
 
 APPNAME = 'CellProfiler Analyst'
 APP = ['CellProfiler-Analyst.py']
@@ -28,11 +25,15 @@ OPTIONS = {'argv_emulation': True,
            'plist': {
                "LSArchitecturePriority": ["i386"],
                "LSMinimumSystemVersion": "10.6.8",
-           }
+               "CFBundleName": "CellProfiler Analyst",
+               "CFBundleIdentifier": "org.cellprofiler.CellProfiler-Analyst",
+               "CFBundleShortVersionString": cpa.util.version.get_bundle_version(),
+            }
 }
 
 setup(
     app=APP,
+    version=cpa.util.version.get_normalized_version(),
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
     name = APPNAME,
