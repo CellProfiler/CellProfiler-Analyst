@@ -274,6 +274,11 @@ class SqliteClassifier():
         #          be found. This only appears to be a problem on Windows 64bit
         return int(class_num)
 
+
+def _check_colname_user(properties, table, colname):
+    if table in [properties.image_table, properties.object_table] and not colname.lower().startswith('user_'):
+        raise ValueError('User-defined columns in the image and object tables must have names beginning with "User_".')
+
     
 class DBConnect(Singleton):
     '''
@@ -1193,8 +1198,7 @@ class DBConnect(Singleton):
         Appends a new column to the specified table.
         The column name must begin with "User_" and contain only A-Za-z0-9_
         '''
-        if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
-            raise ValueError('Column name must begin with "User_" when appending to the image or object tables')
+        _check_colname_user(p, table, colname)
         if not re.match('^[A-Za-z]\w*$', colname):
             raise ValueError('Column name may contain only alphanumeric characters and underscore, and must begin with a letter.')
         self.execute('ALTER TABLE %s ADD %s %s'%(table, colname, coltype))
@@ -1206,8 +1210,7 @@ class DBConnect(Singleton):
         '''
         # TODO: handle other tables
         assert table == p.image_table
-        if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
-            raise 'Can only edit columns beginning with "User_" in the image table.'            
+        _check_colname_user(p, table, colname)
         if type(value) in (str, unicode):
             value = '"'+value+'"'
             if re.match('\"\'\`', value):
