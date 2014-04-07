@@ -25,7 +25,11 @@ OPTIONS = {'argv_emulation': True,
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
                          'scipy.weave', 'imagej'],
            'resources' : [],
-          }
+           'plist': {
+               "LSArchitecturePriority": ["i386"],
+               "LSMinimumSystemVersion": "10.6.8",
+           }
+}
 
 setup(
     app=APP,
