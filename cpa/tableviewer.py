@@ -14,6 +14,7 @@ import wx.grid as  gridlib
 import wx.lib.intctrl as intctrl
 import logging
 import numpy as np
+import cpa.helpmenu
 from cpatool import CPATool
 from properties import Properties
 import dbconnect
@@ -586,6 +587,8 @@ class TableViewer(wx.Frame):
         view_menu.AppendMenu(-1, 'Column widths', column_width_menu)
         fixed_cols_menu_item = column_width_menu.Append(-1, 'Fixed width', kind=wx.ITEM_RADIO)
         fit_cols_menu_item = column_width_menu.Append(-1, 'Fit to table', kind=wx.ITEM_RADIO)
+
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
         
         self.CreateStatusBar()
         

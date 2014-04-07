@@ -29,6 +29,7 @@ import os
 import sys
 import wx
 import re
+import cpa.helpmenu
 from supportvectormachines import SupportVectorMachines, scikits_loaded
 from fastgentleboosting import FastGentleBoosting
 from dimensredux import PlotMain
@@ -498,6 +499,8 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnFetchImage, item)
         item.Check()# Add new "Images" menu bar item
         self.GetMenuBar().Append(self.imagesMenu, 'Images')
+
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
         
     #######################################
     # OnFetchImage

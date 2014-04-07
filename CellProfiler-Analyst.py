@@ -7,11 +7,11 @@ import logging
 import re
 import javabridge
 import bioformats
+from cpa import __version__
+import cpa.helpmenu
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
 
-import cpa.util.version
-__version__ = cpa.util.version.version_number
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -183,9 +183,7 @@ class MainGUI(wx.Frame):
         clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
-        helpMenu = wx.Menu()
-        aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
-        self.GetMenuBar().Append(helpMenu, 'Help')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
 
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
@@ -218,7 +216,6 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.launch_normalization_tool, normalizeMenuItem)
         self.Bind(wx.EVT_MENU, self.clear_link_tables, clearTableLinksMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_query_maker, queryMenuItem)
-        self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
@@ -334,21 +331,6 @@ class MainGUI(wx.Frame):
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_tables_table))
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_columns_table))
         db.Commit()
-
-    def on_show_about(self, evt):
-        ''' Shows a message box with the version number etc.'''
-        message = ('CellProfiler Analyst was developed at The Broad Institute\n'
-                   'Imaging Platform and is distributed under the GNU General\n'
-                   'Public License version 2.')
-        info = wx.AboutDialogInfo()
-        info.SetIcon(icons.get_cpa_icon())
-        info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(__version__) or 'unknown revision'))
-        info.SetDescription(message)
-        info.AddDeveloper('Adam Fraser')
-        info.AddDeveloper('Thouis (Ray) Jones')
-        info.AddDeveloper('Vebjorn Ljosa')
-        info.SetWebSite('www.CellProfiler.org')
-        wx.AboutBox(info)
 
     def on_close(self, evt=None):
         # Classifier needs to be told to close so it can clean up it's threads
