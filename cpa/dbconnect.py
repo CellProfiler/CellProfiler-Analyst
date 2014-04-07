@@ -1213,7 +1213,7 @@ class DBConnect(Singleton):
         _check_colname_user(p, table, colname)
         if type(value) in (str, unicode):
             if re.search(r'["\'`]', value):
-                raise 'No quotes are allowed in values written to the database.'
+                raise ValueError('No quotes are allowed in values written to the database.')
             value = '"'+value+'"'
         if value is None:
             value = 'NULL'
