@@ -81,7 +81,7 @@ class QueryBuilder(object):
             elif isinstance(col, tuple):
                 self.group_cols += [Column(*col)]
             else:
-                raise 'Invalid parameter type'
+                raise ValueError('Invalid parameter type')
     group_by = set_group_columns
 
     def add_where(self, exp):
@@ -91,7 +91,7 @@ class QueryBuilder(object):
         elif type(exp) in (list, tuple):
             self.wheres += exp
         else:
-            raise 'invalid type (%s) passed into add_where'%(type(exp))
+            raise ValueError('Invalid type (%s) passed into add_where'%(type(exp)))
     where = add_where
 
     def get_select_clause_string(self):
@@ -161,7 +161,7 @@ class QueryBuilder(object):
         elif isinstance(fltr, OldFilter):
             self.old_filters += ['(%s) AS subquery_%d'%(fltr, len(self.old_filters))]
         else:
-            raise 'add_filter requires a Filter or OldFilter object as input'
+            raise ValueError('add_filter requires a Filter or OldFilter object as input')
         
 
 class Column(object):
@@ -213,7 +213,7 @@ class Gate1D(object, Observable):
         elif isinstance(column, Column):
             self.column = column
         else:
-            raise 'invalid type (%s) for "column"'%(type(column))
+            raise ValueError('invalid type (%s) for "column"'%(type(column)))
         self.min, self.max = value_range
     
     def __eq__(self, wc):

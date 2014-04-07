@@ -394,7 +394,7 @@ class DBTable(TableData):
             int(rmin)
             int(rmax)
         except:
-            raise 'Invalid row interval, values must be positive numbers.'
+            raise ValueError('Invalid row interval, values must be positive numbers.')
         self.rmin = rmin
         self.rmax = rmax
         
@@ -724,9 +724,10 @@ class TableViewer(wx.Frame):
                 try:
                     cols = int(dlg.GetValue())
                     if 1 <= cols <= 1000: user_is_stupid = False
-                    else: raise 'You must enter a value between 1 and 1000'
+                    else: 
+                        raise ValueError('You must enter a value between 1 and 1000')
                 except:
-                    raise 'You must enter a value between 1 and 1000'
+                    raise ValueError('You must enter a value between 1 and 1000')
             else:
                 return
         user_is_stupid = True
@@ -737,9 +738,9 @@ class TableViewer(wx.Frame):
                 try:
                     rows = int(dlg.GetValue())
                     if 1 <= rows <= 100000: user_is_stupid = False
-                    else: raise 'You must enter a value between 1 and 100000'
+                    else: raise ValueError('You must enter a value between 1 and 100000')
                 except:
-                    raise 'You must enter a value between 1 and 100000'
+                    raise ValueError('You must enter a value between 1 and 100000')
             else:
                 return
         pos = (self.Position[0]+10, self.Position[1]+10)

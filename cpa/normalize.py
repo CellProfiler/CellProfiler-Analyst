@@ -62,7 +62,7 @@ def do_normalization_step(input_data, grouping, aggregate_type, win_size, win_ty
     elif grouping == G_CONSTANT:
         output_data = do_normalization(input_data, constant)
     else:
-        raise 'Programming Error: Unknown normalization type supplied.'
+        raise ValueError('Programming Error: Unknown normalization type supplied.')
         
     return output_data
 
@@ -75,7 +75,7 @@ def square_filter_normalization(data, aggregate_type, win_size):
     elif aggregate_type  == M_MEAN:
         normalization_values = uniform_filter(data, (win_size, win_size))
     else:
-        raise 'Programming Error: Unknown window type supplied.'
+        raise ValueError('Programming Error: Unknown window type supplied.')
     
     return data / normalization_values
 
@@ -88,7 +88,7 @@ def linear_filter_normalization(data, aggregate_type, win_size):
     elif aggregate_type  == M_MEAN:
         normalization_values = uniform_filter(data.flatten(), win_size).reshape(data.shape)
     else:
-        raise 'Programming Error: Unknown window type supplied.'
+        raise ValueError('Programming Error: Unknown window type supplied.')
     
     return data / normalization_values
 

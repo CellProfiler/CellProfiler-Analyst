@@ -1555,7 +1555,7 @@ class DBConnect(Singleton):
 
         # Explicitly check for TableNumber in case it was not specified in props file
         if not p.object_table and 'TableNumber' in self.GetColumnNames(p.image_table):
-            raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
+            raise ValueError('Indexed column "TableNumber" was found in the database but not in your properties file.')
         
         # STOP here if there is no object table
         if not p.object_table:
@@ -1580,7 +1580,7 @@ class DBConnect(Singleton):
         
         # Explicitly check for TableNumber in case it was not specified in props file
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in self.GetColumnNames(p.object_table)):
-            raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
+            raise ValueError('Indexed column "TableNumber" was found in the database but not in your properties file.')
         elif ('TableNumber' in self.GetColumnNames(p.object_table)):
             logging.warn('TableNumber column was found indexed in your image table but not your object table.')
         elif ('TableNumber' not in object_key_columns()):

@@ -30,7 +30,7 @@ def aggregate_profiles(profiles, group_name, aggregator):
         images = input_group_r[key]
         groups = [output_group[image] for image in images]
         if groups.count(groups[0]) != len(groups):
-            raise 'Error: Input group %r contains images in %d different output groups' % (key, len(set(groups)))
+            raise ValueError('Input group %r contains images in %d different output groups' % (key, len(set(groups))))
         d.setdefault(groups[0], []).append(vector)
 
     keys = d.keys()

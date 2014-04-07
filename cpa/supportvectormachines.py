@@ -300,8 +300,7 @@ class SupportVectorMachines(object):
                 # Retrieve the keys of the objects in the current image
                 obKeys = dm.GetObjectsFromImage(imKey)
             except:
-                raise 'No such image: %s' % (imKey,)
-                return
+                raise ValueError('No such image: %s' % (imKey,))
 
             # Calculate the amount of hits for each of the classes in the current image
             classHits = {}
