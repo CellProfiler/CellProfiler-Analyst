@@ -1212,9 +1212,9 @@ class DBConnect(Singleton):
         assert table == p.image_table
         _check_colname_user(p, table, colname)
         if type(value) in (str, unicode):
-            value = '"'+value+'"'
-            if re.match('\"\'\`', value):
+            if re.search(r'["\'`]', value):
                 raise 'No quotes are allowed in values written to the database.'
+            value = '"'+value+'"'
         if value is None:
             value = 'NULL'
         self.execute('UPDATE %s SET %s=%s WHERE %s'%(table, colname, value,
