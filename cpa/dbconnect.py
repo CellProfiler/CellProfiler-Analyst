@@ -762,7 +762,7 @@ class DBConnect(Singleton):
                                                    ','.join(f.get_tables()), 
                                                    str(f))
         elif isinstance(f, sqltools.OldFilter):
-            return f
+            return str(f)
         else:
             raise Exception('Invalid filter type in p._filters')
 
