@@ -1,3 +1,4 @@
+import cpa
 from dbconnect import *
 from properties import Properties
 from utils import Observable
@@ -431,11 +432,25 @@ class Filter(Expression):
         return Filter(*init_param_list)
 
 
-class OldFilter(str):
+def get_tables_from_explain(sql_query):
+    rows = cpa.db.execute("EXPLAIN " + sql_query)
+    columns = cpa.db.GetResultColumnNames()
+    j = columns.index('table')
+    return set(row[j] for row in rows)
+
+
+class OldFilter(object):
     '''Wrapper class for backwards compatibility with the old style of defining
     filters. We simply wrap the filter query.
     '''
-    pass
+    def __init__(self, sql):
+        self.sql = sql
+
+    def __str__(self):
+        return self.sql
+
+    def get_tables(self):
+        return get_tables_from_explain(self.sql)
 
 
 def parse_old_group_query(group_query):
