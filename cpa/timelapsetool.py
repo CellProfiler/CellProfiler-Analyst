@@ -23,6 +23,9 @@ from properties import Properties
 from cpatool import CPATool
 import tableviewer
 
+import matplotlib
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+
 # traits imports
 from traits.api import HasTraits, Instance
 from traitsui.api import View, Item, HSplit, Group
@@ -62,18 +65,32 @@ def add_props_field(props):
     #props.series_id = ["Image_Metadata_Plate"]
     props.group_id = "Image_Group_Number"
     props.timepoint_id = "Image_Group_Index"
-    obj = props.cell_x_loc.split('_')[0]
+    obj = props.cell_x_loc.split('_Location_Center')[0]
     #props.object_tracking_label = obj + "_TrackObjects_Label_10"
     #props.parent_fields = ["%s_%s"%(obj,item) for item in ["TrackObjects_ParentImageNumber_10","TrackObjects_ParentObjectNumber_10"]]
     props.object_tracking_label = obj + "_TrackObjects_Label"
-    props.parent_fields = ["%s_%s"%(obj,item) for item in ["TrackObjects_ParentImageNumber","TrackObjects_ParentObjectNumber"]]    
+    props.parent_fields = ["%s_%s"%(obj,item) for item in ["TrackObjects_ParentImageNumber","TrackObjects_ParentObjectNumber"]]  
+    props.relationship_table = props.image_table.split("Per_Image")[0] + "Per_Relationships"
+    props.relationshiptypes_table = props.image_table.split("Per_Image")[0] + "Per_RelationshipTypes"
+    props.relationships_view = props.image_table.split("Per_Image")[0] + "Per_RelationshipsView"
     return props
 
 def retrieve_datasets():
     series_list = ",".join(props.series_id)
-    all_datasets = [x[0] for x in db.execute("SELECT %s FROM %s GROUP BY %s"%(series_list,props.image_table,series_list))]
+    query = "SELECT %s FROM %s GROUP BY %s"%(series_list,props.image_table,series_list)
+    all_datasets = [x[0] for x in db.execute(query)]
     return all_datasets
 
+def is_LAP_tracking_data():
+    # If the data is LAP-based, then additional button(s) show up
+    LAP_field = "Kalman"
+    if props.db_type == 'sqlite':
+        query = "PRAGMA table_info(%s)"%(props.object_table)
+        return(len([_[1] for _ in db.execute(query) if _[1].find(LAP_field) > 0]) > 0)
+    else:
+        query = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP '_Kalman_'"%(props.db_name, props.object_table)
+        return(len(db.execute(query)) > 0)
+    
 def obtain_tracking_data(selected_dataset, selected_measurement, selected_filter):
     def parse_dataset_selection(s):
         return [x.strip() for x in s.split(',') if x.strip() is not '']
@@ -210,6 +227,9 @@ class TimeLapseControlPanel(wx.Panel):
         # Get names of data sets
         all_datasets = retrieve_datasets()
 
+        # Capture if LAP data is being used
+        self.isLAP = is_LAP_tracking_data()
+        
         # Get names of fields
         measurements = db.GetColumnNames(props.object_table)
         coltypes = db.GetColumnTypes(props.object_table)
@@ -229,6 +249,7 @@ class TimeLapseControlPanel(wx.Panel):
         self.colormap_choice.SetStringSelection("jet") 
         self.colormap_choice.SetHelpText("Select the colormap to use for color-coding the data.")
         self.trajectory_selection_button = wx.Button(self, -1, "Select Tracks to Visualize...")
+        self.trajectory_diagnosis_toggle = wx.ToggleButton(self, -1, "Show LAP Diagnostic Graphs")
         self.trajectory_selection_button.SetHelpText("Select the trajectories to show or hide in both panels.")
         self.update_plot_color_button = wx.Button(self, -1, "Update Color")
         self.update_plot_color_button.SetHelpText("Press this button after making selections to update the panels.")
@@ -242,6 +263,9 @@ class TimeLapseControlPanel(wx.Panel):
         sz.Add(self.dataset_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
         sz.Add(self.trajectory_selection_button)
+        if self.isLAP:
+            sz.AddSpacer((4,-1))
+            sz.Add(self.trajectory_diagnosis_toggle)
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))
 
@@ -297,6 +321,46 @@ class MayaviView(HasTraits):
     def __init__(self):
         HasTraits.__init__(self)
 
+################################################################################
+class FigureFrame(wx.Frame, CPATool):
+    """A wx.Frame with a figure inside"""
+    def __init__(self, parent=None, id=-1, title="", 
+                     pos=wx.DefaultPosition, size=wx.DefaultSize,
+                     style=wx.DEFAULT_FRAME_STYLE, name=wx.FrameNameStr, 
+                     subplots=None, on_close = None):
+        """Initialize the frame:
+            
+            parent   - parent window to this one
+            id       - window ID
+            title    - title in title bar
+            pos      - 2-tuple position on screen in pixels
+            size     - 2-tuple size of frame in pixels
+            style    - window style
+            name     - searchable window name
+            subplots - 2-tuple indicating the layout of subplots inside the window
+            on_close - a function to run when the window closes
+            """       
+        super(FigureFrame,self).__init__(parent, id, title, pos, size, style, name)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer) 
+        matplotlib.rcdefaults()
+        self.figure = figure = matplotlib.figure.Figure()
+        figure.set_facecolor((1,1,1))
+        figure.set_edgecolor((1,1,1))        
+        self.panel = FigureCanvasWxAgg(self, -1, self.figure)
+        sizer.Add(self.panel, 1, wx.EXPAND)
+        #wx.EVT_CLOSE(self, self.on_close)
+        if subplots:
+            self.subplots = np.zeros(subplots,dtype=object)  
+        self.Fit()
+        self.Show()
+        
+    def on_close(self, event):
+        if self.close_fn is not None:
+            self.close_fn(event)
+        self.clf() # Free memory allocated by imshow
+        self.Destroy()        
+        
 ################################################################################
 class TimeLapseTool(wx.Frame, CPATool):
     '''
@@ -372,6 +436,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_COMBOBOX(self.control_panel.dataset_choice, -1, self.on_dataset_selected)
         wx.EVT_COMBOBOX(self.control_panel.measurement_choice, -1, self.on_measurement_selected)
         wx.EVT_BUTTON(self.control_panel.trajectory_selection_button, -1, self.update_trajectory_selection)
+        wx.EVT_TOGGLEBUTTON(self.control_panel.trajectory_diagnosis_toggle, -1, self.calculate_and_display_lap_stats)
         wx.EVT_COMBOBOX(self.control_panel.colormap_choice, -1, self.on_colormap_selected)
         wx.EVT_BUTTON(self.control_panel.update_plot_color_button, -1, self.update_plot)
         wx.EVT_CHECKBOX(self.control_panel.enable_filtering_checkbox, -1, self.enable_filtering)
@@ -404,7 +469,10 @@ class TimeLapseTool(wx.Frame, CPATool):
                     self.Bind(wx.EVT_MENU, self.parent.show_selection_in_table, item)
                     item = wx.MenuItem(self, wx.NewId(), "Show image montage containing %s %s"%(props.object_name[0],str(self.parent.selected_node)))
                     self.AppendItem(item)
-                    self.Bind(wx.EVT_MENU, self.parent.show_cell_montage, item)                    
+                    self.Bind(wx.EVT_MENU, self.parent.show_cell_montage, item)   
+                    item = wx.MenuItem(self, wx.NewId(), "Show image tile of %s %s"%(props.object_name[0],str(self.parent.selected_node)))
+                    self.AppendItem(item)
+                    self.Bind(wx.EVT_MENU, self.parent.show_cell_tile, item)                       
                 # The 'Show all trajectories' item and its associated binding
                 item = wx.MenuItem(self, wx.NewId(), "Show all trajectories")
                 self.AppendItem(item)
@@ -447,6 +515,11 @@ class TimeLapseTool(wx.Frame, CPATool):
             montage_frame.add_objects(current_trajectory_keys)
             [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey == self.selected_node]
     
+    def show_cell_tile(self, event = None):
+        montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image tile of %s %s"%(props.object_name[0],self.selected_node))
+        montage_frame.Show()
+        montage_frame.add_objects([self.selected_node])   
+    
     def on_dataset_selected(self, event = None):
         # Disable trajectory selection button until plot updated or the currently plotted dataset is selected
         self.do_plots_need_updating["dataset"] = False
@@ -479,6 +552,9 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                    #current_filter.comparatorChoice.GetStringSelection(),
                                                                    #current_filter.valueField.GetStringSelection())))
             
+    def calculate_and_display_lap_stats(self, event = None):
+        self.show_LAP_metrics()
+    
     def update_trajectory_selection(self, event = None):
         
         class TrajectoryMultiChoiceDialog (wx.Dialog):
@@ -708,6 +784,172 @@ class TimeLapseTool(wx.Frame, CPATool):
         t2 = time.clock()
         logging.info("Computed derived measurements (%.2f sec)"%(t2-t1))        
         
+    def find_fig(self, parent=None, title="", name=wx.FrameNameStr, subplots=None):
+        """Find a figure frame window. Returns the window or None"""
+        if parent:
+            window = parent.FindWindowByName(name)
+            if window:
+                if len(title) and title != window.Title:
+                    window.Title = title
+                window.set_subplots(subplots)
+            return window    
+
+    def create_or_find(self, parent=None, id=-1, title="", 
+                       pos=wx.DefaultPosition, size=wx.DefaultSize,
+                       style=wx.DEFAULT_FRAME_STYLE, name=wx.FrameNameStr,
+                       subplots=None,
+                       on_close=None):
+        """Create or find a figure frame window"""
+        win = self.find_fig(parent, title, name, subplots)
+        return win or FigureFrame(parent, id, title, pos, size, style, name, 
+                                    subplots, on_close)    
+    def show_LAP_metrics(self):
+        # See http://cshprotocols.cshlp.org/content/2009/12/pdb.top65.full, esp. Figure 5
+        # Create new figure
+        new_title = "LAP metrics"
+        window = self.create_or_find(self, -1, new_title, subplots=(2,1), name=new_title)
+        
+        # Plot the frame-to-frame linking distances
+        dists = self.calculate_frame_to_frame_linking_distances() 
+        title = "Frame-to-frame linking distances"
+        axes = window.figure.add_subplot(2,2,1)   
+        
+        import matplotlib.pylab as plt
+        axes = window.figure.add_subplot(2,2,1) 
+        axes.set_axis_off()
+        axes.text(0.0,0.0,
+                  "Frame-to-frame linking distances\n"
+                  "are the distances between the\n"
+                  "predicted position of an object\n"
+                  "and the observed position. This\n"
+                  "data is displayed as a histogram\n"
+                  "and should decay to zero.\n\n"
+                  "The arrow indicates the pixel\n"
+                  "distance at which 95% of the\n"
+                  "maximum number of links were\n"
+                  "made. You should confirm that\n"
+                  "this value is less than the\n"
+                  "maximum search radius in the\n"
+                  "TrackObjects module.\n")
+        axes = window.figure.add_subplot(2,2,2)        
+        if dists.shape[0] == 0:
+            plot = axes.text(0.0, 1.0, "No valid values to plot.")
+            axes.set_xlabel('')   
+        else:
+            bins = np.arange(0, np.max(dists))
+            n, _, _ = axes.hist(dists, bins,
+                          edgecolor='none',
+                          alpha=0.75)
+            max_search_radius = bins[n < 0.05*np.max(n)][0]
+            axes.annotate('95%% of max count: %d pixels'%(max_search_radius),
+                          xy=(max_search_radius,n[n < 0.05*np.max(n)][0]), 
+                          xytext=(max_search_radius,axes.get_ylim()[1]/2), 
+                          arrowprops=dict(facecolor='red', shrink=0.05))
+            axes.set_xlabel('Frame-to-frame linking distances (pixels)')
+            axes.set_xlim((0,np.mean(dists) + 2*np.std(dists)))
+            axes.set_ylabel('Counts')        
+        
+        # Plot the gap lengths
+        axes = window.figure.add_subplot(2,2,3) 
+        axes.set_axis_off()
+        axes.text(0.0,0.0,
+                  "Gap lengths are displayed as\n"
+                  "a histogram. A plateau in the\n"
+                  "tail of the histogram \n"
+                  "indicates that the time window\n"
+                  "used for gap closing is too \n"
+                  "large, resulting in falsely \n"
+                  "closed gaps.\n\n"
+                  "If all the gap lengths are 1,\n"
+                  "no data is shown since gap\n"
+                  "closing was not necessary.")        
+        values = np.array(self.calculate_gap_lengths()).flatten()
+        values = values[np.isfinite(values)] # Just in case
+        title = "Gap lengths"
+        axes = window.figure.add_subplot(2,2,4)        
+        if values.shape[0] == 0:
+            plot = axes.text(0.1, 0.5, "No valid values to plot.")
+            axes.set_xlabel('')  
+        elif np.max(values) == 1:
+            plot = axes.text(0.1, 0.5, "No gap lengths > 1")
+            axes.set_xlabel('')              
+        else:
+            bins = np.arange(1, np.max(values)+1)
+            axes.hist(values, bins,
+                      facecolor=(0.0, 0.62, 1.0),
+                      edgecolor='none',
+                      alpha=0.75)
+            axes.set_xlabel('Gap length (frames)')
+            axes.set_ylabel('Counts')
+        
+       
+        # Draw the figure
+        window.figure.canvas.draw()
+        
+    def calculate_gap_lengths(self):
+        obj = props.cell_x_loc.split('_Location_Center')[0]
+        # We want relationships that are cover the following:
+        # - Are parent/child, e.g, exclude neighborhood
+        # - Share the same parent/child object, e.g, exclude primary/secondary/tertiary, some cases of neighborhood
+        # - Are across-frame, e.g, exclude neighborhood, primary/secondary/tertiary
+        query = ("SELECT ABS(i2.%s - i1.%s)"%(props.timepoint_id, props.timepoint_id),
+            "FROM %s r"%(props.relationships_view),           
+            "JOIN %s i1"%(props.image_table),
+            "ON r.image_number1 = i1.%s"%(props.image_id),
+            "JOIN %s i2"%(props.image_table),
+            "ON r.image_number2 = i2.%s"%(props.image_id),
+            "WHERE LOWER(relationship) = 'parent'", 
+            "AND object_name1 = '%s'"%(obj),
+            "AND object_name1 = object_name2",
+            "AND image_number1 != image_number2"
+            )       
+        query = " ".join(query)
+        return(np.array([_ for _ in db.execute(query)]))
+    
+    def calculate_frame_to_frame_linking_distances(self):
+        #What's recorded in the database for each object are the values necessary to predict the 
+        # location of the object in the next frame. There are two models applicable in TrackObjects: Random (NoVel) and Velocity (Vel)
+        # For the Velocity model, you have to add Kalman_State_Vel_X and Kalman_State_Vel_VX and similarly for Y to get the 
+        # predicted (X,Y) position. 
+        # For NoVel, it's Kalman_State_NoVel_X and Kalman_State_NoVel_Y that gives the predicted (X,Y) position.
+        # The error in distance between the observed location and the predicted location is calculated depending on which 
+        # the user picked in TrackObjects (usually both) and the appropriate model is picked on a per-object basis as the
+        # minimum of the two.
+        obj = props.cell_x_loc.split('_Location_Center')[0]
+        if props.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s)"%(props.object_table)
+            used_velocity_model = len([_[1] for _ in db.execute(query) if _[1].find('_Kalman_Vel_') > 0]) > 0    
+            used_novelocity_model = len([_[1] for _ in db.execute(query) if _[1].find('_Kalman_NoVel_') > 0]) > 0  
+        else:
+            query = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP '_Kalman_Vel_'"%(props.db_name, props.object_table)
+            db.execute(query)
+            used_velocity_model = len([item for item in cursor.fetchall()]) > 0
+            query = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP '_Kalman_NoVel_'"%(props.db_name, props.object_table)
+            db.execute(query)
+            used_novelocity_model = len([item for item in cursor.fetchall()]) > 0
+        # SQL courtesy of Lee. 
+        query = ("SELECT",
+                 "pred.pred_vel_x, pred.pred_vel_y, pred.pred_novel_x, pred.pred_novel_y, obs.%s_Location_Center_X, obs.%s_Location_Center_Y"%(obj,obj),
+                 "FROM %s r"%(props.relationships_view),
+                 "JOIN",
+                 "(SELECT %s AS ImageNumber, %s AS ObjectNumber,"%(props.image_id, props.object_id),
+                 "(%s_TrackObjects_Kalman_Vel_State_X + %s_TrackObjects_Kalman_Vel_State_VX)"%(obj,obj) if used_velocity_model else "NULL","AS pred_vel_x,",
+                 "(%s_TrackObjects_Kalman_Vel_State_Y + %s_TrackObjects_Kalman_Vel_State_VY)"%(obj,obj) if used_velocity_model else "NULL","AS pred_vel_y,",
+                 "%s_TrackObjects_Kalman_NoVel_State_X AS pred_novel_x, %s_TrackObjects_Kalman_NoVel_State_Y"%(obj,obj) if used_novelocity_model else "NULL","AS pred_novel_y",
+                 "FROM %s) AS pred ON r.image_number1 = pred.ImageNumber AND r.object_number1 = pred.ObjectNumber"%(props.object_table),
+                 "JOIN %s AS obs ON r.image_number2 = obs.%s AND r.object_number2 = obs.%s"%(props.object_table, props.image_id, props.object_id),
+                 "JOIN %s AS i1 ON r.image_number1 = i1.%s"%(props.image_table, props.image_id),
+                 "JOIN %s AS i2 ON r.image_number2 = i2.%s"%(props.image_table, props.image_id),
+                 "WHERE i1.%s + 1 = i2.%s"%(props.timepoint_id,props.timepoint_id) )   
+        query = " ".join(query)
+        values = np.array(db.execute(query))
+        # I would love to do this arithmetic in the query, but SQLite doesn't handle SQRT or POW
+        dist_error_novel = np.sqrt((values[:,2]-values[:,4])**2 + (values[:,3]-values[:,5])**2)
+        dist_error_vel = np.sqrt((values[:,0]-values[:,4])**2 + (values[:,1]-values[:,5])**2)
+        # Return the minimum of the two models for each object/timepoint
+        return(np.min(np.vstack((dist_error_novel,dist_error_vel)),axis=0))
+        
+    
     def on_pick_one_timepoint(self,picker):
         """ Picker callback: this gets called upon pick events.
         """
