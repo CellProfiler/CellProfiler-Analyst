@@ -18,7 +18,8 @@ from optparse import OptionParser
 import numpy as np
 import cpa
 from cpa.util import replace_atomically
-from .cache import Cache, RobustLinearNormalization, normalizations
+from .cache import Cache
+from .normalization import RobustLinearNormalization, normalizations
 from .parallel import ParallelProcessor, Uniprocessing
 
 def _break_indices(indices, image_keys, count_cells):

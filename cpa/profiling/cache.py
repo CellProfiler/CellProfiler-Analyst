@@ -8,7 +8,8 @@ $ python -m cpa.profiling.cache CDP2.properties /imaging/analysis/2008_12_04_Ima
 Example usage as module:
 
 >>> import cpa
->>> from cpa.profiling.cache import Cache, RobustLinearNormalization
+>>> from cpa.profiling.cache import Cache
+>>> from cpa.profiling.normalization import RobustLinearNormalization
 >>> cpa.properties.LoadFile('CDP2.properties')
 >>> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
 >>> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
