@@ -17,6 +17,7 @@ import os
 import sys
 import re
 import wx
+import cpa.helpmenu
 
 p = properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
@@ -49,6 +50,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.fileMenu = wx.Menu()
         self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
+        self.menuBar.Append(cpa.helpmenu.make_help_menu(self), 'Help')
         
         wx.EVT_MENU(self, wx.ID_EXIT, lambda(_):self.Close())
 
@@ -768,8 +770,8 @@ if __name__ == "__main__":
     # Kill the Java VM
     #
     try:
-        from bioformats import jutil
-        jutil.kill_vm()
+        import javavbridge
+        javabridge.kill_vm()
     except:
         import traceback
         traceback.print_exc()

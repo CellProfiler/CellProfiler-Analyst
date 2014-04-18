@@ -1,3 +1,4 @@
+import cpa
 from dbconnect import *
 from properties import Properties
 from utils import Observable
@@ -81,7 +82,7 @@ class QueryBuilder(object):
             elif isinstance(col, tuple):
                 self.group_cols += [Column(*col)]
             else:
-                raise 'Invalid parameter type'
+                raise ValueError('Invalid parameter type')
     group_by = set_group_columns
 
     def add_where(self, exp):
@@ -91,7 +92,7 @@ class QueryBuilder(object):
         elif type(exp) in (list, tuple):
             self.wheres += exp
         else:
-            raise 'invalid type (%s) passed into add_where'%(type(exp))
+            raise ValueError('Invalid type (%s) passed into add_where'%(type(exp)))
     where = add_where
 
     def get_select_clause_string(self):
@@ -161,7 +162,7 @@ class QueryBuilder(object):
         elif isinstance(fltr, OldFilter):
             self.old_filters += ['(%s) AS subquery_%d'%(fltr, len(self.old_filters))]
         else:
-            raise 'add_filter requires a Filter or OldFilter object as input'
+            raise ValueError('add_filter requires a Filter or OldFilter object as input')
         
 
 class Column(object):
@@ -213,7 +214,7 @@ class Gate1D(object, Observable):
         elif isinstance(column, Column):
             self.column = column
         else:
-            raise 'invalid type (%s) for "column"'%(type(column))
+            raise ValueError('invalid type (%s) for "column"'%(type(column)))
         self.min, self.max = value_range
     
     def __eq__(self, wc):
@@ -431,11 +432,25 @@ class Filter(Expression):
         return Filter(*init_param_list)
 
 
-class OldFilter(str):
+def get_tables_from_explain(sql_query):
+    rows = cpa.db.execute("EXPLAIN " + sql_query)
+    columns = cpa.db.GetResultColumnNames()
+    j = columns.index('table')
+    return set(row[j] for row in rows)
+
+
+class OldFilter(object):
     '''Wrapper class for backwards compatibility with the old style of defining
     filters. We simply wrap the filter query.
     '''
-    pass
+    def __init__(self, sql):
+        self.sql = sql
+
+    def __str__(self):
+        return self.sql
+
+    def get_tables(self):
+        return get_tables_from_explain(self.sql)
 
 
 def parse_old_group_query(group_query):

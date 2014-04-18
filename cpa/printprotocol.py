@@ -106,7 +106,7 @@ class PrintProtocol(wx.Frame):
 		    self.printfile.write('<dfn>'+element[0]+': </dfn><code>'+element[1]+'</code><br />')
 		#self.printfile.write('<code>'+protocol_info[2]+' </code><br />')
 		self.printfile.write('<br />')
-		self.printfile.write('<dfn>'+protocol_info[2][0]+'</dfn><br />'
+		self.printfile.write('<dfn>'+protocol_info[2][0]+'</dfn><br />')
 	else:
 	    self.printfile.write('<code>No stock culture was used for this experiment</code>')
           	

@@ -274,6 +274,11 @@ class SqliteClassifier():
         #          be found. This only appears to be a problem on Windows 64bit
         return int(class_num)
 
+
+def _check_colname_user(properties, table, colname):
+    if table in [properties.image_table, properties.object_table] and not colname.lower().startswith('user_'):
+        raise ValueError('User-defined columns in the image and object tables must have names beginning with "User_".')
+
     
 class DBConnect(Singleton):
     '''
@@ -475,6 +480,10 @@ class DBConnect(Singleton):
         the current thread.  Returns the results as a list of rows
         unless return_result is false.
         '''
+        if p.db_type.lower() == 'sqlite':
+            if args:
+                raise TypeError('Can\'t pass args to sqlite execute!')
+
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
         if not connID in self.connections.keys():
@@ -489,9 +498,8 @@ class DBConnect(Singleton):
         try:
             if verbose and not silent: 
                 logging.debug('[%s] %s'%(connID, query))
-            if p.db_type.lower()=='sqlite':
-                if args:
-                    raise 'Can\'t pass args to sqlite execute!'
+            if p.db_type.lower() == 'sqlite':
+                assert args is None
                 cursor.execute(query)
             else:
                 cursor.execute(query, args=args)
@@ -754,7 +762,7 @@ class DBConnect(Singleton):
                                                    ','.join(f.get_tables()), 
                                                    str(f))
         elif isinstance(f, sqltools.OldFilter):
-            return f
+            return str(f)
         else:
             raise Exception('Invalid filter type in p._filters')
 
@@ -1190,10 +1198,9 @@ class DBConnect(Singleton):
         Appends a new column to the specified table.
         The column name must begin with "User_" and contain only A-Za-z0-9_
         '''
-        if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
-            raise 'Column name must begin with "User_" when appending to the image or object tables'
+        _check_colname_user(p, table, colname)
         if not re.match('^[A-Za-z]\w*$', colname):
-            raise 'Column name may contain only alphanumeric characters and underscore, and must begin with a letter.'
+            raise ValueError('Column name may contain only alphanumeric characters and underscore, and must begin with a letter.')
         self.execute('ALTER TABLE %s ADD %s %s'%(table, colname, coltype))
         
     def UpdateWells(self, table, colname, value, wellkeys):
@@ -1203,12 +1210,11 @@ class DBConnect(Singleton):
         '''
         # TODO: handle other tables
         assert table == p.image_table
-        if table in [p.image_table, p.object_table] and not colname.lower().startswith('user_'):
-            raise 'Can only edit columns beginning with "User_" in the image table.'            
+        _check_colname_user(p, table, colname)
         if type(value) in (str, unicode):
+            if re.search(r'["\'`]', value):
+                raise ValueError('No quotes are allowed in values written to the database.')
             value = '"'+value+'"'
-            if re.match('\"\'\`', value):
-                raise 'No quotes are allowed in values written to the database.'
         if value is None:
             value = 'NULL'
         self.execute('UPDATE %s SET %s=%s WHERE %s'%(table, colname, value,
@@ -1549,7 +1555,7 @@ class DBConnect(Singleton):
 
         # Explicitly check for TableNumber in case it was not specified in props file
         if not p.object_table and 'TableNumber' in self.GetColumnNames(p.image_table):
-            raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
+            raise ValueError('Indexed column "TableNumber" was found in the database but not in your properties file.')
         
         # STOP here if there is no object table
         if not p.object_table:
@@ -1574,7 +1580,7 @@ class DBConnect(Singleton):
         
         # Explicitly check for TableNumber in case it was not specified in props file
         if ('TableNumber' not in object_key_columns()) and ('TableNumber' in self.GetColumnNames(p.object_table)):
-            raise 'Indexed column "TableNumber" was found in the database but not in your properties file.'
+            raise ValueError('Indexed column "TableNumber" was found in the database but not in your properties file.')
         elif ('TableNumber' in self.GetColumnNames(p.object_table)):
             logging.warn('TableNumber column was found indexed in your image table but not your object table.')
         elif ('TableNumber' not in object_key_columns()):

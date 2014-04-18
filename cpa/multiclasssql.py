@@ -1,5 +1,6 @@
 import numpy
 import sys
+import cpa.sqltools
 from dbconnect import *
 from properties import Properties
 from datamodel import DataModel
@@ -171,41 +172,40 @@ def PerImageCounts(weaklearners, filter_name=None, cb=None):
     # I'm pretty sure this would be even faster if we were to run two
     # or more parallel threads and split the work between them.
     def do_by_steps(class_query, tables, filter_name, result_clauses):
+        filter_clause = '1 = 1'
+        join_clause = ''
         if filter_name is not None:
-            filter_clause = str(p._filters[filter_name])
-            filter_clause += ' AND ' + ' AND '.join(
-                ['%s=%s'%(im_col, ob_col) 
-                 for im_col, ob_col in zip(image_key_columns(p.image_table), 
-                                           image_key_columns(p.object_table))])
-            tables += ', ' + ', '.join(p._filters[filter_name].get_tables())
+            filter = p._filters[filter_name]
+            if isinstance(filter, cpa.sqltools.OldFilter):
+                join_table = '(%s) as filter' % str(filter)
+            else:
+                if p.object_table in tables:
+                    join_table = None
+                else:
+                    join_table = p.object_table
+                    filter_clause = str(filter)
+            if join_table:
+                join_clause = 'JOIN %s USING (%s)' % (join_table, ','.join(image_key_columns()))
         if cb:
             result =  []
             wheres = _where_clauses(p, dm, filter_name)
             num_clauses = len(wheres)
             
-            for idx, wc in enumerate(wheres):
-                if filter_name is None:
-                    where_clause = wc
-                else:
-                    where_clause = '%s AND %s'%(wc, filter_clause)
-                    
+            for idx, where_clause in enumerate(wheres):
+                if filter_clause is not None:
+                    where_clause += ' AND ' + filter_clause
                 result += [db.execute('SELECT %s, %s as class, %s FROM %s '
-                                      'WHERE %s GROUP BY %s, class'
+                                      '%s WHERE %s GROUP BY %s, class'
                                       %(UniqueImageClause(p.object_table), 
                                         class_query, result_clauses, tables, 
-                                        where_clause, 
+                                        join_clause, where_clause, 
                                         UniqueImageClause(p.object_table)),
                                       silent=(idx > 10))]
                 cb(min(1, idx/float(num_clauses)))
             return sum(result, [])
         else:
-            if filter_name is None:
-                return db.execute('SELECT %s, %s as class, %s FROM %s GROUP BY %s, class'%
-                                  (imkeys, class_query, result_clauses, tables, imkeys))
-            else:
-                tables += ', ' + ', '.join(filter.get_tables())
-                return db.execute('SELECT %s, %s as class, %s FROM %s WHERE %s GROUP BY %s, class'%
-                                  (imkeys, class_query, result_clauses, tables, filter_clause, imkeys))
+            return db.execute('SELECT %s, %s as class, %s FROM %s %s WHERE %s GROUP BY %s, class'%
+                              (imkeys, class_query, result_clauses, tables, join_clause, filter_clause, imkeys))
     
     if p.area_scoring_column is None:
         result_clauses = 'COUNT(*)'

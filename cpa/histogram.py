@@ -290,7 +290,7 @@ class HistogramPanel(FigureCanvasWxAgg):
         elif scale == LOG_SCALE:
             self.log_y = True
         else:
-            raise 'Unsupported y-axis scale.' 
+            raise ValueError('Unsupported y-axis scale.')
     
     def get_toolbar(self):
         return self.navtoolbar
@@ -399,8 +399,8 @@ if __name__ == "__main__":
 
     # Kill the Java VM
     try:
-        from bioformats import jutil
-        jutil.kill_vm()
+        import javabridge
+        javabridge.kill_vm()
     except:
         import traceback
         traceback.print_exc()

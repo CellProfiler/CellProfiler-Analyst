@@ -5,10 +5,9 @@
 *.so
 *.dll
 *.exe
-*.properties
 *\#
-build
-dist
+/build
+/dist
 output
-cpa/util/frozen_version.py
-cpa/version.iss
+/cpa/_description.py
+/cpa/version.iss

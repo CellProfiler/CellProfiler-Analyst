@@ -90,18 +90,21 @@ class Page1(wiz.WizardPageSimple):
         self.btnTest.Disable()
             
     def OnPageChanging(self,evt):
-        try:
-            if p.db_type.lower()!='mysql':
-                raise 'This wizard only supports merging MySQL databases!'
-                evt.Veto()
-            db.Disconnect()
-            db.connect()
-            self.btnTest.SetLabel('Connection OK')
-            wx.FindWindowById(wx.ID_FORWARD).Enable()
-            self.Parent.inDB = self.Parent.outDB = p.db_name
-        except:
-            self.btnTest.SetLabel('Connection Failed')
+        if p.db_type.lower()!='mysql':
+            wx.MessageBox('This wizard only knows how to merge MySQL databases.', 
+                          'Error', wx.OK | wx.ICON_ERROR)
+            self.btnTest.SetLabel('Error')
             evt.Veto()
+        else:
+            try:
+                db.Disconnect()
+                db.connect()
+                self.btnTest.SetLabel('Connection OK')
+                wx.FindWindowById(wx.ID_FORWARD).Enable()
+                self.Parent.inDB = self.Parent.outDB = p.db_name
+            except:
+                self.btnTest.SetLabel('Connection Failed')
+                evt.Veto()
         self.btnTest.Disable()
         
         

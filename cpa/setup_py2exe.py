@@ -51,16 +51,6 @@ OutputBaseFilename=CellProfilerAnalyst_win32_r%d
                 key.Close()
             raise DistutilsFileError, "Inno Setup does not seem to be installed properly. Specifically, there is no entry in the HKEY_CLASSES_ROOT for InnoSetupScriptFile\\shell\\Compile\\command"
 
-if 'CP_HOME' in os.environ:
-    CP_HOME = os.environ['CP_HOME']
-else:
-    CP_HOME = '../../CellProfiler'
-if not os.path.exists(CP_HOME):
-    raise Exception('CellProfiler source not found. Edit CP_HOME in setup.py')
-    exit(1)
-else:
-    sys.path.append(CP_HOME)
-
 if os.path.exists('build'):
     raise Exception("Please delete the build directory before running setup.")
 if os.path.exists('dist'):
@@ -79,8 +69,7 @@ setup(windows=[{'script':'cpa.py',
 				'icon_resources':[(1,'.\icons\cpa.ico')]}],
       options={
         'py2exe': {
-            'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'icons',
-                          'bioformats', 'killjavabridge'],
+            'packages' : ['matplotlib', 'pytz', 'MySQLdb', 'icons',],
             'includes' : ['pilfix', "xml.etree.cElementTree", "xml.etree.ElementTree"],
             "excludes" : ['_gtkagg', '_tkagg', "nose",
                           "wx.tools", "pylab", "scipy.weave",
@@ -96,11 +85,6 @@ setup(windows=[{'script':'cpa.py',
       data_files=(
               matplotlib.get_py2exe_datafiles() +
               [('icons', glob.glob('icons\\*.png')),
-               ('bioformats', [os.path.join(CP_HOME, 'bioformats/loci_tools.jar')]),
-               ('cellprofiler/utilities', 
-                [os.path.join(CP_HOME, 'cellprofiler', 'utilities', x) 
-                 for x in ('js.jar', 'runnablequeue-1.0.0.jar')]),
-               ('cellprofiler/icons', [os.path.join(CP_HOME, 'cellprofiler/icons/CellProfilerIcon.png')]), # needed for cpfigure used by classifier cross validation
               ]
             ),
       cmdclass={"msi":CellProfilerAnalystMSI}

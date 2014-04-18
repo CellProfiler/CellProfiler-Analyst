@@ -14,6 +14,7 @@ import wx.grid as  gridlib
 import wx.lib.intctrl as intctrl
 import logging
 import numpy as np
+import cpa.helpmenu
 from cpatool import CPATool
 from properties import Properties
 import dbconnect
@@ -394,7 +395,7 @@ class DBTable(TableData):
             int(rmin)
             int(rmax)
         except:
-            raise 'Invalid row interval, values must be positive numbers.'
+            raise ValueError('Invalid row interval, values must be positive numbers.')
         self.rmin = rmin
         self.rmax = rmax
         
@@ -586,6 +587,8 @@ class TableViewer(wx.Frame):
         view_menu.AppendMenu(-1, 'Column widths', column_width_menu)
         fixed_cols_menu_item = column_width_menu.Append(-1, 'Fixed width', kind=wx.ITEM_RADIO)
         fit_cols_menu_item = column_width_menu.Append(-1, 'Fit to table', kind=wx.ITEM_RADIO)
+
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
         
         self.CreateStatusBar()
         
@@ -724,9 +727,10 @@ class TableViewer(wx.Frame):
                 try:
                     cols = int(dlg.GetValue())
                     if 1 <= cols <= 1000: user_is_stupid = False
-                    else: raise 'You must enter a value between 1 and 1000'
+                    else: 
+                        raise ValueError('You must enter a value between 1 and 1000')
                 except:
-                    raise 'You must enter a value between 1 and 1000'
+                    raise ValueError('You must enter a value between 1 and 1000')
             else:
                 return
         user_is_stupid = True
@@ -737,9 +741,9 @@ class TableViewer(wx.Frame):
                 try:
                     rows = int(dlg.GetValue())
                     if 1 <= rows <= 100000: user_is_stupid = False
-                    else: raise 'You must enter a value between 1 and 100000'
+                    else: raise ValueError('You must enter a value between 1 and 100000')
                 except:
-                    raise 'You must enter a value between 1 and 100000'
+                    raise ValueError('You must enter a value between 1 and 100000')
             else:
                 return
         pos = (self.Position[0]+10, self.Position[1]+10)

@@ -9,6 +9,7 @@
 #image_channel_colors = none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, 
 #########################
 
+import cpa.helpmenu
 from dbconnect import *
 from datamodel import DataModel
 from imagecontrolpanel import *
@@ -282,6 +283,7 @@ class ImageViewer(wx.Frame):
         self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
         self.classViewMenuItem.Enable(p.object_table is not None)
         self.GetMenuBar().Append(self.viewMenu, 'View')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
 
 
     #######################################
