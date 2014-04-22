@@ -17,6 +17,7 @@ import glayout
 import logging
 import time
 import sortbin
+import imagetools
 from guiutils import get_main_frame_or_none
 from dbconnect import DBConnect, image_key_columns, object_key_columns
 from properties import Properties
@@ -27,7 +28,7 @@ import matplotlib
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 
 # traits imports
-from traits.api import HasTraits, Instance
+from traits.api import HasTraits, Instance, on_trait_change
 from traitsui.api import View, Item, HSplit, Group
 
 # mayavi imports
@@ -332,6 +333,15 @@ class MayaviView(HasTraits):
     
     def __init__(self):
         HasTraits.__init__(self)
+        #self.figure = self.lineage_scene.mlab.gcf()
+        
+    @on_trait_change('scene.activated')
+    def update_plot(self):
+        picker = self.self.lineage_scene.mlab.gcf().on_mouse_pick(self.on_pick_one_timepoint,
+                                                                    type='point',
+                                                                                  button='Left',
+                                                                                  remove=False)
+        picker.tolerance = 0.01        
 
 ################################################################################
 class FigureFrame(wx.Frame, CPATool):
@@ -407,6 +417,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.plot_updated = False
         self.trajectory_selected = False
         self.selected_node = None
+        self.selected_endpoints = [None,None]
         self.axes_opacity = 0.25
         self.do_plots_need_updating = {"dataset":True,
                                        "colormap":True,
@@ -479,14 +490,28 @@ class TimeLapseTool(wx.Frame, CPATool):
                     item = wx.MenuItem(self, wx.NewId(), "Show data containing %s %s in table"%(props.object_name[0],str(self.parent.selected_node)))
                     self.AppendItem(item)
                     self.Bind(wx.EVT_MENU, self.parent.show_selection_in_table, item)
-                    item = wx.MenuItem(self, wx.NewId(), "Use %s %s as an endpoint for a montage"%(props.object_name[0],str(self.parent.selected_node)))
-                    #item = wx.MenuItem(self, wx.NewId(), "Show image montage containing %s %s"%(props.object_name[0],str(self.parent.selected_node)))
+                    
+                    item = wx.MenuItem(self, wx.NewId(), "Use %s %s as endpoint #1 for a montage"%(props.object_name[0],str(self.parent.selected_node)))
                     self.AppendItem(item)
-                    #self.Bind(wx.EVT_MENU, self.parent.show_cell_montage, item)  
-                    self.Bind(wx.EVT_MENU, self.parent.select_point_for_montage, item)
+                    self.Bind(wx.EVT_MENU, self.parent.select_point1_for_montage, item)
+                    
+                    item = wx.MenuItem(self, wx.NewId(), "Use %s %s as endpoint #2 for a montage"%(props.object_name[0],str(self.parent.selected_node)))
+                    self.AppendItem(item)
+                    self.Bind(wx.EVT_MENU, self.parent.select_point2_for_montage, item)
+                    
+                    
+                    item = wx.MenuItem(self, wx.NewId(), "Show image montage containing selected endpoints")
+                    item.Enable(all([_ != None for _ in self.parent.selected_endpoints]))
+                    self.AppendItem(item)
+                    self.Bind(wx.EVT_MENU, self.parent.show_cell_montage, item)  
+                    
                     item = wx.MenuItem(self, wx.NewId(), "Show image tile of %s %s"%(props.object_name[0],str(self.parent.selected_node)))
                     self.AppendItem(item)
-                    self.Bind(wx.EVT_MENU, self.parent.show_cell_tile, item)                       
+                    self.Bind(wx.EVT_MENU, self.parent.show_cell_tile, item)    
+                    
+                    item = wx.MenuItem(self, wx.NewId(), "Show full image containing %s %s"%(props.object_name[0],str(self.parent.selected_node)))
+                    self.AppendItem(item)
+                    self.Bind(wx.EVT_MENU, self.parent.show_full_image, item)                        
                 # The 'Show all trajectories' item and its associated binding
                 item = wx.MenuItem(self, wx.NewId(), "Show all trajectories")
                 self.AppendItem(item)
@@ -520,24 +545,52 @@ class TimeLapseTool(wx.Frame, CPATool):
         grid.set_fitted_col_widths()
         grid.Show()
         
-    def select_point_for_montage(self, event = None):
-        idx = 0
-        self.point_selection_outline[idx].bounds = self.trajectory_selection_outline.bounds
-        self.point_selection_outline[idx].actor.actor.visibility = 1
+    def select_point1_for_montage(self,event=None):
+        self.select_point_for_montage(1)
+        
+    def select_point2_for_montage(self,event=None):
+        self.select_point_for_montage(2)        
+    
+    def select_point_for_montage(self, num):
+        idx = num-1
+        self.selected_endpoints[idx] = self.selected_node
+        self.trajectory_point_selection_outline[idx].mlab_source.dataset.points[0] = (np.mean(self.trajectory_selection_outline.bounds[:2]),
+                                                                                         np.mean(self.trajectory_selection_outline.bounds[2:4]),
+                                                                                         np.mean(self.trajectory_selection_outline.bounds[4:]))
+        self.trajectory_point_selection_outline[idx].actor.actor.visibility = 1
+        
+        self.lineage_point_selection_outline[idx].mlab_source.dataset.points[0] = (np.mean(self.lineage_selection_outline.bounds[:2]),
+                                                                                      np.mean(self.lineage_selection_outline.bounds[2:4]),
+                                                                                      0)
+        self.lineage_point_selection_outline[idx].actor.actor.visibility = 1  
     
     def show_cell_montage(self, event = None):
-        # TODO: In this piece of code, it assumes there can be multiple trajectories selected but only one node selected. Should make consistent.
-        selected_trajectories = [self.connected_nodes[item].nodes() for item in self.selected_trajectory]
-        for index, current_trajectory_keys in enumerate(selected_trajectories):
-            montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s"%(self.selected_trajectory[index], props.object_name[0],self.selected_node))
-            montage_frame.Show()
-            montage_frame.add_objects(current_trajectory_keys)
-            [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey == self.selected_node]
+        # Pick out the trajectory containing the selected endpoints
+        # TODO: Probably should check whether the endpoints lie in the same trajectory when selecting them
+        trajectory_to_use = np.unique([key for key in self.connected_nodes.keys() for endpoint in self.selected_endpoints if endpoint in self.connected_nodes[key]]).tolist()
+        if len(trajectory_to_use) > 1:
+            print "Should have one trajectory selected"
+            return
+        else:
+            trajectory_to_use = trajectory_to_use[0]
+            
+        # Check the node ordering
+        selected_endpoints = self.selected_endpoints if nx.has_path(self.directed_graph, self.selected_endpoints[0],self.selected_endpoints[1]) else self.selected_endpoints[::-1]
+            
+        current_trajectory_keys = nx.shortest_path(self.connected_nodes[trajectory_to_use], selected_endpoints[0],selected_endpoints[1])
+        montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s and %s"%(trajectory_to_use, props.object_name[0],selected_endpoints[0],selected_endpoints[1] ))
+        montage_frame.Show()
+        montage_frame.add_objects(current_trajectory_keys)
+        [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey in self.selected_endpoints]
     
     def show_cell_tile(self, event = None):
         montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image tile of %s %s"%(props.object_name[0],self.selected_node))
         montage_frame.Show()
         montage_frame.add_objects([self.selected_node])   
+    
+    def show_full_image(self, event = None):
+        imViewer = imagetools.ShowImage(self.selected_node, props.image_channel_colors, parent=self)
+        imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.selected_node))
     
     def on_dataset_selected(self, event = None):
         # Disable trajectory selection button until plot updated or the currently plotted dataset is selected
@@ -1048,7 +1101,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             # Clear the scene
             logging.info("Drawing lineage graph...")
             self.mayavi_view.lineage_scene.mlab.clf(figure = self.mayavi_view.lineage_scene.mayavi_scene)
-            
+             
             #mlab.title("Lineage tree",size=2.0,figure=self.mayavi_view.lineage_scene.mayavi_scene)   
             
             t1 = time.clock()
@@ -1101,7 +1154,21 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.lineage_selection_outline.bounds = (-node_scale_factor,node_scale_factor,
                                                      -node_scale_factor,node_scale_factor,
                                                      -node_scale_factor,node_scale_factor)            
-            
+            # Add 2 more outlines to be used later when selecting points
+            self.lineage_point_selection_outline = []
+            for i in range(2):
+                ol = mlab.points3d(0,0,0,
+                                   extent = list(2*np.array([-node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor])),
+                                   color = (1,0,1),
+                                   mode = 'sphere',
+                                   scale_factor = 2*node_scale_factor, 
+                                   scale_mode = 'none',                                   
+                                   figure = self.mayavi_view.trajectory_scene.mayavi_scene)
+                ol.actor.actor.visibility = 0    
+                self.lineage_point_selection_outline.append(ol)            
+
             # Add axes outlines
             extent = np.array(self.lineage_node_positions.values())
             extent = (0,np.max(extent[:,0]),0,np.max(extent[:,1]),0,0)
@@ -1118,10 +1185,13 @@ class TimeLapseTool(wx.Frame, CPATool):
             
             # Constrain view to 2D
             self.mayavi_view.lineage_scene.interactor.interactor_style = tvtk.InteractorStyleImage()
-            
+
             # Make the graph clickable
-            self.mayavi_view.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint)
-    
+            #super(MayaviView, self).update_plot()
+            self.mayavi_view.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint,
+                                                                      type='point',
+                                                                      button='Left',
+                                                                      remove=False)          
             t2 = time.clock()
             logging.info("Computed layout (%.2f sec)"%(t2-t1))   
         else:
@@ -1225,18 +1295,17 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                         -node_scale_factor,node_scale_factor)
             self.trajectory_selection_outline.actor.actor.visibility = 0
             
-            # Add 2 more outlines to be used later when selecting points
-            self.point_selection_outline = []
+            # Add 2 more points to be used later when selecting points
+            self.trajectory_point_selection_outline = []
             for i in range(2):
-                ol = mlab.outline(line_width = 3,
-                                  color = 'black',
-                                  figure = self.mayavi_view.trajectory_scene.mayavi_scene))
-                ol.outline_mode = 'cornered'
-                ol.bounds = (-node_scale_factor,node_scale_factor,
-                                                            -node_scale_factor,node_scale_factor,
-                                                            -node_scale_factor,node_scale_factor)
+                ol = mlab.points3d(0,0,0,
+                                   extent = [-node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor],
+                                   color = (1,0,1),
+                                   figure = self.mayavi_view.trajectory_scene.mayavi_scene)
                 ol.actor.actor.visibility = 0    
-                self.point_selection_outline.append(ol)
+                self.trajectory_point_selection_outline.append(ol)
             
             # Using axes doesn't work until the scene is avilable: 
             # http://docs.enthought.com/mayavi/mayavi/building_applications.html#making-the-visualization-live
@@ -1253,10 +1322,14 @@ class TimeLapseTool(wx.Frame, CPATool):
                       figure = self.mayavi_view.trajectory_scene.mayavi_scene)
             self.mayavi_view.trajectory_scene.reset_zoom()
             
-            # An trajectory picker object is created to trigger an event when a trajectory is picked.       
+            # An trajectory picker object is created to trigger an event when a trajectory is picked. 
+            # Can press 'p' to get UI on curretn pick
             # TODO: Figure out how to re-activate picker on scene refresh
             #  E.g., (not identical problem) http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00583.html
-            picker = self.mayavi_view.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint)
+            picker = self.mayavi_view.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint,
+                                                                                  type='point',
+                                                                                  button='Left',
+                                                                                  remove=False)
             picker.tolerance = 0.01
             
             # Figure decorations
