@@ -28,7 +28,7 @@ import matplotlib
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 
 # traits imports
-from traits.api import HasTraits, Instance, on_trait_change
+from traits.api import HasTraits, Int, Instance, on_trait_change
 from traitsui.api import View, Item, HSplit, Group
 
 # mayavi imports
@@ -319,6 +319,7 @@ class MayaviView(HasTraits):
     """ Create a mayavi scene"""
     lineage_scene = Instance(MlabSceneModel, ())
     trajectory_scene = Instance(MlabSceneModel, ())
+    dataset = Int(0)
     
     # The layout of the dialog created
     view = View(HSplit(Group(Item('trajectory_scene',
@@ -331,18 +332,391 @@ class MayaviView(HasTraits):
                                   resizable=True, show_label=False))),
                 resizable=True)
     
-    def __init__(self):
+    def __init__(self, parent):
         HasTraits.__init__(self)
-        #self.figure = self.lineage_scene.mlab.gcf()
+        self.parent = parent
+        self.axes_opacity = 0.25
+        self.lineage_figure = self.lineage_scene.mlab.gcf()
+        self.trajectory_figure = self.trajectory_scene.mlab.gcf()
         
-    @on_trait_change('scene.activated')
-    def update_plot(self):
-        picker = self.self.lineage_scene.mlab.gcf().on_mouse_pick(self.on_pick_one_timepoint,
-                                                                    type='point',
-                                                                                  button='Left',
-                                                                                  remove=False)
-        picker.tolerance = 0.01        
+    #@on_trait_change('dataset')
+    #def reassign_pickers(self):
+        #self.lineage_picker = self.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_lineage)
+        #self.lineage_picker.tolerance = 0.01    
+        #self.trajectory_picker = self.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_trajectory)
+        #self.trajectory_picker.tolerance = 0.01
+        
+    @on_trait_change('lineage_scene.activated')
+    def activate_lineage_scene(self):
+        # An trajectory picker object is created to trigger an event when a trajectory is picked. 
+        # Can press 'p' to get UI on current pick
+        # TODO: Figure out how to re-activate picker on scene 
+        #
+        # Helpful pages re: pickers
+        # https://gist.github.com/syamajala/8804396
+        # http://sourceforge.net/p/mayavi/mailman/message/27239432/  (not identical problem)        
+        self.lineage_picker = self.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_lineage)
+        self.lineage_picker.tolerance = 0.01
+        
+        # Why is this here? Well, apparently the axes need to be oriented to a camera, which needs the view to be opened first.
+        # See http://en.it-usenet.org/thread/15952/8170/
+        mlab.axes(self.lineage_node_collection, 
+                          xlabel='T', ylabel='',
+                          extent = self.lineage_extent,
+                          opacity = self.axes_opacity,
+                          x_axis_visibility=True, y_axis_visibility=False, z_axis_visibility=False) 
+        
+        # Constrain view to 2D
+        self.lineage_scene.interactor.interactor_style = tvtk.InteractorStyleImage()        
+        self.lineage_scene.reset_zoom()
+        
+        # Add object label text to the left
+        # Why is this here? The text module needs to have a scene opened to work
+        # http://enthought-dev.117412.n3.nabble.com/How-to-clear-AttributeError-NoneType-object-has-no-attribute-active-camera-td2181947.html
+        text_scale_factor = self.lineage_node_scale_factor/1.0 
+        self.lineage_label_collection = dict(zip(self.connected_nodes.keys(),
+                                                 [mlab.text3d(self.lineage_node_positions[self.start_nodes[key]][0]-0.75*self.lineage_temporal_scaling,
+                                                              self.lineage_node_positions[self.start_nodes[key]][1],
+                                                              0,
+                                                              str(key),
+                                                              scale = text_scale_factor,
+                                                              figure = self.lineage_scene.mayavi_scene)
+                                                  for key in self.connected_nodes.keys()]))       
+        #self.dataset = int(self.parent.selected_dataset)        
+    
+    @on_trait_change('trajectory_scene.activated')
+    def activate_trajectory_scene(self):
+        self.trajectory_picker = self.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_trajectory)
+        self.trajectory_picker.tolerance = 0.01
+                                                                 
+        mlab.axes(self.trajectory_line_source, 
+                      xlabel='X', ylabel='Y',zlabel='T',
+                      opacity = self.axes_opacity,
+                      x_axis_visibility=True, y_axis_visibility=True, z_axis_visibility=True)
+        
+        # Set axes to MATLAB's default 3d view
+        mlab.view(azimuth = 322.5,elevation = 30.0,
+                  figure = self.trajectory_scene.mayavi_scene)     
+        
+        # Add object label text at end of trajectory
+        text_scale_factor = self.trajectory_node_scale_factor*5 
+        self.trajectory_label_collection = dict(zip(self.connected_nodes.keys(),
+                                                    [mlab.text3d(self.directed_graph.node[sorted(subgraph)[-1]]["x"],
+                                                                 self.directed_graph.node[sorted(subgraph)[-1]]["y"],
+                                                                 self.directed_graph.node[sorted(subgraph)[-1]]["t"]*self.trajectory_temporal_scaling,
+                                                                 str(key),
+                                                                 scale = text_scale_factor,
+                                                                 name = str(key),
+                                                                 figure = self.trajectory_scene.mayavi_scene) 
+                                                     for (key,subgraph) in self.connected_nodes.items()]))       
+        #self.dataset = int(self.parent.selected_dataset)
+        self.trajectory_scene.reset_zoom()        
+        
+    def on_pick_lineage(self, picker):
+        """ Lineage picker callback: this gets called upon pick events.
+        """
+        picked_graph_node = None
+        picked_lineage_coords = None
+        picked_trajectory_coords = None
+        if picker.actor in self.lineage_node_collection.actor.actors + self.lineage_edge_collection.actor.actors:
+            # TODO: Figure what the difference is between node_collection and edge_collection being clicked on.
+            # Retrieve to which point corresponds the picked point. 
+            # Here, we grab the points describing the individual glyph, to figure
+            # out how many points are in an individual glyph.                
+            n_glyph = self.lineage_node_collection.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]
+            # Find which data point corresponds to the point picked:
+            # we have to account for the fact that each data point is
+            # represented by a glyph with several points      
+            point_id = picker.point_id/n_glyph
+            picked_lineage_coords = self.lineage_node_collection.mlab_source.points[point_id,:]
+            picked_trajectory_coords = self.trajectory_node_collection.mlab_source.points[point_id,:]
+            picked_graph_node = sorted(self.directed_graph)[point_id]
+        self.on_pick(picked_graph_node, picked_lineage_coords, picked_trajectory_coords)
+    
+    def on_pick_trajectory(self,picker):
+        """ trajectory picker callback: this gets called upon pick events.
+        """
+        picked_graph_node = None
+        picked_lineage_coords = None
+        picked_trajectory_coords = None
+        if picker.actor in self.trajectory_node_collection.actor.actors:
+            n_glyph = self.trajectory_node_collection.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]  
+            point_id = picker.point_id/n_glyph            
+            picked_trajectory_coords = self.trajectory_node_collection.mlab_source.points[point_id,:]
+            picked_lineage_coords = self.lineage_node_collection.mlab_source.points[point_id,:]
+            picked_graph_node = sorted(self.directed_graph)[point_id]        
+        else:
+            picked_graph_node = None
+        self.on_pick(picked_graph_node, picked_lineage_coords, picked_trajectory_coords)
+            
+    def on_pick(self,picked_graph_node, picked_lineage_coords, picked_trajectory_coords):
+        if picked_graph_node != None:
+            # If the picked node is not one of the selected trajectories, then don't select it 
+            if picked_graph_node == self.parent.selected_node:
+                self.parent.selected_node = None
+                self.parent.selected_trajectory = None      
+                self.lineage_selection_outline.actor.actor.visibility = 0
+                self.trajectory_selection_outline.actor.actor.visibility = 0
+            else:
+                self.parent.selected_node = picked_graph_node
+                self.parent.selected_trajectory = [key for key in self.connected_nodes.keys() if self.parent.selected_node in self.connected_nodes[key]]
+                
+                # Move the outline to the data point
+                dx = np.diff(self.lineage_selection_outline.bounds[:2])[0]/2
+                dy = np.diff(self.lineage_selection_outline.bounds[2:4])[0]/2           
+                self.lineage_selection_outline.bounds = (picked_lineage_coords[0]-dx, picked_lineage_coords[0]+dx,
+                                                         picked_lineage_coords[1]-dy, picked_lineage_coords[1]+dy,
+                                                         0, 0)
+                self.lineage_selection_outline.actor.actor.visibility = 1
+                
+                dx = np.diff(self.trajectory_selection_outline.bounds[:2])[0]/2
+                dy = np.diff(self.trajectory_selection_outline.bounds[2:4])[0]/2
+                dt = np.diff(self.trajectory_selection_outline.bounds[4:6])[0]/2
+                self.trajectory_selection_outline.bounds = (picked_trajectory_coords[0]-dx, picked_trajectory_coords[0]+dx,
+                                                            picked_trajectory_coords[1]-dy, picked_trajectory_coords[1]+dy,
+                                                            picked_trajectory_coords[2]-dt, picked_trajectory_coords[2]+dt)
+                self.trajectory_selection_outline.actor.actor.visibility = 1        
 
+    def draw_lineage(self, do_plots_need_updating, directed_graph=None, connected_nodes=None, selected_colormap=None, lineage_node_positions=None, start_nodes=None):
+        # Rendering temporarily disabled
+        self.lineage_scene.disable_render = True 
+
+        # Helpful pages on using NetworkX and Mayavi:
+        #  http://docs.enthought.com/mayavi/mayavi/auto/example_delaunay_graph.html
+        #  https://groups.google.com/forum/?fromgroups=#!topic/networkx-discuss/wdhYIPeuilo
+        #  http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00727.html        
+
+        # Draw the lineage tree if the dataset has been updated
+        if do_plots_need_updating["dataset"]:
+            self.connected_nodes = connected_nodes
+            self.directed_graph = directed_graph
+            self.lineage_node_positions = lineage_node_positions
+            self.start_nodes = start_nodes
+            
+            # Clear the scene
+            logging.info("Drawing lineage graph...")
+            self.lineage_scene.mlab.clf(figure = self.lineage_scene.mayavi_scene)
+             
+            #mlab.title("Lineage tree",size=2.0,figure=self.lineage_scene.mayavi_scene)   
+            
+            t1 = time.clock()
+            
+            G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
+            xys = np.array([lineage_node_positions[node]+[directed_graph.node[node]["s"]] for node in sorted(directed_graph.nodes()) ])
+            #xys = np.array([lineage_node_positions[node]+[directed_graph.node[node]["s"]] for node in sorted(directed_graph.nodes()) if directed_graph.node[node]["f"]==0])
+            #if len(xys) == 0:
+                #xys = np.array(3*[np.NaN],ndmin=2)
+            dt = np.median(np.diff(np.unique(nx.get_node_attributes(directed_graph,"t").values())))
+            # The scale factor defaults to the typical interpoint distance, which may not be appropriate. 
+            # So I set it explicitly here to a fraction of delta_t
+            # To inspect the value, see pts.glyph.glpyh.scale_factor
+            node_scale_factor = 0.5*dt
+            pts = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
+                                scale_factor = node_scale_factor, 
+                                scale_mode = 'none',
+                                colormap = selected_colormap,
+                                resolution = 8,
+                                figure = self.lineage_scene.mayavi_scene) 
+            pts.glyph.color_mode = 'color_by_scalar'
+            pts.mlab_source.dataset.lines = np.array(G.edges())
+
+            self.lineage_node_collection = pts
+            
+            tube_radius = node_scale_factor/10.0
+            tube = mlab.pipeline.tube(pts, 
+                                      tube_radius = tube_radius, # Default tube_radius results in v. thin lines: tube.filter.radius = 0.05
+                                      figure = self.lineage_scene.mayavi_scene)
+            self.lineage_edge_collection = mlab.pipeline.surface(tube, 
+                                                                 color=(0.8, 0.8, 0.8),
+                                                                 figure = self.lineage_scene.mayavi_scene)
+            
+            # Add outline to be used later when selecting points
+            self.lineage_selection_outline = mlab.outline(line_width=3,
+                                                          figure = self.lineage_scene.mayavi_scene)
+            self.lineage_selection_outline.outline_mode = 'cornered'
+            self.lineage_selection_outline.actor.actor.visibility = 0
+            self.lineage_selection_outline.bounds = (-node_scale_factor,node_scale_factor,
+                                                     -node_scale_factor,node_scale_factor,
+                                                     -node_scale_factor,node_scale_factor)            
+            # Add 2 more outlines to be used later when selecting points
+            self.lineage_point_selection_outline = []
+            for i in range(2):
+                ol = mlab.points3d(0,0,0,
+                                   extent = list(2*np.array([-node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor])),
+                                   color = (1,0,1),
+                                   mode = 'sphere',
+                                   scale_factor = 2*node_scale_factor, 
+                                   scale_mode = 'none',                                   
+                                   figure = self.trajectory_scene.mayavi_scene)
+                ol.actor.actor.visibility = 0    
+                self.lineage_point_selection_outline.append(ol)            
+
+            self.lineage_node_scale_factor = node_scale_factor
+            
+            # Add axes outlines
+            extent = np.array(lineage_node_positions.values())
+            self.lineage_extent = (0,np.max(extent[:,0]),0,np.max(extent[:,1]),0,0)
+            mlab.pipeline.outline(self.lineage_node_collection,
+                                  extent = self.lineage_extent,
+                                  opacity = self.axes_opacity,
+                                  figure = self.lineage_scene.mayavi_scene) 
+                      
+
+            t2 = time.clock()
+            logging.info("Computed layout (%.2f sec)"%(t2-t1))   
+        else:
+            logging.info("Re-drawing lineage tree...")
+            
+            if do_plots_need_updating["trajectories"]:
+                self.lineage_node_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
+                self.lineage_node_collection.mlab_source.update()
+                #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
+                #self.lineage_edge_collection.mlab_source.update()
+                
+                for key in connected_nodes.keys():
+                    self.lineage_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]
+
+            if do_plots_need_updating["measurement"]:
+                self.lineage_node_collection.mlab_source.set(scalars = self.scalar_data)
+            
+            if do_plots_need_updating["colormap"]:
+                # http://docs.enthought.com/mayavi/mayavi/auto/example_custom_colormap.html
+                self.lineage_node_collection.module_manager.scalar_lut_manager.lut_mode = selected_colormap
+                
+        # Re-enable the rendering
+        self.lineage_scene.disable_render = False        
+
+    def draw_trajectories(self, do_plots_need_updating, directed_graph = None, connected_nodes = None, selected_colormap=None):
+        # Rendering temporarily disabled
+        self.trajectory_scene.disable_render = True  
+        
+        # Draw the lineage tree if either (1) all the controls indicate that updating is needed (e.g., initial condition) or
+        # (2) if the dataset has been updated        
+        if do_plots_need_updating["dataset"]:
+            self.directed_graph = directed_graph
+            self.connected_nodes = connected_nodes
+            
+            logging.info("Drawing trajectories...")
+            # Clear the scene
+            self.trajectory_scene.mlab.clf(figure = self.trajectory_scene.mayavi_scene)
+    
+            #mlab.title("Trajectory plot",size=2.0,figure=self.trajectory_scene.mayavi_scene)   
+    
+            t1 = time.clock()
+            
+            G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
+    
+            xyts = np.array([(directed_graph.node[key]["x"],
+                              directed_graph.node[key]["y"],
+                              directed_graph.node[key]["t"],
+                              directed_graph.node[key]["s"]) for key in sorted(directed_graph)])
+            
+            # Compute reasonable scaling factor according to the data limits.
+            # We want the plot to be roughly square, to avoid nasty Mayavi axis scaling issues later.
+            # Unfortunately, adjusting the surface.actor.actor.scale seems to lead to more problems than solutions.
+            # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
+            t_scaling = np.mean( [(max(xyts[:,0])-min(xyts[:,0])), (max(xyts[:,1])-min(xyts[:,1]))] ) / (max(xyts[:,2])-min(xyts[:,2]))
+            xyts[:,2] *= t_scaling
+            self.trajectory_temporal_scaling = t_scaling
+    
+            # Taken from http://docs.enthought.com/mayavi/mayavi/auto/example_plotting_many_lines.html
+            # Create the lines
+            self.trajectory_line_source = mlab.pipeline.scalar_scatter(xyts[:,0], xyts[:,1], xyts[:,2], xyts[:,3], \
+                                                                       figure = self.trajectory_scene.mayavi_scene)
+            # Connect them using the graph edge matrix
+            self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())     
+            
+            # Finally, display the set of lines by using the surface module. Using a wireframe
+            # representation allows to control the line-width.
+            self.trajectory_line_collection = mlab.pipeline.surface(mlab.pipeline.stripper(self.trajectory_line_source), # The stripper filter cleans up connected lines; it regularizes surfaces by creating triangle strips
+                                                                    line_width=1, 
+                                                                    colormap=selected_colormap,
+                                                                    figure = self.trajectory_scene.mayavi_scene)         
+    
+            # Generate the corresponding set of nodes
+            dt = np.median(np.diff(np.unique(nx.get_node_attributes(directed_graph,"t").values())))
+            self.lineage_temporal_scaling = dt
+            
+            # Try to scale the nodes in a reasonable way
+            # To inspect, see pts.glyph.glpyh.scale_factor 
+            node_scale_factor = 0.5*dt
+            pts = mlab.points3d(xyts[:,0], xyts[:,1], xyts[:,2], xyts[:,3],
+                                scale_factor = 0.0,
+                                scale_mode = 'none',
+                                colormap = selected_colormap,
+                                figure = self.trajectory_scene.mayavi_scene) 
+            pts.glyph.color_mode = 'color_by_scalar'
+            pts.mlab_source.dataset.lines = np.array(G.edges())
+            self.trajectory_node_collection = pts    
+    
+            # Add outline to be used later when selecting points
+            self.trajectory_selection_outline = mlab.outline(line_width = 3,
+                                                             figure = self.trajectory_scene.mayavi_scene)
+            self.trajectory_selection_outline.outline_mode = 'cornered'
+            self.trajectory_selection_outline.bounds = (-node_scale_factor,node_scale_factor,
+                                                        -node_scale_factor,node_scale_factor,
+                                                        -node_scale_factor,node_scale_factor)
+            self.trajectory_selection_outline.actor.actor.visibility = 0
+            
+            # Add 2 more points to be used later when selecting points
+            self.trajectory_point_selection_outline = []
+            for i in range(2):
+                ol = mlab.points3d(0,0,0,
+                                   extent = [-node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor,
+                                             -node_scale_factor,node_scale_factor],
+                                   color = (1,0,1),
+                                   figure = self.trajectory_scene.mayavi_scene)
+                ol.actor.actor.visibility = 0    
+                self.trajectory_point_selection_outline.append(ol)
+            
+            self.trajectory_node_scale_factor = node_scale_factor
+            
+            # Using axes doesn't work until the scene is avilable: 
+            # http://docs.enthought.com/mayavi/mayavi/building_applications.html#making-the-visualization-live
+            mlab.pipeline.outline(self.trajectory_line_source,
+                                  opacity = self.axes_opacity,
+                                  figure = self.trajectory_scene.mayavi_scene) 
+            
+            # Figure decorations
+            # Orientation axes
+            #mlab.orientation_axes(zlabel = "T", 
+                                  #line_width = 5,
+                                  #figure = self.mayavi_view.trajectory_scene.mayavi_scene )
+            # Colormap
+            # TODO: Figure out how to scale colorbar to smaller size
+            #c = mlab.colorbar(orientation = "horizontal", 
+                              #title = self.selected_measurement,
+                              #figure = self.mayavi_view.trajectory_scene.mayavi_scene)
+            #c.scalar_bar_representation.position2[1] = 0.05
+            #c.scalar_bar.height = 0.05
+            
+            t2 = time.clock()
+            logging.info("Computed trajectory layout (%.2f sec)"%(t2-t1))              
+        else:
+            logging.info("Re-drawing trajectories...")
+            
+            if do_plots_need_updating["trajectories"]:
+                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(directed_graph.edges())
+                self.trajectory_line_collection.mlab_source.update()
+                self.trajectory_line_source.mlab_source.update()                
+                
+                for key in connected_nodes.keys():
+                    self.trajectory_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]  
+
+            if do_plots_need_updating["measurement"]:
+                self.trajectory_line_collection.mlab_source.set(scalars = self.scalar_data)
+                self.trajectory_node_collection.mlab_source.set(scalars = self.scalar_data)
+            
+            if do_plots_need_updating["colormap"]:
+                self.trajectory_line_collection.module_manager.scalar_lut_manager.lut_mode = selected_colormap
+                self.trajectory_node_collection.module_manager.scalar_lut_manager.lut_mode = selected_colormap
+                
+        # Re-enable the rendering
+        self.trajectory_scene.disable_render = False  
+            
 ################################################################################
 class FigureFrame(wx.Frame, CPATool):
     """A wx.Frame with a figure inside"""
@@ -418,17 +792,19 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.trajectory_selected = False
         self.selected_node = None
         self.selected_endpoints = [None,None]
-        self.axes_opacity = 0.25
         self.do_plots_need_updating = {"dataset":True,
                                        "colormap":True,
                                        "measurement":True, 
                                        "trajectories":True,
                                        "filter":None}
         
-        self.mayavi_view = MayaviView()
+        self.mayavi_view = MayaviView(self)
+        self.update_plot()        
         self.figure_panel = self.mayavi_view.edit_traits(
                                             parent=self,
                                             kind='subpanel').control
+        self.mayavi_view.dataset = int(self.selected_dataset)
+        
         navigation_help_text = ("Tips on navigating the plots:\n"
                                 "Rotating the 3-D visualization: Place the mouse pointer over the visualization"
                                 "window. Then left-click and drag the mouse pointer in the direction you want to rotate"
@@ -445,8 +821,6 @@ class TimeLapseTool(wx.Frame, CPATool):
                                 "Please note that while the lineage panel can be rotated, zoomed and panned, it is a 2-D"
                                 "plot so the top-down view is fixed.")
         self.figure_panel.SetHelpText(navigation_help_text)
-        
-        self.update_plot()
             
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.figure_panel, 1, wx.EXPAND)
@@ -554,15 +928,15 @@ class TimeLapseTool(wx.Frame, CPATool):
     def select_point_for_montage(self, num):
         idx = num-1
         self.selected_endpoints[idx] = self.selected_node
-        self.trajectory_point_selection_outline[idx].mlab_source.dataset.points[0] = (np.mean(self.trajectory_selection_outline.bounds[:2]),
-                                                                                         np.mean(self.trajectory_selection_outline.bounds[2:4]),
-                                                                                         np.mean(self.trajectory_selection_outline.bounds[4:]))
-        self.trajectory_point_selection_outline[idx].actor.actor.visibility = 1
+        self.mayavi_view.trajectory_point_selection_outline[idx].mlab_source.dataset.points[0] = (np.mean(self.mayavi_view.trajectory_selection_outline.bounds[:2]),
+                                                                                         np.mean(self.mayavi_view.trajectory_selection_outline.bounds[2:4]),
+                                                                                         np.mean(self.mayavi_view.trajectory_selection_outline.bounds[4:]))
+        self.mayavi_view.trajectory_point_selection_outline[idx].actor.actor.visibility = 1
         
-        self.lineage_point_selection_outline[idx].mlab_source.dataset.points[0] = (np.mean(self.lineage_selection_outline.bounds[:2]),
-                                                                                      np.mean(self.lineage_selection_outline.bounds[2:4]),
+        self.mayavi_view.lineage_point_selection_outline[idx].mlab_source.dataset.points[0] = (np.mean(self.mayavi_view.lineage_selection_outline.bounds[:2]),
+                                                                                      np.mean(self.mayavi_view.lineage_selection_outline.bounds[2:4]),
                                                                                       0)
-        self.lineage_point_selection_outline[idx].actor.actor.visibility = 1  
+        self.mayavi_view.lineage_point_selection_outline[idx].actor.actor.visibility = 1  
     
     def show_cell_montage(self, event = None):
         # Pick out the trajectory containing the selected endpoints
@@ -703,8 +1077,9 @@ class TimeLapseTool(wx.Frame, CPATool):
     def update_plot(self, event=None):
         self.do_plots_need_updating["filter"] = self.control_panel.enable_filtering_checkbox.IsChecked()   
         self.generate_graph()
-        self.draw_trajectories()
-        self.draw_lineage()
+        self.mayavi_view.draw_trajectories(self.do_plots_need_updating, self.directed_graph, self.connected_nodes, self.selected_colormap)
+        self.mayavi_view.draw_lineage(self.do_plots_need_updating, self.directed_graph, self.connected_nodes, self.selected_colormap, self.lineage_node_positions, self.start_nodes )
+        
         self.control_panel.trajectory_selection_button.Enable()
         
         self.do_plots_need_updating["dataset"] = False
@@ -1032,343 +1407,6 @@ class TimeLapseTool(wx.Frame, CPATool):
         # Return the minimum of the two models for each object/timepoint
         return(np.min(np.vstack((dist_error_novel,dist_error_vel)),axis=0))
         
-    def on_pick_one_timepoint(self,picker):
-        """ Picker callback: this gets called upon pick events.
-        """
-        # Retrieving the data from Mayavi pipelines: http://docs.enthought.com/mayavi/mayavi/data.html#retrieving-the-data-from-mayavi-pipelines
-        # More helpful example: http://docs.enthought.com/mayavi/mayavi/auto/example_select_red_balls.html
-        if picker.actor in self.lineage_node_collection.actor.actors + self.lineage_edge_collection.actor.actors:
-            # TODO: Figure what the difference is between node_collection and edge_collection being clicked on.
-            # Retrieve to which point corresponds the picked point. 
-            # Here, we grab the points describing the individual glyph, to figure
-            # out how many points are in an individual glyph.                
-            n_glyph = self.lineage_node_collection.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]
-            # Find which data point corresponds to the point picked:
-            # we have to account for the fact that each data point is
-            # represented by a glyph with several points      
-            point_id = picker.point_id/n_glyph
-            x_lineage,y_lineage,_ = self.lineage_node_collection.mlab_source.points[point_id,:]
-            x_traj,y_traj,t_traj = self.trajectory_node_collection.mlab_source.points[point_id,:]
-            picked_node = sorted(self.directed_graph)[point_id]
-                
-        elif picker.actor in self.trajectory_node_collection.actor.actors:
-            n_glyph = self.trajectory_node_collection.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]  
-            point_id = picker.point_id/n_glyph            
-            x_traj,y_traj,t_traj = self.trajectory_node_collection.mlab_source.points[point_id,:]
-            x_lineage,y_lineage,_ = self.lineage_node_collection.mlab_source.points[point_id,:]
-            picked_node = sorted(self.directed_graph)[point_id]
-        else:
-            picked_node = None
-
-        if picked_node != None:
-            # If the picked node is not one of the selected trajectories, then don't select it 
-            if picked_node == self.selected_node:
-                self.selected_node = None
-                self.selected_trajectory = None      
-                self.lineage_selection_outline.actor.actor.visibility = 0
-                self.trajectory_selection_outline.actor.actor.visibility = 0
-            else:
-                self.selected_node = picked_node
-                self.selected_trajectory = [key for key in self.connected_nodes.keys() if self.selected_node in self.connected_nodes[key]]
-                
-                # Move the outline to the data point
-                dx = np.diff(self.lineage_selection_outline.bounds[:2])[0]/2
-                dy = np.diff(self.lineage_selection_outline.bounds[2:4])[0]/2           
-                self.lineage_selection_outline.bounds = (x_lineage-dx, x_lineage+dx,
-                                                         y_lineage-dy, y_lineage+dy,
-                                                         0, 0)
-                self.lineage_selection_outline.actor.actor.visibility = 1
-                
-                dx = np.diff(self.trajectory_selection_outline.bounds[:2])[0]/2
-                dy = np.diff(self.trajectory_selection_outline.bounds[2:4])[0]/2
-                dt = np.diff(self.trajectory_selection_outline.bounds[4:6])[0]/2
-                self.trajectory_selection_outline.bounds = (x_traj-dx, x_traj+dx,
-                                                            y_traj-dy, y_traj+dy,
-                                                            t_traj-dt, t_traj+dt)
-                self.trajectory_selection_outline.actor.actor.visibility = 1
-                  
-    def draw_lineage(self):
-        # Rendering temporarily disabled
-        self.mayavi_view.lineage_scene.disable_render = True 
-
-        # (Possibly) Helpful pages on using NetworkX and Mayavi:
-        # http://docs.enthought.com/mayavi/mayavi/auto/example_delaunay_graph.html
-        # https://groups.google.com/forum/?fromgroups=#!topic/networkx-discuss/wdhYIPeuilo
-        # http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00727.html        
-
-        # Draw the lineage tree if the dataset has been updated
-        if self.do_plots_need_updating["dataset"]:
-            # Clear the scene
-            logging.info("Drawing lineage graph...")
-            self.mayavi_view.lineage_scene.mlab.clf(figure = self.mayavi_view.lineage_scene.mayavi_scene)
-             
-            #mlab.title("Lineage tree",size=2.0,figure=self.mayavi_view.lineage_scene.mayavi_scene)   
-            
-            t1 = time.clock()
-            
-            G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
-            xys = np.array([self.lineage_node_positions[node]+[self.directed_graph.node[node]["s"]] for node in sorted(self.directed_graph.nodes()) ])
-            #xys = np.array([self.lineage_node_positions[node]+[self.directed_graph.node[node]["s"]] for node in sorted(self.directed_graph.nodes()) if self.directed_graph.node[node]["f"]==0])
-            #if len(xys) == 0:
-                #xys = np.array(3*[np.NaN],ndmin=2)
-            dt = np.median(np.diff(np.unique(nx.get_node_attributes(self.directed_graph,"t").values())))
-            # The scale factor defaults to the typical interpoint distance, which may not be appropriate. 
-            # So I set it explicitly here to a fraction of delta_t
-            # To inspect the value, see pts.glyph.glpyh.scale_factor
-            node_scale_factor = 0.5*dt
-            pts = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
-                                scale_factor = node_scale_factor, 
-                                scale_mode = 'none',
-                                colormap = self.selected_colormap,
-                                resolution = 8,
-                                figure = self.mayavi_view.lineage_scene.mayavi_scene) 
-            pts.glyph.color_mode = 'color_by_scalar'
-            pts.mlab_source.dataset.lines = np.array(G.edges())
-
-            self.lineage_node_collection = pts
-            
-            tube_radius = node_scale_factor/10.0
-            tube = mlab.pipeline.tube(pts, 
-                                      tube_radius = tube_radius, # Default tube_radius results in v. thin lines: tube.filter.radius = 0.05
-                                      figure = self.mayavi_view.lineage_scene.mayavi_scene)
-            self.lineage_edge_collection = mlab.pipeline.surface(tube, 
-                                                                 color=(0.8, 0.8, 0.8),
-                                                                 figure = self.mayavi_view.lineage_scene.mayavi_scene)
-            
-            # Add object label text to the left
-            text_scale_factor = node_scale_factor/1.0 
-            self.lineage_label_collection = dict(zip(self.connected_nodes.keys(),
-                                                     [mlab.text3d(self.lineage_node_positions[self.start_nodes[key]][0]-0.75*dt,
-                                                                  self.lineage_node_positions[self.start_nodes[key]][1],
-                                                                  0,
-                                                                  str(key),
-                                                                  scale = text_scale_factor,
-                                                                  figure = self.mayavi_view.lineage_scene.mayavi_scene)
-                                                      for key in self.connected_nodes.keys()]))
-
-            # Add outline to be used later when selecting points
-            self.lineage_selection_outline = mlab.outline(line_width=3,
-                                                          figure = self.mayavi_view.lineage_scene.mayavi_scene)
-            self.lineage_selection_outline.outline_mode = 'cornered'
-            self.lineage_selection_outline.actor.actor.visibility = 0
-            self.lineage_selection_outline.bounds = (-node_scale_factor,node_scale_factor,
-                                                     -node_scale_factor,node_scale_factor,
-                                                     -node_scale_factor,node_scale_factor)            
-            # Add 2 more outlines to be used later when selecting points
-            self.lineage_point_selection_outline = []
-            for i in range(2):
-                ol = mlab.points3d(0,0,0,
-                                   extent = list(2*np.array([-node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor])),
-                                   color = (1,0,1),
-                                   mode = 'sphere',
-                                   scale_factor = 2*node_scale_factor, 
-                                   scale_mode = 'none',                                   
-                                   figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-                ol.actor.actor.visibility = 0    
-                self.lineage_point_selection_outline.append(ol)            
-
-            # Add axes outlines
-            extent = np.array(self.lineage_node_positions.values())
-            extent = (0,np.max(extent[:,0]),0,np.max(extent[:,1]),0,0)
-            mlab.pipeline.outline(self.lineage_node_collection,
-                                  extent = extent,
-                                  opacity = self.axes_opacity,
-                                  figure = self.mayavi_view.lineage_scene.mayavi_scene) 
-            mlab.axes(self.lineage_node_collection, 
-                      xlabel='T', ylabel='',
-                      extent = extent,
-                      opacity = self.axes_opacity,
-                      x_axis_visibility=True, y_axis_visibility=False, z_axis_visibility=False)             
-            self.mayavi_view.lineage_scene.reset_zoom()
-            
-            # Constrain view to 2D
-            self.mayavi_view.lineage_scene.interactor.interactor_style = tvtk.InteractorStyleImage()
-
-            # Make the graph clickable
-            #super(MayaviView, self).update_plot()
-            self.mayavi_view.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint,
-                                                                      type='point',
-                                                                      button='Left',
-                                                                      remove=False)          
-            t2 = time.clock()
-            logging.info("Computed layout (%.2f sec)"%(t2-t1))   
-        else:
-            logging.info("Re-drawing lineage tree...")
-            
-            if self.do_plots_need_updating["trajectories"]:
-                self.lineage_node_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
-                self.lineage_node_collection.mlab_source.update()
-                #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
-                #self.lineage_edge_collection.mlab_source.update()
-                
-                for key in self.connected_nodes.keys():
-                    self.lineage_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]
-
-            if self.do_plots_need_updating["measurement"]:
-                self.lineage_node_collection.mlab_source.set(scalars = self.scalar_data)
-            
-            if self.do_plots_need_updating["colormap"]:
-                # http://docs.enthought.com/mayavi/mayavi/auto/example_custom_colormap.html
-                self.lineage_node_collection.module_manager.scalar_lut_manager.lut_mode = self.selected_colormap
-                
-        # Re-enable the rendering
-        self.mayavi_view.lineage_scene.disable_render = False
-
-    def draw_trajectories(self):
-        # Rendering temporarily disabled
-        self.mayavi_view.trajectory_scene.disable_render = True  
-        
-        # Draw the lineage tree if either (1) all the controls indicate that updating is needed (e.g., initial condition) or
-        # (2) if the dataset has been updated        
-        if self.do_plots_need_updating["dataset"]:
-
-            logging.info("Drawing trajectories...")
-            # Clear the scene
-            self.mayavi_view.trajectory_scene.mlab.clf(figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-    
-            #mlab.title("Trajectory plot",size=2.0,figure=self.mayavi_view.trajectory_scene.mayavi_scene)   
-    
-            t1 = time.clock()
-            
-            G = nx.convert_node_labels_to_integers(self.directed_graph,ordering="sorted")
-    
-            xyts = np.array([(self.directed_graph.node[key]["x"],
-                              self.directed_graph.node[key]["y"],
-                              self.directed_graph.node[key]["t"],
-                              self.directed_graph.node[key]["s"]) for key in sorted(self.directed_graph)])
-            
-            # Compute reasonable scaling factor according to the data limits.
-            # We want the plot to be roughly square, to avoid nasty Mayavi axis scaling issues later.
-            # Unfortunately, adjusting the surface.actor.actor.scale seems to lead to more problems than solutions.
-            # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
-            t_scaling = np.mean( [(max(xyts[:,0])-min(xyts[:,0])), (max(xyts[:,1])-min(xyts[:,1]))] ) / (max(xyts[:,2])-min(xyts[:,2]))
-            xyts[:,2] *= t_scaling
-    
-            # Taken from http://docs.enthought.com/mayavi/mayavi/auto/example_plotting_many_lines.html
-            # Create the lines
-            self.trajectory_line_source = mlab.pipeline.scalar_scatter(xyts[:,0], xyts[:,1], xyts[:,2], xyts[:,3], \
-                                                                       figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-            # Connect them using the graph edge matrix
-            self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())     
-            
-            # Finally, display the set of lines by using the surface module. Using a wireframe
-            # representation allows to control the line-width.
-            self.trajectory_line_collection = mlab.pipeline.surface(mlab.pipeline.stripper(self.trajectory_line_source), # The stripper filter cleans up connected lines; it regularizes surfaces by creating triangle strips
-                                                                    line_width=1, 
-                                                                    colormap=self.selected_colormap,
-                                                                    figure = self.mayavi_view.trajectory_scene.mayavi_scene)         
-    
-            # Generate the corresponding set of nodes
-            dt = np.median(np.diff(np.unique(nx.get_node_attributes(self.directed_graph,"t").values())))
-            # Try to scale the nodes in a reasonable way
-            # To inspect, see pts.glyph.glpyh.scale_factor 
-            node_scale_factor = 0.5*dt
-            pts = mlab.points3d(xyts[:,0], xyts[:,1], xyts[:,2], xyts[:,3],
-                                scale_factor = 0.0,
-                                scale_mode = 'none',
-                                colormap = self.selected_colormap,
-                                figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
-            pts.glyph.color_mode = 'color_by_scalar'
-            pts.mlab_source.dataset.lines = np.array(G.edges())
-            self.trajectory_node_collection = pts    
-    
-            # Add object label text at end of trajectory
-            text_scale_factor = node_scale_factor*5 
-            self.trajectory_label_collection = dict(zip(self.connected_nodes.keys(),
-                                                        [mlab.text3d(self.directed_graph.node[sorted(subgraph)[-1]]["x"],
-                                                                     self.directed_graph.node[sorted(subgraph)[-1]]["y"],
-                                                                     self.directed_graph.node[sorted(subgraph)[-1]]["t"]*t_scaling,
-                                                                     str(key),
-                                                                     scale = text_scale_factor,
-                                                                     name = str(key),
-                                                                     figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
-                                                         for (key,subgraph) in self.connected_nodes.items()]))
-            
-            # Add outline to be used later when selecting points
-            self.trajectory_selection_outline = mlab.outline(line_width = 3,
-                                                             figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-            self.trajectory_selection_outline.outline_mode = 'cornered'
-            self.trajectory_selection_outline.bounds = (-node_scale_factor,node_scale_factor,
-                                                        -node_scale_factor,node_scale_factor,
-                                                        -node_scale_factor,node_scale_factor)
-            self.trajectory_selection_outline.actor.actor.visibility = 0
-            
-            # Add 2 more points to be used later when selecting points
-            self.trajectory_point_selection_outline = []
-            for i in range(2):
-                ol = mlab.points3d(0,0,0,
-                                   extent = [-node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor],
-                                   color = (1,0,1),
-                                   figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-                ol.actor.actor.visibility = 0    
-                self.trajectory_point_selection_outline.append(ol)
-            
-            # Using axes doesn't work until the scene is avilable: 
-            # http://docs.enthought.com/mayavi/mayavi/building_applications.html#making-the-visualization-live
-            mlab.pipeline.outline(self.trajectory_line_source,
-                                  opacity = self.axes_opacity,
-                                  figure = self.mayavi_view.trajectory_scene.mayavi_scene) 
-            mlab.axes(self.trajectory_line_source, 
-                      xlabel='X', ylabel='Y',zlabel='T',
-                      opacity = self.axes_opacity,
-                      x_axis_visibility=True, y_axis_visibility=True, z_axis_visibility=True)
-            
-            # Set axes to MATLAB's default 3d view
-            mlab.view(azimuth = 322.5,elevation = 30.0,
-                      figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-            self.mayavi_view.trajectory_scene.reset_zoom()
-            
-            # An trajectory picker object is created to trigger an event when a trajectory is picked. 
-            # Can press 'p' to get UI on curretn pick
-            # TODO: Figure out how to re-activate picker on scene refresh
-            #  E.g., (not identical problem) http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00583.html
-            picker = self.mayavi_view.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_one_timepoint,
-                                                                                  type='point',
-                                                                                  button='Left',
-                                                                                  remove=False)
-            picker.tolerance = 0.01
-            
-            # Figure decorations
-            # Orientation axes
-            #mlab.orientation_axes(zlabel = "T", 
-                                  #line_width = 5,
-                                  #figure = self.mayavi_view.trajectory_scene.mayavi_scene )
-            # Colormap
-            # TODO: Figure out how to scale colorbar to smaller size
-            #c = mlab.colorbar(orientation = "horizontal", 
-                              #title = self.selected_measurement,
-                              #figure = self.mayavi_view.trajectory_scene.mayavi_scene)
-            #c.scalar_bar_representation.position2[1] = 0.05
-            #c.scalar_bar.height = 0.05
-            
-            t2 = time.clock()
-            logging.info("Computed trajectory layout (%.2f sec)"%(t2-t1))              
-        else:
-            logging.info("Re-drawing trajectories...")
-            
-            if self.do_plots_need_updating["trajectories"]:
-                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(self.directed_graph.edges())
-                self.trajectory_line_collection.mlab_source.update()
-                self.trajectory_line_source.mlab_source.update()                
-                
-                for key in self.connected_nodes.keys():
-                    self.trajectory_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]  
-
-            if self.do_plots_need_updating["measurement"]:
-                self.trajectory_line_collection.mlab_source.set(scalars = self.scalar_data)
-                self.trajectory_node_collection.mlab_source.set(scalars = self.scalar_data)
-            
-            if self.do_plots_need_updating["colormap"]:
-                self.trajectory_line_collection.module_manager.scalar_lut_manager.lut_mode = self.selected_colormap
-                self.trajectory_node_collection.module_manager.scalar_lut_manager.lut_mode = self.selected_colormap
-                
-        # Re-enable the rendering
-        self.mayavi_view.trajectory_scene.disable_render = False  
-
 ################################################################################
 if __name__ == "__main__":
         
