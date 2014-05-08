@@ -19,50 +19,33 @@ class UniverseViewer(HasTraits):
     scene = Instance(MlabSceneModel, (), {'background' : (0,0,0)})
     
     def __init__(self):
-    
         HasTraits.__init__(self)
-        
-        
     view = View(Item("scene", editor = SceneEditor(), resizable = True, show_label = False), resizable = True)
 
     
 class UniversePanel(wx.Panel):
-    
     def __init__(self, parent):
-    
         wx.Panel.__init__(self, parent=parent)
-
         self.parent = parent
-        
         sizer = wx.BoxSizer(wx.VERTICAL)
-                                
         self.viewer = UniverseViewer()
-        
         self.control = self.viewer.edit_traits(parent=self, kind='subpanel').control
-        
         sizer.Add(self.control, 1, wx.ALL|wx.EXPAND, 0)
-            
         self.SetSizer(sizer)
-                                
         self.menu = wx.Menu()
-        
         item = self.menu.Append(wx.ID_ANY, "Select all")
         self.menu.Bind(wx.EVT_MENU, self.__select_all, item)
-
         self.control.Bind(wx.EVT_CONTEXT_MENU, self.__show_menu)
                                     
                         
     def __show_menu(self, event):
-                                
         pos = event.GetPosition()
         pos = self.control.ScreenToClient(pos)                                                        
         self.PopupMenu(self.menu, pos)
                         
 
     def __select_all(self, event=None):
-
         print "toto"
-                
         
 def start_application():
     
