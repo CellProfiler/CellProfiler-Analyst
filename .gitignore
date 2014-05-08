@@ -12,3 +12,6 @@ dist
 output
 cpa/util/frozen_version.py
 cpa/version.iss
+*.mat
+*.cpproj
+*.txt
