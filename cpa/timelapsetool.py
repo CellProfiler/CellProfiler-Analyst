@@ -833,7 +833,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_COMBOBOX(self.control_panel.dataset_choice, -1, self.on_dataset_selected)
         wx.EVT_COMBOBOX(self.control_panel.measurement_choice, -1, self.on_measurement_selected)
         wx.EVT_BUTTON(self.control_panel.trajectory_selection_button, -1, self.update_trajectory_selection)
-        wx.EVT_TOGGLEBUTTON(self.control_panel.trajectory_diagnosis_toggle, -1, self.calculate_and_display_lap_stats)
+        if self.control_panel.isLAP:
+            wx.EVT_TOGGLEBUTTON(self.control_panel.trajectory_diagnosis_toggle, -1, self.calculate_and_display_lap_stats)
         wx.EVT_COMBOBOX(self.control_panel.colormap_choice, -1, self.on_colormap_selected)
         wx.EVT_BUTTON(self.control_panel.update_plot_color_button, -1, self.update_plot)
         wx.EVT_CHECKBOX(self.control_panel.enable_filtering_checkbox, -1, self.enable_filtering)
@@ -1102,6 +1103,14 @@ class TimeLapseTool(wx.Frame, CPATool):
         column_names,trajectory_info = obtain_tracking_data(self.selected_dataset,
                                                             self.selected_measurement if self.selected_measurement in self.dataset_measurement_choices else None, 
                                                             self.selected_filter)
+        
+        if len(trajectory_info) == 0:
+            logging.info("No object data found")
+            wx.MessageBox('The table %s referenced in the properties file contains no object information.'%props.object_table,
+                          caption = "No data found",
+                            parent = self.control_panel,
+                            style = wx.OK | wx.ICON_ERROR)            
+            return
         
         if self.do_plots_need_updating["dataset"]:           
             logging.info("Retrieved %d %s from dataset %s"%(len(trajectory_info),props.object_name[1],self.selected_dataset))
