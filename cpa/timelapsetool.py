@@ -477,7 +477,7 @@ class MayaviView(HasTraits):
                                                             picked_trajectory_coords[2]-dt, picked_trajectory_coords[2]+dt)
                 self.trajectory_selection_outline.actor.actor.visibility = 1        
 
-    def draw_lineage(self, do_plots_need_updating, directed_graph=None, connected_nodes=None, selected_colormap=None, lineage_node_positions=None, start_nodes=None):
+    def draw_lineage(self, do_plots_need_updating, directed_graph=None, connected_nodes=None, selected_colormap=None, scalar_data = None, lineage_node_positions=None, start_nodes=None):
         # Rendering temporarily disabled
         self.lineage_scene.disable_render = True 
 
@@ -579,7 +579,7 @@ class MayaviView(HasTraits):
                     self.lineage_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]
 
             if do_plots_need_updating["measurement"]:
-                self.lineage_node_collection.mlab_source.set(scalars = self.scalar_data)
+                self.lineage_node_collection.mlab_source.set(scalars = scalar_data)
             
             if do_plots_need_updating["colormap"]:
                 # http://docs.enthought.com/mayavi/mayavi/auto/example_custom_colormap.html
@@ -588,7 +588,7 @@ class MayaviView(HasTraits):
         # Re-enable the rendering
         self.lineage_scene.disable_render = False        
 
-    def draw_trajectories(self, do_plots_need_updating, directed_graph = None, connected_nodes = None, selected_colormap=None):
+    def draw_trajectories(self, do_plots_need_updating, directed_graph = None, connected_nodes = None, selected_colormap=None, scalar_data = None):
         # Rendering temporarily disabled
         self.trajectory_scene.disable_render = True  
         
@@ -707,8 +707,8 @@ class MayaviView(HasTraits):
                     self.trajectory_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]  
 
             if do_plots_need_updating["measurement"]:
-                self.trajectory_line_collection.mlab_source.set(scalars = self.scalar_data)
-                self.trajectory_node_collection.mlab_source.set(scalars = self.scalar_data)
+                self.trajectory_line_collection.mlab_source.set(scalars = scalar_data)
+                self.trajectory_node_collection.mlab_source.set(scalars = scalar_data)
             
             if do_plots_need_updating["colormap"]:
                 self.trajectory_line_collection.module_manager.scalar_lut_manager.lut_mode = selected_colormap
@@ -1078,8 +1078,8 @@ class TimeLapseTool(wx.Frame, CPATool):
     def update_plot(self, event=None):
         self.do_plots_need_updating["filter"] = self.control_panel.enable_filtering_checkbox.IsChecked()   
         self.generate_graph()
-        self.mayavi_view.draw_trajectories(self.do_plots_need_updating, self.directed_graph, self.connected_nodes, self.selected_colormap)
-        self.mayavi_view.draw_lineage(self.do_plots_need_updating, self.directed_graph, self.connected_nodes, self.selected_colormap, self.lineage_node_positions, self.start_nodes )
+        self.mayavi_view.draw_trajectories(self.do_plots_need_updating, self.directed_graph, self.connected_nodes, self.selected_colormap, self.scalar_data)
+        self.mayavi_view.draw_lineage(self.do_plots_need_updating, self.directed_graph, self.connected_nodes, self.selected_colormap, self.scalar_data, self.lineage_node_positions, self.start_nodes )
         
         self.control_panel.trajectory_selection_button.Enable()
         
