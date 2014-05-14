@@ -7,6 +7,7 @@ NumPy-MKL (1.71+): http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
 configobj (required by Enthought): https://pypi.python.org/pypi/configobj
 '''
 import wx
+# Looks like wx.combo becomes wx.adv in wx 2.9+ or Phoenix? http://comments.gmane.org/gmane.comp.python.wxpython.devel/5635
 from wx.combo import OwnerDrawnComboBox as ComboBox
 from wx.lib.scrolledpanel import ScrolledPanel
 import networkx as nx
@@ -338,14 +339,15 @@ class MayaviView(HasTraits):
         self.axes_opacity = 0.25
         self.lineage_figure = self.lineage_scene.mlab.gcf()
         self.trajectory_figure = self.trajectory_scene.mlab.gcf()
-        
-    #@on_trait_change('dataset')
-    #def reassign_pickers(self):
-        #self.lineage_picker = self.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_lineage)
-        #self.lineage_picker.tolerance = 0.01    
-        #self.trajectory_picker = self.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_trajectory)
-        #self.trajectory_picker.tolerance = 0.01
-        
+
+    # Apparently, I cannot use mlab.clf to clear the figure without disconnecting the picker
+    # So remove the children to get the same effect.
+    # See: http://stackoverflow.com/questions/23435986/mayavi-help-in-resetting-mouse-picker-and-connecting-wx-event-to-on-trait-chan
+    # Note that the respondent says I will still need to reattach the picker, but that doesn't seem to be the case here...
+    def clear_figures(self, scene):
+        for child in scene.mayavi_scene.children:
+            child.remove()  
+            
     @on_trait_change('lineage_scene.activated')
     def activate_lineage_scene(self):
         # An trajectory picker object is created to trigger an event when a trajectory is picked. 
@@ -354,9 +356,9 @@ class MayaviView(HasTraits):
         #
         # Helpful pages re: pickers
         # https://gist.github.com/syamajala/8804396
-        # http://sourceforge.net/p/mayavi/mailman/message/27239432/  (not identical problem)        
-        self.lineage_picker = self.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_lineage)
-        self.lineage_picker.tolerance = 0.01
+        # http://sourceforge.net/p/mayavi/mailman/message/27239432/  (not identical problem)    
+        picker = self.lineage_scene.mayavi_scene.on_mouse_pick(self.on_pick_lineage)
+        picker.tolerance = 0.01
         
         # Why is this here? Well, apparently the axes need to be oriented to a camera, which needs the view to be opened first.
         # See http://en.it-usenet.org/thread/15952/8170/
@@ -386,8 +388,8 @@ class MayaviView(HasTraits):
     
     @on_trait_change('trajectory_scene.activated')
     def activate_trajectory_scene(self):
-        self.trajectory_picker = self.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_trajectory)
-        self.trajectory_picker.tolerance = 0.01
+        picker = self.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_trajectory)
+        picker.tolerance = 0.01
                                                                  
         mlab.axes(self.trajectory_line_source, 
                       xlabel='X', ylabel='Y',zlabel='T',
@@ -495,7 +497,8 @@ class MayaviView(HasTraits):
             
             # Clear the scene
             logging.info("Drawing lineage graph...")
-            self.lineage_scene.mlab.clf(figure = self.lineage_scene.mayavi_scene)
+            if self.parent.plot_initialized:
+                self.clear_figures(self.lineage_scene)
              
             #mlab.title("Lineage tree",size=2.0,figure=self.lineage_scene.mayavi_scene)   
             
@@ -600,7 +603,8 @@ class MayaviView(HasTraits):
             
             logging.info("Drawing trajectories...")
             # Clear the scene
-            self.trajectory_scene.mlab.clf(figure = self.trajectory_scene.mayavi_scene)
+            if self.parent.plot_initialized:
+                self.clear_figures(self.trajectory_scene)
     
             #mlab.title("Trajectory plot",size=2.0,figure=self.trajectory_scene.mayavi_scene)   
     
@@ -789,6 +793,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.selected_colormap  = self.control_panel.colormap_choice.GetStringSelection()
         self.selected_filter = None
         self.plot_updated = False
+        self.plot_initialized = False
         self.trajectory_selected = False
         self.selected_node = None
         self.selected_endpoints = [None,None]
@@ -799,7 +804,8 @@ class TimeLapseTool(wx.Frame, CPATool):
                                        "filter":None}
         
         self.mayavi_view = MayaviView(self)
-        self.update_plot()        
+        self.update_plot() 
+        self.plot_initialized = True
         self.figure_panel = self.mayavi_view.edit_traits(
                                             parent=self,
                                             kind='subpanel').control
@@ -1236,6 +1242,11 @@ class TimeLapseTool(wx.Frame, CPATool):
         
         singletons = set(start_nodes).intersection(set(end_nodes))
         self.derived_measurements["Singletons"] = np.array([key in singletons for key in sorted(self.directed_graph) ]).astype(float)
+        
+        # Suggested by http://stackoverflow.com/questions/18381187/functions-for-pruning-a-networkx-graph/23601809?iemail=1&noredirect=1#23601809
+        # TODO: Come up with a heuristic to determine which branch to prune based on this value
+        bc = nx.betweenness_centrality(self.directed_graph, normalized=True)
+        self.derived_measurements["BetweennessCentrality"] = np.array([bc[key] for key in sorted(self.directed_graph)])
         
         t2 = time.clock()
         logging.info("Computed derived measurements (%.2f sec)"%(t2-t1))        
