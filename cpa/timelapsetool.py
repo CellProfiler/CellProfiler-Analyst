@@ -377,8 +377,8 @@ class MayaviView(HasTraits):
         # http://enthought-dev.117412.n3.nabble.com/How-to-clear-AttributeError-NoneType-object-has-no-attribute-active-camera-td2181947.html
         text_scale_factor = self.lineage_node_scale_factor/1.0 
         self.lineage_label_collection = dict(zip(self.connected_nodes.keys(),
-                                                 [mlab.text3d(self.lineage_node_positions[self.start_nodes[key]][0]-0.75*self.lineage_temporal_scaling,
-                                                              self.lineage_node_positions[self.start_nodes[key]][1],
+                                                 [mlab.text3d(self.lineage_node_positions[self.start_nodes[key][0]][0]-0.75*self.lineage_temporal_scaling,
+                                                              self.lineage_node_positions[self.start_nodes[key][0]][1],
                                                               0,
                                                               str(key),
                                                               scale = text_scale_factor,
@@ -435,8 +435,16 @@ class MayaviView(HasTraits):
             picked_graph_node = sorted(self.directed_graph)[point_id]
         self.on_pick(picked_graph_node, picked_lineage_coords, picked_trajectory_coords)
     
+    def on_select_point(self):
+        # Used if a coordinate is picked via somethign other than a mouse pick
+        point_id = sorted(self.directed_graph).index(self.parent.selected_node)
+        picked_trajectory_coords = self.trajectory_node_collection.mlab_source.points[point_id,:]
+        picked_lineage_coords = self.lineage_node_collection.mlab_source.points[point_id,:]
+        #self.parent.selected_node = None # Disable temporailty since it gets set back in on_pick
+        self.on_pick(self.parent.selected_node, picked_lineage_coords, picked_trajectory_coords, True)  
+    
     def on_pick_trajectory(self,picker):
-        """ trajectory picker callback: this gets called upon pick events.
+        """ Trajectory picker callback: this gets called upon pick events.
         """
         picked_graph_node = None
         picked_lineage_coords = None
@@ -450,18 +458,18 @@ class MayaviView(HasTraits):
         else:
             picked_graph_node = None
         self.on_pick(picked_graph_node, picked_lineage_coords, picked_trajectory_coords)
-            
-    def on_pick(self,picked_graph_node, picked_lineage_coords, picked_trajectory_coords):
+                
+    def on_pick(self,picked_graph_node, picked_lineage_coords = None, picked_trajectory_coords = None, no_mouse = False):
         if picked_graph_node != None:
             # If the picked node is not one of the selected trajectories, then don't select it 
-            if picked_graph_node == self.parent.selected_node:
+            if not no_mouse and picked_graph_node == self.parent.selected_node:
                 self.parent.selected_node = None
                 self.parent.selected_trajectory = None      
                 self.lineage_selection_outline.actor.actor.visibility = 0
                 self.trajectory_selection_outline.actor.actor.visibility = 0
             else:
                 self.parent.selected_node = picked_graph_node
-                self.parent.selected_trajectory = [key for key in self.connected_nodes.keys() if self.parent.selected_node in self.connected_nodes[key]]
+                self.parent.selected_trajectory = [key for key,subgraph in self.connected_nodes.items() if self.parent.selected_node in subgraph]
                 
                 # Move the outline to the data point
                 dx = np.diff(self.lineage_selection_outline.bounds[:2])[0]/2
@@ -827,7 +835,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                                 "direction\n\n"
                                 "Please note that while the lineage panel can be rotated, zoomed and panned, it is a 2-D"
                                 "plot so the top-down view is fixed.")
-        self.figure_panel.SetHelpText(navigation_help_text)
+        self.figure_panel.SetHelpText(" ".join(navigation_help_text))
             
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.figure_panel, 1, wx.EXPAND)
@@ -851,6 +859,64 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot()    
 
+    def on_select_cell_by_index(self,event = None):
+        # First, get the image key
+        # Start with the table_id if there is one
+        tblNum = None
+        if props.table_id:
+            dlg = wx.TextEntryDialog(self, props.table_id+':','Enter '+props.table_id)
+            dlg.SetValue('0')
+            if dlg.ShowModal() == wx.ID_OK:
+                try:
+                    tblNum = int(dlg.GetValue())
+                except ValueError:
+                    errdlg = wx.MessageDialog(self, 'Invalid value for %s!'%(props.table_id), "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+                    errdlg.ShowModal()
+                    return
+                dlg.Destroy()
+            else:
+                dlg.Destroy()
+                return
+            
+        # Then get the image_id
+        dlg = wx.TextEntryDialog(self, props.image_id+':','Enter '+props.image_id)
+        dlg.SetValue('')
+        if dlg.ShowModal() == wx.ID_OK:
+            try:
+                imgNum = int(dlg.GetValue())
+            except ValueError:
+                errdlg = wx.MessageDialog(self, 'Invalid value for %s!'%(props.image_id), "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+                errdlg.ShowModal()
+                return
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
+    
+        # Then get the object_id
+        dlg = wx.TextEntryDialog(self, props.object_id+':','Enter '+props.object_id)
+        dlg.SetValue('')
+        if dlg.ShowModal() == wx.ID_OK:
+            try:
+                objNum = int(dlg.GetValue())
+            except ValueError:
+                errdlg = wx.MessageDialog(self, 'Invalid value for %s!'%(props.object_id), "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+                errdlg.ShowModal()
+                return
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return        
+        
+        # Build the imkey
+        if props.table_id:
+            objectkey = (tblNum,imgNum,objNum)
+        else:
+            objectkey = (imgNum,objNum)
+        
+        self.selected_node = objectkey
+        self.mayavi_view.on_select_point()
+    
     def on_show_popup_menu(self, event = None):   
         '''
         Event handler: show the viewer context menu.  
@@ -866,26 +932,60 @@ class TimeLapseTool(wx.Frame, CPATool):
                 super(TrajectoryPopupMenu, self).__init__()
                 
                 self.parent = parent
+                
+                # Context menu entries
+                # - Select cell using (ImageNumber,ObjectNumber)...
+                # - Show selected cell (I,J) as
+                #   - Image tile
+                #   - Full image
+                #   - Data table from selected trajectory                
+                # - Define trajectory segment with cell (I,J) as
+                #   - Endpoint #1
+                #   - Endpoint #2
+                #   - N frames before/after...
+                #   - Entire trajectory
+                # - Display defined trajectory segment as
+                #   - Image montage
+                #   - Plot of current measurement
+                # - Show all trajectories
             
                 # The 'Show data in table' item and its associated binding
+                item = wx.MenuItem(self, wx.NewId(), "Select cell using object ID...")
+                self.AppendItem(item)
+                self.Bind(wx.EVT_MENU, self.parent.on_select_cell_by_index, item)
+                
                 if self.parent.selected_node is not None:
-                    item = wx.MenuItem(self, wx.NewId(), "Show data containing %s %s in table"%(props.object_name[0],str(self.parent.selected_node)))
-                    self.AppendItem(item)
-                    self.Bind(wx.EVT_MENU, self.parent.show_selection_in_table, item)
+                    item = wx.Menu()
+                    ID_SHOW_IMAGE_TILE = wx.NewId()
+                    ID_SHOW_FULL_IMAGE = wx.NewId()
+                    ID_DATA_TABLE = wx.NewId()
+                    item.Append(ID_SHOW_IMAGE_TILE,"Image tile")
+                    item.Append(ID_SHOW_FULL_IMAGE,"Full image")
+                    item.Append(ID_DATA_TABLE,"Data table from selected trajectory")
+                    self.Bind(wx.EVT_MENU, self.parent.show_cell_tile,id=ID_SHOW_IMAGE_TILE)
+                    self.Bind(wx.EVT_MENU, self.parent.show_full_image,id=ID_SHOW_FULL_IMAGE)    
+                    self.Bind(wx.EVT_MENU, self.parent.show_selection_in_table,id=ID_DATA_TABLE)  
+                    self.AppendSubMenu(item,"Show selected %s %s as"%(props.object_name[0],str(self.parent.selected_node)))    
                     
-                    if self.parent.selected_endpoints[0] != None:
-                        item = wx.MenuItem(self, wx.NewId(), "Make point furthest downstream of %s %s as endpoint"%(props.object_name[0],str(self.parent.selected_endpoints[0])))
-                        self.AppendItem(item)
-                        self.Bind(wx.EVT_MENU, self.parent.select_furthest_downstream_point, item)
+                    #if self.parent.selected_endpoints[0] != None:
+                        #item = wx.MenuItem(self, wx.NewId(), "Make point furthest downstream of %s %s as endpoint"%(props.object_name[0],str(self.parent.selected_endpoints[0])))
+                        #self.AppendItem(item)
+                        #self.Bind(wx.EVT_MENU, self.parent.select_furthest_downstream_point, item)
                     
                     item = wx.Menu()
                     ID_SELECT_ENDPOINT1 = wx.NewId()
                     ID_SELECT_ENDPOINT2 = wx.NewId()
-                    item.Append(ID_SELECT_ENDPOINT1,"#1")
-                    item.Append(ID_SELECT_ENDPOINT2,"#2")
-                    self.Bind(wx.EVT_MENU, self.parent.select_point1_for_montage,id=ID_SELECT_ENDPOINT1)
-                    self.Bind(wx.EVT_MENU, self.parent.select_point2_for_montage,id=ID_SELECT_ENDPOINT2)                   
-                    self.AppendSubMenu(item,"Use %s %s as an endpoint"%(props.object_name[0],str(self.parent.selected_node)))
+                    ID_SELECT_N_FRAMES = wx.NewId()
+                    ID_SELECT_TRAJECTORY = wx.NewId()
+                    item.Append(ID_SELECT_ENDPOINT1,"Endpoint #1")
+                    item.Append(ID_SELECT_ENDPOINT2,"Endpoint #2")
+                    item.Append(ID_SELECT_N_FRAMES,"N frames before/after...")
+                    #item.Append(ID_SELECT_TRAJECTORY,"Entire trajectory")                 
+                    self.Bind(wx.EVT_MENU, self.parent.select_endpoint1,id=ID_SELECT_ENDPOINT1)
+                    self.Bind(wx.EVT_MENU, self.parent.select_endpoint2,id=ID_SELECT_ENDPOINT2)
+                    self.Bind(wx.EVT_MENU, self.parent.select_n_frames,id=ID_SELECT_N_FRAMES)
+                    self.Bind(wx.EVT_MENU, self.parent.select_entire_trajectory,id=ID_SELECT_TRAJECTORY)                    
+                    self.AppendSubMenu(item,"Define trajectory segment with %s %s as"%(props.object_name[0],str(self.parent.selected_node)))
                     
                     item = wx.Menu()
                     are_endpoints_selected = all([_ != None for _ in self.parent.selected_endpoints])
@@ -899,15 +999,8 @@ class TimeLapseTool(wx.Frame, CPATool):
                     subItem.Enable(are_endpoints_selected)
                     self.Bind(wx.EVT_MENU, self.parent.show_cell_montage,id=ID_DISPLAY_MONTAGE) 
                     self.Bind(wx.EVT_MENU, self.parent.show_cell_measurement_plot,id=ID_DISPLAY_GRAPH)   
-                    self.AppendSubMenu(item,"Display %s with selected endpoints as..."%(props.object_name[0]))
+                    self.AppendSubMenu(item,"Display defined trajectory segment as")
                     
-                    item = wx.MenuItem(self, wx.NewId(), "Show image tile of %s %s"%(props.object_name[0],str(self.parent.selected_node)))
-                    self.AppendItem(item)
-                    self.Bind(wx.EVT_MENU, self.parent.show_cell_tile, item)    
-                    
-                    item = wx.MenuItem(self, wx.NewId(), "Show full image containing %s %s"%(props.object_name[0],str(self.parent.selected_node)))
-                    self.AppendItem(item)
-                    self.Bind(wx.EVT_MENU, self.parent.show_full_image, item)                        
                 # The 'Show all trajectories' item and its associated binding
                 item = wx.MenuItem(self, wx.NewId(), "Show all trajectories")
                 self.AppendItem(item)
@@ -941,15 +1034,16 @@ class TimeLapseTool(wx.Frame, CPATool):
         grid.set_fitted_col_widths()
         grid.Show()
         
-    def select_point1_for_montage(self,event=None):
-        self.select_point_for_montage(1)
+    def select_endpoint1(self,event=None):
+        self.selected_endpoints[0] = self.selected_node
+        self.highlight_selected_endpoint(1)        
         
-    def select_point2_for_montage(self,event=None):
-        self.select_point_for_montage(2)        
+    def select_endpoint2(self,event=None):
+        self.selected_endpoints[1] = self.selected_node
+        self.highlight_selected_endpoint(2)
     
-    def select_point_for_montage(self, num):
+    def highlight_selected_endpoint(self, num):
         idx = num-1
-        self.selected_endpoints[idx] = self.selected_node
         self.mayavi_view.trajectory_point_selection_outline[idx].mlab_source.dataset.points[0] = (np.mean(self.mayavi_view.trajectory_selection_outline.bounds[:2]),
                                                                                                   np.mean(self.mayavi_view.trajectory_selection_outline.bounds[2:4]),
                                                                                                   np.mean(self.mayavi_view.trajectory_selection_outline.bounds[4:]))
@@ -960,21 +1054,48 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                                                0)
         self.mayavi_view.lineage_point_selection_outline[idx].actor.actor.visibility = 1  
     
+    def select_n_frames(self, event = None):
+        dlg = wx.TextEntryDialog(self, "Enter the number of frames before and after")
+        dlg.SetValue('0')
+        if dlg.ShowModal() == wx.ID_OK:
+            try:
+                n_frames = int(dlg.GetValue())
+            except ValueError:
+                errdlg = wx.MessageDialog(self, 'Invalid value', "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+                errdlg.ShowModal()
+                return
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
+        if n_frames < 0:
+            errdlg = wx.MessageDialog(self, 'Only positive values allowed', "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+            errdlg.ShowModal()
+            return            
+        
+        trajectory_to_use = self.pick_trajectory_to_use()
+        subgraph = self.connected_nodes[trajectory_to_use]
+        nodes_within_n_frames = {n:length for n, length in nx.single_source_shortest_path_length(subgraph.to_undirected(),self.selected_node).items() if length <= n_frames}
+        self.selected_endpoints = [sorted(nodes_within_n_frames)[0], sorted(nodes_within_n_frames)[-1] ]     
+        self.highlight_selected_endpoint(1)
+        self.highlight_selected_endpoint(2)        
+         
+    def select_entire_trajectory(self, event = None):
+        trajectory_to_use = self.pick_trajectory_to_use()
+        # TODO: Decide on proper behavior if selected node contains multiple end nodes. Use all end nodes? Use terminal nodes?
+        self.selected_endpoints = [self.start_nodes[trajectory_to_use], self.end_nodes[trajectory_to_use]]
+        self.highlight_selected_endpoint(1)
+        self.highlight_selected_endpoint(2)
+    
     def pick_trajectory_to_use(self, event = None):
-        # Pick out the trajectory containing the selected endpoints
-        # TODO: Probably should check whether the endpoints lie in the same trajectory when selecting them
-        trajectory_to_use = np.unique([key for key in self.connected_nodes.keys() for endpoint in self.selected_endpoints if endpoint in self.connected_nodes[key]]).tolist()
+        # Pick out the trajectory containing the selected node
+        trajectory_to_use = [key for key, subgraph in self.connected_nodes.items() if self.selected_node in subgraph]
         if len(trajectory_to_use) > 1:
-            print "Should have one trajectory selected"
+            print "Should have only one trajectory selected"
             return [],[]
         else:
             trajectory_to_use = trajectory_to_use[0]    
         return trajectory_to_use
-    
-    def select_furthest_downstream_point(self, event = None):
-        trajectory_to_use = self.pick_trajectory_to_use()
-        self.selected_node = self.end_nodes[trajectory_to_use]
-        self.select_point_for_montage(2)
         
     def validate_node_ordering(self):
         trajectory_to_use = self.pick_trajectory_to_use()
@@ -987,11 +1108,39 @@ class TimeLapseTool(wx.Frame, CPATool):
         # Check the node ordering
         selected_endpoints, trajectory_to_use = self.validate_node_ordering()
             
+        #if 1:
+            #candidate_nodes = {(1,37):96,(87,28):447,(105,27):334,(137,41):266,(150,58):342,(242,19):323,(291,65):382,(346,59):429,(338,15):370,(350,59):420,(463,5):495,(683,69):769,(712,85):786}
+            #candidate_nodes_to_plot = {1:(1,37),2:(87,28),3:(105,27),4:(137,41),5:(150,58),6:(242,19),7:(291,65),8:(346,59),9:(338,15),10:(350,59),11:(463,5),12:(683,69),13:(712,85)}
+            #node = candidate_nodes_to_plot[self.candidate_nodes_to_plot]
+            ##for node in candidate_nodes.keys():
+            #for key,subgraph in self.connected_nodes.items():
+                #if node in subgraph:
+                    #print "%s, trajectory = %d"%(str(node), key)
+                    #trajectory_to_use = key
+                    #node_list = sorted(self.connected_nodes[key])
+                    #frame = candidate_nodes[node]
+                    #offset = 10
+                    #idx = np.nonzero(np.array(node_list)[:,0] == frame)[0]
+                    #if len(idx) > 0:    # If empty, must have been interpolated from gap
+                        #for ii in idx: # May be multiple branches passing through the same frame
+                            #current_trajectory_keys = {n:length for n, length in nx.single_source_shortest_path_length(subgraph.to_undirected(),node_list[ii]).items() if length < offset}
+                            #selected_endpoints[0] = sorted(current_trajectory_keys)[0]
+                            #selected_endpoints[1] = sorted(current_trajectory_keys)[-1]
+                            #montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s and %s"%(trajectory_to_use, props.object_name[0],selected_endpoints[0],selected_endpoints[1] ))
+                            #montage_frame.Show()
+                            ##with montage_frame.tile_collection.load_lock:
+                            #montage_frame.add_objects(sorted(current_trajectory_keys))
+                            #[tile.Select() for tile in montage_frame.sb.tiles if tile.obKey in [node_list[ii]] ] 
+                    #else:
+                        #print "Frame not found for %s: %d"%(str(node),frame)
+                    #break
+            #self.candidate_nodes_to_plot += 1
+
         current_trajectory_keys = nx.shortest_path(self.connected_nodes[trajectory_to_use], selected_endpoints[0],selected_endpoints[1])
         montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s and %s"%(trajectory_to_use, props.object_name[0],selected_endpoints[0],selected_endpoints[1] ))
         montage_frame.Show()
         montage_frame.add_objects(current_trajectory_keys)
-        [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey in self.selected_endpoints]
+        [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey in selected_endpoints]
     
     def show_cell_measurement_plot(self, event = None):
         # Check the node ordering
@@ -1212,20 +1361,59 @@ class TimeLapseTool(wx.Frame, CPATool):
             #connected_nodes = nx.connected_component_subgraphs(self.directed_graph.to_undirected())
             connected_nodes = nx.weakly_connected_component_subgraphs(self.directed_graph)
             self.connected_nodes = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
+            #self.candidate_nodes_to_plot = 1
             
-            # Calculate measurements created from existing measurments
-            self.derived_measurements = self.add_derived_measurements()
+            # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
+            self.start_nodes = {_: [] for _ in self.connected_nodes.keys()}
+            for (key,subgraph) in self.connected_nodes.items():
+                in_degrees = subgraph.in_degree()
+                # Since it's a directed graph, I know that the in_degree result will have the starting node at index 0.
+                #  So even if there are multiple nodes with in-degree 0, this approach will get the first one.
+                #  HT to http://stackoverflow.com/a/13149770/2116023 for the index approach
+                self.start_nodes[key] = [in_degrees.keys()[in_degrees.values().index(0)]]
             
-            # Insert derived measurements and update current selection
-            measurement_choices = self.control_panel.dataset_measurement_choices + self.derived_measurements.keys()
-            current_measurement_choice = self.control_panel.measurement_choice.GetSelection() 
-            self.control_panel.measurement_choice.SetItems(measurement_choices)
-            self.control_panel.measurement_choice.SetSelection(current_measurement_choice)
+            self.end_nodes = {_: [] for _ in self.connected_nodes.keys()}
+            self.branch_nodes = {_: [] for _ in self.connected_nodes.keys()}
+            max_timepoint = 0
+            for (key,subgraph) in self.connected_nodes.items():
+                out_degrees = subgraph.out_degree()
+                # HT to http://stackoverflow.com/questions/9106065/python-list-slicing-with-arbitrary-indices
+                #  for using itemgetter to slice a list using a list of indices
+                idx = np.nonzero(np.array(out_degrees.values()) == 0)[0]
+                # If 1 node is returned, it's a naked tuple instead of a tuple of tuples, so we have to extract the innermost element in this case
+                self.end_nodes[key] = itemgetter(*idx)(out_degrees.keys())
+                self.end_nodes[key] = list(self.end_nodes[key]) if isinstance(self.end_nodes[key][0],tuple) else list((self.end_nodes[key],))
+                max_timepoint = max([max_timepoint,max([_[0] for _ in self.end_nodes[key]])])
+                
+                idx = np.nonzero(np.array(out_degrees.values()) > 1)[0]
+                self.branch_nodes[key] = itemgetter(*idx)(out_degrees.keys()) if len(idx) > 0 else []
+                if self.branch_nodes[key] != []:
+                    self.branch_nodes[key] = list(self.branch_nodes[key]) if isinstance(self.branch_nodes[key][0],tuple) else list((self.branch_nodes[key],))
+            
+            self.terminal_nodes = {_: [] for _ in self.connected_nodes.keys()}
+            for (key,subgraph) in self.connected_nodes.items():
+                idx = np.nonzero(np.array(subgraph.nodes())[:,0] == max_timepoint)[0]
+                self.terminal_nodes[key] = itemgetter(*idx)(subgraph.nodes()) if len(idx) > 0 else []            
+
+            ## Calculate measurements created from existing measurments
+            #self.derived_measurements = self.add_derived_measurements()
+            
+            ## Insert derived measurements and update current selection
+            #measurement_choices = self.control_panel.dataset_measurement_choices + self.derived_measurements.keys()
+            #current_measurement_choice = self.control_panel.measurement_choice.GetSelection() 
+            #self.control_panel.measurement_choice.SetItems(measurement_choices)
+            #self.control_panel.measurement_choice.SetSelection(current_measurement_choice)
             
             self.lineage_node_positions = node_positions
             
             # When visualizing a new dataset, select all trajectories by default
-            self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)              
+            self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)     
+            
+            #for x in [(1,37),(87,28),(105,27),(137,41),(150,58),(242,19),(291,65),(346,59),(338,15),(350,59),(463,5),(683,69),(712,85)]:
+                #for key,subgraph in self.connected_nodes.items():
+                    #if x in subgraph:
+                        #print "%s, traj=%d"%(str(x), key)
+                
         else:
             key_length = len(object_key_columns())
             indices = range(0,key_length)
@@ -1250,39 +1438,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         # TODO: Allow for user choice to add derived measurements
         # Create dict for QC measurements derived from graph properities
         derived_measurements = {}      
-        
-        # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
-        self.start_nodes = {_: [] for _ in self.connected_nodes.keys()}
-        for (key,subgraph) in self.connected_nodes.items():
-            in_degrees = subgraph.in_degree()
-            # Since it's a directed graph, I know that the in_degree result will have the starting node at index 0.
-            #  So even if there are multiple nodes with in-degree 0, this approach will get the first one.
-            #  HT to http://stackoverflow.com/a/13149770/2116023 for the index approach
-            self.start_nodes[key] = [in_degrees.keys()[in_degrees.values().index(0)]]
-        
-        self.end_nodes = {_: [] for _ in self.connected_nodes.keys()}
-        self.branch_nodes = {_: [] for _ in self.connected_nodes.keys()}
-        max_timepoint = 0
-        for (key,subgraph) in self.connected_nodes.items():
-            out_degrees = subgraph.out_degree()
-            # HT to http://stackoverflow.com/questions/9106065/python-list-slicing-with-arbitrary-indices
-            #  for using itemgetter to slice a list using a list of indices
-            idx = np.nonzero(np.array(out_degrees.values()) == 0)[0]
-            # If 1 node is returned, it's a naked tuple instead of a tuple of tuples, so we have to extract the innermost element in this case
-            self.end_nodes[key] = itemgetter(*idx)(out_degrees.keys())
-            self.end_nodes[key] = list(self.end_nodes[key]) if isinstance(self.end_nodes[key][0],tuple) else list((self.end_nodes[key],))
-            max_timepoint = max([max_timepoint,max([_[0] for _ in self.end_nodes[key]])])
-            
-            idx = np.nonzero(np.array(out_degrees.values()) > 1)[0]
-            self.branch_nodes[key] = itemgetter(*idx)(out_degrees.keys()) if len(idx) > 0 else []
-            if self.branch_nodes[key] != []:
-                self.branch_nodes[key] = list(self.branch_nodes[key]) if isinstance(self.branch_nodes[key][0],tuple) else list((self.branch_nodes[key],))
-        
-        self.terminal_nodes = {_: [] for _ in self.connected_nodes.keys()}
-        for (key,subgraph) in self.connected_nodes.items():
-            idx = np.nonzero(np.array(subgraph.nodes())[:,0] == max_timepoint)[0]
-            self.terminal_nodes[key] = itemgetter(*idx)(subgraph.nodes()) if len(idx) > 0 else []
-            
+                    
         # Find branchpoints and nodes with a distance threshold from them (for later pruning if desired)
         cutoff_dist_from_branch = 4
         end_nodes_for_pruning = {_: set() for _ in self.connected_nodes.keys()}
@@ -1331,54 +1487,6 @@ class TimeLapseTool(wx.Frame, CPATool):
             for (node,value) in betweenness_centrality.items():
                 temp_dict[node] = value
         derived_measurements["BetweennessCentrality"] = np.array([temp_dict[node] for node in sorted_nodes ]).astype(float)
-
-        #start_nodes = [node for (node,value) in self.directed_graph.in_degree().items() if value == 0]
-        #end_nodes = [node for (node,value) in self.directed_graph.out_degree().items() if value == 0]
-        #self.start_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in start_nodes if node in value ])
-        #self.end_nodes = dict([(key,node) for (key,value) in self.connected_nodes.items() for node in end_nodes if node in value ])
-        #max_timepoint = max([item[0] for item in end_nodes])
-        #self.terminal_nodes = dict([(key,value) for (key,value) in self.end_nodes.items() if value[0] == max_timepoint])
-        
-        # Find branchpoints and nodes with a distance threshold from them (for later pruning if desired)
-        #branch_node_list = [graph for (key,graph) in self.connected_nodes.items() ]
-        
-        #branch_node_list = [node for (node,value) in self.directed_graph.out_degree().items() if value > 1]
-        #subgraph_branch_nodes = [(key,node) for (key,value) in self.connected_nodes.items() for node in branch_node_list if node in value ]
-        #self.branch_nodes = {k: [] for k in self.connected_nodes.keys()}
-        #[self.branch_nodes[key].append(value) for (key,value) in subgraph_branch_nodes]
-        #cutoff_dist_from_branch = 4 # TODO: Allow for user-selected distance cutoff
-        #end_nodes_for_pruning = set()
-        #for source_node in branch_node_list:
-            ## Find out-degrees for all nodes within N nodes of branchpoint
-            #out_degrees = self.directed_graph.out_degree(nx.single_source_shortest_path_length(self.directed_graph,
-                                                                                               #source_node,
-                                                                                               #cutoff_dist_from_branch).keys())
-            ## Find all nodes for which the out-degree is 0 (i.e, all terminal nodes (leaves)) and not at end of movie
-            #branch_to_leaf_endpoints = [(source_node,path_node) for (path_node,degree) in out_degrees.items() if degree == 0 and path_node not in self.terminal_nodes]
-            #if len(branch_to_leaf_endpoints) > 0:
-                #for current_branch in branch_to_leaf_endpoints:
-                    #shortest_path = nx.shortest_path(self.directed_graph,current_branch[0],current_branch[1]) 
-                    #shortest_path.remove(source_node) # Remove the intital branchpoint
-                    ## Skip this path if another branchpoint exists, since it will get caught later
-                    #if all(np.array(self.directed_graph.out_degree(shortest_path).values()) <= 1): 
-                        ## Add nodes on the path from the branchpoint to the leaf
-                        #end_nodes_for_pruning.update(shortest_path)
-        ## TODO: This page (http://stackoverflow.com/questions/740287/python-check-if-one-of-the-following-items-is-in-a-list)
-        ##  indicates that using numpy might be faster than the set approach below. Check to confirm.
-        ## end_nodes_for_pruning = list(end_nodes_for_pruning.difference(set(branch_node_list)))
-        #branch_node_list = np.array(branch_node_list,dtype=[('i',int),('j',int)])
-        #end_nodes_for_pruning = np.array(list(end_nodes_for_pruning),dtype=[('i',int),('j',int)])
-        #end_nodes_for_pruning = list(end_nodes_for_pruning[-np.in1d(end_nodes_for_pruning,branch_node_list)])
-        #end_nodes_for_pruning = [tuple(item) for item in end_nodes_for_pruning] # Convert numpy.void elements back to tuples
-        #derived_measurements["NodesWithinDistanceCutoff"] = np.array([key in end_nodes_for_pruning for key in sorted(self.directed_graph) ]).astype(float)
-        
-        #singletons = set(start_nodes).intersection(set(end_nodes))
-        #derived_measurements["Singletons"] = np.array([key in singletons for key in sorted(self.directed_graph) ]).astype(float)
-        
-        ## Suggested by http://stackoverflow.com/questions/18381187/functions-for-pruning-a-networkx-graph/23601809?iemail=1&noredirect=1#23601809
-        ## TODO: Come up with a heuristic to determine which branch to prune based on this value
-        #bc = nx.betweenness_centrality(self.directed_graph, normalized=True)
-        #derived_measurements["BetweennessCentrality"] = np.array([bc[key] for key in sorted(self.directed_graph)])
         
         t2 = time.clock()
         logging.info("Computed derived measurements (%.2f sec)"%(t2-t1))    
