@@ -581,13 +581,13 @@ class MayaviView(HasTraits):
             logging.info("Re-drawing lineage tree...")
             
             if do_plots_need_updating["trajectories"]:
-                self.lineage_node_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
+                self.lineage_node_collection.mlab_source.dataset.lines = np.array(self.parent.altered_directed_graph.edges())
                 self.lineage_node_collection.mlab_source.update()
-                #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(self.altered_directed_graph.edges())
+                #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(self.parent.altered_directed_graph.edges())
                 #self.lineage_edge_collection.mlab_source.update()
                 
                 for key in connected_nodes.keys():
-                    self.lineage_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]
+                    self.lineage_label_collection[key].actor.actor.visibility = self.parent.trajectory_selection[key]
 
             if do_plots_need_updating["measurement"]:
                 self.lineage_node_collection.mlab_source.set(scalars = scalar_data)
@@ -712,12 +712,13 @@ class MayaviView(HasTraits):
             
             if do_plots_need_updating["trajectories"]:
                 # TODO: Fix exception (AssertionError: Input array must be 2D) here if single trajectory selected
-                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(directed_graph.edges())
+                G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
+                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())
                 self.trajectory_line_collection.mlab_source.update()
                 self.trajectory_line_source.mlab_source.update()                
                 
                 for key in connected_nodes.keys():
-                    self.trajectory_label_collection[key].actor.actor.visibility = self.trajectory_selection[key]  
+                    self.trajectory_label_collection[key].actor.actor.visibility = self.parent.trajectory_selection[key]  
 
             if do_plots_need_updating["measurement"]:
                 self.trajectory_line_collection.mlab_source.set(scalars = scalar_data)
