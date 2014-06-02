@@ -56,7 +56,7 @@ all_colormaps.sort()
 
 required_fields = ['series_id', 'group_id', 'timepoint_id','object_tracking_label']
 
-track_attributes = ["label","x","y","t","s","f"]
+
 
 db = DBConnect.getInstance()
 props = Properties.getInstance()
@@ -68,6 +68,9 @@ L_TCOORD = "T_2"
 T_XCOORD = "X_3"
 T_YCOORD = "Y_3"
 T_TCOORD = "T_3"
+SCALAR_VAL = "S"
+track_attributes = ["label","x","y","t",SCALAR_VAL,"f"]
+
 SUBGRAPH_ID = "Subgraph"
 
 METRIC_BC = "BetweennessCentrality"
@@ -288,7 +291,15 @@ class TimeLapseControlPanel(wx.Panel):
         self.derived_measurement_choice.SetHelpText("Select the derived measurement to visualize the data with.")     
         self.derived_measurement_choice.Disable()
         
+        self.distance_cutoff_value = wx.SpinCtrl(self, -1, value = "4", style=wx.SP_ARROW_KEYS, min=0, initial=4)
+        self.distance_cutoff_value.SetHelpText("Enter the number of nodes from a branch that a terminus must be found in order to be selected as a candidate for pruning.")   
+        self.distance_cutoff_value.Disable()
+        
+        self.bc_branch_ratio_value = wx.TextCtrl(self, -1, value = "0.5", style=wx.TE_PROCESS_ENTER)
+        self.bc_branch_ratio_value.SetHelpText("Enter the betweeness centrality fraction that a branch node must be in order be selected as a candidate for pruning.")   
+        self.bc_branch_ratio_value.Disable()        
 
+        
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
         sz = wx.BoxSizer(wx.HORIZONTAL)
@@ -325,6 +336,10 @@ class TimeLapseControlPanel(wx.Panel):
         sz.AddSpacer((4,-1))  
         sz.Add(self.derived_measurement_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
+        sz.Add(wx.StaticText(self, -1, "Distance cutoff:"), 0, wx.TOP, 4)
+        sz.Add(self.distance_cutoff_value, 1, wx.EXPAND)
+        sz.Add(wx.StaticText(self, -1, "Betweeness centrality cutoff:"), 0, wx.TOP, 4)
+        sz.Add(self.bc_branch_ratio_value, 1, wx.EXPAND)        
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))        
 
@@ -422,9 +437,27 @@ class MayaviView(HasTraits):
     def activate_trajectory_scene(self):
         picker = self.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_trajectory)
         picker.tolerance = 0.01
-                                                                 
+        
+        ## TODO: Incorporate image dimensions into axes viz
+        ## Get image dimensions
+        #if props.db_type == 'sqlite':
+            #query = "PRAGMA table_info(%s)"%(props.image_table)
+            #w_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Width') >= 0][0]
+            #h_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Height') >= 0][0]  
+        #else:
+            #query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Width' LIMIT 1"%(props.db_name, props.image_table)
+            #w_col = db.execute(query)[0][0]
+            #query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Height' LIMIT 1"%(props.db_name, props.image_table)
+            #h_col = db.execute(query)[0][0]          
+
+        #query = "SELECT %s FROM %s LIMIT 1"%(w_col, props.image_table)
+        #self.parent.image_x_dims = db.execute(query)[0][0]
+        #query = "SELECT %s FROM %s LIMIT 1"%(h_col, props.image_table)
+        #self.parent.image_y_dims = db.execute(query)[0][0]        
+                
         mlab.axes(self.trajectory_line_source, 
                       xlabel='X', ylabel='Y',zlabel='T',
+                      #extent = [1,self.parent.image_x_dims,1,self.parent.image_y_dims,1,1],
                       opacity = self.axes_opacity,
                       x_axis_visibility=True, y_axis_visibility=True, z_axis_visibility=True)
         
@@ -544,7 +577,7 @@ class MayaviView(HasTraits):
             t1 = time.clock()
             
             G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
-            xys = np.array([[directed_graph.node[node][L_TCOORD],directed_graph.node[node][L_YCOORD],directed_graph.node[node]["s"]] for node in sorted(directed_graph.nodes()) ])
+            xys = np.array([[directed_graph.node[node][L_TCOORD],directed_graph.node[node][L_YCOORD],directed_graph.node[node][SCALAR_VAL]] for node in sorted(directed_graph.nodes()) ])
             #if len(xys) == 0:
                 #xys = np.array(3*[np.NaN],ndmin=2)
             dt = np.median(np.diff(np.unique(nx.get_node_attributes(directed_graph,"t").values())))
@@ -638,7 +671,7 @@ class MayaviView(HasTraits):
         if do_plots_need_updating["dataset"]:
             self.directed_graph = directed_graph
             self.connected_nodes = connected_nodes
-            
+
             logging.info("Drawing trajectories...")
             # Clear the scene
             if self.parent.plot_initialized:
@@ -653,7 +686,7 @@ class MayaviView(HasTraits):
             xyts = np.array([(directed_graph.node[key]["x"],
                               directed_graph.node[key]["y"],
                               directed_graph.node[key]["t"],
-                              directed_graph.node[key]["s"]) for key in sorted(directed_graph)])
+                              directed_graph.node[key][SCALAR_VAL]) for key in sorted(directed_graph)])
             
             # Compute reasonable scaling factor according to the data limits.
             # We want the plot to be roughly square, to avoid nasty Mayavi axis scaling issues later.
@@ -839,6 +872,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.selected_endpoints = [None,None]
         self.start_frame = None
         self.end_frame = None
+        self.image_x_dims = None
+        self.image_y_dims = None
         self.do_plots_need_updating = {"dataset":True,
                                        "colormap":True,
                                        "measurement":True, 
@@ -887,7 +922,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_COMBOBOX(self.control_panel.colormap_choice, -1, self.on_colormap_selected)
         wx.EVT_BUTTON(self.control_panel.update_plot_color_button, -1, self.update_plot)
         wx.EVT_CHECKBOX(self.control_panel.enable_filtering_checkbox, -1, self.enable_filtering)
-        
+        wx.EVT_SPINCTRL(self.control_panel.distance_cutoff_value,-1,self.on_derived_measurement_selected)        
+        wx.EVT_TEXT(self.control_panel.distance_cutoff_value,-1,self.on_derived_measurement_selected)  
+            
     def on_show_all_trajectories(self, event = None):
         self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)
         self.do_plots_need_updating["trajectories"] = True
@@ -1051,7 +1088,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         '''Callback for "Show selection in a table" popup item.'''
         keys = [self.connected_nodes[item].nodes() for item in self.selected_trajectory]
         keys = [item for sublist in keys for item in sublist]
-        tracking_label,timepoint,data = zip(*np.array([(self.directed_graph.node[node]["label"],self.directed_graph.node[node]["t"],self.directed_graph.node[node]["s"]) for node in keys]))
+        tracking_label,timepoint,data = zip(*np.array([(self.directed_graph.node[node]["label"],
+                                                        self.directed_graph.node[node]["t"],
+                                                        self.directed_graph.node[node][SCALAR_VAL]) for node in keys]))
         table_data = np.hstack((np.array(keys), np.array((tracking_label,timepoint,data)).T))
         column_labels = list(object_key_columns())
         key_col_indices = list(xrange(len(column_labels)))
@@ -1179,7 +1218,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         
         # Plot the selected measurement
         current_trajectory_keys = nx.shortest_path(self.connected_nodes[trajectory_to_use], selected_endpoints[0],selected_endpoints[1])
-        timepoint,data = zip(*np.array([(self.directed_graph.node[node]["t"],self.directed_graph.node[node]["s"]) for node in current_trajectory_keys]))
+        timepoint,data = zip(*np.array([(self.directed_graph.node[node]["t"],
+                                         self.directed_graph.node[node][SCALAR_VAL]) 
+                                        for node in current_trajectory_keys]))
         axes = window.figure.add_subplot(1,1,1)   
         
         axes.plot(timepoint, data)
@@ -1218,7 +1259,9 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.do_plots_need_updating["measurement"] = True
 
     def on_derived_measurement_selected(self, event = None):
-        self.selected_metric = self.control_panel.derived_measurement_choice.GetStringSelection()   
+        self.selected_metric = self.control_panel.derived_measurement_choice.GetStringSelection() 
+        self.control_panel.distance_cutoff_value.Enable(self.selected_metric == METRIC_NODESWITHINDIST)
+        self.control_panel.bc_branch_ratio_value.Enable(self.selected_metric == METRIC_BC)            
         self.do_plots_need_updating["measurement"] = True        
         
     def on_colormap_selected(self, event = None):
@@ -1462,25 +1505,18 @@ class TimeLapseTool(wx.Frame, CPATool):
                 attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)]))        
             else:
                 node_ids = sorted(self.directed_graph)
+                if self.selected_metric == METRIC_NODESWITHINDIST:
+                    self.derived_measurements[self.selected_metric] = self.calc_n_nodes_from_branchpoint()
                 attr = dict(zip(node_ids,self.derived_measurements[self.selected_metric]))
-            nx.set_node_attributes(self.directed_graph,"s",attr)
+            nx.set_node_attributes(self.directed_graph,SCALAR_VAL,attr)
             getitem = itemgetter(len(trajectory_info[0])-1) # Filter values
             attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)])) 
             nx.set_node_attributes(self.directed_graph,"f",attr)
             
-        self.scalar_data = np.array([self.directed_graph.node[key]["s"] for key in sorted(self.directed_graph)]).astype(float)
+        self.scalar_data = np.array([self.directed_graph.node[key][SCALAR_VAL] for key in sorted(self.directed_graph)]).astype(float)
 
-    def add_derived_measurements(self):
-        logging.info("Calculating derived measurements")
-                    
-        t1 = time.clock()   
-        # TODO: Allow for user choice to add derived measurements
-        # TODO: Figure out where to best store this information: as a graph attrubute, subgraph attribute, or a separate matrix
-        # Create dict for QC measurements derived from graph properities
-        derived_measurements = {}      
-                    
-        # Find branchpoints and nodes with a distance threshold from them (for later pruning if desired)
-        cutoff_dist_from_branch = 4
+    def calc_n_nodes_from_branchpoint(self):
+        cutoff_dist_from_branch = self.control_panel.distance_cutoff_value.GetValue()
         end_nodes_for_pruning = {_: set() for _ in self.connected_nodes.keys()}
         
         for (key,subgraph) in self.connected_nodes.items():
@@ -1508,7 +1544,22 @@ class TimeLapseTool(wx.Frame, CPATool):
             l = list(end_nodes_for_pruning[key])
             for ii in l:
                 temp_full_graph_dict[ii] = 1.0
-        derived_measurements[METRIC_NODESWITHINDIST] = np.array([temp_full_graph_dict[node] for node in sorted_nodes]).astype(float) 
+        
+        return np.array([temp_full_graph_dict[node] for node in sorted_nodes]).astype(float)
+        
+    def add_derived_measurements(self):
+        logging.info("Calculating derived measurements")
+                    
+        t1 = time.clock()   
+        # TODO: Allow for user choice to add derived measurements
+        # TODO: Figure out where to best store this information: as a graph attrubute, subgraph attribute, or a separate matrix
+        # Create dict for QC measurements derived from graph properities
+        derived_measurements = {}      
+                    
+        # Find branchpoints and nodes with a distance threshold from them (for later pruning if desired)
+        derived_measurements[METRIC_NODESWITHINDIST] = self.calc_n_nodes_from_branchpoint()
+        
+        sorted_nodes = sorted(self.directed_graph)
         
         # Singletons: Subgraphs for which the start node = end node
         temp_full_graph_dict = {_: 0.0 for _ in self.directed_graph.nodes()}
