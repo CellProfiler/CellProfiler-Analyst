@@ -1152,24 +1152,39 @@ class TimeLapseTool(wx.Frame, CPATool):
         nodes_within_n_frames = {n:length for n, length in nx.single_source_shortest_path_length(subgraph.to_undirected(),self.selected_node).items() if length <= n_frames}
         # Find the candidate terminal nodes @ N frames away (before/after)        
         sorted_nodes = sorted([(key,val,nodes_within_n_frames[key]) for key,val in nx.get_node_attributes(subgraph,'t').items() if key in nodes_within_n_frames.keys()],key=itemgetter(1))
-        idx = s.index((self.selected_node,self.selected_node[0],0))
-        start_nodes = [_[0] for _ in sorted_nodes if (_[2] == n_frames or _[2] == self.start_frame)  and _[1] <= sorted_nodes[idx][1]]
-        end_nodes = [_[0] for _ in sorted_nodes if (_[2] == n_frames or _[2] == self.end_frame) and _[1] >= sorted_nodes[idx][1] ]
-        # If we have multiple candidates on one side, pick the one that has a higher betweenness centrality score
-        if len(start_nodes) > 1 or len(end_nodes):
+        idx = sorted_nodes.index((self.selected_node,self.selected_node[0],0))
+        # A node is at the start/end of the selection if: (1) it's N frames away, or (2) it's at the start/end of the trajectory branch
+        start_nodes = [_ for _ in sorted_nodes if (_[2] == n_frames or subgraph.in_degree(_[0])  == 0) and _[1] <= sorted_nodes[idx][1] ]
+        end_nodes =   [_ for _ in sorted_nodes if (_[2] == n_frames or subgraph.out_degree(_[0]) == 0) and _[1] >= sorted_nodes[idx][1] ]
+        # If we have multiple candidates on either side, try to intelligently pick the right one
+        if len(start_nodes) > 1 or len(end_nodes) > 1:
             bc = nx.get_node_attributes(subgraph,METRIC_BC)
             if len(start_nodes) > 1:
-                temp = [bc[_] for _ in start_nodes]
-                idx = temp.index(max(temp)) # If the betweenness centrality scores are equal, this picks the first one
-                start_nodes = start_nodes[idx]       
+                # First, try to pick the furthest one away
+                bounding_frame = sorted(start_nodes,key=itemgetter(2),reverse=True)[0][2]
+                start_nodes = [_ for _ in start_nodes if _[2] == bounding_frame]
+                if len(start_nodes) > 1: 
+                    # If we still have multiple candidates, pick the one with the higher betweenness centrality score
+                    temp = [bc[_[0]] for _ in start_nodes]
+                    idx = temp.index(max(temp))  # If the betweenness centrality scores are equal, this picks the first one
+                    start_nodes = start_nodes[idx][0] 
+                else:
+                    start_nodes = start_nodes[0][0]   
             else:
-                start_nodes = start_nodes[0]
+                start_nodes = start_nodes[0][0]
             if len(end_nodes) > 1:
-                temp = [bc[_] for _ in end_nodes]
-                idx = temp.index(max(temp)) 
-                end_nodes = end_nodes[idx]  
+                sorted_end_nodes = sorted(end_nodes,key=itemgetter(2),reverse=False)
+                bounding_frame = sorted_end_nodes[-1][2]
+                end_nodes = [_ for _ in end_nodes if _[2] == bounding_frame]
+                if len(end_nodes) > 1:
+                    temp = [bc[_[0]] for _ in end_nodes]
+                    idx = temp.index(max(temp))
+                    end_nodes = end_nodes[idx][0] 
+                else:
+                    end_nodes = end_nodes[0][0]
             else:
-                end_nodes = end_nodes[0]
+                end_nodes = end_nodes[0][0]
+        
         self.selected_endpoints = [start_nodes, end_nodes]     
         self.highlight_selected_endpoint(1)
         self.highlight_selected_endpoint(2)        
@@ -1456,7 +1471,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                 #  So even if there are multiple nodes with in-degree 0, this approach will get the first one.
                 #  HT to http://stackoverflow.com/a/13149770/2116023 for the index approach
                 self.start_nodes[key] = [in_degrees.keys()[in_degrees.values().index(0)]]
-                self.start_frame = max([self.start_frame,min([_[0] for _ in self.start_nodes[key]])])
+                self.start_frame = min([self.start_frame,min([_[0] for _ in self.start_nodes[key]])])
             
             self.end_nodes = {_: [] for _ in self.connected_nodes.keys()}
             self.branch_nodes = {_: [] for _ in self.connected_nodes.keys()}
