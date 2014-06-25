@@ -85,6 +85,8 @@ def get_normalized_version(_description=_get_description()):
     in the module's __version__ variable.
 
     """
+    if _description is None:
+        return None
     tag, additional, commit = _parse_description(_description)
     if additional == '0':
         s = tag
