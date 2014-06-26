@@ -69,6 +69,7 @@ T_XCOORD = "X_3"
 T_YCOORD = "Y_3"
 T_TCOORD = "T_3"
 SCALAR_VAL = "S"
+VISIBLE = "VISIBLE"
 track_attributes = ["label","x","y","t",SCALAR_VAL,"f"]
 
 SUBGRAPH_ID = "Subgraph"
@@ -585,24 +586,24 @@ class MayaviView(HasTraits):
             # So I set it explicitly here to a fraction of delta_t
             # To inspect the value, see pts.glyph.glpyh.scale_factor
             node_scale_factor = 0.5*dt
-            pts = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
+            self.lineage_node_collection = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
                                 scale_factor = node_scale_factor, 
                                 scale_mode = 'none',
                                 colormap = selected_colormap,
                                 resolution = 8,
                                 figure = self.lineage_scene.mayavi_scene) 
-            pts.glyph.color_mode = 'color_by_scalar'
-            pts.mlab_source.dataset.lines = np.array(G.edges())
-
-            self.lineage_node_collection = pts
+            self.lineage_node_collection.glyph.color_mode = 'color_by_scalar'
             
-            tube_radius = node_scale_factor/10.0
-            tube = mlab.pipeline.tube(pts, 
-                                      tube_radius = tube_radius, # Default tube_radius results in v. thin lines: tube.filter.radius = 0.05
-                                      figure = self.lineage_scene.mayavi_scene)
-            self.lineage_edge_collection = mlab.pipeline.surface(tube, 
+            #tube_radius = node_scale_factor/10.0
+            #tube = mlab.pipeline.tube(self.lineage_node_collection, 
+            #                          tube_radius = tube_radius, # Default tube_radius results in v. thin lines: tube.filter.radius = 0.05
+            #                          figure = self.lineage_scene.mayavi_scene)
+            #self.lineage_tube = tube
+            self.lineage_edge_collection = mlab.pipeline.surface(self.lineage_node_collection, 
                                                                  color=(0.8, 0.8, 0.8),
                                                                  figure = self.lineage_scene.mayavi_scene)
+            self.lineage_edge_collection.mlab_source.dataset.lines = np.array(G.edges())
+            self.lineage_edge_collection.mlab_source.update()
             
             # Add outline to be used later when selecting points
             self.lineage_selection_outline = mlab.outline(line_width=3,
@@ -633,7 +634,7 @@ class MayaviView(HasTraits):
             self.lineage_extent = (0,np.max(nx.get_node_attributes(directed_graph,L_TCOORD).values()),
                                    0,np.max(nx.get_node_attributes(directed_graph,L_YCOORD).values()),
                                    0,0)
-            mlab.pipeline.outline(self.lineage_node_collection,
+            self.lineage_outline = mlab.pipeline.outline(self.lineage_node_collection,
                                   extent = self.lineage_extent,
                                   opacity = self.axes_opacity,
                                   figure = self.lineage_scene.mayavi_scene) 
@@ -644,10 +645,10 @@ class MayaviView(HasTraits):
             logging.info("Re-drawing lineage tree...")
             
             if do_plots_need_updating["trajectories"]:
-                self.lineage_node_collection.mlab_source.dataset.lines = np.array(self.parent.altered_directed_graph.edges())
-                self.lineage_node_collection.mlab_source.update()
-                #self.lineage_edge_collection.mlab_source.dataset.lines = np.array(self.parent.altered_directed_graph.edges())
-                #self.lineage_edge_collection.mlab_source.update()
+                G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
+                edges = np.array([e for e in G.edges() if G.node[e[0]][VISIBLE] and G.node[e[1]][VISIBLE]])
+                self.lineage_edge_collection.mlab_source.dataset.lines = edges
+                self.lineage_edge_collection.mlab_source.update()
                 
                 for key in connected_nodes.keys():
                     self.lineage_label_collection[key].actor.actor.visibility = self.parent.trajectory_selection[key]
@@ -684,10 +685,12 @@ class MayaviView(HasTraits):
             G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
     
             xyts = np.array([(directed_graph.node[key]["x"],
-                              directed_graph.node[key]["y"],
-                              directed_graph.node[key]["t"],
-                              directed_graph.node[key][SCALAR_VAL]) for key in sorted(directed_graph)])
+                               directed_graph.node[key]["y"],
+                               directed_graph.node[key]["t"],
+                               directed_graph.node[key][SCALAR_VAL],
+                               directed_graph.node[key][VISIBLE]) for key in sorted(directed_graph)])
             
+            visible = xyts[:, -1]
             # Compute reasonable scaling factor according to the data limits.
             # We want the plot to be roughly square, to avoid nasty Mayavi axis scaling issues later.
             # Unfortunately, adjusting the surface.actor.actor.scale seems to lead to more problems than solutions.
@@ -775,12 +778,14 @@ class MayaviView(HasTraits):
             
             if do_plots_need_updating["trajectories"]:
                 G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
-                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = np.array(G.edges())
+                edges = [e for e in G.edges() if G.node[e[0]][VISIBLE] and G.node[e[1]][VISIBLE]]
+                self.trajectory_line_collection.mlab_source.dataset.lines = self.trajectory_line_source.mlab_source.dataset.lines = \
+                    np.array(edges)
                 self.trajectory_line_collection.mlab_source.update()
                 self.trajectory_line_source.mlab_source.update()                
                 
                 for key in connected_nodes.keys():
-                    self.trajectory_label_collection[key].actor.actor.visibility = self.parent.trajectory_selection[key]  
+                    self.trajectory_label_collection[key].actor.actor.visibility = self.parent.trajectory_selection[key] != 0  
 
             if do_plots_need_updating["measurement"]:
                 self.trajectory_line_collection.mlab_source.set(scalars = scalar_data)
@@ -1353,9 +1358,13 @@ class TimeLapseTool(wx.Frame, CPATool):
                 self.trajectory_selection[all_labels[x]] = 1
             self.do_plots_need_updating["trajectories"] = True
             
+            for key, value in self.trajectory_selection.items():
+                for node_key in self.connected_nodes[key]:
+                    self.directed_graph.node[node_key][VISIBLE] = (value != 0)
             # Alter lines between the points that we have previously created by directly modifying the VTK dataset.                
             nodes_to_remove = [self.connected_nodes[key] for (key,value)in self.trajectory_selection.items() if value == 0]
             nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
+            
             mapping = dict(zip(sorted(self.directed_graph),range(0,self.directed_graph.number_of_nodes()+1)))
             nodes_to_remove = [mapping[item] for item in nodes_to_remove]
             self.altered_directed_graph = nx.relabel_nodes(self.directed_graph, mapping, copy=True)
@@ -1416,6 +1425,8 @@ class TimeLapseTool(wx.Frame, CPATool):
             parent_node_ids = map(itemgetter(*indices),trajectory_info) 
             indices = range(key_length+2,len(trajectory_info[0]))
             attr = [dict(zip(track_attributes,item)) for item in map(itemgetter(*indices),trajectory_info)]
+            for attr_d in attr:
+                attr_d[VISIBLE] = True
             # Add nodes
             self.directed_graph.add_nodes_from(zip(node_ids,attr))
             # Add edges as list of tuples (exclude those that have no parent, i.e, (0,0))
@@ -1455,7 +1466,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             # According to http://stackoverflow.com/questions/18643789/how-to-find-subgraphs-in-a-directed-graph-without-converting-to-undirected-graph,
             #  weakly_connected_component_subgraphs maintains directionality
             #connected_nodes = nx.connected_component_subgraphs(self.directed_graph.to_undirected())
-            connected_nodes = nx.weakly_connected_component_subgraphs(self.directed_graph)
+            connected_nodes = tuple(nx.weakly_connected_component_subgraphs(self.directed_graph))
             self.connected_nodes = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
             # Set graph attribute: Connected component ID
             for key,subgraph in self.connected_nodes.items():
