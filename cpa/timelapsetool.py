@@ -280,6 +280,12 @@ class TimeLapseControlPanel(wx.Panel):
         self.dataset_choice = ComboBox(self, -1, choices=[str(item) for item in all_datasets], size=(200,-1), style=wx.CB_READONLY)
         self.dataset_choice.Select(0)
         self.dataset_choice.SetHelpText("Select the time-lapse data set to visualize.")
+        
+        self.dataset_relationship_index = ComboBox(self, -1, choices=["Original (no edits)"], size=(200,-1), style=wx.CB_READONLY)
+        self.dataset_relationship_index.Select(0)
+        self.dataset_relationship_index.SetHelpText("Select the identifier specifying the tracked object relationships in the current data set.")  
+        self.dataset_relationship_index.Disable()
+
         self.dataset_measurement_choice = ComboBox(self, -1, choices=self.dataset_measurement_choices, style=wx.CB_READONLY)
         self.dataset_measurement_choice.Select(0)
         self.dataset_measurement_choice.SetHelpText("Select the per-%s measurement to visualize the data with. The lineages and (xyt) trajectories will be color-coded by this measurement."%props.object_name[0])
@@ -314,6 +320,10 @@ class TimeLapseControlPanel(wx.Panel):
         self.preview_prune_button = wx.ToggleButton(self, -1, "Preview Pruned Plots")
         self.preview_prune_button.SetHelpText("Redraws the graph with the pruned nodes removed.")
         self.preview_prune_button.Disable()  
+        
+        self.save_edited_tracks = wx.Button(self, -1, "Save Edited Tracks...")
+        self.save_edited_tracks.SetHelpText("Saves the edited graph as a new index into the relationship table.")
+        self.save_edited_tracks.Disable()         
 
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
@@ -321,6 +331,9 @@ class TimeLapseControlPanel(wx.Panel):
         sz.Add(wx.StaticText(self, -1, "Data Source:"), 0, wx.TOP, 4)
         sz.AddSpacer((4,-1))
         sz.Add(self.dataset_choice, 1, wx.EXPAND)
+        sz.AddSpacer((4,-1))
+        sz.Add(wx.StaticText(self, -1, "Data Tracks:"), 0, wx.TOP, 4)
+        sz.Add(self.dataset_relationship_index, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
         sz.Add(self.trajectory_selection_button)
         if self.isLAP:
@@ -355,7 +368,10 @@ class TimeLapseControlPanel(wx.Panel):
         sz.Add(self.distance_cutoff_value, 1, wx.EXPAND)
         sz.Add(wx.StaticText(self, -1, "Betweeness centrality cutoff:"), 0, wx.TOP, 4)
         sz.Add(self.bc_branch_ratio_value, 1, wx.EXPAND) 
+        sz.AddSpacer((4,-1))
         sz.Add(self.preview_prune_button, 1, wx.EXPAND) 
+        sz.AddSpacer((4,-1))
+        sz.Add(self.save_edited_tracks, 1, wx.EXPAND) 
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))        
 
@@ -455,26 +471,26 @@ class MayaviView(HasTraits):
         picker = self.trajectory_scene.mayavi_scene.on_mouse_pick(self.on_pick_trajectory)
         picker.tolerance = 0.01
         
-        ## TODO: Incorporate image dimensions into axes viz
-        ## Get image dimensions
-        #if props.db_type == 'sqlite':
-            #query = "PRAGMA table_info(%s)"%(props.image_table)
-            #w_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Width') >= 0][0]
-            #h_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Height') >= 0][0]  
-        #else:
-            #query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Width' LIMIT 1"%(props.db_name, props.image_table)
-            #w_col = db.execute(query)[0][0]
-            #query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Height' LIMIT 1"%(props.db_name, props.image_table)
-            #h_col = db.execute(query)[0][0]          
+        # TODO: Incorporate image dimensions into axes viz
+        # Get image dimensions
+        if props.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s)"%(props.image_table)
+            w_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Width') >= 0][0]
+            h_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Height') >= 0][0]  
+        else:
+            query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Width' LIMIT 1"%(props.db_name, props.image_table)
+            w_col = db.execute(query)[0][0]
+            query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Height' LIMIT 1"%(props.db_name, props.image_table)
+            h_col = db.execute(query)[0][0]          
 
-        #query = "SELECT %s FROM %s LIMIT 1"%(w_col, props.image_table)
-        #self.parent.image_x_dims = db.execute(query)[0][0]
-        #query = "SELECT %s FROM %s LIMIT 1"%(h_col, props.image_table)
-        #self.parent.image_y_dims = db.execute(query)[0][0]        
-                
-        mlab.axes(self.trajectory_line_source, 
+        query = "SELECT %s FROM %s LIMIT 1"%(w_col, props.image_table)
+        self.parent.image_x_dims = db.execute(query)[0][0]
+        query = "SELECT %s FROM %s LIMIT 1"%(h_col, props.image_table)
+        self.parent.image_y_dims = db.execute(query)[0][0]        
+        
+        ax = mlab.axes(self.trajectory_line_source, 
                       xlabel='X', ylabel='Y',zlabel='T',
-                      #extent = [1,self.parent.image_x_dims,1,self.parent.image_y_dims,1,1],
+                      #extent = (1,self.parent.image_x_dims,1,self.parent.image_y_dims,self.parent.start_frame,self.parent.end_frame),
                       opacity = self.axes_opacity,
                       x_axis_visibility=True, y_axis_visibility=True, z_axis_visibility=True)
         
@@ -946,6 +962,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_SPINCTRL(self.control_panel.distance_cutoff_value,-1,self.on_derived_measurement_selected)        
         wx.EVT_TEXT(self.control_panel.distance_cutoff_value,-1,self.on_derived_measurement_selected)  
         wx.EVT_TOGGLEBUTTON(self.control_panel.preview_prune_button,-1, self.on_toggle_preview_pruned_graph)
+        wx.EVT_BUTTON(self.control_panel.save_edited_tracks,-1, self.on_saved_edited_tracks)
             
     def on_show_all_trajectories(self, event = None):
         self.trajectory_selection = dict.fromkeys(self.connected_nodes.keys(),1)
@@ -1300,6 +1317,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.control_panel.distance_cutoff_value.Enable(self.selected_metric == METRIC_NODESWITHINDIST)
         self.control_panel.bc_branch_ratio_value.Enable(self.selected_metric == METRIC_BC)  
         self.control_panel.preview_prune_button.Enable() 
+        self.control_panel.save_edited_tracks.Enable() 
         self.do_plots_need_updating["measurement"] = True        
     
     def on_toggle_preview_pruned_graph(self, event=None):
@@ -1323,6 +1341,31 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot()
     
+    def on_saved_edited_tracks(self, event = None):
+        dlg = wx.TextEntryDialog(self, 'Specify a name for your edited tracks','Enter track identifier')
+        dlg.SetValue('MyEditedTracks')
+        if dlg.ShowModal() == wx.ID_OK:
+            try:
+                trackID = dlg.GetValue()
+            except ValueError:
+                errdlg = wx.MessageDialog(self, 'Invalid value!', "Invalid value", wx.OK|wx.ICON_EXCLAMATION)
+                errdlg.ShowModal()
+                return
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
+        # Create new table
+        # TODO: Insert table creation here
+        logging.info('Populating table %s...'%results_table)
+        success = dbconnect.CreateTableFromData(tableData, colnames, results_table, temporary=False)
+        
+        # Update drop-down listing
+        track_choices = self.control_panel.dataset_relationship_index.GetItems() + [trackID]
+        self.control_panel.dataset_relationship_index.SetItems(track_choices)
+        self.control_panel.dataset_relationship_index.SetSelection(track_choices.index(trackID))   
+        self.control_panel.dataset_relationship_index.Enable()  
+        
     def on_colormap_selected(self, event = None):
         self.do_plots_need_updating["colormap"] = False
         if self.selected_colormap != self.control_panel.colormap_choice.GetStringSelection():
@@ -1487,8 +1530,8 @@ class TimeLapseTool(wx.Frame, CPATool):
             glayout.layer_layout(G, level_attribute = "t")
             nx.relabel_nodes(G, mapping,copy=False) # Map back to original graph labels
             node_positions = dict(zip(G.nodes(),[[G.node[key]["t"],G.node[key]["y"]] for key in G.nodes()]))
-            end_frame = max(np.array(node_positions.values())[:,0])
-            start_frame = min(np.array(node_positions.values())[:,0])
+            self.end_frame = end_frame = max(np.array(node_positions.values())[:,0])
+            self.start_frame = start_frame = min(np.array(node_positions.values())[:,0])
             
             # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
             # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
