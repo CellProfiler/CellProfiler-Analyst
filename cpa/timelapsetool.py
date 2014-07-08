@@ -1906,7 +1906,11 @@ class TimeLapseTool(wx.Frame, CPATool):
             nx.set_node_attributes(subgraph,METRIC_LOOPS_VISIBLE,attr)  
             
             for _ in cycles:
-                for item in _:
+                t = [subgraph.node[item]["t"] for item in _]
+                # Omit interior nodes within the cycle
+                # I'm searching by time, rather than in/out-degree b/c further splits could occur within the cycle
+                nodes = [item for item in _ if subgraph.node[item]["t"] not in [min(t),max(t)]]
+                for item in nodes:
                     temp_full_graph_dict[item] = 1.0            
         
         return np.array([temp_full_graph_dict[node] for node in sorted_nodes ]).astype(float)  
