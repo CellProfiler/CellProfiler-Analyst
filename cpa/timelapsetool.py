@@ -156,7 +156,7 @@ def where_stmt_for_tracked_objects(obj, group_id, selected_dataset):
             )
     return stmt    
   
-def create_update_relationship_table(selected_dataset):
+def create_update_relationship_table():
     edited_relnship_table = get_edited_relationship_tablename()
     is_table = 0
     if props.db_type == 'sqlite':
@@ -170,19 +170,53 @@ def create_update_relationship_table(selected_dataset):
         logging.info("Creating custom relationship table...")
         # If the table doens't exist, create it
         obj = get_object_name()
+        # From http://stackoverflow.com/questions/12730390/copy-table-structure-to-new-table-in-sqlite3. Seems to work in MySQL too
         query = ("CREATE TABLE %s AS"%(edited_relnship_table),
-                 "SELECT %s"%(",".join(reln_cols)),
-                 "FROM %s r"%(props.relationships_view),
-                 "JOIN %s i1"%(props.image_table),
-                 "ON r.image_number1 = i1.%s"%(props.image_id),
-                 "WHERE") + \
-            where_stmt_for_tracked_objects(obj,props.group_id,int(selected_dataset)) 
+                "SELECT %s"%(",".join(reln_cols)),
+                "FROM %s"%(props.relationships_view),
+                "WHERE 0")
         query = " ".join(query)            
         db.execute(query)
+        query = "SELECT DISTINCT(%s) FROM %s"%(props.group_id, props.image_table)
+        all_datasets = [_[0] for _ in db.execute(query)]
+        for selected_dataset in all_datasets:
+            query = ("INSERT INTO %s"%(edited_relnship_table),
+                     "SELECT %s"%(",".join(reln_cols)),
+                     "FROM %s r"%(props.relationships_view),
+                     "JOIN %s i1"%(props.image_table),
+                     "ON r.image_number1 = i1.%s"%(props.image_id),
+                     "WHERE") + \
+                where_stmt_for_tracked_objects(obj,props.group_id,int(selected_dataset)) 
+            query = " ".join(query)            
+            db.execute(query)
         
-        # Add the default column
-        query = "ALTER TABLE %s ADD COLUMN %s INT DEFAULT 1"%(edited_relnship_table,ORIGINAL_TRACK)
+        # Add the grouping ID and the default track column
+        if props.db_type == 'sqlite':
+            query = "ALTER TABLE %s ADD COLUMN %s INT"%(edited_relnship_table, props.group_id)
+            db.execute(query)
+            query = "ALTER TABLE %s ADD COLUMN %s INT DEFAULT 1"%(edited_relnship_table, ORIGINAL_TRACK)
+            db.execute(query)
+        else:
+            query = "ALTER TABLE %s ADD %s INT, %s INT DEFAULT 1"%(edited_relnship_table, props.group_id, ORIGINAL_TRACK)
+            db.execute(query)
+            
+        if props.db_type == 'sqlite':
+            # From http://stackoverflow.com/questions/19270259/update-join-sqlite
+            query = ("UPDATE %s"%(edited_relnship_table),
+                     "SET %s ="%(props.group_id),
+                     "(SELECT %s.%s"%(props.image_table,props.group_id),
+                     "FROM %s"%(props.image_table),
+                     "WHERE %s.image_number1 = %s.%s)"%(edited_relnship_table,props.image_table,props.image_id))
+        else:
+            # From http://dba.stackexchange.com/questions/21152/how-to-update-one-table-based-on-another-tables-values-on-the-fly
+            query = ("UPDATE %s"%(edited_relnship_table),
+                 "INNER JOIN %s"%(props.image_table),
+                 "ON %s.image_number1 = %s.%s"%(edited_relnship_table, props.image_table, props.image_id),
+                 "SET %s.%s = %s.%s"%(edited_relnship_table, props.group_id, props.image_table, props.group_id))
+        query = " ".join(query)  
         db.execute(query)
+        # Spent the better part of a day figuring out that a 'commit' was needed here
+        db.Commit()
         relationship_table_cols = []
     
     # Retrieve column names
@@ -196,7 +230,9 @@ def create_update_relationship_table(selected_dataset):
     query = "SELECT * FROM %s"%edited_relnship_table
     relationship_table_data = [_ for _ in db.execute(query)] 
     
-    return relationship_table_cols, relationship_table_data
+    defined_track_cols = list(set(relationship_table_cols).difference(set(reln_cols+[props.group_id])))
+    
+    return relationship_table_cols, defined_track_cols, relationship_table_data
 
 def obtain_tracking_data(selected_dataset, selected_dataset_track, selected_measurement, selected_filter):
     def parse_dataset_selection(s):
@@ -350,10 +386,10 @@ class TimeLapseControlPanel(wx.Panel):
         self.dataset_choice.Select(0)
         self.dataset_choice.SetHelpText("Select the time-lapse data set to visualize.")
         
-        self.dataset_relationship_index = ComboBox(self, -1, choices=[ORIGINAL_TRACK], size=(200,-1), style=wx.CB_READONLY)
-        self.dataset_relationship_index.Select(0)
-        self.dataset_relationship_index.SetHelpText("Select the identifier specifying the tracked object relationships in the current data set.")  
-        self.dataset_relationship_index.Disable()
+        self.track_collection = ComboBox(self, -1, choices=[ORIGINAL_TRACK], size=(200,-1), style=wx.CB_READONLY)
+        self.track_collection.Select(0)
+        self.track_collection.SetHelpText("Select the identifier specifying the tracked object relationships in the current data set.")  
+        self.track_collection.Disable()
 
         self.dataset_measurement_choice = ComboBox(self, -1, choices=self.dataset_measurement_choices, style=wx.CB_READONLY)
         self.dataset_measurement_choice.Select(0)
@@ -413,7 +449,7 @@ class TimeLapseControlPanel(wx.Panel):
         sz.Add(self.dataset_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
         sz.Add(wx.StaticText(self, -1, "Data Tracks:"), 0, wx.TOP, 4)
-        sz.Add(self.dataset_relationship_index, 1, wx.EXPAND)
+        sz.Add(self.track_collection, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
         sz.Add(self.trajectory_selection_button)
         if self.isLAP:
@@ -652,7 +688,7 @@ class MayaviView(HasTraits):
                 self.trajectory_selection_outline.actor.actor.visibility = 0
             else:
                 self.parent.selected_node = picked_graph_node
-                self.parent.selected_trajectory = [self.parent.directed_graph[self.parent.selected_dataset_track].node[picked_graph_node][SUBGRAPH_ID]]
+                self.parent.selected_trajectory = [self.parent.directed_graph[self.parent.selected_dataset][self.parent.selected_dataset_track].node[picked_graph_node][SUBGRAPH_ID]]
                 
                 # Move the outline to the data point
                 dx = np.diff(self.lineage_selection_outline.bounds[:2])[0]/2
@@ -804,7 +840,8 @@ class MayaviView(HasTraits):
                                directed_graph.node[key]["y"],
                                directed_graph.node[key]["t"],
                                directed_graph.node[key][SCALAR_VAL],
-                               directed_graph.node[key][VISIBLE]) for key in sorted(directed_graph)])
+                               directed_graph.node[key][VISIBLE]) 
+                             for key in sorted(directed_graph)])
             
             visible = xyts[:, -1]
             # Compute reasonable scaling factor according to the data limits.
@@ -979,8 +1016,6 @@ class TimeLapseTool(wx.Frame, CPATool):
         props = Properties.getInstance()
         props = add_props_field(props)
 
-        self.directed_graph = {}
-        self.connected_nodes = {}
         self.control_panel = TimeLapseControlPanel(self)
         self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
         self.selected_dataset_track = ORIGINAL_TRACK
@@ -1004,7 +1039,23 @@ class TimeLapseTool(wx.Frame, CPATool):
                                        "filter":None}
         
         self.mayavi_view = MayaviView(self)
-        self.relationship_cols, self.relationship_data = create_update_relationship_table(self.selected_dataset)
+        
+        self.relationship_cols, self.defined_track_cols, self.relationship_data = create_update_relationship_table()
+        available_tracks = [ORIGINAL_TRACK]+list(set(self.defined_track_cols).difference([ORIGINAL_TRACK]))
+        available_datasets = list(set(map(itemgetter(self.relationship_cols.index(props.group_id)),self.relationship_data)))
+        available_datasets = [str(_) for _ in available_datasets]
+        self.directed_graph = dict.fromkeys(available_datasets,{})
+        self.connected_nodes = dict.fromkeys(available_datasets,{})
+        self.derived_measurements = dict.fromkeys(available_datasets,{})
+        for dataset in available_datasets:
+            for track in available_tracks:
+                self.directed_graph[dataset][track] = None
+                self.connected_nodes[dataset][track] = None
+                self.derived_measurements[dataset][track] = None
+            
+        self.control_panel.track_collection.SetItems(available_tracks)
+        self.control_panel.track_collection.SetSelection(available_tracks.index(ORIGINAL_TRACK))
+        self.control_panel.track_collection.Enable(len(available_tracks) > 1)
         self.update_plot() 
         self.plot_initialized = True
         self.figure_panel = self.mayavi_view.edit_traits(
@@ -1038,6 +1089,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         
         # Define events
         wx.EVT_COMBOBOX(self.control_panel.dataset_choice, -1, self.on_dataset_selected)
+        wx.EVT_COMBOBOX(self.control_panel.track_collection, -1, self.on_track_collection_selected)
         wx.EVT_COMBOBOX(self.control_panel.dataset_measurement_choice, -1, self.on_dataset_measurement_selected)
         wx.EVT_COMBOBOX(self.control_panel.derived_measurement_choice, -1, self.on_derived_measurement_selected)
         wx.EVT_BUTTON(self.control_panel.trajectory_selection_button, -1, self.update_trajectory_selection)
@@ -1050,10 +1102,10 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.EVT_TEXT(self.control_panel.distance_cutoff_value,-1,self.on_derived_measurement_selected)  
         wx.EVT_TOGGLEBUTTON(self.control_panel.preview_prune_button,-1, self.on_toggle_preview_pruned_graph)
         wx.EVT_BUTTON(self.control_panel.add_pruning_to_edits_button,-1,self.on_add_pruning_to_edits)
-        wx.EVT_BUTTON(self.control_panel.save_edited_tracks,-1, self.on_saved_edited_tracks)
+        wx.EVT_BUTTON(self.control_panel.save_edited_tracks,-1, self.on_save_edited_tracks)
             
     def on_show_all_trajectories(self, event = None):
-        self.trajectory_selection = dict.fromkeys(self.connected_nodes[self.selected_dataset_track].keys(),1)
+        self.trajectory_selection = dict.fromkeys(self.connected_nodes[self.selected_dataset][self.selected_dataset_track].keys(),1)
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot()    
 
@@ -1213,11 +1265,11 @@ class TimeLapseTool(wx.Frame, CPATool):
 
     def show_selection_in_table(self, event = None):
         '''Callback for "Show selection in a table" popup item.'''
-        keys = [self.connected_nodes[self.selected_dataset_track][item].nodes() for item in self.selected_trajectory]
+        keys = [self.connected_nodes[self.selected_dataset][self.selected_dataset_track][item].nodes() for item in self.selected_trajectory]
         keys = [item for sublist in keys for item in sublist]
-        tracking_label,timepoint,data = zip(*np.array([(self.directed_graph[self.selected_dataset_track].node[node]["label"],
-                                                        self.directed_graph[self.selected_dataset_track].node[node]["t"],
-                                                        self.directed_graph[self.selected_dataset_track].node[node][SCALAR_VAL]) for node in keys]))
+        tracking_label,timepoint,data = zip(*np.array([(self.directed_graph[self.selected_dataset][self.selected_dataset_track].node[node]["label"],
+                                                        self.directed_graph[self.selected_dataset][self.selected_dataset_track].node[node]["t"],
+                                                        self.directed_graph[self.selected_dataset][self.selected_dataset_track].node[node][SCALAR_VAL]) for node in keys]))
         table_data = np.hstack((np.array(keys), np.array((tracking_label,timepoint,data)).T))
         column_labels = list(object_key_columns())
         key_col_indices = list(xrange(len(column_labels)))
@@ -1275,7 +1327,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             return            
         
         trajectory_to_use = self.pick_trajectory_to_use()
-        subgraph = self.connected_nodes[self.selected_dataset_track][trajectory_to_use]
+        subgraph = self.connected_nodes[self.selected_dataset][self.selected_dataset_track][trajectory_to_use]
         # Find all nodes within N frames. This includes nodes that occur after a branch so extra work is needed to figure out which path to follow
         # For a directed graph, nx.single_source_shortest_path_length returns only the upstream nodes, so converted to undirected
         nodes_within_n_frames = nx.single_source_shortest_path_length(subgraph.to_undirected(),self.selected_node,n_frames)
@@ -1326,7 +1378,7 @@ class TimeLapseTool(wx.Frame, CPATool):
     
     def pick_trajectory_to_use(self, event = None):
         # Pick out the trajectory containing the selected node
-        trajectory_to_use = [key for key, subgraph in self.connected_nodes[self.selected_dataset_track].items() if self.selected_node in subgraph]
+        trajectory_to_use = [key for key, subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items() if self.selected_node in subgraph]
         if len(trajectory_to_use) > 1:
             print "Should have only one trajectory selected"
             return [],[]
@@ -1338,14 +1390,14 @@ class TimeLapseTool(wx.Frame, CPATool):
         trajectory_to_use = self.pick_trajectory_to_use()
             
         # Check the node ordering
-        selected_endpoints = self.selected_endpoints if nx.has_path(self.directed_graph[self.selected_dataset_track], self.selected_endpoints[0],self.selected_endpoints[1]) else self.selected_endpoints[::-1]        
+        selected_endpoints = self.selected_endpoints if nx.has_path(self.directed_graph[self.selected_dataset][self.selected_dataset_track], self.selected_endpoints[0],self.selected_endpoints[1]) else self.selected_endpoints[::-1]        
         return selected_endpoints, trajectory_to_use
     
     def show_cell_montage(self, event = None):
         # Check the node ordering
         selected_endpoints, trajectory_to_use = self.validate_node_ordering()
 
-        current_trajectory_keys = nx.shortest_path(self.connected_nodes[self.selected_dataset_track][trajectory_to_use], selected_endpoints[0],selected_endpoints[1])
+        current_trajectory_keys = nx.shortest_path(self.connected_nodes[self.selected_dataset][self.selected_dataset_track][trajectory_to_use], selected_endpoints[0],selected_endpoints[1])
         montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s and %s"%(trajectory_to_use, props.object_name[0],selected_endpoints[0],selected_endpoints[1] ))
         montage_frame.Show()
         montage_frame.add_objects(current_trajectory_keys)
@@ -1361,8 +1413,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         
         # Plot the selected measurement
         current_trajectory_keys = nx.shortest_path(self.connected_nodes[self.selected_dataset_track][trajectory_to_use], selected_endpoints[0],selected_endpoints[1])
-        timepoint,data = zip(*np.array([(self.directed_graph[self.selected_dataset_track].node[node]["t"],
-                                         self.directed_graph[self.selected_dataset_track].node[node][SCALAR_VAL]) 
+        timepoint,data = zip(*np.array([(self.directed_graph[self.selected_dataset][self.selected_dataset_track].node[node]["t"],
+                                         self.directed_graph[self.selected_dataset][self.selected_dataset_track].node[node][SCALAR_VAL]) 
                                         for node in current_trajectory_keys]))
         axes = window.figure.add_subplot(1,1,1)   
         
@@ -1389,6 +1441,11 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
             self.do_plots_need_updating["dataset"] = True
             
+    def on_track_collection_selected(self, event=None):
+        self.selected_dataset_track = self.control_panel.track_collection.GetStringSelection()
+        self.do_plots_need_updating["tracks"] = True
+        self.update_plot()
+    
     def on_dataset_measurement_selected(self, event = None):
         self.do_plots_need_updating["measurement"] = False
         if self.control_panel.dataset_measurement_choice.GetStringSelection() == OTHER_METRICS:
@@ -1412,36 +1469,36 @@ class TimeLapseTool(wx.Frame, CPATool):
     
     def on_toggle_preview_pruned_graph(self, event=None):
         # Set the visibility of the nodes
-        attr = nx.get_node_attributes(self.directed_graph[self.selected_dataset_track], VISIBLE)
+        attr = nx.get_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track], VISIBLE)
         if self.control_panel.preview_prune_button.GetValue():
             # Set visibility based on the selected metric and trajectory selection
-            for key,subgraph in self.connected_nodes[self.selected_dataset_track].items():
+            for key,subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
                 is_currently_visible = self.trajectory_selection[key]              
                 subattr = nx.get_node_attributes(subgraph, self.selected_metric+VISIBLE_SUFFIX)
                 for _ in subattr.items():
                     attr[_[0]] = _[1] & is_currently_visible
         else:
             # Set visibility based on trajectory selection only
-            for key,subgraph in self.connected_nodes[self.selected_dataset_track].items():
+            for key,subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
                 is_currently_visible = self.trajectory_selection[key] 
                 for _ in subgraph.nodes():
                     attr[_] = is_currently_visible      
-        nx.set_node_attributes(self.directed_graph[self.selected_dataset_track], VISIBLE, attr)
+        nx.set_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track], VISIBLE, attr)
         
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot()
         
     def on_add_pruning_to_edits(self, event=None):
-        attr = nx.get_node_attributes(self.directed_graph[self.selected_dataset_track], IS_REMOVED)
-        for key,subgraph in self.connected_nodes[self.selected_dataset_track].items():
+        attr = nx.get_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track], IS_REMOVED)
+        for key,subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
             subattr = nx.get_node_attributes(subgraph, self.selected_metric+VISIBLE_SUFFIX)
             for _ in subattr.items():
                 attr[_[0]] = (not _[1]) or attr[_[0]]  # A node is removed if it's pruned (i.e, not visible) or it's already removed
-        nx.set_node_attributes(self.directed_graph[self.selected_dataset_track], IS_REMOVED, attr)   
+        nx.set_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track], IS_REMOVED, attr)   
         dlg = wx.MessageDialog(self, "The selected pruning has been added to the list of trajectory edits. You can save the edits to the database by selecting the 'Save Edited Tracks' button", "Edits Added", wx.OK)
         dlg.ShowModal()
     
-    def on_saved_edited_tracks(self, event = None):
+    def on_save_edited_tracks(self, event = None):
         dlg = wx.TextEntryDialog(self, 'Specify a name for your edited tracks','Enter track identifier')
         dlg.SetValue('MyEditedTracks')
         if dlg.ShowModal() == wx.ID_OK:
@@ -1456,32 +1513,53 @@ class TimeLapseTool(wx.Frame, CPATool):
         else:
             dlg.Destroy()
             return
-        # Create new table
-        # TODO: Insert table creation here
+        
+        # Create/update the table
         table_name = get_edited_relationship_tablename()
         logging.info('Populating table %s...'%table_name)
         
-        # Retrieve original relationship table
-        #tableData = create_update_relationship_table(self.selected_dataset)
-        
         # Create new column containing 1 if edge is kept, 0 if not
-        newcol = len(tableData)*[1]
-        attr = nx.get_node_attributes(self.directed_graph[self.selected_dataset_track], IS_REMOVED)
+        newcol = len(self.relationship_data)*[1]
+        attr = nx.get_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track], IS_REMOVED)
+        all_edges = map(itemgetter(0,1,2,3), self.relationship_data)
         for _ in attr.items():
             if _[1]:
-                for successor in self.directed_graph[self.selected_dataset_track].successors_iter(_[0]):
-                    newcol[tableData.index(_[0]+successor)] = 0
+                for successor in self.directed_graph[self.selected_dataset][self.selected_dataset_track].successors_iter(_[0]):
+                    newcol[all_edges.index(_[0]+successor)] = 0
             
-        tableData = np.hstack((np.array(tableData),np.array(newcol)[np.newaxis].T))
-        colnames += [trackID]
+        if self.relationship_cols.count(trackID) == 0:
+            colnames = self.relationship_cols + [trackID]
+            tableData = np.hstack((np.array(self.relationship_data),np.array(newcol)[np.newaxis].T))
+        else:
+            dlg = wx.MessageDialog(self, 'This track already exists. Do you want to overwrite it?', 
+                                   "Overwrite track?", wx.OK|wx.NO)
+            if dlg.ShowModal() == wx.NO:
+                dlg.Destroy()
+                return
+            else:
+                colnames = self.relationship_cols 
+                tableData = np.array(self.relationship_data)
+                tableData[:,colnames.index(trackID)] = np.array(newcol)
+                dlg.Destroy()
 
         success = db.CreateTableFromData(tableData, colnames, table_name, temporary=False)
         
-        # Update drop-down listing
-        track_choices = self.control_panel.dataset_relationship_index.GetItems() + [trackID]
-        self.control_panel.dataset_relationship_index.SetItems(track_choices)
-        self.control_panel.dataset_relationship_index.SetSelection(track_choices.index(trackID))   
-        self.control_panel.dataset_relationship_index.Enable()  
+        # Update drop-down listings
+        track_choices = self.control_panel.track_collection.GetItems() + [trackID]
+        self.control_panel.track_collection.SetItems(track_choices)
+        self.control_panel.track_collection.SetSelection(track_choices.index(trackID))   
+        self.control_panel.track_collection.Enable()  
+        self.selected_dataset_track = trackID
+        self.selected_measurement = props.image_id
+        self.control_panel.dataset_measurement_choice.SetSelection(self.control_panel.dataset_measurement_choices.index(self.selected_measurement))
+        self.on_dataset_measurement_selected()
+        
+        # Update bookkeepinng and display
+        self.do_plots_need_updating["dataset"] = True
+        self.directed_graph[self.selected_dataset][trackID] = {}
+        self.connected_nodes[self.selected_dataset][trackID] = {}
+        self.derived_measurements[self.selected_dataset][trackID] = {}        
+        self.on_track_collection_selected()
         
     def on_colormap_selected(self, event = None):
         self.do_plots_need_updating["colormap"] = False
@@ -1544,30 +1622,30 @@ class TimeLapseTool(wx.Frame, CPATool):
         trajectory_selection_dlg = TrajectoryMultiChoiceDialog(self, 
                                                     message = 'Select the objects you would like to show',
                                                     caption = 'Select trajectories to visualize', 
-                                                    choices = [str(x) for x in self.connected_nodes[self.selected_dataset_track].keys()])
+                                                    choices = [str(x) for x in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].keys()])
                 
         current_selection = np.nonzero(self.trajectory_selection.values())[0]
         trajectory_selection_dlg.SetSelections(current_selection)
         
         if (trajectory_selection_dlg.ShowModal() == wx.ID_OK):
             current_selection = trajectory_selection_dlg.GetSelections()
-            all_labels = self.connected_nodes[self.selected_dataset_track].keys()
+            all_labels = self.connected_node[self.selected_dataset].s[self.selected_dataset_track].keys()
             self.trajectory_selection = dict.fromkeys(all_labels,0)
             for x in current_selection:
                 self.trajectory_selection[all_labels[x]] = 1
             self.do_plots_need_updating["trajectories"] = True
             
             for key, value in self.trajectory_selection.items():
-                for node_key in self.connected_nodes[self.selected_dataset_track][key]:
-                    self.directed_graph[self.selected_dataset_track].node[node_key][VISIBLE] = (value != 0)
+                for node_key in self.connected_nodes[self.selected_dataset][self.selected_dataset_track][key]:
+                    self.directed_graph[self.selected_dataset][self.selected_dataset_track].node[node_key][VISIBLE] = (value != 0)
             # Alter lines between the points that we have previously created by directly modifying the VTK dataset.                
-            nodes_to_remove = [self.connected_nodes[self.selected_dataset_track][key] for (key,value)in self.trajectory_selection.items() if value == 0]
+            nodes_to_remove = [self.connected_nodes[self.selected_dataset][self.selected_dataset_track][key] for (key,value)in self.trajectory_selection.items() if value == 0]
             nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
             
-            mapping = dict(zip(sorted(self.directed_graph[self.selected_dataset_track]),
-                               range(0,self.directed_graph[self.selected_dataset_track].number_of_nodes()+1)))
+            mapping = dict(zip(sorted(self.directed_graph[self.selected_dataset][self.selected_dataset_track]),
+                               range(0,self.directed_graph[self.selected_dataset][self.selected_dataset_track].number_of_nodes()+1)))
             nodes_to_remove = [mapping[item] for item in nodes_to_remove]
-            self.altered_directed_graph = nx.relabel_nodes(self.directed_graph[self.selected_dataset_track], mapping, copy=True)
+            self.altered_directed_graph = nx.relabel_nodes(self.directed_graph[self.selected_dataset][self.selected_dataset_track], mapping, copy=True)
             self.altered_directed_graph.remove_nodes_from(nodes_to_remove)
             self.update_plot()                    
     
@@ -1581,13 +1659,13 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.do_plots_need_updating["filter"] = self.control_panel.enable_filtering_checkbox.IsChecked()   
         self.generate_graph()
         self.mayavi_view.draw_trajectories(self.do_plots_need_updating, 
-                                           self.directed_graph[self.selected_dataset_track], 
-                                           self.connected_nodes[self.selected_dataset_track], 
+                                           self.directed_graph[self.selected_dataset][self.selected_dataset_track], 
+                                           self.connected_nodes[self.selected_dataset][self.selected_dataset_track], 
                                            self.selected_colormap, 
                                            self.scalar_data)
         self.mayavi_view.draw_lineage(self.do_plots_need_updating, 
-                                      self.directed_graph[self.selected_dataset_track], 
-                                      self.connected_nodes[self.selected_dataset_track], 
+                                      self.directed_graph[self.selected_dataset][self.selected_dataset_track], 
+                                      self.connected_nodes[self.selected_dataset][self.selected_dataset_track], 
                                       self.selected_colormap, 
                                       self.scalar_data )
         
@@ -1618,7 +1696,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         
         if self.do_plots_need_updating["tracks"]: 
             relationship_index = map(itemgetter(self.relationship_cols.index(self.selected_dataset_track)),self.relationship_data)
-            relationship_index = [_ == 1 for _ in relationship_index] # Convert to boolean
+            dataset_id = map(itemgetter(self.relationship_cols.index(props.group_id)),self.relationship_data)
+            # Index is 1 if (a) the row was flagged in the saved track and (b) the dataset is currently active 
+            relationship_index = [_[0] == 1 and _[1] == int(self.selected_dataset) for _ in zip(relationship_index, dataset_id)] # Convert to boolean
         
         if len(trajectory_info) == 0:
             logging.info("No object data found")
@@ -1634,7 +1714,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                  self.selected_dataset, 
                                                                  self.selected_dataset_track))
             
-            self.directed_graph[self.selected_dataset_track] = nx.DiGraph()
+            self.directed_graph[self.selected_dataset][self.selected_dataset_track] = nx.DiGraph()
             key_length = len(object_key_columns())
             indices = range(0,key_length)
             node_ids = map(itemgetter(*indices),trajectory_info)
@@ -1653,19 +1733,19 @@ class TimeLapseTool(wx.Frame, CPATool):
             
             temp = dict(zip(node_ids,attr))
             unified_selected_node_ids = list(set(selected_node_ids).union(set(selected_parent_node_ids)))
-            self.directed_graph[self.selected_dataset_track].add_nodes_from(zip(unified_selected_node_ids,[temp[_] for _ in unified_selected_node_ids]))
+            self.directed_graph[self.selected_dataset][self.selected_dataset_track].add_nodes_from(zip(unified_selected_node_ids,[temp[_] for _ in unified_selected_node_ids]))
             
             # Add edges as list of tuples
-            self.directed_graph[self.selected_dataset_track].add_edges_from(zip(selected_parent_node_ids,selected_node_ids))
+            self.directed_graph[self.selected_dataset][self.selected_dataset_track].add_edges_from(zip(selected_parent_node_ids,selected_node_ids))
             
-            logging.info("Constructed graph consisting of %d nodes and %d edges"%(self.directed_graph[self.selected_dataset_track].number_of_nodes(),
-                                                                                  self.directed_graph[self.selected_dataset_track].number_of_edges()))
+            logging.info("Constructed graph consisting of %d nodes and %d edges"%(self.directed_graph[self.selected_dataset][self.selected_dataset_track].number_of_nodes(),
+                                                                                  self.directed_graph[self.selected_dataset][self.selected_dataset_track].number_of_edges()))
             
             t1 = time.clock()
-            G = nx.convert_node_labels_to_integers(self.directed_graph[self.selected_dataset_track],
+            G = nx.convert_node_labels_to_integers(self.directed_graph[self.selected_dataset][self.selected_dataset_track],
                                                    first_label=0,
                                                    ordering="default")
-            mapping = dict(zip(G.nodes(),self.directed_graph[self.selected_dataset_track].nodes()))
+            mapping = dict(zip(G.nodes(),self.directed_graph[self.selected_dataset][self.selected_dataset_track].nodes()))
             glayout.layer_layout(G, level_attribute = "t")
             nx.relabel_nodes(G, mapping,copy=False) # Map back to original graph labels
             node_positions = dict(zip(G.nodes(),[[G.node[key]["t"],G.node[key]["y"]] for key in G.nodes()]))
@@ -1679,8 +1759,8 @@ class TimeLapseTool(wx.Frame, CPATool):
             for key in G.nodes(): node_positions[key][1] *= scaling_y
             
             self.lineage_node_positions = node_positions  
-            nx.set_node_attributes(self.directed_graph[self.selected_dataset_track],L_TCOORD,dict(zip(node_positions.keys(), [item[0] for item in node_positions.values()])))
-            nx.set_node_attributes(self.directed_graph[self.selected_dataset_track],L_YCOORD,dict(zip(node_positions.keys(), [item[1] for item in node_positions.values()])))         
+            nx.set_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track],L_TCOORD,dict(zip(node_positions.keys(), [item[0] for item in node_positions.values()])))
+            nx.set_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track],L_YCOORD,dict(zip(node_positions.keys(), [item[1] for item in node_positions.values()])))         
             
             t2 = time.clock()
             logging.info("Computed lineage layout (%.2f sec)"%(t2-t1))
@@ -1688,15 +1768,14 @@ class TimeLapseTool(wx.Frame, CPATool):
             # Each track gets its own indexed subgraph. Later operations to the graphs are referenced to this key.
             # According to http://stackoverflow.com/questions/18643789/how-to-find-subgraphs-in-a-directed-graph-without-converting-to-undirected-graph,
             #  weakly_connected_component_subgraphs maintains directionality
-            #connected_nodes = nx.connected_component_subgraphs(self.directed_graph[self.selected_dataset_track].to_undirected())
-            connected_nodes = tuple(nx.weakly_connected_component_subgraphs(self.directed_graph[self.selected_dataset_track]))
-            self.connected_nodes[self.selected_dataset_track] = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
+            connected_nodes = tuple(nx.weakly_connected_component_subgraphs(self.directed_graph[self.selected_dataset][self.selected_dataset_track]))
+            self.connected_nodes[self.selected_dataset][self.selected_dataset_track] = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
             
             # Set graph attributes
-            for key,subgraph in self.connected_nodes[self.selected_dataset_track].items():
+            for key,subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
                 # Set connect component ID in ful graph                
                 nodes = subgraph.nodes()
-                nx.set_node_attributes(self.directed_graph[self.selected_dataset_track], SUBGRAPH_ID, dict(zip(nodes,[key]*len(nodes))))
+                nx.set_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track], SUBGRAPH_ID, dict(zip(nodes,[key]*len(nodes))))
                 
                 # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
                 # Set end nodes
@@ -1744,7 +1823,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                 nx.set_node_attributes(subgraph, TERMINAL_NODES, attr)      
 
             # Calculate measurements created from existing measurments
-            self.derived_measurements = self.add_derived_measurements()
+            self.derived_measurements[self.selected_dataset][self.selected_dataset_track] = self.add_derived_measurements()
             
             # Insert ref to derived measurements and update current selection
             measurement_choices = self.control_panel.dataset_measurement_choices + [OTHER_METRICS]
@@ -1752,11 +1831,11 @@ class TimeLapseTool(wx.Frame, CPATool):
             self.control_panel.dataset_measurement_choice.SetItems(measurement_choices)
             self.control_panel.dataset_measurement_choice.SetSelection(current_measurement_choice)
             
-            self.control_panel.derived_measurement_choice.SetItems(self.derived_measurements.keys())
+            self.control_panel.derived_measurement_choice.SetItems(self.derived_measurements[self.selected_dataset][self.selected_dataset_track].keys())
             self.control_panel.derived_measurement_choice.SetSelection(0)
             
             # When visualizing a new dataset, select all trajectories by default
-            self.trajectory_selection = dict.fromkeys(self.connected_nodes[self.selected_dataset_track].keys(),1)    
+            self.trajectory_selection = dict.fromkeys(self.connected_nodes[self.selected_dataset][self.selected_dataset_track].keys(),1)    
                 
         else:
             key_length = len(object_key_columns())
@@ -1766,22 +1845,23 @@ class TimeLapseTool(wx.Frame, CPATool):
                 getitem = itemgetter(len(trajectory_info[0])-2) # Measurement values                
                 attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)]))        
             else:
-                node_ids = sorted(self.directed_graph[self.selected_dataset_track])
+                node_ids = sorted(self.directed_graph[self.selected_dataset][self.selected_dataset_track])
                 if self.selected_metric == METRIC_NODESWITHINDIST:
-                    self.derived_measurements[self.selected_metric] = self.calc_n_nodes_from_branchpoint()
-                attr = dict(zip(node_ids,self.derived_measurements[self.selected_metric]))
-            nx.set_node_attributes(self.directed_graph[self.selected_dataset_track],SCALAR_VAL,attr)
+                    self.derived_measurements[self.selected_dataset][self.selected_dataset_track][self.selected_metric] = self.calc_n_nodes_from_branchpoint()
+                attr = dict(zip(node_ids,self.derived_measurements[self.selected_dataset][self.selected_dataset_track][self.selected_metric]))
+            nx.set_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track],SCALAR_VAL,attr)
             getitem = itemgetter(len(trajectory_info[0])-1) # Filter values
             attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)])) 
-            nx.set_node_attributes(self.directed_graph[self.selected_dataset_track],"f",attr)
+            nx.set_node_attributes(self.directed_graph[self.selected_dataset][self.selected_dataset_track],"f",attr)
             
-        self.scalar_data = np.array([self.directed_graph[self.selected_dataset_track].node[key][SCALAR_VAL] for key in sorted(self.directed_graph[self.selected_dataset_track])]).astype(float)
+        self.scalar_data = np.array([self.directed_graph[self.selected_dataset][self.selected_dataset_track].node[key][SCALAR_VAL] 
+                                     for key in sorted(self.directed_graph[self.selected_dataset][self.selected_dataset_track])]).astype(float)
 
     def calc_n_nodes_from_branchpoint(self):
         cutoff_dist_from_branch = self.control_panel.distance_cutoff_value.GetValue()
-        end_nodes_for_pruning = {_:set() for _ in self.connected_nodes[self.selected_dataset_track].keys()} 
+        end_nodes_for_pruning = {_:set() for _ in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].keys()} 
         
-        for (key,subgraph) in self.connected_nodes[self.selected_dataset_track].items():
+        for (key,subgraph) in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
             branch_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,BRANCH_NODES).items() if _[1]]
             terminal_nodes = [_[0] for _ in nx.get_node_attributes(subgraph, TERMINAL_NODES).items() if _[1]]
             if branch_nodes != []:
@@ -1812,9 +1892,9 @@ class TimeLapseTool(wx.Frame, CPATool):
                 attr[_] = False
             nx.set_node_attributes(subgraph,METRIC_NODESWITHINDIST_VISIBLE,attr)            
     
-        sorted_nodes = sorted(self.directed_graph[self.selected_dataset_track])
+        sorted_nodes = sorted(self.directed_graph[self.selected_dataset][self.selected_dataset_track])
 
-        temp_full_graph_dict =  dict.fromkeys(self.directed_graph[self.selected_dataset_track].nodes(),0.0)
+        temp_full_graph_dict =  dict.fromkeys(self.directed_graph[self.selected_dataset][self.selected_dataset_track].nodes(),0.0)
         for key, nodes in end_nodes_for_pruning.items():
             l = list(end_nodes_for_pruning[key])
             for ii in l:
@@ -1823,9 +1903,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         return np.array([temp_full_graph_dict[node] for node in sorted_nodes]).astype(float)
         
     def calc_singletons(self):
-        sorted_nodes = sorted(self.directed_graph[self.selected_dataset_track])
-        temp_full_graph_dict = dict.fromkeys(self.directed_graph[self.selected_dataset_track].nodes(),0.0)
-        for (key,subgraph) in self.connected_nodes[self.selected_dataset_track].items():
+        sorted_nodes = sorted(self.directed_graph[self.selected_dataset][self.selected_dataset_track])
+        temp_full_graph_dict = dict.fromkeys(self.directed_graph[self.selected_dataset][self.selected_dataset_track].nodes(),0.0)
+        for (key,subgraph) in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
             start_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,START_NODES).items() if _[1]]
             end_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,END_NODES).items() if _[1]]
             singletons = list(set(start_nodes).intersection(set(end_nodes)))
@@ -1851,9 +1931,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         # nx.betweenness_centrality: http://networkx.lanl.gov/reference/generated/networkx.algorithms.centrality.betweenness_centrality.html
         # Betweenness centrality of a node v is the sum of the fraction of all-pairs shortest paths that pass through v:
         
-        sorted_nodes = sorted(self.directed_graph[self.selected_dataset_track])
-        temp_full_graph_dict = dict.fromkeys(self.directed_graph[self.selected_dataset_track].nodes(),0.0)
-        for key,subgraph in self.connected_nodes[self.selected_dataset_track].items():
+        sorted_nodes = sorted(self.directed_graph[self.selected_dataset][self.selected_dataset_track])
+        temp_full_graph_dict = dict.fromkeys(self.directed_graph[self.selected_dataset][self.selected_dataset_track].nodes(),0.0)
+        for key,subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
             attr = dict.fromkeys(subgraph.nodes(), 0.0)
             betweenness_centrality = nx.betweenness_centrality(subgraph, normalized=True)
             for (node,value) in betweenness_centrality.items():
@@ -1880,9 +1960,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         return np.array([temp_full_graph_dict[node] for node in sorted_nodes ]).astype(float)      
     
     def calc_loops(self):
-        sorted_nodes = sorted(self.directed_graph[self.selected_dataset_track])
-        temp_full_graph_dict = dict.fromkeys(self.directed_graph[self.selected_dataset_track].nodes(),0.0)
-        for key,subgraph in self.connected_nodes[self.selected_dataset_track].items():
+        sorted_nodes = sorted(self.directed_graph[self.selected_dataset][self.selected_dataset_track])
+        temp_full_graph_dict = dict.fromkeys(self.directed_graph[self.selected_dataset][self.selected_dataset_track].nodes(),0.0)
+        for key,subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items():
             cycles = nx.cycle_basis(subgraph.to_undirected())
             # Just picking out the simple cycles for now
             #     2
