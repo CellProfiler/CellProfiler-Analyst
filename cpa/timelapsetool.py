@@ -26,6 +26,7 @@ from cpatool import CPATool
 import tableviewer
 
 import matplotlib
+import matplotlib.cm as cm
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 
 # traits imports
@@ -38,21 +39,6 @@ from mayavi.core.ui.api import MlabSceneModel, SceneEditor
 from mayavi.core.ui.mayavi_scene import MayaviScene
 from tvtk.pyface.scene import Scene
 from tvtk.api import tvtk
-
-# Colormap names from an error msg (http://www.mail-archive.com/mayavi-users@lists.sourceforge.net/msg00615.html)
-# TODO(?): Find a better way to captures these names
-all_colormaps = ['Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'Dark2', 
-                 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 
-                 'Paired', 'Pastel1', 'Pastel2', 'PiYG', 'PuBu', 
-                 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 
-                 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Set1', 'Set2', 
-                 'Set3', 'Spectral', 'YlGn', 'YlGnBu', 'YlOrBr', 
-                 'YlOrRd', 'autumn', 'binary', 'black-white', 'blue-red', 
-                 'bone', 'cool', 'copper', 'file', 'flag', 'gist_earth', 
-                 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 
-                 'gist_stern', 'gist_yarg', 'gray', 'hot', 'hsv', 'jet', 
-                 'pink', 'prism', 'spectral', 'spring', 'summer','winter']
-all_colormaps.sort()
 
 required_fields = ['series_id', 'group_id', 'timepoint_id','object_tracking_label']
 
@@ -371,7 +357,6 @@ class TimeLapseControlPanel(wx.Panel):
 
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
-
         self.parent = parent
         
         # Get names of data sets
@@ -403,7 +388,7 @@ class TimeLapseControlPanel(wx.Panel):
         self.dataset_measurement_choice.Select(0)
         self.dataset_measurement_choice.SetHelpText("Select the per-%s measurement to visualize the data with. The lineages and (xyt) trajectories will be color-coded by this measurement."%props.object_name[0])
         
-        self.colormap_choice = ComboBox(self, -1, choices=all_colormaps, style=wx.CB_READONLY)
+        self.colormap_choice = ComboBox(self, -1, choices=sorted(cm.datad.keys()), style=wx.CB_READONLY)
         self.colormap_choice.SetStringSelection("jet") 
         self.colormap_choice.SetHelpText("Select the colormap to use for color-coding the data.")
         
@@ -441,13 +426,6 @@ class TimeLapseControlPanel(wx.Panel):
         self.save_edited_tracks = wx.Button(self, -1, "Save Edited Tracks...")
         self.save_edited_tracks.SetHelpText("Saves the edited graph as a new index into the relationship table.")
         self.save_edited_tracks.Disable()         
-
-        self.all_derived_measurements_widgets = [self.derived_measurement_choice, 
-                                                 self.distance_cutoff_value, 
-                                                 self.bc_branch_ratio_value, 
-                                                 self.preview_prune_button, 
-                                                 self.add_pruning_to_edits_button,
-                                                 self.save_edited_tracks]
         
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
@@ -488,19 +466,27 @@ class TimeLapseControlPanel(wx.Panel):
         sz.AddSpacer((4,-1))  
         sz.Add(self.derived_measurement_choice, 1, wx.EXPAND)
         sz.AddSpacer((4,-1))
-        sz.Add(wx.StaticText(self, -1, "Distance cutoff:"), 0, wx.TOP, 4)
+        self.distance_cutoff_value_text = wx.StaticText(self, -1, "Distance cutoff:")
+        sz.Add(self.distance_cutoff_value_text, 0, wx.TOP, 4)
+        self.distance_cutoff_value_text.Hide()
         sz.Add(self.distance_cutoff_value, 1, wx.EXPAND)
-        sz.Add(wx.StaticText(self, -1, "Betweeness centrality cutoff:"), 0, wx.TOP, 4)
+        self.distance_cutoff_value.Hide()
+        self.bc_branch_ratio_value_text = wx.StaticText(self, -1, "Betweeness centrality cutoff:")
+        self.bc_branch_ratio_value_text.Hide()
+        sz.Add(self.bc_branch_ratio_value_text, 0, wx.TOP, 4)
+        self.bc_branch_ratio_value_text.Hide()
         sz.Add(self.bc_branch_ratio_value, 1, wx.EXPAND) 
+        self.bc_branch_ratio_value.Hide()
         sz.AddSpacer((4,-1))
         sz.Add(self.preview_prune_button, 1, wx.EXPAND) 
         sz.AddSpacer((4,-1))
         sz.Add(self.add_pruning_to_edits_button, 1, wx.EXPAND) 
         sz.AddSpacer((4,-1))
         sz.Add(self.save_edited_tracks, 1, wx.EXPAND) 
+        self.derived_measurement_sizer = sz # Save sizer for later reference
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))        
-
+        sizer.AddSpacer((-1,2))       
+        
         # Row #4: Measurement filter selection
         sz = wx.BoxSizer(wx.HORIZONTAL)
         self.enable_filtering_checkbox = wx.CheckBox(self, -1, label="Enable filtering")
@@ -512,10 +498,17 @@ class TimeLapseControlPanel(wx.Panel):
         sz.Layout()
         sizer.Add(sz, 1, wx.EXPAND) 
         sizer.AddSpacer((-1,2))
+        
         sizer.Layout()
         self.SetSizer(sizer)
         self.Layout()
         self.Show(True)
+        
+        self.derived_metric_to_widget_mapping = {   METRIC_SINGLETONS: None, 
+                                                    METRIC_BC: [self.bc_branch_ratio_value_text, self.bc_branch_ratio_value ],
+                                                    METRIC_NODESWITHINDIST: [self.distance_cutoff_value_text, self.distance_cutoff_value],
+                                                    METRIC_LOOPS: None,
+                                                    METRIC_CROSSINGS: None}
         
         # Define events
         wx.EVT_COMBOBOX(self.dataset_choice, -1, self.on_dataset_selected)
@@ -1059,6 +1052,7 @@ class TimeLapseTool(wx.Frame, CPATool):
     '''
     def __init__(self, parent, size=(1000,600), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Time-Lapse Tool', **kwargs)
+        self.SetBackgroundColour(wx.NullColor)
         CPATool.__init__(self)
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
         self.SetName(self.tool_name)
@@ -1498,10 +1492,11 @@ class TimeLapseTool(wx.Frame, CPATool):
     def dataset_measurement_selected(self, selected_measurement=None, selected_metric=None):
         self.do_plots_need_updating["measurement"] = False
         if selected_measurement == OTHER_METRICS:
-            [_.Enable() for _ in self.control_panel.all_derived_measurements_widgets]            
+            # http://stackoverflow.com/questions/14366594/wxpython-how-do-you-access-the-objects-which-youve-placed-inside-of-a-wx-sizer
+            [_.Window.Enable() for _ in self.control_panel.derived_measurement_sizer.Children if _.IsWindow()]
             self.derived_measurement_selected(selected_metric)
         else:
-            [_.Disable() for _ in self.control_panel.all_derived_measurements_widgets]
+            [_.Window.Disable() for _ in self.control_panel.derived_measurement_sizer.Children if _.IsWindow()]
         if self.selected_measurement == selected_measurement:
             self.control_panel.trajectory_selection_button.Enable()
         else:
@@ -1511,9 +1506,15 @@ class TimeLapseTool(wx.Frame, CPATool):
 
     def derived_measurement_selected(self, selected_metric=None):
         self.selected_metric = selected_metric
-        # A couple more specific ones, until I get the hide/show thing working
-        self.control_panel.distance_cutoff_value.Enable(self.selected_metric == METRIC_NODESWITHINDIST)
-        self.control_panel.bc_branch_ratio_value.Enable(self.selected_metric == METRIC_BC) 
+        widget_dict = self.control_panel.derived_metric_to_widget_mapping
+        for _ in widget_dict.items():
+            if _[1] is None:
+                pass
+            else:
+                [item.Show(_[0] == selected_metric) for item in _[1]]
+        # http://stackoverflow.com/questions/2562063/why-does-hideing-and-showing-panels-in-wxpython-result-in-the-sizer-changi
+        self.control_panel.derived_measurement_sizer.Layout()
+           
         self.do_plots_need_updating["measurement"] = True        
     
     def toggle_preview_pruned_graph(self, selected_dataset=None, selected_dataset_track=None):
