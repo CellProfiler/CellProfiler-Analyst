@@ -84,6 +84,8 @@ IS_REMOVED = "Is_removed"
 
 EDITED_TABLE_SUFFIX = "_Edits"
 ORIGINAL_TRACK = "Original"
+EDGE_TBL_ID = "Edges"
+NODE_TBL_ID = "Nodes"
 
 def add_props_field(props):
     # Temp declarations; these will be retrieved from the properties file directly, eventually
@@ -119,8 +121,9 @@ def retrieve_datasets():
 def get_object_name():
     return props.cell_x_loc.split('_Location_Center')[0]
 
-def get_edited_relationship_tablename():
-    return props.relationship_table+EDITED_TABLE_SUFFIX
+def get_edited_relationship_tablenames():
+    return {EDGE_TBL_ID: "_".join((props.relationship_table,EDGE_TBL_ID)),
+            NODE_TBL_ID: "_".join((props.relationship_table,NODE_TBL_ID))}
 
 def is_LAP_tracking_data():
     # If the data is LAP-based, then additional button(s) show up
@@ -146,32 +149,35 @@ def where_stmt_for_tracked_objects(obj, group_id, selected_dataset):
             )
     return stmt    
   
-def create_update_relationship_table():
-    edited_relnship_table = get_edited_relationship_tablename()
-    is_table = 0
+def create_update_relationship_tables():
+    edited_relnship_tables = get_edited_relationship_tablenames()
     if props.db_type == 'sqlite':
-        query = "PRAGMA table_info(%s)"%(edited_relnship_table)
+        query = "PRAGMA table_info(%s)"%(edited_relnship_tables.values()[0])
     else:
-        query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, edited_relnship_table)
+        query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, edited_relnship_tables.values()[0])
     is_table = len(db.execute(query)) > 0 
 
-    reln_cols = ['image_number1', 'object_number1', 'image_number2', 'object_number2']
+    reln_cols = {EDGE_TBL_ID:['image_number1', 'object_number1', 'image_number2', 'object_number2'],
+                 NODE_TBL_ID:['image_number', 'object_number']}
     if not is_table:
-        logging.info("Creating custom relationship table...")
         # If the table doens't exist, create it
+        #-------------------------------
+        # Create the edge table first
+        logging.info("Creating custom relationship tables...")
+        
         obj = get_object_name()
         # From http://stackoverflow.com/questions/12730390/copy-table-structure-to-new-table-in-sqlite3. Seems to work in MySQL too
-        query = ("CREATE TABLE %s AS"%(edited_relnship_table),
-                "SELECT %s"%(",".join(reln_cols)),
-                "FROM %s"%(props.relationships_view),
-                "WHERE 0")
+        query = ("CREATE TABLE %s AS"%(edited_relnship_tables[EDGE_TBL_ID]),
+                    "SELECT %s"%(",".join(reln_cols[EDGE_TBL_ID])),
+                    "FROM %s"%(props.relationships_view),
+                    "WHERE 0")
         query = " ".join(query)            
         db.execute(query)
         query = "SELECT DISTINCT(%s) FROM %s"%(props.group_id, props.image_table)
         available_datasets = [_[0] for _ in db.execute(query)]
         for selected_dataset in available_datasets:
-            query = ("INSERT INTO %s"%(edited_relnship_table),
-                     "SELECT %s"%(",".join(reln_cols)),
+            query = ("INSERT INTO %s"%(edited_relnship_tables[EDGE_TBL_ID]),
+                     "SELECT %s"%(",".join(reln_cols[EDGE_TBL_ID])),
                      "FROM %s r"%(props.relationships_view),
                      "JOIN %s i1"%(props.image_table),
                      "ON r.image_number1 = i1.%s"%(props.image_id),
@@ -179,48 +185,92 @@ def create_update_relationship_table():
                 where_stmt_for_tracked_objects(obj,props.group_id,int(selected_dataset)) 
             query = " ".join(query)            
             db.execute(query)
-        
-        # Add the grouping ID and the default track column
-        if props.db_type == 'sqlite':
-            query = "ALTER TABLE %s ADD COLUMN %s INT"%(edited_relnship_table, props.group_id)
-            db.execute(query)
-            query = "ALTER TABLE %s ADD COLUMN %s INT DEFAULT 1"%(edited_relnship_table, ORIGINAL_TRACK)
-            db.execute(query)
-        else:
-            query = "ALTER TABLE %s ADD %s INT, %s INT DEFAULT 1"%(edited_relnship_table, props.group_id, ORIGINAL_TRACK)
-            db.execute(query)
+              
+        # Add the grouping ID and default track columns 
+        # SQLite doesn't do multiple ADDs in one query, so do with multiple queries
+        query = "ALTER TABLE %s ADD COLUMN %s INT"%(edited_relnship_tables[EDGE_TBL_ID], props.group_id)
+        db.execute(query)
+        query = "ALTER TABLE %s ADD COLUMN %s INT DEFAULT 1"%(edited_relnship_tables[EDGE_TBL_ID], ORIGINAL_TRACK)
+        db.execute(query)
             
         if props.db_type == 'sqlite':
             # From http://stackoverflow.com/questions/19270259/update-join-sqlite
-            query = ("UPDATE %s"%(edited_relnship_table),
+            query = ("UPDATE %s"%(edited_relnship_tables[EDGE_TBL_ID]),
                      "SET %s ="%(props.group_id),
                      "(SELECT %s.%s"%(props.image_table,props.group_id),
                      "FROM %s"%(props.image_table),
-                     "WHERE %s.image_number1 = %s.%s)"%(edited_relnship_table,props.image_table,props.image_id))
+                     "WHERE %s.image_number1 = %s.%s)"%(edited_relnship_tables[EDGE_TBL_ID],props.image_table,props.image_id))
         else:
             # From http://dba.stackexchange.com/questions/21152/how-to-update-one-table-based-on-another-tables-values-on-the-fly
-            query = ("UPDATE %s"%(edited_relnship_table),
-                 "INNER JOIN %s"%(props.image_table),
-                 "ON %s.image_number1 = %s.%s"%(edited_relnship_table, props.image_table, props.image_id),
-                 "SET %s.%s = %s.%s"%(edited_relnship_table, props.group_id, props.image_table, props.group_id))
+            query = ("UPDATE %s"%(edited_relnship_tables[EDGE_TBL_ID]),
+                        "INNER JOIN %s"%(props.image_table),
+                        "ON %s.image_number1 = %s.%s"%(edited_relnship_tables[EDGE_TBL_ID], props.image_table, props.image_id),
+                        "SET %s.%s = %s.%s"%(edited_relnship_tables[EDGE_TBL_ID], props.group_id, props.image_table, props.group_id))
         query = " ".join(query)  
         db.execute(query)
         # Spent the better part of a day figuring out that a 'commit' was needed here
         db.Commit()
-        relationship_table_cols = []
-    
-    # Retrieve column names
-    if props.db_type == 'sqlite':
-        query = "PRAGMA table_info(%s)"%(edited_relnship_table)
-        relationship_table_cols = [_[1] for _ in db.execute(query)]
-    else:
-        query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, edited_relnship_table)
-        relationship_table_cols = db.execute(query)  
+        #-------------------------------
+        # Now the node table
+        orig_cols = [props.image_id, props.object_id]
+        obj = get_object_name()
+        # From http://stackoverflow.com/questions/12730390/copy-table-structure-to-new-table-in-sqlite3. Seems to work in MySQL too
+        query = ("CREATE TABLE %s AS"%(edited_relnship_tables[NODE_TBL_ID]),
+                    "SELECT %s"%(",".join(["%s AS %s"%(_) for _ in zip(orig_cols,reln_cols[NODE_TBL_ID])])),
+                    "FROM %s"%(props.object_table),
+                    "WHERE 0")
+        query = " ".join(query)            
+        db.execute(query)   
+        query = "SELECT DISTINCT(%s) FROM %s"%(props.group_id, props.image_table)
+        available_datasets = [_[0] for _ in db.execute(query)]
+        for selected_dataset in available_datasets:
+            query = ("INSERT INTO %s"%(edited_relnship_tables[NODE_TBL_ID]),
+                     "SELECT %s"%(",".join(["o.%s"%(_) for _ in [props.image_id, props.object_id]])),
+                     "FROM %s o"%(props.object_table),
+                     "JOIN %s i"%(props.image_table),
+                     "ON o.%s = i.%s"%(props.image_id, props.image_id),
+                     "WHERE i.%s = %d"%(props.group_id, int(selected_dataset)) )
+            query = " ".join(query)            
+            db.execute(query)
+        # Add the grouping ID and default track columns 
+        # SQLite doesn't do multiple ADDs in one query, so do with multiple queries
+        query = "ALTER TABLE %s ADD COLUMN %s INT"%(edited_relnship_tables[NODE_TBL_ID], props.group_id)
+        db.execute(query)
+        query = "ALTER TABLE %s ADD COLUMN %s INT DEFAULT 1"%(edited_relnship_tables[NODE_TBL_ID], ORIGINAL_TRACK)
+        db.execute(query)            
+            
+        if props.db_type == 'sqlite':
+            # From http://stackoverflow.com/questions/19270259/update-join-sqlite
+            query = ("UPDATE %s"%(edited_relnship_tables[NODE_TBL_ID]),
+                     "SET %s ="%(props.group_id),
+                     "(SELECT %s.%s"%(props.image_table,props.group_id),
+                     "FROM %s"%(props.image_table),
+                     "WHERE %s.image_number = %s.%s)"%(edited_relnship_tables[NODE_TBL_ID],props.image_table,props.image_id))
+        else:
+            # From http://dba.stackexchange.com/questions/21152/how-to-update-one-table-based-on-another-tables-values-on-the-fly
+            query = ("UPDATE %s"%(edited_relnship_tables[NODE_TBL_ID]),
+                        "INNER JOIN %s"%(props.image_table),
+                        "ON %s.image_number = %s.%s"%(edited_relnship_tables[NODE_TBL_ID], props.image_table, props.image_id),
+                        "SET %s.%s = %s.%s"%(edited_relnship_tables[NODE_TBL_ID], props.group_id, props.image_table, props.group_id))
+        query = " ".join(query)  
+        db.execute(query) 
+        db.Commit()        
         
-    query = "SELECT * FROM %s"%edited_relnship_table
-    relationship_table_data = [_ for _ in db.execute(query)] 
+    # Retrieve column names
+    relationship_table_cols = {}  
+    relationship_table_data = {}
+    for key in edited_relnship_tables.keys():
+        if props.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s)"%(edited_relnship_tables[key])
+            relationship_table_cols[key] = [_[1] for _ in db.execute(query)]
+        else:
+            query = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, edited_relnship_tables[key])
+            relationship_table_cols[key] = [_[0] for _ in db.execute(query) ]
+        
+        query = "SELECT * FROM %s"%edited_relnship_tables[key]
+        relationship_table_data[key] = [_ for _ in db.execute(query)] 
     
-    defined_track_cols = list(set(relationship_table_cols).difference(set(reln_cols+[props.group_id])))
+    defined_track_cols = list(set(relationship_table_cols[NODE_TBL_ID]).difference(set(reln_cols[NODE_TBL_ID]+[props.group_id])))
     
     return relationship_table_cols, defined_track_cols, relationship_table_data
 
@@ -575,7 +625,10 @@ class TimeLapseControlPanel(wx.Panel):
         self.parent.update_trajectory_selection(self.dataset_choice.GetValue(),self.track_collection.GetStringSelection())  
         
     def on_calculate_and_display_lap_stats(self, event=None):
-        self.parent.calculate_and_display_lap_stats()  
+        # TODO: Figure out why the appearance of the toggle doesn't change when pressed
+        self.trajectory_diagnosis_toggle.SetValue(True)
+        self.parent.calculate_and_display_lap_stats()
+        self.trajectory_diagnosis_toggle.SetValue(False)
         
     def on_colormap_selected(self, event=None):
         self.parent.colormap_selected(self.colormap_choice.GetStringSelection())  
@@ -587,7 +640,7 @@ class TimeLapseControlPanel(wx.Panel):
         self.parent.enable_filtering(self.enable_filtering_checkbox.GetValue())  
         
     def on_singleton_length_plot(self, event=None):
-        self.parent.singleton_length_plot(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())
+        self.parent.singleton_length_plot(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection(), int(self.singleton_length_value.GetValue()))
     
     def on_diistance_plot(self, event=None):
         self.parent.distance_plot(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())
@@ -691,9 +744,9 @@ class MayaviView(HasTraits):
             w_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Width') >= 0][0]
             h_col = [_[1] for _ in db.execute(query) if _[1].find('Image_Height') >= 0][0]  
         else:
-            query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Width' LIMIT 1"%(props.db_name, props.image_table)
+            query = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Width' LIMIT 1"%(props.db_name, props.image_table)
             w_col = db.execute(query)[0][0]
-            query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Height' LIMIT 1"%(props.db_name, props.image_table)
+            query = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s' AND COLUMN_NAME REGEXP 'Image_Height' LIMIT 1"%(props.db_name, props.image_table)
             h_col = db.execute(query)[0][0]          
 
         query = "SELECT %s FROM %s LIMIT 1"%(w_col, props.image_table)
@@ -1135,9 +1188,9 @@ class TimeLapseTool(wx.Frame, CPATool):
         
         self.mayavi_view = MayaviView(self)
         
-        self.relationship_cols, self.defined_track_cols, self.relationship_data = create_update_relationship_table()
+        self.relationship_cols, self.defined_track_cols, self.relationship_data = create_update_relationship_tables()
         available_tracks = [ORIGINAL_TRACK]+list(set(self.defined_track_cols).difference([ORIGINAL_TRACK]))
-        available_datasets = list(set(map(itemgetter(self.relationship_cols.index(props.group_id)),self.relationship_data)))
+        available_datasets = list(set(map(itemgetter(self.relationship_cols[NODE_TBL_ID].index(props.group_id)),self.relationship_data[NODE_TBL_ID])))
         available_datasets = [str(_) for _ in available_datasets]
         self.directed_graph = {_:{} for _ in available_datasets }
         self.connected_nodes = {_:{} for _ in available_datasets }
@@ -1804,7 +1857,7 @@ class TimeLapseTool(wx.Frame, CPATool):
        
         if selected_dataset == None and selected_track == None:
             # No data sources or tracks specified: Initialize all graphs from scratch
-            available_datasets = list(set(map(itemgetter(self.relationship_cols.index(props.group_id)),self.relationship_data)))
+            available_datasets = list(set(map(itemgetter(self.relationship_cols[NODE_TBL_ID].index(props.group_id)),self.relationship_data[NODE_TBL_ID])))
             available_datasets = [str(_) for _ in available_datasets]            
             available_tracks = self.defined_track_cols
         else:
@@ -1830,10 +1883,12 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                      dataset_id, 
                                                                      track_id))
                 
-                relationship_index = map(itemgetter(self.relationship_cols.index(track_id)),self.relationship_data)
-                dataset_index = map(itemgetter(self.relationship_cols.index(props.group_id)),self.relationship_data)
-                # Index is 1 if (a) the row was flagged in the saved track and (b) the dataset is currently active 
-                relationship_index = [_[0] == 1 and _[1] == int(dataset_id) for _ in zip(relationship_index, dataset_index)] # Convert to boolean            
+                relationship_index = {}
+                for key in [NODE_TBL_ID, EDGE_TBL_ID]:
+                    relationship_index[key] = map(itemgetter(self.relationship_cols[key].index(track_id)),self.relationship_data[key])
+                    dataset_index = map(itemgetter(self.relationship_cols[key].index(props.group_id)),self.relationship_data[key])
+                    # Index is 1 if (a) the row was flagged in the saved track and (b) the dataset is currently active 
+                    relationship_index[key] = [_[0] == 1 and _[1] == int(dataset_id) for _ in zip(relationship_index[key], dataset_index)] # Convert to boolean            
 
                 self.directed_graph[dataset_id][track_id] = nx.DiGraph()
                 key_length = len(object_key_columns())
@@ -1848,15 +1903,15 @@ class TimeLapseTool(wx.Frame, CPATool):
                     _[IS_REMOVED] = False
             
                 # Add nodes
-                selected_relationships = [_[0] for _ in zip(self.relationship_data,relationship_index) if _[1]]
-                selected_node_ids = map(itemgetter(2,3),selected_relationships)
-                selected_parent_node_ids = map(itemgetter(0,1),selected_relationships)
-            
+                selected_relationships = [_[0] for _ in zip(self.relationship_data[NODE_TBL_ID],relationship_index[NODE_TBL_ID]) if _[1]]
+                selected_node_ids = map(itemgetter(0,1),selected_relationships)
                 temp = dict(zip(node_ids,attr))
-                unified_selected_node_ids = list(set(selected_node_ids).union(set(selected_parent_node_ids)))
-                self.directed_graph[dataset_id][track_id].add_nodes_from(zip(unified_selected_node_ids,[temp[_] for _ in unified_selected_node_ids]))
+                self.directed_graph[dataset_id][track_id].add_nodes_from(zip(selected_node_ids,[temp[_] for _ in selected_node_ids]))
             
-                # Add edges as list of tuples
+                # Add edges
+                selected_relationships = [_[0] for _ in zip(self.relationship_data[EDGE_TBL_ID],relationship_index[EDGE_TBL_ID]) if _[1]]
+                selected_node_ids = map(itemgetter(2,3),selected_relationships)
+                selected_parent_node_ids = map(itemgetter(0,1),selected_relationships)                
                 self.directed_graph[dataset_id][track_id].add_edges_from(zip(selected_parent_node_ids,selected_node_ids))
                 
                 logging.info("Constructed graph consisting of %d nodes and %d edges"%(self.directed_graph[dataset_id][track_id].number_of_nodes(),
@@ -1998,7 +2053,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                       current_filter.valueField.GetValue())))        
         if selected_dataset == None and selected_track == None:
             # No data sources or tracks specified: Initialize graph scalar attributes from scratch
-            available_datasets = list(set(map(itemgetter(self.relationship_cols.index(props.group_id)),self.relationship_data)))
+            available_datasets = list(set(map(itemgetter(self.relationship_cols[NODE_TBL_ID].index(props.group_id)),self.relationship_data[NODE_TBL_ID])))
             available_datasets = [str(_) for _ in available_datasets]                 
             selected_dataset = available_datasets[0]
             available_tracks = self.defined_track_cols
@@ -2014,14 +2069,6 @@ class TimeLapseTool(wx.Frame, CPATool):
                                                                 self.selected_filter)             
             for track_id in available_tracks:     
                 
-                #relationship_index = map(itemgetter(self.relationship_cols.index(track_id)),self.relationship_data)
-                #dataset_index = map(itemgetter(self.relationship_cols.index(props.group_id)),self.relationship_data)
-                ## Index is 1 if (a) the row was flagged in the saved track and (b) the dataset is currently active 
-                #relationship_index = [_[0] == 1 and _[1] == int(dataset_id) for _ in zip(relationship_index, dataset_index)] # Convert to boolean 
-                                
-                #selected_relationships = [_[0] for _ in zip(self.relationship_data,relationship_index) if _[1]]
-                #selected_node_ids = map(itemgetter(2,3),selected_relationships)
-                #selected_parent_node_ids = map(itemgetter(0,1),selected_relationships)  
                 selected_node_ids = self.directed_graph[dataset_id][track_id].nodes()
  
                 if self.selected_measurement in self.dataset_measurement_choices:
@@ -2152,6 +2199,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                         
         # Plot the betweeness centrality values
         title = "Betweeness centrality branchpoint values"
+        # Nice tutorial on GridSpec: http://matplotlib.org/users/gridspec.html
         gs = gridspec.GridSpec(3, 1, height_ratios=[1, 3, 3])
         axes = window.figure.add_subplot(gs[0]) 
         axes.set_axis_off()
@@ -2172,12 +2220,13 @@ class TimeLapseTool(wx.Frame, CPATool):
             axes.set_xlabel('Betweeness centrality values')
             axes.set_ylabel('Counts')
             
+        # Plot the betweeness centrality ratios
         axes = window.figure.add_subplot(gs[2])        
         if ratios.shape[0] == 0:
             plot = axes.text(0.0, 1.0, "No valid ratios to plot.")
             axes.set_axis_off()  
         else:
-            bins = np.linspace(0, np.max(ratios))
+            bins = np.linspace(0, 0.5)
             n, _, _ = axes.hist(ratios, bins,
                           edgecolor='none',
                           alpha=0.75)
@@ -2223,10 +2272,11 @@ class TimeLapseTool(wx.Frame, CPATool):
         
         return np.array([temp_full_graph_dict[node] for node in sorted_nodes ]).astype(float)      
     
-    def singleton_length_plot(self, selected_dataset=None, selected_dataset_track=None):
+    def singleton_length_plot(self, selected_dataset=None, selected_dataset_track=None, length_cutoff=1):
         connected_nodes = self.connected_nodes[selected_dataset][selected_dataset_track]
         
         dists = []
+        num_tracks = len(connected_nodes.keys())
         for key,subgraph in connected_nodes.items():
             start_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,START_NODES).items() if _[1]]
             terminal_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,TERMINAL_NODES).items() if _[1]]
@@ -2234,37 +2284,47 @@ class TimeLapseTool(wx.Frame, CPATool):
             for _ in terminal_nodes:
                 dists += [nx.shortest_path_length(subgraph, source=start_nodes[0], target=_)]
         dists = np.array(dists)
+        num_singletons = len(np.argwhere(dists <= length_cutoff))
         
         new_title = "Track lengths"
         window = self.create_or_find_plain_figure_window(self, -1, new_title, subplots=(2,1), name=new_title)
                         
-        # Plot the frame-to-frame linking distances
+        # Plot the track lengths
         title = "Track lengths"
-        gs = gridspec.GridSpec(2, 1, height_ratios=[1, 3])
-        axes = window.figure.add_subplot(gs[0]) 
+        gs = gridspec.GridSpec(3, 2)
+        axes = window.figure.add_subplot(gs[0,:]) 
         axes.set_axis_off()
         axes.text(0.0,0.0,
                 "This plot shows the histogram of the track lengths for all trajectories in the current\n"
                 "data source. The length of a track corresponds to the lifetime of the object.\n\n"
                 "Cells that last for one or just a few frames are likely to be false positives and are\n"
                 "candidates for removal.")
-        axes = window.figure.add_subplot(gs[1])        
+        
+        axes = window.figure.add_subplot(gs[1:,0])        
         if dists.shape[0] == 0:
             plot = axes.text(0.0, 1.0, "No valid values to plot.")
             axes.set_axis_off()  
         else:
-            bins = np.arange(0, np.max(dists)+1)
+            bins = np.arange(1, np.max(dists)+1)
             n, _, _ = axes.hist(dists, bins,
                           edgecolor='none',
                           alpha=0.75)
-            #max_search_radius = bins[n < 0.05*np.max(n)][0]
-            #axes.annotate('95%% of max count: %d pixels'%(max_search_radius),
-                          #xy=(max_search_radius,n[n < 0.05*np.max(n)][0]), 
-                          #xytext=(max_search_radius,axes.get_ylim()[1]/2), 
-                          #arrowprops=dict(facecolor='red', shrink=0.05))
             axes.set_xlabel('Track lengths (frames)')
-            axes.set_ylabel('Counts')  
-                        
+            axes.set_ylabel('Counts')
+            
+        axes = window.figure.add_subplot(gs[1:,1])
+        stats = np.array([["Number of tracks","%d"%num_tracks],
+                          ["Number of singletons","%d"%num_singletons],
+                          ["10th percentile length","%d"%np.percentile(dists,10)],
+                          ["Median length","%d"%np.percentile(dists,50)],
+                          ["90th percentile length","%d"%np.percentile(dists,90)]])
+        # TODO: Use cpfiure subplot_table code below (maybe)
+        table = axes.table(rowLabels=None, colLabels=None, colWidths=[0.75, 0.25], cellText= stats, loc='center')
+        table.auto_set_font_size(False)
+        table.set_fontsize(12)
+        table.scale(1.0, 2.0)
+        axes.set_axis_off()        
+        
         # Draw the figure
         window.figure.tight_layout()
         window.figure.canvas.draw()        
@@ -2391,6 +2451,74 @@ class TimeLapseTool(wx.Frame, CPATool):
         return win or FigureFrame(parent, id, title, pos, size, style, name, 
                                     subplots, on_close)    
     
+    def subplot_table(self, x, y, statistics, 
+                          col_labels=None, 
+                          row_labels = None, 
+                          n_cols = 1,
+                          n_rows = 1):
+            """Put a table into a subplot
+            
+            x,y - subplot's column and row
+            statistics - a sequence of sequences that form the values to
+                         go into the table
+            col_labels - labels for the column header
+            
+            row_labels - labels for the row header
+            
+            **kwargs - for backwards compatibility, old argument values
+            """
+            
+            nx, ny = self.subplots.shape
+            xstart = float(x) / float(nx)
+            ystart = float(y) / float(ny)
+            width = float(n_cols) / float(nx)
+            height = float(n_rows) / float(ny)
+            cw, ch = self.figure.canvas.GetSizeTuple()
+            ctrl = wx.grid.Grid(self.figure.canvas)
+            self.widgets.append(
+                (xstart, ystart, width, height, 
+                 wx.ALIGN_CENTER, wx.ALIGN_CENTER, ctrl))
+            nrows = len(statistics)
+            ncols = 0 if nrows == 0 else len(statistics[0])
+            ctrl.CreateGrid(nrows, ncols)
+            if col_labels is not None:
+                for i, value in enumerate(col_labels):
+                    ctrl.SetColLabelValue(i, unicode(value))
+            else:
+                ctrl.SetColLabelSize(0)
+            if row_labels is not None:
+                ctrl.GridRowLabelWindow.Font = ctrl.GetLabelFont()
+                ctrl.SetRowLabelAlignment(wx.ALIGN_LEFT, wx.ALIGN_CENTER)
+                max_width = 0
+                for i, value in enumerate(row_labels):
+                    value = unicode(value)
+                    ctrl.SetRowLabelValue(i, value)
+                    max_width = max(
+                        max_width, 
+                        ctrl.GridRowLabelWindow.GetTextExtent(value+"M")[0])
+                ctrl.SetRowLabelSize(max_width)
+            else:
+                ctrl.SetRowLabelSize(0)
+                
+            for i, row in enumerate(statistics):
+                for j, value in enumerate(row):
+                    ctrl.SetCellValue(i, j, unicode(value))
+                    ctrl.SetReadOnly(i, j, True)
+            ctrl.AutoSize()
+            ctrl.Show()
+            self.align_widget(ctrl, xstart, ystart, width, height,
+                              wx.ALIGN_CENTER, wx.ALIGN_CENTER, cw, ch)
+            self.table = []
+            if col_labels is not None:
+                if row_labels is not None:
+                    # Need a blank corner header if both col and row labels
+                    col_labels = [""] + list(col_labels)
+                self.table.append(col_labels)
+            if row_labels is not None:
+                self.table += [[a] + list(b) for a, b in zip(row_labels, statistics)]
+            else:
+                self.table += statistics    
+    
     def calculate_and_display_lap_stats(self):
         # See http://cshprotocols.cshlp.org/content/2009/12/pdb.top65.full, esp. Figure 5
         # Create new figure
@@ -2421,7 +2549,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             plot = axes.text(0.0, 1.0, "No valid values to plot.")
             axes.set_axis_off()  
         else:
-            bins = np.arange(0, np.max(dists))
+            bins = np.arange(0, int(0.95*np.max(dists)))
             n, _, _ = axes.hist(dists, bins,
                           edgecolor='none',
                           alpha=0.75)
