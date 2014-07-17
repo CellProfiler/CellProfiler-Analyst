@@ -1150,6 +1150,15 @@ class TimeLapseTool(wx.Frame, CPATool):
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
         self.SetName(self.tool_name)
         
+        self.SetMenuBar(wx.MenuBar())
+        fileMenu = wx.Menu()
+        self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', help='Exit this tool')
+        self.GetMenuBar().Append(fileMenu, 'File')  
+        
+        toolsMenu = wx.Menu()
+        pruneMenuItem         = toolsMenu.Append(-1, 'Save pruned tracks', help='Save pruned tracks.')
+        self.GetMenuBar().Append(toolsMenu, 'Tools')        
+        
         # Check for required properties fields.
         #fail = False
         #missing_fields = [field for field in required_fields if not props.field_defined(field)]
@@ -1235,6 +1244,19 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.SetSizer(sizer)
         
         self.figure_panel.Bind(wx.EVT_CONTEXT_MENU, self.on_show_popup_menu)
+        
+        self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
+    
+    def on_close(self, event=None):
+        try:
+            from cellprofiler.utilities.jutil import kill_vm
+            kill_vm()
+        except:
+            print "Failed to kill the Java VM"
+        for win in wx.GetTopLevelWindows():
+            logging.debug('Destroying: %s'%(win))
+            win.Destroy()
+        self.Destroy()        
             
     def on_show_all_trajectories(self, event = None):
         self.trajectory_selection = dict.fromkeys(self.connected_nodes[self.selected_dataset][self.selected_dataset_track].keys(),1)
@@ -1649,7 +1671,15 @@ class TimeLapseTool(wx.Frame, CPATool):
             subattr = nx.get_node_attributes(subgraph, self.selected_metric+VISIBLE_SUFFIX)
             for _ in subattr.items():
                 attr[_[0]] = (not _[1]) or attr[_[0]]  # A node is removed if it's pruned (i.e, not visible) or it's already removed
-        nx.set_node_attributes(directed_graph, IS_REMOVED, attr)   
+        nx.set_node_attributes(directed_graph, IS_REMOVED, attr) 
+        
+        attr = nx.get_edge_attributes(directed_graph, IS_REMOVED)
+        for key,subgraph in connected_nodes.items():
+            subattr = nx.get_edge_attributes(subgraph, self.selected_metric+VISIBLE_SUFFIX)
+            for _ in subattr.items():
+                attr[_[0]] = (not _[1]) or attr[_[0]]  # An edge is removed if it's pruned (i.e, not visible) or it's already removed
+        nx.set_edge_attributes(directed_graph, IS_REMOVED, attr) 
+        
         dlg = wx.MessageDialog(self, 
                                "The selected pruning has been added to the list of trajectory edits."
                                "You can save the edits to the database by selecting the 'Save Edited "
@@ -1674,35 +1704,36 @@ class TimeLapseTool(wx.Frame, CPATool):
             return
         
         # Create/update the table
-        table_name = get_edited_relationship_tablename()
-        logging.info('Populating table %s...'%table_name)
-        
-        # Create new column containing 1 if edge is kept, 0 if not
-        newcol = len(self.relationship_data)*[1]
-        attr = nx.get_node_attributes(self.directed_graph[selected_dataset][selected_dataset_track], IS_REMOVED)
-        all_edges = map(itemgetter(0,1,2,3), self.relationship_data)
-        for _ in attr.items():
-            if _[1]:
-                for successor in self.directed_graph[selected_dataset][selected_dataset_track].successors_iter(_[0]):
-                    newcol[all_edges.index(_[0]+successor)] = 0
+        table_name = get_edited_relationship_tablenames()
+        for key in [EDGE_TBL_ID, NODE_TBL_ID]:
+            logging.info('Populating table %s...'%table_name[key])
             
-        if self.relationship_cols.count(trackID) == 0:
-            colnames = self.relationship_cols + [trackID]
-            tableData = np.hstack((np.array(self.relationship_data),np.array(newcol)[np.newaxis].T))
-        else:
-            dlg = wx.MessageDialog(self, 
-                                   'This track already exists. Do you want to overwrite it?', 
-                                   "Overwrite track?", wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION|wx.STAY_ON_TOP)
-            if dlg.ShowModal() == wx.ID_NO:
-                dlg.Destroy()
-                return
+            # Create new column containing 1 if edge is kept, 0 if not
+            newcol = len(self.relationship_data[key])*[1]
+            attr = nx.get_node_attributes(self.directed_graph[selected_dataset][selected_dataset_track], IS_REMOVED)
+            all_edges = map(itemgetter(0,1,2,3), self.relationship_data[key])
+            for _ in attr.items():
+                if _[1]:
+                    for successor in self.directed_graph[selected_dataset][selected_dataset_track].successors_iter(_[0]):
+                        newcol[all_edges.index(_[0]+successor)] = 0
+                
+            if self.relationship_cols[key].count(trackID) == 0:
+                colnames = self.relationship_cols[key] + [trackID]
+                tableData = np.hstack((np.array(self.relationship_data[key]),np.array(newcol)[np.newaxis].T))
             else:
-                colnames = self.relationship_cols 
-                tableData = np.array(self.relationship_data)
-                tableData[:,colnames.index(trackID)] = np.array(newcol)
-                dlg.Destroy()
-
-        success = db.CreateTableFromData(tableData, colnames, table_name, temporary=False)
+                dlg = wx.MessageDialog(self, 
+                                       'This track already exists. Do you want to overwrite it?', 
+                                       "Overwrite track?", wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION|wx.STAY_ON_TOP)
+                if dlg.ShowModal() == wx.ID_NO:
+                    dlg.Destroy()
+                    return
+                else:
+                    colnames = self.relationship_cols[key] 
+                    tableData = np.array(self.relationship_data[key])
+                    tableData[:,colnames.index(trackID)] = np.array(newcol)
+                    dlg.Destroy()
+    
+            success = db.CreateTableFromData(tableData, colnames, table_name[key], temporary=False)
         
         # Update drop-down listings
         track_choices = self.control_panel.track_collection.GetItems() + [trackID]
@@ -1906,13 +1937,17 @@ class TimeLapseTool(wx.Frame, CPATool):
                 selected_relationships = [_[0] for _ in zip(self.relationship_data[NODE_TBL_ID],relationship_index[NODE_TBL_ID]) if _[1]]
                 selected_node_ids = map(itemgetter(0,1),selected_relationships)
                 temp = dict(zip(node_ids,attr))
-                self.directed_graph[dataset_id][track_id].add_nodes_from(zip(selected_node_ids,[temp[_] for _ in selected_node_ids]))
+                self.directed_graph[dataset_id][track_id].add_nodes_from(zip(selected_node_ids,
+                                                                             [temp[_] for _ in selected_node_ids]))
             
                 # Add edges
                 selected_relationships = [_[0] for _ in zip(self.relationship_data[EDGE_TBL_ID],relationship_index[EDGE_TBL_ID]) if _[1]]
                 selected_node_ids = map(itemgetter(2,3),selected_relationships)
-                selected_parent_node_ids = map(itemgetter(0,1),selected_relationships)                
-                self.directed_graph[dataset_id][track_id].add_edges_from(zip(selected_parent_node_ids,selected_node_ids))
+                selected_parent_node_ids = map(itemgetter(0,1),selected_relationships)       
+                attr = [{VISIBLE: True, IS_REMOVED: False} for _ in selected_parent_node_ids]
+                self.directed_graph[dataset_id][track_id].add_edges_from(zip(selected_parent_node_ids,
+                                                                             selected_node_ids, 
+                                                                             attr))
                 
                 logging.info("Constructed graph consisting of %d nodes and %d edges"%(self.directed_graph[dataset_id][track_id].number_of_nodes(),
                                                                                       self.directed_graph[dataset_id][track_id].number_of_edges()))
@@ -2313,7 +2348,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             axes.set_ylabel('Counts')
             
         axes = window.figure.add_subplot(gs[1:,1])
-        stats = np.array([["Number of tracks","%d"%num_tracks],
+        stats = np.array([["Total number of tracks","%d"%num_tracks],
                           ["Number of singletons","%d"%num_singletons],
                           ["10th percentile length","%d"%np.percentile(dists,10)],
                           ["Median length","%d"%np.percentile(dists,50)],
