@@ -55,6 +55,7 @@ T_YCOORD = "Y_3"
 T_TCOORD = "T_3"
 SCALAR_VAL = "S"
 VISIBLE = "VISIBLE"
+COMPONENT_ID = "Component_ID"
 track_attributes = ["label","x","y","t",SCALAR_VAL,"f"]
 
 SUBGRAPH_ID = "Subgraph"
@@ -886,11 +887,11 @@ class MayaviView(HasTraits):
             # To inspect the value, see pts.glyph.glpyh.scale_factor
             node_scale_factor = 0.5*dt
             self.lineage_node_collection = mlab.points3d(xys[:,0], xys[:,1], np.zeros_like(xys[:,0]), xys[:,2],
-                                scale_factor = node_scale_factor, 
-                                scale_mode = 'none',
-                                colormap = selected_colormap,
-                                resolution = 8,
-                                figure = self.lineage_scene.mayavi_scene) 
+                                                            scale_factor = node_scale_factor, 
+                                                            scale_mode = 'none',
+                                                            colormap = selected_colormap,
+                                                            resolution = 8,
+                                                            figure = self.lineage_scene.mayavi_scene) 
             self.lineage_node_collection.glyph.color_mode = 'color_by_scalar'
             
             #tube_radius = node_scale_factor/10.0
@@ -1985,6 +1986,8 @@ class TimeLapseTool(wx.Frame, CPATool):
                 #  weakly_connected_component_subgraphs maintains directionality
                 connected_nodes = tuple(nx.weakly_connected_component_subgraphs(self.directed_graph[dataset_id][track_id]))
                 self.connected_nodes[dataset_id][track_id] = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
+                for key, subgraph in self.connected_nodes[dataset_id][track_id].items():
+                    nx.set_node_attributes(subgraph, COMPONENT_ID, {_:key for _ in subgraph.nodes()})
             
                 # Set graph attributes
                 for key,subgraph in self.connected_nodes[dataset_id][track_id].items():
@@ -2160,22 +2163,37 @@ class TimeLapseTool(wx.Frame, CPATool):
                                 # Add nodes on the path from the branchpoint to the leaf
                                 end_nodes_for_pruning[key].update(shortest_path)     
             
+            end_nodes_for_pruning[key] = list(end_nodes_for_pruning[key])
+                
             # Set identity attributes
             attr = dict.fromkeys(subgraph.nodes(),False)
-            for _ in list(end_nodes_for_pruning[key]):
+            for _ in end_nodes_for_pruning[key]:
                 attr[_] = True
             nx.set_node_attributes(subgraph,METRIC_NODESWITHINDIST,attr)
+            attr = dict.fromkeys(subgraph.edges(),False)
+            for _ in end_nodes_for_pruning[key]:
+                ebunch = nx.edges(subgraph,_)
+                for e in ebunch:
+                    attr[e] = True
+            nx.set_edge_attributes(subgraph,METRIC_NODESWITHINDIST,attr)                
+            
             # Set visibility attributes
             attr = dict.fromkeys(subgraph.nodes(),True) 
-            for _ in list(end_nodes_for_pruning[key]):
+            for _ in end_nodes_for_pruning[key]:
                 attr[_] = False
             nx.set_node_attributes(subgraph,METRIC_NODESWITHINDIST_VISIBLE,attr)            
-    
+            attr = dict.fromkeys(subgraph.edges(),True)
+            for _ in end_nodes_for_pruning[key]:
+                ebunch = nx.edges(subgraph,_)
+                for e in ebunch:
+                    attr[e] = False
+            nx.set_edge_attributes(subgraph,METRIC_NODESWITHINDIST_VISIBLE,attr)       
+
         sorted_nodes = sorted(directed_graph)
 
         temp_full_graph_dict =  dict.fromkeys(directed_graph.nodes(),0.0)
         for key, nodes in end_nodes_for_pruning.items():
-            l = list(end_nodes_for_pruning[key])
+            l = end_nodes_for_pruning[key]
             for ii in l:
                 temp_full_graph_dict[ii] = 1.0
         
@@ -2204,11 +2222,24 @@ class TimeLapseTool(wx.Frame, CPATool):
             for _ in singleton_nodes:
                 attr[_] = True
             nx.set_node_attributes(subgraph,METRIC_SINGLETONS,attr)  
+            attr = dict.fromkeys(subgraph.edges(),False)
+            for _ in singleton_nodes:
+                ebunch = nx.edges(subgraph,_)
+                for e in ebunch:
+                    attr[e] = True
+            nx.set_edge_attributes(subgraph,METRIC_SINGLETONS,attr)            
+
             # Set visibility attribute 
             attr = dict.fromkeys(subgraph.nodes(), True)
             for _ in singleton_nodes:
                 attr[_] = False            
             nx.set_node_attributes(subgraph,METRIC_SINGLETONS_VISIBLE,attr)
+            attr = dict.fromkeys(subgraph.edges(), True)
+            for _ in singleton_nodes:
+                ebunch = nx.edges(subgraph,_)
+                for e in ebunch:
+                    attr[e] = False            
+            nx.set_edge_attributes(subgraph,METRIC_SINGLETONS_VISIBLE,attr)            
             
             for _ in singleton_nodes:
                 temp_full_graph_dict[_] = 1.0
@@ -2279,6 +2310,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         connected_nodes = self.connected_nodes[selected_dataset][selected_dataset_track]
         directed_graph = self.directed_graph[selected_dataset][selected_dataset_track]
         
+        nodes_to_prune = {_:set() for _ in connected_nodes.keys()}         
         sorted_nodes = sorted(directed_graph)
         temp_full_graph_dict = dict.fromkeys(directed_graph.nodes(),0.0)
         for key,subgraph in connected_nodes.items():
@@ -2291,7 +2323,6 @@ class TimeLapseTool(wx.Frame, CPATool):
             nx.set_node_attributes(subgraph, METRIC_BC, attr)
             # Set visibility attribute 
             # TODO: Come up with a heuristic to determine which branch to prune based on this value 
-            attr = dict.fromkeys(subgraph.nodes(), True)
             branch_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,BRANCH_NODES).items() if _[1]]
             for bn in branch_nodes:
                 successors = subgraph.successors(bn)
@@ -2301,9 +2332,18 @@ class TimeLapseTool(wx.Frame, CPATool):
                 # Find all downstream nodes for branches that failed the cutoff
                 for i in idx:
                     nodes = nx.single_source_shortest_path(subgraph,successors[i]).keys()
-                    for _ in nodes:
-                        attr[_] = False
+                    nodes_to_prune[key].update(nodes)
+            
+            attr = dict.fromkeys(subgraph.nodes(), True)
+            for _ in nodes_to_prune[key]:
+                attr[_] = False                        
             nx.set_node_attributes(subgraph, METRIC_BC_VISIBLE, attr)
+            attr = dict.fromkeys(subgraph.edges(), True)
+            for _ in nodes_to_prune[key]:
+                ebunch = nx.edges(subgraph,_)
+                for e in ebunch:
+                    attr[e] = False 
+            nx.set_edge_attributes(subgraph, METRIC_BC_VISIBLE, attr)
         
         return np.array([temp_full_graph_dict[node] for node in sorted_nodes ]).astype(float)      
     
@@ -2386,12 +2426,25 @@ class TimeLapseTool(wx.Frame, CPATool):
             attr = dict.fromkeys(subgraph.nodes(), False)
             for _ in crossings:
                 attr[_] = True
-            nx.set_node_attributes(subgraph,METRIC_CROSSINGS,attr)  
+            nx.set_node_attributes(subgraph,METRIC_CROSSINGS,attr)
+            attr = dict.fromkeys(subgraph.edges(), False)
+            for _ in crossings:
+                ebunch = nx.edges(subgraph,_)
+                for e in ebunch:
+                    attr[e] = True 
+            nx.set_edge_attributes(subgraph,METRIC_CROSSINGS,attr)  
+            
             # Set visibility attribute 
             attr = dict.fromkeys(subgraph.nodes(), True)
             for _ in crossings:
                 attr[_] = False            
             nx.set_node_attributes(subgraph,METRIC_CROSSINGS_VISIBLE,attr)  
+            attr = dict.fromkeys(subgraph.edges(), True)
+            for _ in crossings:
+                ebunch = nx.edges(subgraph,_)
+                for e in ebunch:                
+                    attr[e] = False            
+            nx.set_edge_attributes(subgraph,METRIC_CROSSINGS_VISIBLE,attr)              
             
             for _ in crossings:
                 temp_full_graph_dict[_] = 1.0            
@@ -2425,7 +2478,14 @@ class TimeLapseTool(wx.Frame, CPATool):
             for _ in cycles:
                 for item in _:
                     attr[item] = False            
-            nx.set_node_attributes(subgraph,METRIC_LOOPS_VISIBLE,attr)  
+            nx.set_node_attributes(subgraph,METRIC_LOOPS_VISIBLE,attr)
+            attr = dict.fromkeys(subgraph.edges(), True)
+            for _ in cycles:
+                for item in _:
+                    ebunch = nx.edges(subgraph,item)
+                    for e in ebunch:
+                        attr[e] = False           
+            nx.set_edge_attributes(subgraph,METRIC_LOOPS_VISIBLE,attr)            
             
             for _ in cycles:
                 t = [subgraph.node[item]["t"] for item in _]
