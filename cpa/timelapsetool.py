@@ -29,6 +29,7 @@ import matplotlib
 import matplotlib.cm as cm
 from matplotlib import gridspec
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+from textwrap import wrap
 
 # traits imports
 from traits.api import HasTraits, Int, Instance, on_trait_change
@@ -123,8 +124,8 @@ def get_object_name():
     return props.cell_x_loc.split('_Location_Center')[0]
 
 def get_edited_relationship_tablenames():
-    return {EDGE_TBL_ID: "_".join((props.relationship_table,EDGE_TBL_ID)),
-            NODE_TBL_ID: "_".join((props.relationship_table,NODE_TBL_ID))}
+    return {EDGE_TBL_ID: "_".join(("",EDGE_TBL_ID,props.relationship_table.split('_Per')[0])),
+            NODE_TBL_ID: "_".join(("",NODE_TBL_ID,props.relationship_table.split('_Per')[0]))}
 
 def is_LAP_tracking_data():
     # If the data is LAP-based, then additional button(s) show up
@@ -439,7 +440,9 @@ class TimeLapseControlPanel(wx.Panel):
         self.dataset_measurement_choice.Select(0)
         self.dataset_measurement_choice.SetHelpText("Select the per-%s measurement to visualize the data with. The lineages and (xyt) trajectories will be color-coded by this measurement."%props.object_name[0])
         
-        self.colormap_choice = ComboBox(self, -1, choices=sorted(cm.datad.keys()), style=wx.CB_READONLY)
+        cmaps = sorted(cm.datad.keys())
+        cmaps = [_ for _ in cmaps if not _.endswith('_r')]
+        self.colormap_choice = ComboBox(self, -1, choices=cmaps, style=wx.CB_READONLY)
         self.colormap_choice.SetStringSelection("jet") 
         self.colormap_choice.SetHelpText("Select the colormap to use for color-coding the data.")
         
@@ -1264,6 +1267,59 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot(self.selected_dataset, self.selected_dataset_track)    
 
+    def on_display_selected_measurment(self, event = None):
+        measurement_selection_dlg = self.MultiChoiceDialog(self, 
+                                                    message = 'Select the measurements you would like to show.\nNote that each measurement will be shown normalized from 0 to 1',
+                                                    caption = 'Select measurements to visualize', 
+                                                    choices = [str(x) for x in self.dataset_measurement_choices])
+        measurement_selection_dlg.SetSelections(range(0,len(self.dataset_measurement_choices)))   
+        if (measurement_selection_dlg.ShowModal() == wx.ID_OK):
+            current_selections = measurement_selection_dlg.GetSelections()  
+            if len(current_selections) == 0:
+                wx.MessageBox("No measurements were selected", caption = "No selection made", parent = self, style = wx.OK | wx.ICON_ERROR)                  
+                return
+            selected_measurments = itemgetter(*current_selections)(self.dataset_measurement_choices)
+            selected_measurments = [selected_measurments] if isinstance(selected_measurments,(str,unicode)) else selected_measurments
+            dataset_index = map(itemgetter(self.relationship_cols[NODE_TBL_ID].index(props.group_id)),self.relationship_data[NODE_TBL_ID])
+            dataset_image_ids = map(itemgetter(self.relationship_cols[NODE_TBL_ID].index("image_number")),self.relationship_data[NODE_TBL_ID])
+            all_image_ids = [_[0]  for _ in zip(dataset_image_ids, dataset_index) if _[1] == int(self.selected_dataset) ] 
+            all_image_ids = list(set(all_image_ids))
+            heatmap = np.NaN*np.ones((len(selected_measurments),len(all_image_ids)))
+            for idx, image_num in enumerate(all_image_ids):
+                query = ("SELECT %s"%(",".join(selected_measurments)),
+                         "FROM %s"%props.object_table,
+                         "WHERE %s = %d"%(props.image_id, image_num))
+                query = " ".join(query)
+                data = np.array([_ for _ in db.execute(query)]).astype(float)
+                heatmap[:,idx] = np.nanmean(data,axis=0)
+            
+            # Normalize to [0,1] for visualization
+            heatmap = heatmap - np.tile(np.nanmin(heatmap,axis=1,keepdims=True),(1,heatmap.shape[1]))
+            heatmap = heatmap/np.tile(np.nanmax(heatmap,axis=1,keepdims=True),(1,heatmap.shape[1]))
+            
+            # Create new figure
+            new_title = "Heatmap"
+            window = self.create_or_find_plain_figure_window(self, -1, new_title, subplots=(1,1), name=new_title)
+            
+            # Plot the selected measurement: http://stackoverflow.com/questions/14391959/heatmap-in-matplotlib-with-pcolor
+            axes = window.figure.add_subplot(1,1,1)   
+            row_labels = [str(_) for _ in all_image_ids]
+            column_labels = selected_measurments
+            pcm = axes.pcolormesh(heatmap, cmap=self.selected_colormap,vmin=0.0, vmax=1.0)
+            axes.set_xticks(np.arange(heatmap.shape[1])+0.5, minor=False)   
+            axes.set_yticks(np.arange(heatmap.shape[0])+0.5, minor=False)
+            axes.set_xticklabels(row_labels, minor=False)
+            axes.set_yticklabels(column_labels, minor=False)   
+            axes.invert_yaxis()
+            axes.xaxis.tick_top()
+            axes.grid(False)
+            axes.set_xlim((0, heatmap.shape[1]))
+            axes.set_ylim((0, heatmap.shape[0]))
+            cbar = window.figure.colorbar(pcm,ax=axes)
+            cbar.ax.tick_params(labelsize=8) 
+            axes.tick_params(axis='both',labelsize=8)              
+            window.figure.tight_layout()         
+        
     def on_select_cell_by_index(self,event = None):
         # First, get the image key
         # Start with the table_id if there is one
@@ -1406,10 +1462,15 @@ class TimeLapseTool(wx.Frame, CPATool):
                     self.Bind(wx.EVT_MENU, self.parent.show_cell_measurement_plot,id=ID_DISPLAY_GRAPH)   
                     self.AppendSubMenu(item,"Display defined trajectory segment as")
                     
-                # The 'Show all trajectories' item and its associated binding
-                item = wx.MenuItem(self, wx.NewId(), "Show all trajectories")
+                # The 'Make all trajectories visble' item and its associated binding
+                item = wx.MenuItem(self, wx.NewId(), "Make all trajectories visible")
                 self.AppendItem(item)
                 self.Bind(wx.EVT_MENU, self.parent.on_show_all_trajectories, item)
+                
+                # The 'Show all trajectories' item and its associated binding
+                item = wx.MenuItem(self, wx.NewId(), "Display currently selected measurement")                
+                self.AppendItem(item)
+                self.Bind(wx.EVT_MENU, self.parent.on_display_selected_measurment, item)                
 
         # The event (mouse right-click) position.
         pos = event.GetPosition()
@@ -1765,56 +1826,56 @@ class TimeLapseTool(wx.Frame, CPATool):
             #self.do_plots_need_updating["filter"].append(" ".join((current_filter.colChoice.GetStringSelection(), 
                                                                    #current_filter.comparatorChoice.GetStringSelection(),
                                                                    #current_filter.valueField.GetStringSelection())))
-    
-    def update_trajectory_selection(self, selected_dataset=None, selected_dataset_track=None):
-        
-        class TrajectoryMultiChoiceDialog (wx.Dialog):
-            '''
-            Build the dialog box that appears when you click on the trajectory selection
-            '''
-            def __init__(self, parent, message="", caption="", choices=[]):
-                wx.Dialog.__init__(self, parent, -1)
-                self.SetTitle(caption)
-                sizer1 = wx.BoxSizer(wx.VERTICAL)
-                self.message = wx.StaticText(self, -1, message)
-                self.clb = wx.CheckListBox(self, -1, choices = choices)
-                self.selectallbtn = wx.Button(self,-1,"Select all")
-                self.deselectallbtn = wx.Button(self,-1,"Deselect all")
-                sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-                sizer2.Add(self.selectallbtn,0, wx.ALL | wx.EXPAND, 5)
-                sizer2.Add(self.deselectallbtn,0, wx.ALL | wx.EXPAND, 5)
-                self.dlgbtns = self.CreateSeparatedButtonSizer(wx.OK | wx.CANCEL)
-                self.Bind(wx.EVT_BUTTON, self.SelectAll, self.selectallbtn)
-                self.Bind(wx.EVT_BUTTON, self.DeselectAll, self.deselectallbtn)
-                
-                sizer1.Add(self.message, 0, wx.ALL | wx.EXPAND, 5)
-                sizer1.Add(self.clb, 1, wx.ALL | wx.EXPAND, 5)
-                sizer1.Add(sizer2, 0, wx.EXPAND)
-                sizer1.Add(self.dlgbtns, 0, wx.ALL | wx.EXPAND, 5)
-                self.SetSizer(sizer1)
-                self.Fit()
-                
-            def GetSelections(self):
-                return self.clb.GetChecked()
+                                                                    
+    class MultiChoiceDialog (wx.Dialog):
+        '''
+        Build the dialog box
+        '''
+        def __init__(self, parent, message="", caption="", choices=[]):
+            wx.Dialog.__init__(self, parent, -1)
+            self.SetTitle(caption)
+            sizer1 = wx.BoxSizer(wx.VERTICAL)
+            self.message = wx.StaticText(self, -1, message)
+            self.clb = wx.CheckListBox(self, -1, choices = choices)
+            self.selectallbtn = wx.Button(self,-1,"Select all")
+            self.deselectallbtn = wx.Button(self,-1,"Deselect all")
+            sizer2 = wx.BoxSizer(wx.HORIZONTAL)
+            sizer2.Add(self.selectallbtn,0, wx.ALL | wx.EXPAND, 5)
+            sizer2.Add(self.deselectallbtn,0, wx.ALL | wx.EXPAND, 5)
+            self.dlgbtns = self.CreateSeparatedButtonSizer(wx.OK | wx.CANCEL)
+            self.Bind(wx.EVT_BUTTON, self.SelectAll, self.selectallbtn)
+            self.Bind(wx.EVT_BUTTON, self.DeselectAll, self.deselectallbtn)
             
-            def SetSelections(self, indexes):
-                return self.clb.SetChecked(indexes)
+            sizer1.Add(self.message, 0, wx.ALL | wx.EXPAND, 5)
+            sizer1.Add(self.clb, 1, wx.ALL | wx.EXPAND, 5)
+            sizer1.Add(sizer2, 0, wx.EXPAND)
+            sizer1.Add(self.dlgbtns, 0, wx.ALL | wx.EXPAND, 5)
+            self.SetSizer(sizer1)
+            self.Fit()
+            
+        def GetSelections(self):
+            return self.clb.GetChecked()
+        
+        def SetSelections(self, indexes):
+            return self.clb.SetChecked(indexes)
 
-            def SelectAll(self, event):
-                for i in range(self.clb.GetCount()):
-                    self.clb.Check(i, True)
-                    
-            def DeselectAll(self, event):
-                for i in range(self.clb.GetCount()):
-                    self.clb.Check(i, False)
+        def SelectAll(self, event):
+            for i in range(self.clb.GetCount()):
+                self.clb.Check(i, True)
+                
+        def DeselectAll(self, event):
+            for i in range(self.clb.GetCount()):
+                self.clb.Check(i, False)    
+
+    def update_trajectory_selection(self, selected_dataset=None, selected_dataset_track=None):
         
         connected_nodes = self.connected_nodes[selected_dataset][selected_dataset_track]
         directed_graph = self.directed_graph[selected_dataset][selected_dataset_track]
                                                             
-        trajectory_selection_dlg = TrajectoryMultiChoiceDialog(self, 
-                                                    message = 'Select the objects you would like to show',
-                                                    caption = 'Select trajectories to visualize', 
-                                                    choices = [str(x) for x in connected_nodes.keys()])
+        trajectory_selection_dlg = self.MultiChoiceDialog(self, 
+                                                          message = 'Select the objects you would like to show.',
+                                                          caption = 'Select trajectories to visualize', 
+                                                          choices = [str(x) for x in connected_nodes.keys()])
                 
         current_selection = np.nonzero(self.trajectory_selection.values())[0]
         trajectory_selection_dlg.SetSelections(current_selection)
@@ -1830,16 +1891,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             for key, value in self.trajectory_selection.items():
                 for node_key in connected_nodes[key]:
                     directed_graph.node[node_key][VISIBLE] = (value != 0)
-            ## Alter lines between the points that we have previously created by directly modifying the VTK dataset.                
-            #nodes_to_remove = [connedted_nodes[key] for (key,value) in self.trajectory_selection.items() if value == 0]
-            #nodes_to_remove = [item for sublist in nodes_to_remove for item in sublist]
-            
-            #mapping = dict(zip(sorted(directed_graph),
-                               #range(0,directed_graph.number_of_nodes()+1)))
-            #nodes_to_remove = [mapping[item] for item in nodes_to_remove]
-            #self.altered_directed_graph = nx.relabel_nodes(directed_graph, mapping, copy=True)
-            #self.altered_directed_graph.remove_nodes_from(nodes_to_remove)
-            #self.update_plot(selected_dataset,selected_dataset_track)                    
+            self.update_plot(selected_dataset,selected_dataset_track)                    
     
     def enable_filtering(self, enable_filtering=None):
         if enable_filtering:
@@ -2269,11 +2321,14 @@ class TimeLapseTool(wx.Frame, CPATool):
         gs = gridspec.GridSpec(3, 1, height_ratios=[1, 3, 3])
         axes = window.figure.add_subplot(gs[0]) 
         axes.set_axis_off()
-        axes.text(0.0,0.0,
-                "This plot shows the histogram of the betweenness centrality values for all branchpoints\n"
-                "in the current data source. The length of a track corresponds to the lifetime of the object.\n\n"
-                "Braches that last for one or just a few frames are likely to be false positives and are \n"
-                "candidates for removal.")
+        help_text = ("This plot shows the histogram of the betweenness centrality values for all branchpoints",
+                     "in the current data source. The length of a track corresponds to the lifetime of the object.\n\n"
+                     "Branches that last for one or just a few frames are likely to be false positives and are"
+                     "candidates for removal.")
+        help_text = " ".join(help_text)
+        help_text = '\n'.join(wrap(help_text,80))
+        
+        axes.text(0.0,0.0,help_text)
         axes = window.figure.add_subplot(gs[1])        
         if values.shape[0] == 0:
             plot = axes.text(0.0, 1.0, "No valid values to plot.")
@@ -2369,11 +2424,13 @@ class TimeLapseTool(wx.Frame, CPATool):
         gs = gridspec.GridSpec(3, 2)
         axes = window.figure.add_subplot(gs[0,:]) 
         axes.set_axis_off()
-        axes.text(0.0,0.0,
-                "This plot shows the histogram of the track lengths for all trajectories in the current\n"
-                "data source. The length of a track corresponds to the lifetime of the object.\n\n"
-                "Cells that last for one or just a few frames are likely to be false positives and are\n"
-                "candidates for removal.")
+        help_text = ("This plot shows the histogram of the track lengths for all trajectories in the current",
+                     "data source. The length of a track corresponds to the lifetime of the object.\n\n",
+                     "Cells that last for one or just a few frames are likely to be false positives and are",
+                     "candidates for removal.")
+        help_text = " ".join(help_text)
+        help_text = '\n'.join(wrap(help_text,80))        
+        axes.text(0.0,0.0,help_text)
         
         axes = window.figure.add_subplot(gs[1:,0])        
         if dists.shape[0] == 0:
@@ -2625,20 +2682,22 @@ class TimeLapseTool(wx.Frame, CPATool):
         title = "Frame-to-frame linking distances"       
         axes = window.figure.add_subplot(2,2,1) 
         axes.set_axis_off()
-        axes.text(0.0,0.0,
-                  "Frame-to-frame linking distances\n"
-                  "are the distances between the\n"
-                  "predicted position of an object\n"
-                  "and the observed position. This\n"
-                  "data is displayed as a histogram\n"
-                  "and should decay to zero.\n\n"
-                  "The arrow indicates the pixel\n"
-                  "distance at which 95%% of the\n"
-                  "maximum number of links were\n"
-                  "made. You should confirm that\n"
-                  "this value is less than the\n"
-                  "maximum search radius in the\n"
-                  "%s module."%TRACKING_MODULE_NAME)
+        help_text = ("Frame-to-frame linking distances",
+                     "are the distances between the",
+                     "predicted position of an object",
+                     "and the observed position. This",
+                     "data is displayed as a histogram",
+                     "and should decay to zero.\n\n",
+                     "The arrow indicates the pixel",
+                     "distance at which 95%% of the",
+                     "maximum number of links were",
+                     "made. You should confirm that",
+                     "this value is less than the",
+                     "maximum search radius in the",
+                     "%s module."%TRACKING_MODULE_NAME)
+        help_text = " ".join(help_text)
+        help_text = '\n'.join(wrap(help_text,30))    
+        axes.text(0.0,0.0,help_text)
         axes = window.figure.add_subplot(2,2,2)        
         if dists.shape[0] == 0:
             plot = axes.text(0.0, 1.0, "No valid values to plot.")
@@ -2660,17 +2719,19 @@ class TimeLapseTool(wx.Frame, CPATool):
         # Plot the gap lengths
         axes = window.figure.add_subplot(2,2,3) 
         axes.set_axis_off()
-        axes.text(0.0,0.0,
-                  "Gap lengths are displayed as\n"
-                  "a histogram. A plateau in the\n"
-                  "tail of the histogram \n"
-                  "indicates that the time window\n"
-                  "used for gap closing is too \n"
-                  "large, resulting in falsely \n"
-                  "closed gaps.\n\n"
-                  "If all the gap lengths are 1,\n"
-                  "no data is shown since gap\n"
-                  "closing was not necessary.")        
+        help_text = ("Gap lengths are displayed as",
+                     "a histogram. A plateau in the",
+                     "tail of the histogram",
+                     "indicates that the time window",
+                     "used for gap closing is too",
+                     "large, resulting in falsely",
+                     "closed gaps.\n\n",
+                     "If all the gap lengths are 1,",
+                     "no data is shown since gap",
+                     "closing was not necessary.")
+        help_text = " ".join(help_text)
+        help_text = '\n'.join(wrap(help_text,30))    
+        axes.text(0.0,0.0,help_text)        
         values = np.array(self.calculate_gap_lengths()).flatten()
         values = values[np.isfinite(values)] # Just in case
         title = "Gap lengths"
