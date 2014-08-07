@@ -1,3 +1,31 @@
+"""
+http://stackoverflow.com/questions/5912761/wxpython-scrolled-panel-not-updating-scroll-bars
+
+Anyway it appears that you missed the following things that are mandatory to
+make scrolled panel works:
+
+Scrolled panel must have a sizer. This could be done via
+self.test_panel.SetSizer(self.a_sizer) method. All other controls inside the
+panel must be attached to this sizer.
+
+You must call SetupScrolling() method on your panel, e.g.
+self.test_panel.SetupScrolling()
+
+You must enable auto layout for the panel, e.g. self.test_panel.SetAutoLayout(1)
+
+P.S. Have you ever seen an examples of the wxPython code? I'm asking since
+almost all of them have wonderful method like __do_layout or something like
+that. This approach will help to make your code much more readable.
+
+EDIT:
+
+You need to add self.test_panel.FitInside() to TextChange method in order to
+force the panel to recalculate sizes of child controls and update its own
+virtual size.
+
+Here is complete solution:
+
+"""
 import wx
 from wx.lib.scrolledpanel import ScrolledPanel
 
@@ -56,4 +84,4 @@ def main():
     win = 1
 
 if ( __name__ == "__main__" ):
-    main()    
+    main()
