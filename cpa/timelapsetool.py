@@ -7,7 +7,6 @@ NumPy-MKL (1.71+): http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
 configobj (required by Enthought): https://pypi.python.org/pypi/configobj
 '''
 import wx
-# Looks like wx.combo becomes wx.adv in wx 2.9+ or Phoenix? http://comments.gmane.org/gmane.comp.python.wxpython.devel/5635
 from wx.combo import OwnerDrawnComboBox as ComboBox
 from wx.lib.scrolledpanel import ScrolledPanel
 import networkx as nx
@@ -24,9 +23,9 @@ from dbconnect import DBConnect, image_key_columns, object_key_columns
 from properties import Properties
 from cpatool import CPATool
 import tableviewer
+from columnfilter import ColumnFilterDialog
 
 import matplotlib
-import matplotlib.cm as cm
 from matplotlib import gridspec
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from textwrap import wrap
@@ -38,6 +37,7 @@ from traitsui.api import View, Item, HSplit, Group
 # mayavi imports
 from mayavi import mlab
 from mayavi.core.ui.api import MlabSceneModel, SceneEditor
+from mayavi.core import lut_manager
 from mayavi.core.ui.mayavi_scene import MayaviScene
 from tvtk.pyface.scene import Scene
 from tvtk.api import tvtk
@@ -57,7 +57,7 @@ T_TCOORD = "T_3"
 SCALAR_VAL = "S"
 VISIBLE = "VISIBLE"
 COMPONENT_ID = "Component_ID"
-track_attributes = ["label","x","y","t",SCALAR_VAL,"f"]
+track_attributes = ["x","y","t",SCALAR_VAL]
 
 SUBGRAPH_ID = "Subgraph"
 
@@ -161,6 +161,20 @@ def create_update_relationship_tables():
 
     reln_cols = {EDGE_TBL_ID:['image_number1', 'object_number1', 'image_number2', 'object_number2'],
                  NODE_TBL_ID:['image_number', 'object_number']}
+    
+    # TODO: Insert trigger creation statements to drop/re-create the edge/node table if the relationship table has been changed
+    # Triggers for SQLite: http://www.sqlite.org/lang_createtrigger.html
+    # Triggers For MySQL: http://dev.mysql.com/doc/refman/5.5/en/trigger-syntax.html
+    '''
+    query = ("CREATE TRIGGER drop_tracer_relationship_tables AFTER UPDATE ON %s"%props.object_table,
+            "FOR EACH ROW",
+            "BEGIN",
+                  "DROP TABLE IF EXISTS %s;"%(edited_relnship_tables[EDGE_TBL_ID]),
+                  "DROP TABLE IF EXISTS %s;"%(edited_relnship_tables[NODE_TBL_ID]),
+            "END")
+    query = " ".join(query)
+    db.execute(query)
+    '''
     if not is_table:
         # If the table doens't exist, create it
         #-------------------------------
@@ -276,7 +290,8 @@ def create_update_relationship_tables():
     
     return relationship_table_cols, defined_track_cols, relationship_table_data
 
-def obtain_tracking_data(selected_dataset, selected_measurement, selected_filter):
+#def obtain_tracking_data(selected_dataset, selected_measurement, selected_filter):
+def obtain_tracking_data(selected_dataset, selected_measurement):
     #def parse_dataset_selection(s):
         #return [x.strip() for x in s.split(',') if x.strip() is not '']
     
@@ -285,120 +300,19 @@ def obtain_tracking_data(selected_dataset, selected_measurement, selected_filter
     dataset_clause = " AND ".join(["%s = '%s'"%(x[0], x[1]) for x in zip([props.image_table+"."+_ for _ in props.series_id], [selected_dataset])])
     
     columns_to_retrieve = list(object_key_columns(props.object_table))    # Node IDs
-    columns_to_retrieve += [props.object_table+"."+_ for _ in props.parent_fields]    # Parent node IDs
-    columns_to_retrieve += [props.object_table+"."+props.object_tracking_label] # Label assigned by TrackObjects
     columns_to_retrieve += [props.object_table+"."+props.cell_x_loc, props.object_table+"."+props.cell_y_loc] # x,y coordinates
     columns_to_retrieve += [props.image_table+"."+props.timepoint_id] # Timepoint/frame
     columns_to_retrieve += [props.object_table+"."+selected_measurement if selected_measurement is not None else 'NULL'] # Measured feature, insert NULL as placeholder if derived
-    columns_to_retrieve += [" AND ".join(selected_filter)] if selected_filter is not None else ['1'] # Filter
+    #columns_to_retrieve += [" AND ".join(selected_filter)] if selected_filter is not None else ['1'] # Filter
     query = ["SELECT %s"%(",".join(columns_to_retrieve))]
     query.append("FROM %s, %s"%(props.image_table, props.object_table))
     query.append("WHERE %s = %s AND %s"%(props.image_table+"."+props.image_id, props.object_table+"."+props.image_id, dataset_clause))
     query.append("ORDER BY %s, %s"%(props.object_tracking_label, props.timepoint_id))
     data = db.execute(" ".join(query))
-    columns = [props.object_tracking_label, props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, "Filter", props.parent_fields]
+    #columns = [props.object_tracking_label, props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, "Filter", props.parent_fields]
+    columns = [props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, selected_measurement]
     
     return columns, data
-
-################################################################################
-class MeasurementFilter(wx.Panel):
-    '''
-    Widget for creating lists of filters
-    '''    
-    def __init__(self, parent, allow_delete=True, **kwargs):
-        wx.Panel.__init__(self, parent, **kwargs)        
-        
-        self.measurement_choices = db.GetColumnNames(props.object_table)
-        self.colChoice = ComboBox(self, choices=self.measurement_choices, size=(-1,-1), style=wx.CB_READONLY)
-        self.colChoice.Select(0)
-        self.colChoice.Bind(wx.EVT_COMBOBOX, self.on_select_column)
-        
-        self.comparatorChoice = ComboBox(self, size=(-1,-1))
-        self.update_comparator_choice()
-        
-        self.valueField = wx.ComboBox(self, -1, value='')
-        
-        if allow_delete:
-            self.minus_button = wx.Button(self, -1, label='-', size=(30,-1))
-            self.minus_button.Bind(wx.EVT_BUTTON, lambda event: self.Parent.on_remove_filter(event,self))              
-        self.plus_button = wx.Button(self, -1, label='+', size=(30,-1))   
-        self.plus_button.Bind(wx.EVT_BUTTON, lambda event: self.Parent.on_add_filter(event,self))     
-        
-        colSizer = wx.BoxSizer(wx.HORIZONTAL)
-        colSizer.Add(self.colChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
-        colSizer.Add(self.comparatorChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
-        colSizer.Add(self.valueField, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
-        colSizer.Add(self.plus_button, 0, wx.EXPAND) 
-        colSizer.AddSpacer((5,-1))        
-        colSizer.Add(self.minus_button if allow_delete else wx.StaticText(self,-1,size=(30,-1)), 0, wx.EXPAND)
-        self.SetSizerAndFit(colSizer)
-
-    def on_select_column(self, evt):
-        self.update_comparator_choice()
-        self.update_value_choice()
-
-    def _get_column_type(self):
-        return db.GetColumnTypes(props.object_table)[self.colChoice.GetSelection()]
-
-    def update_comparator_choice(self):
-        coltype = self._get_column_type()
-        comparators = []
-        if coltype in [str, unicode]:
-            comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT', 'IS NULL']
-        if coltype in [int, float, long]:
-            comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT', 'IS NULL']
-        self.comparatorChoice.SetItems(comparators)
-        self.comparatorChoice.Select(0)
-        
-    def update_value_choice(self):
-        column = self.colChoice.Value
-        column_type = db.GetColumnTypes(props.object_table)[self.colChoice.GetSelection()]
-        vals = []
-        if column_type == str:# or coltype == int or coltype == long:
-            res = db.execute('SELECT DISTINCT %s FROM %s ORDER BY %s'%(column, table, column))
-            vals = [str(row[0]) for row in res]
-        self.valueField.SetItems(vals)         
-
-################################################################################
-class FilterPanel(ScrolledPanel):
-    '''
-    Panel for measurement filtering.
-    '''
-    def __init__(self, parent, **kwargs):
-        ScrolledPanel.__init__(self, parent, **kwargs)
-        
-        self.panel_sizer = wx.BoxSizer( wx.VERTICAL )
-        self.filters = []
-        filt = MeasurementFilter(self, False)
-        self.panel_sizer.Add(filt, 0, wx.EXPAND)
-        self.filters.append(filt)
-
-        self.SetSizer(self.panel_sizer)
-        self.SetAutoLayout(1)
-        self.SetupScrolling(False,True)
-        self.Disable()
-        
-    def on_add_filter(self,event,selected_filter):
-        self.filters.append(MeasurementFilter(self, True))
-        self.panel_sizer.Add(self.filters[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
-        self.SetupScrolling(False,True)
-        self.panel_sizer.SetMinSize(self.panel_sizer.GetMinSize())
-        self.SetSizerAndFit(self.panel_sizer)        
-        self.SetAutoLayout(1)
-        self.Refresh()
-        self.Layout() 
-        
-    def on_remove_filter(self,event,selected_filter):
-        i = self.filters.index(selected_filter)
-        self.filters.remove(selected_filter)
-        self.panel_sizer.Remove(selected_filter)
-        selected_filter.Destroy()
-        self.SetupScrolling(False,len(self.filters) < 3 )  
-        self.Refresh()
-        self.Layout()          
 
 ################################################################################
 class TimeLapseControlPanel(wx.Panel):
@@ -440,8 +354,7 @@ class TimeLapseControlPanel(wx.Panel):
         self.dataset_measurement_choice.Select(0)
         self.dataset_measurement_choice.SetHelpText("Select the per-%s measurement to visualize the data with. The lineages and (xyt) trajectories will be color-coded by this measurement."%props.object_name[0])
         
-        cmaps = sorted(cm.datad.keys())
-        cmaps = [_ for _ in cmaps if not _.endswith('_r')]
+        cmaps = sorted(lut_manager.lut_mode_list())
         self.colormap_choice = ComboBox(self, -1, choices=cmaps, style=wx.CB_READONLY)
         self.colormap_choice.SetStringSelection("jet") 
         self.colormap_choice.SetHelpText("Select the colormap to use for color-coding the data.")
@@ -510,6 +423,13 @@ class TimeLapseControlPanel(wx.Panel):
         self.save_edited_tracks.SetHelpText("Saves the edited graph as a new index into the relationship table.")
         self.save_edited_tracks.Disable()         
         
+        self.create_filter_button = wx.Button(self, -1, "Create New Data Measurement Filter")
+        self.create_filter_button.SetHelpText("Creates a new measurement filter.")
+        self.create_filter_button.Disable()  
+        self.filter_choices = ComboBox(self, -1, style=wx.CB_READONLY)
+        self.filter_choices.SetHelpText("Selects a previously defined measurement filter.")
+        self.filter_choices.Disable() 
+        
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
         sz = wx.BoxSizer(wx.HORIZONTAL)
@@ -572,12 +492,13 @@ class TimeLapseControlPanel(wx.Panel):
         
         # Row #4: Measurement filter selection
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        self.enable_filtering_checkbox = wx.CheckBox(self, -1, label="Enable filtering")
+        self.enable_filtering_checkbox = wx.CheckBox(self, -1, label="Enable Filtering by Data Measurements")
         self.enable_filtering_checkbox.SetValue(0)
         sz.Add(self.enable_filtering_checkbox, 0, wx.TOP, 4)
         sz.AddSpacer((4,-1))
-        self.filter_panel = FilterPanel(self)
-        sz.Add(self.filter_panel,1, wx.TOP, 4)
+        sz.Add(self.create_filter_button, 1, wx.TOP, 4)
+        sz.AddSpacer((4,-1))
+        sz.Add(self.filter_choices, 1, wx.TOP, 4)
         sz.Layout()
         sizer.Add(sz, 1, wx.EXPAND) 
         sizer.AddSpacer((-1,2))
@@ -611,6 +532,8 @@ class TimeLapseControlPanel(wx.Panel):
         wx.EVT_TOGGLEBUTTON(self.preview_prune_button,-1, self.on_toggle_preview_pruned_graph)
         wx.EVT_BUTTON(self.add_pruning_to_edits_button,-1,self.on_add_pruning_to_edits)
         wx.EVT_BUTTON(self.save_edited_tracks,-1, self.on_save_edited_tracks)      
+        wx.EVT_BUTTON(self.create_filter_button,-1, self.on_filter_button) 
+        wx.EVT_COMBOBOX(self.filter_choices,-1, self.on_filter_selection)   
         
     def on_dataset_selected(self, event=None):
         self.parent.dataset_selected(self.dataset_choice.GetStringSelection(), self.track_collection.GetStringSelection())
@@ -640,9 +563,6 @@ class TimeLapseControlPanel(wx.Panel):
     def on_update_plot(self, event=None):
         self.parent.update_plot(self.dataset_choice.GetValue(),self.track_collection.GetStringSelection())  
         
-    def on_enable_filtering(self, event=None):
-        self.parent.enable_filtering(self.enable_filtering_checkbox.GetValue())  
-        
     def on_singleton_length_plot(self, event=None):
         self.parent.singleton_length_plot(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection(), int(self.singleton_length_value.GetValue()))
     
@@ -661,7 +581,17 @@ class TimeLapseControlPanel(wx.Panel):
     def on_save_edited_tracks(self, event=None):     
         self.parent.save_edited_tracks(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())  
         
-        
+    def on_enable_filtering(self, event=None):
+        is_enabled = self.enable_filtering_checkbox.GetValue()
+        self.create_filter_button.Enable(is_enabled)
+        self.filter_choices.Enable(is_enabled)            
+
+    def on_filter_button(self, event=None):
+        self.parent.create_new_filter()
+    
+    def on_filter_selection(self, event=None):
+        self.parent.filter_selected(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection(), self.filter_choices.GetStringSelection()) 
+    
 ################################################################################
 class MayaviView(HasTraits):
     """ Create a mayavi scene"""
@@ -1184,6 +1114,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         self.selected_measurement = self.control_panel.dataset_measurement_choice.GetStringSelection()
         self.selected_metric = self.control_panel.derived_measurement_choice.GetStringSelection()
         self.selected_colormap  = self.control_panel.colormap_choice.GetStringSelection()
+        self.available_filters = None
         self.selected_filter = None
         self.plot_updated = False
         self.plot_initialized = False
@@ -1303,7 +1234,8 @@ class TimeLapseTool(wx.Frame, CPATool):
             
             # Plot the selected measurement: http://stackoverflow.com/questions/14391959/heatmap-in-matplotlib-with-pcolor
             axes = window.figure.add_subplot(1,1,1)   
-            row_labels = [str(_) for _ in all_image_ids]
+            shown_row_labels = list(np.floor(np.linspace(all_image_ids[0],all_image_ids[-1],5)).astype(int)) 
+            row_labels = [str(_) if _ in shown_row_labels else '' for _ in all_image_ids ]
             column_labels = selected_measurments
             pcm = axes.pcolormesh(heatmap, cmap=self.selected_colormap,vmin=0.0, vmax=1.0)
             axes.set_xticks(np.arange(heatmap.shape[1])+0.5, minor=False)   
@@ -1315,7 +1247,10 @@ class TimeLapseTool(wx.Frame, CPATool):
             axes.grid(False)
             axes.set_xlim((0, heatmap.shape[1]))
             axes.set_ylim((0, heatmap.shape[0]))
-            cbar = window.figure.colorbar(pcm,ax=axes)
+            from mpl_toolkits.axes_grid1 import make_axes_locatable # From http://matplotlib.org/users/tight_layout_guide.html
+            divider = make_axes_locatable(axes)
+            cax = divider.append_axes(position="bottom", size="2%", pad="3%")
+            cbar = window.figure.colorbar(pcm, orientation='horizontal', cax=cax, ticks=[0, 0.5, 1])
             cbar.ax.tick_params(labelsize=8) 
             axes.tick_params(axis='both',labelsize=8)              
             window.figure.tight_layout()         
@@ -1819,13 +1754,46 @@ class TimeLapseTool(wx.Frame, CPATool):
         if self.selected_colormap != selected_colormap:
             self.selected_colormap = selected_colormap    
             self.do_plots_need_updating["colormap"] = True
-    
-    #def on_filter_selected(self, event = None):
-        #self.do_plots_need_updating["filter"] = []
-        #for current_filter in self.control_panel.filter_panel.filters:
-            #self.do_plots_need_updating["filter"].append(" ".join((current_filter.colChoice.GetStringSelection(), 
-                                                                   #current_filter.comparatorChoice.GetStringSelection(),
-                                                                   #current_filter.valueField.GetStringSelection())))
+                                                                   
+    def create_new_filter(self):
+        cff = ColumnFilterDialog(self, tables=[props.object_table],size=(600,300))
+        if cff.ShowModal() == wx.OK:
+            fltr = cff.get_filter()
+            filter_name = cff.get_filter_name()
+            # I *don't* think I want to register the filter name here. TODO: Check into this
+            props._filters[filter_name] = fltr
+            items = self.control_panel.filter_choices.GetItems()
+            self.control_panel.filter_choices.SetItems(items[:-1]+[filter_name]+items[-1:])
+            self.control_panel.filter_choices.Select(len(items)-1)
+            if self.available_filters is None:
+                self.available_filters = {filter_name: fltr} 
+            else:
+                self.available_filters[filter_name] = fltr
+        else:
+            self.control_panel.filter_choices.Select(0)
+        cff.Destroy()  
+        
+    def filter_selected(self, selected_dataset=None, selected_dataset_track=None, selected_filter=None):
+        if self.selected_filter == selected_filter:
+            return
+        else:
+            self.selected_filter == selected_filter
+            fltr = self.available_filters[self.selected_filter]
+            
+            import sqltools
+            from dbconnect import UniqueObjectClause
+            query = 'SELECT %s FROM %s WHERE %s' % (UniqueObjectClause(props.object_table), ','.join(fltr.get_tables()), str(fltr))
+            node_list = db.execute(query)
+            attr = {_: False for _ in self.directed_graph[selected_dataset][selected_dataset_track].nodes()} 
+            for _ in node_list:
+                if _ in attr:
+                    attr[_] = True
+            nx.set_node_attributes(self.directed_graph[selected_dataset][selected_dataset_track],"f",attr)   
+            
+            #for key,subgraph in self.connected_nodes.items():
+                #for node_key in self.connected_nodes[key]:
+                    #directed_graph.node[node_key][VISIBLE] = (value != 0)
+            #self.update_plot(selected_dataset,selected_dataset_track)                
                                                                     
     class MultiChoiceDialog (wx.Dialog):
         '''
@@ -1893,12 +1861,6 @@ class TimeLapseTool(wx.Frame, CPATool):
                     directed_graph.node[node_key][VISIBLE] = (value != 0)
             self.update_plot(selected_dataset,selected_dataset_track)                    
     
-    def enable_filtering(self, enable_filtering=None):
-        if enable_filtering:
-            self.control_panel.filter_panel.Enable()
-        else:
-            self.control_panel.filter_panel.Disable()
-    
     def update_plot(self, selected_dataset=None, selected_dataset_track=None):
         directed_graph = self.directed_graph[selected_dataset][selected_dataset_track]
         connected_nodes = self.connected_nodes[selected_dataset][selected_dataset_track]
@@ -1930,14 +1892,14 @@ class TimeLapseTool(wx.Frame, CPATool):
     def generate_graph(self, selected_dataset=None, selected_track=None):
         # Generate the graph relationship if the dataset has been updated
         
-        if not self.do_plots_need_updating["filter"]:
-            self.selected_filter = None
-        else:
-            self.selected_filter = []
-            for current_filter in self.control_panel.filter_panel.filters:
-                self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetStringSelection(), 
-                                                      current_filter.comparatorChoice.GetStringSelection(),
-                                                      current_filter.valueField.GetValue())))
+        #if not self.do_plots_need_updating["filter"]:
+            #self.selected_filter = None
+        #else:
+            #self.selected_filter = []
+            #for current_filter in self.control_panel.filter_panel.filters:
+                #self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetStringSelection(), 
+                                                      #current_filter.comparatorChoice.GetStringSelection(),
+                                                      #current_filter.valueField.GetValue())))
        
         if selected_dataset == None and selected_track == None:
             # No data sources or tracks specified: Initialize all graphs from scratch
@@ -1952,7 +1914,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         for dataset_id in available_datasets:
             column_names,trajectory_info = obtain_tracking_data(dataset_id,
                                                                 self.selected_measurement if self.selected_measurement in self.dataset_measurement_choices else None, 
-                                                                self.selected_filter)              
+                                                                #self.selected_filter
+                                                                )              
             for track_id in available_tracks:     
                 if len(trajectory_info) == 0:
                     logging.info("No object data found")
@@ -1978,9 +1941,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                 key_length = len(object_key_columns())
                 indices = range(0,key_length)
                 node_ids = map(itemgetter(*indices),trajectory_info)
-                indices = range(key_length,key_length+2)
-                parent_node_ids = map(itemgetter(*indices),trajectory_info) 
-                indices = range(key_length+2,len(trajectory_info[0]))
+                indices = range(key_length,len(trajectory_info[0]))
                 attr = [dict(zip(track_attributes,_)) for _ in map(itemgetter(*indices),trajectory_info)]
                 for _ in attr:
                     _[VISIBLE] = True
@@ -2133,14 +2094,14 @@ class TimeLapseTool(wx.Frame, CPATool):
                 
     def set_scalar_values(self, selected_dataset=None, selected_track=None):
         
-        if not self.do_plots_need_updating["filter"]:
-            self.selected_filter = None
-        else:
-            self.selected_filter = []
-            for current_filter in self.control_panel.filter_panel.filters:
-                self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetStringSelection(), 
-                                                      current_filter.comparatorChoice.GetStringSelection(),
-                                                      current_filter.valueField.GetValue())))        
+        #if not self.do_plots_need_updating["filter"]:
+            #self.selected_filter = None
+        #else:
+            #self.selected_filter = []
+            #for current_filter in self.control_panel.filter_panel.filters:
+                #self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetStringSelection(), 
+                                                      #current_filter.comparatorChoice.GetStringSelection(),
+                                                      #current_filter.valueField.GetValue())))        
         if selected_dataset == None and selected_track == None:
             # No data sources or tracks specified: Initialize graph scalar attributes from scratch
             available_datasets = list(set(map(itemgetter(self.relationship_cols[NODE_TBL_ID].index(props.group_id)),self.relationship_data[NODE_TBL_ID])))
@@ -2156,7 +2117,8 @@ class TimeLapseTool(wx.Frame, CPATool):
         for dataset_id in available_datasets:
             column_names,trajectory_info = obtain_tracking_data(dataset_id,
                                                                 self.selected_measurement if self.selected_measurement in self.dataset_measurement_choices else None, 
-                                                                self.selected_filter)             
+                                                                #self.selected_filter
+                                                                )             
             for track_id in available_tracks:     
                 
                 selected_node_ids = self.directed_graph[dataset_id][track_id].nodes()
@@ -2165,7 +2127,7 @@ class TimeLapseTool(wx.Frame, CPATool):
                     key_length = len(object_key_columns())
                     indices = range(0,key_length)
                     node_ids = map(itemgetter(*indices),trajectory_info)
-                    getitem = itemgetter(len(trajectory_info[0])-2) # Measurement values                
+                    getitem = itemgetter(len(trajectory_info[0])-1) # Last value is the measurement value               
                     attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)]))  
                     attr = {_:attr[_] for _ in selected_node_ids}
                 else:
@@ -2177,11 +2139,11 @@ class TimeLapseTool(wx.Frame, CPATool):
                     attr = dict(zip(node_ids,self.derived_measurements[dataset_id][track_id][self.selected_metric]))
                 nx.set_node_attributes(self.directed_graph[dataset_id][track_id],SCALAR_VAL,attr)
                 
-                # Filter values
-                getitem = itemgetter(len(trajectory_info[0])-1)
-                attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)])) 
-                attr = {_:attr[_] for _ in selected_node_ids}
-                nx.set_node_attributes(self.directed_graph[dataset_id][track_id],"f",attr)
+                ## Filter values
+                #getitem = itemgetter(len(trajectory_info[0])-1)
+                #attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)])) 
+                #attr = {_:attr[_] for _ in selected_node_ids}
+                #nx.set_node_attributes(self.directed_graph[dataset_id][track_id],"f",attr)
             
         self.scalar_data = np.array([self.directed_graph[selected_dataset][selected_track].node[key][SCALAR_VAL] 
                                      for key in sorted(self.directed_graph[selected_dataset][selected_track])]).astype(float)
