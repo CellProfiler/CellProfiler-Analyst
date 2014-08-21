@@ -1,2 +1,3 @@
 mock
 verlib
+python-bioformats
