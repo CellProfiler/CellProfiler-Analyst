@@ -15,3 +15,6 @@ cpa/version.iss
 *.mat
 *.cpproj
 *.txt
+data
+cpa/mayavi_examples
+cpa/scrollpanel_examples
