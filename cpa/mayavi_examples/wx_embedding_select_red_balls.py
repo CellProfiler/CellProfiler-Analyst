@@ -44,6 +44,10 @@ class MayaviView(HasTraits):
         #self.figure = self.scene.mayavi_scene
         mlab.clf(figure = self.scene.mayavi_scene)
         
+    def clear_figure(self):
+        for child in self.scene.mayavi_scene.children:
+            child.remove()  
+            
     @on_trait_change('scene.activated')
     def activate_trajectory_scene(self):
         # Here, we grab the points describing the individual glyph, to figure
@@ -73,20 +77,20 @@ class MayaviView(HasTraits):
                                   y-0.1, y+0.1,
                                   z-0.1, z+0.1)
     
-    def create_points(self):
-        x1, y1, z1 = np.random.random((3, 10))
-        x2, y2, z2 = np.random.random((3, 10))
+    def create_points(self,n):
+        x1, y1, z1 = np.random.random((3, n))
+        x2, y2, z2 = np.random.random((3, n))
         return (x1,y1,z1),(x2,y2,z2)
         
     def cMap(self,glyph,x,y,z):
         pass
         #lut = glyph.module_manager.scalar_lut_manager.lut.table.to_array()
 
-    def initialize_data(self):
+    def initialize_data(self,n):
         self.scene.disable_render = True
         
         # Creates two set of points using mlab.points3d: red point and white points
-        pts1,pts2 = self.create_points()
+        pts1,pts2 = self.create_points(n)
         
         # From http://docs.enthought.com/mayavi/mayavi/building_applications.html#embedding-mayavi-traits
         #  under "A scene, with mlab embedded"
@@ -190,7 +194,7 @@ class MainWindow(wx.Frame):
         
         self.control_panel = ControlPanel(self)
         
-        self.selected_ball_number = self.control_panel.number_of_balls.GetStringSelection()
+        self.selected_number_of_balls = int(self.control_panel.number_of_balls.GetStringSelection())
         self.selected_ball_1_color = self.control_panel.color_ball_1.GetItems()
         self.selected_ball_2_color = self.control_panel.color_ball_2.GetStringSelection()  
         
@@ -201,7 +205,7 @@ class MainWindow(wx.Frame):
         wx.EVT_BUTTON(self.control_panel.update_button, -1, self.update)      
 
         self.mayavi_view = MayaviView(self)
-        self.mayavi_view.initialize_data()            
+        self.mayavi_view.initialize_data(self.selected_number_of_balls)            
         
         # Use traits to create a panel, and use it as the content of this wx frame.
         # From http://docs.enthought.com/mayavi/mayavi/auto/example_adjust_cropping_extents.html
@@ -220,7 +224,16 @@ class MainWindow(wx.Frame):
         self.Show(True)
 
     def on_number_of_balls_selected(self, event = None):
-        pass
+        self.selected_number_of_balls = int(self.control_panel.number_of_balls.GetStringSelection())
+        
+        self.mayavi_view.clear_figure()
+        #mlab.clf(figure = self.mayavi_view.scene.mayavi_scene )
+      
+        # make some new points
+        self.mayavi_view.initialize_data(self.selected_number_of_balls)
+      
+        # reattach the picker
+        picker = self.mayavi_view.figure.on_mouse_pick(self.mayavi_view.picker_callback)
     
     def on_ball_1_color_selected(self, event = None):
         self.selected_ball_1_color = self.control_panel.color_ball_1.GetItems()

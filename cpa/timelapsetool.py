@@ -1793,7 +1793,7 @@ class TimeLapseTool(wx.Frame, CPATool):
             #for key,subgraph in self.connected_nodes.items():
                 #for node_key in self.connected_nodes[key]:
                     #directed_graph.node[node_key][VISIBLE] = (value != 0)
-            #self.update_plot(selected_dataset,selected_dataset_track)                
+            #self.update_plot(selected_dataset, selected_dataset_track)                
                                                                     
     class MultiChoiceDialog (wx.Dialog):
         '''
