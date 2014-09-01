@@ -20,9 +20,13 @@ class ColumnFilterPanel(wx.Panel):
         self.tables = tables
         self.types = {}
         self.types[p.image_table] = db.GetColumnTypes(p.image_table)
+        self.types[p.object_table] = db.GetColumnTypes(p.object_table)
         self.tableChoice = ComboBox(self, choices=self.tables, size=(150,-1), style=wx.CB_READONLY)
         self.tableChoice.Select(0)
-        self.colChoice = ComboBox(self, choices=db.GetColumnNames(p.image_table), size=(150,-1), style=wx.CB_READONLY)
+        choices = []
+        for table in tables:
+            choices += db.GetColumnNames(table)
+        self.colChoice = ComboBox(self, choices=choices, size=(150,-1), style=wx.CB_READONLY)
         self.colChoice.Select(0)
         self.comparatorChoice = ComboBox(self, size=(80,-1))
         self.update_comparator_choice()

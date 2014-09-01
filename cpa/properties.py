@@ -38,6 +38,10 @@ string_vars = ['db_type',
                'object_id', 
                'plate_id', 
                'well_id',
+               #'series_id',
+               #'group_id',
+               #'timepoint_id',
+               #'object_tracking_label',
                'cell_x_loc', 
                'cell_y_loc',
                'image_url_prepend',
@@ -93,6 +97,10 @@ optional_vars = ['db_port',
                  'tile_buffer_size',
                  'plate_id', 
                  'well_id', 
+                 #'series_id',
+                 #'group_id',
+                 #'timepoint_id',
+                 #'object_tracking_label',                 
                  'plate_type',
                  'classifier_ignore_substrings', 'classifier_ignore_columns',
                  'object_name',
@@ -648,7 +656,11 @@ class Properties(Singleton):
             if len(self.link_columns_table) >= 64:
                 from hashlib import md5
                 self.link_columns_table = '_link_columns_%s'%(md5(self.image_table+(self.object_table or '')).hexdigest())
-            
+        
+        #missing_tlm_fields = [field for field in ['series_id','timepoint_id','object_tracking_label','group_id'] if not self.field_defined(field)]
+        #if missing_tlm_fields:
+            #logging.warn('PROPERTIES WARNING (%s): Field(s) are required for time-lapse data viewer.'%(','.join(missing_tlm_fields)))        
+        
         if not self.field_defined('gates'):
             from utils import ObservableDict
             self.gates = ObservableDict()

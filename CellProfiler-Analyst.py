@@ -1,5 +1,14 @@
 from __future__ import with_statement
 import sys
+try:
+    # Important. Do this up front to make bioformats work
+    # in windows executables. Otherwise it will look for
+    # loci_tools.jar in the directory where your properties
+    # were loaded from (presumably because this is set to
+    # the cwd).
+    if sys.platform == 'win32':
+        import bioformats
+except: pass
 import sys
 import os
 import os.path
@@ -12,6 +21,8 @@ import cpa.helpmenu
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
 
+import util.version
+__version__ = util.version.version_number
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -78,13 +89,21 @@ from cpa.density import Density
 from cpa.querymaker import QueryMaker
 from cpa.normalizationtool import NormalizationUI
 import cpa.icons
+
+from cpa.timelapsetool import TimeLapseTool
 import cpa.cpaprefs
 from cpa.cpatool import CPATool
+import icons
+import cpaprefs
+from cpatool import CPATool
 import inspect
 
 from cpa.icons import get_cpa_icon
 import cpa.dbconnect
 import cpa.multiclasssql
+from icons import get_cpa_icon
+import dbconnect
+import multiclasssql
 # ---
 import wx
 
@@ -97,6 +116,7 @@ ID_HISTOGRAM = wx.NewId()
 ID_DENSITY = wx.NewId()
 ID_BOXPLOT = wx.NewId()
 ID_NORMALIZE = wx.NewId()
+ID_TIMELAPSE_VIEWER = wx.NewId()
 
 def get_cpatool_subclasses():
     '''returns a list of CPATool subclasses.
@@ -128,7 +148,8 @@ class MainGUI(wx.Frame):
         #
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
-        tb.SetSize((-1,132))
+        tb.SetSize((-1,200))
+        tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
         tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
         tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
@@ -137,6 +158,7 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
+        tb.AddLabelTool(ID_TIMELAPSE_VIEWER, 'Time-lapse', cpa.icons.timelapse_viewer.ConvertToBitmap(), shortHelp='Time-lapse Viewer', longHelp='Launch time-lapse Viewer')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs
         #self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
@@ -166,6 +188,7 @@ class MainGUI(wx.Frame):
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
         boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
+        tlmMenuItem         = toolsMenu.Append(ID_TIMELAPSE_VIEWER, 'Time-lapse Viewer\tCtrl+Shift+L', help='Launches the Time-lapse Viewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()        
@@ -184,6 +207,9 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        helpMenu = wx.Menu()
+        aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
+        self.GetMenuBar().Append(helpMenu, 'Help')
 
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
@@ -216,6 +242,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.launch_normalization_tool, normalizeMenuItem)
         self.Bind(wx.EVT_MENU, self.clear_link_tables, clearTableLinksMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_query_maker, queryMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
@@ -224,6 +251,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
         self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
+        self.Bind(wx.EVT_TOOL, self.launch_timelapse_viewer, id=ID_TIMELAPSE_VIEWER)
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
@@ -266,6 +294,10 @@ class MainGUI(wx.Frame):
     def launch_box_plot(self, evt=None):
         boxplot = BoxPlot(parent=self)
         boxplot.Show(True)
+        
+    def launch_timelapse_viewer(self, evt=None):
+        lineagetool = TimeLapseTool(parent=self)
+        lineagetool.Show(True)        
         
     def launch_query_maker(self, evt=None):
         querymaker = QueryMaker(parent=self)
@@ -331,6 +363,21 @@ class MainGUI(wx.Frame):
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_tables_table))
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_columns_table))
         db.Commit()
+
+    def on_show_about(self, evt):
+        ''' Shows a message box with the version number etc.'''
+        message = ('CellProfiler Analyst was developed at The Broad Institute\n'
+                   'Imaging Platform and is distributed under the GNU General\n'
+                   'Public License version 2.')
+        info = wx.AboutDialogInfo()
+        info.SetIcon(icons.get_cpa_icon())
+        info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(__version__) or 'unknown revision'))
+        info.SetDescription(message)
+        info.AddDeveloper('Adam Fraser')
+        info.AddDeveloper('Thouis (Ray) Jones')
+        info.AddDeveloper('Vebjorn Ljosa')
+        info.SetWebSite('www.CellProfiler.org')
+        wx.AboutBox(info)
 
     def on_close(self, evt=None):
         # Classifier needs to be told to close so it can clean up it's threads
@@ -415,7 +462,7 @@ class CPAnalyst(wx.App):
             if not show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
-        self.frame = MainGUI(p, None, size=(860,-1))
+        self.frame = MainGUI(p, None, size=(1000,-1))
         self.frame.Show(True)
         db = cpa.dbconnect.DBConnect.getInstance()
         # Black magic: Bus errors occur on Mac OS X if we wait until
