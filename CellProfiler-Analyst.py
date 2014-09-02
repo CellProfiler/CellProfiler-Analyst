@@ -1,15 +1,5 @@
 from __future__ import with_statement
 import sys
-try:
-    # Important. Do this up front to make bioformats work
-    # in windows executables. Otherwise it will look for
-    # loci_tools.jar in the directory where your properties
-    # were loaded from (presumably because this is set to
-    # the cwd).
-    if sys.platform == 'win32':
-        import bioformats
-except: pass
-import sys
 import os
 import os.path
 import logging
@@ -21,8 +11,6 @@ import cpa.helpmenu
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
 
-import util.version
-__version__ = util.version.version_number
 
 class FuncLog(logging.Handler):
     '''A logging handler that sends logs to an update function.
@@ -88,22 +76,15 @@ from cpa.histogram import Histogram
 from cpa.density import Density
 from cpa.querymaker import QueryMaker
 from cpa.normalizationtool import NormalizationUI
-import cpa.icons
-
 from cpa.timelapsetool import TimeLapseTool
+import cpa.icons
 import cpa.cpaprefs
 from cpa.cpatool import CPATool
-import icons
-import cpaprefs
-from cpatool import CPATool
 import inspect
 
 from cpa.icons import get_cpa_icon
 import cpa.dbconnect
 import cpa.multiclasssql
-from icons import get_cpa_icon
-import dbconnect
-import multiclasssql
 # ---
 import wx
 
@@ -149,7 +130,6 @@ class MainGUI(wx.Frame):
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,200))
-        tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
         tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
         tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
