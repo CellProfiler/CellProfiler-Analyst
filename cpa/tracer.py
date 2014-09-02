@@ -315,7 +315,7 @@ def obtain_tracking_data(selected_dataset, selected_measurement):
     return columns, data
 
 ################################################################################
-class TimeLapseControlPanel(wx.Panel):
+class TracerControlPanel(wx.Panel):
     '''
     A panel with controls for selecting the data for a visual
     Some helpful tips on using sizers for layout: http://zetcode.com/wxpython/layout/
@@ -1073,12 +1073,12 @@ class FigureFrame(wx.Frame, CPATool):
         self.Destroy()        
         
 ################################################################################
-class TimeLapseTool(wx.Frame, CPATool):
+class Tracer(wx.Frame, CPATool):
     '''
     A time-lapse visual plot with its controls.
     '''
     def __init__(self, parent, size=(1000,600), **kwargs):
-        wx.Frame.__init__(self, parent, -1, size=size, title='Time-Lapse Tool', **kwargs)
+        wx.Frame.__init__(self, parent, -1, size=size, title='Tracer Time-Lapse Visualization Tool', **kwargs)
         self.SetBackgroundColour(wx.NullColor)
         CPATool.__init__(self)
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
@@ -1107,7 +1107,7 @@ class TimeLapseTool(wx.Frame, CPATool):
         props = Properties.getInstance()
         props = add_props_field(props)
 
-        self.control_panel = TimeLapseControlPanel(self)
+        self.control_panel = TracerControlPanel(self)
         self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
         self.selected_dataset_track = ORIGINAL_TRACK
         self.dataset_measurement_choices = self.control_panel.dataset_measurement_choice.GetItems()
@@ -2801,8 +2801,8 @@ if __name__ == "__main__":
         else:
             props = add_props_field(props)
             
-    timelapsevisual = TimeLapseTool(None)
-    timelapsevisual.Show()
+    tracer = Tracer(None)
+    tracer.Show()
 
     app.MainLoop()
     
