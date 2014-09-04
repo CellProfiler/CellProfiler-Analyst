@@ -268,7 +268,7 @@ class FastGentleBoosting(object):
 
         Labels should be 1 and -1, only.
         label_matrix and weights are NxC.
-        values is Nx1
+        values is N
         '''
 
         global order, s_values, s_labels, s_weights, s_weights_times_labels, num_a, den_a, a, b, sless0, sgrtr0, w_below_neg, w_below_pos, w_above_neg, w_above_pos, J
@@ -278,7 +278,7 @@ class FastGentleBoosting(object):
         # slightly with the number of workers.  Add kind="mergesort" to
         # get a stable sort, which avoids this.
         order = np.argsort(values)
-        s_values = values[order, :]
+        s_values = values[order]
         s_labels = labels[order, :]
         s_weights = weights[order, :]
 
