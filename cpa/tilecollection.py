@@ -5,6 +5,7 @@ from singleton import Singleton
 from heapq import heappush, heappop
 from weakref import WeakValueDictionary
 import imagetools
+import javabridge
 import logging
 import numpy
 import threading
@@ -106,41 +107,45 @@ class TileLoader(threading.Thread):
         self.start()
     
     def run(self):
-        while 1:            
-            self.tile_collection.cv.acquire()
-            # If there are no objects in the queue then wait
-            while not self.tile_collection.loadq:
-                self.tile_collection.cv.wait()
-                
-            if self._want_abort:
+        javabridge.attach()
+        try:
+            while 1:            
+                self.tile_collection.cv.acquire()
+                # If there are no objects in the queue then wait
+                while not self.tile_collection.loadq:
+                    self.tile_collection.cv.wait()
+                    
+                if self._want_abort:
+                    self.tile_collection.cv.release()
+                    logging.info('%s aborted'%self.getName())
+                    return
+    
+                obKey = heappop(self.tile_collection.loadq)[1]
                 self.tile_collection.cv.release()
-                logging.info('%s aborted'%self.getName())
-                return
-
-            obKey = heappop(self.tile_collection.loadq)[1]
-            self.tile_collection.cv.release()
-
-            # wait until loading has completed before continuing
-            with self.tile_collection.load_lock:
-                # Make sure tile hasn't been deleted outside this thread
-                if not self.tile_collection.tileData.get(obKey, None):
-                    continue
-
-                # Get the tile
-                new_data = imagetools.FetchTile(obKey)
-                if new_data is None:
-                    #if fetching fails, leave the tile blank
-                    continue
-                
-                tile_data = self.tile_collection.tileData.get(obKey, None)
-                
-                # Make sure tile hasn't been deleted outside this thread
-                if tile_data is not None:
-                    # copy each channel
-                    for i in range(len(tile_data)):
-                        tile_data[i] = new_data[i]
-                    wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
-
+    
+                # wait until loading has completed before continuing
+                with self.tile_collection.load_lock:
+                    # Make sure tile hasn't been deleted outside this thread
+                    if not self.tile_collection.tileData.get(obKey, None):
+                        continue
+    
+                    # Get the tile
+                    new_data = imagetools.FetchTile(obKey)
+                    if new_data is None:
+                        #if fetching fails, leave the tile blank
+                        continue
+                    
+                    tile_data = self.tile_collection.tileData.get(obKey, None)
+                    
+                    # Make sure tile hasn't been deleted outside this thread
+                    if tile_data is not None:
+                        # copy each channel
+                        for i in range(len(tile_data)):
+                            tile_data[i] = new_data[i]
+                        wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
+        finally:
+            javabridge.detach()
+            
     def abort(self):
         self._want_abort = True
         self.tile_collection.cv.acquire()
