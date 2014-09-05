@@ -11,6 +11,7 @@ from wx.combo import OwnerDrawnComboBox as ComboBox
 from wx.lib.scrolledpanel import ScrolledPanel
 import networkx as nx
 import numpy as np
+import hashlib
 from operator import itemgetter
 import glayout
 
@@ -86,8 +87,8 @@ IS_REMOVED = "Is_removed"
 
 EDITED_TABLE_SUFFIX = "_Edits"
 ORIGINAL_TRACK = "Original"
-EDGE_TBL_ID = "Edges"
-NODE_TBL_ID = "Nodes"
+EDGE_TBL_ID = "edges"
+NODE_TBL_ID = "nodes"
 
 def add_props_field(props):
     # Temp declarations; these will be retrieved from the properties file directly, eventually
@@ -150,45 +151,112 @@ def where_stmt_for_tracked_objects(obj, group_id, selected_dataset):
             "AND i1.%s = %d"%(group_id,selected_dataset)
             )
     return stmt    
-  
-def create_update_relationship_tables():
-    edited_relnship_tables = get_edited_relationship_tablenames()
-    if props.db_type == 'sqlite':
-        query = "PRAGMA table_info(%s)"%(edited_relnship_tables.values()[0])
-    else:
-        query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, edited_relnship_tables.values()[0])
-    is_table = len(db.execute(query)) > 0 
 
-    reln_cols = {EDGE_TBL_ID:['image_number1', 'object_number1', 'image_number2', 'object_number2'],
-                 NODE_TBL_ID:['image_number', 'object_number']}
+def does_table_exist(table_name):
+    if props.db_type == 'sqlite':
+        query = "PRAGMA table_info(%s)"%(table_name)
+    else:
+        query = "SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, table_name)
+    return len(db.execute(query)) > 0    
     
-    # TODO: Insert trigger creation statements to drop/re-create the edge/node table if the relationship table has been changed
-    # Triggers for SQLite: http://www.sqlite.org/lang_createtrigger.html
-    # Triggers For MySQL: http://dev.mysql.com/doc/refman/5.5/en/trigger-syntax.html
-    '''
-    query = ("CREATE TRIGGER drop_tracer_relationship_tables AFTER UPDATE ON %s"%props.object_table,
-            "FOR EACH ROW",
-            "BEGIN",
-                  "DROP TABLE IF EXISTS %s;"%(edited_relnship_tables[EDGE_TBL_ID]),
-                  "DROP TABLE IF EXISTS %s;"%(edited_relnship_tables[NODE_TBL_ID]),
-            "END")
-    query = " ".join(query)
-    db.execute(query)
-    '''
-    if not is_table:
-        # If the table doens't exist, create it
-        #-------------------------------
-        # Create the edge table first
-        logging.info("Creating custom relationship tables...")
+def create_update_relationship_tables():
+    
+    reln_cols = {EDGE_TBL_ID:['image_number1', 'object_number1', 'image_number2', 'object_number2'],
+                 NODE_TBL_ID:['image_number', 'object_number']}    
         
-        obj = get_object_name()
-        # From http://stackoverflow.com/questions/12730390/copy-table-structure-to-new-table-in-sqlite3. Seems to work in MySQL too
+    def create_table_hash():
+        query = "SELECT * FROM %s"%(props.relationship_table)
+        h = hashlib.sha1()
+        h.update(repr(db.execute(query)))
+        d = np.frombuffer(h.digest(), np.uint8)
+        return "".join(["%02x" % b for b in d])   
+    
+    def create_adjacency_tables():
+        # Trick to copy table structure in SQLite; seems to work in MySQL too
+        # From http://stackoverflow.com/questions/12730390/copy-table-structure-to-new-table-in-sqlite3
+        
+        # Edge table
         query = ("CREATE TABLE %s AS"%(edited_relnship_tables[EDGE_TBL_ID]),
                     "SELECT %s"%(",".join(reln_cols[EDGE_TBL_ID])),
                     "FROM %s"%(props.relationships_view),
                     "WHERE 0")
         query = " ".join(query)            
-        db.execute(query)
+        db.execute(query)    
+        
+        # Node table
+        orig_cols = [props.image_id, props.object_id]
+        query = ("CREATE TABLE %s AS"%(edited_relnship_tables[NODE_TBL_ID]),
+                    "SELECT %s"%(",".join(["%s AS %s"%(_) for _ in zip(orig_cols,reln_cols[NODE_TBL_ID])])),
+                    "FROM %s"%(props.object_table),
+                    "WHERE 0")
+        query = " ".join(query)            
+        db.execute(query)        
+        
+    edited_relnship_tables = get_edited_relationship_tablenames()
+    tracer_info_table = '_tracer_info'
+    # Check if the info table exists
+    is_tracer_table = does_table_exist(tracer_info_table)
+    no_changes_needed = True
+        
+    if not is_tracer_table:
+        # If the Tracer info table doens't exist, create it
+        logging.info("Creating info table for Tracer...")
+        query = ("CREATE TABLE IF NOT EXISTS %s ("%tracer_info_table,
+                 "schema_hash TEXT,",
+                 "edge_table TEXT,",
+                 "node_table TEXT"
+                 ")")
+        query = " ".join(query)
+        db.execute(query)  
+        
+        # Create hash of relationship data
+        schema_hash = create_table_hash()      
+
+        query = ("UPDATE %s SET"%tracer_info_table,
+                 "edge_table = '%s',"%EDGE_TBL_ID,
+                 "node_table = '%s',"%NODE_TBL_ID,
+                 "schema_hash = '%s'"%schema_hash)
+        query = " ".join(query)        
+        db.execute(query) 
+        
+        # Create edge and node tables
+        logging.info("Creating custom relationship tables...")
+        create_adjacency_tables()
+        db.Commit()
+        no_changes_needed = False
+    else:
+        query = "SELECT schema_hash FROM %s"%tracer_info_table
+        saved_schema_hash = db.execute(query)
+        current_schema_hash = create_table_hash()
+        
+        if saved_schema_hash == current_schema_hash:
+            logging.info("No change to data since last session: Keeping old info...")
+        else:            
+            logging.info("Data has changed: Removing old info...")
+            # Data has changed: Drop edge and node tables after confirming they exist
+            if does_table_exist(edited_relnship_tables[EDGE_TBL_ID]):
+                query = "DROP TABLE %s"%(edited_relnship_tables[EDGE_TBL_ID])
+                db.execute(query) 
+            if does_table_exist(edited_relnship_tables[NODE_TBL_ID]):
+                query = "DROP TABLE %s"%(edited_relnship_tables[NODE_TBL_ID])
+                db.execute(query) 
+                
+            # Re-create edge and node tables
+            logging.info("Re-creating custom relationship tables...")
+            create_adjacency_tables() 
+            
+            # Save new data hash
+            query = "UPDATE %s SET schema_hash = '%s'"%(tracer_info_table, current_schema_hash)
+            db.execute(query)
+            db.Commit()
+            no_changes_needed = False
+    
+    if not no_changes_needed: # Need to re-populate the adjacency tables
+        # Populate the edge table first
+        logging.info("Populating custom relationship tables...")
+        
+        obj = get_object_name()
+        
         query = "SELECT DISTINCT(%s) FROM %s"%(props.group_id, props.image_table)
         available_datasets = [_[0] for _ in db.execute(query)]
         for selected_dataset in available_datasets:
@@ -226,17 +294,9 @@ def create_update_relationship_tables():
         db.execute(query)
         # Spent the better part of a day figuring out that a 'commit' was needed here
         db.Commit()
+        
         #-------------------------------
         # Now the node table
-        orig_cols = [props.image_id, props.object_id]
-        obj = get_object_name()
-        # From http://stackoverflow.com/questions/12730390/copy-table-structure-to-new-table-in-sqlite3. Seems to work in MySQL too
-        query = ("CREATE TABLE %s AS"%(edited_relnship_tables[NODE_TBL_ID]),
-                    "SELECT %s"%(",".join(["%s AS %s"%(_) for _ in zip(orig_cols,reln_cols[NODE_TBL_ID])])),
-                    "FROM %s"%(props.object_table),
-                    "WHERE 0")
-        query = " ".join(query)            
-        db.execute(query)   
         query = "SELECT DISTINCT(%s) FROM %s"%(props.group_id, props.image_table)
         available_datasets = [_[0] for _ in db.execute(query)]
         for selected_dataset in available_datasets:
