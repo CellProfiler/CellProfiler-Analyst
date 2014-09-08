@@ -479,9 +479,9 @@ class TracerControlPanel(wx.Panel):
         self.add_pruning_to_edits_button.SetHelpText("Adds the pruned graph to the list of edits.")
         self.add_pruning_to_edits_button.Disable()          
         
-        self.save_edited_tracks = wx.Button(self, -1, "Save Edited Tracks...")
-        self.save_edited_tracks.SetHelpText("Saves the edited graph as a new index into the relationship table.")
-        self.save_edited_tracks.Disable()         
+        self.save_edited_tracks_button = wx.Button(self, -1, "Save Edited Tracks...")
+        self.save_edited_tracks_button.SetHelpText("Saves the edited graph as a new index into the relationship table.")
+        self.save_edited_tracks_button.Disable()         
         
         self.create_filter_button = wx.Button(self, -1, "Create New Data Measurement Filter")
         self.create_filter_button.SetHelpText("Creates a new measurement filter.")
@@ -538,14 +538,14 @@ class TracerControlPanel(wx.Panel):
         sz.Add(self.bc_branch_ratio_value_text, 0, wx.TOP, 4)
         sz.Add(self.bc_branch_ratio_value, 1, wx.EXPAND) 
         sz.Add(self.bc_branch_plot_button, 1, wx.EXPAND) 
-        sz.AddSpacer((4,-1))
-        sz.Add(wx.StaticLine(self,-1,style=wx.LI_VERTICAL), 0) 
+        #sz.AddSpacer((4,-1))
+        #sz.Add(wx.StaticLine(self,-1,style=wx.LI_VERTICAL), 0) 
         sz.AddSpacer((4,-1))
         sz.Add(self.preview_prune_button, 1, wx.EXPAND) 
         sz.AddSpacer((4,-1))
         sz.Add(self.add_pruning_to_edits_button, 1, wx.EXPAND) 
         sz.AddSpacer((4,-1))
-        sz.Add(self.save_edited_tracks, 1, wx.EXPAND) 
+        sz.Add(self.save_edited_tracks_button, 1, wx.EXPAND) 
         self.derived_measurement_sizer = sz # Save sizer for later reference
         sizer.Add(sz, 1, wx.EXPAND)
         sizer.AddSpacer((-1,2))       
@@ -568,8 +568,8 @@ class TracerControlPanel(wx.Panel):
         self.Layout()
         self.Show(True)
         
-        self.derived_metric_to_widget_mapping = {   METRIC_SINGLETONS: [self.singleton_length_cutoff_text, self.singleton_length_value, self.singleton_length_plot_button], 
-                                                    METRIC_BC: [self.bc_branch_ratio_value_text, self.bc_branch_ratio_value, self.bc_branch_plot_button ],
+        self.derived_metric_to_widget_mapping = {   METRIC_SINGLETONS: [self.singleton_length_cutoff_text, self.singleton_length_value, self.singleton_length_plot_button, self.add_pruning_to_edits_button, self.save_edited_tracks_button], 
+                                                    METRIC_BC: [self.bc_branch_ratio_value_text, self.bc_branch_ratio_value, self.bc_branch_plot_button],
                                                     METRIC_NODESWITHINDIST: [self.distance_cutoff_value_text, self.distance_cutoff_value, self.distance_cutoff_plot_button],
                                                     METRIC_LOOPS: None,
                                                     METRIC_CROSSINGS: None}
@@ -591,7 +591,7 @@ class TracerControlPanel(wx.Panel):
         wx.EVT_BUTTON(self.bc_branch_plot_button,-1,self.on_bc_branch_plot)
         wx.EVT_TOGGLEBUTTON(self.preview_prune_button,-1, self.on_toggle_preview_pruned_graph)
         wx.EVT_BUTTON(self.add_pruning_to_edits_button,-1,self.on_add_pruning_to_edits)
-        wx.EVT_BUTTON(self.save_edited_tracks,-1, self.on_save_edited_tracks)      
+        wx.EVT_BUTTON(self.save_edited_tracks_button,-1, self.on_save_edited_tracks)      
         wx.EVT_BUTTON(self.create_filter_button,-1, self.on_filter_button) 
         wx.EVT_COMBOBOX(self.filter_choices,-1, self.on_filter_selection)   
         
@@ -1690,6 +1690,8 @@ class Tracer(wx.Frame, CPATool):
                 pass
             else:
                 [item.Show(_[0] == selected_metric) for item in _[1]]
+        self.control_panel.preview_prune_button.Show(True)
+        
         # http://stackoverflow.com/questions/2562063/why-does-hideing-and-showing-panels-in-wxpython-result-in-the-sizer-changi
         self.control_panel.derived_measurement_sizer.Layout()
            
@@ -2434,7 +2436,7 @@ class Tracer(wx.Frame, CPATool):
             terminal_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,TERMINAL_NODES).items() if _[1]]
             # If there are multiple terminal nodes, then the distance for them is the same, but with a different path
             for _ in terminal_nodes:
-                dists += [nx.shortest_path_length(subgraph, source=start_nodes[0], target=_)]
+                dists += [nx.shortest_path_length(subgraph, source=start_nodes[0], target=_)+1]
         dists = np.array(dists)
         num_singletons = len(np.argwhere(dists <= length_cutoff))
         
