@@ -1190,9 +1190,10 @@ class Tracer(wx.Frame, CPATool):
         self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', help='Exit this tool')
         self.GetMenuBar().Append(fileMenu, 'File')  
         
-        toolsMenu = wx.Menu()
-        pruneMenuItem         = toolsMenu.Append(-1, 'Save pruned tracks', help='Save pruned tracks.')
-        self.GetMenuBar().Append(toolsMenu, 'Tools')        
+        # TODO: Add this option back when I feel more confident re: track pruning
+        #toolsMenu = wx.Menu()
+        #pruneMenuItem         = toolsMenu.Append(-1, 'Save pruned tracks', help='Save pruned tracks.')
+        #self.GetMenuBar().Append(toolsMenu, 'Tools')        
         
         helpMenu = wx.Menu()
         self.helpMenuItem         = helpMenu.Append(-1, 'Tracer webpage', help='Go to Tracer webpage.')
