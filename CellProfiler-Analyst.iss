@@ -7,8 +7,8 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{7DC05C02-41F1-4241-BD72-449D12360372}
 AppName=CellProfiler-Analyst
-AppVersion=tracer
-;AppVerName=CellProfiler-Analyst tracer
+AppVersion=Tracer
+;AppVerName=CellProfiler-Analyst Tracer
 AppPublisher=Broad Institute
 AppPublisherURL=http://cellprofiler.org
 AppSupportURL=http://cellprofiler.org

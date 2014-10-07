@@ -43,7 +43,7 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 from tvtk.pyface.scene import Scene
 from tvtk.api import tvtk
 
-required_fields = ['series_id', 'group_id', 'timepoint_id','object_tracking_label']
+required_fields = ['series_id', 'group_id', 'timepoint_id']
 
 db = DBConnect.getInstance()
 props = Properties.getInstance()
@@ -96,6 +96,27 @@ def add_props_field(props):
     #props.series_id = ["Image_Metadata_Plate"]
     props.group_id = "Image_Group_Number"
     props.timepoint_id = "Image_Group_Index"
+    
+    if props.db_type == 'sqlite':
+        query = "PRAGMA table_info(%s)"%(props.image_table)
+        all_fields = [item[1] for item in db.execute(query)]
+    else:
+        query = "SELECT column_name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, props.image_table)
+        all_fields = [item[0] for item in db.execute(query)]    
+
+    # Check if the appropriate cols exist in the object table
+    defined_tables = {_:False for _ in props.series_id}
+    defined_tables[props.group_id] = False
+    defined_tables[props.timepoint_id] = False
+    success = True
+    for key in defined_tables.keys():
+        if key not in all_fields:
+            success = False
+            message = "A '%s' column is required in the image table for Tracer."%(key)
+            wx.MessageBox(message,'Required image table column missing')
+            logging.error(message)
+            break        
+    
     obj = get_object_name() 
     # TODO: Allow for selection of tracking labels, since there may be multiple objects tracked in different ways. Right now, just pick the first one.
     # TODO: Allow for selection of parent image/object fields, since there may be multiple tracked objects. Right now, just pick the first one.
@@ -105,14 +126,32 @@ def add_props_field(props):
     else:
         query = "SELECT column_name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, props.object_table)
         all_fields = [item[0] for item in db.execute(query)]
-    props.object_tracking_label = [item for item in all_fields if item.find("_".join((obj,TRACKING_MODULE_NAME,'Label'))) != -1][0]
-    props.parent_fields = [ [item for item in all_fields if item.find("_".join((obj,TRACKING_MODULE_NAME,'ParentImageNumber'))) != -1][0],
-                            [item for item in all_fields if item.find("_".join((obj,TRACKING_MODULE_NAME,'ParentObjectNumber'))) != -1][0] ] 
-    table_prefix = props.image_table.split("Per_Image")[0]
+    
+    table_prefix = props.image_table.lower().split("per_image")[0]
     props.relationship_table = table_prefix + "Per_Relationships"
     props.relationshiptypes_table = table_prefix + "Per_RelationshipTypes"
     props.relationships_view = table_prefix + "Per_RelationshipsView"
-    return props
+    
+    # Check if the appropriate tables/views exist
+    defined_tables = {props.relationship_table:False, props.relationshiptypes_table:False, props.relationships_view:False}
+    for key in defined_tables.keys():
+        if props.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s)"%(key)
+            defined_tables[key] = len([item[1] for item in db.execute(query)]) > 0
+        else:
+            query = "SELECT * FROM information_schema.tables WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name,key)
+            defined_tables[key] = len([item[0] for item in db.execute(query)]) > 0
+    
+    success = True
+    if not all(defined_tables.values()):
+        success = False
+        message = "".join(('The tables/views ',
+                           '%s'%(", ".join([_[0] for _ in defined_tables.items() if not _[1]])),
+                           'are required in the database for Tracer.'))
+        wx.MessageBox(message,'Required tables missing')
+        logging.error(message)      
+
+    return props, success
 
 def retrieve_datasets():
     #TODO: Decide if this approach or the relationship table should be used
@@ -367,7 +406,8 @@ def obtain_tracking_data(selected_dataset, selected_measurement):
     query = ["SELECT %s"%(",".join(columns_to_retrieve))]
     query.append("FROM %s, %s"%(props.image_table, props.object_table))
     query.append("WHERE %s = %s AND %s"%(props.image_table+"."+props.image_id, props.object_table+"."+props.image_id, dataset_clause))
-    query.append("ORDER BY %s, %s"%(props.object_tracking_label, props.timepoint_id))
+    #query.append("ORDER BY %s, %s"%(props.object_tracking_label, props.timepoint_id))
+    query.append("ORDER BY %s"%(props.timepoint_id))
     data = db.execute(" ".join(query))
     #columns = [props.object_tracking_label, props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, "Filter", props.parent_fields]
     columns = [props.image_id, props.object_id, props.cell_x_loc, props.cell_y_loc, props.timepoint_id, selected_measurement]
@@ -1154,19 +1194,12 @@ class Tracer(wx.Frame, CPATool):
         pruneMenuItem         = toolsMenu.Append(-1, 'Save pruned tracks', help='Save pruned tracks.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')        
         
-        # Check for required properties fields.
-        #fail = False
-        #missing_fields = [field for field in required_fields if not props.field_defined(field)]
-        #if missing_fields:
-            #fail = True
-            #message = 'The following missing fields are required for LineageTool: %s.'%(",".join(missing_fields))
-            #wx.MessageBox(message,'Required field(s) missing')
-            #logging.error(message)
-        #if fail:    
-            #self.Destroy()
-            #return   
         props = Properties.getInstance()
-        props = add_props_field(props)
+        props, success = add_props_field(props)
+        # If a required column or table/view is missing, terminate
+        if not success:
+            self.Destroy()
+            return        
 
         self.control_panel = TracerControlPanel(self)
         self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
@@ -2854,7 +2887,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
         props.LoadFile(propsFile)
-        props = add_props_field(props)
+        props, success = add_props_field(props)
     else:
         if not props.show_load_dialog():
             print 'Time Visualizer requires a properties file.  Exiting.'
@@ -2862,7 +2895,7 @@ if __name__ == "__main__":
             wx.GetApp().Exit()
             sys.exit()
         else:
-            props = add_props_field(props)
+            props, success = add_props_field(props)
             
     tracer = Tracer(None)
     tracer.Show()
