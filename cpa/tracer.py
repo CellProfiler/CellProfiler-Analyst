@@ -1194,6 +1194,10 @@ class Tracer(wx.Frame, CPATool):
         pruneMenuItem         = toolsMenu.Append(-1, 'Save pruned tracks', help='Save pruned tracks.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')        
         
+        helpMenu = wx.Menu()
+        self.helpMenuItem         = helpMenu.Append(-1, 'Tracer webpage', help='Go to Tracer webpage.')
+        self.GetMenuBar().Append(helpMenu, 'Help')         
+
         props = Properties.getInstance()
         props, success = add_props_field(props)
         # If a required column or table/view is missing, terminate
@@ -1275,6 +1279,7 @@ class Tracer(wx.Frame, CPATool):
         self.figure_panel.Bind(wx.EVT_CONTEXT_MENU, self.on_show_popup_menu)
         
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_tracer_webpage, self.helpMenuItem)
     
     def on_close(self, event=None):
         try:
@@ -1285,7 +1290,11 @@ class Tracer(wx.Frame, CPATool):
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
             win.Destroy()
-        self.Destroy()        
+        self.Destroy() 
+    
+    def on_tracer_webpage(self, event=None):
+        import webbrowser
+        webbrowser.open("http://www.cellprofiler.org/tracer")        
             
     def on_show_all_trajectories(self, event = None):
         self.trajectory_selection = dict.fromkeys(self.connected_nodes[self.selected_dataset][self.selected_dataset_track].keys(),1)
