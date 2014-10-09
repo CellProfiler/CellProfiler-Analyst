@@ -523,12 +523,13 @@ class TracerControlPanel(wx.Panel):
         self.save_edited_tracks_button.SetHelpText("Saves the edited graph as a new index into the relationship table.")
         self.save_edited_tracks_button.Disable()         
         
-        self.create_filter_button = wx.Button(self, -1, "Create New Data Measurement Filter")
-        self.create_filter_button.SetHelpText("Creates a new measurement filter.")
-        self.create_filter_button.Disable()  
-        self.filter_choices = ComboBox(self, -1, style=wx.CB_READONLY)
-        self.filter_choices.SetHelpText("Selects a previously defined measurement filter.")
-        self.filter_choices.Disable() 
+        # TODO: Fix filtering functionality, then enable
+        #self.create_filter_button = wx.Button(self, -1, "Create New Data Measurement Filter")
+        #self.create_filter_button.SetHelpText("Creates a new measurement filter.")
+        #self.create_filter_button.Disable()  
+        #self.filter_choices = ComboBox(self, -1, style=wx.CB_READONLY)
+        #self.filter_choices.SetHelpText("Selects a previously defined measurement filter.")
+        #self.filter_choices.Disable() 
         
         # Arrange widgets
         # Row #1: Dataset drop-down + track selection button
