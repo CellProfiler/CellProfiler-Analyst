@@ -1465,6 +1465,7 @@ class Tracer(wx.Frame, CPATool):
                 self.Bind(wx.EVT_MENU, self.parent.on_select_cell_by_index, item)
                 
                 if self.parent.selected_node is not None:
+                    self.SetTitle("Selected: Trajectory %d, %s %s"%(self.parent.selected_trajectory[0],props.object_name[0],str(self.parent.selected_node)))
                     item = wx.Menu()
                     ID_SHOW_IMAGE_TILE = wx.NewId()
                     ID_SHOW_FULL_IMAGE = wx.NewId()
@@ -1475,7 +1476,7 @@ class Tracer(wx.Frame, CPATool):
                     self.Bind(wx.EVT_MENU, self.parent.show_cell_tile,id=ID_SHOW_IMAGE_TILE)
                     self.Bind(wx.EVT_MENU, self.parent.show_full_image,id=ID_SHOW_FULL_IMAGE)    
                     self.Bind(wx.EVT_MENU, self.parent.show_selection_in_table,id=ID_DATA_TABLE)  
-                    self.AppendSubMenu(item,"Show selected %s %s as"%(props.object_name[0],str(self.parent.selected_node)))    
+                    self.AppendSubMenu(item,"Show selected %s as"%(props.object_name[0]))    
                     
                     #if self.parent.selected_endpoints[0] != None:
                         #item = wx.MenuItem(self, wx.NewId(), "Make point furthest downstream of %s %s as endpoint"%(props.object_name[0],str(self.parent.selected_endpoints[0])))
@@ -1495,7 +1496,7 @@ class Tracer(wx.Frame, CPATool):
                     self.Bind(wx.EVT_MENU, self.parent.select_endpoint2,id=ID_SELECT_ENDPOINT2)
                     self.Bind(wx.EVT_MENU, self.parent.select_n_frames,id=ID_SELECT_N_FRAMES)
                     self.Bind(wx.EVT_MENU, self.parent.select_entire_trajectory,id=ID_SELECT_TRAJECTORY)                    
-                    self.AppendSubMenu(item,"Define trajectory segment with %s %s as"%(props.object_name[0],str(self.parent.selected_node)))
+                    self.AppendSubMenu(item,"Define trajectory segment with %s as"%(props.object_name[0]))
                     
                     item = wx.Menu()
                     are_endpoints_selected = all([_ != None for _ in self.parent.selected_endpoints])
