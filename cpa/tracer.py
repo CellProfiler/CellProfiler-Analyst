@@ -308,6 +308,10 @@ def create_update_relationship_tables():
                 where_stmt_for_tracked_objects(obj,props.group_id,int(selected_dataset)) 
             query = " ".join(query)            
             db.execute(query)
+        # Create an index to speed things up
+        index_name = 'idx'
+        query = "CREATE INDEX %s ON %s(image_number1,object_number1)"%(index_name, edited_relnship_tables[EDGE_TBL_ID])
+        db.execute(query)
               
         # Add the grouping ID and default track columns 
         # SQLite doesn't do multiple ADDs in one query, so do with multiple queries
@@ -347,6 +351,11 @@ def create_update_relationship_tables():
                      "WHERE i.%s = %d"%(props.group_id, int(selected_dataset)) )
             query = " ".join(query)            
             db.execute(query)
+        # Create an index to speed things up
+        index_name = 'idx'
+        query = "CREATE INDEX %s ON %s(image_number,object_number)"%(index_name, edited_relnship_tables[NODE_TBL_ID])
+        db.execute(query)  
+            
         # Add the grouping ID and default track columns 
         # SQLite doesn't do multiple ADDs in one query, so do with multiple queries
         query = "ALTER TABLE %s ADD COLUMN %s INT"%(edited_relnship_tables[NODE_TBL_ID], props.group_id)
