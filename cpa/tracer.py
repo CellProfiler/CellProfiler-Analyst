@@ -127,7 +127,7 @@ def add_props_field(props):
         query = "SELECT column_name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(props.db_name, props.object_table)
         all_fields = [item[0] for item in db.execute(query)]
     
-    table_prefix = props.image_table.lower().split("per_image")[0]
+    table_prefix = props.image_table[:props.image_table.lower().find("per_image")]
     props.relationship_table = table_prefix + "Per_Relationships"
     props.relationshiptypes_table = table_prefix + "Per_RelationshipTypes"
     props.relationships_view = table_prefix + "Per_RelationshipsView"
@@ -145,7 +145,7 @@ def add_props_field(props):
     success = True
     if not all(defined_tables.values()):
         success = False
-        message = "".join(('The tables/views ',
+        message = " ".join(('The tables/views',
                            '%s'%(", ".join([_[0] for _ in defined_tables.items() if not _[1]])),
                            'are required in the database for Tracer.'))
         wx.MessageBox(message,'Required tables missing')
