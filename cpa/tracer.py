@@ -310,6 +310,14 @@ def create_update_relationship_tables():
             db.execute(query)
         # Create an index to speed things up
         index_name = 'idx'
+        if props.db_type == 'sqlite':
+            query = "DROP INDEX IF EXISTS %s"%(index_name)
+            db.execute(query) 
+        else:
+            query = "SHOW INDEX FROM %s WHERE KEY_NAME = '%s'"%(edited_relnship_tables[EDGE_TBL_ID], index_name)
+            if len([_ for _ in db.execute(query)]) > 0:
+                query = "DROP INDEX %s ON %s"%(index_name, edited_relnship_tables[EDGE_TBL_ID])
+                db.execute(query)         
         query = "CREATE INDEX %s ON %s(image_number1,object_number1)"%(index_name, edited_relnship_tables[EDGE_TBL_ID])
         db.execute(query)
               
@@ -353,6 +361,14 @@ def create_update_relationship_tables():
             db.execute(query)
         # Create an index to speed things up
         index_name = 'idx'
+        if props.db_type == 'sqlite':
+            query = "DROP INDEX IF EXISTS %s"%(index_name)
+            db.execute(query) 
+        else:
+            query = "SHOW INDEX FROM %s WHERE KEY_NAME = '%s'"%(edited_relnship_tables[NODE_TBL_ID], index_name)
+            if len([_ for _ in db.execute(query)]) > 0:
+                query = "DROP INDEX %s ON %s"%(index_name, edited_relnship_tables[NODE_TBL_ID])
+                db.execute(query)                  
         query = "CREATE INDEX %s ON %s(image_number,object_number)"%(index_name, edited_relnship_tables[NODE_TBL_ID])
         db.execute(query)  
             
