@@ -974,19 +974,19 @@ class MayaviView(HasTraits):
                                                      -node_scale_factor,node_scale_factor,
                                                      -node_scale_factor,node_scale_factor)            
             # Add 2 more outlines to be used later when selecting points
-            self.lineage_point_selection_outline = []
-            for i in range(2):
-                ol = mlab.points3d(0,0,0,
-                                   extent = list(2*np.array([-node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor])),
-                                   color = (1,0,1),
-                                   mode = 'sphere',
-                                   scale_factor = 2*node_scale_factor, 
-                                   scale_mode = 'none',                                   
-                                   figure = self.lineage_scene.mayavi_scene)
-                ol.actor.actor.visibility = 0    
-                self.lineage_point_selection_outline.append(ol)            
+            #self.lineage_point_selection_outline = []
+            #for i in range(2):
+                #ol = mlab.points3d(0,0,0,
+                                   #extent = list(2*np.array([-node_scale_factor,node_scale_factor,
+                                             #-node_scale_factor,node_scale_factor,
+                                             #-node_scale_factor,node_scale_factor])),
+                                   #color = (1,0,1),
+                                   #mode = 'sphere',
+                                   #scale_factor = 2*node_scale_factor, 
+                                   #scale_mode = 'none',                                   
+                                   #figure = self.lineage_scene.mayavi_scene)
+                #ol.actor.actor.visibility = 0    
+                #self.lineage_point_selection_outline.append(ol)            
 
             self.lineage_node_scale_factor = node_scale_factor
             
@@ -1100,16 +1100,16 @@ class MayaviView(HasTraits):
             self.trajectory_selection_outline.actor.actor.visibility = 0
             
             # Add 2 more points to be used later when selecting points
-            self.trajectory_point_selection_outline = []
-            for i in range(2):
-                ol = mlab.points3d(0,0,0,
-                                   extent = [-node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor,
-                                             -node_scale_factor,node_scale_factor],
-                                   color = (1,0,1),
-                                   figure = self.trajectory_scene.mayavi_scene)
-                ol.actor.actor.visibility = 0    
-                self.trajectory_point_selection_outline.append(ol)
+            #self.trajectory_point_selection_outline = []
+            #for i in range(2):
+                #ol = mlab.points3d(0,0,0,
+                                   #extent = [-node_scale_factor,node_scale_factor,
+                                             #-node_scale_factor,node_scale_factor,
+                                             #-node_scale_factor,node_scale_factor],
+                                   #color = (1,0,1),
+                                   #figure = self.trajectory_scene.mayavi_scene)
+                #ol.actor.actor.visibility = 0    
+                #self.trajectory_point_selection_outline.append(ol)
             
             self.trajectory_node_scale_factor = node_scale_factor
             
@@ -1570,11 +1570,11 @@ class Tracer(wx.Frame, CPATool):
         
     def select_endpoint1(self,event=None):
         self.selected_endpoints[0] = self.selected_node
-        self.highlight_selected_endpoint(1)        
+        #self.highlight_selected_endpoint(1)        
         
     def select_endpoint2(self,event=None):
         self.selected_endpoints[1] = self.selected_node
-        self.highlight_selected_endpoint(2)
+        #self.highlight_selected_endpoint(2)
     
     def highlight_selected_endpoint(self, num):
         idx = num-1
@@ -1652,15 +1652,15 @@ class Tracer(wx.Frame, CPATool):
         end_nodes = pick_furthest_node(end_nodes)
         
         self.selected_endpoints = [start_nodes, end_nodes]     
-        self.highlight_selected_endpoint(1)
-        self.highlight_selected_endpoint(2)        
+        #self.highlight_selected_endpoint(1)
+        #self.highlight_selected_endpoint(2)        
          
     def select_entire_trajectory(self, event = None):
         trajectory_to_use = self.pick_trajectory_to_use()
         # TODO: Decide on proper behavior if selected node contains multiple end nodes. Use all end nodes? Use terminal nodes?
         self.selected_endpoints = [self.start_nodes[trajectory_to_use], self.end_nodes[trajectory_to_use]]
-        self.highlight_selected_endpoint(1)
-        self.highlight_selected_endpoint(2)
+        #self.highlight_selected_endpoint(1)
+        #self.highlight_selected_endpoint(2)
     
     def pick_trajectory_to_use(self, event = None):
         # Pick out the trajectory containing the selected node
