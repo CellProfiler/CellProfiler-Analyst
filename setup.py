@@ -31,7 +31,7 @@ APPNAME = 'CellProfiler Analyst'
 APP = ['CellProfiler-Analyst.py']
 OPTIONS = {'includes' : [ 
     'scipy.sparse.*', 'scipy.sparse.csgraph.*', 'scipy.integrate', 
-    'scipy.special.*', 'scipy.linalg', 
+    'scipy.special.*', 'scipy.linalg', 'numpy.linalg.lapack_lite',
     'verlib', 'traits', 'traitsui', 'traitsui.*', 'traitsui.wx', 'traitsui.wx.*',
     'pyface.*', 'pyface.wx.*', 'pyface.ui.wx', 'pyface.ui.wx.*',
     'pyface.ui.wx.grid.*', 'pyface.ui.wx.action.*', 'pyface.ui.wx.timer.*',
@@ -154,7 +154,11 @@ elif sys.platform == "win32":
                         for filename in os.listdir(src_dir)
                         if filename.endswith(".jar")]))
                            
-    
+    #
+    # some dlls are in numpy.core, but are referenced elsewhere and
+    # py2exe fails
+    #
+    os.environ["PATH"] += os.pathsep + os.path.dirname(numpy.core.__file__)
                                                    
     dist = setup(
         console=APP,
