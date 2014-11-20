@@ -208,7 +208,7 @@ def prompt_user_to_link_table(parent, table):
                                'new set of images in your experiment?', 
                                'New per-image table', wx.YES_NO)
         if dlg.ShowModal() == wx.ID_YES:
-            wx.MessageDialog('Sorry, CPA does not currently support multiple\n'
+            wx.MessageDialog(parent,'Sorry, CPA does not currently support multiple\n'
                              'per-image tables unless they are referring to the\n'
                              'same images.\n\n'
                              'Please see the manual for more information',
@@ -222,7 +222,7 @@ def prompt_user_to_link_table(parent, table):
                                'new set of objects in your experiment?', 
                                'New per-object table', wx.YES_NO)
         if dlg.ShowModal() == wx.ID_YES:
-            wx.MessageDialog('Sorry, CPA does not currently support multiple\n'
+            wx.MessageDialog(parent,'Sorry, CPA does not currently support multiple\n'
                              'per-object tables unless they are referring to the\n'
                              'same objects.\n\n'
                              'Please see the manual for more information',
