@@ -392,10 +392,10 @@ def new_version_cb(new_version, new_version_info):
     # called from a child thread, so use CallAfter to bump it to the gui thread
     def cb2():
         def set_check_pref(val):
-            cpaprefs.set_check_new_versions(val)
+            cpa.cpaprefs.set_check_new_versions(val)
 
         def skip_this_version():
-            cpaprefs.set_skip_version(new_version)
+            cpa.cpaprefs.set_skip_version(new_version)
 
         # showing a modal dialog while the splashscreen is up causes a hang
         try: wx.GetApp().splash.Destroy()
@@ -404,7 +404,7 @@ def new_version_cb(new_version, new_version_info):
         import cellprofiler.gui.newversiondialog as nvd
         dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
                                    new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
-                                   cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
+                                   cpa.cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
         dlg.Show()
 
     wx.CallAfter(cb2)
@@ -462,7 +462,7 @@ class CPAnalyst(wx.App):
             if __version__ != -1:
                 import cellprofiler.utilities.check_for_updates as cfu
                 cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
-                                      max(__version__, cpaprefs.get_skip_version()), 
+                                      max(__version__, cpa.cpaprefs.get_skip_version()), 
                                       new_version_cb,
                                       user_agent='CPAnalyst/2.0.%d'%(__version__))
         except ImportError:
