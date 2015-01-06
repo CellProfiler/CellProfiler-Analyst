@@ -2113,7 +2113,11 @@ class Tracer(wx.Frame, CPATool):
                 # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
                 # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
                 xy = np.array([node_positions[key] for key in G.nodes()])
-                scaling_y = 1.0/float(max(xy[:,1]) - min(xy[:,1]))*float(max(xy[:,0]) - min(xy[:,0]))
+                ys = float(max(xy[:,1]) - min(xy[:,1]))
+                if ys == 0.0: 
+                    scaling_y = 1.0
+                else:
+                    scaling_y = 1.0/ys*float(max(xy[:,0]) - min(xy[:,0]))
                 for key in G.nodes(): node_positions[key][1] *= scaling_y
             
                 self.lineage_node_positions = node_positions  
