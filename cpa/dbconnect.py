@@ -81,7 +81,7 @@ def sqltype_to_pythontype(t):
         return int
     elif t in ['REAL', 'DOUBLE', 'DOUBLE PRECISION', 'FLOAT']:
         return float
-    elif (t.startswith('CHARACTER') or t.startswith('VARCHAR') or
+    elif (t.startswith('CHARACTER') or t.startswith('VARCHAR') or t.startswith('CHAR') or
           t.startswith('VARYING CHARACTER') or t.startswith('NCHAR') or 
           t.startswith('NCHAR') or t.startswith('NATIVE CHARACTER') or
           t.startswith('NVARCHAR') or t in ['TEXT', 'CLOB']):
