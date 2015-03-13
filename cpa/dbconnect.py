@@ -75,8 +75,8 @@ def sqltype_to_pythontype(t):
     returns a python type that will hold the given sqltype
     '''
     t = t.upper()
-    if (t.startswith('INT') or t.startswith('DECIMAL') or 
-        t in ['TINYINT', 'SMALLINT', 'MEDIUMINT', 'BIGINT', 'UNSIGNED BIG INT', 
+    if (t.startswith('INT') or t.startswith('DECIMAL') or t.startswith('BIGINT') or
+        t in ['TINYINT', 'SMALLINT', 'MEDIUMINT', 'UNSIGNED BIG INT', 
               'INT2', 'INT8', 'NUMERIC', 'BOOLEAN', 'DATE', 'DATETIME']):
         return int
     elif t in ['REAL', 'DOUBLE', 'DOUBLE PRECISION', 'FLOAT']:
