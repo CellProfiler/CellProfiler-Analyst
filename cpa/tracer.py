@@ -1618,9 +1618,10 @@ class Tracer(wx.Frame, CPATool):
         upstream_nodes_within_n_frames = {_[0]: _[1] for _ in nodes_within_n_frames.items() if _[0] not in downstream_nodes_within_n_frames.keys()}
         # Obtain the final node set by checking whether a path exists for upstream nodes to the target via the *directed* graph
         [nodes_within_n_frames.pop(_) for _ in upstream_nodes_within_n_frames.keys() if not nx.has_path(subgraph,_,self.selected_node)]
-        # Find the candidate terminal nodes @ N frames away (before/after)        
-        sorted_nodes = sorted([(key,val,nodes_within_n_frames[key]) for key,val in nx.get_node_attributes(subgraph,'t').items() if key in nodes_within_n_frames.keys()],key=itemgetter(1))
-        idx = sorted_nodes.index((self.selected_node,self.selected_node[0],0))
+        # Find the candidate terminal nodes @ N frames away (before/after)  
+        node_attributes = nx.get_node_attributes(subgraph,'t')
+        sorted_nodes = sorted([(key,val,nodes_within_n_frames[key]) for key,val in node_attributes.items() if key in nodes_within_n_frames.keys()],key=itemgetter(1))
+        idx = sorted_nodes.index((self.selected_node,node_attributes[self.selected_node],0))
         # A node is at the start/end of the selection if: (1) it's N frames away, or (2) it's at the start/end of the trajectory branch, even if < N frames away
         start_nodes = [_ for _ in sorted_nodes if (_[2] == n_frames or subgraph.in_degree(_[0])  == 0) and _[1] <= sorted_nodes[idx][1] ]
         end_nodes =   [_ for _ in sorted_nodes if (_[2] == n_frames or subgraph.out_degree(_[0]) == 0) and _[1] >= sorted_nodes[idx][1] ]
