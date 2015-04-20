@@ -66,6 +66,13 @@ class BaseNormalization(object):
                 for col, keep in zip(self.cache.colnames, self._colmask) 
                 if keep]
 
+    @property
+    def colnames_excluded(self):
+        """Return the names of the columns excluded by normalize()"""
+        return [col
+                for col, keep in zip(self.cache.colnames, self._colmask) 
+                if not keep]
+
     #
     # Methods to precompute the normalizations
     #
@@ -98,8 +105,7 @@ class BaseNormalization(object):
             else:
                 colmask &= nonzero
         np.save(self._colmask_filename, colmask)
-
-    
+            
     @abc.abstractmethod
     #@staticmethod
     def _compute_params(self, features):
