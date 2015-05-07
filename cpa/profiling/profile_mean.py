@@ -24,6 +24,10 @@ def _compute_group_mean((cache_dir, images, normalization_name,
         normalization = normalizations[normalization_name]
         data, colnames, _ = cache.load(images, normalization=normalization)
         
+        cellcount = data.shape[0]
+        if method == 'cellcount':
+            return cellcount
+        
         if len(data) == 0:
             return np.empty(len(colnames)) * np.nan
 
@@ -104,6 +108,8 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
         variables = ['decile_%02d_%s' % (dec, v) for dec in range(10,100,10) for v in variables]
     elif method == 'mean+deciles':
         variables = variables + ['decile_%02d_%s' % (dec, v) for dec in range(10,100,10) for v in variables]
+    elif method == 'cellcount':
+        variables = 'Cells_Count'
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
                             show_progress=show_progress, 
