@@ -203,6 +203,9 @@ class Profiles(object):
         lists of image keys.
 
         """
+        
+        raise NotImplementedError('regroup has not been re-implemented.')
+        
         input_group_r, input_colnames = cpa.db.group_map(self.group_name, 
                                                          reverse=True)
         input_group_r = dict((tuple(map(str, k)), v) 
