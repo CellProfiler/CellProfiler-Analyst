@@ -23,6 +23,7 @@ def _compute_group_mean((cache_dir, images, normalization_name,
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
         data, colnames, _ = cache.load(images, normalization=normalization)
+        #from IPython import embed; embed()
         
         cellcount = np.ones(1) * data.shape[0]
         if method == 'cellcount':
@@ -74,13 +75,25 @@ def _compute_group_mean((cache_dir, images, normalization_name,
         print_exc(None, sys.stderr)
         return None
 
-def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
+def profile_mean(cache_dir, group_name, colnames_group, filter=None, parallel=Uniprocessing(),
                  normalization=RobustLinearNormalization, preprocess_file=None,
                  show_progress=True, method='mean',
                  full_group_header=False):
-    group, colnames_group = cpa.db.group_map(group_name, reverse=True,
-                                             filter=filter)
 
+    cache = Cache(cache_dir)
+    variables = normalization(cache).colnames
+    _image_table = cache.get_image_table()
+    colnames_group = colnames_group.strip().split(",")
+    #from IPython import embed; embed()
+    
+    assert len(cache.image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
+    
+    group = dict({})
+    for idx, row in _image_table.iterrows():
+        k = tuple(row[colnames_group])
+        v = (row[cache.image_key_columns[0]],)
+        group.setdefault(k, []).append(v)
+                                                     
     keys = group.keys()
     parameters = [(cache_dir, group[g], normalization.__name__, preprocess_file, method)
                   for g in keys]
@@ -92,12 +105,7 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
         parameters = parameters[0:DEBUG_NGROUPS]
         keys = keys[0:DEBUG_NGROUPS]
     
-    if preprocess_file:
-        preprocessor = cpa.util.unpickle1(preprocess_file)
-        variables = preprocessor.variables
-    else:
-        cache = Cache(cache_dir)
-        variables = normalization(cache).colnames
+        
     if method == 'mean+std':
         variables = variables + ['std_' + v for v in variables]
     elif method == 'median+mad':
@@ -124,7 +132,7 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
-    parser = OptionParser("usage: %prog [options] PROPERTIES-FILE CACHE-DIR GROUP")
+    parser = OptionParser("usage: %prog [options] PLATE-DIR GROUP")
     ParallelProcessor.add_options(parser)
     parser.add_option('-o', dest='output_filename', help='file to store the profiles in')
     parser.add_option('-f', dest='filter', help='only profile images matching this CPAnalyst filter')
@@ -134,17 +142,21 @@ if __name__ == '__main__':
                       help='Include full group header in csv file', action='store_true')
     parser.add_option('--method', dest='method', help='method: mean (default), mean+std, mode, median, median+mad, deciles, mean+deciles', 
                       action='store', default='mean')
+    parser.add_option('--colnames_group', dest='colnames_group', help='colnames_group', 
+                      action='store', default='Metadata_Barcode,Metadata_Well')
+                                              
     add_common_options(parser)
     options, args = parser.parse_args()
     parallel = ParallelProcessor.create_from_options(parser, options)
 
-    if len(args) != 3:
+    if len(args) != 2:
         parser.error('Incorrect number of arguments')
-    properties_file, cache_dir, group = args
+    plate_dir, group = args
+    cache_dir = os.path.join(plate_dir, "profiling_params")
+    
+    assert group == "Well", "profile_mean does not handle groups other than Well, which is currently been hard-coded"
 
-    cpa.properties.LoadFile(properties_file)
-
-    profiles = profile_mean(cache_dir, group, filter=options.filter,
+    profiles = profile_mean(cache_dir, group, colnames_group=options.colnames_group, filter=options.filter,
                             parallel=parallel, 
                             normalization=normalizations[options.normalization],
                             preprocess_file=options.preprocess_file,
