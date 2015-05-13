@@ -246,6 +246,13 @@ class Cache(object):
     def _generate_imagekey_prefix(self, fname):
         return re.sub('[^0-9a-zA-Z]+', '_', os.path.dirname(os.path.relpath(fname, os.path.join(self.cache_dir, "../../"))))
         
+    def get_image_table(self):
+        if os.path.exists(self._image_table_filename):
+            return cpa.util.unpickle1(self._image_table_filename)
+        else:
+            logger.error('%s does not exist.' % self._image_table_filename)
+            sys.exit(1)
+        
     def _create_cache_image_table(self, resume):
         """Create cache of image table"""
         if resume and os.path.exists(self._image_table_filename):
