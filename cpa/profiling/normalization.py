@@ -8,7 +8,6 @@ import numpy as np
 from scipy.stats.stats import scoreatpercentile
 from scipy.stats import norm as Gaussian
 import cpa
-import cpa.dbconnect
 import cpa.util
 
 logger = logging.getLogger(__name__)
@@ -84,10 +83,11 @@ class BaseNormalization(object):
     def _get_controls(self, predicate):
         """Return a dictionary mapping plate names to lists of control wells"""
         plates_and_images = {}
-        for row in cpa.db.execute("select distinct %s, %s from %s where %s"%
-                                  (cpa.properties.plate_id, 
-                                   ', '.join(cpa.dbconnect.image_key_columns()),
-                                   cpa.properties.image_table, predicate)):
+        from pandasql import sqldf
+        _image_table = self.cache.get_image_table()
+        from IPython import embed; embed()
+        df = sqldf('select distinct %s, %s from %s where %s'% (self.cache.plate_id, ', '.join(self.cache.image_key_columns), '_image_table'), locals())
+        for idx, row in df.iterrows():
             plate = row[0]
             imKey = tuple(row[1:])
             plates_and_images.setdefault(plate, []).append(imKey)
