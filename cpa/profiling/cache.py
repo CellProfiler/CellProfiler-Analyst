@@ -28,8 +28,10 @@ import progressbar
 import numpy as np
 from scipy.stats.stats import scoreatpercentile
 import cpa
-# import cpa.dbconnect
-# import cpa.util
+import pandas as pd
+import re
+import fnmatch
+import pickle
 from .normalization import DummyNormalization, normalizations
 
 logger = logging.getLogger(__name__)
@@ -64,9 +66,10 @@ class Cache(object):
         self._plate_map_filename = os.path.join(self.cache_dir, 
                                                 'image_to_plate.pickle')
         self._colnames_filename = os.path.join(self.cache_dir, 'colnames.txt')
-        self._counts_filename = os.path.join(self.cache_dir, 'counts.npy')
+        self._counts_filename = os.path.join(self.cache_dir, 'counts.pickle')
         self._image_key_columns = options.image_key_columns.split(",")
         self._plate_id = options.plate_id
+        self._object_id = options.object_id
         self._image_table_filename = os.path.join(self.cache_dir, 'image_table.pickle')
         self._object_table_filename = os.path.join(self.cache_dir, 'object_table.pickle')
         
@@ -186,10 +189,11 @@ class Cache(object):
         Image with zero object won't have their key stored in this dictionary.
         """
         
+        assert len(self._image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
         #if not os.path.exists(self._counts_filename):
         #    self._create_cache_counts()
-        a = np.load(self._counts_filename)
-        return dict((tuple(row[:-1]), row[-1]) for row in a)
+        df = pd.read_pickle(self._counts_filename)
+        return dict((row[self._image_key_columns[0]], row['count']) for idx, row in df.iterrows())
 
 
     #
@@ -202,15 +206,17 @@ class Cache(object):
         # self._create_cache_colnames(resume)
         self._create_cache_plate_map(resume)
         self._create_cache_features(resume)
-        # self._create_cache_counts(resume)
+        self._create_cache_counts(resume)
 
+    def _generate_imagekey_prefix(self, fname):
+        return re.sub('[^0-9a-zA-Z]+', '_', os.path.dirname(os.path.relpath(fname, os.path.join(self.cache_dir, "../../"))))
+        
     def _create_cache_image_table(self, resume):
         """Create cache of image table"""
         if resume and os.path.exists(self._image_table_filename):
+            self._image_table = cpa.util.unpickle1(self._image_table_filename)
             return
             
-        import fnmatch
-        import pandas as pd
         image_table_csv_l = []
         for root, dirnames, filenames in os.walk(os.path.join(self.cache_dir, "../")):
           for filename in fnmatch.filter(filenames, 'image.csv'):
@@ -218,8 +224,9 @@ class Cache(object):
 
         image_table_l = []
         for image_table_csv in image_table_csv_l:
-            #print image_table_csv
-            df = pd.read_csv(image_table_csv, dtype={'ImageNumber': np.int32, 'Metadata_Barcode' : str} )
+            df = pd.read_csv(image_table_csv, dtype={'ImageNumber': str, 'Metadata_Barcode' : str} )
+            prefix = self._generate_imagekey_prefix(image_table_csv) 
+            df['ImageNumber'] = prefix + "_" + df['ImageNumber'] 
             image_table_l.append(df)
             
         self._image_table = pd.concat(image_table_l)
@@ -228,29 +235,33 @@ class Cache(object):
     def _create_cache_object_table(self, resume):
         """Create cache of object table"""
         if resume and os.path.exists(self._object_table_filename):
+            self._object_table = cpa.util.unpickle1(self._object_table_filename)
             return
 
-        import fnmatch
-        import pandas as pd
         object_table_csv_l = []
         for root, dirnames, filenames in os.walk(os.path.join(self.cache_dir, "../")):
           for filename in fnmatch.filter(filenames, 'object.csv'):
             object_table_csv_l.append(os.path.join(root, filename))
 
         object_table_l = []
-        for object_table_csv in object_table_csv_l[0:1]:
+        object_table_csv_l_ = object_table_csv_l if options.debug_limit == -1 else object_table_csv_l[0:options.debug_limit]
+        for object_table_csv in object_table_csv_l_:
             with(open(object_table_csv, "r")) as f:
                 a = f.readline()
                 b = f.readline()
                 
             header = b.strip().split(",")
             header_dtype  = dict(zip(header, [np.float32]*len(header)))
-            header_dtype['ImageNumber'] = np.int32
+            header_dtype['ImageNumber'] = str
             header_dtype['ObjectNumber'] = np.int32
 
             header_new = [x+"_"+y if y not in ['ImageNumber', 'ObjectNumber'] else y for x,y in zip(a.strip().split(","), b.strip().split(",")) ]
             
             df = pd.read_csv(object_table_csv, dtype=header_dtype, header=1, names=header_new)
+            
+            prefix = self._generate_imagekey_prefix(object_table_csv) 
+            df['ImageNumber'] = prefix + "_" + df['ImageNumber'] 
+            
             object_table_l.append(df)
             
             cols = [col for col in header_new if col not in ['ImageNumber', 'ObjectNumber'] ]
@@ -304,39 +315,30 @@ class Cache(object):
         filename = self._image_filename(plate, image_key)
         if resume and os.path.exists(filename):
             return
-        print filename, image_key
-        return
-        from pandasql import sqldf
-        _object_table = self._object_table
         
-        _object_table
+        assert len(image_key) == 1, "_create_cache_image does not currently support composite image_key"
         
-        
-        df = sqldf('select %s from %s where %s'% (self._plate_id, ', '.join(self._image_key_columns), '_object_table'), locals())
-
-        features = cpa.db.execute("""select %s from %s where %s""" % (
-                ','.join(self.colnames), cpa.properties.object_table, 
-                cpa.dbconnect.GetWhereClauseForImages([image_key])))
-                
-        cellids  = cpa.db.execute("""select %s from %s where %s""" % (
-                cpa.properties.object_id, cpa.properties.object_table, 
-                cpa.dbconnect.GetWhereClauseForImages([image_key])))
-                
+        sel = self._object_table[self._image_key_columns[0]]==image_key[0]
+        features = self._object_table[self.colnames][sel]            
+        cellids  = self._object_table[self._object_id][sel]
+                        
         np.savez(filename, features=np.array(features, dtype=float), cellids=np.squeeze(np.array(cellids)))
 
     def _create_cache_counts(self, resume):
         """
-        Does not create a key for images with zero objects
+        Does not create a key for images with zero objects - this may not longer be true
         """
         if resume and os.path.exists(self._counts_filename):
             return
-        result = cpa.db.execute("""select {0}, count(*) from {1} group by {0}""".format(
-                cpa.dbconnect.UniqueImageClause(), 
-                cpa.properties.object_table))
-        counts = np.array(result, dtype='i4')
+        
+        assert len(self._image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
+        
+        counts = self._object_table[self._image_key_columns[0]].value_counts()
+        counts = pd.DataFrame(counts, columns=['count'])
+        counts['ImageNumber'] = counts.index
+        
         with cpa.util.replace_atomically(self._counts_filename) as f:
-            np.save(f, counts)
-
+            pickle.dump(counts, f)
 
 def _check_directory(dir, resume):
     if os.path.exists(dir):
@@ -350,10 +352,11 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     parser = OptionParser("usage: %prog [-r] [-c colnames] PLATE-DIR ")
-    parser.add_option('-r', dest='resume', action='store_true', help='resume')
-    parser.add_option('-c', dest='colnames', action='store_true', help='file containing column names')
-    parser.add_option('-k', dest='image_key_columns', action='store', help='image_key_columns')
-    parser.add_option('-p', dest='plate_id', action='store', help='plate_id')
+    parser.add_option('-r', '--resume', dest='resume', action='store_true', help='resume')
+    parser.add_option('-k', '--image_key_columns', dest='image_key_columns', action='store', default='ImageNumber', help='image_key_columns',)
+    parser.add_option('-p', '--plate_id', dest='plate_id', action='store', default='Metadata_Barcode', help='plate_id')
+    parser.add_option('-j', '--object_id', dest='object_id', action='store', default='ObjectNumber', help='object_id')
+    parser.add_option('-d', '--debug_limit', dest='debug_limit', action='store', type='int', default=-1, help='debug_limit')
     
     options, args = parser.parse_args()
 
