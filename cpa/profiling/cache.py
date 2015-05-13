@@ -60,6 +60,9 @@ def invert_dict(d):
 class Cache(object):
     _cached_plate_map = None
     _cached_colnames = None
+    _image_key_columns = None
+    _object_id = None
+    _plate_id = None
 
     def __init__(self, cache_dir):
         self.cache_dir = cache_dir
@@ -67,11 +70,9 @@ class Cache(object):
                                                 'image_to_plate.pickle')
         self._colnames_filename = os.path.join(self.cache_dir, 'colnames.txt')
         self._counts_filename = os.path.join(self.cache_dir, 'counts.pickle')
-        self._image_key_columns = options.image_key_columns.split(",")
-        self._plate_id = options.plate_id
-        self._object_id = options.object_id
         self._image_table_filename = os.path.join(self.cache_dir, 'image_table.pickle')
         self._object_table_filename = os.path.join(self.cache_dir, 'object_table.pickle')
+        self._cache_params_filename = os.path.join(self.cache_dir, 'cache_params.pickle')
         
     def _image_filename(self, plate, imKey):
         return os.path.join(self.cache_dir, unicode(plate),
@@ -180,6 +181,27 @@ class Cache(object):
                                                       'rU').readlines()]
         return self._cached_colnames
 
+    @property
+    def object_id(self):
+        if self._object_id is None:
+            _cache_params = cpa.util.unpickle1(self._cache_params_filename)
+            self._object_id = _cache_params['_object_id']
+        return self._object_id
+        
+    @property
+    def plate_id(self):
+        if self._plate_id is None:
+            _cache_params = cpa.util.unpickle1(self._cache_params_filename)
+            self._plate_id = _cache_params['_plate_id']
+        return self._plate_id
+        
+    @property
+    def image_key_columns(self):
+        if self._image_key_columns is None:
+            _cache_params = cpa.util.unpickle1(self._cache_params_filename)
+            self._image_key_columns = _cache_params['_image_key_columns']
+        return self._image_key_columns
+        
     def get_cell_counts(self):
         """
         The counts include rows with NaNs, which may be removed by
@@ -189,11 +211,11 @@ class Cache(object):
         Image with zero object won't have their key stored in this dictionary.
         """
         
-        assert len(self._image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
+        assert len(self.image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
         #if not os.path.exists(self._counts_filename):
         #    self._create_cache_counts()
         df = pd.read_pickle(self._counts_filename)
-        return dict((row[self._image_key_columns[0]], row['count']) for idx, row in df.iterrows())
+        return dict((row[self.image_key_columns[0]], row['count']) for idx, row in df.iterrows())
 
 
     #
@@ -201,6 +223,7 @@ class Cache(object):
     #
 
     def _create_cache(self, resume=False):
+        self._create_cache_params(resume)
         self._create_cache_image_table(resume)
         self._create_cache_object_table(resume)
         # self._create_cache_colnames(resume)
@@ -208,6 +231,18 @@ class Cache(object):
         self._create_cache_features(resume)
         self._create_cache_counts(resume)
 
+    def _create_cache_params(self, resume):
+        """Create cache of parameters"""
+        if resume and os.path.exists(self._cache_params_filename):
+            return
+            
+        _cache_params = dict({})
+        _cache_params['_object_id'] = options.object_id
+        _cache_params['_plate_id'] = options.plate_id
+        _cache_params['_image_key_columns'] = options.image_key_columns.split(",")
+        cpa.util.pickle(self._cache_params_filename, _cache_params)
+        
+            
     def _generate_imagekey_prefix(self, fname):
         return re.sub('[^0-9a-zA-Z]+', '_', os.path.dirname(os.path.relpath(fname, os.path.join(self.cache_dir, "../../"))))
         
@@ -297,7 +332,7 @@ class Cache(object):
             return
         from pandasql import sqldf
         _image_table = self._image_table
-        df = sqldf('select distinct %s, %s from %s'% (self._plate_id, ', '.join(self._image_key_columns), '_image_table'), locals())
+        df = sqldf('select distinct %s, %s from %s'% (self.plate_id, ', '.join(self.image_key_columns), '_image_table'), locals())
         self._cached_plate_map = dict((tuple(row[1:].tolist()), row[0]) for idx, row in df.iterrows())
         #from IPython import embed; embed()                                                                 
         cpa.util.pickle(self._plate_map_filename, self._cached_plate_map)
@@ -318,9 +353,9 @@ class Cache(object):
         
         assert len(image_key) == 1, "_create_cache_image does not currently support composite image_key"
         
-        sel = self._object_table[self._image_key_columns[0]]==image_key[0]
+        sel = self._object_table[self.image_key_columns[0]]==image_key[0]
         features = self._object_table[self.colnames][sel]            
-        cellids  = self._object_table[self._object_id][sel]
+        cellids  = self._object_table[self.object_id][sel]
                         
         np.savez(filename, features=np.array(features, dtype=float), cellids=np.squeeze(np.array(cellids)))
 
@@ -331,9 +366,9 @@ class Cache(object):
         if resume and os.path.exists(self._counts_filename):
             return
         
-        assert len(self._image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
+        assert len(self.image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
         
-        counts = self._object_table[self._image_key_columns[0]].value_counts()
+        counts = self._object_table[self.image_key_columns[0]].value_counts()
         counts = pd.DataFrame(counts, columns=['count'])
         counts['ImageNumber'] = counts.index
         
