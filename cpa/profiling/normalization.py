@@ -85,8 +85,7 @@ class BaseNormalization(object):
         plates_and_images = {}
         from pandasql import sqldf
         _image_table = self.cache.get_image_table()
-        from IPython import embed; embed()
-        df = sqldf('select distinct %s, %s from %s where %s'% (self.cache.plate_id, ', '.join(self.cache.image_key_columns), '_image_table'), locals())
+        df = sqldf('select distinct %s, %s from %s where %s'% (self.cache.plate_id, ', '.join(self.cache.image_key_columns), '_image_table', predicate), locals())
         for idx, row in df.iterrows():
             plate = row[0]
             imKey = tuple(row[1:])
@@ -245,3 +244,22 @@ normalizations = dict((c.__name__, c)
                                 RobustStdNormalization,
                                 StdNormalization,
                                 DummyNormalization])
+                                
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
+    parser = OptionParser("usage: %prog [-r] [-m method] PLATE-DIR PREDICATE")
+    parser.add_option('-m', '--method', dest='method', action='store', default='RobustStdNormalization', help='method')
+    
+    options, args = parser.parse_args()
+
+    if len(args) != 2:
+        parser.error('Incorrect number of arguments')
+    cache_dir = os.path.join(args[0], "profiling_params")
+    predicate = args[1]
+
+    from cpa.profiling.cache import Cache
+    cache = Cache(cache_dir)
+    normalizer = normalizations[options.method](cache)
+    normalizer._create_cache(predicate)
+
