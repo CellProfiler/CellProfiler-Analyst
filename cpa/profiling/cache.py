@@ -63,6 +63,7 @@ class Cache(object):
     _image_key_columns = None
     _object_id = None
     _plate_id = None
+    _well_id = None
 
     def __init__(self, cache_dir):
         self.cache_dir = cache_dir
@@ -196,6 +197,13 @@ class Cache(object):
         return self._plate_id
         
     @property
+    def well_id(self):
+        if self._well_id is None:
+            _cache_params = cpa.util.unpickle1(self._cache_params_filename)
+            self._well_id = _cache_params['_well_id']
+        return self._well_id
+        
+    @property
     def image_key_columns(self):
         if self._image_key_columns is None:
             _cache_params = cpa.util.unpickle1(self._cache_params_filename)
@@ -239,6 +247,7 @@ class Cache(object):
         _cache_params = dict({})
         _cache_params['_object_id'] = options.object_id
         _cache_params['_plate_id'] = options.plate_id
+        _cache_params['_well_id'] = options.well_id
         _cache_params['_image_key_columns'] = options.image_key_columns.split(",")
         cpa.util.pickle(self._cache_params_filename, _cache_params)
         
@@ -397,6 +406,7 @@ if __name__ == '__main__':
     parser.add_option('-r', '--resume', dest='resume', action='store_true', help='resume')
     parser.add_option('-k', '--image_key_columns', dest='image_key_columns', action='store', default='ImageNumber', help='image_key_columns',)
     parser.add_option('-p', '--plate_id', dest='plate_id', action='store', default='Metadata_Barcode', help='plate_id')
+    parser.add_option('-w', '--well_id', dest='well_id', action='store', default='Metadata_Well', help='well_id')
     parser.add_option('-j', '--object_id', dest='object_id', action='store', default='ObjectNumber', help='object_id')
     parser.add_option('-d', '--debug_limit', dest='debug_limit', action='store', type='int', default=-1, help='debug_limit')
     
