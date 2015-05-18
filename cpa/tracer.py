@@ -1591,7 +1591,7 @@ class Tracer(wx.Frame, CPATool):
     def select_n_frames(self, event = None):
         dlg = wx.TextEntryDialog(self, "Enter the number of frames before and after")
         n_frames = 0
-        dlg.SetValue(str(n_frames))
+        #dlg.SetValue(str(n_frames))
         if dlg.ShowModal() == wx.ID_OK:
             try:
                 n_frames = int(dlg.GetValue())
@@ -1711,12 +1711,13 @@ class Tracer(wx.Frame, CPATool):
                                         for node in current_trajectory_keys]))
         axes = window.figure.add_subplot(1,1,1)   
         
-        axes.plot(timepoint, data)
+        axes.plot(timepoint, data, color='blue', markerfacecolor='white', linestyle='-', marker='o', markeredgecolor='blue')
         axes.set_xlabel("Timepoint")
         axes.set_ylabel(self.selected_measurement)                
     
     def show_cell_tile(self, event = None):
-        montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image tile of %s %s"%(props.object_name[0],self.selected_node))
+        trajectory_to_use = self.pick_trajectory_to_use()
+        montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image tile of %s %s in trajectory %d"%(props.object_name[0],self.selected_node,trajectory_to_use))
         montage_frame.Show()
         montage_frame.add_objects([self.selected_node])   
     
@@ -2804,17 +2805,22 @@ class Tracer(wx.Frame, CPATool):
             axes.set_axis_off()  
         else:
             bins = np.arange(0, int(0.95*np.max(dists)))
-            n, _, _ = axes.hist(dists, bins,
-                          edgecolor='none',
-                          alpha=0.75)
-            max_search_radius = bins[n < 0.05*np.max(n)][0]
-            axes.annotate('95%% of max count: %d pixels'%(max_search_radius),
-                          xy=(max_search_radius,n[n < 0.05*np.max(n)][0]), 
-                          xytext=(max_search_radius,axes.get_ylim()[1]/2), 
-                          arrowprops=dict(facecolor='red', shrink=0.05))
+            if len(bins) > 0:
+                n, _, _ = axes.hist(dists, bins,
+                              edgecolor='none',
+                              alpha=0.75)
+                max_search_radius = bins[n < 0.05*np.max(n)][0]
+                axes.annotate('95% of max count: %d pixels'%(max_search_radius),
+                              xy=(max_search_radius,n[n < 0.05*np.max(n)][0]), 
+                              xytext=(max_search_radius,axes.get_ylim()[1]/2), 
+                              arrowprops=dict(facecolor='red', shrink=0.05))
+            else:
+                n, _, _ = axes.hist(dists, np.array([0,1]),
+                                edgecolor='none',
+                                alpha=0.75)   
             axes.set_xlabel('Frame-to-frame linking distances (pixels)')
             #axes.set_xlim((0,np.mean(dists) + 2*np.std(dists)))
-            axes.set_ylabel('Counts')        
+            axes.set_ylabel('Counts')                    
         
         # Plot the gap lengths
         axes = window.figure.add_subplot(2,2,3) 
