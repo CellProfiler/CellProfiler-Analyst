@@ -10,6 +10,7 @@ from .cache import Cache
 from .normalization import DummyNormalization, RobustLinearNormalization, RobustStdNormalization, normalizations
 from .profiles import Profiles
 from .parallel import ParallelProcessor, Uniprocessing
+import string
 
 def _transform_cell_feats((cache_dir, images, normalization_name, output_filename, key, header)):
     try:
@@ -32,14 +33,18 @@ def _transform_cell_feats((cache_dir, images, normalization_name, output_filenam
         # save the features to csv
         import csv
         key = [str(k) for k in key]
-        filename = output_filename + "-" + "-".join(key) + ".csv"
-        f = open(filename, 'w')
-        w = csv.writer(f)
-        w.writerow(header)
+        valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        key_str = "".join(c for c in "-".join(key) if c in valid_chars)
         
-        for i, (cell_id,vector) in enumerate(zip(cell_ids, normalizeddata)):
-            w.writerow(tuple(key) + tuple([cell_id]) + tuple(vector))
-        f.close()
+        filename = output_filename + "-" + key_str + ".csv"
+        
+        with open(filename, 'w') as f: 
+            w = csv.writer(f)
+            w.writerow(header)
+        
+            for i, (cell_id,vector) in enumerate(zip(cell_ids, normalizeddata)):
+                w.writerow(tuple(key) + tuple([cell_id]) + tuple(vector))
+        
         return [-1]
 
     except: # catch *all* exceptions
