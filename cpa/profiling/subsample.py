@@ -39,7 +39,7 @@ def _make_parameters(cache_dir, normalization_name, image_keys,
                      per_image_indices):
     parameters = [(cache_dir, normalization_name, image_key, indices)
             for image_key, indices in zip(image_keys, per_image_indices)]
-    return [(a,b,c,d) for (a,b,c,d) in parameters if d.shape[0]>0] # remove images with no indices
+    return [(a,b,c,d) for (a,b,c,d) in parameters if d.shape[0]>1] # remove images with one or no indices
 
 def _combine_subsample(generator):
     return np.vstack([a for a in generator])
