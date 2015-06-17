@@ -24,7 +24,8 @@ import numpy as np
 from scipy import linalg
 from sklearn.mixture import GMM
 import cpa
-from .cache import Cache, RobustLinearNormalization, normalizations
+from .cache import Cache
+from normalization import RobustLinearNormalization, normalizations
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
     
