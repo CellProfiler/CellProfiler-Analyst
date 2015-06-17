@@ -8,9 +8,13 @@ def _compute_mixture_probabilities((cache_dir, normalization_name,
     cache = Cache(cache_dir)
     normalization = normalizations[normalization_name]
     normalizeddata, normalized_colnames, _ = cache.load(images, normalization=normalization)
+    if len(normalizeddata) == 0:
+        return np.empty(len(normalized_colnames)) * np.nan
     if preprocess_file:
         preprocessor = cpa.util.unpickle1(preprocess_file)
         normalizeddata = preprocessor(normalizeddata)
+    if len(normalizeddata) == 0:
+        return np.empty(len(normalized_colnames)) * np.nan
     mean_centered = normalizeddata - meanvector
     projected = np.dot(mean_centered, loadings)
     mixture_probabilities = gmm.predict_proba(projected)
@@ -57,9 +61,10 @@ def profile_gmm(cache_dir, subsample_file, group_name, ncomponents=50,
     npc = np.nonzero(percvar_cum > float(cutoffpercentage) / 100)[0][0]
     if npc < 20: 
         npc = 20
-   
+
     # GMM
-    gmm = GMM(ncomponents, covariance_type='full', n_iter=100000, thresh=1e-7)
+    #gmm = GMM(ncomponents, covariance_type='full', n_iter=100000, thresh=1e-7)
+    gmm = GMM(ncomponents, covariance_type='diag', n_iter=100, tol=0.001)
     gmm.fit(scores[:, :npc])
 
     parameters = [(cache_dir, normalization.__name__, preprocess_file,
