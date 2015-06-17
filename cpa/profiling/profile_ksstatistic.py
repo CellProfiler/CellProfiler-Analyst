@@ -5,7 +5,8 @@ def _compute_ksstatistic((cache_dir, images, control_images, normalization_name,
     import numpy as np 
     import sys
     import cpa
-    from cpa.profiling.cache import Cache, normalizations
+    from cpa.profiling.cache import Cache
+    from cpa.profiling.normalization import normalizations
     from cpa.profiling.ks_2samp import ks_2samp
 
     cache = Cache(cache_dir)
@@ -35,7 +36,8 @@ import logging
 from optparse import OptionParser
 import numpy as np
 import cpa
-from .cache import Cache, RobustLinearNormalization, normalizations
+from .cache import Cache
+from .normalization import RobustLinearNormalization, normalizations
 from profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 

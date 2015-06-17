@@ -13,7 +13,8 @@ import time
 import itertools
 import cpa
 import cpa.util
-from .cache import Cache, RobustLinearNormalization, normalizations
+from .cache import Cache
+from .normalization import RobustLinearNormalization, normalizations
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
@@ -76,7 +77,8 @@ def _compute_svmnormalvector((cache_dir, images, control_images,
     #try:
         import numpy as np 
         import sys
-        from cpa.profiling.cache import Cache, RobustLinearNormalization, normalizations
+        from cpa.profiling.cache import Cache
+        from cpa.profiling.normalization import RobustLinearNormalization, normalizations
         from sklearn.svm import LinearSVC
         from cpa.profiling.profile_svmnormalvector import _compute_rfe
 
