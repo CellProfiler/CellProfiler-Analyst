@@ -24,21 +24,27 @@ class FactorAnalysisPreprocessor(Preprocessor):
         self.input_variables = input_variables
         self.nfactors = nfactors
         self.variables = ['Factor %d' % (i + 1) for i in range(self.nfactors)]
+        self.selected_variables = range(len(self.variables))
         self._train(training_data)
 
-    def _train(self, training_data):
-        nvariables = training_data.shape[1]
+    def _train(self, training_data, tol=1e-05):
+        # select independent columns
+        # http://stackoverflow.com/a/13313828/1094109
+        _, R = np.linalg.qr(training_data)
+        self.selected_variables = np.where(np.abs(R.diagonal()) > tol)[0]
+            
+        nvariables = len(self.selected_variables)
         if self.nfactors > nvariables:
             raise ValueError('Cannot find more factors than the number of '
                              'variables ({0})'.format(nvariables))
 
         self.fa_node = nodes.FANode(input_dim=None, output_dim=self.nfactors, 
                                     dtype=None, max_cycles=30)
-        self.fa_node.train(training_data)
+        self.fa_node.train(training_data[:, self.selected_variables])
         self.fa_node.stop_training()
 
     def __call__(self, data):
-        return self.fa_node.execute(data)
+        return self.fa_node.execute(data[:, self.selected_variables])
 
     @property
     def nvariables(self):
@@ -47,8 +53,9 @@ class FactorAnalysisPreprocessor(Preprocessor):
     def get_variable_selector(self):
         loadings = self.fa_node.E_y_mtx
         variable_indices = set(np.argmax(loadings, axis=0))
-        mask = np.array([i in variable_indices
-                         for i in xrange(self.nvariables)])
+        variable_indices_mapped = [self.selected_variables[i] for i in variable_indices]
+        mask = np.array([i in variable_indices_mapped
+                         for i in xrange(len(self.input_variables))])
         return VariableSelector(mask, self.input_variables)
 
 def kaiser(data):
