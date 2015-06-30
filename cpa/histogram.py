@@ -358,7 +358,7 @@ class Histogram(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Histogram', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColor)
+        self.SetBackgroundColour(wx.NullColour)
         points = []
         figpanel = HistogramPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
