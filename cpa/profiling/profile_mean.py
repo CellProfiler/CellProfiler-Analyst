@@ -114,9 +114,9 @@ def profile_mean(cache_dir, group_name, colnames_group, filter=None, parallel=Un
     elif method == 'gmm2':
         variables = ['m1_' + v for v in variables] + ['m2_' + v for v in variables]
     elif method == 'deciles':
-        variables = ['decile_%02d_%s' % (dec, v) for dec in range(10,100,10) for v in variables]
+        variables = ['decile_%02d_%s' % (dec, v) for dec in range(0,101,10) for v in variables]
     elif method == 'mean+deciles':
-        variables = variables + ['decile_%02d_%s' % (dec, v) for dec in range(10,100,10) for v in variables]
+        variables = variables + ['decile_%02d_%s' % (dec, v) for dec in range(0,101,10) for v in variables]
     elif method == 'cellcount':
         variables = ['Cells_Count']
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
