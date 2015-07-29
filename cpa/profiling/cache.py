@@ -104,7 +104,7 @@ class Cache(object):
                 results[object_key] = fv
         return np.array([results[object_key] for object_key in object_keys])
 
-    def load(self, image_keys, normalization=DummyNormalization, removeRowsWithNaN=True):
+    def load(self, image_keys, normalization=DummyNormalization, removeRowsWithNaN=True, ignore_colmask=False):
         """Load the raw features of all the cells in a particular well and
         return them as a ncells x nfeatures numpy array."""
         normalizer = normalization(self)
@@ -157,7 +157,7 @@ class Cache(object):
                                 _cellids = np.array([])
 
                 if len(_features) > 0:
-                    features.append(normalizer.normalize(plate, _features))
+                    features.append(normalizer.normalize(plate, _features, ignore_colmask))
                     if not flag_bkwd:
                         cellids.append(_cellids)
 

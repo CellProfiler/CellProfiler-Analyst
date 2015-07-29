@@ -13,7 +13,7 @@ from .normalization import DummyNormalization, RobustLinearNormalization, Robust
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
-def _compute_group_mean((cache_dir, images, normalization_name, 
+def _compute_group_mean((cache_dir, images, normalization_name, ignore_colmask,
                          preprocess_file, method)):
     try:
         import numpy as np
@@ -22,7 +22,7 @@ def _compute_group_mean((cache_dir, images, normalization_name,
         from scipy.stats import norm as Gaussian
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
-        data, colnames, _ = cache.load(images, normalization=normalization)
+        data, colnames, _ = cache.load(images, normalization=normalization, ignore_colmask=ignore_colmask)
         #from IPython import embed; embed()
         
         cellcount = np.ones(1) * data.shape[0]
@@ -78,7 +78,8 @@ def _compute_group_mean((cache_dir, images, normalization_name,
 def profile_mean(cache_dir, group_name, colnames_group, filter=None, parallel=Uniprocessing(),
                  normalization=RobustLinearNormalization, preprocess_file=None,
                  show_progress=True, method='mean',
-                 full_group_header=False):
+                 full_group_header=False,
+                 ignore_colmask=False):
 
     cache = Cache(cache_dir)
     variables = normalization(cache).colnames
@@ -95,7 +96,7 @@ def profile_mean(cache_dir, group_name, colnames_group, filter=None, parallel=Un
         group.setdefault(k, []).append(v)
                                                      
     keys = group.keys()
-    parameters = [(cache_dir, group[g], normalization.__name__, preprocess_file, method)
+    parameters = [(cache_dir, group[g], normalization.__name__, ignore_colmask, preprocess_file, method)
                   for g in keys]
 
     if "CPA_DEBUG" in os.environ:
@@ -144,6 +145,8 @@ if __name__ == '__main__':
                       action='store', default='mean')
     parser.add_option('--colnames_group', dest='colnames_group', help='colnames_group', 
                       action='store', default='Metadata_Barcode,Metadata_Well')
+    parser.add_option('--ignore_colmask', dest='ignore_colmask', help='When normalizing, dont drop columns that cant be normalized', 
+                      action='store_true', default=False)
                                               
     add_common_options(parser)
     options, args = parser.parse_args()
@@ -159,6 +162,7 @@ if __name__ == '__main__':
     profiles = profile_mean(cache_dir, group, colnames_group=options.colnames_group, filter=options.filter,
                             parallel=parallel, 
                             normalization=normalizations[options.normalization],
+                            ignore_colmask = options.ignore_colmask,
                             preprocess_file=options.preprocess_file,
                             method=options.method,
                             show_progress=not options.no_progress,
