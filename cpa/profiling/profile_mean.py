@@ -23,8 +23,6 @@ def _compute_group_mean((cache_dir, images, normalization_name, ignore_colmask,
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
         data, colnames, _ = cache.load(images, normalization=normalization, ignore_colmask=ignore_colmask)
-        #from IPython import embed; embed()
-        
         cellcount = np.ones(1) * data.shape[0]
         if method == 'cellcount':
             return cellcount
@@ -32,7 +30,8 @@ def _compute_group_mean((cache_dir, images, normalization_name, ignore_colmask,
         if len(data) == 0:
             return np.empty(len(colnames)) * np.nan
 
-        data = data[~np.isnan(np.sum(data, 1)), :]
+        if not ignore_colmask:
+            data = data[~np.isnan(np.sum(data, 1)), :]
 
         if len(data) == 0:
             return np.empty(len(colnames)) * np.nan
@@ -82,10 +81,9 @@ def profile_mean(cache_dir, group_name, colnames_group, filter=None, parallel=Un
                  ignore_colmask=False):
 
     cache = Cache(cache_dir)
-    variables = normalization(cache).colnames
+    variables = normalization(cache, ignore_colmask=ignore_colmask).colnames
     _image_table = cache.get_image_table()
     colnames_group = colnames_group.strip().split(",")
-    #from IPython import embed; embed()
     
     assert len(cache.image_key_columns) == 1, "_create_cache_image does not currently support composite image_key"
     
@@ -122,7 +120,8 @@ def profile_mean(cache_dir, group_name, colnames_group, filter=None, parallel=Un
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
                             show_progress=show_progress, 
-                            group_header=colnames_group if full_group_header else None)
+                            group_header=colnames_group if full_group_header else None,
+                            ignore_colmask=ignore_colmask)
 
     # def save_as_csv_file(self, output_file):
     #     csv_file = csv.writer(output_file)
@@ -145,7 +144,7 @@ if __name__ == '__main__':
                       action='store', default='mean')
     parser.add_option('--colnames_group', dest='colnames_group', help='colnames_group', 
                       action='store', default='Metadata_Barcode,Metadata_Well')
-    parser.add_option('--ignore_colmask', dest='ignore_colmask', help='When normalizing, dont drop columns that cant be normalized', 
+    parser.add_option('--ignore_colmask', dest='ignore_colmask', help='When1 normalizing, dont drop columns that cant be normalized', 
                       action='store_true', default=False)
                                               
     add_common_options(parser)

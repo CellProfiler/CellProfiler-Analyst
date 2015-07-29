@@ -107,7 +107,7 @@ class Cache(object):
     def load(self, image_keys, normalization=DummyNormalization, removeRowsWithNaN=True, ignore_colmask=False):
         """Load the raw features of all the cells in a particular well and
         return them as a ncells x nfeatures numpy array."""
-        normalizer = normalization(self)
+        normalizer = normalization(self, ignore_colmask=ignore_colmask)
         images_per_plate = {}
         for imKey in image_keys:
             images_per_plate.setdefault(self._plate_map[imKey], []).append(imKey)
@@ -157,7 +157,7 @@ class Cache(object):
                                 _cellids = np.array([])
 
                 if len(_features) > 0:
-                    features.append(normalizer.normalize(plate, _features, ignore_colmask))
+                    features.append(normalizer.normalize(plate, _features))
                     if not flag_bkwd:
                         cellids.append(_cellids)
 
@@ -350,7 +350,7 @@ class Cache(object):
         _image_table = self._image_table
         df = sqldf('select distinct %s, %s from %s'% (self.plate_id, ', '.join(self.image_key_columns), '_image_table'), locals())
         self._cached_plate_map = dict((tuple(row[1:].tolist()), row[0]) for idx, row in df.iterrows())
-        #from IPython import embed; embed()                                                                 
+                            
         cpa.util.pickle(self._plate_map_filename, self._cached_plate_map)
 
     def _create_cache_features(self, resume):

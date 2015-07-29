@@ -25,12 +25,13 @@ class InputError(Exception):
                                                       self.message)
 
 class Profiles(object):
-    def __init__(self, keys, data, variables, key_size=None, group_name=None, group_header=None):
+    def __init__(self, keys, data, variables, key_size=None, group_name=None, group_header=None,ignore_colmask=False):
         assert isinstance(keys, list)
         assert all(isinstance(k, tuple) for k in keys)
         assert all(isinstance(v, str) for v in variables)
         self._keys = [tuple(map(str, t)) for t in keys]
-        assert ~np.any(np.isnan(data))
+        if not ignore_colmask:
+            assert ~np.any(np.isnan(data))
         self.data = np.array(data)
         self.variables = variables
         self.group_header = group_header
@@ -155,7 +156,8 @@ class Profiles(object):
 
     @classmethod
     def compute(cls, keys, variables, function, parameters, parallel=None,
-                ipython_profile=None, group_name=None, show_progress=True, group_header=None):
+                ipython_profile=None, group_name=None, show_progress=True, group_header=None,
+                ignore_colmask=False):
         """
         Compute profiles by applying the parameters to the function in parallel.
 
@@ -176,8 +178,6 @@ class Profiles(object):
             progress = lambda x: x
         data = list(progress(generator))
         
-        from IPython import embed; embed()
-
         if all([l is None for l in data]):
             print "No data returned! Not generating a Profile class"
             return
@@ -187,12 +187,16 @@ class Profiles(object):
                 logger.info('Retrying failed computation locally')
                 data[i] = function(p)
 
-        rowmask = [(l != None) and all(~np.isnan(l)) for l in data]
+        if not ignore_colmask:
+            rowmask = [(l != None) and all(~np.isnan(l)) for l in data]
+        else:
+            rowmask = [(l != None) for l in data]
+            
         import itertools
         data = list(itertools.compress(data, rowmask))
         keys = list(itertools.compress(keys, rowmask))
 
-        return cls(keys, data, variables, group_name=group_name, group_header=group_header)
+        return cls(keys, data, variables, group_name=group_name, group_header=group_header, ignore_colmask=ignore_colmask)
 
     def regroup(self, group_name):
         """

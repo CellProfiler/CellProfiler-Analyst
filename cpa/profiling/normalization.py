@@ -58,7 +58,7 @@ class BaseNormalization(object):
         return self._cached_colmask
 
     @abc.abstractmethod
-    def normalize(self, plate, dataingo):
+    def normalize(self, plate, data):
         pass
         
     @property
