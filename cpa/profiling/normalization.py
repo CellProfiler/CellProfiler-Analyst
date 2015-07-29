@@ -39,10 +39,11 @@ class BaseNormalization(object):
     
     _cached_colmask = None
 
-    def __init__(self, cache, param_dir):
+    def __init__(self, cache, param_dir, ignore_colmask=False):
         self.cache = cache
         self.dir = os.path.join(cache.cache_dir, param_dir)
         self._colmask_filename = os.path.join(self.dir, 'colmask.npy')
+        self.ignore_colmask = ignore_colmask
 
     def _params_filename(self, plate):
         return os.path.join(self.dir, 'params', 
@@ -52,10 +53,12 @@ class BaseNormalization(object):
     def _colmask(self):
         if self._cached_colmask is None:
             self._cached_colmask = np_load(self._colmask_filename)
+        if self.ignore_colmask:
+            self._cached_colmask = np.ones(self._cached_colmask.shape[0], dtype="bool")
         return self._cached_colmask
 
     @abc.abstractmethod
-    def normalize(self, plate, data, ignore_colmask):
+    def normalize(self, plate, dataingo):
         pass
         
     @property
@@ -149,10 +152,10 @@ class BaseNormalization(object):
             
             
 class DummyNormalization(BaseNormalization):
-    def __init__(self, cache, param_dir='dummy'):
-        super(DummyNormalization, self).__init__(cache, param_dir)
+    def __init__(self, cache, param_dir='dummy', ignore_colmask=False):
+        super(DummyNormalization, self).__init__(cache, param_dir, ignore_colmask)
 
-    def normalize(self, plate, data, ignore_colmask = False):
+    def normalize(self, plate, data):
         return data
 
     def _null_param(self):
@@ -169,18 +172,18 @@ class DummyNormalization(BaseNormalization):
         return self.cache.colnames
     
 class StdNormalization(BaseNormalization):
-    def __init__(self, cache, param_dir='std'):
-        super(StdNormalization, self).__init__(cache, param_dir)
+    def __init__(self, cache, param_dir='std', ignore_colmask=False):
+        super(StdNormalization, self).__init__(cache, param_dir, ignore_colmask)
 
-    def normalize(self, plate, data, ignore_colmask = False):
+    def normalize(self, plate, data):
         params = np_load(self._params_filename(plate))
         assert data.shape[1] == params.shape[1]
-        if not ignore_colmask:
-          data = data[:, self._colmask]
-          params = params[:, self._colmask]
+        data = data[:, self._colmask]
+        params = params[:, self._colmask]
         shift = params[0]
         scale = params[1]
-        assert np.all(scale > 0)
+        if not self.ignore_colmask:
+            assert np.all(scale > 0)
         return (data - shift) / scale
 
     def _compute_params(self, features):
@@ -198,8 +201,8 @@ class StdNormalization(BaseNormalization):
         return params[1] != 0    
 
 class RobustStdNormalization(StdNormalization):
-    def __init__(self, cache, param_dir='robust_std'):
-        super(RobustStdNormalization, self).__init__(cache, param_dir)
+    def __init__(self, cache, param_dir='robust_std', ignore_colmask=False):
+        super(RobustStdNormalization, self).__init__(cache, param_dir, ignore_colmask)
         
     def _compute_params(self, features):
         m = features.shape[1]
@@ -212,19 +215,19 @@ class RobustStdNormalization(StdNormalization):
         return params                   
 
 class RobustLinearNormalization(BaseNormalization):
-    def __init__(self, cache, param_dir='robust_linear', lower_q=1, upper_q=99):
-        super(RobustLinearNormalization, self).__init__(cache, param_dir)
+    def __init__(self, cache, param_dir='robust_linear', lower_q=1, upper_q=99, ignore_colmask=False):
+        super(RobustLinearNormalization, self).__init__(cache, param_dir, ignore_colmask)
         self.lower_q = lower_q
         self.upper_q = upper_q
         
-    def normalize(self, plate, data, ignore_colmask = False):
+    def normalize(self, plate, data):
         percentiles = np_load(self._params_filename(plate))
         assert data.shape[1] == percentiles.shape[1]
-        if not ignore_colmask:
-          data = data[:, self._colmask]
-          percentiles = percentiles[:, self._colmask]
+        data = data[:, self._colmask]
+        percentiles = percentiles[:, self._colmask]
         divisor = (percentiles[1] - percentiles[0])
-        assert np.all(divisor > 0)
+        if not self.ignore_colmask:
+            assert np.all(divisor > 0)
         return (data - percentiles[0]) / divisor
         
     def _compute_params(self, features):

@@ -175,6 +175,8 @@ class Profiles(object):
         else:
             progress = lambda x: x
         data = list(progress(generator))
+        
+        from IPython import embed; embed()
 
         if all([l is None for l in data]):
             print "No data returned! Not generating a Profile class"
