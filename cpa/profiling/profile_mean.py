@@ -66,9 +66,9 @@ def _compute_group_mean((cache_dir, images, normalization_name,
             gmm = GMM(2, covariance_type='full').fit(pca_data)
             return pca.inverse_transform(gmm.means_).flatten()
         elif method == 'deciles':
-            return np.hstack(map(lambda d: np.percentile(data, d, axis=0), range(10,100,10)))
+            return np.hstack(map(lambda d: np.percentile(data, d, axis=0), range(0,101,10)))
         elif method == 'mean+deciles':
-            return np.hstack((np.mean(data, axis=0), np.hstack(map(lambda d: np.percentile(data, d, axis=0), range(10,100,10)))))
+            return np.hstack((np.mean(data, axis=0), np.hstack(map(lambda d: np.percentile(data, d, axis=0), range(0,101,10)))))
     except: # catch *all* exceptions
         from traceback import print_exc
         import sys
