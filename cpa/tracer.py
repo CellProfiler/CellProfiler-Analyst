@@ -2790,12 +2790,11 @@ class Tracer(wx.Frame, CPATool):
                      "data is displayed as a histogram",
                      "and should decay to zero.\n\n",
                      "The arrow indicates the pixel",
-                     "distance at which 95%% of the",
-                     "maximum number of links were",
-                     "made. You should confirm that",
-                     "this value is less than the",
-                     "maximum search radius in the",
-                     "%s module."%TRACKING_MODULE_NAME)
+                     "distance at which 95%% of all",
+                     "links were made. You should",
+                     "confirm that this value is less",
+                     "than the maximum search radius",
+                     "in the %s module."%TRACKING_MODULE_NAME)
         help_text = " ".join(help_text)
         help_text = '\n'.join(wrap(help_text,30))    
         axes.text(0.0,0.0,help_text)
@@ -2809,8 +2808,8 @@ class Tracer(wx.Frame, CPATool):
                 n, _, _ = axes.hist(dists, bins,
                               edgecolor='none',
                               alpha=0.75)
-                max_search_radius = bins[n < 0.05*np.max(n)][0]
-                axes.annotate('95% of max count: %d pixels'%(max_search_radius),
+                max_search_radius = bins[np.cumsum(n) < 0.95*np.max(np.cumsum(n))][-1]
+                axes.annotate('95% of all links: %d pixels'%(max_search_radius),
                               xy=(max_search_radius,n[n < 0.05*np.max(n)][0]), 
                               xytext=(max_search_radius,axes.get_ylim()[1]/2), 
                               arrowprops=dict(facecolor='red', shrink=0.05))
