@@ -249,15 +249,14 @@ normalizations = dict((c.__name__, c)
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
-    parser = OptionParser("usage: %prog [-r] [-m method] PLATE-DIR PREDICATE")
+    parser = OptionParser("usage: %prog [-r] [-m method] PROPERTIES-FILE CACHE-DIR PREDICATE")
     parser.add_option('-m', '--method', dest='method', action='store', default='RobustStdNormalization', help='method')
     
     options, args = parser.parse_args()
 
-    if len(args) != 2:
+    if len(args) != 3:
         parser.error('Incorrect number of arguments')
-    cache_dir = os.path.join(args[0], "profiling_params")
-    predicate = args[1]
+    properties_file, cache_dir, predicate = args
 
     from cpa.profiling.cache import Cache
     cache = Cache(cache_dir)
