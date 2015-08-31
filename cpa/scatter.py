@@ -930,7 +930,7 @@ class Scatter(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColor)
+        self.SetBackgroundColour(wx.NullColour)
         
         figpanel = ScatterPanel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)

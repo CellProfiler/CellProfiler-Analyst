@@ -1,3 +1,6 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+
 from __future__ import with_statement
 import sys
 import sys
@@ -102,7 +105,7 @@ def get_cpatool_subclasses():
     '''returns a list of CPATool subclasses.
     '''
     class_objs = inspect.getmembers(sys.modules[__name__], inspect.isclass)
-    return [klass for name, klass in class_objs 
+    return [klass for name, klass in class_objs
             if issubclass(klass, CPATool) and klass!=CPATool]
 
 class MainGUI(wx.Frame):
@@ -168,7 +171,7 @@ class MainGUI(wx.Frame):
         boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
-        logMenu = wx.Menu()        
+        logMenu = wx.Menu()
         debugMenuItem    = logMenu.AppendRadioItem(-1, 'Debug\tCtrl+1', help='Logging window will display debug-level messages.')
         infoMenuItem     = logMenu.AppendRadioItem(-1, 'Info\tCtrl+2', help='Logging window will display info-level messages.')
         warnMenuItem     = logMenu.AppendRadioItem(-1, 'Warnings\tCtrl+3', help='Logging window will display warning-level messages.')
@@ -211,7 +214,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.CRITICAL), criticalMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_properties, savePropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
-        self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)        
+        self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)
         self.Bind(wx.EVT_MENU, self.save_log, saveLogMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_normalization_tool, normalizeMenuItem)
         self.Bind(wx.EVT_MENU, self.clear_link_tables, clearTableLinksMenuItem)
@@ -219,7 +222,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
-        self.Bind(wx.EVT_TOOL, self.launch_image_viewer, id=ID_IMAGE_VIEWER)        
+        self.Bind(wx.EVT_TOOL, self.launch_image_viewer, id=ID_IMAGE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_scatter_plot, id=ID_SCATTER)
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
@@ -266,11 +269,11 @@ class MainGUI(wx.Frame):
     def launch_box_plot(self, evt=None):
         boxplot = BoxPlot(parent=self)
         boxplot.Show(True)
-        
+
     def launch_query_maker(self, evt=None):
         querymaker = QueryMaker(parent=self)
         querymaker.Show(True)
-        
+
     def launch_normalization_tool(self, evt=None):
         normtool = NormalizationUI(parent=self)
         normtool.Show(True)
@@ -279,16 +282,16 @@ class MainGUI(wx.Frame):
         p = Properties.getInstance()
         dirname, filename = os.path.split(p._filename)
         ext = os.path.splitext(p._filename)[-1]
-        dlg = wx.FileDialog(self, message="Save properties as...", defaultDir=dirname, 
-                            defaultFile=filename, wildcard=ext, 
+        dlg = wx.FileDialog(self, message="Save properties as...", defaultDir=dirname,
+                            defaultFile=filename, wildcard=ext,
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             p.save_file(dlg.GetPath())
 
     def on_save_workspace(self, evt):
         p = Properties.getInstance()
-        dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(), 
-                            defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table), 
+        dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
+                            defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().save_workspace(dlg.GetPath())
@@ -300,8 +303,8 @@ class MainGUI(wx.Frame):
             wx.GetApp().load_workspace(dlg.GetPath())
 
     def save_log(self, evt=None):
-        dlg = wx.FileDialog(self, message="Save log as...", defaultDir=os.getcwd(), 
-                            defaultFile='CPA_log.txt', wildcard='txt', 
+        dlg = wx.FileDialog(self, message="Save log as...", defaultDir=os.getcwd(),
+                            defaultFile='CPA_log.txt', wildcard='txt',
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
@@ -313,7 +316,7 @@ class MainGUI(wx.Frame):
         self.logr.setLevel(level)
         # cheat the logger so these always get displayed
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
-        
+
     def clear_link_tables(self, evt=None):
         p = Properties.getInstance()
         dlg = wx.MessageDialog(self, 'This will delete the tables '
@@ -322,7 +325,7 @@ class MainGUI(wx.Frame):
                     'discovers how your database is linked. Are you sure you '
                     'want to proceed?'
                     %(p.link_tables_table, p.link_columns_table),
-                    'Clear table linking information?', 
+                    'Clear table linking information?',
                     wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
         response = dlg.ShowModal()
         if response != wx.ID_YES:
@@ -397,14 +400,14 @@ class CPAnalyst(wx.App):
         splashimage = cpa.icons.cpa_splash.ConvertToBitmap()
         # If the splash image has alpha, it shows up transparently on
         # windows, so we blend it into a white background.
-        splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(), 
-                                          splashimage.GetHeight(), 
+        splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(),
+                                          splashimage.GetHeight(),
                                           255, 255, 255, 255)
         dc = wx.MemoryDC()
         dc.SelectObject(splashbitmap)
         dc.DrawBitmap(splashimage, 0, 0)
         dc.Destroy() # necessary to avoid a crash in splashscreen
-        splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN | 
+        splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN |
                                  wx.SPLASH_TIMEOUT, 2000, None, -1)
         self.splash = splash
 
@@ -434,8 +437,8 @@ class CPAnalyst(wx.App):
         try:
             if __version__ != -1:
                 import cellprofiler.utilities.check_for_updates as cfu
-                cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html', 
-                                      max(__version__, cpa.cpaprefs.get_skip_version()), 
+                cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html',
+                                      max(__version__, cpa.cpaprefs.get_skip_version()),
                                       new_version_cb,
                                       user_agent='CPAnalyst/2.0.%s'%(__version__))
         except ImportError:
@@ -497,7 +500,7 @@ class CPAnalyst(wx.App):
         '''This function must be called to generate a unique name for each plot.
         eg: plot.SetName(wx.GetApp().make_unique_plot_name('Histogram'))
         '''
-        plot_num = max([int(plot.Name[len(prefix):]) 
+        plot_num = max([int(plot.Name[len(prefix):])
                         for plot in self.plots if plot.Name.startswith(prefix)])
         return '%s %d'%(prefix, plot_num)
 
@@ -512,6 +515,6 @@ if __name__ == "__main__":
     if sys.excepthook == sys.__excepthook__:
        from cpa.errors import show_exception_as_dialog
        sys.excepthook = show_exception_as_dialog
-    
+
     app.MainLoop()
 #    os._exit(0)
