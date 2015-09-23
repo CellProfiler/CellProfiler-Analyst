@@ -258,6 +258,8 @@ if __name__ == '__main__':
         parser.error('Incorrect number of arguments')
     properties_file, cache_dir, predicate = args
 
+    cpa.properties.LoadFile(properties_file)
+
     from cpa.profiling.cache import Cache
     cache = Cache(cache_dir)
     normalizer = normalizations[options.method](cache)
