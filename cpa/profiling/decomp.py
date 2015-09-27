@@ -10,6 +10,8 @@ from .preprocessing import Preprocessor, VariableSelector
 import os
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.preprocessing import Imputer
 from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
@@ -21,10 +23,12 @@ class DecompositionPreprocessor(Preprocessor):
         self.n_components = n_components
         self.variables = ['V%d' % (i + 1) for i in range(self.n_components)]
 
-        pca = PCA(n_components=2)
+        impute = Imputer()
+        nzv = VarianceThreshold()
         scale = StandardScaler()
+        pca = PCA(n_components=2)
 
-        self.model = Pipeline([('scale', scale), ('pca', pca)])
+        self.model = Pipeline([('impute', impute), ('nzv', nzv), ('scale', scale), ('pca', pca)])
         self.model.set_params(pca__whiten = True, pca__n_components = n_components)
         self._train(training_data)
 
