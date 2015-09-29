@@ -29,7 +29,7 @@ class DecompositionPreprocessor(Preprocessor):
         pca = PCA(n_components=2)
 
         self.model = Pipeline([('impute', impute), ('nzv', nzv), ('scale', scale), ('pca', pca)])
-        self.model.set_params(pca__whiten = True, pca__n_components = n_components)
+        self.model.set_params(pca__whiten = False, pca__n_components = n_components)
         self._train(training_data)
 
     def _train(self, training_data):
