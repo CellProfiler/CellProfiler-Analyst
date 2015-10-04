@@ -110,6 +110,8 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
         variables = variables + ['decile_%02d_%s' % (dec, v) for dec in range(10,100,10) for v in variables]
     elif method == 'cellcount':
         variables = ['Cells_Count']
+    else:
+        raise ValueError("Method %s not defined." % method)
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
                             show_progress=show_progress, 
@@ -132,7 +134,7 @@ if __name__ == '__main__':
     parser.add_option('--no-progress', dest='no_progress', help='Do not show progress bar', action='store_true')
     parser.add_option('-g', '--full-group-header', dest='full_group_header', default=False, 
                       help='Include full group header in csv file', action='store_true')
-    parser.add_option('--method', dest='method', help='method: mean (default), mean+std, mode, median, median+mad, deciles, mean+deciles', 
+    parser.add_option('--method', dest='method', type = 'choice', choices = ['mean', 'mean+std', 'mode', 'median', 'median+mad', 'deciles', 'mean+deciles', 'cellcount'], 
                       action='store', default='mean')
     add_common_options(parser)
     options, args = parser.parse_args()
