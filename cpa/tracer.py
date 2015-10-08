@@ -43,6 +43,18 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 from tvtk.pyface.scene import Scene
 from tvtk.api import tvtk
 
+#
+# Monkey-patch ComboBox.GetStringSelection()
+#   self.Selection returns a tuple instead of a single value
+#   and things probably go downhill from there.
+#
+def __GetStringSelection(self):
+    sel = self.Selection[0]
+    items = self.GetItems()
+    if sel >= 0 and sel < len(items):
+        return items[sel]
+ComboBox.GetStringSelection = __GetStringSelection
+
 required_fields = ['series_id', 'group_id', 'timepoint_id']
 
 db = DBConnect.getInstance()
@@ -1206,7 +1218,6 @@ class Tracer(wx.Frame, CPATool):
     '''
     def __init__(self, parent, size=(1000,600), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Tracer Time-Lapse Visualization Tool', **kwargs)
-        self.SetBackgroundColour(wx.NullColor)
         CPATool.__init__(self)
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
         self.SetName(self.tool_name)
