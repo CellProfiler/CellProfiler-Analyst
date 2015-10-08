@@ -33,7 +33,11 @@ def setup_frozen_logging():
         softspace = 0 # python uses this for printing
         _file = None
         _error = None
-        def write(self, text, fname=sys.executable + '.log'):
+        def write(self, text, fname=None):
+            if fname is None:
+                fname = sys.executable + '.log'
+                if not os.access(fname, os.W_OK):
+                    fname = os.path.expanduser("~/CellProfilerAnalyst.log")
             if self._file is None and self._error is None:
                 try:
                     self._file = open(fname, 'w')
