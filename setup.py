@@ -31,13 +31,14 @@ APPNAME = 'CellProfiler Analyst'
 APP = ['CellProfiler-Analyst.py']
 OPTIONS = {'includes' : [ 
     'scipy.sparse.*', 'scipy.sparse.csgraph.*', 'scipy.integrate', 
-    'scipy.special.*', 'scipy.linalg', 'numpy.linalg.lapack_lite',
+    'scipy.special.*', 'scipy.linalg', 'scipy.linalg.*', 
+    'numpy.linalg.lapack_lite',
     'verlib', 'traits', 'traitsui', 'traitsui.*', 'traitsui.wx', 'traitsui.wx.*',
     'pyface.*', 'pyface.wx.*', 'pyface.ui.wx', 'pyface.ui.wx.*',
     'pyface.ui.wx.grid.*', 'pyface.ui.wx.action.*', 'pyface.ui.wx.timer.*',
     'pyface.ui.wx.wizard.*', 'pyface.ui.wx.workbench.*',
     'tvtk.*', 'tvtk.pyface.*', 'tvtk.pyface.ui.*','tvtk.pyface.ui.wx.*',
-    'tvtk.view.*',
+    'tvtk.view.*', 'vtk.*',
     'enable.*', 'enable.wx.*'],
            'packages' : ['cpa', 'javabridge', 'bioformats'],
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
@@ -70,7 +71,10 @@ elif sys.platform == "win32":
     import tvtk.plugins.scene
     
     packager = 'py2exe'
-    OPTIONS['dll_excludes']=["MSVCP90.dll", "jvm.dll"]
+    OPTIONS['dll_excludes']=[
+        "MSVCP90.dll", "jvm.dll", "AVICAP32.dll", "AVIFIL32.dll",
+        "CRYPT32.dll", "d3d9.dll", "MSACM32.dll", "MSVCR100.dll",
+        "MSVFW32.dll", "PSAPI.DLL"]
     data_files = matplotlib.get_py2exe_datafiles()
     icon_path = os.path.dirname(cpa.icons.__file__)
     data_files.append(('cpa/icons', [
@@ -153,7 +157,16 @@ elif sys.platform == "win32":
             (dest_dir, [os.path.join(src_dir, filename)
                         for filename in os.listdir(src_dir)
                         if filename.endswith(".jar")]))
-                           
+    #
+    # networkx needs lib2to3\Grammar.txt (needs?)
+    #
+    import lib2to3
+    grammar_txt_path = \
+        os.path.join(os.path.dirname(lib2to3.__file__), "Grammar.txt")
+    pattern_grammar_txt_path = \
+        os.path.join(os.path.dirname(lib2to3.__file__), "PatternGrammar.txt")
+    if os.path.exists(grammar_txt_path):
+        data_files.append(("lib2to3", [grammar_txt_path, pattern_grammar_txt_path]))
     #
     # some dlls are in numpy.core, but are referenced elsewhere and
     # py2exe fails
