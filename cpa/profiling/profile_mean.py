@@ -100,7 +100,9 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     else:
         cache = Cache(cache_dir)
         variables = normalization(cache).colnames
-    if method == 'mean+std':
+    if method in ['mean', 'median', 'mode']:
+        pass
+    elif method == 'mean+std':
         variables = variables + ['std_' + v for v in variables]
     elif method == 'median+mad':
         variables = variables + ['mad_' + v for v in variables]
