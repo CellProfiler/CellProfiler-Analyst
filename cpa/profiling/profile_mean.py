@@ -20,6 +20,7 @@ def _compute_group_mean((cache_dir, images, normalization_name,
         from cpa.profiling.cache import Cache
         from cpa.profiling.normalization import normalizations
         from scipy.stats import norm as Gaussian
+        np.seterr(all='raise')
         cache = Cache(cache_dir)
         normalization = normalizations[normalization_name]
         data, colnames, _ = cache.load(images, normalization=normalization)
@@ -29,7 +30,7 @@ def _compute_group_mean((cache_dir, images, normalization_name,
             return cellcount
         
         if len(data) == 0:
-            return np.empty(len(colnames)) * np.nan
+            return [np.nan] * len(colnames)
 
         data = data[~np.isnan(np.sum(data, 1)), :]
 
