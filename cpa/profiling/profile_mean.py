@@ -67,6 +67,8 @@ def _compute_group_mean((cache_dir, images, normalization_name,
             return pca.inverse_transform(gmm.means_).flatten()
         elif method == 'deciles':
             return np.hstack(map(lambda d: np.percentile(data, d, axis=0), range(10,100,10)))
+        elif method == 'quartiles':
+            return np.hstack(map(lambda d: np.percentile(data, d, axis=0), range(25,76,25)))
         elif method == 'mean+deciles':
             return np.hstack((np.mean(data, axis=0), np.hstack(map(lambda d: np.percentile(data, d, axis=0), range(10,100,10)))))
     except: # catch *all* exceptions
@@ -99,7 +101,9 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     else:
         cache = Cache(cache_dir)
         variables = normalization(cache).colnames
-    if method == 'mean+std':
+    if method in ['mean', 'median', 'mode']:
+        pass
+    elif method == 'mean+std':
         variables = variables + ['std_' + v for v in variables]
     elif method == 'median+mad':
         variables = variables + ['mad_' + v for v in variables]
@@ -107,10 +111,14 @@ def profile_mean(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
         variables = ['m1_' + v for v in variables] + ['m2_' + v for v in variables]
     elif method == 'deciles':
         variables = ['decile_%02d_%s' % (dec, v) for dec in range(10,100,10) for v in variables]
+    elif method == 'quartiles':
+        variables = ['quartile_%02d_%s' % (quar, v) for quar in range(25,76,25) for v in variables]
     elif method == 'mean+deciles':
         variables = variables + ['decile_%02d_%s' % (dec, v) for dec in range(10,100,10) for v in variables]
     elif method == 'cellcount':
         variables = ['Cells_Count']
+    else:
+        raise ValueError("Method %s not defined." % method)
     return Profiles.compute(keys, variables, _compute_group_mean, parameters,
                             parallel=parallel, group_name=group_name,
                             show_progress=show_progress, 
@@ -133,8 +141,7 @@ if __name__ == '__main__':
     parser.add_option('--no-progress', dest='no_progress', help='Do not show progress bar', action='store_true')
     parser.add_option('-g', '--full-group-header', dest='full_group_header', default=False, 
                       help='Include full group header in csv file', action='store_true')
-    parser.add_option('--method', dest='method', help='method: mean (default), mean+std, mode, median, median+mad, deciles, mean+deciles', 
-                      action='store', default='mean')
+    parser.add_option('--method', dest='method', type = 'choice', choices = ['mean', 'mean+std', 'mode', 'median', 'median+mad', 'deciles', 'mean+deciles', 'quartiles', 'cellcount'], action='store', default='mean')
     add_common_options(parser)
     options, args = parser.parse_args()
     parallel = ParallelProcessor.create_from_options(parser, options)
