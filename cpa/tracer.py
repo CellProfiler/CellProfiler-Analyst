@@ -2809,7 +2809,7 @@ class Tracer(wx.Frame, CPATool):
                               edgecolor='none',
                               alpha=0.75)
                 max_search_radius = bins[np.cumsum(n) < 0.95*np.max(np.cumsum(n))][-1]
-                axes.annotate('95% of all links: %d pixels'%(max_search_radius),
+                axes.annotate('95%% of all links: %d pixels'%(max_search_radius),
                               xy=(max_search_radius,n[n < 0.05*np.max(n)][0]), 
                               xytext=(max_search_radius,axes.get_ylim()[1]/2), 
                               arrowprops=dict(facecolor='red', shrink=0.05))
