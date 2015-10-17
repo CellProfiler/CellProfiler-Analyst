@@ -663,20 +663,20 @@ class TracerControlPanel(wx.Panel):
         #wx.EVT_COMBOBOX(self.filter_choices,-1, self.on_filter_selection)   
         
     def on_dataset_selected(self, event=None):
-        self.parent.dataset_selected(self.dataset_choice.GetStringSelection(), self.track_collection.GetStringSelection())
+        self.parent.dataset_selected(self.dataset_choice.GetValue(), self.track_collection.GetValue())
         
     def on_track_collection_selected(self, event=None):
-        self.parent.track_collection_selected(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())  
+        self.parent.track_collection_selected(self.dataset_choice.GetValue(), self.track_collection.GetValue())  
         
     def on_dataset_measurement_selected(self, event=None):
-        self.parent.dataset_measurement_selected(self.dataset_measurement_choice.GetStringSelection(), 
-                                                 self.derived_measurement_choice.GetStringSelection())  
+        self.parent.dataset_measurement_selected(self.dataset_measurement_choice.GetValue(), 
+                                                 self.derived_measurement_choice.GetValue())  
         
     def on_derived_measurement_selected(self, event=None):
-        self.parent.derived_measurement_selected(self.derived_measurement_choice.GetStringSelection())  
+        self.parent.derived_measurement_selected(self.derived_measurement_choice.GetValue())  
         
     def on_update_trajectory_selection(self, event=None):
-        self.parent.update_trajectory_selection(self.dataset_choice.GetValue(),self.track_collection.GetStringSelection())  
+        self.parent.update_trajectory_selection(self.dataset_choice.GetValue(),self.track_collection.GetValue())  
         
     def on_calculate_and_display_lap_stats(self, event=None):
         # TODO: Figure out why the appearance of the toggle doesn't change when pressed
@@ -685,28 +685,28 @@ class TracerControlPanel(wx.Panel):
         self.trajectory_diagnosis_toggle.SetValue(False)
         
     def on_colormap_selected(self, event=None):
-        self.parent.colormap_selected(self.colormap_choice.GetStringSelection())  
+        self.parent.colormap_selected(self.colormap_choice.GetValue())  
         
     def on_update_plot(self, event=None):
-        self.parent.update_plot(self.dataset_choice.GetValue(),self.track_collection.GetStringSelection())  
+        self.parent.update_plot(self.dataset_choice.GetValue(),self.track_collection.GetValue())  
         
     def on_singleton_length_plot(self, event=None):
-        self.parent.singleton_length_plot(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection(), int(self.singleton_length_value.GetValue()))
+        self.parent.singleton_length_plot(self.dataset_choice.GetValue(), self.track_collection.GetValue(), int(self.singleton_length_value.GetValue()))
     
     def on_diistance_plot(self, event=None):
-        self.parent.distance_plot(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())
+        self.parent.distance_plot(self.dataset_choice.GetValue(), self.track_collection.GetValue())
         
     def on_bc_branch_plot(self, event=None):
-        self.parent.bc_branch_plot(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())
+        self.parent.bc_branch_plot(self.dataset_choice.GetValue(), self.track_collection.GetValue())
     
     def on_toggle_preview_pruned_graph(self, event=None):
-        self.parent.toggle_preview_pruned_graph(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())  
+        self.parent.toggle_preview_pruned_graph(self.dataset_choice.GetValue(), self.track_collection.GetValue())  
         
     def on_add_pruning_to_edits(self, event=None):
-        self.parent.add_pruning_to_edits(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())  
+        self.parent.add_pruning_to_edits(self.dataset_choice.GetValue(), self.track_collection.GetValue())  
         
     def on_save_edited_tracks(self, event=None):     
-        self.parent.save_edited_tracks(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection())  
+        self.parent.save_edited_tracks(self.dataset_choice.GetValue(), self.track_collection.GetValue())  
         
     def on_enable_filtering(self, event=None):
         is_enabled = self.enable_filtering_checkbox.GetValue()
@@ -717,7 +717,7 @@ class TracerControlPanel(wx.Panel):
         self.parent.create_new_filter()
     
     def on_filter_selection(self, event=None):
-        self.parent.filter_selected(self.dataset_choice.GetValue(), self.track_collection.GetStringSelection(), self.filter_choices.GetStringSelection()) 
+        self.parent.filter_selected(self.dataset_choice.GetValue(), self.track_collection.GetValue(), self.filter_choices.GetValue()) 
     
 ################################################################################
 class MayaviView(HasTraits):
@@ -1206,7 +1206,7 @@ class Tracer(wx.Frame, CPATool):
     '''
     def __init__(self, parent, size=(1000,600), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Tracer Time-Lapse Visualization Tool', **kwargs)
-        self.SetBackgroundColour(wx.NullColor)
+        self.SetBackgroundColour(wx.NullColour)
         CPATool.__init__(self)
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
         self.SetName(self.tool_name)
@@ -1233,12 +1233,12 @@ class Tracer(wx.Frame, CPATool):
             return        
 
         self.control_panel = TracerControlPanel(self)
-        self.selected_dataset = self.control_panel.dataset_choice.GetStringSelection()
+        self.selected_dataset = self.control_panel.dataset_choice.GetValue()
         self.selected_dataset_track = ORIGINAL_TRACK
         self.dataset_measurement_choices = self.control_panel.dataset_measurement_choice.GetItems()
-        self.selected_measurement = self.control_panel.dataset_measurement_choice.GetStringSelection()
-        self.selected_metric = self.control_panel.derived_measurement_choice.GetStringSelection()
-        self.selected_colormap  = self.control_panel.colormap_choice.GetStringSelection()
+        self.selected_measurement = self.control_panel.dataset_measurement_choice.GetValue()
+        self.selected_metric = self.control_panel.derived_measurement_choice.GetValue()
+        self.selected_colormap  = self.control_panel.colormap_choice.GetValue()
         self.available_filters = None
         self.selected_filter = None
         self.plot_updated = False
@@ -2032,8 +2032,8 @@ class Tracer(wx.Frame, CPATool):
         #else:
             #self.selected_filter = []
             #for current_filter in self.control_panel.filter_panel.filters:
-                #self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetStringSelection(), 
-                                                      #current_filter.comparatorChoice.GetStringSelection(),
+                #self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetValue(), 
+                                                      #current_filter.comparatorChoice.GetValue(),
                                                       #current_filter.valueField.GetValue())))
        
         if selected_dataset == None and selected_track == None:
@@ -2238,8 +2238,8 @@ class Tracer(wx.Frame, CPATool):
         #else:
             #self.selected_filter = []
             #for current_filter in self.control_panel.filter_panel.filters:
-                #self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetStringSelection(), 
-                                                      #current_filter.comparatorChoice.GetStringSelection(),
+                #self.selected_filter.append(" ".join((props.object_table + "." + current_filter.colChoice.GetValue(), 
+                                                      #current_filter.comparatorChoice.GetValue(),
                                                       #current_filter.valueField.GetValue())))        
         if selected_dataset == None and selected_track == None:
             # No data sources or tracks specified: Initialize graph scalar attributes from scratch
