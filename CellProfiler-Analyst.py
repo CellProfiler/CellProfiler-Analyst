@@ -430,7 +430,7 @@ class CPAnalyst(wx.App):
 
         # The JVM has to be started after db.connect(), otherwise bus errors
         # occur on Mac OS X.
-        javabridge.start_vm(class_path=bioformats.JARS, run_headless=False)
+        javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
         javabridge.attach()
         javabridge.activate_awt()
 
