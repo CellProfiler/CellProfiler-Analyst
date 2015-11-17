@@ -222,7 +222,7 @@ class SortBin(wx.ScrolledWindow):
         for tile in self.Selection():
             self.tiles.remove(tile)
             self.sizer.Remove(tile)
-            tile.Destroy()
+            wx.CallAfter(tile.Destroy)
         self.UpdateSizer()
         self.UpdateQuantity()
     
