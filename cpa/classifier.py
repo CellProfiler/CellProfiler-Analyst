@@ -589,7 +589,7 @@ class Classifier(wx.Frame):
                 self.obClassChoice.Select(0)
                 # Remove the bin
                 self.classified_bins_sizer.Remove(bin.parentSizer)
-                bin.Destroy()
+                wx.CallAfter(bin.Destroy)
                 self.classified_bins_panel.Layout()
                 break
         self.algorithm.UpdateBins([]);
