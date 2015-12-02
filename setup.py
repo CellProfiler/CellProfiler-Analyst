@@ -18,17 +18,17 @@ APP = ['CellProfiler-Analyst.py']
 OPTIONS = {'argv_emulation': True,
            'iconfile' : "cpa/icons/cpa.icns",
            'includes' : [ 'scipy.sparse'],
-           'packages' : ['numpy', 'cpa', 'javabridge', 'bioformats'],
+           'packages' : ['numpy', 'cpa', 'javabridge', 'bioformats','PIL'],
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
-                         'scipy.weave', 'imagej'],
-           'resources' : [],
-           'plist': {
-               "LSArchitecturePriority": ["i386"],
-               "LSMinimumSystemVersion": "10.6.8",
-               "CFBundleName": "CellProfiler Analyst",
-               "CFBundleIdentifier": "org.cellprofiler.CellProfiler-Analyst",
-               "CFBundleShortVersionString": cpa.util.version.get_bundle_version(),
-            }
+                         'scipy.weave', 'imagej','AppKit','CoreFoundation','Foundation','objc'],
+           'resources' : []
+           # 'plist': {
+           #     "LSArchitecturePriority": ["i386"],
+           #     "LSMinimumSystemVersion": "10.6.8",
+           #     "CFBundleName": "CellProfiler Analyst",
+           #     "CFBundleIdentifier": "org.cellprofiler.CellProfiler-Analyst",
+           #     "CFBundleShortVersionString": cpa.util.version.get_bundle_version(),
+           #  }
 }
 
 setup(
@@ -38,8 +38,8 @@ setup(
     setup_requires=['py2app'],
     name = APPNAME,
 )
-if sys.argv[-1] == 'py2app':
-    a = "CellProfiler\\ Analyst" 
-    call('find dist/{a}.app -name tests -type d | xargs rm -rf'.format(a=a), shell=True)
-    call('lipo dist/{a}.app/Contents/MacOS/{a} -thin i386 -output dist/{a}.app/Contents/MacOS/{a}'.format(a=a), shell=True)
+# if sys.argv[-1] == 'py2app':
+#     a = "CellProfiler\\ Analyst" 
+#     call('find dist/{a}.app -name tests -type d | xargs rm -rf'.format(a=a), shell=True)
+#     call('lipo dist/{a}.app/Contents/MacOS/{a} -thin i386 -output dist/{a}.app/Contents/MacOS/{a}'.format(a=a), shell=True)
 
