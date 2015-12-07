@@ -461,7 +461,7 @@ class Density(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Density Plot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         figpanel = DensityPanel(self)
         configpanel = DataSourcePanel(self, figpanel)
         figpanel.set_configpanel(configpanel)

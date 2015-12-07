@@ -201,7 +201,7 @@ class ImageViewer(wx.Frame):
         '''
         wx.Frame.__init__(self, parent, -1, title)
         self.SetName('ImageViewer')
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)
