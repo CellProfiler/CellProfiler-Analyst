@@ -1,3 +1,4 @@
 mock
 verlib
 python-bioformats
+pandas

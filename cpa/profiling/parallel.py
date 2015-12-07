@@ -15,14 +15,14 @@ class ParallelProcessor(object):
     @classmethod
     def add_options(cls, parser):
         group = OptionGroup(parser, 'Parallel processing options (specify only one)')
-        group.add_option('--ipython-profile', dest='ipython_profile',
+        group.add_option('--ipython-profile', dest='ipython_profile', 
                          metavar='PROFILE-NAME',
-                         help='use ipyparallel')
-        group.add_option('--lsf-directory', dest='lsf_directory',
+                         help='use iPython.parallel')
+        group.add_option('--lsf-directory', dest='lsf_directory', 
                          metavar='/path/to/control/directory',
                          help='use the cpa.profiling.lsf interface to LSF')
-        group.add_option('--multiprocessing', dest='multiprocessing',
-                         help='use multiprocessing on the local machine',
+        group.add_option('--multiprocessing', dest='multiprocessing', 
+                         help='use multiprocessing on the local machine', 
                          action='store_true')
         group.add_option('--memory', dest='memory',
                          help='main memory requirement in gigabytes')
@@ -40,7 +40,7 @@ class ParallelProcessor(object):
         if isinstance(ipython_profile, LSF):
             import LSF
         elif ipython_profile:
-            from ipyparallel import Client, LoadBalancedView
+            from IPython.parallel import Client, LoadBalancedView
             client = Client(profile=ipython_profile)
             return IPython(client)
             return view.imap
@@ -52,7 +52,7 @@ class ParallelProcessor(object):
     @classmethod
     def create_from_options(cls, parser, options):
         noptions = ((options.ipython_profile and 1 or 0) +
-                    (options.lsf_directory and 1 or 0) +
+                    (options.lsf_directory and 1 or 0) + 
                     (options.multiprocessing and 1 or 0))
         if noptions > 1:
             parser.error('You can only specify one of --ipython-profile, --lsf-directory, and --multiprocessing.')
@@ -60,7 +60,7 @@ class ParallelProcessor(object):
             import lsf
             return lsf.LSF(options.njobs, options.lsf_directory, memory=options.memory, job_array_name = options.jobname)
         elif options.ipython_profile:
-            from ipyparallel import Client, LoadBalancedView
+            from IPython.parallel import Client, LoadBalancedView
             client = Client(profile=options.ipython_profile)
             return IPython(client)
         elif options.multiprocessing:
@@ -78,7 +78,7 @@ class IPython(ParallelProcessor):
         return self.client.load_balanced_view()
 
 
-class Multiprocessing(ParallelProcessor):
+class Multiprocessing(ParallelProcessor): 
     def __init__(self, *args, **kwargs):
         super(Multiprocessing, self).__init__(*args, **kwargs)
         from multiprocessing import Pool
@@ -117,6 +117,6 @@ def test():
     for result in view.imap(test_function, [random.randint(1, 10)
                                             for task in range(10)]):
         print 'Task returned', result
-
+    
 if __name__ == '__main__':
     test()

@@ -1,14 +1,24 @@
-# Cellprofiler Analyst 2
+![CPA Logo](http://i.imgur.com/45Iosp1.png)
+# Cellprofiler Analyst 2.1.0 (Development)
 
-Authors: Adam Fraser, Thouis R. Jones
+*Note: This version is heavily in development and not production-ready yet*
 
-Developers: Adam Fraser, Thouis R. Jones
+Authors: Adam Fraser, Thouis R. Jones, David Dao, Jane Hung
+
+Current Developers: David Dao, Jane Hung
 
 Website: cellprofiler.org
 
-Copyright 2011, The Broad Institute of MIT and Harvard.
+Copyright 2015, The Broad Institute of MIT and Harvard.
 
 Distributed under the GPLv2.
+
+## Current Development
+
+* Fixing color issues due to changes in wxPython Library
+* Restoring visualization functionalities
+* Cleaning up files
+* Improving Evaluation for Classifier
 
 ## Wiki
 

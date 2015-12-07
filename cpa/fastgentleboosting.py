@@ -1,22 +1,27 @@
 import re
 import dbconnect
 import logging
-import multiclasssql
+import multiclasssql_legacy as multiclasssql # Legacy code for scoring cells
 import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
 from time import time
 
+
 class FastGentleBoosting(object):
     def __init__(self, classifier = None):
         logging.info('Initialized New Fast Gentle Boosting Classifier')
+        self.name = self.name()
         self.model = None
         self.classBins = []
         self.classifier = classifier
 
+    def name(self):
+        return self.__class__.__name__
+
     def CheckProgress(self):
         import wx
-        ''' Called when the CheckProgress Button is pressed. '''
+        ''' Called when the Cross Validation Button is pressed. '''
         # get wells if available, otherwise use imagenumbers
         try:
             nRules = int(self.classifier.nRulesTxt.GetValue())
@@ -111,17 +116,15 @@ class FastGentleBoosting(object):
         return self.model is not None
 
     def LoadModel(self, model_filename):
-        import cPickle
-        fh = open(model_filename, 'r')
+        
+        # For loading scikit learn library
+        from sklearn.externals import joblib
         try:
-            self.model, self.bin_labels = cPickle.load(fh)
+            self.model, self.bin_labels, self.name = joblib.load(model_filename)
         except:
             self.model = None
             self.bin_labels = None
-            logging.error('The loaded model was not a fast gentle boosting model')
-            raise TypeError
-        finally:
-            fh.close()
+            logging.error('Loading trained model failed')
 
     def ParseModel(self, string):
         self.model = []
@@ -150,10 +153,10 @@ class FastGentleBoosting(object):
         return multiclasssql.PerImageCounts(self.model, filter_name=filter_name, cb=cb)
 
     def SaveModel(self, model_filename, bin_labels):
-        import cPickle
-        fh = open(model_filename, 'w')
-        cPickle.dump((self.model, bin_labels), fh)
-        fh.close()
+
+        # For loading scikit learn library
+        from sklearn.externals import joblib
+        joblib.dump((self.model, bin_labels, self.name), model_filename)
 
     def ShowModel(self):
         '''

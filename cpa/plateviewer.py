@@ -31,7 +31,7 @@ class PlateViewer(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Plate Viewer', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white") # Fixing the color
 
         # Check for required properties fields.
         fail = False

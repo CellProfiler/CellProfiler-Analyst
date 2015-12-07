@@ -35,6 +35,7 @@ class DataSourcePanel(wx.Panel):
         wx.Panel.__init__(self, parent, **kwargs)
         
         # the panel to draw charts on
+        self.SetBackgroundColour('white') # color for the background of panel
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)

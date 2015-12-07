@@ -94,7 +94,8 @@ class ScatterControlPanel(wx.Panel):
         
         # the panel to draw charts on
         self.figpanel = figpanel
-        
+        self.SetBackgroundColour('white') # color for the background of panel
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.x_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
         self.y_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
@@ -161,6 +162,7 @@ class ScatterControlPanel(wx.Panel):
         
     @property
     def x_column(self):
+        print self.x_table_choice.GetStringSelection(), self.x_choice.GetStringSelection(), "!!!!"
         return sql.Column(self.x_table_choice.GetStringSelection(), 
                           self.x_choice.GetStringSelection())
     @property
@@ -290,6 +292,7 @@ class ScatterControlPanel(wx.Panel):
             q.add_filter(self.filter)
         q.add_where(sql.Expression(self.x_column, 'IS NOT NULL'))
         q.add_where(sql.Expression(self.y_column, 'IS NOT NULL'))
+        print "x_column:", self.x_column
         return db.execute(str(q))
     
     def get_selected_column_types(self):

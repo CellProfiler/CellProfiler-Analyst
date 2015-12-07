@@ -9,18 +9,18 @@
 import csv
 import os
 import re
+import logging
+from UserDict import DictMixin
+
+import numpy as np
+
 import wx
 import wx.grid as  gridlib
-import wx.lib.intctrl as intctrl
-import logging
-import numpy as np
 import cpa.helpmenu
-from cpatool import CPATool
 from properties import Properties
 import dbconnect
 from datamodel import DataModel
 import imagetools
-from UserDict import DictMixin
 
 p = Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
@@ -1060,7 +1060,6 @@ def show_loaddata_table(gate_names, as_columns=True):
 
 
 if __name__ == '__main__':
-    import sys
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
     if p.show_load_dialog():

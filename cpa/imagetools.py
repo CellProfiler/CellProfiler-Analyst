@@ -49,7 +49,7 @@ def FetchImage(imKey):
     else:
         ir = ImageReader()
         filenames = db.GetFullChannelPathsForImage(imKey)
-        imgs = ir.ReadImages(filenames)                    
+        imgs = ir.ReadImages(filenames)                       
         cache[imKey] = imgs
         cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
@@ -309,7 +309,7 @@ def SaveBitmap(bitmap, filename, format='PNG'):
 def ImageToPIL(image):
     '''Convert wx.Image to PIL Image.'''
     pil = Image.new('RGB', (image.GetWidth(), image.GetHeight()))
-    pil.fromstring(image.GetData())
+    pil.frombytes(image.GetData())
     return pil
 
 def BitmapToPIL(bitmap):
@@ -327,7 +327,7 @@ def npToPIL(imdata):
         assert imdata.shape[2] >=3, 'Cannot convert the given numpy array to PIL'
     if buf.dtype != 'uint8':
         buf = (buf * 255.0).astype('uint8')
-    im = Image.fromstring(mode='RGB', size=(buf.shape[1],buf.shape[0]),
+    im = Image.frombytes(mode='RGB', size=(buf.shape[1],buf.shape[0]),
                           data=buf.tostring())
     return im
 
@@ -341,7 +341,7 @@ def pil_to_np( pilImage ):
     def toarray(im):
         'return a 1D array of floats'
         x_str = im.tostring('raw', im.mode)
-        x = np.fromstring(x_str,np.uint8)
+        x = np.frombytes(x_str,np.uint8)
         return x
     
     if pilImage.mode[0] == 'P':

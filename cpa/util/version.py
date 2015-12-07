@@ -102,6 +102,8 @@ def get_bundle_version(_description=_get_description()):
     additional commits past a tag), return "0.0.0".
 
     """
+    if _description is None:
+        return '0.0.0'
     tag, additional, commit = _parse_description(_description)
     if additional == '0' and re.match('\d+\.\d+\.\d+$', tag):
         return tag

@@ -312,7 +312,8 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         '''returns a Filter (or OldFilter) for the selected object or None
         if the selection is NO_FILTER or NEW_FILTER
         '''
-        kind = self.get_item_kind(self.Selection)
+        kind = self.get_item_kind(self.GetSelection()) # Fix selection issue
+        print kind
         if kind == 'filter':
             return p._filters[self.Value]
         elif kind == 'gate':
@@ -501,7 +502,7 @@ class GateDialog(wx.TextEntryDialog):
         if not valid:
             self.txtCtrl.SetForegroundColour('red')
         else:
-            self.txtCtrl.SetForegroundColour('black')
+            self.txtCtrl.SetForegroundColour('black') # Text color
         self.okbtn.Enable(valid)
         evt.Skip()
                 
@@ -801,7 +802,9 @@ def show_load_dialog():
                     'Columbus MeasurementIndex file (*.ColumbusIDX.xml)|*.ColumbusIDX.xml|'
                     'Harmony PlateResults file (*.xml)|*.xml',
                     style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
+    response = dlg.ShowModal()
+    
+    if response == wx.ID_OK:
         filename = dlg.GetPath()
         os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         if filename.endswith('ColumbusIDX.xml'):

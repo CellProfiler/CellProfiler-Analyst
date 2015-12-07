@@ -18,17 +18,17 @@ APP = ['CellProfiler-Analyst.py']
 OPTIONS = {'argv_emulation': True,
            'iconfile' : "cpa/icons/cpa.icns",
            'includes' : [ 'scipy.sparse'],
-           'packages' : ['numpy', 'cpa', 'javabridge', 'bioformats','PIL'],
+           'packages' : ['numpy', 'cpa', 'javabridge', 'bioformats', 'PIL','sklearn'],
            'excludes' : ['nose', 'wx.tools', 'Cython', 'pylab', 'Tkinter',
                          'scipy.weave', 'imagej','AppKit','CoreFoundation','Foundation','objc'],
            'resources' : []
            # 'plist': {
-           #     "LSArchitecturePriority": ["i386"],
+           #     "LSArchitecturePriority": ["x86_64"]
            #     "LSMinimumSystemVersion": "10.6.8",
            #     "CFBundleName": "CellProfiler Analyst",
            #     "CFBundleIdentifier": "org.cellprofiler.CellProfiler-Analyst",
            #     "CFBundleShortVersionString": cpa.util.version.get_bundle_version(),
-           #  }
+            # }
 }
 
 setup(

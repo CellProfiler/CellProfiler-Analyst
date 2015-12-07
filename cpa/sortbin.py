@@ -214,7 +214,7 @@ class SortBin(wx.ScrolledWindow):
             if t.obKey in obKeys:
                 self.tiles.remove(t)
                 self.sizer.Remove(t)
-                t.Destroy()
+                wx.CallAfter(t.Destroy) # Call After?
         self.UpdateSizer()
         self.UpdateQuantity()
 
@@ -236,15 +236,26 @@ class SortBin(wx.ScrolledWindow):
         
     def ReceiveDrop(self, srcID, obKeys):
         # TODO: stop drops from happening on the same board they originated on 
+        
+        # Generate a closure to fix the issue, that images dragged into the own bin are deleted
+        # Add back the deleted images after deletion
+        def hack(obKeys):
+            def closure():
+                if self.classifier:
+                    self.AddObjects(obKeys, self.classifier.chMap)
+                else:
+                    self.AddObjects(obKeys)
+            return closure
+
+        closure = hack(obKeys)
         if srcID == self.GetId():
+            wx.CallAfter(closure)
             return
         self.DeselectAll()
-        if self.classifier:
-            self.AddObjects(obKeys, self.classifier.chMap)
-        else:
-            self.AddObjects(obKeys)
+        closure()
         [tile.Select() for tile in self.tiles if tile.obKey in obKeys]
         self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
+        #self.classifier.UpdateTrainingSet() # Update TrainingSet after each drop (very slow)
         return wx.DragMove
         
     def MapChannels(self, chMap):
@@ -323,7 +334,7 @@ class SortBin(wx.ScrolledWindow):
         try:
             self.parentSizer.GetStaticBox().SetLabel('%s (%d)'%(self.label,len(self.tiles)))
         except:
-            pass
+            logging.info("Error: Could not update Quantity!")
 
 
 

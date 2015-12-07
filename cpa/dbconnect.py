@@ -781,10 +781,10 @@ class DBConnect(Singleton):
         '''
         if p.db_type.lower()=='mysql':
             res = self.execute('SHOW TABLES')
-            return [t[0] for t in res]
+            return [t[0] for t in res] 
         elif p.db_type.lower()=='sqlite':
             res = self.execute('SELECT name FROM sqlite_master WHERE type="table" ORDER BY name')
-            return [t[0] for t in res]
+            return [t[0] for t in res] 
 
     def get_other_table_names(self):
         '''
@@ -958,9 +958,10 @@ class DBConnect(Singleton):
         if p.link_tables_table not in self.GetTableNames():
             return None
         res = self.execute('SELECT link FROM %s '
-                           'WHERE src="%s" AND dest="%s" ORDER BY ord'
-                           %(p.link_tables_table, table_from, table_to))
-        return [row[0] for row in res] or None
+                          'WHERE src="%s" AND dest="%s" ORDER BY ord'
+                          %(p.link_tables_table, table_from, table_to))
+
+        return [row[0] for row in res] or None 
     
     def get_linking_table_pairs(self, table_from, table_to):
         '''returns: an ordered list of table pairs that must be used to join 
