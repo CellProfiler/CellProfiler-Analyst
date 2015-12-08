@@ -193,11 +193,7 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add(self.evaluationBtn)
         self.Bind(wx.EVT_BUTTON, self.OnEvaluation, self.evaluationBtn)
         # Plot nice graphics Button
-        self.trainAllBtn = wx.Button(self.find_rules_panel, -1, 'Train All')
-        self.trainAllBtn.Disable()
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.trainAllBtn)
-        self.Bind(wx.EVT_BUTTON, self.OnTrainAll, self.trainAllBtn)
 
 
         self.find_rules_sizer.Add((5, 20))
@@ -793,21 +789,15 @@ class Classifier(wx.Frame):
         self.trainClassifierBtn.Enable()
         if hasattr(self, 'evaluationBtn'):
             self.evaluationBtn.Enable()
-            self.trainAllBtn.Enable() # added DD
-            #self.inspectBtn.Enable() # added DD
         if len(self.classBins) <= 1:
             self.trainClassifierBtn.Disable()
             if hasattr(self, 'evaluationBtn'):
                 self.evaluationBtn.Disable()
-                self.trainAllBtn.Disable() # added DD
-                #self.inspectBtn.Enable() # added DD
         for bin in self.classBins:
             if bin.empty:
                 self.trainClassifierBtn.Disable()
                 if hasattr(self, 'evaluationBtn'):
                     self.evaluationBtn.Disable()
-                    self.trainAllBtn.Disable() # added DD
-                    #self.inspectBtn.Enable() # added DD
 
     def OnFetch(self, evt):
         # Parse out the GUI input values
@@ -1247,10 +1237,6 @@ class Classifier(wx.Frame):
         plot_title = 'Learning Curves ({})'.format(model.name)
         self.PlotLearningCurve(clf, plot_title, X_train, y_train, cv=5)
 
-    # Added by DD
-    def OnTrainAll(self, evt):
-        pass
-
     from utils import delay
     # Add AutoSave by DD
     @delay(360.0) # every 5 min
@@ -1415,6 +1401,30 @@ class Classifier(wx.Frame):
                                         brightness=self.brightness, scale=self.scale,
                                         contrast=self.contrast)
         imViewer.SetClasses(classCoords)
+
+         # Show table of counts
+        nClasses = len(self.classBins)
+        title = "Hit table (Image key %s)" % (imKey)
+        title += ' (%s)' % (os.path.split(p._filename)[1])
+        grid = tableviewer.TableViewer(self, title=title)
+        labels = list(dbconnect.image_key_columns())
+        # record the column indices for the keys
+        # CONSTRUCT ARRAY OF TABLE DATA
+        classCounts = []
+        tableData = []
+        for className, obKeys in classHits.items():
+            classCounts.append(len(classCoords[className]))
+        tableData += imKey
+        tableData += [sum(classCounts)]
+        tableData += classCounts
+        key_col_indices = [i for i in range(len(labels))]
+
+        labels += ['Total %s Count' % (p.object_name[0].capitalize())]
+        for i in xrange(nClasses):
+            labels += ['%s %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
+        tableData = np.array([tableData])
+        grid.table_from_array(tableData, labels, 'Image', key_col_indices)
+        grid.Show()
 
     def ScoreImage(self, imKey):
         '''
