@@ -88,7 +88,7 @@ class DataSourcePanel(wx.Panel):
         self.Show(1)
 
     def on_select_multiple(self, evt):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         column_names = self.get_numeric_columns_from_table(tablename)
         dlg = wx.MultiChoiceDialog(self, 
                                    'Select the columns you would like to plot',
@@ -118,7 +118,7 @@ class DataSourcePanel(wx.Panel):
         self.group_choice.Enable()        
     
     def update_column_fields(self):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         fieldnames = self.get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
@@ -203,7 +203,7 @@ class DataSourcePanel(wx.Panel):
         if self.x_choice.Value == SELECT_MULTIPLE:
             cols = self.x_columns
         else:
-            cols = [self.x_choice.GetStringSelection()]
+            cols = [self.x_choice.GetString(self.x_choice.GetSelection())]
         return {'table'  : self.table_choice.Value,
                 'x-axis' : ','.join(cols),
                 'filter' : self.filter_choice.Value,

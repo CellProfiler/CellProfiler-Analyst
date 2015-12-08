@@ -116,7 +116,7 @@ class ScatterControlPanel(wx.Panel):
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
         sz.AddSpacer((3,-1))
-        sz.Add(self.x_table_choice, 1, wx.EXPAND)
+        sz.Add(self.x_table_choice, 1, wx.EXPAND) 
         sz.AddSpacer((3,-1))
         sz.Add(self.x_choice, 2, wx.EXPAND)
         sz.AddSpacer((3,-1))
@@ -162,13 +162,16 @@ class ScatterControlPanel(wx.Panel):
         
     @property
     def x_column(self):
-        print self.x_table_choice.GetStringSelection(), self.x_choice.GetStringSelection(), "!!!!"
-        return sql.Column(self.x_table_choice.GetStringSelection(), 
-                          self.x_choice.GetStringSelection())
+        x_table_choice_id = self.x_table_choice.GetSelection()
+        x_choice_id = self.x_choice.GetSelection()
+        return sql.Column(self.x_table_choice.GetString(x_table_choice_id), 
+                          self.x_choice.GetString(x_choice_id))
     @property
     def y_column(self):
-        return sql.Column(self.y_table_choice.GetStringSelection(), 
-                          self.y_choice.GetStringSelection())
+        y_table_choice_id = self.y_table_choice.GetSelection()
+        y_choice_id = self.y_choice.GetSelection()
+        return sql.Column(self.y_table_choice.GetString(y_table_choice_id), 
+                          self.y_choice.GetString(y_choice_id))
     @property
     def filter(self):
         return self.filter_choice.get_filter_or_none()
@@ -316,7 +319,8 @@ class ScatterControlPanel(wx.Panel):
              'version' : '1',
              }
         if self.gate_choice.get_gatename_or_none():
-            d['gate'] = self.gate_choice.GetStringSelection()
+            gate_choice_id = self.gate_choice.GetSelection() 
+            d['gate'] = self.gate_choice.GetString(gate_choice_id)
         return d
     
     def load_settings(self, settings):
