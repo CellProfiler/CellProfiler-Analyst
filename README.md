@@ -1,5 +1,5 @@
 ![CPA Logo](http://i.imgur.com/45Iosp1.png)
-# Cellprofiler Analyst 2.1.0 (Development)
+# CellProfiler Analyst 2.1.0 (Development)
 
 *Note: This version is heavily in development and not production-ready yet*
 
