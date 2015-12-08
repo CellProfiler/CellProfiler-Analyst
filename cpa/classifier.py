@@ -1251,7 +1251,7 @@ class Classifier(wx.Frame):
 
     from utils import delay
     # Add AutoSave by DD
-    @delay(70.0) # every 5 min
+    @delay(360.0) # every 5 min
     def AutoSave(self):
         logging.info("Autosaving ...")
         self.AutoSaveTrainingSet() # Saves only labels

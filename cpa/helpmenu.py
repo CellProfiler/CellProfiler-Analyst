@@ -15,6 +15,7 @@ def _on_about(self):
     info.SetIcon(cpa.icons.get_cpa_icon())
     info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(cpa.__version__) or 'unknown revision'))
     info.SetDescription(message)
+    info.AddDeveloper('David Dao')
     info.AddDeveloper('Adam Fraser')
     info.AddDeveloper('Thouis (Ray) Jones')
     info.AddDeveloper('Vebjorn Ljosa')

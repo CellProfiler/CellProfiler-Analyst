@@ -59,26 +59,24 @@ class FastGentleBoosting(object):
         xvalid_50 = []
 
         try:
+            n_iter = 1
             for i in range(10):
-                # JK - Start Modification
-                xvalid_50 += self.XValidate(
+                xval = self.XValidate(
                     self.classifier.trainingSet.colnames, nRules, self.classifier.trainingSet.label_matrix,
-                    self.classifier.trainingSet.values, 2, groups, progress_callback
-                )
-                # JK - End Modification
+                    self.classifier.trainingSet.values, 2, groups, progress_callback)
+                if xval is not None:
+                    xvalid_50 += xval
+                    n_iter += 1
 
                 # each round makes one "scale" size step in progress
                 base += scale
-            xvalid_50 = sum(xvalid_50) / 10.0
+            xvalid_50 = sum(xvalid_50) / float(n_iter)
 
             # only one more step
             scale = 1.0 - base
-            # JK - Start Modification
             xvalid_95 = self.XValidate(
                 self.classifier.trainingSet.colnames, nRules, self.classifier.trainingSet.label_matrix,
-                self.classifier.trainingSet.values, 20, groups, progress_callback
-            )
-            # JK - End Modification
+                self.classifier.trainingSet.values, 20, groups, progress_callback)
 
             dlg.Destroy()
             figure = plt.figure()
@@ -364,7 +362,7 @@ class FastGentleBoosting(object):
                 current_holdout = [(a or b) for a, b in zip(current_holdout, [g == to_add for g in group_labels])]
 
             if sum(current_holdout) == 0:
-                print "no holdout"
+                logging.error("no holdout")
                 break
 
             holdout_idx = np.nonzero(current_holdout)[0]
