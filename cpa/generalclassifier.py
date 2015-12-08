@@ -46,6 +46,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         labels = self.env.trainingSet.label_array
         values = self.env.trainingSet.values
         classificationReport = self.ClassificationReport(labels, self.XValidatePredict(labels, values, folds=5, stratified=True))
+        logging.info("Classification Report")
         logging.info(classificationReport)
         self.plot_classification_report(classificationReport)
 
@@ -231,6 +232,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Plots the classification report for the user
     def plot_classification_report(self, cr, title='Classification report ', with_avg_total=False, cmap=plt.cm.Greys):
+        sns.set_style("whitegrid", {'axes.grid' : False})
 
         lines = cr.split('\n')
 
@@ -251,7 +253,6 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             vAveTotal = [float(x) for x in t[1:len(aveTotal) - 1]]
             plotMat.append(vAveTotal)
 
-
         plt.imshow(plotMat, interpolation='nearest', cmap=cmap)
         plt.title(title)
         plt.colorbar()
@@ -262,6 +263,45 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         plt.tight_layout()
         plt.ylabel('Classes')
         plt.xlabel('Measures')
+        plt.show()
+
+    # Confusion Matrix
+    def plot_confusion_matrix(self, cm, title='Confusion matrix', cmap=plt.cm.Blues):
+        sns.set_style("whitegrid", {'axes.grid' : False})
+
+        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        plt.title(title)
+        plt.colorbar()
+        tick_marks = np.arange(len(self.env.trainingSet.labels))
+        plt.xticks(tick_marks, self.env.trainingSet.labels, rotation=45)
+        plt.yticks(tick_marks, self.env.trainingSet.labels)
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+
+    def ConfusionMatrix(self):
+        from sklearn.metrics import confusion_matrix
+        # Compute confusion matrix
+        folds = 5 # like classification report
+        y_pred = self.XValidatePredict(self.env.trainingSet.label_array, self.env.trainingSet.values, folds)
+        y_test = self.env.trainingSet.label_array
+
+        cm = confusion_matrix(y_test, y_pred)
+        cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+        np.set_printoptions(precision=2)
+        logging.info('Confusion matrix, without normalization')
+        logging.info(cm)
+        plt.figure()
+        self.plot_confusion_matrix(cm)
+
+        # Normalize the confusion matrix by row (i.e by the number of samples
+        # in each class)
+        logging.info('Normalized confusion matrix')
+        logging.info(cm_normalized)
+        plt.figure()
+        self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
+
         plt.show()
 
     # Get sklearn params dic

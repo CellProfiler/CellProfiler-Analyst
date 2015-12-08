@@ -1222,6 +1222,8 @@ class Classifier(wx.Frame):
             self.PlotLearningCurveWrapper()
         elif selectedText == "Precision Recall Curve":
             self.PlotPrecisionRecall()
+        elif selectedText == "Confusion Matrix":
+            self.algorithm.ConfusionMatrix()
         else:
             self.algorithm.CheckProgress()
 
