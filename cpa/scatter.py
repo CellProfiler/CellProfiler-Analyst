@@ -269,10 +269,10 @@ class ScatterControlPanel(wx.Panel):
         # plot the points
         self.figpanel.set_points(xpoints, ypoints)
         self.figpanel.set_keys(keys)
-        self.figpanel.set_x_label(self.x_column.col)
-        self.figpanel.set_y_label(self.y_column.col)
         self.figpanel.set_x_scale(self.x_scale_choice.Value)
         self.figpanel.set_y_scale(self.y_scale_choice.Value)
+        self.figpanel.set_x_label(self.x_column.col)
+        self.figpanel.set_y_label(self.y_column.col)
         self.update_gate_helper()
         self.figpanel.redraw()
         self.figpanel.draw()
@@ -923,10 +923,14 @@ class ScatterPanel(FigureCanvasWxAgg):
     
     def set_x_label(self, label):
         self.x_label = label
+        if self.x_scale == LOG_SCALE:
+            self.x_label = 'Log(%s)'%(self.x_label)
+
     
     def set_y_label(self, label):
         self.y_label = label
-    
+        if self.y_scale == LOG_SCALE:
+            self.y_label = 'Log(%s)'%(self.y_label)
         
 
 class Scatter(wx.Frame, CPATool):
