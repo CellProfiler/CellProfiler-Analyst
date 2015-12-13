@@ -104,10 +104,14 @@ class ImageTile(ImagePanel):
         choice = self.popupItemIndexById[evt.GetId()]
         if choice == 0:
             for obKey in self.bin.SelectedKeys():
+                #View full images of selected
                 imViewer = imagetools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=self.scale)
+
                 imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
+                #imViewer.imagePanel.SetPosition((-db.GetObjectCoords(obKey)[0]+imViewer.Size[0]/2, -db.GetObjectCoords(obKey)[1]+imViewer.Size[1]/2))
+
         elif choice == 1:
             self.DisplayProbs()
         elif choice == 2:

@@ -101,9 +101,10 @@ class ImageViewerPanel(ImagePanel):
                             y = y * self.scale - 6
                             dc.DrawText(clnum, x, y)
                         else:
-                            x = x * self.scale - 2
-                            y = y * self.scale - 2
                             w = h = 4
+                            x = x * self.scale - w/2
+                            y = y * self.scale - h/2
+
                             dc.SetPen(wx.Pen(color,1))
                             dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                             dc.DrawRectangle(x,y,w,h)
@@ -115,9 +116,10 @@ class ImageViewerPanel(ImagePanel):
         dc.SetPen(wx.Pen("WHITE",1))
         dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
         for (x,y) in self.selectedPoints:
-            x = x * self.scale - 3
-            y = y * self.scale - 3
             w = h = 6
+            x = x * self.scale - w/2
+            y = y * self.scale - h/2
+
             dc.BeginDrawing()
             dc.DrawRectangle(x,y,w,h)
             dc.EndDrawing()
@@ -213,6 +215,7 @@ class ImageViewer(wx.Frame):
         self.cp          = None
         self.controls    = None
         self.first_layout = True
+
         if chMap is None:
             try:
                 chMap = p.image_channel_colors
@@ -458,7 +461,8 @@ class ImageViewer(wx.Frame):
                                      min(self.maxSize[1], h*self.imagePanel.scale+55)) )
                 self.Center()
                 self.first_layout = False
-            self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)    
+            self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
+            #self.sw.SetScrollRate(1, 1)
             self.CreateChannelMenus()
             # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
             self.Bind(wx.EVT_KEY_UP, self.OnKey)
