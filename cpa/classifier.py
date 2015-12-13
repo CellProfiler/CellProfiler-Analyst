@@ -138,12 +138,14 @@ class Classifier(wx.Frame):
 
         # find rules interface
         self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30, -1))
+        # self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=['RandomForest Classifier']) # Classifier Choice
+
         self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
         self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
 
         # JEN - Start Add
-        self.openDimensReduxBtn = wx.Button(self.find_rules_panel, -1, 'Dimension Reduction')
+        # self.openDimensReduxBtn = wx.Button(self.find_rules_panel, -1, 'Dimension Reduction')
         # JEN - End Add
 
         # add sorting class
@@ -185,9 +187,11 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.nRulesTxt)
         self.find_rules_sizer.Add((5, 20))
+        #self.find_rules_sizer.Add(self.classifierChoice) #Classifier Choice
+        self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.trainClassifierBtn)
         # Cross Validation Button
-        self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Plot Evaluation')
+        self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluation')
         self.evaluationBtn.Disable()
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.evaluationBtn)
@@ -202,7 +206,7 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add(self.scoreImageBtn)
         self.find_rules_sizer.Add((5, 20))
         # JEN - Start Add
-        self.find_rules_sizer.Add(self.openDimensReduxBtn)
+        #self.find_rules_sizer.Add(self.openDimensReduxBtn)
         self.find_rules_sizer.Add((5, 20))
         # JEN - End Add
         self.find_rules_panel.SetSizerAndFit(self.find_rules_sizer)
@@ -238,7 +242,7 @@ class Classifier(wx.Frame):
         self.scoreAllBtn.Disable()
         self.scoreImageBtn.Disable()
         # JEN - Start Add
-        self.openDimensReduxBtn.Disable()
+        # self.openDimensReduxBtn.Disable()
         # JEN - End Add
         self.fetchSizer.Hide(self.fetchFromGroupSizer)
 
@@ -297,7 +301,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
         #self.Bind(wx.EVT_BUTTON, self.OnInspect, self.inspectBtn)
         # JEN - Start Add
-        self.Bind(wx.EVT_BUTTON, self.OpenDimensRedux, self.openDimensReduxBtn)
+        # self.Bind(wx.EVT_BUTTON, self.OpenDimensRedux, self.openDimensReduxBtn)
         # JEN - End Add
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfRules)
@@ -343,7 +347,7 @@ class Classifier(wx.Frame):
         button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1]))
 
     # JK - Start Add
-    def AlgorithmSelect(self, event):
+    def SelectAlgorithm(self, event):
         selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(event.GetId()).GetText())
         try:
             self.algorithm = self.algorithms[selectedItem]
@@ -371,7 +375,7 @@ class Classifier(wx.Frame):
         # Disable scoring buttons
         self.scoreAllBtn.Disable()
         self.scoreImageBtn.Disable()
-        self.openDimensReduxBtn.Disable()
+        # self.openDimensReduxBtn.Disable()
 
     # JK - End Add
 
@@ -438,8 +442,8 @@ class Classifier(wx.Frame):
                                                    help='Save your training data as CSV')
         self.fileMenu.AppendSeparator()
         # JEN - Start Add
-        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load classifier model\tCtrl+Shift+O', help='Loads a classifier model specified in a text file')
-        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save classifier model\tCtrl+Shift+S', help='Save your classifier model to file so you can use it again on this or other experiments.')
+        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load classifier model', help='Loads a classifier model specified in a text file')
+        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save classifier model', help='Save your classifier model to file so you can use it again on this or other experiments.')
         self.fileMenu.AppendSeparator()
         # JEN - End Add
         self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
@@ -522,14 +526,14 @@ class Classifier(wx.Frame):
 
 
         # Bind events for algorithms
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, rfMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, adaMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, svcMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, gbMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, lgMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, ldaMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, knnMenuItem)
-        self.Bind(wx.EVT_MENU, self.AlgorithmSelect, fgbMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, rfMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, adaMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, svcMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, gbMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, lgMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, ldaMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, knnMenuItem)
+        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, fgbMenuItem)
 
 
     def CreateChannelMenus(self):
@@ -764,7 +768,7 @@ class Classifier(wx.Frame):
             self.obClassChoice.SetSelection(0)
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
-            self.openDimensReduxBtn.Disable()
+            # self.openDimensReduxBtn.Disable()
             return
         sel = self.obClassChoice.GetSelection()
         selectableClasses = ['random'] 
@@ -997,7 +1001,7 @@ class Classifier(wx.Frame):
         except:
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
-            self.openDimensReduxBtn.Disable()
+            # self.openDimensReduxBtn.Disable()
 
             logging.error('Error loading classifier model')
             self.PostMessage('Error loading classifier model')
@@ -1653,7 +1657,7 @@ class Classifier(wx.Frame):
         grid.table_from_array(tableData, labels, group, key_col_indices)
         grid.Show()
 
-        self.openDimensReduxBtn.Enable()  # JEN - Added
+        # self.openDimensReduxBtn.Enable()  # JEN - Added
 
         self.SetStatusText('')
 

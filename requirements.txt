@@ -2,3 +2,5 @@ mock
 verlib
 python-bioformats
 pandas
+seaborn
+scikit-learn

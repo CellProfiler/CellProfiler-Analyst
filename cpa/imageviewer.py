@@ -450,6 +450,7 @@ class ImageViewer(wx.Frame):
                                                    scale=self.imagePanel.scale, 
                                                    contrast=self.imagePanel.contrast)
                 self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.cp)
+                self.cp.Collapse(collapse=False) # default open controls
             else:
                 self.controls.SetListener(self.imagePanel)
             self.Sizer.Clear()
