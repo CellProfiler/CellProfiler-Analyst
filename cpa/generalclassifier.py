@@ -18,7 +18,8 @@ import seaborn as sns
 class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, classifier = "lda.LDA()", env=None):
         self.classBins = []
-        self.classifier = eval(classifier)
+        self.__classifier__ = eval(classifier)
+        self.classifier = multiclass.OneVsRestClassifier(self.__classifier__) # determine one vs rest strategy
         self.trained = False
         self.env = env # Env is Classifier in Legacy Code -- maybe renaming ?
         self.name = self.name()
@@ -27,7 +28,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Return name
     def name(self):
-        return self.classifier.__class__.__name__
+        return self.__classifier__.__class__.__name__
 
     def CheckProgress(self):
         #import wx
@@ -306,11 +307,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Get sklearn params dic
     def get_params(self):
-        return self.classifier.get_params()
+        return self.__classifier__.get_params()
 
     # Set sklearn params 
     def set_params(self, params):
-        self.classifier.set_params(**params)
+        self.__classifier__.set_params(**params)
 
 
 

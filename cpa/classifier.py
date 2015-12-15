@@ -136,9 +136,20 @@ class Classifier(wx.Frame):
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
+
+
         # find rules interface
         self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30, -1))
-        self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=['RandomForest Classifier']) # Classifier Choice
+        algorithmChoices = ['RandomForest Classifier',
+                            'AdaBoost Classifier',
+                            'SVC',
+                            'GradientBoosting Classifier',
+                            'LogisticRegression',
+                            'LDA',
+                            'KNeighbors Classifier',
+                            'Fast Gentle Bossting']
+                            
+        self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
 
         self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
