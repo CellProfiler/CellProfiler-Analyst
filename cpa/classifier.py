@@ -138,7 +138,7 @@ class Classifier(wx.Frame):
 
         # find rules interface
         self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30, -1))
-        # self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=['RandomForest Classifier']) # Classifier Choice
+        self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=['RandomForest Classifier']) # Classifier Choice
 
         self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
@@ -187,7 +187,7 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.nRulesTxt)
         self.find_rules_sizer.Add((5, 20))
-        #self.find_rules_sizer.Add(self.classifierChoice) #Classifier Choice
+        self.find_rules_sizer.Add(self.classifierChoice) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.trainClassifierBtn)
         # Cross Validation Button

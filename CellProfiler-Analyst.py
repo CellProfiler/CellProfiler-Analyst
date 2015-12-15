@@ -446,7 +446,7 @@ class CPAnalyst(wx.App):
                 cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html',
                                       max(__version__, cpa.cpaprefs.get_skip_version()),
                                       new_version_cb,
-                                      user_agent='CPAnalyst/2.0.%s'%(__version__))
+                                      user_agent='CPAnalyst/%s'%(__version__))
         except ImportError:
             logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
 
