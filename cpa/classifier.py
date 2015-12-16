@@ -147,8 +147,8 @@ class Classifier(wx.Frame):
                             'LogisticRegression',
                             'LDA',
                             'KNeighbors Classifier',
-                            'Fast Gentle Bossting']
-                            
+                            'Fast Gentle Boosting']
+
         self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
 
         self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')

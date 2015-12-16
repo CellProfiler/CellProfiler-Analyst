@@ -215,6 +215,7 @@ class ImageViewer(wx.Frame):
         self.cp          = None
         self.controls    = None
         self.first_layout = True
+        self.inspect_release = True
 
         if chMap is None:
             try:
@@ -450,7 +451,7 @@ class ImageViewer(wx.Frame):
                                                    scale=self.imagePanel.scale, 
                                                    contrast=self.imagePanel.contrast)
                 self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.cp)
-                self.cp.Collapse(collapse=False) # default open controls
+                # self.cp.Collapse(collapse=False) # default open controls
             else:
                 self.controls.SetListener(self.imagePanel)
             self.Sizer.Clear()
@@ -465,6 +466,13 @@ class ImageViewer(wx.Frame):
             self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
             #self.sw.SetScrollRate(1, 1)
             self.CreateChannelMenus()
+
+            # Annoying: Need to bind 3 windows to KEY_DOWN in case focus changes.
+            self.Bind(wx.EVT_KEY_DOWN, self.HoldKey) 
+            self.sw.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
+            self.cp.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
+            self.imagePanel.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
+
             # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
             self.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
@@ -518,6 +526,19 @@ class ImageViewer(wx.Frame):
         self.chMap = chMap
         self.imagePanel.MapChannels(chMap)
 
+    def HoldKey(self, evt):
+        keycode = evt.GetKeyCode()
+        chIdx = keycode-49
+        if evt.CmdDown() or evt.ControlDown():
+            if keycode == ord('F'): # When holding, make it dark
+                # Check if evt before was already released
+                if(self.inspect_release):
+                    self.imagePanel.tmp_brightness = self.imagePanel.brightness
+                    self.inspect_release = False
+                self.imagePanel.SetBrightness(0)
+        else:
+            evt.Skip()
+
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
         keycode = evt.GetKeyCode()
@@ -536,6 +557,10 @@ class ImageViewer(wx.Frame):
             elif keycode == ord('L'):
                 self.imagePanel.SetContrastMode('Log')
                 self.controls.SetContrastMode('Log')
+            elif keycode == ord('F'): # Release the darkness :)
+                brightness = self.imagePanel.tmp_brightness
+                self.imagePanel.SetBrightness(brightness)
+                self.inspect_release = True # Tell the panel, F key is not pressed anymore, otherwise it is stuck in key down events.
             elif len(self.chMap) > chIdx >= 0:   
                 # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)

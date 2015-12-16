@@ -69,12 +69,20 @@ class ImageControlPanel(wx.Panel):
         scale_sizer.Add(self.scale_percent)
         sizer2.Add(brightness_sizer)
         sizer2.Add(scale_sizer)
+        text = wx.StaticText(parent, wx.NewId(), 'Hint: Hold Ctrl+F to find selected object')
+        text.SetFont(wx.Font(12, wx.ITALIC, wx.ITALIC, wx.ITALIC))
+        sizer2.Add(text)
         sizer2.Add(self.reset_btn)
+        sizer2.AddSpacer((0,10)) # Space on the bottom
+
+
         
         self.sizer3 = wx.BoxSizer(wx.VERTICAL)
         self.AddContrastControls(contrast)
         self.sizer4 = wx.BoxSizer(wx.VERTICAL)
         self.sizer3.Add(self.sizer4) # place holder for class check boxes
+        self.sizer3.AddSpacer((0,10)) # Space on the bottom
+
         if classCoords is not None:
             self.SetClasses(classCoords)
 
