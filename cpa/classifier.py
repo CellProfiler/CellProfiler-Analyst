@@ -136,8 +136,6 @@ class Classifier(wx.Frame):
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
-
-
         # find rules interface
         self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30, -1))
         algorithmChoices = ['RandomForest Classifier',
@@ -167,7 +165,6 @@ class Classifier(wx.Frame):
         self.find_rules_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetch_and_rules_sizer = wx.BoxSizer(wx.VERTICAL)
         self.classified_bins_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
 
         #### Add elements to sizers and splitters
         # fetch panel
@@ -209,7 +206,6 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnEvaluation, self.evaluationBtn)
         # Plot nice graphics Button
         self.find_rules_sizer.Add((5, 20))
-
 
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.scoreAllBtn)
@@ -305,6 +301,7 @@ class Classifier(wx.Frame):
 
         # do event binding
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
+        self.Bind(wx.EVT_CHOICE, self.OnClassifierChoice, self.classifierChoice)
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
         self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
         self.Bind(wx.EVT_BUTTON, self.OnTrainClassifier, self.trainClassifierBtn)
@@ -357,13 +354,28 @@ class Classifier(wx.Frame):
         # diagonal lines drawn on mac, so move let by height.
         button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1]))
 
-    # JK - Start Add
-    def SelectAlgorithm(self, event):
+    # When choosing the classifier in the rules panel
+    def OnClassifierChoice(self, event):
+        itemId = self.classifierChoice.GetSelection()
+        self.classifierMenu.Check(itemId + 1, True)
+        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(itemId + 1).GetText())
+        self.SelectAlgorithm(selectedItem)
+
+    def OnSelectAlgorithm(self, event):
         selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(event.GetId()).GetText())
+        self.SelectAlgorithm(selectedItem)
+
+    # JK - Start Add
+    # Parameter: selected Item is name of the selected Algorithm
+    def SelectAlgorithm(self, selectedItem):
         try:
             self.algorithm = self.algorithms[selectedItem]
             logging.info("Classifier " + selectedItem + " successfully loaded")
             self.complexityTxt.SetLabel(str(self.algorithm.ComplexityTxt())) # Set new label to # box
+
+            itemId = self.classifier2ItemId[selectedItem] # translate name to select
+            self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
+
         except:
             # Fall back to default algorithm
             logging.error('Could not load specified algorithm, falling back to RandomForestClassifier.')
@@ -537,14 +549,14 @@ class Classifier(wx.Frame):
 
 
         # Bind events for algorithms
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, rfMenuItem)
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, adaMenuItem)
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, svcMenuItem)
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, gbMenuItem)
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, lgMenuItem)
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, ldaMenuItem)
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, knnMenuItem)
-        self.Bind(wx.EVT_MENU, self.SelectAlgorithm, fgbMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, rfMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, adaMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, svcMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, gbMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, lgMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, ldaMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, knnMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, fgbMenuItem)
 
 
     def CreateChannelMenus(self):
@@ -992,6 +1004,7 @@ class Classifier(wx.Frame):
             itemId = self.classifier2ItemId[select]
             # Checks the MenuItem
             self.classifierMenu.Check(itemId, True)
+            self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
 
             # for label in self.algorithm.bin_labels:
             #     self.AddSortClass(label)
@@ -1719,7 +1732,7 @@ class Classifier(wx.Frame):
                 self.filterChoice.Select(0)
             cff.Destroy()
         self.fetch_panel.Layout()
-        self.fetch_panel.Refresh()
+        self.fetch_panel.Refresh() 
 
     def SetupFetchFromGroupSizer(self, group):
         '''

@@ -24,8 +24,8 @@ class CellProfilerAnalystMSI(distutils.core.Command):
     def run(self):
         fd = open("version.iss", "w")
         fd.write("""
-AppVerName=CellProfiler 2.0 r%d
-OutputBaseFilename=CellProfilerAnalyst_win32_r%d
+AppVerName=CellProfiler %d
+OutputBaseFilename=CellProfilerAnalyst_win32_%d
 """ % (util.version.version_number, util.version.version_number))
         fd.close()
         required_files = os.path.join("dist", "cpa.exe")
