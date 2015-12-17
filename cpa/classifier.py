@@ -148,7 +148,7 @@ class Classifier(wx.Frame):
                             'Fast Gentle Boosting']
 
         self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
-
+        self.classifierChoice.SetSelection(0) # Windows GUI otherwise doesn't select
         self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
         self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
@@ -336,9 +336,6 @@ class Classifier(wx.Frame):
                 self.LoadTrainingSet(p.training_set)
 
         self.AutoSave() # Autosave try out
-
-
- 
 
     # JEN - Start Add
     def OpenDimensRedux(self, event):

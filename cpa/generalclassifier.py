@@ -20,6 +20,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         self.classBins = []
         self.__classifier__ = eval(classifier)
         self.classifier = multiclass.OneVsRestClassifier(self.__classifier__) # determine one vs rest strategy
+        self.classifier = self.__classifier__
         self.trained = False
         self.env = env # Env is Classifier in Legacy Code -- maybe renaming ?
         self.name = self.name()
@@ -76,9 +77,10 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def LoadModel(self, model_filename):
 
         try:
-            self.classifier, self.bin_labels, self.name = joblib.load(model_filename)
+            self.__classifier__, self.bin_labels, self.name = joblib.load(model_filename)
+            self.classifier = multiclass.OneVsRestClassifier(self.__classifier__)
         except:
-            self.classifier = None
+            self.__classifier__ = None
             self.bin_labels = None
             logging.error('Model not correctly loaded')
             raise TypeError
@@ -125,7 +127,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             logging.info("Selected algorithm doesn't provide probabilities")
            
     def SaveModel(self, model_filename, bin_labels):
-        joblib.dump((self.classifier, bin_labels, self.name), model_filename, compress=9)
+        joblib.dump((self.__classifier__, bin_labels, self.name), model_filename, compress=9)
 
     def ShowModel(self):#SKLEARN TODO
         '''
@@ -267,7 +269,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         plt.show()
 
     # Confusion Matrix
-    def plot_confusion_matrix(self, cm, title='Confusion matrix', cmap=plt.cm.Blues):
+    def plot_confusion_matrix(self, cm, title='Confusion matrix', cmap=plt.cm.Greys):
         sns.set_style("whitegrid", {'axes.grid' : False})
 
         plt.imshow(cm, interpolation='nearest', cmap=cmap)
@@ -312,6 +314,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
     # Set sklearn params 
     def set_params(self, params):
         self.__classifier__.set_params(**params)
+        self.classifier = multiclass.OneVsRestClassifier(self.__classifier__)
 
 
 
