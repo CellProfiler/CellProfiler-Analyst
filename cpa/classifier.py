@@ -112,7 +112,7 @@ class Classifier(wx.Frame):
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
         self.rules_text = wx.TextCtrl(self.fetch_and_rules_panel, -1, size=(-1, -1),
                                       style=wx.TE_MULTILINE | wx.TE_READONLY)
-        self.rules_text.SetMinSize((-1, 50))
+        self.rules_text.SetMinSize((-1, 85))
         self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
 
         # sorting bins
@@ -1372,7 +1372,7 @@ class Classifier(wx.Frame):
                 self.PostMessage('Classifier trained in %.2fs.' % (time() - t1))
                 dlg.Destroy()
 
-                self.rules_text.Value = self.algorithm.ShowModel()
+                self.rules_text.SetValue(self.algorithm.ShowModel())
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
 
@@ -1855,7 +1855,7 @@ class Classifier(wx.Frame):
                     self.OnRulesEdit(evt)
                     return
                 self.keysAndCounts = None
-                self.rules_text.Value = self.algorithm.ShowModel()
+                self.rules_text.Value.SetValue(self.algorithm.ShowModel())
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:
@@ -1903,7 +1903,7 @@ class Classifier(wx.Frame):
                     self.OnParamsEdit(evt)
                     return
                 self.keysAndCounts = None
-                self.rules_text.Value = self.algorithm.ShowModel()
+                self.rules_text.SetValue(self.algorithm.ShowModel())
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:

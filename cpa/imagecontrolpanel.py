@@ -69,8 +69,7 @@ class ImageControlPanel(wx.Panel):
         scale_sizer.Add(self.scale_percent)
         sizer2.Add(brightness_sizer)
         sizer2.Add(scale_sizer)
-        text = wx.StaticText(parent, wx.NewId(), 'Hint: Hold Ctrl+F (Cmd+F) to find selected object')
-        text.SetFont(wx.Font(12, wx.ITALIC, wx.ITALIC, wx.ITALIC))
+        text = wx.StaticText(parent, wx.NewId(), 'Find Selected: Hold Ctrl+F/Cmd+F')
         sizer2.Add(text)
         sizer2.Add(self.reset_btn)
         sizer2.AddSpacer((0,10)) # Space on the bottom

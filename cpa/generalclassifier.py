@@ -18,9 +18,7 @@ import seaborn as sns
 class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, classifier = "lda.LDA()", env=None):
         self.classBins = []
-        self.__classifier__ = eval(classifier)
-        self.classifier = multiclass.OneVsRestClassifier(self.__classifier__) # determine one vs rest strategy
-        self.classifier = self.__classifier__
+        self.classifier = eval(classifier)
         self.trained = False
         self.env = env # Env is Classifier in Legacy Code -- maybe renaming ?
         self.name = self.name()
@@ -29,7 +27,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Return name
     def name(self):
-        return self.__classifier__.__class__.__name__
+        return self.classifier.__class__.__name__
 
     def CheckProgress(self):
         #import wx
@@ -77,10 +75,9 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def LoadModel(self, model_filename):
 
         try:
-            self.__classifier__, self.bin_labels, self.name = joblib.load(model_filename)
-            self.classifier = multiclass.OneVsRestClassifier(self.__classifier__)
+            self.classifier, self.bin_labels, self.name = joblib.load(model_filename)
         except:
-            self.__classifier__ = None
+            self.classifier = None
             self.bin_labels = None
             logging.error('Model not correctly loaded')
             raise TypeError
@@ -127,7 +124,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             logging.info("Selected algorithm doesn't provide probabilities")
            
     def SaveModel(self, model_filename, bin_labels):
-        joblib.dump((self.__classifier__, bin_labels, self.name), model_filename, compress=9)
+        joblib.dump((self.classifier, bin_labels, self.name), model_filename, compress=9)
 
     def ShowModel(self):#SKLEARN TODO
         '''
@@ -138,6 +135,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
                 colnames = self.env.trainingSet.colnames
                 importances = self.classifier.feature_importances_
                 indices = np.argsort(importances)[::-1]
+                print self.classifier
                 return "\n".join([str(colnames[indices[f]]) for f in range(self.env.nRules)])
             except:
                 return ''
@@ -309,13 +307,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Get sklearn params dic
     def get_params(self):
-        return self.__classifier__.get_params()
+        return self.classifier.get_params()
 
     # Set sklearn params 
     def set_params(self, params):
-        self.__classifier__.set_params(**params)
-        self.classifier = multiclass.OneVsRestClassifier(self.__classifier__)
-
+        self.classifier.set_params(**params)
 
 
 if __name__ == '__main__':
