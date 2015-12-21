@@ -339,23 +339,30 @@ class MainGUI(wx.Frame):
         # Classifier needs to be told to close so it can clean up it's threads
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier and classifier.Close() == False:
+            print "Classifier False"
             return
+        else:
+            print "Classifier TRUE"
         if any(wx.GetApp().get_plots()):
             dlg = wx.MessageDialog(self, 'Some tools are open, are you sure you want to quit CPA?', 'Quit CellProfiler Analyst?', wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response != wx.ID_YES:
                 return
+
         try:
+            logging.debug("Shutting of Java VM")
             import javabridge
             javabridge.kill_vm()
         except:
-            print "Failed to kill the Java VM"
+            logging.debug("Failed to kill the Java VM")
+
         # Blow up EVVVVERYTHIIINGGG!!! Muahahahahhahahah!
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
             win.Destroy()
         if self.tbicon is not None:
             self.tbicon.Destroy()
+        
         self.Destroy()
 
     def on_idle(self, evt=None):
@@ -436,7 +443,6 @@ class CPAnalyst(wx.App):
         # removes the log4j warnings
         from bioformats import log4j
         log4j.basic_config()
-
         javabridge.attach()
         javabridge.activate_awt()
 
@@ -523,4 +529,4 @@ if __name__ == "__main__":
        sys.excepthook = show_exception_as_dialog
 
     app.MainLoop()
-#    os._exit(0)
+    os._exit(0) # Enforces Exit, see issue #101

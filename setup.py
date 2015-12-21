@@ -42,4 +42,3 @@ setup(
 #     a = "CellProfiler\\ Analyst" 
 #     call('find dist/{a}.app -name tests -type d | xargs rm -rf'.format(a=a), shell=True)
 #     call('lipo dist/{a}.app/Contents/MacOS/{a} -thin i386 -output dist/{a}.app/Contents/MacOS/{a}'.format(a=a), shell=True)
-
