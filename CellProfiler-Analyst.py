@@ -339,10 +339,8 @@ class MainGUI(wx.Frame):
         # Classifier needs to be told to close so it can clean up it's threads
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier and classifier.Close() == False:
-            print "Classifier False"
             return
-        else:
-            print "Classifier TRUE"
+            
         if any(wx.GetApp().get_plots()):
             dlg = wx.MessageDialog(self, 'Some tools are open, are you sure you want to quit CPA?', 'Quit CellProfiler Analyst?', wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
             response = dlg.ShowModal()

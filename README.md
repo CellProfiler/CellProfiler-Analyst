@@ -1,11 +1,9 @@
 ![CPA Logo](http://i.imgur.com/45Iosp1.png)
 # CellProfiler Analyst 2.1.0 (Development)
 
-[![GitHub tag](https://img.shields.io/github/tag/CellProfiler/CellProfiler-Analyst.svg?style=flat-square)]()
-[![GitHub license](https://img.shields.io/github/license/CellProfiler/CellProfiler-Analyst.svg?style=flat-square)]()
-[![GitHub issues](https://img.shields.io/github/issues/CellProfiler/CellProfiler-Analyst.svg?style=flat-square)]()
-
 *Note: This version is heavily under development and not production-ready yet*
+
+You can download and test out the new build version for mac os [here] (https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4Wm8tdVZQMkd4V3c/view?usp=sharing) (only available for Broadies)
 
 Authors: Adam Fraser, Thouis R. Jones, David Dao, Jane Hung
 
@@ -17,6 +15,17 @@ Copyright 2015, The Broad Institute of MIT and Harvard.
 
 Distributed under the GPLv2.
 
+## Requirements
+
+Builds upon CellProfiler dependencies
+
+* Pandas
+* Seaborn
+* Scikit-learn
+* Javabridge
+* Verlib
+* Python-bioformats
+
 ## About CellProfiler Analyst
 
 ![Workflow](http://i.imgur.com/j12EQH5.png)
@@ -25,7 +34,6 @@ CellProfiler Analyst allows interactive exploration and analysis of data, partic
 
 ## Current Development
 
-* Fixing color issues and bugs due to changes in wxPython Library
 * Restoring visualization functionalities
 * Cleaning up files
 * Improving Evaluation for Classifier
