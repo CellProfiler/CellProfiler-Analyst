@@ -6,6 +6,8 @@ See the accompanying file LICENSE for details.
 
 Copyright (c) 2003-2009 Massachusetts Institute of Technology
 Copyright (c) 2009-2011 Broad Institute
+Copyright (c) 2015 Broad Institute
+
 All rights reserved.
 
 Please see the AUTHORS file for credits.
@@ -19,6 +21,8 @@ import os.path
 import verlib
 
 _cached_description = None
+
+_semantic_version = '2.1.0' # New semantic version system
 
 def _get_description():
     """Get description from git or file system.
@@ -73,40 +77,51 @@ def _parse_description(description):
 def _get_parsed():
     return _parse_description(_get_description())
 
+# def get_display_version(_description=_get_description()):
+#     tag, additional, commit = _parse_description(_description)
+#     version = get_normalized_version()
+#     return '%s (rev. %s)' % (version, commit)
+
+# def get_normalized_version(_description=_get_description()):
+#     """Return the normalized version or None.
+
+#     Normalized versions are defined by PEP 386, and are what should go
+#     in the module's __version__ variable.
+
+#     """
+#     if _description is None:
+#         return None
+#     tag, additional, commit = _parse_description(_description)
+#     if additional == '0':
+#         s = tag
+#     else:
+#         s = tag + '.post' + additional
+#     return verlib.suggest_normalized_version(s)
+
+# def get_bundle_version(_description=_get_description()):
+#     """Get the MacOS X bundle version.
+
+#     The MacOS X bundle version is always three integers separated by
+#     dots. If our version does not match that (e.g., because we have
+#     additional commits past a tag), return "0.0.0".
+
+#     """
+#     if _description is None:
+#         return '0.0.0'
+#     tag, additional, commit = _parse_description(_description)
+#     if additional == '0' and re.match('\d+\.\d+\.\d+$', tag):
+#         return tag
+#     else:
+#         return '0.0.0'
+
 def get_display_version(_description=_get_description()):
-    tag, additional, commit = _parse_description(_description)
-    version = get_normalized_version()
-    return '%s (rev. %s)' % (version, commit)
+    return _semantic_version
 
 def get_normalized_version(_description=_get_description()):
-    """Return the normalized version or None.
-
-    Normalized versions are defined by PEP 386, and are what should go
-    in the module's __version__ variable.
-
-    """
-    if _description is None:
-        return None
-    tag, additional, commit = _parse_description(_description)
-    if additional == '0':
-        s = tag
-    else:
-        s = tag + '.post' + additional
-    return verlib.suggest_normalized_version(s)
+    return _semantic_version
 
 def get_bundle_version(_description=_get_description()):
-    """Get the MacOS X bundle version.
-
-    The MacOS X bundle version is always three integers separated by
-    dots. If our version does not match that (e.g., because we have
-    additional commits past a tag), return "0.0.0".
-
-    """
-    tag, additional, commit = _parse_description(_description)
-    if additional == '0' and re.match('\d+\.\d+\.\d+$', tag):
-        return tag
-    else:
-        return '0.0.0'
+    return _semantic_version
 
 def get_commit(_description=_get_description()):
     tag, additional, commit = _parse_description(_description)

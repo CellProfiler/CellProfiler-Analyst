@@ -1,9 +1,15 @@
-import numpy
+
+import numpy as np
 import sys
+
+sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/cpa');
+sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/')
+
 import cpa.sqltools
-from dbconnect import *
+from dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_key_columns, GetWhereClauseForImages, GetWhereClauseForObjects, object_key_defs
 from properties import Properties
 from datamodel import DataModel
+from sklearn.ensemble import AdaBoostClassifier
 
 db = DBConnect.getInstance()
 p = Properties.getInstance()
@@ -14,112 +20,134 @@ temp_score_table = "_scores"
 temp_class_table = "_class"
 filter_table_prefix = '_filter_'
 
-def translate(weaklearners):
+def create_perobject_class_table(classifier, classNames):
     '''
-    Translate weak leaners into a classifier() expression
-    (or something more complicated in the future).
+    classifier: generalclassifier object
+    classNames: list/array of class names
+    RETURNS: Saves table with columns Table Number, Image Number, Object Number, class number, class name to a pre defined
+    table in the database (the class number is the predicted class)
     '''
-    num_features = len(weaklearners)
-    nClasses = len(weaklearners[0][2])
-
-    has_classifier_function = False
-    if p.db_type.lower() == 'sqlite':
-        thresholds = numpy.array([wl[1] for wl in weaklearners])
-        a = numpy.array([wl[2] for wl in weaklearners])
-        b = numpy.array([wl[3] for wl in weaklearners])
-        db.setup_sqlite_classifier(thresholds, a, b)
-        return "classifier(%s)"%(",".join([wl[0] for wl in weaklearners]))
-    
-    if p.db_type.lower() == 'mysql':
-        # MySQL
-        try:
-            res = db.execute("SELECT * from mysql.func where name='classifier'")
-            has_classifier_function = len(res) > 0
-        except:
-            has_classifier_function = False
-        if has_classifier_function:
-            num_stumps = len(weaklearners)
-            featurenames = "1," + ",".join([wl[0] for wl in weaklearners])
-            thresholds = "0,"+",".join([str(wl[1]) for wl in weaklearners])
-            base = [sum([wl[3][k] for wl in weaklearners]) for k in range(nClasses)]
-            weights = ",".join([",".join([str(base[k])] + [str(wl[2][k]-wl[3][k]) for wl in weaklearners]) for k in range(nClasses)])
-            return "(classifier(%d, %s, %s, %s)+1)"%(num_stumps + 1, featurenames, thresholds, weights)
-        else:
-            class_scores = ['+'.join(['IF(`%s` > %f, %f, %f)'%(feature, threshold, a[i], b[i]) for (feature, threshold, a, b, ignore) in weaklearners]) for i in range(nClasses)]
-            return "CASE GREATEST(%s) %s END"%(",".join(class_scores), "\n".join(["WHEN %s THEN %d"%(score, idx+1) for idx, score in enumerate(class_scores)]))
-    
-
-def FilterObjectsFromClassN(clNum, weaklearners, filterKeys):
-    '''
-    clNum: 1-based index of the class to retrieve obKeys from
-    weaklearners: Weak learners from fastgentleboostingmulticlass.train
-    filterKeys: (optional) A specific list of imKeys OR obKeys (NOT BOTH)
-        to classify.
-        * WARNING: If this list is too long, you may exceed the size limit to
-          MySQL queries. 
-        * Useful when fetching N objects from a particular class. Use the
-          DataModel to get batches of random objects, and sift through them
-          here until N objects of the desired class have been accumulated.
-        * Also useful for classifying a specific image or group of images.
-    RETURNS: A list of object keys that fall in the specified class,
-        if Properties.area_scoring_column is specified, area sums are also
-        reported for each class
-    '''
-
-    class_query = translate(weaklearners)
-
-    if filterKeys != []:
-        if isinstance(filterKeys, str):
-            whereclause = filterKeys + " AND"
-        else:
-            isImKey = len(filterKeys[0]) == len(image_key_columns())
-            if isImKey:
-                whereclause = GetWhereClauseForImages(filterKeys) + " AND"
-            else:
-                whereclause = GetWhereClauseForObjects(filterKeys) + " AND"
-    else:
-        whereclause = ""
-
-    return db.execute('SELECT '+UniqueObjectClause()+' FROM %s WHERE %s %s=%d '%(p.object_table, whereclause, class_query, clNum))
-
-
-def object_scores(weaklearners):
-    stump_stmnts, score_stmnts, find_max_query, _, _ = \
-                  translate(weaklearners)
-    db.execute('DROP TABLE IF EXISTS _stump')
-    db.execute('DROP TABLE IF EXISTS _scores')
-    [db.execute(stump_query) for stump_query in stump_stmnts] 
-    [db.execute(score_query) for score_query in score_stmnts]
-    col_names = db.GetColumnNames('_scores')
-    col_types = db.GetColumnTypes('_scores')
-    type_mapping = { long: 'i4', float: 'f8' }
-    dtype = numpy.dtype([(name, type_mapping[type])
-                         for name, type in zip(col_names, col_types)])
-    res = db.execute('SELECT * from _scores')
-    return numpy.array(map(tuple, res), dtype)
-
-
-def create_perobject_class_table(classnames, rules):
-    ''' Saves object keys and classes to a text file '''
-    nClasses = len(classnames)
+    nClasses = len(classNames)
 
     if p.class_table is None:
         raise ValueError('"class_table" in properties file is not set.')
 
     index_cols = UniqueObjectClause()
-    class_cols = UniqueObjectClause() + ', class, class_number'
-    class_col_defs = object_key_defs() + ', class VARCHAR (%d)'%(max([len(c) for c in classnames])+1) + ', class_number INT'
-    
-    
+    class_cols = UniqueObjectClause() + ', class_number, class'
+    class_col_defs = object_key_defs() + ', class VARCHAR (%d)'%(3) + ', class_number INT'
+
+
     # Drop must be explicitly asked for Classifier.ScoreAll
+    print('Drop table...')
     db.execute('DROP TABLE IF EXISTS %s'%(p.class_table))
+    print('Create table...')
     db.execute('CREATE TABLE %s (%s)'%(p.class_table, class_col_defs))
+    print('Create index...')
     db.execute('CREATE INDEX idx_%s ON %s (%s)'%(p.class_table, p.class_table, index_cols))
-        
-    case_expr = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, classnames[n]) for n in range(nClasses)]) + " END"
-    case_expr2 = 'CASE %s'%(translate(rules)) + ''.join([" WHEN %d THEN '%s'"%(n+1, n+1) for n in range(nClasses)]) + " END"
-    db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, case_expr, case_expr2, p.object_table))
+
+    print('Getting data...')
+    number_of_features = len(db.GetColnamesForClassifier())
+    wheres = _where_clauses(p, dm, None)
+    data = []
+    for idx, where_clause in enumerate(wheres):
+        data = db.execute('SELECT %s, %s FROM %s '
+                          '%s WHERE %s'
+                          %(UniqueObjectClause(p.object_table),
+                            ",".join(db.GetColnamesForClassifier()), p.object_table,'', where_clause),
+                          silent=(idx > 10))
+        #data.extend(result)
+    #print('Getting predictions...')
+        cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
+        object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+        predicted_classes = classifier.Predict(cell_data)
+
+    #print('Writing to database...')
+        expr = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
+            object_keys[ii][0], object_keys[ii][1], object_keys[ii][2], predicted_classes[ii] )
+            for ii in range(0, len(predicted_classes))])+ " END"
+        expr2 = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
+            object_keys[ii][0], object_keys[ii][1], object_keys[ii][2],
+            classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
+        db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
+            silent=True)
+        print(idx)
     db.Commit()
+
+
+
+def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
+    '''
+    uncertain: allows to search for uncertain (regarding the probs assigned by the classifier) cell images
+    classNum: 1-based index of the class to retrieve obKeys from
+    classifier: trained classifier object
+    filterKeys: (optional) A list of specific imKeys OR obKeys (NOT BOTH)
+        to classify.
+        * WARNING: If this list is too long, you may exceed the size limit to
+          MySQL queries.
+        * Useful when fetching N objects from a particular class. Use the
+          DataModel to get batches of random objects, and sift through them
+          here until N objects of the desired class have been accumulated.
+        * Also useful for classifying a specific image or group of images.
+    RETURNS: A list of object keys that fall in the specified class (but not all objects?),
+        if Properties.area_scoring_column is specified, area sums are also
+        reported for each class
+    '''
+
+    if filterKeys != [] and filterKeys is not None:
+
+        if isinstance(filterKeys, str):
+            whereclause = filterKeys #+ " AND"
+        else:
+            isImKey = len(filterKeys[0]) == len(image_key_columns())
+            if isImKey:
+                whereclause = GetWhereClauseForImages(filterKeys) #+ " AND"
+            else:
+                whereclause = GetWhereClauseForObjects(filterKeys) #+ " AND"
+    else:
+        whereclause = ""
+
+    if p.area_scoring_column:
+        data = db.execute('SELECT %s, %s FROM %s WHERE %s'%(UniqueObjectClause(p.object_table),
+        ",".join(db.GetColnamesForClassifier()),
+        _objectify(p, p.area_scoring_column), p.object_table, whereclause))
+        area_score = data[-1] #separate area from data
+        data = data[:-1]
+    else:
+        data = db.execute('SELECT %s, %s FROM %s WHERE %s'%(UniqueObjectClause(p.object_table),
+        ",".join(db.GetColnamesForClassifier()), p.object_table, whereclause))
+
+    number_of_features = len(db.GetColnamesForClassifier())
+
+    cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
+    object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+    cell_data, object_keys = CleanData(cell_data, object_keys)
+
+    res = [] # list
+    if uncertain:
+        # Our requirement: if the two largest scores are smaller than threshold
+        probabilities = classifier.PredictProba(cell_data) #
+        threshold = 0.1 # TODO: This threshold should be adjustable
+        sorted_p = np.sort(probabilities)[:,-2:]# sorted array
+        diff = sorted_p[:,1] - sorted_p[:,0]
+
+        indices = np.where(diff < threshold)[0] # get all indices where this is true
+        res = [object_keys[i] for i in indices] 
+    else:
+        predicted_classes = classifier.Predict(cell_data)
+        res = object_keys[predicted_classes == classNum * np.ones(predicted_classes.shape)].tolist() #convert to list 
+    return map(tuple,res) # ... and then to tuples
+
+def CleanData(dataValues, dataKeys):
+    #remove Null and None values
+    remove_index = []
+    for i in np.arange(len(dataValues)):
+        if "Null" in dataValues[i].tolist():
+            remove_index.append(i)
+        elif None in dataValues[i].tolist():
+            remove_index.append(i)
+    dataValues_truncated = np.delete(dataValues, remove_index, axis=0)
+    dataKeys_truncated = np.delete(dataKeys, remove_index, axis=0)
+    return dataValues_truncated, dataKeys_truncated
 
 def _objectify(p, field):
     return "%s.%s"%(p.object_table, field)
@@ -135,43 +163,45 @@ def _where_clauses(p, dm, filter_name):
     if p.table_id:
         # split each table independently
         def splitter():
-            yield "(%s = %d) AND (%s <= %d)"%(_objectify(p, p.table_id), key_thresholds[0][0], 
+            yield "(%s = %d) AND (%s <= %d)"%(_objectify(p, p.table_id), key_thresholds[0][0],
                                               _objectify(p, p.image_id), key_thresholds[0][1])
             for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:]):
                 if lo[0] == hi[0]:
                     # block within one table
-                    yield "(%s = %d) AND (%s > %d) AND (%s <= %d)"%(_objectify(p, p.table_id), lo[0], 
-                                                                    _objectify(p, p.image_id), lo[1], 
+                    yield "(%s = %d) AND (%s > %d) AND (%s <= %d)"%(_objectify(p, p.table_id), lo[0],
+                                                                    _objectify(p, p.image_id), lo[1],
                                                                     _objectify(p, p.image_id), hi[1])
                 else:
                     # query spans a table boundary
-                    yield "(%s >= %d) AND (%s > %d)"%(_objectify(p, p.table_id), lo[0], 
+                    yield "(%s >= %d) AND (%s > %d)"%(_objectify(p, p.table_id), lo[0],
                                                      _objectify(p, p.image_id), lo[1])
-                    yield "(%s <= %d) AND (%s <= %d)"%(_objectify(p, p.table_id), hi[0], 
+                    yield "(%s <= %d) AND (%s <= %d)"%(_objectify(p, p.table_id), hi[0],
                                                       _objectify(p, p.image_id), hi[1])
         return list(splitter())
     else:
-        return (["(%s <= %d)"%(_objectify(p, p.image_id), key_thresholds[0][0])] + 
+        return (["(%s <= %d)"%(_objectify(p, p.image_id), key_thresholds[0][0])] +
                 ["(%s > %d) AND (%s <= %d)"
                  %(_objectify(p, p.image_id), lo[0], _objectify(p, p.image_id), hi[0])
                  for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
-    
-def PerImageCounts(weaklearners, filter_name=None, cb=None):
+
+def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
     '''
-    weaklearners: Weak learners from fastgentleboostingmulticlass.train
+    classifier: trained classifier object
     filter: name of filter, or None.
     cb: callback function to update with the fraction complete
     RETURNS: A list of lists of imKeys and respective object counts for each class:
         Note that the imKeys are exploded so each row is of the form:
         [TableNumber, ImageNumber, Class1_ObjectCount, Class2_ObjectCount,...]
-        where TableNumber is only present if table_id is defined in Properties. 
+        where TableNumber is only present if table_id is defined in Properties.
         If p.area_scoring_column is set, then area scores will be appended to
         the object scores.
     '''
 
     # I'm pretty sure this would be even faster if we were to run two
     # or more parallel threads and split the work between them.
-    def do_by_steps(class_query, tables, filter_name, result_clauses):
+    # For each image clause, classify the cells using the model
+    # then for each image key, count the number in each class (and maybe area)
+    def do_by_steps(tables, filter_name, area_score=False):
         filter_clause = '1 = 1'
         join_clause = ''
         if filter_name is not None:
@@ -186,49 +216,61 @@ def PerImageCounts(weaklearners, filter_name=None, cb=None):
                     filter_clause = str(filter)
             if join_table:
                 join_clause = 'JOIN %s USING (%s)' % (join_table, ','.join(image_key_columns()))
-        if cb:
-            result =  []
-            wheres = _where_clauses(p, dm, filter_name)
-            num_clauses = len(wheres)
-            
-            for idx, where_clause in enumerate(wheres):
-                if filter_clause is not None:
-                    where_clause += ' AND ' + filter_clause
-                result += [db.execute('SELECT %s, %s as class, %s FROM %s '
-                                      '%s WHERE %s GROUP BY %s, class'
-                                      %(UniqueImageClause(p.object_table), 
-                                        class_query, result_clauses, tables, 
-                                        join_clause, where_clause, 
-                                        UniqueImageClause(p.object_table)),
-                                      silent=(idx > 10))]
-                cb(min(1, idx/float(num_clauses)))
-            return sum(result, [])
-        else:
-            return db.execute('SELECT %s, %s as class, %s FROM %s %s WHERE %s GROUP BY %s, class'%
-                              (imkeys, class_query, result_clauses, tables, join_clause, filter_clause, imkeys))
-    
-    if p.area_scoring_column is None:
-        result_clauses = 'COUNT(*)'
-    else:
-        result_clauses = 'COUNT(*), SUM(%s)'%(_objectify(p, p.area_scoring_column))
 
-    class_query = translate(weaklearners)
-    results = do_by_steps(class_query, p.object_table, filter_name, result_clauses)
+        wheres = _where_clauses(p, dm, filter_name)
+        num_clauses = len(wheres)
+        counts = {}
 
-    # convert to dictionary
-    counts = {}
-    keylen = 1 + len(image_key_columns()) # includes class
+        # iterate over where clauses to go through whole set
+        for idx, where_clause in enumerate(wheres):
+            if filter_clause is not None:
+                where_clause += ' AND ' + filter_clause
+            if area_score:
+                data = db.execute('SELECT %s, %s, %s FROM %s '
+                                  '%s WHERE %s'
+                                  %(UniqueImageClause(p.object_table),
+                                    ",".join(db.GetColnamesForClassifier()),
+                                    _objectify(p, p.area_scoring_column), tables,
+                                    join_clause, where_clause),
+                                  silent=(idx > 10))
+                area_score = data[-1] #separate area from data
+                data = data[:-1]
+            else:
+                data = db.execute('SELECT %s, %s FROM %s '
+                                  '%s WHERE %s'
+                                  %(UniqueImageClause(p.object_table),
+                                    ",".join(db.GetColnamesForClassifier()), tables,
+                                    join_clause, where_clause),
+                                  silent=(idx > 10))
 
-    for r in results:
-        counts[r[:keylen]] = r[keylen:]
+            number_of_features = len(db.GetColnamesForClassifier())
 
-    num_classes = len(weaklearners[0][2])
-    # this is clearer than the one-line version
+            cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
+            image_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+
+            cell_data, image_keys = CleanData(cell_data, image_keys)
+            predicted_classes = classifier.Predict(cell_data)
+            for i in range(0, len(predicted_classes)):
+                row_cls = tuple(np.append(image_keys[i], predicted_classes[i]))
+                oneCount = np.array([1])
+                if area_score:
+                    oneCount = np.append(oneCount, area_score[i])
+                if row_cls in counts:
+                    counts[row_cls] += oneCount
+                else:
+                    counts[row_cls] = oneCount
+
+            if cb:
+                cb(min(1, idx/float(num_clauses))) #progress
+        return counts
+
+    counts = do_by_steps(p.object_table, filter_name, p.area_scoring_column)
+
     def get_count(im_key, classnum):
-        return counts.get(tuple(list(im_key) + [classnum]), [0])[0]
+        return counts.get(im_key + (classnum, ), np.array([0]))[0]
 
     def get_area(im_key, classnum):
-        return counts.get(tuple(list(im_key) + [classnum]), [0, 0])[1]
+        return counts.get(im_key + (classnum, ), np.array([0, 0]))[1]
 
     def get_results():
         for imkey in dm.GetImageKeysAndObjectCounts(filter_name):
@@ -241,56 +283,49 @@ def PerImageCounts(weaklearners, filter_name=None, cb=None):
 
 
 if __name__ == "__main__":
-#    dir = "/Users/ljosa/research/modifier/piyush"
-#    p.LoadFile("%s/batch1and2.properties"%(dir,))
-#    import cPickle as pickle
-#    f = open("%s/batch1and2.boostingclassifier"%(dir,))
-#    learners = pickle.load(f)
-#    f.close()
-#
-#    keys_and_counts = PerImageCounts(learners, filter='HRG')
-#    import numpy
-#    keys_and_counts = numpy.array(keys_and_counts, dtype='i4')
-#    print keys_and_counts[0,:]
-#    print sum(keys_and_counts[:,-2:])
-
     from trainingset import TrainingSet
     from StringIO import StringIO
-    import fastgentleboostingmulticlass
+    import generalclassifier
     from datatable import DataGrid
     import wx
     p = Properties.getInstance()
     db = DBConnect.getInstance()
     dm = DataModel.getInstance()
-    
-#    props = '/Volumes/imaging_analysis/2007_10_19_Gilliland_LeukemiaScreens/Screen3_1Apr09_run3/2007_10_19_Gilliland_LeukemiaScreens_Validation_v2_AllBatches_DuplicatesFiltered_FullBarcode_testSinglePlate.properties'
-#    ts = '/Volumes/imaging_analysis/2007_10_19_Gilliland_LeukemiaScreens/Screen3_1Apr09_run3/trainingvalidation3b.txt'
-    props = '../Properties/nirht_area_test.properties'
-    ts = '/Users/afraser/Desktop/MyTrainingSet3.txt'
+
+    props = '/vagrant/az-dnaonly.properties'
+    ts = '/vagrant/Anne_DNA_66.txt'
     nRules = 5
-    filter = 'MAPs'
-#    props = '/Users/afraser/Desktop/2007_10_19_Gilliland_LeukemiaScreens_Validation_v2_AllBatches_DuplicatesFiltered_FullBarcode.properties'
-#    ts = '/Users/afraser/Desktop/trainingvalidation3d.txt'
-#    nRules = 50
-#    filter = 'afraser_test'
-    
+    filter = None
+
+    classifier = AdaBoostClassifier(n_estimators=nRules)
+    GC = generalclassifier.GeneralClassifier(classifier)
+
     p.LoadFile(props)
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
+    print trainingSet.label_matrix.shape
+    print trainingSet.labels
+    print len(trainingSet.colnames)
+    print trainingSet.values.shape
     output = StringIO()
     print 'Training classifier with '+str(nRules)+' rules...'
-    weaklearners = fastgentleboostingmulticlass.train(trainingSet.colnames,
-                                                      nRules, trainingSet.label_matrix, 
-                                                      trainingSet.values, output)
-    table = PerImageCounts(weaklearners, filter_name=filter)
-    table.sort()
 
+    labels = np.nonzero(trainingSet.label_matrix+1)[1] + 1 #base 1 classes
+    print len(labels)
+    GC.Train(labels,trainingSet.values)
+    num_classes = trainingSet.label_matrix.shape[1]
+
+    '''
+    table = PerImageCounts(GC.classifier, num_classes, filter_name=filter)
+    table.sort()
     labels = ['table', 'image'] + list(trainingSet.labels) + list(trainingSet.labels)
-    print labels
     for row in table:
-        print row
-#    app = wx.PySimpleApp()
-#    grid = DataGrid(numpy.array(table), labels, key_col_indices=[0,1])
-#    grid.Show()
-#    app.MainLoop()
-    
+        print row'''
+
+    #obkey_list = FilterObjectsFromClassN(2, GC, filterKeys=None)
+    #for row in obkey_list:
+    #    print row
+    #object_scores()
+    p.class_table = 'testmulticlassql'
+    create_perobject_class_table(GC, range(num_classes))
+    #_objectify()

@@ -112,14 +112,14 @@ class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
-        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 (r%s)'%(__version__), **kwargs)
-
+        #wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.1.0 (r%s)'%(__version__), **kwargs)
+        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.1.0', **kwargs)
         self.properties = properties
         self.SetIcon(get_cpa_icon())
         if not sys.platform.startswith('win'):
             # this is good for Mac, but on windows creates a (currently) unused icon in the system tray
             self.tbicon = wx.TaskBarIcon()
-            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
+            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.1.0')
         else:
             self.tbicon = None
         self.SetName('CPA')
@@ -191,9 +191,9 @@ class MainGUI(wx.Frame):
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-        self.console.SetBackgroundColour('#111111')
+        self.console.SetBackgroundColour('#FFFFFF')
 
-        self.console.SetForegroundColour('#DDDDDD')
+        self.console.SetForegroundColour('#000000')
         log_level = logging.DEBUG
         self.logr = logging.getLogger()
         self.set_log_level(log_level)
@@ -339,23 +339,30 @@ class MainGUI(wx.Frame):
         # Classifier needs to be told to close so it can clean up it's threads
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier and classifier.Close() == False:
+            print "Classifier False"
             return
+        else:
+            print "Classifier TRUE"
         if any(wx.GetApp().get_plots()):
             dlg = wx.MessageDialog(self, 'Some tools are open, are you sure you want to quit CPA?', 'Quit CellProfiler Analyst?', wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response != wx.ID_YES:
                 return
+
         try:
+            logging.debug("Shutting of Java VM")
             import javabridge
             javabridge.kill_vm()
         except:
-            print "Failed to kill the Java VM"
+            logging.debug("Failed to kill the Java VM")
+
         # Blow up EVVVVERYTHIIINGGG!!! Muahahahahhahahah!
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
             win.Destroy()
         if self.tbicon is not None:
             self.tbicon.Destroy()
+        
         self.Destroy()
 
     def on_idle(self, evt=None):
@@ -377,7 +384,7 @@ def new_version_cb(new_version, new_version_info):
         try: wx.GetApp().splash.Destroy()
         except: pass
 
-        import cellprofiler.gui.newversiondialog as nvd
+        import cpa.gui.newversiondialog as nvd
         dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
                                    new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
                                    cpa.cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
@@ -389,7 +396,7 @@ class CPAnalyst(wx.App):
     '''The CPAnalyst application.
     This launches the main UI, and keeps track of the session.
     '''
-    def OnInit(self):
+    def Start(self):
         '''Initialize CPA
         '''
 
@@ -418,6 +425,7 @@ class CPAnalyst(wx.App):
             if not show_load_dialog():
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
+
         self.frame = MainGUI(p, None, size=(860,-1))
         self.frame.Show(True)
         db = cpa.dbconnect.DBConnect.getInstance()
@@ -431,18 +439,22 @@ class CPAnalyst(wx.App):
         # The JVM has to be started after db.connect(), otherwise bus errors
         # occur on Mac OS X.
         javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+
+        # removes the log4j warnings
+        from bioformats import log4j
+        log4j.basic_config()
         javabridge.attach()
         javabridge.activate_awt()
 
         try:
             if __version__ != -1:
-                import cellprofiler.utilities.check_for_updates as cfu
+                import cpa.util.check_for_updates as cfu
                 cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html',
                                       max(__version__, cpa.cpaprefs.get_skip_version()),
                                       new_version_cb,
-                                      user_agent='CPAnalyst/2.0.%s'%(__version__))
+                                      user_agent='CPAnalyst/%s'%(__version__))
         except ImportError:
-            logging.warn("CPA was unable to check for updates. Could not import cellprofiler.utilities.check_for_updates.")
+            logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
 
         return True
 
@@ -505,11 +517,11 @@ class CPAnalyst(wx.App):
         return '%s %d'%(prefix, plot_num)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
     # Initialize the app early because the fancy exception handler
-    # depends on it in order to show a dialog.
+    # depends on it in order to show a 
     app = CPAnalyst(redirect=False)
-
+    app.Start()
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
@@ -517,4 +529,4 @@ if __name__ == "__main__":
        sys.excepthook = show_exception_as_dialog
 
     app.MainLoop()
-#    os._exit(0)
+    os._exit(0) # Enforces Exit, see issue #101

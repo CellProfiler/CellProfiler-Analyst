@@ -7,6 +7,7 @@ import zlib
 import wx
 import collections
 
+import pandas as pd
 from dbconnect import *
 from singleton import Singleton
 
@@ -15,27 +16,45 @@ db = DBConnect.getInstance()
 class TrainingSet:
     "A class representing a set of manually labeled cells."
 
-    def __init__(self, properties, filename='', labels_only=False):
+    def __init__(self, properties, filename='', labels_only=False, csv=False):
         self.properties = properties
         self.colnames = db.GetColnamesForClassifier()
+        self.key_labels = object_key_columns()
         self.filename = filename
         self.cache = CellCache.getInstance()
         if filename != '':
-            self.Load(filename, labels_only=labels_only)
+            if csv:
+                self.LoadCSV(filename, labels_only=labels_only)
+            else:
+                self.Load(filename, labels_only=labels_only)
 
+    def normalize(self):
+        import pandas as pd
+        df = pd.DataFrame(self.values, columns = self.colnames)
+        df_norm = (df - df.mean()) / (df.max() - df.min())
+        return df.values
+
+    # Get back an array with labels instead of numbers
+    def get_class_per_object(self):
+        return [self.labels[self.label_array[i] - 1] for i in range(len(self.label_array))]
 
     def Clear(self):
         self.saved = False
         self.labels = []                # set of possible class labels (human readable)
         self.classifier_labels = []     # set of possible class labels (for classifier)
                                         #     eg: [[+1,-1,-1], [-1,+1,-1], [-1,-1,+1]]
-        self.label_matrix = []          # array of classifier labels for each sample
+        self.label_matrix = []          # n x k matrix of classifier labels for each sample
+        self.label_array = []           # n x 1 vector of classifier labels (indexed with 1) 
+                                        #     eg: [1,1,2,3,1,2] 
         self.values = []                # array of measurements (data from db) for each sample
         self.entries = []               # list of (label, obKey) pairs
+        self.coordinates = []           # list of coordinates per obKey
 
         # check cache freshness
-        self.cache.clear_if_objects_modified()
-            
+        try:
+            self.cache.clear_if_objects_modified()
+        except:
+            logging.info("Couldn't check for cache freshness. Connection to DB broken?") #let it pass to allow saving 
             
     def Create(self, labels, keyLists, labels_only=False, callback=None):
         '''
@@ -55,10 +74,12 @@ class TrainingSet:
         # Populate the label_matrix, entries, and values
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             self.label_matrix += ([cl_label] * len(keyList))
+
             self.entries += zip([label] * len(keyList), keyList)
 
             if labels_only:
                 self.values += []
+                self.coordinates += [db.GetObjectCoords(k) for k in keyList]
             else:
                 def get_data(k):
                     d = self.cache.get_object_data(k)
@@ -67,10 +88,11 @@ class TrainingSet:
                     num_fetched[0] = num_fetched[0] + 1
                     return d
                 self.values += [get_data(k) for k in keyList]
+                self.coordinates += [db.GetObjectCoords(k) for k in keyList]
 
         self.label_matrix = numpy.array(self.label_matrix)
         self.values = numpy.array(self.values, np.float64)
-
+        self.label_array = numpy.nonzero(self.label_matrix + 1)[1] + 1 # Convert to array
 
     def Load(self, filename, labels_only=False):
         self.Clear()
@@ -79,6 +101,7 @@ class TrainingSet:
 #        lines = lines.replace('\r', '\n')    # replace CRs with LFs
         lines = lines.split('\n')
         labelDict = collections.OrderedDict()
+        self.key_labels = object_key_columns()
         for l in lines:
             try:
                 if l.strip()=='': continue
@@ -106,6 +129,27 @@ class TrainingSet:
         self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
         
         f.close()
+        
+    def LoadCSV(self, filename, labels_only=True):
+        self.Clear()
+        df = pd.read_csv(filename)
+        labels = list(set(df['Class'].values)) # List of labels
+        labelDict = collections.OrderedDict() # Why stuck?
+        self.key_labels = object_key_columns()
+        key_names = [key for key in self.key_labels]
+        for label in labels:
+            keys = df[key_names][df['Class'] == label].values # Get the keys
+            if len(key_names) == 2:
+                keys = map(lambda x: tuple((x[0],x[1])), keys) # convert them into tuples
+                labelDict[label] = keys
+            else:
+                assert(len(key_names) == 3)
+                keys = map(lambda x: tuple((x[0],x[1],x[2])), keys)
+                labelDict[label] = keys
+            
+        # validate positions and renumber if necessary
+        self.Renumber(labelDict)
+        self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
         
     def Renumber(self, label_dict):
         from properties import Properties
@@ -158,7 +202,10 @@ class TrainingSet:
 
     def Save(self, filename):
         # check cache freshness
-        self.cache.clear_if_objects_modified()
+        try:
+            self.cache.clear_if_objects_modified()
+        except:
+            logging.info("Couldn't check cache freshness, DB connection lost?")
 
         f = open(filename, 'w')
         try:
@@ -166,16 +213,64 @@ class TrainingSet:
             p = Properties.getInstance()
             f.write('# Training set created while using properties: %s\n'%(p._filename))
             f.write('label '+' '.join(self.labels)+'\n')
+            i = 0
             for label, obKey in self.entries:
-                line = '%s %s %s\n'%(label, ' '.join([str(int(k)) for k in obKey]), ' '.join([str(int(k)) for k in db.GetObjectCoords(obKey)]))
+                line = '%s %s %s\n'%(label, ' '.join([str(int(k)) for k in obKey]), ' '.join([str(int(k)) for k in self.coordinates[i]]))
                 f.write(line)
-            f.write('# ' + self.cache.save_to_string([k[1] for k in self.entries]) + '\n')
+                i += 1 # increase counter to keep track of the coordinates positions
+            try:
+                f.write('# ' + self.cache.save_to_string([k[1] for k in self.entries]) + '\n')
+            except:
+                logging.error("No DB connection, couldn't save cached image strings")
         except:
             logging.error("Error saving training set %s" % (filename))
             f.close()
             raise
         f.close()
         logging.info('Training set saved to %s'%filename)
+        self.saved = True
+
+    def SaveAsCSV(self, filename):
+        # check cache freshness
+        try:
+            self.cache.clear_if_objects_modified()
+            df = pd.DataFrame(self.values, columns=self.colnames)
+        except:
+            logging.info("Couldn't check cache freshness, DB connection lost?")
+            df = pd.DataFrame([]) # empty
+
+        try:
+            from properties import Properties
+            # getting feature values
+
+            # getting object key
+            tuples = self.get_object_keys()
+            key_labels = self.key_labels
+            # Differentiate between ids
+            if len(key_labels) == 2:
+                keyList = map(lambda x : [x[0],x[1]], tuples)
+                df_keys = pd.DataFrame(keyList, columns=key_labels)
+            else:
+                #assert(len(tuples) == 3) # It has to be 3!
+                keyList = map(lambda x : [x[0],x[1],x[2]], tuples)
+                df_keys = pd.DataFrame(keyList, columns=key_labels)
+
+
+            # getting label dataframe
+            labels = self.labels
+            label_array = self.label_array
+            labels = [labels[label_array[i] - 1] for i in range(len(label_array))]
+            df_class = pd.DataFrame(labels, columns=["Class"])
+
+            # Join to get the labeled data along the columns!
+            df_labeled = pd.concat([df_keys,df_class,df],axis=1)
+            df_labeled.to_csv(filename, index=False)
+
+        except:
+            logging.error("Error saving training set %s" % (filename))
+            raise
+
+        logging.info('Training set saved to %s as CSV'%filename)
         self.saved = True
             
 

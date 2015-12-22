@@ -94,7 +94,8 @@ class ScatterControlPanel(wx.Panel):
         
         # the panel to draw charts on
         self.figpanel = figpanel
-        
+        self.SetBackgroundColour('white') # color for the background of panel
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.x_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
         self.y_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
@@ -115,7 +116,7 @@ class ScatterControlPanel(wx.Panel):
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
         sz.AddSpacer((3,-1))
-        sz.Add(self.x_table_choice, 1, wx.EXPAND)
+        sz.Add(self.x_table_choice, 1, wx.EXPAND) 
         sz.AddSpacer((3,-1))
         sz.Add(self.x_choice, 2, wx.EXPAND)
         sz.AddSpacer((3,-1))
@@ -161,12 +162,16 @@ class ScatterControlPanel(wx.Panel):
         
     @property
     def x_column(self):
-        return sql.Column(self.x_table_choice.GetStringSelection(), 
-                          self.x_choice.GetStringSelection())
+        x_table_choice_id = self.x_table_choice.GetSelection()
+        x_choice_id = self.x_choice.GetSelection()
+        return sql.Column(self.x_table_choice.GetString(x_table_choice_id), 
+                          self.x_choice.GetString(x_choice_id))
     @property
     def y_column(self):
-        return sql.Column(self.y_table_choice.GetStringSelection(), 
-                          self.y_choice.GetStringSelection())
+        y_table_choice_id = self.y_table_choice.GetSelection()
+        y_choice_id = self.y_choice.GetSelection()
+        return sql.Column(self.y_table_choice.GetString(y_table_choice_id), 
+                          self.y_choice.GetString(y_choice_id))
     @property
     def filter(self):
         return self.filter_choice.get_filter_or_none()
@@ -264,10 +269,10 @@ class ScatterControlPanel(wx.Panel):
         # plot the points
         self.figpanel.set_points(xpoints, ypoints)
         self.figpanel.set_keys(keys)
-        self.figpanel.set_x_label(self.x_column.col)
-        self.figpanel.set_y_label(self.y_column.col)
         self.figpanel.set_x_scale(self.x_scale_choice.Value)
         self.figpanel.set_y_scale(self.y_scale_choice.Value)
+        self.figpanel.set_x_label(self.x_column.col)
+        self.figpanel.set_y_label(self.y_column.col)
         self.update_gate_helper()
         self.figpanel.redraw()
         self.figpanel.draw()
@@ -290,6 +295,7 @@ class ScatterControlPanel(wx.Panel):
             q.add_filter(self.filter)
         q.add_where(sql.Expression(self.x_column, 'IS NOT NULL'))
         q.add_where(sql.Expression(self.y_column, 'IS NOT NULL'))
+        print "x_column:", self.x_column
         return db.execute(str(q))
     
     def get_selected_column_types(self):
@@ -313,7 +319,8 @@ class ScatterControlPanel(wx.Panel):
              'version' : '1',
              }
         if self.gate_choice.get_gatename_or_none():
-            d['gate'] = self.gate_choice.GetStringSelection()
+            gate_choice_id = self.gate_choice.GetSelection() 
+            d['gate'] = self.gate_choice.GetString(gate_choice_id)
         return d
     
     def load_settings(self, settings):
@@ -916,10 +923,14 @@ class ScatterPanel(FigureCanvasWxAgg):
     
     def set_x_label(self, label):
         self.x_label = label
+        if self.x_scale == LOG_SCALE:
+            self.x_label = 'Log(%s)'%(self.x_label)
+
     
     def set_y_label(self, label):
         self.y_label = label
-    
+        if self.y_scale == LOG_SCALE:
+            self.y_label = 'Log(%s)'%(self.y_label)
         
 
 class Scatter(wx.Frame, CPATool):
@@ -930,7 +941,7 @@ class Scatter(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         
         figpanel = ScatterPanel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)

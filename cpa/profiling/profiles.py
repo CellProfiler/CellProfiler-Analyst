@@ -34,13 +34,10 @@ class Profiles(object):
         self.data = np.array(data)
         self.variables = variables
         self.group_header = group_header
-        if keys == []:
-            raise ValueError("No data generated for profile!")
+        if key_size is None:
+            self.key_size = len(keys[0])
         else:
-            if key_size is None:
-                self.key_size = len(keys[0])
-            else:
-                self.key_size = key_size
+            self.key_size = key_size
         self.group_name = group_name
 
     @classmethod

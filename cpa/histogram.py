@@ -35,6 +35,7 @@ class DataSourcePanel(wx.Panel):
         wx.Panel.__init__(self, parent, **kwargs)
         
         # the panel to draw charts on
+        self.SetBackgroundColour('white') # color for the background of panel
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -100,8 +101,8 @@ class DataSourcePanel(wx.Panel):
         
     @property
     def x_column(self):
-        return sql.Column(self.table_choice.GetStringSelection(), 
-                          self.x_choice.GetStringSelection())
+        return sql.Column(self.table_choice.GetString(self.table_choice.GetSelection()), 
+                          self.x_choice.GetString(self.x_choice.GetSelection()))
     @property
     def filter(self):
         return self.filter_choice.get_filter_or_none()
@@ -129,7 +130,7 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.gate_helper.disable()        
 
     def update_column_fields(self):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         fieldnames = self.get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
@@ -152,8 +153,8 @@ class DataSourcePanel(wx.Panel):
         points = self._load_points()
         bins = int(self.bins_input.GetValue())
         self.figpanel.set_x_label(self.x_column.col)
-        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
-        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.set_x_scale(self.x_scale_choice.GetString(self.x_scale_choice.GetSelection()))
+        self.figpanel.set_y_scale(self.y_scale_choice.GetString(self.y_scale_choice.GetSelection()))
         self.figpanel.setpoints(points, bins)
         self.update_gate_helper()
         self.figpanel.draw()
@@ -171,17 +172,17 @@ class DataSourcePanel(wx.Panel):
         '''save_settings is called when saving a workspace to file.
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        d = {'table'   : self.table_choice.GetStringSelection(),
-             'x-axis'  : self.x_choice.GetStringSelection(),
+        d = {'table'   : self.table_choice.GetString(self.table_choice.GetSelection()),
+             'x-axis'  : self.x_choice.GetString(self.x_choice.GetSelection()),
              'bins'    : self.bins_input.GetValue(),
-             'x-scale' : self.x_scale_choice.GetStringSelection(),
-             'y-scale' : self.y_scale_choice.GetStringSelection(),
-             'filter'  : self.filter_choice.GetStringSelection(),
+             'x-scale' : self.x_scale_choice.GetString(self.x_scale_choice.GetSelection()),
+             'y-scale' : self.y_scale_choice.GetString(self.y_scale_choice.GetSelection()),
+             'filter'  : self.filter_choice.GetString(self.filter_choice.GetSelection()),
              'x-lim'   : self.figpanel.subplot.get_xlim(),
              'y-lim'   : self.figpanel.subplot.get_ylim(),
              }
         if self.gate_choice.get_gatename_or_none():
-            d['gate'] = self.gate_choice.GetStringSelection()
+            d['gate'] = self.gate_choice.GetString(self.gate_choice.GetSelection())
         return d
     
     def load_settings(self, settings):
@@ -358,7 +359,7 @@ class Histogram(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Histogram', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         points = []
         figpanel = HistogramPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)

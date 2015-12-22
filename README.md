@@ -1,30 +1,49 @@
-# Cellprofiler Analyst 2
+![CPA Logo](http://i.imgur.com/45Iosp1.png)
+# CellProfiler Analyst 2.1.0 (Development)
 
-Authors: Adam Fraser, Thouis R. Jones
+[![GitHub tag](https://img.shields.io/github/tag/CellProfiler/CellProfiler-Analyst.svg?style=flat-square)]()
+[![GitHub license](https://img.shields.io/github/license/CellProfiler/CellProfiler-Analyst.svg?style=flat-square)]()
+[![GitHub issues](https://img.shields.io/github/issues/CellProfiler/CellProfiler-Analyst.svg?style=flat-square)]()
 
-Developers: Adam Fraser, Thouis R. Jones
+*Note: This version is heavily under development and not production-ready yet*
+
+Authors: Adam Fraser, Thouis R. Jones, David Dao, Jane Hung
+
+Current Developers: David Dao, Jane Hung
 
 Website: cellprofiler.org
 
-Copyright 2011, The Broad Institute of MIT and Harvard.
+Copyright 2015, The Broad Institute of MIT and Harvard.
 
 Distributed under the GPLv2.
+
+## About CellProfiler Analyst
+
+![Workflow](http://i.imgur.com/j12EQH5.png)
+
+CellProfiler Analyst allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
+
+## Current Development
+
+* Fixing color issues and bugs due to changes in wxPython Library
+* Restoring visualization functionalities
+* Cleaning up files
+* Improving Evaluation for Classifier
+* Including testing
+* Include documentation
 
 ## Wiki
 
 > http://cellprofiler.org/wiki/index.php
 
-## Mailing list
+## Forum
 
-CellProfiler Analyst development is discussed on the cpa-dev mailing
-list.  This is a fairly low-volume mailing list.  To subscribe:
+CellProfiler Analyst development is discussed on the CellProfiler Forum
+list.  
 
-> https://groups.google.com/a/broadinstitute.org/d/forum/cpa-dev
+> http://forum.cellprofiler.org/
 
 ## How to file new issues
-
-There is a [special form](http://cellprofiler.org/issues/) for submitting
-new issues with attachments.
 
 Please attach sufficient information to reproduce the bug. For many
 bugs, it is appropriate to attach a properties file, a training set,

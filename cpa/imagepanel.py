@@ -29,8 +29,10 @@ class ImagePanel(wx.Panel):
                                scale = scale,
                                brightness = brightness,
                                contrast = contrast)
-        
-        wx.Panel.__init__(self, parent, wx.NewId(), size=self.bitmap.Size)
+        max_size = 1000
+        sizex = min(max_size, self.bitmap.Size[0])
+        sizey = min(max_size, self.bitmap.Size[1])
+        wx.Panel.__init__(self, parent, wx.NewId(), size=(sizex, sizey))
         
         self.scale         = scale
         self.brightness    = brightness
