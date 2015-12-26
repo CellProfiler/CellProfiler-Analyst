@@ -4,7 +4,7 @@ import os
 import os.path
 import numpy
 # fix from
-#  http://mail.python.org/pipermail/pythonmac-sig/2008-June/020111.html
+# http://mail.python.org/pipermail/pythonmac-sig/2008-June/020111.html
 import pytz
 pytz.zoneinfo = pytz.tzinfo
 pytz.zoneinfo.UTC = pytz.UTC

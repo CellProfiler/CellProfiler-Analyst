@@ -113,13 +113,13 @@ class MainGUI(wx.Frame):
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
         #wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.1.0 (r%s)'%(__version__), **kwargs)
-        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.1.0', **kwargs)
+        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst %s'%(__version__), **kwargs)
         self.properties = properties
         self.SetIcon(get_cpa_icon())
         if not sys.platform.startswith('win'):
             # this is good for Mac, but on windows creates a (currently) unused icon in the system tray
             self.tbicon = wx.TaskBarIcon()
-            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.1.0')
+            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst %s'%(__version__))
         else:
             self.tbicon = None
         self.SetName('CPA')
@@ -191,9 +191,11 @@ class MainGUI(wx.Frame):
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-        self.console.SetBackgroundColour('#FFFFFF')
+        
+        # Black background and white font
+        self.console.SetDefaultStyle(wx.TextAttr(wx.WHITE,wx.BLACK))
+        self.console.SetBackgroundColour('#000000')  
 
-        self.console.SetForegroundColour('#000000')
         log_level = logging.DEBUG
         self.logr = logging.getLogger()
         self.set_log_level(log_level)
