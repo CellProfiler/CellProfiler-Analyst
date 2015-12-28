@@ -43,7 +43,8 @@ MAX_ATTEMPTS = 10000
 ID_CLASSIFIER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
-required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+#required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+required_fields = []
 
 class Classifier(wx.Frame):
     """

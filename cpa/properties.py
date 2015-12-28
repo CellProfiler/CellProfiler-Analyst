@@ -57,6 +57,7 @@ string_vars = ['db_type',
                'link_tables_table',
                'link_columns_table',
                'image_rescale',
+               'image_classification'
                ]
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
@@ -112,6 +113,7 @@ optional_vars = ['db_port',
                  'image_rescale',
                  'plate_shape',
                  'image_tile_size',
+                 'image_classification'
                  ]
 
 # map deprecated fields to new fields
@@ -285,6 +287,218 @@ class Properties(Singleton):
                     logging.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
                 
         f.close()
+        #if image_classification is defined
+        if 'image_classification' in self.__dict__:
+            import difflib
+            from collections import defaultdict
+            DB_TYPE = self.db_type.lower()
+            if DB_TYPE == 'mysql':
+                import MySQLdb
+                DB_HOST = self.db_host
+                DB_NAME = self.db_name
+                DB_USER = self.db_user
+                DB_PASSWD = self.db_passwd
+                # Establish connection
+                db = MySQLdb.connect(host=DB_HOST, user=DB_USER, passwd=DB_PASSWD, db=DB_NAME)
+            elif DB_TYPE== 'sqlite':
+                import sqlite3
+                import numpy as np
+                if not self.db_sqlite_file:# Compute a UNIQUE database name for these files
+                    import md5
+                    from dbconnect import get_csv_filenames_from_sql_file
+                    dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or os.path.expanduser('~')
+                    dbpath = os.path.join(dbpath,'CPA')
+                    try:
+                        os.listdir(dbpath)
+                    except OSError:
+                        os.mkdir(dbpath)
+                    if self.db_sql_file:
+                        csv_dir = os.path.split(self.db_sql_file)[0] or '.'
+                        imcsvs, obcsvs = get_csv_filenames_from_sql_file()
+                        files = imcsvs + obcsvs + [os.path.split(self.db_sql_file)[1]]
+                        hash = md5.new()
+                        for fname in files:
+                            t = os.stat(csv_dir + os.path.sep + fname).st_mtime
+                            hash.update('%s%s'%(fname,t))
+                            dbname = 'CPA_DB_%s.db'%(hash.hexdigest())
+                    else:
+                        imtime = os.stat(self.image_csv_file).st_mtime
+                        obtime = os.stat(self.object_csv_file).st_mtime
+                        l = '%s%s%s%s'%(self.image_csv_file,self.object_csv_file,imtime,obtime)
+                        dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
+                    self.db_sqlite_file = os.path.join(dbpath, dbname)
+                DB_SQLITE_FILE = self.db_sqlite_file
+
+                # Establish connection
+                db = sqlite3.connect(DB_SQLITE_FILE)
+            cursor = db.cursor()
+
+            #2 cases:
+            # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
+            # object_table/object_id/cell_x_loc/cell_y_loc don't exist
+            try:
+                # Initialize some more variables user later
+                s = difflib.SequenceMatcher(None, self.image_table, self.object_table)
+                m = s.find_longest_match(0, len(self.image_table), 0, len(self.object_table))
+                selected_table_substring = self.image_table[0:m[-1]]
+
+                if DB_TYPE== 'mysql':
+                    query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME LIKE '%%%s%%' AND TABLE_NAME NOT LIKE '%%Per_Image%%' AND TABLE_NAME NOT LIKE '%%Per_Object%%' AND TABLE_NAME NOT LIKE '%%Experiment%%'"\
+                      %(DB_NAME, selected_table_substring)
+                elif DB_TYPE== 'sqlite':
+                    query = "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%%%s%%' AND name NOT LIKE '%%Per_Image%%' AND name NOT LIKE '%%Per_Object%%'  AND name NOT LIKE '%%Experiment%%'"%(selected_table_substring)
+                cursor.execute(query)
+                object_table_names = [_[0] for _ in cursor.fetchall()]
+                object_table_names = [_ for _ in object_table_names if _.startswith(selected_table_substring)]
+                all_objects = dict(zip([_[m[-1]:] for _ in object_table_names],object_table_names))
+
+                # Obtain per-image object counts and remove objects which don't correspond one-to-one, by excluding
+                #  the objects which do not have the max number of matching counts (e.g., speckles w.r.t. nuclei/cells/cytoplasm)
+                query = "SELECT %s from %s LIMIT 1"%(",".join(["Image_Count_"+x for x in all_objects.keys()]), self.image_table)
+                cursor.execute(query)
+                per_image_objects_counts = [x for x in cursor.fetchall()[0]]
+                count = defaultdict(int)
+                for x in per_image_objects_counts:
+                    count[x] += 1
+                id = [z == [x for x,y in count.iteritems() if y == np.max(count.values())][0] for z in per_image_objects_counts]
+                for (i,key) in zip(id,all_objects.keys()):
+                    if not i:
+                        all_objects.pop(key)
+
+                selected_object = self.object_table[m[-1]:]
+                FINAL_PER_OBJ_NAME = selected_table_substring + "Object"
+                FINAL_PROPERTIES_NAME = "_".join((DB_NAME,re.split("_Per",selected_table_substring)[0]))
+
+                # Produce a list of columns from each of the separate tables
+                list_of_cols = []
+                for (current_obj,current_table) in all_objects.iteritems():
+                    query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(DB_NAME,current_table)
+                    cursor.execute(query)
+                    list_of_cols.append([x[0] for x in cursor.fetchall()])
+                    list_of_cols[-1].remove('ImageNumber')   # A single ImageNumber col will be referenced later
+                    list_of_cols[-1].remove('%s_Number_Object_Number'%current_obj) # A single ObjectNumber col will be referenced later
+                all_cols = sum(list_of_cols,[])
+
+                all_cols = ["%s.ImageNumber"%all_objects[selected_object],"%s_Number_Object_Number AS ObjectNumber"%selected_object] + all_cols
+
+                # Create the new view
+                query = "CREATE OR REPLACE VIEW %s AS SELECT %s FROM %s"%(FINAL_PER_OBJ_NAME,",".join(all_cols), all_objects[selected_object])
+                object_table_pairs = all_objects.items()
+                object_table_pairs = [x for x in object_table_pairs if x[0] != selected_object]
+                for (current_obj,current_tbl) in object_table_pairs:
+                    query = " ".join((query,"INNER JOIN %s ON %s.ImageNumber = %s.ImageNumber AND %s.%s_Number_Object_Number = %s.%s_Number_Object_Number"\
+                                      %(current_tbl, all_objects[selected_object], current_tbl, all_objects[selected_object], selected_object, current_tbl, current_obj)))
+                cursor.execute(query)
+            except:
+                import csv
+                #Make a new table where each image is an object
+
+                FINAL_PER_OBJ_NAME = 'object_table'
+                self.object_id = 'ObjectNumber'
+                self.cell_x_loc = 'Cell_x_loc'
+                self.cell_y_loc = 'Cell_y_loc'
+                self.object_table = FINAL_PER_OBJ_NAME
+
+                # Produce a list of column names
+                if DB_TYPE == 'mysql':
+                    query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(DB_NAME, self.image_table)
+                    cursor.execute(query)
+                    list_of_cols = []
+                    cols = [x[0] for x in cursor.fetchall()]
+                    list_of_cols.extend([str(x) for x in cols])
+
+                    query = 'DROP TABLE IF EXISTS %s'%(FINAL_PER_OBJ_NAME)
+                    cursor.execute(query)
+                    
+                    #Create a new object table with all data from image table
+                    query = 'CREATE TABLE %s LIKE %s'%(FINAL_PER_OBJ_NAME, self.image_table)
+                    cursor.execute(query)
+                    query = 'INSERT INTO %s SELECT * FROM %s'%(FINAL_PER_OBJ_NAME, self.image_table)
+                    cursor.execute(query)
+
+                    #Add object specific fields
+                    query = 'ALTER TABLE %s ADD COLUMN %s TINYINT(2) NOT NULL AFTER %s, ' \
+                            'ADD COLUMN %s FLOAT(10,2) NOT NULL AFTER %s, ' \
+                            'ADD COLUMN %s FLOAT(10,2) NOT NULL AFTER %s'%(FINAL_PER_OBJ_NAME,
+                                                                       self.object_id, self.image_id,
+                                                                       self.cell_x_loc, self.object_id,
+                                                                       self.cell_y_loc, self.cell_x_loc)
+                    cursor.execute(query)
+                    query = 'ALTER TABLE %s ADD INDEX (%s)'%(FINAL_PER_OBJ_NAME, self.object_id)
+                    cursor.execute(query)
+
+                    #Get info on image width and height (assuming they are fields in the image table)
+                    width_col = next(name for name in list_of_cols if 'width' in name.lower())
+                    height_col = next(name for name in list_of_cols if 'height' in name.lower())
+
+                    if width_col and height_col:
+                        width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, self.image_table)
+                        height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, self.image_table)
+                    else:
+                        width_query = self.image_tile_size/2 or 25
+                        height_query = self.image_tile_size/2 or 25
+                    #Update
+                    query = "UPDATE %s SET %s=1, %s=(%s), %s=(%s)"%(FINAL_PER_OBJ_NAME, self.object_id,
+                                                              self.cell_x_loc, width_query,
+                                                              self.cell_y_loc, height_query)
+                    cursor.execute(query)
+                elif DB_TYPE == 'sqlite':
+                    logging.info('Creating SQLite database at: %s.'%(self.db_sqlite_file))
+                    # parse out create table statements and execute them
+                    with open(self.db_sql_file, 'r') as f:
+                        lines = f.readlines()
+                        create_stmts = []
+                        i=0
+                        in_create_stmt = False
+                        for l in lines:
+                            if l.upper().startswith('CREATE TABLE') or in_create_stmt:
+                                if in_create_stmt:
+                                    create_stmts[i] += l
+                            else:
+                                create_stmts.append(l)
+                            if l.strip().endswith(';'):
+                                in_create_stmt = False
+                                i+=1
+                            else:
+                                in_create_stmt = True
+                    for q in create_stmts:
+                        try:
+                            cursor.execute(q)
+                        except:
+                            pass
+                    query = "PRAGMA table_info(%s)"%self.image_table
+                    cursor.execute(query)
+                    list_of_cols = []
+                    cols = [x[1] for x in cursor.fetchall()]#index 0 is id of column, 1 is name of column, 2 is type of column, etc.
+                    list_of_cols.extend([str(x) for x in cols])
+                    all_cols = list_of_cols
+                    all_cols.remove(self.image_id)
+                    all_cols = [self.image_id, self.object_id, self.cell_x_loc, self.cell_y_loc] + all_cols
+
+                    query = 'DROP TABLE IF EXISTS %s'%(FINAL_PER_OBJ_NAME)
+                    cursor.execute(query)
+                    query = 'CREATE TABLE %s (%s);'%(FINAL_PER_OBJ_NAME, ",".join(all_cols))
+                    cursor.execute(query)
+                    query = 'INSERT INTO %s (%s) SELECT %s FROM %s;'%(FINAL_PER_OBJ_NAME, ",".join(list_of_cols), ",".join(list_of_cols), self.image_table)
+                    cursor.execute(query)
+
+                    #Get info on image width and height (assuming they are fields in the image table)
+                    width_col = next(name for name in list_of_cols if 'width' in name.lower())
+                    height_col = next(name for name in list_of_cols if 'height' in name.lower())
+
+                    if width_col and height_col:
+                        width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, self.image_table)
+                        height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, self.image_table)
+                    else:
+                        width_query = self.image_tile_size/2 or 25
+                        height_query = self.image_tile_size/2 or 25
+                    query = "UPDATE %s SET %s=1, %s=(%s), %s=(%s)"%(FINAL_PER_OBJ_NAME, self.object_id,
+                                                              self.cell_x_loc, width_query,
+                                                              self.cell_y_loc, height_query)
+                    cursor.execute(query)
+
+            cursor.close()
+            db.close()
         self.Validate()
         self._initialized = True
     LoadFile = load_file
