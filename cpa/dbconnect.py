@@ -331,6 +331,8 @@ class DBConnect(Singleton):
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
                                                (p.db_passwd or None), p.db_name)
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
+                if p.image_classification:
+                    self.CreateObjectImageTable()
             except DBError(), e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
             
@@ -1437,108 +1439,43 @@ class DBConnect(Singleton):
         # Create object table for image classification
         DB_NAME = p.db_name
         DB_TYPE = p.db_type.lower()
-
-        #2 cases:
-        # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
-        # object_table/object_id/cell_x_loc/cell_y_loc don't exist
-        try:
-            import difflib
-            from collections import defaultdict
-            # Initialize some more variables user later
-            s = difflib.SequenceMatcher(None, p.image_table, p.object_table)
-            m = s.find_longest_match(0, len(p.image_table), 0, len(p.object_table))
-            selected_table_substring = p.image_table[0:m[-1]]
-
-            if DB_TYPE== 'mysql':
-                query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME LIKE '%%%s%%' AND TABLE_NAME NOT LIKE '%%Per_Image%%' AND TABLE_NAME NOT LIKE '%%Per_Object%%' AND TABLE_NAME NOT LIKE '%%Experiment%%'"\
-                  %(DB_NAME, selected_table_substring)
-            elif DB_TYPE== 'sqlite':
-                query = "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%%%s%%' AND name NOT LIKE '%%Per_Image%%' AND name NOT LIKE '%%Per_Object%%'  AND name NOT LIKE '%%Experiment%%'"%(selected_table_substring)
+        if DB_TYPE == 'mysql':
+            query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(DB_NAME, p.image_table)
             self.execute(query)
-            #object_table_names = [_[0] for _ in cursor.fetchall()]
-            object_table_names = [_[0] for _ in self.cursors[connID].fetchall()]
-            object_table_names = [_ for _ in object_table_names if _.startswith(selected_table_substring)]
-            all_objects = dict(zip([_[m[-1]:] for _ in object_table_names],object_table_names))
-
-            # Obtain per-image object counts and remove objects which don't correspond one-to-one, by excluding
-            #  the objects which do not have the max number of matching counts (e.g., speckles w.r.t. nuclei/cells/cytoplasm)
-            query = "SELECT %s from %s LIMIT 1"%(",".join(["Image_Count_"+x for x in all_objects.keys()]), p.image_table)
-            self.execute(query)
-            per_image_objects_counts = [x for x in self.cursors[connID].fetchall()[0]]
-            count = defaultdict(int)
-            for x in per_image_objects_counts:
-                count[x] += 1
-            id = [z == [x for x,y in count.iteritems() if y == np.max(count.values())][0] for z in per_image_objects_counts]
-            for (i,key) in zip(id,all_objects.keys()):
-                if not i:
-                    all_objects.pop(key)
-
-            selected_object = p.object_table[m[-1]:]
-            FINAL_PER_OBJ_NAME = selected_table_substring + "Object"
-            FINAL_PROPERTIES_NAME = "_".join((DB_NAME,re.split("_Per",selected_table_substring)[0]))
-
-            # Produce a list of columns from each of the separate tables
             list_of_cols = []
-            for (current_obj,current_table) in all_objects.iteritems():
-                query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(DB_NAME,current_table)
-                self.execute(query)
-                list_of_cols.append([x[0] for x in self.cursors[connID].fetchall()])
-                list_of_cols[-1].remove('ImageNumber')   # A single ImageNumber col will be referenced later
-                list_of_cols[-1].remove('%s_Number_Object_Number'%current_obj) # A single ObjectNumber col will be referenced later
-            all_cols = sum(list_of_cols,[])
+            cols = [x for x in self.GetColumnNames(p.image_table)]
+            list_of_cols.extend([str(x) for x in cols])
 
-            all_cols = ["%s.ImageNumber"%all_objects[selected_object],"%s_Number_Object_Number AS ObjectNumber"%selected_object] + all_cols
+            try:
+                width_col = next(name for name in list_of_cols if 'width' in name.lower())
+                height_col = next(name for name in list_of_cols if 'height' in name.lower())
+                width_query = 'SELECT FLOOR(%s/2) FROM %s LIMIT 1'%(width_col, p.image_table)
+                height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
+                width = self.execute(width_query)
+                height = self.execute(height_query)
+                width = int(width[0][0])
+                height = int(height[0][0])
+            except:
+                width = int(p.image_width)/2
+                height = int(p.image_height)/2
 
-            # Create the new view
-            query = "CREATE OR REPLACE VIEW %s AS SELECT %s FROM %s"%(FINAL_PER_OBJ_NAME,",".join(all_cols), all_objects[selected_object])
-            object_table_pairs = all_objects.items()
-            object_table_pairs = [x for x in object_table_pairs if x[0] != selected_object]
-            for (current_obj,current_tbl) in object_table_pairs:
-                query = " ".join((query,"INNER JOIN %s ON %s.ImageNumber = %s.ImageNumber AND %s.%s_Number_Object_Number = %s.%s_Number_Object_Number"\
-                                  %(current_tbl, all_objects[selected_object], current_tbl, all_objects[selected_object], selected_object, current_tbl, current_obj)))
+            query = "CREATE OR REPLACE VIEW %s AS SELECT 1 AS %s, %d AS %s, %d AS %s, %s.* FROM %s"%(p.object_table, p.object_id, width, p.cell_x_loc, height, p.cell_y_loc, p.image_table,p.image_table)
             self.execute(query)
-        except:
-            if DB_TYPE == 'mysql':
-                query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(DB_NAME, self.image_table)
-                self.execute(query)
-                list_of_cols = []
-                cols = [x for x in self.GetColumnNames(p.image_table)]
-                list_of_cols.extend([str(x) for x in cols])
 
-                query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
-                self.execute(query)
-
-                #Create a new object table with all data from image table
-                query = 'CREATE TABLE %s LIKE %s'%(p.object_table, p.image_table)
-                self.execute(query)
-                query = 'INSERT INTO %s SELECT * FROM %s'%(p.object_table, p.image_table)
-                self.execute(query)
-
-                #Add object specific fields
-                query = 'ALTER TABLE %s ADD COLUMN %s TINYINT(2) NOT NULL AFTER %s, ' \
-                        'ADD COLUMN %s FLOAT(10,2) NOT NULL AFTER %s, ' \
-                        'ADD COLUMN %s FLOAT(10,2) NOT NULL AFTER %s'%(p.object_table,
-                                                                   p.object_id, p.image_id,
-                                                                   p.cell_x_loc, p.object_id,
-                                                                   p.cell_y_loc, p.cell_x_loc)
-                self.execute(query)
-                query = 'ALTER TABLE %s ADD INDEX (%s)'%(p.object_table, p.object_id)
-                self.execute(query)
-
-            elif DB_TYPE == 'sqlite':
-                # Copy image table and add more columns
-                query = "PRAGMA table_info(%s)"%p.image_table
-                self.execute(query, silent=True)
-                list_of_cols = [str(x) for x in self.GetColumnNames(p.image_table)]
-                all_cols = list(list_of_cols)
-                all_cols.remove(p.image_id)
-                all_cols = [p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc] + all_cols
-                query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
-                self.execute(query)
-                query = 'CREATE TABLE %s (%s)'%(p.object_table, ",".join(all_cols))
-                self.execute(query)
-                query = 'INSERT INTO %s (%s) SELECT %s FROM %s;'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
-                self.execute(query, silent=True)
+        elif DB_TYPE == 'sqlite':
+            # Copy image table and add more columns
+            query = "PRAGMA table_info(%s)"%p.image_table
+            self.execute(query, silent=True)
+            list_of_cols = [str(x) for x in self.GetColumnNames(p.image_table)]
+            all_cols = list(list_of_cols)
+            all_cols.remove(p.image_id)
+            all_cols = [p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc] + all_cols
+            query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
+            self.execute(query)
+            query = 'CREATE TABLE %s (%s)'%(p.object_table, ",".join(all_cols))
+            self.execute(query)
+            query = 'INSERT INTO %s (%s) SELECT %s FROM %s;'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
+            self.execute(query, silent=True)
 
             #Get info on image width and height (assuming they are fields in the image table) to get image center
             try:
@@ -1546,13 +1483,18 @@ class DBConnect(Singleton):
                 height_col = next(name for name in list_of_cols if 'height' in name.lower())
                 width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, p.image_table)
                 height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
+                width = self.execute(width_query)
+                height = self.execute(height_query)
+                width = int(width[0][0])
+                height = int(height[0][0])
             except:
-                width_query = int(p.image_width)/2
-                height_query = int(p.image_height)/2
+                width = int(p.image_width)/2
+                height = int(p.image_height)/2
             query = "UPDATE %s SET %s=1, %s=(%s), %s=(%s)"%(p.object_table, p.object_id,
-                                                              p.cell_x_loc, width_query,
-                                                              p.cell_y_loc, height_query)
+                                                              p.cell_x_loc, width,
+                                                              p.cell_y_loc, height)
             self.execute(query, silent=True)
+
 
     def table_exists(self, name):
         res = []

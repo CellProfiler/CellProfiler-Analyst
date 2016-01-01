@@ -294,24 +294,20 @@ class Properties(Singleton):
 
         #if image_classification is defined
         if 'image_classification' in self.__dict__:
-            import difflib
-
             #2 cases:
             # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
             # object_table/object_id/cell_x_loc/cell_y_loc don't exist
 
             try:
-                # Initialize some more variables user later
-                s = difflib.SequenceMatcher(None, self.image_table, self.object_table)
-                m = s.find_longest_match(0, len(self.image_table), 0, len(self.object_table))
-                selected_table_substring = self.image_table[0:m[-1]]
-
+                len(self.object_table)
+                self.object_table = self.image_table + '_AsObjectTable'
             except:
-                FINAL_PER_OBJ_NAME = 'object_table'
-                self.object_id = 'ObjectNumber'
-                self.cell_x_loc = 'Cell_x_loc'
-                self.cell_y_loc = 'Cell_y_loc'
+                FINAL_PER_OBJ_NAME = 'ObjectTable'
                 self.object_table = FINAL_PER_OBJ_NAME
+
+            self.object_id = 'ObjectNumber'
+            self.cell_x_loc = 'Cell_x_loc'
+            self.cell_y_loc = 'Cell_y_loc'
 
         self.Validate()
         self._initialized = True
