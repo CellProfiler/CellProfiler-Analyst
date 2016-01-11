@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
 from time import time
-from sklearn import ensemble, naive_bayes, grid_search, svm, lda, qda, tree, multiclass, linear_model, neighbors
+from sklearn import ensemble, naive_bayes, grid_search, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors
 #from sklearn.externals import joblib
 from sklearn import cross_validation
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -16,7 +16,7 @@ from sklearn.externals import joblib
 import seaborn as sns
 
 class GeneralClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self, classifier = "lda.LDA()", env=None):
+    def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None):
         self.classBins = []
         self.classifier = eval(classifier)
         self.trained = False

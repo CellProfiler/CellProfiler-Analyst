@@ -264,7 +264,7 @@ class Classifier(wx.Frame):
         
         GradientBoostingClassifier = GeneralClassifier("ensemble.GradientBoostingClassifier()", self)
         LogisticRegression = GeneralClassifier("linear_model.LogisticRegression()", self)
-        LDA = GeneralClassifier("lda.LDA()", self)
+        LDA = GeneralClassifier("discriminant_analysis.LinearDiscriminantAnalysis()", self)
         KNeighborsClassifier = GeneralClassifier("neighbors.KNeighborsClassifier()", self)
         FastGentleBoostingClassifier = FastGentleBoosting(self)
 

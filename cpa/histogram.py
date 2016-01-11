@@ -41,7 +41,8 @@ class DataSourcePanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
-        self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
+        self.x_choice = ComboBox(self, -1, size=(200,-1), choices=[''], style=wx.CB_READONLY)
+        self.x_choice.Select(0)
         self.bins_input = wx.SpinCtrl(self, -1, '100')
         self.bins_input.SetRange(1,400)
         self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE, LOG2_SCALE], style=wx.CB_READONLY)
@@ -49,6 +50,7 @@ class DataSourcePanel(wx.Panel):
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
         self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         self.gate_choice.set_gatable_columns([self.x_column])
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
