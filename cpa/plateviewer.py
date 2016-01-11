@@ -26,6 +26,8 @@ db = DBConnect.getInstance()
 
 required_fields = ['plate_shape', 'well_id']
 
+fixed_width = (200,-1)
+
 class PlateViewer(wx.Frame, CPATool):
     def __init__(self, parent, size=(800,-1), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Plate Viewer', **kwargs)
@@ -56,22 +58,22 @@ class PlateViewer(wx.Frame, CPATool):
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
-        self.sourceChoice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.sourceChoice = TableComboBox(self, -1, style=wx.CB_READONLY, size=fixed_width)
         dataSourceSizer.Add(self.sourceChoice)
         dataSourceSizer.AddSpacer((-1,3))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = get_non_blob_types_from_table(p.image_table)
-        self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY)
+        self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY, size=fixed_width)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         dataSourceSizer.Add(wx.StaticText(self, label='Filter:'))
-        self.filterChoice = FilterComboBox(self)
+        self.filterChoice = FilterComboBox(self, size=fixed_width)
         dataSourceSizer.Add(self.filterChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
         aggregation = ['mean', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
-        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation, style=wx.CB_READONLY)
+        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation, style=wx.CB_READONLY, size=fixed_width)
         self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
 
@@ -79,7 +81,7 @@ class PlateViewer(wx.Frame, CPATool):
         viewSizer.Add(wx.StaticText(self, label='Color map:'))
         maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
         maps.sort()
-        self.colorMapsChoice = ComboBox(self, choices=maps, style=wx.CB_READONLY)
+        self.colorMapsChoice = ComboBox(self, choices=maps, style=wx.CB_READONLY, size=fixed_width)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
 
@@ -90,7 +92,7 @@ class PlateViewer(wx.Frame, CPATool):
         else:
             choices = list(pmp.all_well_shapes)
             choices.remove(pmp.THUMBNAIL)
-        self.wellDisplayChoice = ComboBox(self, choices=choices, style=wx.CB_READONLY)
+        self.wellDisplayChoice = ComboBox(self, choices=choices, style=wx.CB_READONLY, size=fixed_width)
         self.wellDisplayChoice.Select(0)
         viewSizer.Add(self.wellDisplayChoice)
 
