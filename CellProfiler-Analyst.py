@@ -189,7 +189,7 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
 
         # console and logging
-        self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
+        self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH2)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         
         # Black background and white font

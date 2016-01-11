@@ -384,6 +384,48 @@ class FastGentleBoosting(object):
 
         return [num_misclassifications]
 
+    # Confusion Matrix
+    def plot_confusion_matrix(self, cm, title='Confusion matrix', cmap=plt.cm.Greys):
+        # sns.set_style("whitegrid", {'axes.grid' : False})
+
+        # plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        # plt.title(title)
+        # plt.colorbar()
+        # tick_marks = np.arange(len(self.env.trainingSet.labels))
+        # plt.xticks(tick_marks, self.env.trainingSet.labels, rotation=45)
+        # plt.yticks(tick_marks, self.env.trainingSet.labels)
+        # plt.tight_layout()
+        # plt.ylabel('True label')
+        # plt.xlabel('Predicted label')
+        pass
+
+    def ConfusionMatrix(self):
+        # from sklearn.metrics import confusion_matrix
+        # # Compute confusion matrix
+        # folds = 5 # like classification report
+        # y_pred = self.XValidatePredict(self.env.trainingSet.label_array, self.env.trainingSet.values, folds)
+        # y_test = self.env.trainingSet.label_array
+
+        # cm = confusion_matrix(y_test, y_pred)
+        # cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+        # np.set_printoptions(precision=2)
+        # logging.info('Confusion matrix, without normalization')
+        # logging.info(cm)
+        # plt.figure()
+        # self.plot_confusion_matrix(cm)
+
+        # # Normalize the confusion matrix by row (i.e by the number of samples
+        # # in each class)
+        # logging.info('Normalized confusion matrix')
+        # logging.info(cm_normalized)
+        # plt.figure()
+        # self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
+
+        # plt.show()
+
+        print "Sorry, not implemented yet"
+
 if __name__ == '__main__':
     fgb = FastGentleBoosting()
 
