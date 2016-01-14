@@ -306,8 +306,9 @@ class Properties(Singleton):
                 self.object_table = FINAL_PER_OBJ_NAME
 
             self.object_id = 'ObjectNumber'
-            self.cell_x_loc = 'Cell_x_loc'
-            self.cell_y_loc = 'Cell_y_loc'
+            self.cell_x_loc = 'Image_x_loc'
+            self.cell_y_loc = 'Image_y_loc'
+            self.object_name = ['image','images']
 
         self.Validate()
         self._initialized = True
