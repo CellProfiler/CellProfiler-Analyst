@@ -445,7 +445,10 @@ class DBConnect(Singleton):
                         self.CreateSQLiteDB()
                     else:
                         raise DBException, 'Database at %s appears to be empty.'%(p.db_sqlite_file)
+            if p.image_classification:
+                self.CreateObjectImageTable()
             logging.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
+
         # Unknown database type (this should never happen)
         else:
             raise DBException, "Unknown db_type in properties: '%s'\n"%(p.db_type)
@@ -616,7 +619,7 @@ class DBConnect(Singleton):
         '''
         if p.object_table is None or p.object_id is None:
             return []
-                
+
         select = 'SELECT '+UniqueImageClause(p.object_table)+', COUNT('+p.object_table+'.'+p.object_id + ') FROM '+p.object_table + ' GROUP BY '+UniqueImageClause(p.object_table)
         result1 = self.execute(select)
         select = 'SELECT '+UniqueImageClause(p.image_table)+' FROM '+p.image_table
@@ -1287,9 +1290,7 @@ class DBConnect(Singleton):
         f.close()
         
         # POPULATE THE OBJECT TABLE
-        if p.image_classification:
-            self.CreateObjectImageTable()
-        else:
+        if not p.image_classification:
             f = open(p.object_csv_file, 'U')
             r = csv.reader(f)
             row = r.next() # skip the headers
@@ -1388,9 +1389,7 @@ class DBConnect(Singleton):
             logging.info("... loaded %d%% of CSV data"%(pct))
 
         line_count = 0
-        if p.image_classification:
-            self.CreateObjectImageTable()
-        else:
+        if not p.image_classification:
             assert len(obcsvs)>0, ('Failed to parse object csv filenames from %s. '
                               'Make sure db_sql_file in your properties file is'
                               ' set to the .SQL file output by CellProfiler\'s '
@@ -1437,6 +1436,26 @@ class DBConnect(Singleton):
 
     def CreateObjectImageTable(self):
         # Create object table for image classification
+        def getImageWidthHeight(list_of_cols):
+            #get width and height
+            try:
+               width_col = next(name for name in list_of_cols if 'width' in name.lower())
+               height_col = next(name for name in list_of_cols if 'height' in name.lower())
+               width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, p.image_table)
+               height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
+               width = self.execute(width_query)
+               height = self.execute(height_query)
+               width = int(width[0][0])
+               height = int(height[0][0])
+
+            except:
+                if p.image_width and p.image_height:
+                    width = int(p.image_width)/2
+                    height = int(p.image_height)/2
+                else:
+                    raise Exception('Input image_width and image_height fields in properties file')
+            return width, height
+
         DB_NAME = p.db_name
         DB_TYPE = p.db_type.lower()
         if DB_TYPE == 'mysql':
@@ -1445,55 +1464,34 @@ class DBConnect(Singleton):
             list_of_cols = []
             cols = [x for x in self.GetColumnNames(p.image_table)]
             list_of_cols.extend([str(x) for x in cols])
-
-            try:
-                width_col = next(name for name in list_of_cols if 'width' in name.lower())
-                height_col = next(name for name in list_of_cols if 'height' in name.lower())
-                width_query = 'SELECT FLOOR(%s/2) FROM %s LIMIT 1'%(width_col, p.image_table)
-                height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
-                width = self.execute(width_query)
-                height = self.execute(height_query)
-                width = int(width[0][0])
-                height = int(height[0][0])
-            except:
-                width = int(p.image_width)/2
-                height = int(p.image_height)/2
+            width, height = getImageWidthHeight(list_of_cols)
 
             query = "CREATE OR REPLACE VIEW %s AS SELECT 1 AS %s, %d AS %s, %d AS %s, %s.* FROM %s"%(p.object_table, p.object_id, width, p.cell_x_loc, height, p.cell_y_loc, p.image_table,p.image_table)
             self.execute(query)
 
         elif DB_TYPE == 'sqlite':
+            pass
             # Copy image table and add more columns
             query = "PRAGMA table_info(%s)"%p.image_table
-            self.execute(query, silent=True)
+            self.execute(query)
             list_of_cols = [str(x) for x in self.GetColumnNames(p.image_table)]
             all_cols = list(list_of_cols)
             all_cols.remove(p.image_id)
             all_cols = [p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc] + all_cols
             query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
             self.execute(query)
-            query = 'CREATE TABLE %s (%s)'%(p.object_table, ",".join(all_cols))
+            query = 'CREATE TEMP TABLE %s (%s)'%(p.object_table, ",".join(all_cols))
             self.execute(query)
-            query = 'INSERT INTO %s (%s) SELECT %s FROM %s;'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
-            self.execute(query, silent=True)
+            query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
+            self.execute(query)
 
             #Get info on image width and height (assuming they are fields in the image table) to get image center
-            try:
-                width_col = next(name for name in list_of_cols if 'width' in name.lower())
-                height_col = next(name for name in list_of_cols if 'height' in name.lower())
-                width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, p.image_table)
-                height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
-                width = self.execute(width_query)
-                height = self.execute(height_query)
-                width = int(width[0][0])
-                height = int(height[0][0])
-            except:
-                width = int(p.image_width)/2
-                height = int(p.image_height)/2
-            query = "UPDATE %s SET %s=1, %s=(%s), %s=(%s)"%(p.object_table, p.object_id,
+            width, height = getImageWidthHeight(list_of_cols)
+
+            query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(p.object_table, p.object_id,
                                                               p.cell_x_loc, width,
                                                               p.cell_y_loc, height)
-            self.execute(query, silent=True)
+            self.execute(query)
 
 
     def table_exists(self, name):
