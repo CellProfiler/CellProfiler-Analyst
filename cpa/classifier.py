@@ -91,7 +91,10 @@ class Classifier(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
-        self.scale = 1.0
+        if not p.image_classification:
+            self.scale = 1.0
+        else:
+            self.scale = 100.0/p.image_tile_size
         self.contrast = 'Linear'
         self.defaultTSFileName = None
         self.defaultModelFileName = None

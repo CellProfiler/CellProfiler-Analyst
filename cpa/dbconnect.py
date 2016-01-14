@@ -1439,19 +1439,22 @@ class DBConnect(Singleton):
         def getImageWidthHeight(list_of_cols):
             #get width and height
             try:
-               width_col = next(name for name in list_of_cols if 'width' in name.lower())
-               height_col = next(name for name in list_of_cols if 'height' in name.lower())
-               width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, p.image_table)
-               height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
-               width = self.execute(width_query)
-               height = self.execute(height_query)
-               width = int(width[0][0])
-               height = int(height[0][0])
-
+                width_col = next(name for name in list_of_cols if 'width' in name.lower())
+                height_col = next(name for name in list_of_cols if 'height' in name.lower())
+                width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, p.image_table)
+                height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
+                width = self.execute(width_query)
+                height = self.execute(height_query)
+                width = int(width[0][0])
+                height = int(height[0][0])
+                p.image_width = width
+                p.image_height = height
+                p.image_tile_size = 2.0*min([width,height])                
             except:
                 if p.image_width and p.image_height:
                     width = int(p.image_width)/2
                     height = int(p.image_height)/2
+                    p.image_tile_size = 2.0*min([width,height])    
                 else:
                     raise Exception('Input image_width and image_height fields in properties file')
             return width, height
