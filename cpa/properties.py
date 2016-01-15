@@ -293,7 +293,7 @@ class Properties(Singleton):
         f.close()
 
         #if image_classification is defined
-        if 'image_classification' in self.__dict__:
+        if self.field_defined('image_classification'):
             #2 cases:
             # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
             # object_table/object_id/cell_x_loc/cell_y_loc don't exist
@@ -310,7 +310,7 @@ class Properties(Singleton):
             self.cell_y_loc = 'Image_y_loc'
             self.object_name = ['image','images']
 
-            if 'image_width' in self.__dict__ and 'image_height' in self.__dict__:
+            if self.field_defined('image_width') and self.field_defined('image_height'):
                 self.image_tile_size = min([self.image_width, self.image_height])
             else:
                 self.image_tile_size = 500
@@ -464,11 +464,14 @@ class Properties(Singleton):
         self.backwards_compatiblize()
         
         # check that all required fields are defined
-        for name in required_vars:
+        required_vars_all = required_vars
+        if not self.field_defined('image_classification'):
+            required_vars_all += ['object_table']
+        for name in required_vars_all:
             assert self.field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)
         
         assert self.db_type.lower() in ['mysql', 'sqlite'], 'PROPERTIES ERROR (db_type): Value must be either "mysql" or "sqlite".'
-        
+
         # BELOW: Check sometimes-optional fields, and print warnings etc
         if self.db_type.lower()=='sqlite':
             for field in ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',]:
