@@ -92,7 +92,11 @@ class TrainingSet:
 
         self.label_matrix = numpy.array(self.label_matrix)
         self.values = numpy.array(self.values, np.float64)
-        self.label_array = numpy.nonzero(self.label_matrix + 1)[1] + 1 # Convert to array
+        if len(self.label_matrix) > 0:
+            self.label_array = numpy.nonzero(self.label_matrix + 1)[1] + 1 # Convert to array
+        else:
+            self.label_array = self.label_matrix      
+            
 
     def Load(self, filename, labels_only=False):
         self.Clear()

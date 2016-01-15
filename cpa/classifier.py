@@ -1100,11 +1100,13 @@ class Classifier(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
 
+            num_objs = 0
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    num_objs += 1
 
-            self.PostMessage('Training set loaded.')
+            self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
     def LoadTrainingSetCSV(self, filename):
@@ -1127,11 +1129,13 @@ class Classifier(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
 
+            num_objs = 0
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    num_objs += 1
 
-            self.PostMessage('Training set loaded.')
+            self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
 
