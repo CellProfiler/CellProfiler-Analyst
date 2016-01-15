@@ -262,7 +262,7 @@ class Classifier(wx.Frame):
         #######################
 
         # Define Classifiers
-        RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier()", self)
+        RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier(n_estimators=100)", self)
         AdaBoostClassifier = GeneralClassifier("ensemble.AdaBoostClassifier()", self)
         SVC = GeneralClassifier("svm.SVC(probability=True)", self) # Need to turn on probs
         
@@ -1487,7 +1487,11 @@ class Classifier(wx.Frame):
         nKeyCols = len(dbconnect.image_key_columns())
 
         # GET GROUPING METHOD AND FILTER FROM USER
-        dlg = ScoreDialog(self, groupChoices, filterChoices)
+        enrichments = True
+        if p.image_classification:
+            enrichments = False
+
+        dlg = ScoreDialog(self, groupChoices, filterChoices, enrichments)
         if dlg.ShowModal() == wx.ID_OK:
             group = dlg.group
             filter = dlg.filter
