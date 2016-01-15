@@ -1441,16 +1441,16 @@ class DBConnect(Singleton):
             try:
                 width_col = next(name for name in list_of_cols if 'width' in name.lower())
                 height_col = next(name for name in list_of_cols if 'height' in name.lower())
-                width_query = 'SELECT %s/2 FROM %s LIMIT 1'%(width_col, p.image_table)
-                height_query = 'SELECT %s/2 FROM %s LIMIT 1'%(height_col, p.image_table)
+                width_query = 'SELECT %s FROM %s LIMIT 1'%(width_col, p.image_table)
+                height_query = 'SELECT %s FROM %s LIMIT 1'%(height_col, p.image_table)
                 width = self.execute(width_query)
                 height = self.execute(height_query)
                 width = int(width[0][0])
                 height = int(height[0][0])
             except:
                 if p.image_width and p.image_height:
-                    width = int(p.image_width)/2
-                    height = int(p.image_height)/2
+                    width = int(p.image_width)
+                    height = int(p.image_height)
                 else:
                     raise Exception('Input image_width and image_height fields in properties file')
             return width, height
@@ -1465,7 +1465,7 @@ class DBConnect(Singleton):
             list_of_cols.extend([str(x) for x in cols])
             width, height = getImageWidthHeight(list_of_cols)
 
-            query = "CREATE OR REPLACE VIEW %s AS SELECT 1 AS %s, %d AS %s, %d AS %s, %s.* FROM %s"%(p.object_table, p.object_id, width, p.cell_x_loc, height, p.cell_y_loc, p.image_table,p.image_table)
+            query = "CREATE OR REPLACE VIEW %s AS SELECT 1 AS %s, %d AS %s, %d AS %s, %s.* FROM %s"%(p.object_table, p.object_id, width/2, p.cell_x_loc, height/2, p.cell_y_loc, p.image_table,p.image_table)
             self.execute(query)
 
         elif DB_TYPE == 'sqlite':
@@ -1488,8 +1488,8 @@ class DBConnect(Singleton):
             width, height = getImageWidthHeight(list_of_cols)
 
             query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(p.object_table, p.object_id,
-                                                              p.cell_x_loc, width,
-                                                              p.cell_y_loc, height)
+                                                              p.cell_x_loc, width/2,
+                                                              p.cell_y_loc, height/2)
             self.execute(query)
 
 

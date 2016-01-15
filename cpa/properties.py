@@ -313,7 +313,7 @@ class Properties(Singleton):
             if self.field_defined('image_width') and self.field_defined('image_height'):
                 self.image_tile_size = min([self.image_width, self.image_height])
             else:
-                self.image_tile_size = 500
+                self.image_tile_size = 1000
             self.image_tile_size = int(self.image_tile_size)
         self.Validate()
         self._initialized = True
