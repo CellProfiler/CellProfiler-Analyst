@@ -310,6 +310,11 @@ class Properties(Singleton):
             self.cell_y_loc = 'Image_y_loc'
             self.object_name = ['image','images']
 
+            if 'image_width' in self.__dict__ and 'image_height' in self.__dict__:
+                self.image_tile_size = min([self.image_width, self.image_height])
+            else:
+                self.image_tile_size = 500
+            self.image_tile_size = int(self.image_tile_size)
         self.Validate()
         self._initialized = True
     LoadFile = load_file

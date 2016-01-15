@@ -1447,14 +1447,10 @@ class DBConnect(Singleton):
                 height = self.execute(height_query)
                 width = int(width[0][0])
                 height = int(height[0][0])
-                p.image_width = width
-                p.image_height = height
-                p.image_tile_size = 2.0*min([width,height])                
             except:
                 if p.image_width and p.image_height:
                     width = int(p.image_width)/2
                     height = int(p.image_height)/2
-                    p.image_tile_size = 2.0*min([width,height])    
                 else:
                     raise Exception('Input image_width and image_height fields in properties file')
             return width, height
