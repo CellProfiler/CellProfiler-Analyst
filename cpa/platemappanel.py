@@ -485,7 +485,7 @@ class PlateMapPanel(wx.Panel):
             except IOError, e:
                 pngs = [Image.open(StringIO(b64decode(im)), 'r') for im in channels]
 
-            imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
+            imsets += [[np.fromstring(png.tobytes(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
                         for png in pngs]]                
         
         n_channels = len(imsets[0])

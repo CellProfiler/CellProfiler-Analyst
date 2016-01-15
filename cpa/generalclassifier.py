@@ -232,7 +232,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         return np.array(predictions)
 
     # Plots the classification report for the user
-    def plot_classification_report(self, cr, title='Classification report ', with_avg_total=False, cmap=plt.cm.Greys):
+    def plot_classification_report(self, cr, title='Classification report ', with_avg_total=False, cmap=plt.cm.Blues):
         sns.set_style("whitegrid", {'axes.grid' : False})
 
         lines = cr.split('\n')
@@ -266,13 +266,38 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         plt.xlabel('Measures')
         plt.show()
 
-    # Confusion Matrix
-    def plot_confusion_matrix(self, cm, title='Confusion matrix', cmap=plt.cm.Greys):
+    # Confusion Matrix (improved version with total numbers)
+    def plot_confusion_matrix(self, conf_arr, title='Confusion matrix', cmap=plt.cm.Blues):
         sns.set_style("whitegrid", {'axes.grid' : False})
 
-        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        #plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        norm_conf = []
+        for i in conf_arr:
+            a = 0
+            tmp_arr = []
+            a = sum(i, 0)
+            for j in i:
+                tmp_arr.append(float(j)/float(a))
+            norm_conf.append(tmp_arr)
+
+        fig = plt.figure()
+        plt.clf()
+        ax = fig.add_subplot(111)
+        ax.set_aspect(1)
+        res = ax.imshow(np.array(norm_conf), cmap=plt.cm.Blues, 
+                        interpolation='nearest')
+
+        width = len(conf_arr)
+        height = len(conf_arr[0])
+
+        for x in xrange(width):
+            for y in xrange(height):
+                if conf_arr[x][y] != 0:
+                    ax.annotate(str(conf_arr[x][y]), xy=(y, x), 
+                                horizontalalignment='center',
+                                verticalalignment='center')
         plt.title(title)
-        plt.colorbar()
+        plt.colorbar(res)
         tick_marks = np.arange(len(self.env.trainingSet.labels))
         plt.xticks(tick_marks, self.env.trainingSet.labels, rotation=45)
         plt.yticks(tick_marks, self.env.trainingSet.labels)
@@ -293,15 +318,15 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         np.set_printoptions(precision=2)
         logging.info('Confusion matrix, without normalization')
         logging.info(cm)
-        plt.figure()
+        #plt.figure()
         self.plot_confusion_matrix(cm)
 
         # Normalize the confusion matrix by row (i.e by the number of samples
         # in each class)
         logging.info('Normalized confusion matrix')
         logging.info(cm_normalized)
-        plt.figure()
-        self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
+        #plt.figure()
+        #self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
 
         plt.show()
 

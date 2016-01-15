@@ -257,7 +257,8 @@ class ScatterControlPanel(wx.Panel):
             key_indices = list(xrange(len(object_key_columns())))
         else:
             key_indices = list(xrange(len(image_key_columns())))
-        keys = kps[:,key_indices].astype(int)
+        print len(kps)
+        keys = kps[:,key_indices].astype(int) 
         # Strip out x coords
         if col_types[0] in [float, int, long]:
             xpoints = kps[:,-2].astype('float32')

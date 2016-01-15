@@ -350,6 +350,47 @@ class FastGentleBoosting(object):
         unique_labels = list(set(group_labels))
         np.random.shuffle(unique_labels)
 
+        fold_min_size = len(group_labels) / float(folds)
+        num_misclassifications = np.zeros(num_learners, int)
+
+        # break into folds, randomly, but with all identical group_labels together
+        for f in range(folds):
+            current_holdout = [False] * len(group_labels)
+            while unique_labels and (sum(current_holdout) < fold_min_size):
+                to_add = unique_labels.pop()
+                current_holdout = [(a or b) for a, b in zip(current_holdout, [g == to_add for g in group_labels])]
+
+            if sum(current_holdout) == 0:
+                logging.error("no holdout")
+                break
+
+            holdout_idx = np.nonzero(current_holdout)[0]
+            current_holdin = ~ np.array(current_holdout)
+            holdin_idx = np.nonzero(current_holdin)[0]
+            holdin_labels = label_matrix[holdin_idx, :]
+            holdin_values = values[holdin_idx, :]
+            holdout_values = values[holdout_idx, :]
+            holdout_results = self.Train(colnames, num_learners, holdin_labels, holdin_values, test_values=holdout_values)
+            if holdout_results is None:
+                return None
+            # pad the end of the holdout set with the last element
+            if len(holdout_results) < num_learners:
+                holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
+            holdout_labels = label_matrix[holdout_idx, :].argmax(axis=1)
+            num_misclassifications += [sum(hr != holdout_labels) for hr in holdout_results]
+            if progress_callback:
+                progress_callback(f / float(folds))
+
+        return [num_misclassifications]
+
+    def XValidatePredict(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback):
+        # if everything's in the same group, ignore the labels
+        if all([g == group_labels[0] for g in group_labels]):
+            group_labels = range(len(group_labels))
+
+        # randomize the order of labels
+        unique_labels = list(set(group_labels))
+        np.random.shuffle(unique_labels)
 
         fold_min_size = len(group_labels) / float(folds)
         num_misclassifications = np.zeros(num_learners, int)
@@ -386,17 +427,17 @@ class FastGentleBoosting(object):
 
     # Confusion Matrix
     def plot_confusion_matrix(self, cm, title='Confusion matrix', cmap=plt.cm.Greys):
-        # sns.set_style("whitegrid", {'axes.grid' : False})
+        sns.set_style("whitegrid", {'axes.grid' : False})
 
-        # plt.imshow(cm, interpolation='nearest', cmap=cmap)
-        # plt.title(title)
-        # plt.colorbar()
-        # tick_marks = np.arange(len(self.env.trainingSet.labels))
-        # plt.xticks(tick_marks, self.env.trainingSet.labels, rotation=45)
-        # plt.yticks(tick_marks, self.env.trainingSet.labels)
-        # plt.tight_layout()
-        # plt.ylabel('True label')
-        # plt.xlabel('Predicted label')
+        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        plt.title(title)
+        plt.colorbar()
+        tick_marks = np.arange(len(self.env.trainingSet.labels))
+        plt.xticks(tick_marks, self.env.trainingSet.labels, rotation=45)
+        plt.yticks(tick_marks, self.env.trainingSet.labels)
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
         pass
 
     def ConfusionMatrix(self):
