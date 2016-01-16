@@ -196,9 +196,9 @@ class MainGUI(wx.Frame):
         self.console.SetDefaultStyle(wx.TextAttr(wx.WHITE,wx.BLACK))
         self.console.SetBackgroundColour('#000000')  
 
-        log_level = logging.DEBUG
+        log_level = logging.INFO # INFO is the default log level
         self.logr = logging.getLogger()
-        self.set_log_level(log_level)
+        self.set_log_level(log_level) 
         self.log_text = ''
         def update(x):
             self.log_text += x+'\n'

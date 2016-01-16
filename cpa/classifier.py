@@ -1855,7 +1855,7 @@ class Classifier(wx.Frame):
                     self.OnRulesEdit(evt)
                     return
                 self.keysAndCounts = None
-                self.rules_text.Value.SetValue(self.algorithm.ShowModel())
+                self.rules_text.SetValue(self.algorithm.ShowModel())
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:

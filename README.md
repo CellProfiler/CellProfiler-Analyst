@@ -3,7 +3,7 @@
 
 *Note: This version is heavily under development and not production-ready yet*
 
-You can download and test out the new build version for mac os [here] (https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4T0FpaXJXeXBHclE/view?usp=sharing) (only available for Broadies)
+You can download and test out the new build version for mac os [here] (https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4TndsZzNGZ1BkQXc/view?usp=sharing) (only available for Broadies)
 
 Authors: Adam Fraser, Thouis R. Jones, David Dao, Jane Hung
 
