@@ -599,7 +599,7 @@ class PlateViewer(wx.Frame, CPATool):
             if db.GetColumnType(self.sourceChoice.Value, self.measurementsChoice.Value) != str:
                 self.aggregationMethodsChoice.Enable()
                 self.aggregationMethodsChoice.SetSelection(0)
-        self.UpdatePlateMaps()
+        self.UpdatePlateMaps() 
         
     def OnSelectFilter(self, evt):
         self.filterChoice.on_select(evt)

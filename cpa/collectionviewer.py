@@ -40,17 +40,17 @@ from generalclassifier import GeneralClassifier
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
 
-ID_CLASSIFIER = wx.NewId()
+ID_COLLECTION_VIEWER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
 required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
 
-class Classifier(wx.Frame):
+class CollectionViewer(wx.Frame):
     """
     GUI Interface and functionality for the Classifier.
     """
 
-    def __init__(self, properties=None, parent=None, id=ID_CLASSIFIER, **kwargs):
+    def __init__(self, properties=None, parent=None, id=ID_COLLECTION_VIEWER, **kwargs):
 
         if properties is not None:
             global p
@@ -58,19 +58,19 @@ class Classifier(wx.Frame):
             global db
             db = dbconnect.DBConnect.getInstance()
 
-        wx.Frame.__init__(self, parent, id=id, title='CPA/Classifier - %s' % \
+        wx.Frame.__init__(self, parent, id=id, title='CPA/CollectionViewer - %s' % \
                                                      (os.path.basename(p._filename)), size=(800, 600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
             self.tbicon = wx.TaskBarIcon()
-            self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/Classifier')
+            self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/CollectionViewer')
         else:
             self.SetIcon(icons.get_cpa_icon())
-        self.SetName('Classifier')
+        self.SetName('CollectionViewer')
 
         db.register_gui_parent(self)
         for field in required_fields:
             if not p.field_defined(field):
-                raise Exception('Properties field "%s" is required for Classifier.' % (field))
+                raise Exception('Properties field "%s" is required for CollectionViewer.' % (field))
                 self.Destroy()
                 return
 
@@ -78,8 +78,8 @@ class Classifier(wx.Frame):
         dm = DataModel.getInstance()
 
         if not p.is_initialized():
-            logging.critical('Classifier requires a properties file. Exiting.')
-            raise Exception('Classifier requires a properties file. Exiting.')
+            logging.critical('CollectionViewer requires a properties file. Exiting.')
+            raise Exception('CollectionViewer requires a properties file. Exiting.')
 
         self.pmb = None
         self.worker = None
@@ -191,26 +191,26 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.AddStretchSpacer()
         self.find_rules_sizer.Add((5, 20))
         self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
-        self.find_rules_sizer.Add(self.complexityTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.complexityTxt)
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.nRulesTxt)
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
+        self.find_rules_sizer.Add(self.classifierChoice) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.trainClassifierBtn)
         # Cross Validation Button
         self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluation')
         self.evaluationBtn.Disable()
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.evaluationBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.evaluationBtn)
         self.Bind(wx.EVT_BUTTON, self.OnEvaluation, self.evaluationBtn)
         # Plot nice graphics Button
         self.find_rules_sizer.Add((5, 20))
 
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.scoreAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.scoreAllBtn)
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.scoreImageBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.scoreImageBtn)
         self.find_rules_sizer.Add((5, 20))
         # JEN - Start Add
         #self.find_rules_sizer.Add(self.openDimensReduxBtn)
@@ -222,10 +222,7 @@ class Classifier(wx.Frame):
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
         self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
-        self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.find_rules_panel, flag=wx.EXPAND)
-        self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
         # classified bins panel
@@ -350,8 +347,7 @@ class Classifier(wx.Frame):
         button = self.addSortClassBtn
         width, height = self.GetStatusBar().GetClientSize()
         # diagonal lines drawn on mac, so move let by height.
-        button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1] - 3))
-        print button.GetPosition()
+        button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1]))
 
     # When choosing the classifier in the rules panel
     def OnClassifierChoice(self, event):
@@ -468,7 +464,7 @@ class Classifier(wx.Frame):
         self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save classifier model', help='Save your classifier model to file so you can use it again on this or other experiments.')
         self.fileMenu.AppendSeparator()
         # JEN - End Add
-        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit CollectionViewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
         # View Menu
@@ -1988,7 +1984,7 @@ class Classifier(wx.Frame):
 
     def Destroy(self):
         ''' Kill off all threads before combusting. '''
-        super(Classifier, self).Destroy()
+        super(CollectionViewer, self).Destroy()
         import threading
         for thread in threading.enumerate():
             if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):

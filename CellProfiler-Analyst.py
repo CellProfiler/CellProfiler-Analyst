@@ -74,6 +74,7 @@ from cpa.classifier import Classifier
 from cpa.tableviewer import TableViewer
 from cpa.plateviewer import PlateViewer
 from cpa.imageviewer import ImageViewer
+from cpa.collectionviewer import CollectionViewer
 from cpa.boxplot import BoxPlot
 from cpa.scatter import Scatter
 from cpa.histogram import Histogram
@@ -92,6 +93,7 @@ import cpa.multiclasssql
 import wx
 
 ID_CLASSIFIER = wx.NewId()
+ID_COLLECTION_VIEWER = wx.NewId()
 ID_PLATE_VIEWER = wx.NewId()
 ID_TABLE_VIEWER = wx.NewId()
 ID_IMAGE_VIEWER = wx.NewId()
@@ -133,9 +135,11 @@ class MainGUI(wx.Frame):
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
+        #tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', cpa.icons.nn.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
         tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
         tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
         tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        #tb.AddLabelTool(ID_COLLECTION_VIEWER, 'CollectionViewer', cpa.icons.image_explorer.ConvertToBitmap(), shortHelp='Collection Viewer', longHelp='Launch Image Collection Viewer')
         tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
@@ -165,6 +169,7 @@ class MainGUI(wx.Frame):
         plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
         dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
         imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
+        collectionViewerMenuItem = toolsMenu.Append(ID_COLLECTION_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the Image Collection Viewer')
         scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
@@ -225,6 +230,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_image_viewer, id=ID_IMAGE_VIEWER)
+        self.Bind(wx.EVT_TOOL, self.launch_collection_viewer, id=ID_COLLECTION_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_scatter_plot, id=ID_SCATTER)
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
@@ -267,6 +273,16 @@ class MainGUI(wx.Frame):
     def launch_image_viewer(self, evt=None):
         imviewer = ImageViewer(parent=self)
         imviewer.Show(True)
+
+    def launch_collection_viewer(self, evt=None):
+        colViewer = wx.FindWindowById(ID_COLLECTION_VIEWER) or wx.FindWindowByName('CollectionViewer')
+        if colViewer:
+            colViewer.Show()
+            colViewer.SetFocus()
+            logging.warn('You may only run one instance of CollectionViewer at a time.')
+            return
+        colViewer = CollectionViewer(parent=self, properties=self.properties)
+        colViewer.Show(True)
 
     def launch_box_plot(self, evt=None):
         boxplot = BoxPlot(parent=self)
