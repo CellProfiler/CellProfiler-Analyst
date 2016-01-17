@@ -168,7 +168,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.addAnnotationColBtn.Bind(wx.EVT_BUTTON, self.OnAddAnnotationCol)
         self.annotationLabel.Bind(wx.EVT_KEY_UP, self.OnEnterAnnotation)
         self.outlineMarked.Bind(wx.EVT_CHECKBOX, self.OnOutlineMarked)
-        self.annotationShowVals.Bind(wx.EVT_CHECKBOX, self.OnShowAnotationValues)
+        self.annotationShowVals.Bind(wx.EVT_CHECKBOX, self.OnShowAnnotationValues)
         self.filterChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectFilter)
         
         self.AddPlateMap()
@@ -577,7 +577,7 @@ class PlateViewer(wx.Frame, CPATool):
                 pm.SetOutlinedWells([])
         self.UpdatePlateMaps()
                 
-    def OnShowAnotationValues(self, evt=None):
+    def OnShowAnnotationValues(self, evt=None):
         '''Handler for the show values checkbox.
         '''
         if self.annotationShowVals.IsChecked():
