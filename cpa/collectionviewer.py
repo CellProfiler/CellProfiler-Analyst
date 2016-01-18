@@ -191,26 +191,26 @@ class CollectionViewer(wx.Frame):
         self.find_rules_sizer.AddStretchSpacer()
         self.find_rules_sizer.Add((5, 20))
         self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
-        self.find_rules_sizer.Add(self.complexityTxt)
+        self.find_rules_sizer.Add(self.complexityTxt, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.nRulesTxt)
+        self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.classifierChoice) #Classifier Choice
+        self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.trainClassifierBtn)
+        self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         # Cross Validation Button
         self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluation')
         self.evaluationBtn.Disable()
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.evaluationBtn)
+        self.find_rules_sizer.Add(self.evaluationBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.Bind(wx.EVT_BUTTON, self.OnEvaluation, self.evaluationBtn)
         # Plot nice graphics Button
         self.find_rules_sizer.Add((5, 20))
 
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.scoreAllBtn)
+        self.find_rules_sizer.Add(self.scoreAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.scoreImageBtn)
+        self.find_rules_sizer.Add(self.scoreImageBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.Add((5, 20))
         # JEN - Start Add
         #self.find_rules_sizer.Add(self.openDimensReduxBtn)
@@ -222,7 +222,10 @@ class CollectionViewer(wx.Frame):
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
         self.fetch_and_rules_sizer.Add((5, 5))
+        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
+        self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.find_rules_panel, flag=wx.EXPAND)
+        self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
         # classified bins panel
@@ -347,7 +350,7 @@ class CollectionViewer(wx.Frame):
         button = self.addSortClassBtn
         width, height = self.GetStatusBar().GetClientSize()
         # diagonal lines drawn on mac, so move let by height.
-        button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1]))
+        button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1] - 3))
 
     # When choosing the classifier in the rules panel
     def OnClassifierChoice(self, event):
@@ -464,7 +467,7 @@ class CollectionViewer(wx.Frame):
         self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save classifier model', help='Save your classifier model to file so you can use it again on this or other experiments.')
         self.fileMenu.AppendSeparator()
         # JEN - End Add
-        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit CollectionViewer')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
         # View Menu

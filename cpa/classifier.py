@@ -351,7 +351,6 @@ class Classifier(wx.Frame):
         width, height = self.GetStatusBar().GetClientSize()
         # diagonal lines drawn on mac, so move let by height.
         button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1] - 3))
-        print button.GetPosition()
 
     # When choosing the classifier in the rules panel
     def OnClassifierChoice(self, event):
