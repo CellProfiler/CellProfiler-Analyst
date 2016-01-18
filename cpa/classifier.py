@@ -222,9 +222,9 @@ class Classifier(wx.Frame):
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
         self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
-        self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.find_rules_panel, flag=wx.EXPAND)
+        self.fetch_and_rules_sizer.Add((5, 5))
+        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)      
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
@@ -1827,7 +1827,7 @@ class Classifier(wx.Frame):
 
     def OnShowImageControls(self, evt):
         ''' Shows the image adjustment control panel in a new frame. '''
-        self.imageControlFrame = wx.Frame(self)
+        self.imageControlFrame = wx.Frame(self, size=(470, 155))
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale,
                           contrast=self.contrast)
         self.imageControlFrame.Show(True)

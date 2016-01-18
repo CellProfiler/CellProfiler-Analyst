@@ -40,17 +40,17 @@ from generalclassifier import GeneralClassifier
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
 
-ID_COLLECTION_VIEWER = wx.NewId()
+ID_IMAGE_GALLERY = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
 required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
 
-class CollectionViewer(wx.Frame):
+class ImageGallery(wx.Frame):
     """
-    GUI Interface and functionality for the Classifier.
+    GUI Interface and functionality for Image Gallery.
     """
 
-    def __init__(self, properties=None, parent=None, id=ID_COLLECTION_VIEWER, **kwargs):
+    def __init__(self, properties=None, parent=None, id=ID_IMAGE_GALLERY, **kwargs):
 
         if properties is not None:
             global p
@@ -58,19 +58,19 @@ class CollectionViewer(wx.Frame):
             global db
             db = dbconnect.DBConnect.getInstance()
 
-        wx.Frame.__init__(self, parent, id=id, title='CPA/CollectionViewer - %s' % \
+        wx.Frame.__init__(self, parent, id=id, title='CPA/ImageGallery - %s' % \
                                                      (os.path.basename(p._filename)), size=(800, 600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
             self.tbicon = wx.TaskBarIcon()
-            self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/CollectionViewer')
+            self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/ImageGallery')
         else:
             self.SetIcon(icons.get_cpa_icon())
-        self.SetName('CollectionViewer')
+        self.SetName('ImageGallery')
 
         db.register_gui_parent(self)
         for field in required_fields:
             if not p.field_defined(field):
-                raise Exception('Properties field "%s" is required for CollectionViewer.' % (field))
+                raise Exception('Properties field "%s" is required for ImageGallery.' % (field))
                 self.Destroy()
                 return
 
@@ -78,8 +78,8 @@ class CollectionViewer(wx.Frame):
         dm = DataModel.getInstance()
 
         if not p.is_initialized():
-            logging.critical('CollectionViewer requires a properties file. Exiting.')
-            raise Exception('CollectionViewer requires a properties file. Exiting.')
+            logging.critical('ImageGallery requires a properties file. Exiting.')
+            raise Exception('ImageGallery requires a properties file. Exiting.')
 
         self.pmb = None
         self.worker = None
@@ -117,11 +117,11 @@ class CollectionViewer(wx.Frame):
 
         # sorting bins
         self.unclassified_panel = wx.Panel(self.bins_splitter)
-        self.unclassified_box = wx.StaticBox(self.unclassified_panel, label='unclassified ' + p.object_name[1])
+        self.unclassified_box = wx.StaticBox(self.unclassified_panel, label=p.object_name[1] + ' image gallery')
         self.unclassified_sizer = wx.StaticBoxSizer(self.unclassified_box, wx.VERTICAL)
         self.unclassifiedBin = sortbin.SortBin(parent=self.unclassified_panel,
                                                classifier=self,
-                                               label='unclassified',
+                                               label=p.object_name[1] + ' image gallery',
                                                parentSizer=self.unclassified_sizer)
         self.unclassified_sizer.Add(self.unclassifiedBin, proportion=1, flag=wx.EXPAND)
         self.unclassified_panel.SetSizer(self.unclassified_sizer)
@@ -222,8 +222,6 @@ class CollectionViewer(wx.Frame):
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
         self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
-        self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.find_rules_panel, flag=wx.EXPAND)
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
@@ -291,8 +289,8 @@ class CollectionViewer(wx.Frame):
 
         # add the default classes
         #for class in range(1, num_classes+1):
-        self.AddSortClass('positive')
-        self.AddSortClass('negative')
+        self.AddSortClass(p.object_name[1] + ' objects of selected image')
+        #self.AddSortClass('negative')
 
         self.Layout()
 
@@ -326,15 +324,15 @@ class CollectionViewer(wx.Frame):
         self.Bind(sortbin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
 
         # If there's a default training set. Ask to load it.
-        if p.training_set and os.access(p.training_set, os.R_OK):
-            # file existence is checked in Properties module
-            dlg = wx.MessageDialog(self,
-                                   'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.' % (
-                                   p.training_set),
-                                   'Load Default Training Set?', wx.YES_NO | wx.ICON_QUESTION)
-            response = dlg.ShowModal()
-            if response == wx.ID_YES:
-                self.LoadTrainingSet(p.training_set)
+        # if p.training_set and os.access(p.training_set, os.R_OK):
+        #     # file existence is checked in Properties module
+        #     dlg = wx.MessageDialog(self,
+        #                            'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.' % (
+        #                            p.training_set),
+        #                            'Load Default Training Set?', wx.YES_NO | wx.ICON_QUESTION)
+        #     response = dlg.ShowModal()
+        #     if response == wx.ID_YES:
+        #         self.LoadTrainingSet(p.training_set)
 
         self.AutoSave() # Autosave try out
 
@@ -1049,7 +1047,7 @@ class CollectionViewer(wx.Frame):
             self.defaultModelFileName = os.path.split(filename)[1]
             bin_labels = [bin.label for bin in self.classBins]
             self.algorithm.SaveModel(filename, bin_labels)
-            self.PostMessage('Classifier model succesfully saved.')
+            self.PostMessage('Classifier model successfully saved.')
 
     # JEN - End Add
 
@@ -1827,7 +1825,7 @@ class CollectionViewer(wx.Frame):
 
     def OnShowImageControls(self, evt):
         ''' Shows the image adjustment control panel in a new frame. '''
-        self.imageControlFrame = wx.Frame(self)
+        self.imageControlFrame = wx.Frame(self, size=(470, 155))
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale,
                           contrast=self.contrast)
         self.imageControlFrame.Show(True)
@@ -1987,7 +1985,7 @@ class CollectionViewer(wx.Frame):
 
     def Destroy(self):
         ''' Kill off all threads before combusting. '''
-        super(CollectionViewer, self).Destroy()
+        super(ImageGallery, self).Destroy()
         import threading
         for thread in threading.enumerate():
             if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
