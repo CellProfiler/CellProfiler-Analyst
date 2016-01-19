@@ -1,6 +1,7 @@
 
 import numpy as np
 import sys
+import logging
 
 sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/cpa');
 sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/')
@@ -59,6 +60,11 @@ def create_perobject_class_table(classifier, classNames):
     #print('Getting predictions...')
         cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
         object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+        data_shape = cell_data.shape
+        cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
+        cell_data = np.nan_to_num(cell_data) #replace nan data (originally containing nonnumeric or Null/None values before genfromtxt) with 0
+        logging.info('Any values that cannot be converted to float are set to 0')
+
         predicted_classes = classifier.Predict(cell_data)
 
     #print('Writing to database...')
@@ -123,6 +129,7 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
     data_shape = cell_data.shape
     cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
     cell_data = np.nan_to_num(cell_data) #replace nan data (originally containing nonnumeric or Null/None values before genfromtxt) with 0
+    logging.info('Any values that cannot be converted to float are set to 0')
 
     res = [] # list
     if uncertain:
@@ -138,11 +145,6 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
         predicted_classes = classifier.Predict(cell_data)
         res = object_keys[predicted_classes == classNum * np.ones(predicted_classes.shape)].tolist() #convert to list 
     return map(tuple,res) # ... and then to tuples
-
-def CleanData(dataValues, dataKeys):
-    #replace nan data (originally containing nonnumeric or Null/None values before genfromtxt) with 0
-    dataValues = np.nan_to_num(dataValues)
-    return dataValues, dataKeys
 
 def _objectify(p, field):
     return "%s.%s"%(p.object_table, field)
@@ -244,6 +246,8 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
             data_shape = cell_data.shape
             cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
             cell_data = np.nan_to_num(cell_data)
+            logging.info('Any values that cannot be converted to float are set to 0')
+
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i], predicted_classes[i]))
