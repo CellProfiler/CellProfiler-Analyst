@@ -120,7 +120,9 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
 
     cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
     object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
-    cell_data, object_keys = CleanData(cell_data, object_keys)
+    data_shape = cell_data.shape
+    cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
+    cell_data = np.nan_to_num(cell_data) #replace nan data (originally containing nonnumeric or Null/None values before genfromtxt) with 0
 
     res = [] # list
     if uncertain:
@@ -138,16 +140,9 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
     return map(tuple,res) # ... and then to tuples
 
 def CleanData(dataValues, dataKeys):
-    #remove Null and None values
-    remove_index = []
-    for i in np.arange(len(dataValues)):
-        if "Null" in dataValues[i].tolist():
-            remove_index.append(i)
-        elif None in dataValues[i].tolist():
-            remove_index.append(i)
-    dataValues_truncated = np.delete(dataValues, remove_index, axis=0)
-    dataKeys_truncated = np.delete(dataKeys, remove_index, axis=0)
-    return dataValues_truncated, dataKeys_truncated
+    #replace nan data (originally containing nonnumeric or Null/None values before genfromtxt) with 0
+    dataValues = np.nan_to_num(dataValues)
+    return dataValues, dataKeys
 
 def _objectify(p, field):
     return "%s.%s"%(p.object_table, field)
@@ -242,13 +237,13 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                                     ",".join(db.GetColnamesForClassifier()), tables,
                                     join_clause, where_clause),
                                   silent=(idx > 10))
-
             number_of_features = len(db.GetColnamesForClassifier())
 
             cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
             image_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
-
-            cell_data, image_keys = CleanData(cell_data, image_keys)
+            data_shape = cell_data.shape
+            cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
+            cell_data = np.nan_to_num(cell_data)
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i], predicted_classes[i]))

@@ -72,6 +72,7 @@ class TrainingSet:
         num_fetched = [0] # use a list to get static scoping
 
         # Populate the label_matrix, entries, and values
+        # NB: values that are nonnumeric or Null/None are made to be 0
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             self.label_matrix += ([cl_label] * len(keyList))
 
