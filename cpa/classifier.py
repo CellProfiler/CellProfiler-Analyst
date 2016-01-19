@@ -149,7 +149,7 @@ class Classifier(wx.Frame):
 
         self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
         self.classifierChoice.SetSelection(0) # Windows GUI otherwise doesn't select
-        self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')
+        self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train')
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
         self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
 
@@ -190,23 +190,26 @@ class Classifier(wx.Frame):
         # Train classifier panel
         self.find_rules_sizer.AddStretchSpacer()
         self.find_rules_sizer.Add((5, 20))
-        self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
-        self.find_rules_sizer.Add(self.complexityTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, -1, 'with'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.AddSpacer((5, 20))
+        self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
+        self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add((5, 20))
+        self.find_rules_sizer.Add(self.complexityTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add((5, 20))
         # Cross Validation Button
+        self.find_rules_sizer.Add((5, 20))
+        self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add((5, 20))
         self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluation')
         self.evaluationBtn.Disable()
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.evaluationBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.Bind(wx.EVT_BUTTON, self.OnEvaluation, self.evaluationBtn)
         # Plot nice graphics Button
-        self.find_rules_sizer.Add((5, 20))
-
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.scoreAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.Add((5, 20))

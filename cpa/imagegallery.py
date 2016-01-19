@@ -29,7 +29,6 @@ import os
 import wx
 import re
 import cpa.helpmenu
-from dimensredux import PlotMain
 
 import fastgentleboostingmulticlass
 from fastgentleboosting import FastGentleBoosting
@@ -110,21 +109,18 @@ class ImageGallery(wx.Frame):
 
         # fetch & rules
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
-        self.rules_text = wx.TextCtrl(self.fetch_and_rules_panel, -1, size=(-1, -1),
-                                      style=wx.TE_MULTILINE | wx.TE_READONLY)
-        self.rules_text.SetMinSize((-1, 85))
         self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
 
         # sorting bins
-        self.unclassified_panel = wx.Panel(self.bins_splitter)
-        self.unclassified_box = wx.StaticBox(self.unclassified_panel, label=p.object_name[1] + ' image gallery')
-        self.unclassified_sizer = wx.StaticBoxSizer(self.unclassified_box, wx.VERTICAL)
-        self.unclassifiedBin = sortbin.SortBin(parent=self.unclassified_panel,
+        self.gallery_panel = wx.Panel(self.bins_splitter)
+        self.gallery_box = wx.StaticBox(self.gallery_panel, label=p.object_name[1] + ' image gallery')
+        self.gallery_sizer = wx.StaticBoxSizer(self.gallery_box, wx.VERTICAL)
+        self.galleryBin = sortbin.SortBin(parent=self.gallery_panel,
                                                classifier=self,
                                                label=p.object_name[1] + ' image gallery',
-                                               parentSizer=self.unclassified_sizer)
-        self.unclassified_sizer.Add(self.unclassifiedBin, proportion=1, flag=wx.EXPAND)
-        self.unclassified_panel.SetSizer(self.unclassified_sizer)
+                                               parentSizer=self.gallery_sizer)
+        self.gallery_sizer.Add(self.galleryBin, proportion=1, flag=wx.EXPAND)
+        self.gallery_panel.SetSizer(self.gallery_sizer)
         self.classified_bins_panel = wx.Panel(self.bins_splitter)
 
         # fetch objects interface
@@ -149,7 +145,7 @@ class ImageGallery(wx.Frame):
 
         self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
         self.classifierChoice.SetSelection(0) # Windows GUI otherwise doesn't select
-        self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')
+        self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Load images')
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
         self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
 
@@ -232,7 +228,7 @@ class ImageGallery(wx.Frame):
         # splitter windows
         self.splitter.SplitHorizontally(self.fetch_and_rules_panel, self.bins_splitter,
                                         self.fetch_and_rules_panel.GetMinSize()[1])
-        self.bins_splitter.SplitHorizontally(self.unclassified_panel, self.classified_bins_panel)
+        self.bins_splitter.SplitHorizontally(self.gallery_panel, self.classified_bins_panel)
 
         self.splitter.SetSashGravity(0.0)
         self.bins_splitter.SetSashGravity(0.5)
@@ -323,25 +319,7 @@ class ImageGallery(wx.Frame):
         tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
         self.Bind(sortbin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
 
-        # If there's a default training set. Ask to load it.
-        # if p.training_set and os.access(p.training_set, os.R_OK):
-        #     # file existence is checked in Properties module
-        #     dlg = wx.MessageDialog(self,
-        #                            'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.' % (
-        #                            p.training_set),
-        #                            'Load Default Training Set?', wx.YES_NO | wx.ICON_QUESTION)
-        #     response = dlg.ShowModal()
-        #     if response == wx.ID_YES:
-        #         self.LoadTrainingSet(p.training_set)
-
         self.AutoSave() # Autosave try out
-
-    # JEN - Start Add
-    def OpenDimensRedux(self, event):
-        self.pca_main = PlotMain(self, properties=p)
-        self.pca_main.Show(True)
-
-    # JEN - End Add
 
     def status_bar_onsize(self, event):
         # draw the "add sort class..." button in the status bar
@@ -380,7 +358,6 @@ class ImageGallery(wx.Frame):
         # Update the GUI complexity text and classifier description
         # self.complexityTxt.SetLabel(self.algorithm.get_params())
         self.complexityTxt.Parent.Layout()
-        self.rules_text.Value = ''
 
         # Make sure the classifier is cleared before running a new training session
         self.algorithm.ClearModel()
@@ -407,7 +384,6 @@ class ImageGallery(wx.Frame):
             p.object_name[1])))
         self.filterChoice.GetToolTip().SetDelay(3000)
         self.fetchBtn.SetToolTip(wx.ToolTip('Fetches images of %s to be sorted.' % (p.object_name[1])))
-        self.rules_text.SetToolTip(wx.ToolTip('Rules are displayed in this text box.'))
         self.nRulesTxt.SetToolTip(
             wx.ToolTip('The number of top features to show or fast gentle boosting learners.'))
         self.trainClassifierBtn.SetToolTip(wx.ToolTip(
@@ -418,7 +394,7 @@ class ImageGallery(wx.Frame):
         self.scoreImageBtn.SetToolTip(
             wx.ToolTip('Highlight %s of a particular phenotype in an image.' % (p.object_name[1])))
         self.addSortClassBtn.SetToolTip(wx.ToolTip('Add another bin to sort your %s into.' % (p.object_name[1])))
-        self.unclassifiedBin.SetToolTip(
+        self.galleryBin.SetToolTip(
             wx.ToolTip('%s in this bin should be sorted into the bins below.' % (p.object_name[1].capitalize())))
 
     def OnKey(self, evt):
@@ -735,7 +711,6 @@ class ImageGallery(wx.Frame):
         self.algorithm.UpdateBins([]);
         if clearModel:
             self.algorithm.ClearModel()
-        self.rules_text.SetValue('')
         for bin in self.classBins:
             bin.trained = False
         self.UpdateClassChoices()
@@ -779,7 +754,7 @@ class ImageGallery(wx.Frame):
         return wx.ID_CANCEL
 
     def all_sort_bins(self):
-        return [self.unclassifiedBin] + self.classBins
+        return [self.galleryBin] + self.classBins
 
     def UpdateClassChoices(self):
         if not self.IsTrained():
@@ -948,14 +923,14 @@ class ImageGallery(wx.Frame):
                     attempts = 0
             statusMsg += loopMsg
 
-        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
+        self.galleryBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
         self.PostMessage(statusMsg)
 
     def OnTileUpdated(self, evt):
         '''
         When the tile loader returns the tile image update the tile.
         '''
-        self.unclassifiedBin.UpdateTile(evt.data)
+        self.galleryBin.UpdateTile(evt.data)
         for bin in self.classBins:
             bin.UpdateTile(evt.data)
 
@@ -1318,13 +1293,22 @@ class ImageGallery(wx.Frame):
                 return False
 
     def OnTrainClassifier(self, evt):
-        if not self.ValidateNumberOfRules():
-            errdlg = wx.MessageDialog(self, 'Classifier will not run for the number of rules you have entered.',
-                                      "Invalid Number of Rules", wx.OK | wx.ICON_EXCLAMATION)
-            errdlg.ShowModal()
-            errdlg.Destroy()
-            return
-        self.TrainClassifier()
+        # If there's a default training set. Ask to load it.
+        # if p.training_set and os.access(p.training_set, os.R_OK):
+        #     # file existence is checked in Properties module
+        #     dlg = wx.MessageDialog(self,
+        #                            'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.' % (
+        #                            p.training_set),
+        #                            'Load Default Training Set?', wx.YES_NO | wx.ICON_QUESTION)
+        #     response = dlg.ShowModal()
+        #     if response == wx.ID_YES:
+        #         self.LoadTrainingSet(p.training_set)
+
+        # Get all image keys
+        imKeys = db.GetAllImageKeys()
+        imKeys = map(lambda x: (x[0],1), imKeys)
+        self.galleryBin.AddObjects(imKeys, self.chMap, pos='last')
+        self.PostMessage("Loaded all images")
 
 #SKLEARN TODO
     def TrainClassifier(self):
@@ -1371,7 +1355,6 @@ class ImageGallery(wx.Frame):
                 self.PostMessage('Classifier trained in %.2fs.' % (time() - t1))
                 dlg.Destroy()
 
-                self.rules_text.SetValue(self.algorithm.ShowModel())
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
 
@@ -1836,7 +1819,6 @@ class ImageGallery(wx.Frame):
         if self.algorithm.name == "FastGentleBoosting":
             dlg = wx.TextEntryDialog(self, 'Rules:', 'Edit rules',
                                      style=wx.TE_MULTILINE | wx.OK | wx.CANCEL)
-            dlg.SetValue(self.rules_text.Value)
             if dlg.ShowModal() == wx.ID_OK:
                 try:
                     modelRules = self.algorithm.ParseModel(dlg.GetValue())
@@ -1854,7 +1836,6 @@ class ImageGallery(wx.Frame):
                     self.OnRulesEdit(evt)
                     return
                 self.keysAndCounts = None
-                self.rules_text.SetValue(self.algorithm.ShowModel())
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:
@@ -1902,7 +1883,6 @@ class ImageGallery(wx.Frame):
                     self.OnParamsEdit(evt)
                     return
                 self.keysAndCounts = None
-                self.rules_text.SetValue(self.algorithm.ShowModel())
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:
@@ -2145,7 +2125,6 @@ class ImageGallery(wx.Frame):
         df = pd.DataFrame(values,columns=["Probs"])
         df = pd.concat([df,tmp_df],axis=1)
         df = df.sort_values("Probs",ascending=False)
-        # print df
         sns.set(style="whitegrid")
         if(len(df) > 7):
             sns.barplot(x="Probs", y="Class", data=df, palette="RdBu_r",ax=ax)

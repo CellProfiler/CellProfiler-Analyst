@@ -102,7 +102,7 @@ class FastGentleBoosting(object):
         self.model = None
 
     def ComplexityTxt(self):
-        return 'Max # of rules: '
+        return 'max rules'
 
     def CreatePerObjectClassTable(self, labels):
         multiclasssql.create_perobject_class_table(labels, self.model)

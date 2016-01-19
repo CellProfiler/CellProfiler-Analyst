@@ -61,7 +61,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Adapter to SciKit Learn
     def ComplexityTxt(self):
-        return '# top features'
+        return 'top features'
 
     def CreatePerObjectClassTable(self, classNames):
         multiclasssql.create_perobject_class_table(self, classNames)

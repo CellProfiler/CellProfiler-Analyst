@@ -38,6 +38,8 @@ class ImageControlPanel(wx.Panel):
         '''
         wx.Panel.__init__(self, parent, wx.NewId())
 
+        self.SetBackgroundColour('white') # color for the background of panel
+
         if type(listeners) == list:
             self.listeners = listeners
         else:
