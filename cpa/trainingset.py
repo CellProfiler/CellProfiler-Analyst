@@ -72,6 +72,7 @@ class TrainingSet:
         num_fetched = [0] # use a list to get static scoping
 
         # Populate the label_matrix, entries, and values
+        # NB: values that are nonnumeric or Null/None are made to be 0
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             self.label_matrix += ([cl_label] * len(keyList))
 
@@ -92,7 +93,11 @@ class TrainingSet:
 
         self.label_matrix = numpy.array(self.label_matrix)
         self.values = numpy.array(self.values, np.float64)
-        self.label_array = numpy.nonzero(self.label_matrix + 1)[1] + 1 # Convert to array
+        if len(self.label_matrix) > 0:
+            self.label_array = numpy.nonzero(self.label_matrix + 1)[1] + 1 # Convert to array
+        else:
+            self.label_array = self.label_matrix      
+            
 
     def Load(self, filename, labels_only=False):
         self.Clear()

@@ -57,6 +57,9 @@ string_vars = ['db_type',
                'link_tables_table',
                'link_columns_table',
                'image_rescale',
+               'image_classification',
+               'image_width',
+               'image_height'
                ]
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
@@ -112,6 +115,9 @@ optional_vars = ['db_port',
                  'image_rescale',
                  'plate_shape',
                  'image_tile_size',
+                 'image_classification',
+                 'image_width',
+                 'image_height'
                  ]
 
 # map deprecated fields to new fields
@@ -285,6 +291,30 @@ class Properties(Singleton):
                     logging.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
                 
         f.close()
+
+        #if image_classification is defined
+        if self.field_defined('image_classification'):
+            #2 cases:
+            # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
+            # object_table/object_id/cell_x_loc/cell_y_loc don't exist
+
+            try:
+                len(self.object_table)
+                self.object_table = self.image_table + '_AsObjectTable'
+            except:
+                FINAL_PER_OBJ_NAME = 'ObjectTable'
+                self.object_table = FINAL_PER_OBJ_NAME
+
+            self.object_id = 'ObjectNumber'
+            self.cell_x_loc = 'Image_x_loc'
+            self.cell_y_loc = 'Image_y_loc'
+            self.object_name = ['image','images']
+
+            if self.field_defined('image_width') and self.field_defined('image_height'):
+                self.image_tile_size = min([self.image_width, self.image_height])
+            else:
+                self.image_tile_size = 1000
+            self.image_tile_size = int(self.image_tile_size)
         self.Validate()
         self._initialized = True
     LoadFile = load_file
@@ -434,11 +464,14 @@ class Properties(Singleton):
         self.backwards_compatiblize()
         
         # check that all required fields are defined
-        for name in required_vars:
+        required_vars_all = required_vars
+        if not self.field_defined('image_classification'):
+            required_vars_all += ['object_table']
+        for name in required_vars_all:
             assert self.field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)
         
         assert self.db_type.lower() in ['mysql', 'sqlite'], 'PROPERTIES ERROR (db_type): Value must be either "mysql" or "sqlite".'
-        
+
         # BELOW: Check sometimes-optional fields, and print warnings etc
         if self.db_type.lower()=='sqlite':
             for field in ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',]:

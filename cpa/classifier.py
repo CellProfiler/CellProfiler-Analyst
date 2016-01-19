@@ -43,7 +43,8 @@ MAX_ATTEMPTS = 10000
 ID_CLASSIFIER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
-required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+#required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+required_fields = []
 
 class Classifier(wx.Frame):
     """
@@ -90,7 +91,10 @@ class Classifier(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
-        self.scale = 1.0
+        if not p.image_classification:
+            self.scale = 1.0
+        else:
+            self.scale = 100.0/p.image_tile_size
         self.contrast = 'Linear'
         self.defaultTSFileName = None
         self.defaultModelFileName = None
@@ -262,7 +266,7 @@ class Classifier(wx.Frame):
         #######################
 
         # Define Classifiers
-        RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier()", self)
+        RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier(n_estimators=100)", self)
         AdaBoostClassifier = GeneralClassifier("ensemble.AdaBoostClassifier()", self)
         SVC = GeneralClassifier("svm.SVC(probability=True)", self) # Need to turn on probs
         
@@ -1100,11 +1104,13 @@ class Classifier(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
 
+            num_objs = 0
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    num_objs += 1
 
-            self.PostMessage('Training set loaded.')
+            self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
     def LoadTrainingSetCSV(self, filename):
@@ -1127,11 +1133,13 @@ class Classifier(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
 
+            num_objs = 0
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    num_objs += 1
 
-            self.PostMessage('Training set loaded.')
+            self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
 
@@ -1487,7 +1495,11 @@ class Classifier(wx.Frame):
         nKeyCols = len(dbconnect.image_key_columns())
 
         # GET GROUPING METHOD AND FILTER FROM USER
-        dlg = ScoreDialog(self, groupChoices, filterChoices)
+        enrichments = True
+        if p.image_classification:
+            enrichments = False
+
+        dlg = ScoreDialog(self, groupChoices, filterChoices, enrichments)
         if dlg.ShowModal() == wx.ID_OK:
             group = dlg.group
             filter = dlg.filter

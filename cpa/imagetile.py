@@ -107,7 +107,7 @@ class ImageTile(ImagePanel):
                 #View full images of selected
                 imViewer = imagetools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
-                                        scale=self.scale)
+                                        scale=1)
 
                 imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
                 #imViewer.imagePanel.SetPosition((-db.GetObjectCoords(obKey)[0]+imViewer.Size[0]/2, -db.GetObjectCoords(obKey)[1]+imViewer.Size[1]/2))
