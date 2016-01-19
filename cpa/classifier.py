@@ -43,9 +43,6 @@ MAX_ATTEMPTS = 10000
 ID_CLASSIFIER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
-#required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
-required_fields = []
-
 class Classifier(wx.Frame):
     """
     GUI Interface and functionality for the Classifier.
@@ -69,11 +66,6 @@ class Classifier(wx.Frame):
         self.SetName('Classifier')
 
         db.register_gui_parent(self)
-        for field in required_fields:
-            if not p.field_defined(field):
-                raise Exception('Properties field "%s" is required for Classifier.' % (field))
-                self.Destroy()
-                return
 
         global dm
         dm = DataModel.getInstance()
@@ -91,10 +83,19 @@ class Classifier(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
+        self.required_fields = []
         if not p.image_classification:
             self.scale = 1.0
+            self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
         else:
             self.scale = 100.0/p.image_tile_size
+
+        for field in self.required_fields:
+            if not p.field_defined(field):
+                raise Exception('Properties field "%s" is required for Classifier.' % (field))
+                self.Destroy()
+                return
+
         self.contrast = 'Linear'
         self.defaultTSFileName = None
         self.defaultModelFileName = None
