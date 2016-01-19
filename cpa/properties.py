@@ -310,10 +310,11 @@ class Properties(Singleton):
             self.cell_y_loc = 'Image_y_loc'
             self.object_name = ['image','images']
 
+            # image_width and image_height refer to the full image width and height while image_tile_size refers to the size of tiles for classification
+            # NB: if image_width and image_height are defined, they override image_tile_size
             if self.field_defined('image_width') and self.field_defined('image_height'):
                 self.image_tile_size = min([self.image_width, self.image_height])
-            else:
-                self.image_tile_size = 1000
+
             self.image_tile_size = int(self.image_tile_size)
         self.Validate()
         self._initialized = True
@@ -465,8 +466,6 @@ class Properties(Singleton):
         
         # check that all required fields are defined
         required_vars_all = required_vars
-        if not self.field_defined('image_classification'):
-            required_vars_all += ['object_table']
         for name in required_vars_all:
             assert self.field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)
         
