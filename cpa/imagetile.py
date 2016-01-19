@@ -151,7 +151,7 @@ class ImageTile(ImagePanel):
     def OnDClick(self, evt):
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
-                                        scale=self.scale)
+                                        scale=1)
         imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
     def Select(self):
