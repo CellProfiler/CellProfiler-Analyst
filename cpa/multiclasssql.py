@@ -57,17 +57,12 @@ def create_perobject_class_table(classifier, classNames):
                             ",".join(db.GetColnamesForClassifier()), p.object_table,'', where_clause),
                           silent=(idx > 10))
         #data.extend(result)
-    #print('Getting predictions...')
-        cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
-        object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
-        data_shape = cell_data.shape
-        cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
-        cell_data = np.nan_to_num(cell_data) #replace nan data (originally containing nonnumeric or Null/None values before genfromtxt) with 0
-        logging.info('Any values that cannot be converted to float are set to 0')
+        #print('Getting predictions...')
+        cell_data, object_keys = processData(data)
 
         predicted_classes = classifier.Predict(cell_data)
 
-    #print('Writing to database...')
+        #print('Writing to database...')
         expr = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
             object_keys[ii][0], object_keys[ii][1], object_keys[ii][2], predicted_classes[ii] )
             for ii in range(0, len(predicted_classes))])+ " END"
@@ -122,15 +117,7 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
         data = db.execute('SELECT %s, %s FROM %s WHERE %s'%(UniqueObjectClause(p.object_table),
         ",".join(db.GetColnamesForClassifier()), p.object_table, whereclause))
 
-    number_of_features = len(db.GetColnamesForClassifier())
-
-    cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
-    object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
-    data_shape = cell_data.shape
-    cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
-    cell_data = np.nan_to_num(cell_data) #replace nan data (originally containing nonnumeric or Null/None values before genfromtxt) with 0
-    logging.info('Any values that cannot be converted to float are set to 0')
-
+    cell_data, object_keys = processData(data)
     res = [] # list
     if uncertain:
         # Our requirement: if the two largest scores are smaller than threshold
@@ -145,6 +132,23 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
         predicted_classes = classifier.Predict(cell_data)
         res = object_keys[predicted_classes == classNum * np.ones(predicted_classes.shape)].tolist() #convert to list 
     return map(tuple,res) # ... and then to tuples
+
+def processData(data):
+    #takes data from query and returns arrays for feature values and object keys
+    number_of_features = len(db.GetColnamesForClassifier())
+
+    cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
+    object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+
+    data_shape = cell_data.shape
+    # if numpy array is already floats, pass; if numpy array contains strings, convert
+    try:
+        cell_data = np.reshape(np.genfromtxt(cell_data.ravel()), data_shape)
+        cell_data = np.nan_to_num(cell_data)
+        logging.info('Any values that cannot be converted to float are set to 0')
+    except:
+        pass
+    return cell_data, object_keys
 
 def _objectify(p, field):
     return "%s.%s"%(p.object_table, field)
@@ -239,14 +243,8 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                                     ",".join(db.GetColnamesForClassifier()), tables,
                                     join_clause, where_clause),
                                   silent=(idx > 10))
-            number_of_features = len(db.GetColnamesForClassifier())
 
-            cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
-            image_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
-            data_shape = cell_data.shape
-            cell_data = np.reshape(np.genfromtxt(cell_data.flatten()), data_shape)
-            cell_data = np.nan_to_num(cell_data)
-            logging.info('Any values that cannot be converted to float are set to 0')
+            cell_data, image_keys = processData(data)
 
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):

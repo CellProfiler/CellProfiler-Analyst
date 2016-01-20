@@ -77,7 +77,7 @@ class ImageGallery(wx.Frame):
 
         # self.required_fields = []
 
-        # if not p.image_classification:
+        # if not p.image_classification == 'yes':
         #     self.scale = 1.0
         #     self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
         # else:
@@ -98,7 +98,7 @@ class ImageGallery(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
-        if p.image_classification:
+        if p.image_classification == 'yes':
             self.scale = 100.0 / float(p.image_tile_size) # guarantee it is parsed as float
         else:
             self.scale = 1.0 
@@ -125,7 +125,7 @@ class ImageGallery(wx.Frame):
 
         # sorting bins
         self.gallery_panel = wx.Panel(self.bins_splitter)
-        self.gallery_box = wx.StaticBox(self.gallery_panel, label=p.object_name[1] + ' image gallery')
+        self.gallery_box = wx.StaticBox(self.gallery_panel, label=p.object_name[0] + ' image gallery')
         self.gallery_sizer = wx.StaticBoxSizer(self.gallery_box, wx.VERTICAL)
         self.galleryBin = sortbin.SortBin(parent=self.gallery_panel,
                                                classifier=self,
@@ -168,6 +168,10 @@ class ImageGallery(wx.Frame):
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(self.endId, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
+        #self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
+        #self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, ' '.join((p.object_name[0] if not p.image_classification == 'yes' else '','images'))), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
@@ -199,6 +203,9 @@ class ImageGallery(wx.Frame):
         self.bins_splitter.SetMinimumPaneSize(50)
         self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * 50 + self.fetch_and_rules_panel.GetMinHeight()))
 
+        # Set initial state
+        self.filterChoice.SetSelection(0)
+
         # JEN - Start Add
         # self.openDimensReduxBtn.Disable()
         # JEN - End Add
@@ -210,7 +217,7 @@ class ImageGallery(wx.Frame):
 
         # add the default classes
         #for class in range(1, num_classes+1):
-        self.AddSortClass(p.object_name[1] + ' objects of selected image')
+        self.AddSortClass(p.object_name[0] + ' objects of selected image')
         #self.AddSortClass('negative')
 
         self.Layout()
