@@ -23,12 +23,14 @@ class ImagePanel(wx.Panel):
         self.chMap       = channel_map
         self.toggleChMap = channel_map[:]
         self.images      = images
+
         # Displayed bitmap
         self.bitmap      = imagetools.MergeToBitmap(images,
                                chMap = channel_map,
                                scale = scale,
                                brightness = brightness,
                                contrast = contrast)
+        
         max_size = 1000
         sizex = min(max_size, self.bitmap.Size[0])
         sizey = min(max_size, self.bitmap.Size[1])

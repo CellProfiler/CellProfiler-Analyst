@@ -38,6 +38,7 @@ class ImageTile(ImagePanel):
     '''
     def __init__(self, bin, obKey, images, chMap, selected=False, 
                  scale=1.0, brightness=1.0, contrast=None):
+
         ImagePanel.__init__(self, images, chMap, bin, scale=scale, 
                             brightness=brightness, contrast=contrast)
         self.SetDropTarget(ImageTileDropTarget(self))
@@ -52,7 +53,6 @@ class ImageTile(ImagePanel):
 
         self.cache = CellCache.getInstance()
 
-        
         self.MapChannels(chMap)
         
         self.Bind(wx.EVT_SIZE, self.OnSize)

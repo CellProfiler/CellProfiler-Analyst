@@ -29,6 +29,8 @@ import os
 import wx
 import re
 import cpa.helpmenu
+from imageviewer import ImageViewer
+
 
 import fastgentleboostingmulticlass
 from fastgentleboosting import FastGentleBoosting
@@ -136,13 +138,12 @@ class ImageGallery(wx.Frame):
         # fetch objects interface
         self.startId = wx.TextCtrl(self.fetch_panel, id=-1, value='1', size=(60, -1), style=wx.TE_PROCESS_ENTER)
         self.endId = wx.TextCtrl(self.fetch_panel, id=-1, value='100', size=(60, -1), style=wx.TE_PROCESS_ENTER)
-        #self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
+        self.fetchChoice = wx.Choice(self.fetch_panel, id=-1, choices=['range','all','individual'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
                                       choices=['experiment'] + p._filters_ordered + p._groups_ordered + [
                                           CREATE_NEW_FILTER])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
-        self.fetchAllBtn = wx.Button(self.fetch_panel, -1, 'Fetch all images!')
 
         #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -153,11 +154,17 @@ class ImageGallery(wx.Frame):
         #### Add elements to sizers and splitters
         # fetch panel
         self.fetchSizer.AddStretchSpacer()
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'ID:'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch '), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(self.fetchChoice, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchTxt = wx.StaticText(self.fetch_panel, -1, label='of image IDs:')
+        self.fetchSizer.Add(self.fetchTxt, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(self.startId, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'to'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchTxt2 = wx.StaticText(self.fetch_panel, -1, label='to')
+        self.fetchSizer.Add(self.fetchTxt2, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(self.endId, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
@@ -172,8 +179,6 @@ class ImageGallery(wx.Frame):
         self.fetchSizer.Add(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
-        self.fetchSizer.Add(self.fetchAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddStretchSpacer()
         self.fetch_panel.SetSizerAndFit(self.fetchSizer)
 
@@ -226,7 +231,6 @@ class ImageGallery(wx.Frame):
         # self.Bind(wx.EVT_BUTTON, self.OpenDimensRedux, self.openDimensReduxBtn)
         # JEN - End Add
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
-        self.Bind(wx.EVT_BUTTON, self.OnFetchAll, self.fetchAllBtn)
         self.startId.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.startId.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
 
@@ -235,6 +239,7 @@ class ImageGallery(wx.Frame):
         tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
         self.Bind(sortbin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
 
+        self.Bind(wx.EVT_CHOICE, self.OnSelectFetchChoice, self.fetchChoice)
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
 
 
@@ -446,6 +451,7 @@ class ImageGallery(wx.Frame):
         start = int(self.startId.Value)
         end = int(self.endId.Value)
         fltr_sel = self.filterChoice.GetStringSelection()
+        fetch_sel = self.fetchChoice.GetStringSelection()
         statusMsg = 'Fetched %d - %d %s images' % (start, end, p.object_name[1])
 
         # Need to flatten it due to the fact that img key can look like this:
@@ -458,7 +464,16 @@ class ImageGallery(wx.Frame):
                 else:
                     yield x
 
-        if fltr_sel == 'experiment':
+        if fetch_sel == 'all':
+            self.FetchAll()
+            return
+
+        elif fetch_sel == 'individual':
+            imviewer = ImageViewer(parent=None)
+            imviewer.Show(True)
+            return
+
+        elif fltr_sel == 'experiment':
                 self.galleryBin.SelectAll()
                 self.galleryBin.RemoveSelectedTiles()
                 # Need to run this after removing all tiles!
@@ -509,7 +524,7 @@ class ImageGallery(wx.Frame):
         self.PostMessage(statusMsg)
 
 
-    def OnFetchAll(self, evt):
+    def FetchAll(self):
 
         def flatten(*args):
             for x in args:
@@ -667,6 +682,45 @@ class ImageGallery(wx.Frame):
         except(Exception):
             txtCtrl.SetForegroundColour('#FF0000')  # Set field to red if image doesn't exist
             self.SetStatusText('No such image.')
+
+    def OnSelectFetchChoice(self, evt):
+        ''' Handler for fetch filter selection. '''
+        fetchChoice = self.fetchChoice.GetStringSelection()
+        # Select from a specific image
+        if fetchChoice == 'range':
+            self.fetchTxt.SetLabel('of image IDs:')
+            self.fetchTxt2.SetLabel('to')
+            self.fetchTxt2.Show()
+            self.startId.Show()
+            self.endId.Show()
+            self.filterChoice.Enable()
+            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
+            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
+
+        elif fetchChoice == 'all':
+            self.fetchTxt.SetLabel('image IDs')
+            self.fetchTxt2.Hide()
+            self.startId.Hide()
+            self.endId.Hide()
+            #self.startId.Disable()
+            #self.endId.Disable()
+            self.filterChoice.Disable()
+            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
+            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
+
+        elif fetchChoice == 'individual':
+            self.startId.Hide()
+            self.endId.Hide()
+            self.fetchTxt.SetLabel('image')
+            self.fetchTxt2.Hide()
+            self.filterChoice.Disable()
+            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
+            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
+
+
+
+
+            
 
     def OnSelectFilter(self, evt):
         ''' Handler for fetch filter selection. '''

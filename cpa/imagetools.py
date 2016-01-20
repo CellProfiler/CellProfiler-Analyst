@@ -27,7 +27,7 @@ def FetchTile(obKey, display_whole_image=False):
     imgs = FetchImage(imKey)
     
     if display_whole_image:
-        size = (int(p.image_tile_size), int(p.image_tile_size))
+        size = (int(p.image_size), int(p.image_size))
         return [rescale(im, size) for im in imgs] # Rescale it to the tile size
 
     else:
@@ -128,9 +128,10 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         imData = MergeChannels(imgs, chMap, masks=masks)
         
     h,w = imgs[0].shape
-    
+
     # Convert from float [0-1] to 8bit
     imData *= 255.0
+
     imData[imData>255] = 255
 
     # Write wx.Image
