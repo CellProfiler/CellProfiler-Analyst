@@ -80,11 +80,17 @@ class ImageTile(ImagePanel):
         if self.popupMenu is not None:
             return
         popupMenuItems = ['View full images of selected',
-                          'View predicted probability scores',
                           'Select all\tCtrl+A',
                           'Deselect all\tCtrl+D',
                           'Invert selection\tCtrl+I',
                           'Remove selected\tDelete']
+
+        if self.classifier is not None and self.bin.label == 'unclassified':
+            popupMenuItems += ['Predict class']
+
+        if self.bin.label == 'image gallery':
+            popupMenuItems += ['Fetch all objects of image']
+
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
         for i, item in enumerate(popupMenuItems):
@@ -107,21 +113,35 @@ class ImageTile(ImagePanel):
                 #View full images of selected
                 imViewer = imagetools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
-                                        scale=self.scale)
-
-                imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
+                                        scale=1)
+                if self.bin.label != 'image gallery':
+                    imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
                 #imViewer.imagePanel.SetPosition((-db.GetObjectCoords(obKey)[0]+imViewer.Size[0]/2, -db.GetObjectCoords(obKey)[1]+imViewer.Size[1]/2))
 
         elif choice == 1:
-            self.DisplayProbs()
-        elif choice == 2:
             self.bin.SelectAll()
-        elif choice == 3:
+        elif choice == 2:
             self.bin.DeselectAll()
-        elif choice == 4:
+        elif choice == 3:
             self.bin.InvertSelection()
-        elif choice == 5:
+        elif choice == 4:
             self.bin.RemoveSelectedTiles()
+        elif choice == 5:
+            if self.classifier is not None and self.bin.label == 'unclassified':
+                self.DisplayProbs()
+            elif self.bin.label == 'image gallery':
+                self.DisplayObjects()                
+
+    def DisplayObjects(self):
+        self.classifier.classBins[0].SelectAll()
+        self.classifier.classBins[0].RemoveSelectedTiles()
+        # Need to run this after removing all tiles!
+        def cb():
+            pseudo_obKeys = self.bin.SelectedKeys()
+            imKey = pseudo_obKeys[0][:-1] # Get image key
+            obKeys = db.GetObjectsFromImage(imKey)
+            self.classifier.classBins[0].AddObjects(obKeys, self.chMap, pos='last', display_whole_image=False)
+        wx.CallAfter(cb)
 
     def DisplayProbs(self):
         try:
@@ -151,8 +171,9 @@ class ImageTile(ImagePanel):
     def OnDClick(self, evt):
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
-                                        scale=self.scale)
-        imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
+                                        scale=1)
+        if self.bin.label != 'image gallery':
+            imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
     def Select(self):
         if not self.selected:

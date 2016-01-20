@@ -18,6 +18,7 @@ def _on_about(self):
     info.SetDescription(message)
     info.AddDeveloper('David Dao')
     info.AddDeveloper('Adam Fraser')
+    info.AddDeveloper('Jane Hung')
     info.AddDeveloper('Thouis (Ray) Jones')
     info.AddDeveloper('Vebjorn Ljosa')
     info.SetWebSite('www.CellProfiler.org')

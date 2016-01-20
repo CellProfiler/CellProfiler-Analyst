@@ -1,9 +1,7 @@
 ![CPA Logo](http://i.imgur.com/45Iosp1.png)
-# CellProfiler Analyst 2.1.0 (Development)
+# CellProfiler Analyst 2.2.0 (Development)
 
 *Note: This version is heavily under development and not production-ready yet*
-
-You can download and test out the new build version for mac os [here] (https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4TndsZzNGZ1BkQXc/view?usp=sharing) (only available for Broadies)
 
 Authors: Adam Fraser, Thouis R. Jones, David Dao, Jane Hung
 
@@ -11,9 +9,19 @@ Current Developers: David Dao, Jane Hung
 
 Website: cellprofiler.org
 
-Copyright 2015, The Broad Institute of MIT and Harvard.
+Copyright 2016, The Broad Institute of MIT and Harvard.
 
 Distributed under the GPLv2.
+
+## Current Beta App for Mac OS
+
+Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://drive.google.com/file/d/0B_Rfj3esFDX8XzBGbE1uV2NXTjg/view?usp=sharing)
+
+The app requires JDK 1.8 installed.
+
+Please note that CPA 2.2.0 is WIP and we will update the link on regular basis. 
+
+For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://cellprofiler.org/linked_files/Examplezips/cpa_2.0_example.zip)
 
 ## Requirements
 
@@ -39,6 +47,9 @@ CellProfiler Analyst allows interactive exploration and analysis of data, partic
 * Improving Evaluation for Classifier
 * Including testing
 * Include documentation
+* Pixel-based Classifier (Deep Learning)
+* Image Gallery
+* Image Classification
 
 ## Wiki
 

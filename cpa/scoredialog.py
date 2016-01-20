@@ -5,7 +5,7 @@ class ScoreDialog(wx.Dialog):
     A dialog that prompts the user for group and filter, and whether or not
     to calculate/report enrichment values.
     """
-    def __init__(self, parent, groups, filters):
+    def __init__(self, parent, groups, filters, enrichments=True):
         """Groups and filters are lists.  Each item in the list is
         either a (key, value) pair or a non-tuple value (e.g., a
         string).  In the latter case, str(value) is used as the key."""
@@ -25,7 +25,7 @@ class ScoreDialog(wx.Dialog):
         self.filters_lb = wx.ListBox(self, choices=[v for k,v in self.filters])
         self.filters_lb.SetSelection(0)
         self._wants_enrichments = wx.CheckBox(self, -1, 'Report enrichments?')
-        self._wants_enrichments.SetValue(True)
+        self._wants_enrichments.SetValue(enrichments)
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.Add(wx.StaticText(self, -1, 'Grouping method:'), 0)

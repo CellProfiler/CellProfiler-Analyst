@@ -43,8 +43,6 @@ MAX_ATTEMPTS = 10000
 ID_CLASSIFIER = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
-required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
-
 class Classifier(wx.Frame):
     """
     GUI Interface and functionality for the Classifier.
@@ -68,11 +66,6 @@ class Classifier(wx.Frame):
         self.SetName('Classifier')
 
         db.register_gui_parent(self)
-        for field in required_fields:
-            if not p.field_defined(field):
-                raise Exception('Properties field "%s" is required for Classifier.' % (field))
-                self.Destroy()
-                return
 
         global dm
         dm = DataModel.getInstance()
@@ -90,7 +83,19 @@ class Classifier(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
-        self.scale = 1.0
+        self.required_fields = []
+        if not p.image_classification:
+            self.scale = 1.0
+            self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+        else:
+            self.scale = 100.0/p.image_tile_size
+
+        for field in self.required_fields:
+            if not p.field_defined(field):
+                raise Exception('Properties field "%s" is required for Classifier.' % (field))
+                self.Destroy()
+                return
+
         self.contrast = 'Linear'
         self.defaultTSFileName = None
         self.defaultModelFileName = None
@@ -149,7 +154,7 @@ class Classifier(wx.Frame):
 
         self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
         self.classifierChoice.SetSelection(0) # Windows GUI otherwise doesn't select
-        self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train Classifier')
+        self.trainClassifierBtn = wx.Button(self.find_rules_panel, -1, 'Train')
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
         self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
 
@@ -190,23 +195,26 @@ class Classifier(wx.Frame):
         # Train classifier panel
         self.find_rules_sizer.AddStretchSpacer()
         self.find_rules_sizer.Add((5, 20))
-        self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
-        self.find_rules_sizer.Add(self.complexityTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, -1, 'with'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.AddSpacer((5, 20))
+        self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
+        self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add((5, 20))
+        self.find_rules_sizer.Add(self.complexityTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add((5, 20))
         # Cross Validation Button
+        self.find_rules_sizer.Add((5, 20))
+        self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add((5, 20))
         self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluation')
         self.evaluationBtn.Disable()
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.evaluationBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.Bind(wx.EVT_BUTTON, self.OnEvaluation, self.evaluationBtn)
         # Plot nice graphics Button
-        self.find_rules_sizer.Add((5, 20))
-
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.scoreAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.Add((5, 20))
@@ -222,9 +230,9 @@ class Classifier(wx.Frame):
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
         self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
-        self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.find_rules_panel, flag=wx.EXPAND)
+        self.fetch_and_rules_sizer.Add((5, 5))
+        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)      
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
@@ -259,7 +267,7 @@ class Classifier(wx.Frame):
         #######################
 
         # Define Classifiers
-        RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier()", self)
+        RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier(n_estimators=100)", self)
         AdaBoostClassifier = GeneralClassifier("ensemble.AdaBoostClassifier()", self)
         SVC = GeneralClassifier("svm.SVC(probability=True)", self) # Need to turn on probs
         
@@ -351,7 +359,6 @@ class Classifier(wx.Frame):
         width, height = self.GetStatusBar().GetClientSize()
         # diagonal lines drawn on mac, so move let by height.
         button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1] - 3))
-        print button.GetPosition()
 
     # When choosing the classifier in the rules panel
     def OnClassifierChoice(self, event):
@@ -1098,11 +1105,13 @@ class Classifier(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
 
+            num_objs = 0
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    num_objs += 1
 
-            self.PostMessage('Training set loaded.')
+            self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
     def LoadTrainingSetCSV(self, filename):
@@ -1125,11 +1134,13 @@ class Classifier(wx.Frame):
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
 
+            num_objs = 0
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    num_objs += 1
 
-            self.PostMessage('Training set loaded.')
+            self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
 
@@ -1269,8 +1280,11 @@ class Classifier(wx.Frame):
     @delay(360.0) # every 5 min
     def AutoSave(self):
         logging.info("Autosaving ...")
-        self.AutoSaveTrainingSet() # Saves only labels
-        self.AutoSave()
+        try:
+            self.AutoSaveTrainingSet() # Saves only labels
+            self.AutoSave()
+        except:
+            logging.error("Autosaving failed.")
 
     # Same as Update Training Set, just without box
     def AutoSaveTrainingSet(self):
@@ -1485,7 +1499,11 @@ class Classifier(wx.Frame):
         nKeyCols = len(dbconnect.image_key_columns())
 
         # GET GROUPING METHOD AND FILTER FROM USER
-        dlg = ScoreDialog(self, groupChoices, filterChoices)
+        enrichments = True
+        if p.image_classification:
+            enrichments = False
+
+        dlg = ScoreDialog(self, groupChoices, filterChoices, enrichments)
         if dlg.ShowModal() == wx.ID_OK:
             group = dlg.group
             filter = dlg.filter
@@ -1828,7 +1846,7 @@ class Classifier(wx.Frame):
 
     def OnShowImageControls(self, evt):
         ''' Shows the image adjustment control panel in a new frame. '''
-        self.imageControlFrame = wx.Frame(self)
+        self.imageControlFrame = wx.Frame(self, size=(470, 155))
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale,
                           contrast=self.contrast)
         self.imageControlFrame.Show(True)

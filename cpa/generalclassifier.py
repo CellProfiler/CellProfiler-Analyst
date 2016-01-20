@@ -61,7 +61,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Adapter to SciKit Learn
     def ComplexityTxt(self):
-        return '# top features'
+        return 'top features'
 
     def CreatePerObjectClassTable(self, classNames):
         multiclasssql.create_perobject_class_table(self, classNames)
@@ -214,7 +214,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         #do k fold cross validation on this newly balanced data
         return self.XValidate(labels_s, values_s, folds, stratified=True)
 
-    def XValidatePredict(self, labels, values, folds, stratified=False):
+    def XValidatePredict(self, labels, values, folds, stratified=True):
         '''
         :param labels: class of each sample
         :param values: feature values for each sample
@@ -397,7 +397,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         from sklearn.metrics import confusion_matrix
         # Compute confusion matrix
         folds = 5 # like classification report
-        y_pred = self.XValidatePredict(self.env.trainingSet.label_array, self.env.trainingSet.values, folds)
+        y_pred = self.XValidatePredict(self.env.trainingSet.label_array, self.env.trainingSet.values, folds, stratified=True)
         y_test = self.env.trainingSet.label_array
 
         cm = confusion_matrix(y_test, y_pred)

@@ -446,6 +446,7 @@ class ImageViewer(wx.Frame):
         if self.imagePanel:
             if not self.cp:
                 self.cp = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
+                self.SetBackgroundColour('white') # color for the background of panel
                 self.controls  = ImageControlPanel(self.cp.GetPane(), self.imagePanel, 
                                                    brightness=self.imagePanel.brightness,
                                                    scale=self.imagePanel.scale, 
