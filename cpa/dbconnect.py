@@ -763,8 +763,9 @@ class DBConnect(Singleton):
         f = p._filters[filter_name]
         import sqltools
         if isinstance(f, sqltools.Filter):
+            unique_tables = np.unique(f.get_tables()) 
             return 'SELECT %s FROM %s WHERE %s' % (UniqueImageClause(), 
-                                                   ','.join(f.get_tables()), 
+                                                   ','.join(unique_tables), 
                                                    str(f))
         elif isinstance(f, sqltools.OldFilter):
             return str(f)
@@ -774,6 +775,7 @@ class DBConnect(Singleton):
     def GetFilteredImages(self, filter_name):
         ''' Returns a list of imKeys from the given filter. '''
         try:
+            f = p._filters[filter_name]
             return self.execute(self.filter_sql(filter_name))
         except Exception, e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
