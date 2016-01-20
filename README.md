@@ -11,7 +11,7 @@ Current Developers: David Dao, Jane Hung
 
 Website: cellprofiler.org
 
-Copyright 2015, The Broad Institute of MIT and Harvard.
+Copyright 2016, The Broad Institute of MIT and Harvard.
 
 Distributed under the GPLv2.
 
@@ -39,6 +39,9 @@ CellProfiler Analyst allows interactive exploration and analysis of data, partic
 * Improving Evaluation for Classifier
 * Including testing
 * Include documentation
+* Pixel-based Classifier (Deep Learning)
+* Image Gallery
+* Image Classification
 
 ## Wiki
 

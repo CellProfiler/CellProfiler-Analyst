@@ -96,7 +96,7 @@ class ImageGallery(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
-        if p.image_channel_colors:
+        if p.image_classification:
             self.scale = 100.0 / float(p.image_tile_size) # guarantee it is parsed as float
         else:
             self.scale = 1.0 
@@ -138,11 +138,11 @@ class ImageGallery(wx.Frame):
         self.endId = wx.TextCtrl(self.fetch_panel, id=-1, value='100', size=(60, -1), style=wx.TE_PROCESS_ENTER)
         #self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
-                                      choices=['experiment', 'image'] + p._filters_ordered + p._groups_ordered + [
+                                      choices=['experiment'] + p._filters_ordered + p._groups_ordered + [
                                           CREATE_NEW_FILTER])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
-        self.fetchAllBtn = wx.Button(self.fetch_panel, -1, 'Fetch all!')
+        self.fetchAllBtn = wx.Button(self.fetch_panel, -1, 'Fetch all images!')
 
         #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -163,7 +163,7 @@ class ImageGallery(wx.Frame):
         self.fetchSizer.AddSpacer((5, 20))
         #self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
         #self.fetchSizer.AddSpacer((5, 20))
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, p.object_name[1] + ' images'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
@@ -222,6 +222,7 @@ class ImageGallery(wx.Frame):
         # JEN - Start Add
         # self.Bind(wx.EVT_BUTTON, self.OpenDimensRedux, self.openDimensReduxBtn)
         # JEN - End Add
+        self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
         self.Bind(wx.EVT_BUTTON, self.OnFetchAll, self.fetchAllBtn)
         self.startId.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.startId.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
@@ -230,6 +231,9 @@ class ImageGallery(wx.Frame):
         self.Bind(wx.EVT_CHAR, self.OnKey)  # Doesn't work for windows
         tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
         self.Bind(sortbin.EVT_QUANTITY_CHANGED, self.QuantityChanged)
+
+        self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
+
 
     # JK - End Add
 
@@ -436,7 +440,38 @@ class ImageGallery(wx.Frame):
         #######################################
 
     def OnFetch(self, evt):
-        pass
+        start = int(self.startId.Value)
+        end = int(self.endId.Value)
+        fltr_sel = self.filterChoice.GetStringSelection()
+        statusMsg = 'Fetched %d - %d %s images' % (start, end, p.object_name[1])
+
+        if fltr_sel == 'experiment':
+                self.galleryBin.SelectAll()
+                self.galleryBin.RemoveSelectedTiles()
+                # Need to run this after removing all tiles!
+                def cb():
+                    imKeys = db.GetAllImageKeys()
+                    imKeys = map(lambda x: (x[0],1), imKeys)
+                    self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
+                wx.CallAfter(cb)
+
+                statusMsg += ' from whole experiment'
+        elif fltr_sel in p._filters_ordered:
+            self.galleryBin.SelectAll()
+            self.galleryBin.RemoveSelectedTiles()
+            # Need to run this after removing all tiles!
+            def cb():
+                filteredImKeys = db.GetFilteredImages(fltr_sel)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
+                    return
+                imKeys = map(lambda x: (x[0],1), filteredImKeys)
+                self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
+            wx.CallAfter(cb)
+            statusMsg += ' from filter "%s"' % (fltr_sel)
+
+        self.PostMessage(statusMsg)
+
 
     def OnFetchAll(self, evt):
 
@@ -450,12 +485,16 @@ class ImageGallery(wx.Frame):
                                    'Load whole image set?', wx.YES_NO | wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response == wx.ID_YES:
-                imKeys = db.GetAllImageKeys()
-                #for keys in imKeys:
-                    #print db.GetFullChannelPathsForImage(keys) #Get all the paths to the images
-                imKeys = map(lambda x: (x[0],1), imKeys)
-                self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
-                self.PostMessage("Loaded all images")
+                self.galleryBin.SelectAll()
+                self.galleryBin.RemoveSelectedTiles()
+                # Need to run this after removing all tiles!
+                def cb():
+                    imKeys = db.GetAllImageKeys()
+                    imKeys = map(lambda x: (x[0],1), imKeys)
+                    self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
+                    self.PostMessage("Loaded all images")
+                wx.CallAfter(cb)
+
 
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
