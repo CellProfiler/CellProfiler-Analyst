@@ -114,8 +114,8 @@ class ImageTile(ImagePanel):
                 imViewer = imagetools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1)
-
-                imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
+                if self.bin.label != 'image gallery':
+                    imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
                 #imViewer.imagePanel.SetPosition((-db.GetObjectCoords(obKey)[0]+imViewer.Size[0]/2, -db.GetObjectCoords(obKey)[1]+imViewer.Size[1]/2))
 
         elif choice == 1:
@@ -130,9 +130,18 @@ class ImageTile(ImagePanel):
             if self.classifier is not None and self.bin.label == 'unclassified':
                 self.DisplayProbs()
             elif self.bin.label == 'image gallery':
-                obKey = self.bin.SelectedKeys()
-                print obKey
-                #self.classifier.classBins[0].AddObjects((1,1), self.chMap, pos='last', display_whole_image=True)
+                self.DisplayObjects()                
+
+    def DisplayObjects(self):
+        self.classifier.classBins[0].SelectAll()
+        self.classifier.classBins[0].RemoveSelectedTiles()
+        # Need to run this after removing all tiles!
+        def cb():
+            pseudo_obKeys = self.bin.SelectedKeys()
+            imKey = pseudo_obKeys[0][:-1] # Get image key
+            obKeys = db.GetObjectsFromImage(imKey)
+            self.classifier.classBins[0].AddObjects(obKeys, self.chMap, pos='last', display_whole_image=False)
+        wx.CallAfter(cb)
 
     def DisplayProbs(self):
         try:
@@ -163,7 +172,8 @@ class ImageTile(ImagePanel):
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1)
-        imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
+        if self.bin.label != 'image gallery':
+            imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
     def Select(self):
         if not self.selected:

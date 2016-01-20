@@ -461,7 +461,7 @@ class ImageGallery(wx.Frame):
                 # Need to run this after removing all tiles!
                 def cb():
                     imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: tuple(list(flatten(x,1))), imKeys)
+                    imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
                     self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
                 wx.CallAfter(cb)
 
@@ -475,7 +475,7 @@ class ImageGallery(wx.Frame):
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
-                imKeys = map(lambda x: tuple(list(flatten(x,1))), filteredImKeys)
+                imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
             wx.CallAfter(cb)
             statusMsg += ' from filter "%s"' % (fltr_sel)
@@ -494,7 +494,7 @@ class ImageGallery(wx.Frame):
                                                                                           zip(colNames, groupKey)])))
                     return
                 
-                imKeys = map(lambda x: tuple(list(flatten(x,1))), filteredImKeys)
+                imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
             
             statusMsg += ' from group %s: %s' % (groupName,
@@ -531,7 +531,7 @@ class ImageGallery(wx.Frame):
                 # Need to run this after removing all tiles!
                 def cb():
                     imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: tuple(list(flatten(x,1))), imKeys)
+                    imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
                     self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     self.PostMessage("Loaded all images")
                 wx.CallAfter(cb)
