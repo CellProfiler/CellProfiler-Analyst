@@ -331,7 +331,7 @@ class DBConnect(Singleton):
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
                                                (p.db_passwd or None), p.db_name)
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
-                if p.image_classification:
+                if p.image_classification == 'yes':
                     self.CreateObjectImageTable()
             except DBError(), e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
@@ -445,7 +445,7 @@ class DBConnect(Singleton):
                         self.CreateSQLiteDB()
                     else:
                         raise DBException, 'Database at %s appears to be empty.'%(p.db_sqlite_file)
-            if p.image_classification:
+            if p.image_classification == 'yes':
                 self.CreateObjectImageTable()
             logging.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
 
@@ -1255,7 +1255,7 @@ class DBConnect(Singleton):
         self.execute('DROP TABLE IF EXISTS %s'%(p.image_table))
         self.execute(statement)
 
-        if not p.image_classification:
+        if not p.image_classification == 'yes':
             # CREATE THE OBJECT TABLE
             # For the object table we assume that all values are type FLOAT
             # except for the primary keys
@@ -1290,7 +1290,7 @@ class DBConnect(Singleton):
         f.close()
         
         # POPULATE THE OBJECT TABLE
-        if not p.image_classification:
+        if not p.image_classification == 'yes':
             f = open(p.object_csv_file, 'U')
             r = csv.reader(f)
             row = r.next() # skip the headers
@@ -1389,7 +1389,7 @@ class DBConnect(Singleton):
             logging.info("... loaded %d%% of CSV data"%(pct))
 
         line_count = 0
-        if not p.image_classification:
+        if not p.image_classification == 'yes':
             assert len(obcsvs)>0, ('Failed to parse object csv filenames from %s. '
                               'Make sure db_sql_file in your properties file is'
                               ' set to the .SQL file output by CellProfiler\'s '
