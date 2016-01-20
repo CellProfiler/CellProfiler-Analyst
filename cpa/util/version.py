@@ -22,7 +22,7 @@ import verlib
 
 _cached_description = None
 
-_semantic_version = '2.1.0' # New semantic version system
+_semantic_version = '2.2.0' # New semantic version system
 
 def _get_description():
     """Get description from git or file system.

@@ -127,11 +127,11 @@ class ImageGallery(wx.Frame):
         self.gallery_sizer = wx.StaticBoxSizer(self.gallery_box, wx.VERTICAL)
         self.galleryBin = sortbin.SortBin(parent=self.gallery_panel,
                                                classifier=self,
-                                               label=p.object_name[1] + ' image gallery',
+                                               label='image gallery',
                                                parentSizer=self.gallery_sizer)
         self.gallery_sizer.Add(self.galleryBin, proportion=1, flag=wx.EXPAND)
         self.gallery_panel.SetSizer(self.gallery_sizer)
-        self.classified_bins_panel = wx.Panel(self.bins_splitter)
+        self.objects_bin_panel = wx.Panel(self.bins_splitter)
 
         # fetch objects interface
         self.startId = wx.TextCtrl(self.fetch_panel, id=-1, value='1', size=(60, -1), style=wx.TE_PROCESS_ENTER)
@@ -184,12 +184,12 @@ class ImageGallery(wx.Frame):
         self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
         # classified bins panel
-        self.classified_bins_panel.SetSizer(self.classified_bins_sizer)
+        self.objects_bin_panel.SetSizer(self.classified_bins_sizer)
 
         # splitter windows
         self.splitter.SplitHorizontally(self.fetch_and_rules_panel, self.bins_splitter,
                                         self.fetch_and_rules_panel.GetMinSize()[1])
-        self.bins_splitter.SplitHorizontally(self.gallery_panel, self.classified_bins_panel)
+        self.bins_splitter.SplitHorizontally(self.gallery_panel, self.objects_bin_panel)
 
         self.splitter.SetSashGravity(0.0)
         self.bins_splitter.SetSashGravity(0.5)
@@ -445,13 +445,23 @@ class ImageGallery(wx.Frame):
         fltr_sel = self.filterChoice.GetStringSelection()
         statusMsg = 'Fetched %d - %d %s images' % (start, end, p.object_name[1])
 
+        # Need to flatten it due to the fact that img key can look like this:
+        # (image_id,) or this (table_id, image_id)
+        def flatten(*args):
+            for x in args:
+                if hasattr(x, '__iter__'):
+                    for y in flatten(*x):
+                        yield y
+                else:
+                    yield x
+
         if fltr_sel == 'experiment':
                 self.galleryBin.SelectAll()
                 self.galleryBin.RemoveSelectedTiles()
                 # Need to run this after removing all tiles!
                 def cb():
                     imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: (x[0],1), imKeys)
+                    imKeys = map(lambda x: tuple(list(flatten(x,1))), imKeys)
                     self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
                 wx.CallAfter(cb)
 
@@ -465,19 +475,54 @@ class ImageGallery(wx.Frame):
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
-                imKeys = map(lambda x: (x[0],1), filteredImKeys)
+                imKeys = map(lambda x: tuple(list(flatten(x,1))), filteredImKeys)
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
             wx.CallAfter(cb)
             statusMsg += ' from filter "%s"' % (fltr_sel)
+        elif fltr_sel in p._groups_ordered:
+            # if the filter name is a group then it's actually a group
+            self.galleryBin.SelectAll()
+            self.galleryBin.RemoveSelectedTiles()
+            def cb():
+                groupName = fltr_sel
+                groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+                filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
+                colNames = dm.GetGroupColumnNames(groupName)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in group %s: %s' % (groupName,
+                                                                               ', '.join(['%s=%s' % (n, v) for n, v in
+                                                                                          zip(colNames, groupKey)])))
+                    return
+                if not obKeys:
+                    self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
+                                                                                          ', '.join(
+                                                                                              ['%s=%s' % (n, v) for n, v
+                                                                                               in zip(colNames,
+                                                                                                      groupKey)])))
+                    return
+                imKeys = map(lambda x: tuple(list(flatten(x,1))), filteredImKeys)
+                self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
+            wx.CallAfter(cb)
+            statusMsg += ' from group %s: %s' % (groupName,
+                                                 ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+
 
         self.PostMessage(statusMsg)
 
 
     def OnFetchAll(self, evt):
 
+        def flatten(*args):
+            for x in args:
+                if hasattr(x, '__iter__'):
+                    for y in flatten(*x):
+                        yield y
+                else:
+                    yield x
+
         imKeys = db.GetAllImageKeys()
         # A lot of images
-        if imKeys > 200:
+        if len(imKeys) > 200:
             # double check
             dlg = wx.MessageDialog(self,
                                    'The whole collection consists of %s images. Downloading could be slow. Do you still want to continue?' % (
@@ -490,7 +535,7 @@ class ImageGallery(wx.Frame):
                 # Need to run this after removing all tiles!
                 def cb():
                     imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: (x[0],1), imKeys)
+                    imKeys = map(lambda x: tuple(list(flatten(x,1))), imKeys)
                     self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     self.PostMessage("Loaded all images")
                 wx.CallAfter(cb)
@@ -499,10 +544,10 @@ class ImageGallery(wx.Frame):
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
         This sizer is then added to the classified_bins_sizer. '''
-        bin = sortbin.SortBin(parent=self.classified_bins_panel, label=label,
+        bin = sortbin.SortBin(parent=self.objects_bin_panel, label=label,
                               classifier=self)
 
-        box = wx.StaticBox(self.classified_bins_panel, label=label)
+        box = wx.StaticBox(self.objects_bin_panel, label=label)
         # NOTE: bin must be created after sizer or drop events will occur on the sizer
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
         bin.parentSizer = sizer
@@ -510,13 +555,13 @@ class ImageGallery(wx.Frame):
         sizer.Add(bin, proportion=1, flag=wx.EXPAND)
         self.classified_bins_sizer.Add(sizer, proportion=1, flag=wx.EXPAND)
         self.classBins.append(bin)
-        self.classified_bins_panel.Layout()
+        self.objects_bin_panel.Layout()
         self.binsCreated += 1
         self.QuantityChanged()
         # IMPORTANT: required for drag and drop to work on Linux
         # see: http://trac.wxwidgets.org/ticket/2763
         box.Lower()
-
+ 
     def RemoveSortClass(self, label, clearModel=True):
         for bin in self.classBins:
             if bin.label == label:
@@ -527,7 +572,7 @@ class ImageGallery(wx.Frame):
                 # Remove the bin
                 self.classified_bins_sizer.Remove(bin.parentSizer)
                 wx.CallAfter(bin.Destroy)
-                self.classified_bins_panel.Layout()
+                self.objects_bin_panel.Layout()
                 break
         for bin in self.classBins:
             bin.trained = False
@@ -624,24 +669,6 @@ class ImageGallery(wx.Frame):
             txtCtrl.SetForegroundColour('#FF0000')  # Set field to red if image doesn't exist
             self.SetStatusText('No such image.')
 
-    def OnTrainClassifier(self, evt):
-        # If there's a default training set. Ask to load it.
-        # if p.training_set and os.access(p.training_set, os.R_OK):
-        #     # file existence is checked in Properties module
-        #     dlg = wx.MessageDialog(self,
-        #                            'Would you like to load the training set defined in your properties file?\n\n%s\n\nTo prevent this message from appearing. Remove the training_set field from your properties file.' % (
-        #                            p.training_set),
-        #                            'Load Default Training Set?', wx.YES_NO | wx.ICON_QUESTION)
-        #     response = dlg.ShowModal()
-        #     if response == wx.ID_YES:
-        #         self.LoadTrainingSet(p.training_set)
-
-        # Get all image keys
-        imKeys = db.GetAllImageKeys()
-        imKeys = map(lambda x: (x[0],1), imKeys)
-        self.galleryBin.AddObjects(imKeys, self.chMap, pos='last')
-        self.PostMessage("Loaded all images")
-
     def OnSelectFilter(self, evt):
         ''' Handler for fetch filter selection. '''
         filter = self.filterChoice.GetStringSelection()
@@ -723,27 +750,6 @@ class ImageGallery(wx.Frame):
             txtCtrl.SetForegroundColour('#000001')
         except(Exception):
             txtCtrl.SetForegroundColour('#FF0000')
-
-    def ValidateNumberOfRules(self, evt=None):
-        # NOTE: textCtrl.SetBackgroundColor doesn't work on Mac
-        #   and foreground color only works when not setting to black.
-        try:
-            nRules = int(self.nRulesTxt.GetValue())
-            if p.db_type == 'sqlite':
-                nClasses = len(self.classBins)
-                maxRules = 99
-                if nRules > maxRules:
-                    self.nRulesTxt.SetToolTip(wx.ToolTip(str(maxRules)))
-                    self.nRulesTxt.SetForegroundColour('#FF0000')
-                    logging.warn(
-                        'No more than 99 rules can be used with SQLite. To avoid this limitation, use MySQL.' % (
-                        nClasses, maxRules))
-                    return False
-            self.nRulesTxt.SetForegroundColour('#000001')
-            return True
-        except(Exception):
-            self.nRulesTxt.SetForegroundColour('#FF0000')
-            return False
 
     def GetGroupKeyFromGroupSizer(self, group=None):
         ''' Returns the text in the group text inputs as a group key. '''
