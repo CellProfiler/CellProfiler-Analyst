@@ -40,7 +40,7 @@ class TileCollection(Singleton):
     def GetTileData(self, obKey, notify_window, priority=1):
         return self.GetTiles([obKey], notify_window, priority)[0]
 
-    def GetTiles(self, obKeys, notify_window, priority=1):
+    def GetTiles(self, obKeys, notify_window, priority=1, display_whole_image=False):
         '''
         obKeys: object tiles to fetch
         notify_window: window that will handle TileUpdatedEvent(s)
@@ -57,7 +57,7 @@ class TileCollection(Singleton):
         with self.cv:
             for order, obKey in enumerate(obKeys):
                 if not obKey in self.tileData:
-                    heappush(self.loadq, ((priority, self.group_priority, order), obKey))
+                    heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
                     self.group_priority += 1
                     temp[order] = List(self.imagePlaceholder)
                     self.tileData[obKey] = temp[order]
@@ -120,7 +120,10 @@ class TileLoader(threading.Thread):
                     logging.info('%s aborted'%self.getName())
                     return
 
-                obKey = heappop(self.tile_collection.loadq)[1]
+                data = heappop(self.tile_collection.loadq)
+                obKey = data[1]
+                display_whole_image = data[2] #display whole image instead of object image
+
                 self.tile_collection.cv.release()
 
                 # wait until loading has completed before continuing
@@ -130,7 +133,7 @@ class TileLoader(threading.Thread):
                         continue
 
                     # Get the tile
-                    new_data = imagetools.FetchTile(obKey)
+                    new_data = imagetools.FetchTile(obKey, display_whole_image=display_whole_image)
                     if new_data is None:
                         #if fetching fails, leave the tile blank
                         continue

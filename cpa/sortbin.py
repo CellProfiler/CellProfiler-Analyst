@@ -180,12 +180,12 @@ class SortBin(wx.ScrolledWindow):
     def AddObject(self, obKey, chMap=None, priority=1, pos='first'):
         self.AddObjects([obKey], chMap, priority, pos)
                         
-    def AddObjects(self, obKeys, chMap=None, priority=1, pos='first'):
+    def AddObjects(self, obKeys, chMap=None, priority=1, pos='first', display_whole_image=False):
         if chMap is None:
             chMap = p.image_channel_colors
         if self.tile_collection == None:
             self.tile_collection = tilecollection.TileCollection.getInstance()
-        imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority)
+        imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority, display_whole_image=display_whole_image) # Gives back the np matrix of an image?
         for i, obKey, imgs in zip(range(len(obKeys)), obKeys, imgSet):
             if self.classifier:
                 newTile = ImageTile(self, obKey, imgs, chMap, False,

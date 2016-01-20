@@ -318,6 +318,7 @@ class Properties(Singleton):
             self.image_tile_size = int(self.image_tile_size)
         self.Validate()
         self._initialized = True
+
     LoadFile = load_file
 
     def LoadIncellFiles(self, properties_filename, sqlite_filename, incell_filenames):

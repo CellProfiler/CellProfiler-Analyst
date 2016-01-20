@@ -42,8 +42,6 @@ MAX_ATTEMPTS = 10000
 ID_IMAGE_GALLERY = wx.NewId()
 CREATE_NEW_FILTER = '*create new filter*'
 
-required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
-
 class ImageGallery(wx.Frame):
     """
     GUI Interface and functionality for Image Gallery.
@@ -67,11 +65,6 @@ class ImageGallery(wx.Frame):
         self.SetName('ImageGallery')
 
         db.register_gui_parent(self)
-        for field in required_fields:
-            if not p.field_defined(field):
-                raise Exception('Properties field "%s" is required for ImageGallery.' % (field))
-                self.Destroy()
-                return
 
         global dm
         dm = DataModel.getInstance()
@@ -79,6 +72,20 @@ class ImageGallery(wx.Frame):
         if not p.is_initialized():
             logging.critical('ImageGallery requires a properties file. Exiting.')
             raise Exception('ImageGallery requires a properties file. Exiting.')
+
+        # self.required_fields = []
+
+        # if not p.image_classification:
+        #     self.scale = 1.0
+        #     self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+        # else:
+        #     self.scale = 100.0/p.image_tile_size
+
+        # for field in self.required_fields:
+        #     if not p.field_defined(field):
+        #         raise Exception('Properties field "%s" is required for ImageGallery.' % (field))
+        #         self.Destroy()
+        #         return
 
         self.pmb = None
         self.worker = None
@@ -89,7 +96,10 @@ class ImageGallery(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
-        self.scale = 1.0
+        if p.image_channel_colors:
+            self.scale = 100.0 / float(p.image_tile_size) # guarantee it is parsed as float
+        else:
+            self.scale = 1.0 
         self.contrast = 'Linear'
         self.defaultTSFileName = None
         self.defaultModelFileName = None
@@ -124,13 +134,15 @@ class ImageGallery(wx.Frame):
         self.classified_bins_panel = wx.Panel(self.bins_splitter)
 
         # fetch objects interface
-        self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=-1, value='20', size=(30, -1), style=wx.TE_PROCESS_ENTER)
-        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
+        self.startId = wx.TextCtrl(self.fetch_panel, id=-1, value='1', size=(60, -1), style=wx.TE_PROCESS_ENTER)
+        self.endId = wx.TextCtrl(self.fetch_panel, id=-1, value='100', size=(60, -1), style=wx.TE_PROCESS_ENTER)
+        #self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
                                       choices=['experiment', 'image'] + p._filters_ordered + p._groups_ordered + [
                                           CREATE_NEW_FILTER])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
+        self.fetchAllBtn = wx.Button(self.fetch_panel, -1, 'Fetch all!')
 
         #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -143,10 +155,14 @@ class ImageGallery(wx.Frame):
         self.fetchSizer.AddStretchSpacer()
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
-        self.fetchSizer.Add(self.nObjectsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(self.startId, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
-        self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'to'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(self.endId, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.AddSpacer((5, 20))
+        #self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
+        #self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
@@ -156,6 +172,8 @@ class ImageGallery(wx.Frame):
         self.fetchSizer.Add(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(self.fetchAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddStretchSpacer()
         self.fetch_panel.SetSizerAndFit(self.fetchSizer)
 
@@ -204,9 +222,9 @@ class ImageGallery(wx.Frame):
         # JEN - Start Add
         # self.Bind(wx.EVT_BUTTON, self.OpenDimensRedux, self.openDimensReduxBtn)
         # JEN - End Add
-        self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
-        self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
-        self.nObjectsTxt.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
+        self.Bind(wx.EVT_BUTTON, self.OnFetchAll, self.fetchAllBtn)
+        self.startId.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
+        self.startId.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_CHAR, self.OnKey)  # Doesn't work for windows
@@ -216,9 +234,9 @@ class ImageGallery(wx.Frame):
     # JK - End Add
 
     def BindMouseOverHelpText(self):
-        self.nObjectsTxt.SetToolTip(wx.ToolTip('The number of %s to fetch.' % (p.object_name[1])))
-        self.obClassChoice.SetToolTip(wx.ToolTip('The phenotype of the %s.' % (p.object_name[1])))
-        self.obClassChoice.GetToolTip().SetDelay(3000)
+        self.startId.SetToolTip(wx.ToolTip('The number of %s to fetch.' % (p.object_name[1])))
+        #self.obClassChoice.SetToolTip(wx.ToolTip('The phenotype of the %s.' % (p.object_name[1])))
+        #self.obClassChoice.GetToolTip().SetDelay(3000)
         self.filterChoice.SetToolTip(wx.ToolTip(
             'Filters fetched %s to be from a subset of your images. (See groups and filters in the properties file)' % (
             p.object_name[1])))
@@ -418,6 +436,9 @@ class ImageGallery(wx.Frame):
         #######################################
 
     def OnFetch(self, evt):
+        pass
+
+    def OnFetchAll(self, evt):
 
         imKeys = db.GetAllImageKeys()
         # A lot of images
@@ -430,8 +451,10 @@ class ImageGallery(wx.Frame):
             response = dlg.ShowModal()
             if response == wx.ID_YES:
                 imKeys = db.GetAllImageKeys()
+                #for keys in imKeys:
+                    #print db.GetFullChannelPathsForImage(keys) #Get all the paths to the images
                 imKeys = map(lambda x: (x[0],1), imKeys)
-                self.galleryBin.AddObjects(imKeys, self.chMap, pos='last')
+                self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                 self.PostMessage("Loaded all images")
 
     def AddSortClass(self, label):
@@ -460,8 +483,8 @@ class ImageGallery(wx.Frame):
             if bin.label == label:
                 self.classBins.remove(bin)
                 # Remove the label from the class dropdown menu
-                self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item != bin.label])
-                self.obClassChoice.Select(0)
+                #self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item != bin.label])
+                #self.obClassChoice.Select(0)
                 # Remove the bin
                 self.classified_bins_sizer.Remove(bin.parentSizer)
                 wx.CallAfter(bin.Destroy)
@@ -498,13 +521,13 @@ class ImageGallery(wx.Frame):
                     bin.UpdateQuantity()
                     break
             dlg.Destroy()
-            updatedList = self.obClassChoice.GetItems()
-            sel = self.obClassChoice.GetSelection()
+            #updatedList = self.obClassChoice.GetItems()
+            #sel = self.obClassChoice.GetSelection()
             for i in xrange(len(updatedList)):
                 if updatedList[i] == label:
                     updatedList[i] = newLabel
-            self.obClassChoice.SetItems(updatedList)
-            self.obClassChoice.SetSelection(sel)
+            #self.obClassChoice.SetItems(updatedList)
+            #self.obClassChoice.SetSelection(sel)
             return wx.ID_OK
         return wx.ID_CANCEL
 
