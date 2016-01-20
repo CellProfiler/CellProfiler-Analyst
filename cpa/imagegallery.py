@@ -483,29 +483,25 @@ class ImageGallery(wx.Frame):
             # if the filter name is a group then it's actually a group
             self.galleryBin.SelectAll()
             self.galleryBin.RemoveSelectedTiles()
+            groupName = fltr_sel
+            groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+            filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
+            colNames = dm.GetGroupColumnNames(groupName)
             def cb():
-                groupName = fltr_sel
-                groupKey = self.GetGroupKeyFromGroupSizer(groupName)
-                filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
-                colNames = dm.GetGroupColumnNames(groupName)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in group %s: %s' % (groupName,
                                                                                ', '.join(['%s=%s' % (n, v) for n, v in
                                                                                           zip(colNames, groupKey)])))
                     return
-                if not obKeys:
-                    self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
-                                                                                          ', '.join(
-                                                                                              ['%s=%s' % (n, v) for n, v
-                                                                                               in zip(colNames,
-                                                                                                      groupKey)])))
-                    return
+                
                 imKeys = map(lambda x: tuple(list(flatten(x,1))), filteredImKeys)
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
-            wx.CallAfter(cb)
+            
             statusMsg += ' from group %s: %s' % (groupName,
                                                  ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
 
+            wx.CallAfter(cb)
+           
 
         self.PostMessage(statusMsg)
 
