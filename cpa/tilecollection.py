@@ -59,7 +59,13 @@ class TileCollection(Singleton):
                 if not obKey in self.tileData:
                     heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
                     self.group_priority += 1
-                    temp[order] = List(self.imagePlaceholder)
+                    if display_whole_image == True:
+                        imagePlaceholder = [numpy.zeros((int(p.image_size),
+                                                   int(p.image_size)))+0.1
+                                      for i in range(sum(map(int,p.channels_per_image)))]
+                        temp[order] = List(imagePlaceholder)
+                    else:
+                        temp[order] = List(self.imagePlaceholder)
                     self.tileData[obKey] = temp[order]
             tiles = [self.tileData[obKey] for obKey in obKeys]
             self.cv.notify()

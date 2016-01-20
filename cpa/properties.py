@@ -58,6 +58,7 @@ string_vars = ['db_type',
                'link_columns_table',
                'image_rescale',
                'image_classification',
+               'image_size',
                'image_width',
                'image_height'
                ]
@@ -115,6 +116,7 @@ optional_vars = ['db_port',
                  'image_rescale',
                  'plate_shape',
                  'image_tile_size',
+                 'image_size',
                  'image_classification',
                  'image_width',
                  'image_height'
@@ -316,6 +318,13 @@ class Properties(Singleton):
                 self.image_tile_size = min([self.image_width, self.image_height])
 
             self.image_tile_size = int(self.image_tile_size)
+
+        # For image gallery
+        if self.field_defined('image_size'):
+            self.image_size = int(self.image_size)
+        else:
+            self.image_size = self.image_tile_size
+
         self.Validate()
         self._initialized = True
 
