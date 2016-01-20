@@ -153,7 +153,7 @@ class ImageGallery(wx.Frame):
         #### Add elements to sizers and splitters
         # fetch panel
         self.fetchSizer.AddStretchSpacer()
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'ID:'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(self.startId, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))

@@ -240,8 +240,8 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_IDLE, self.on_idle)
 
     def launch_classifier(self, evt=None):
-        classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         # Brave new world! Allowing multiple classifiers
+        # classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         # if classifier:
         #     classifier.Show()
         #     classifier.SetFocus()
@@ -276,12 +276,12 @@ class MainGUI(wx.Frame):
         imviewer.Show(True)
 
     def launch_image_gallery(self, evt=None):
-        colViewer = wx.FindWindowById(ID_IMAGE_GALLERY) or wx.FindWindowByName('ImageGallery')
-        if colViewer:
-            colViewer.Show()
-            colViewer.SetFocus()
-            logging.warn('You may only run one instance of ImageGallery at a time.')
-            return
+        # colViewer = wx.FindWindowById(ID_IMAGE_GALLERY) or wx.FindWindowByName('ImageGallery')
+        # if colViewer:
+        #     colViewer.Show()
+        #     colViewer.SetFocus()
+        #     logging.warn('You may only run one instance of ImageGallery at a time.')
+        #     return
         colViewer = ImageGallery(parent=self, properties=self.properties)
         colViewer.Show(True)
 
