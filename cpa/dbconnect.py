@@ -1429,6 +1429,7 @@ class DBConnect(Singleton):
                             raise Exception, 'cancelled load'
                     logging.info("... loaded %d%% of CSV data"%(pct))
                 f.close()
+                logging.info("Finished loading CSV data")
                 base_bytes += os.path.getsize(os.path.join(csv_dir, file))
 
         # Commit only at very end. No use in committing if the db is incomplete.
