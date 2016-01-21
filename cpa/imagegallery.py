@@ -699,7 +699,7 @@ class ImageGallery(wx.Frame):
             self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
         elif fetchChoice == 'all':
-            self.fetchTxt.SetLabel('image IDs')
+            self.fetchTxt.SetLabel('')
             self.fetchTxt2.Hide()
             self.startId.Hide()
             self.endId.Hide()
@@ -712,7 +712,7 @@ class ImageGallery(wx.Frame):
         elif fetchChoice == 'individual':
             self.startId.Hide()
             self.endId.Hide()
-            self.fetchTxt.SetLabel('image')
+            self.fetchTxt.SetLabel('')
             self.fetchTxt2.Hide()
             self.filterChoice.Disable()
             self.fetch_panel.SetSizerAndFit(self.fetchSizer)

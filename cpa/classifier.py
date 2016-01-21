@@ -121,7 +121,7 @@ class Classifier(wx.Frame):
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
         self.rules_text = wx.TextCtrl(self.fetch_and_rules_panel, -1, size=(-1, -1),
                                       style=wx.TE_MULTILINE | wx.TE_READONLY)
-        self.rules_text.SetMinSize((-1, 85))
+        self.rules_text.SetMinSize((-1, 40))
         self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
 
         # sorting bins

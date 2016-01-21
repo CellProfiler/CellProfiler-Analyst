@@ -9,6 +9,8 @@ import glob
 import numpy
 import subprocess
 import _winreg
+import javabridge
+import bioformats
 
 import cpa.util.version
 
@@ -51,8 +53,8 @@ OutputBaseFilename=CellProfilerAnalyst_win32_%d
                 key.Close()
             raise DistutilsFileError, "Inno Setup does not seem to be installed properly. Specifically, there is no entry in the HKEY_CLASSES_ROOT for InnoSetupScriptFile\\shell\\Compile\\command"
 
-if os.path.exists('build'):
-    raise Exception("Please delete the build directory before running setup.")
+# if os.path.exists('build'):
+#    raise Exception("Please delete the build directory before running setup.")
 if os.path.exists('dist'):
     raise Exception("Please delete the dist directory before running setup.")
 #
@@ -69,7 +71,8 @@ setup(windows=[{'script':'CellProfiler-Analyst.py',
 				'icon_resources':[(1,'.\cpa\icons\cpa.ico')]}],
       options={
         'py2exe': {
-            'packages' : ['matplotlib', 'pytz', 'MySQLdb','bioformats','sklearn','javabridge','cpa','numpy','PIL',],
+            'skip_archive' : 1,
+            'packages' : ['matplotlib', 'pytz', 'MySQLdb','bioformats','sklearn','javabridge','cpa','numpy','PIL','pandas','cpa.icons'],
             'includes' : ['scipy.sparse.csgraph._validation','cpa.pilfix', "xml.etree.cElementTree", "xml.etree.ElementTree",'scipy.special._ufuncs_cxx','scipy.linalg.cython_blas',"scipy.linalg.cython_lapack"],
             "excludes" : ['_gtkagg', '_tkagg', "nose",
                           "wx.tools", "pylab", "scipy.weave",
@@ -84,7 +87,9 @@ setup(windows=[{'script':'CellProfiler-Analyst.py',
         },
       data_files=(
               matplotlib.get_py2exe_datafiles() +
-              [('icons', glob.glob('cpa\icons\\*.png')),
+              [('cpa\\icons', glob.glob('cpa\\icons\\*.png')),
+              ('javabridge\\jars',javabridge.JARS),
+              ('bioformats\\jars',bioformats.JARS)
               ]
             ),
       cmdclass={"msi":CellProfilerAnalystMSI}
