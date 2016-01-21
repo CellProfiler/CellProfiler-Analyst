@@ -139,6 +139,7 @@ class ImageGallery(wx.Frame):
         self.startId = wx.TextCtrl(self.fetch_panel, id=-1, value='1', size=(60, -1), style=wx.TE_PROCESS_ENTER)
         self.endId = wx.TextCtrl(self.fetch_panel, id=-1, value='100', size=(60, -1), style=wx.TE_PROCESS_ENTER)
         self.fetchChoice = wx.Choice(self.fetch_panel, id=-1, choices=['range','all','individual'])
+        self.fetchChoice.SetSelection(0)
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
                                       choices=['experiment'] + p._filters_ordered + p._groups_ordered + [
                                           CREATE_NEW_FILTER])
