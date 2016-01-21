@@ -92,9 +92,13 @@ class Classifier(wx.Frame):
 
         for field in self.required_fields:
             if not p.field_defined(field):
-                raise Exception('Properties field "%s" is required for Classifier.' % (field))
+                errdlg = wx.MessageDialog(self, 'Properties field "%s" is required for Classifier.'% (field),
+                                       'Error', wx.OK| wx.ICON_ERROR)
+                errdlg.ShowModal()
+                errdlg.Destroy()
+                logging.error('Properties field "%s" is required for Classifier.'% (field))
                 self.Destroy()
-                return
+                return 
 
         self.contrast = 'Linear'
         self.defaultTSFileName = None
