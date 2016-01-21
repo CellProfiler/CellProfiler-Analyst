@@ -136,10 +136,10 @@ class MainGUI(wx.Frame):
         tb.SetSize((-1,132))
         tb.AddLabelTool(ID_IMAGE_GALLERY, 'ImageGallery', cpa.icons.image_gallery.ConvertToBitmap(), shortHelp='Gallery Viewer', longHelp='Launch Image Gallery Viewer')
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
-        tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', cpa.icons.pixelclassifier.ConvertToBitmap(), shortHelp='Pixel-based Classifier', longHelp='Launch pixel-based Classifier')
+        # tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', cpa.icons.pixelclassifier.ConvertToBitmap(), shortHelp='Pixel-based Classifier', longHelp='Launch pixel-based Classifier')
         tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
         tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
-        #tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        # tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
         tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
@@ -166,11 +166,11 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(fileMenu, 'File')
 
         toolsMenu = wx.Menu()
+        imageGalleryMenuItem = toolsMenu.Append(ID_IMAGE_GALLERY, 'Image Gallery Viewer\tCtrl+Shift+I', help='Launches the Image Gallery Viewer')
         classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
         plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
         dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
         imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
-        imageGalleryMenuItem = toolsMenu.Append(ID_IMAGE_GALLERY, 'Image Gallery Viewer\tCtrl+Shift+I', help='Launches the Image Gallery Viewer')
         scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
@@ -444,7 +444,8 @@ class CPAnalyst(wx.App):
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
 
-        self.frame = MainGUI(p, None, size=(860,-1))
+        # self.frame = MainGUI(p, None, size=(860,-1))
+        self.frame = MainGUI(p, None, size=(1000,-1))
         self.frame.Show(True)
         db = cpa.dbconnect.DBConnect.getInstance()
         # Black magic: Bus errors occur on Mac OS X if we wait until

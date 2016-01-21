@@ -57,7 +57,7 @@ class Classifier(wx.Frame):
             db = dbconnect.DBConnect.getInstance()
 
         wx.Frame.__init__(self, parent, id=id, title='CPA/Classifier - %s' % \
-                                                     (os.path.basename(p._filename)), size=(800, 600), **kwargs)
+                                                     (os.path.basename(p._filename)), size=(900, 600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
             self.tbicon = wx.TaskBarIcon()
             self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/Classifier')
