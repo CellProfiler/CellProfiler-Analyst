@@ -32,6 +32,7 @@ class FastGentleBoosting(object):
         if not self.classifier.UpdateTrainingSet():
             self.PostMessage('Cross-validation canceled.')
             return
+
         
         db = dbconnect.DBConnect.getInstance()
         groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
@@ -341,7 +342,7 @@ class FastGentleBoosting(object):
         print "Note that if one learner is sufficient, only one will be written."
         exit(1)
 
-    def XValidate(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback):
+    def XValidate(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback, confusion=False):
         # if everything's in the same group, ignore the labels
         if all([g == group_labels[0] for g in group_labels]):
             group_labels = range(len(group_labels))
@@ -352,6 +353,9 @@ class FastGentleBoosting(object):
 
         fold_min_size = len(group_labels) / float(folds)
         num_misclassifications = np.zeros(num_learners, int)
+
+        np_holdout_results = np.array([])
+        np_holdout_labels = np.array([])
 
         # break into folds, randomly, but with all identical group_labels together
         for f in range(folds):
@@ -377,11 +381,19 @@ class FastGentleBoosting(object):
             if len(holdout_results) < num_learners:
                 holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
             holdout_labels = label_matrix[holdout_idx, :].argmax(axis=1)
+
+            if confusion:
+                np_holdout_results = np.concatenate((np_holdout_results,np.array(holdout_results).flatten()))
+                np_holdout_labels = np.concatenate((np_holdout_labels,np.tile(holdout_labels,(num_learners,1)).flatten()))
+                
             num_misclassifications += [sum(hr != holdout_labels) for hr in holdout_results]
             if progress_callback:
                 progress_callback(f / float(folds))
 
-        return [num_misclassifications]
+        if confusion:
+            return np_holdout_results, np_holdout_labels
+        else:
+            return [num_misclassifications]
 
     def XValidatePredict(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback):
         # if everything's in the same group, ignore the labels
@@ -419,6 +431,7 @@ class FastGentleBoosting(object):
             if len(holdout_results) < num_learners:
                 holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
             holdout_labels = label_matrix[holdout_idx, :].argmax(axis=1)
+
             num_misclassifications += [sum(hr != holdout_labels) for hr in holdout_results]
             if progress_callback:
                 progress_callback(f / float(folds))
@@ -426,46 +439,104 @@ class FastGentleBoosting(object):
         return [num_misclassifications]
 
     # Confusion Matrix
-    def plot_confusion_matrix(self, cm, title='Confusion matrix', cmap=plt.cm.Greys):
+    def plot_confusion_matrix(self, conf_arr, title='Confusion matrix', cmap=plt.cm.Blues):
+        import seaborn as sns
+        # sns.set_style("whitegrid", {'axes.grid' : False})
+
+        # plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        # plt.title(title)
+        # plt.colorbar()
+        # tick_marks = np.arange(len(self.classifier.trainingSet.labels))
+        # plt.xticks(tick_marks, self.classifier.trainingSet.labels, rotation=45)
+        # plt.yticks(tick_marks, self.classifier.trainingSet.labels)
+        # plt.tight_layout()
+        # plt.ylabel('True label')
+        # plt.xlabel('Predicted label')
+
         sns.set_style("whitegrid", {'axes.grid' : False})
 
-        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        #plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        norm_conf = []
+        for i in conf_arr:
+            a = 0
+            tmp_arr = []
+            a = sum(i, 0)
+            for j in i:
+                tmp_arr.append(float(j)/float(a))
+            norm_conf.append(tmp_arr)
+
+        fig = plt.figure()
+        plt.clf()
+        ax = fig.add_subplot(111)
+        ax.set_aspect(1)
+        res = ax.imshow(np.array(norm_conf), cmap=cmap, 
+                        interpolation='nearest')
+
+        width = len(conf_arr)
+        height = len(conf_arr[0])
+
+        for x in xrange(width):
+            for y in xrange(height):
+                if conf_arr[x][y] != 0:
+                    ax.annotate("%.2f" % conf_arr[x][y], xy=(y, x), 
+                                horizontalalignment='center',
+                                verticalalignment='center')
         plt.title(title)
-        plt.colorbar()
-        tick_marks = np.arange(len(self.env.trainingSet.labels))
-        plt.xticks(tick_marks, self.env.trainingSet.labels, rotation=45)
-        plt.yticks(tick_marks, self.env.trainingSet.labels)
+        plt.colorbar(res)
+        tick_marks = np.arange(len(self.classifier.trainingSet.labels))
+        plt.xticks(tick_marks, self.classifier.trainingSet.labels, rotation=45)
+        plt.yticks(tick_marks, self.classifier.trainingSet.labels)
         plt.tight_layout()
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
-        pass
 
     def ConfusionMatrix(self):
-        # from sklearn.metrics import confusion_matrix
-        # # Compute confusion matrix
-        # folds = 5 # like classification report
-        # y_pred = self.XValidatePredict(self.env.trainingSet.label_array, self.env.trainingSet.values, folds)
-        # y_test = self.env.trainingSet.label_array
 
-        # cm = confusion_matrix(y_test, y_pred)
-        # cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        from sklearn.metrics import confusion_matrix
+        import wx
+        # get wells if available, otherwise use imagenumbers
+        try:
+            nRules = int(self.classifier.nRulesTxt.GetValue())
+        except:
+            logging.error('Unable to parse number of rules')
+            return
 
-        # np.set_printoptions(precision=2)
-        # logging.info('Confusion matrix, without normalization')
-        # logging.info(cm)
-        # plt.figure()
-        # self.plot_confusion_matrix(cm)
+        if not self.classifier.UpdateTrainingSet():
+            self.PostMessage('Cross-validation canceled.')
+            return
 
-        # # Normalize the confusion matrix by row (i.e by the number of samples
-        # # in each class)
-        # logging.info('Normalized confusion matrix')
-        # logging.info(cm_normalized)
-        # plt.figure()
-        # self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
+        
+        db = dbconnect.DBConnect.getInstance()
+        groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
 
-        # plt.show()
+        #t1 = time()
+        #dlg = wx.ProgressDialog('Computing cross validation accuracy...', '0% Complete', 100, self.classifier, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)        
+        #base = 0.0
+        #scale = 1.0
 
-        print "Sorry, not implemented yet"
+        folds = 5
+        
+        class StopXValidation(Exception):
+            pass
+
+        # def progress_callback(amount):
+        #     pct = min(int(100 * (amount * scale + base)), 100)
+        #     cont, skip = dlg.Update(pct, '%d%% Complete'%(pct))
+        #     self.classifier.PostMessage('Computing cross validation accuracy... %s%% Complete'%(pct))
+        #     if not cont:
+        #         raise StopXValidation
+
+        y_pred, y_test = self.XValidate(self.classifier.trainingSet.colnames, nRules, self.classifier.trainingSet.label_matrix,
+                    self.classifier.trainingSet.values, folds, groups, None, confusion=True)
+
+        cm = confusion_matrix(y_test, y_pred)
+        cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+        np.set_printoptions(precision=2)
+        self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
+        
+        plt.show()
+        #print "Sorry, not implemented yet"
 
 if __name__ == '__main__':
     fgb = FastGentleBoosting()
