@@ -30,17 +30,16 @@ class ImageTileDropTarget(wx.DropTarget):
             return wx.DragNone
         return self.tile.bin.ReceiveDrop(srcID, obKeys) 
 
-
 class ImageTile(ImagePanel):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
     between SortBins.
     '''
     def __init__(self, bin, obKey, images, chMap, selected=False, 
-                 scale=1.0, brightness=1.0, contrast=None):
+                 scale=1.0, brightness=1.0, contrast=None, display_whole_image=False):
 
         ImagePanel.__init__(self, images, chMap, bin, scale=scale, 
-                            brightness=brightness, contrast=contrast)
+                            brightness=brightness, contrast=contrast, display_whole_image=display_whole_image)
         self.SetDropTarget(ImageTileDropTarget(self))
 
         self.bin         = bin             # the SortBin this object belongs to

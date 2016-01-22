@@ -26,9 +26,10 @@ def FetchTile(obKey, display_whole_image=False):
     # Could transform object coords here
     imgs = FetchImage(imKey)
     
+    size = (int(p.image_size),int(p.image_size))
+
     if display_whole_image:
-        size = (int(p.image_size), int(p.image_size))
-        return [rescale(im, size) for im in imgs] # Rescale it to the tile size
+        return imgs
 
     else:
         size = (int(p.image_tile_size), int(p.image_tile_size))
@@ -105,7 +106,7 @@ def Crop(imgdata, (w,h), (x,y)):
 
     return crop
 
-def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None):
+def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None, display_whole_image=False):
     '''
     imgs  - list of np arrays containing pixel data for each channel of an image
     chMap - list of colors to map each corresponding channel onto.  
@@ -137,7 +138,15 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     # Write wx.Image
     img = wx.EmptyImage(w,h)
     img.SetData(imData.astype('uint8').flatten())
-    
+
+    tmp_h = int(p.image_size)
+    tmp_w = int(p.image_size)
+
+    if display_whole_image and h != tmp_h and h!= tmp_w:
+        h = tmp_h
+        w = tmp_w
+        img.Rescale(h,w)
+
     # Apply brightness & scale
     if brightness != 1.0:
         img = img.AdjustChannels(brightness, brightness, brightness)
@@ -146,7 +155,8 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
             img.Rescale(w*scale, h*scale)
         else:
             img.Rescale(10,10)
-    
+
+
     return img.ConvertToBitmap()
 
 def MergeChannels(imgs, chMap, masks=[]):

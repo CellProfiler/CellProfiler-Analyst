@@ -199,6 +199,8 @@ class Classifier(wx.Frame):
         # Train classifier panel
         self.find_rules_sizer.AddStretchSpacer()
         self.find_rules_sizer.Add((5, 20))
+        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, -1, 'Use'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.AddSpacer((5, 20))

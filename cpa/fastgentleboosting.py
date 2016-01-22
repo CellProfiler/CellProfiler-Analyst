@@ -445,17 +445,6 @@ class FastGentleBoosting(object):
     # Confusion Matrix
     def plot_confusion_matrix(self, conf_arr, title='Confusion matrix', cmap=plt.cm.Blues):
         import seaborn as sns
-        # sns.set_style("whitegrid", {'axes.grid' : False})
-
-        # plt.imshow(cm, interpolation='nearest', cmap=cmap)
-        # plt.title(title)
-        # plt.colorbar()
-        # tick_marks = np.arange(len(self.classifier.trainingSet.labels))
-        # plt.xticks(tick_marks, self.classifier.trainingSet.labels, rotation=45)
-        # plt.yticks(tick_marks, self.classifier.trainingSet.labels)
-        # plt.tight_layout()
-        # plt.ylabel('True label')
-        # plt.xlabel('Predicted label')
 
         sns.set_style("whitegrid", {'axes.grid' : False})
 
@@ -540,7 +529,6 @@ class FastGentleBoosting(object):
         self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
         
         plt.show()
-        #print "Sorry, not implemented yet"
 
 if __name__ == '__main__':
     fgb = FastGentleBoosting()
