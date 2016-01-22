@@ -1,3 +1,12 @@
+# =============================================================================
+#
+#   Mac OS build file for CellProfiler-Analyst
+#
+#   Run python setup.py py2app to build a dmg
+#
+# =============================================================================
+
+
 from setuptools import setup, Extension
 import sys
 import os

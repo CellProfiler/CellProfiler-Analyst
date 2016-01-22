@@ -4,3 +4,4 @@ python-bioformats
 pandas
 seaborn
 scikit-learn
+javabridge

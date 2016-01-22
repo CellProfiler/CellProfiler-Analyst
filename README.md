@@ -13,7 +13,7 @@ Copyright 2016, The Broad Institute of MIT and Harvard.
 
 Distributed under the GPLv2.
 
-## Current Beta App for Mac OS
+## Beta Apps
 
 Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://drive.google.com/file/d/0B_Rfj3esFDX8XzBGbE1uV2NXTjg/view?usp=sharing)
 

@@ -1,3 +1,11 @@
+# =============================================================================
+#
+#   Mac OS build file for CellProfiler-Analyst
+#
+#   Run python setup_py2exe.py to build a dist file containing Windows binaries
+#
+# =============================================================================
+
 import distutils
 import sys
 from distutils.core import setup, Extension
