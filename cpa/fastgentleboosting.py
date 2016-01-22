@@ -102,7 +102,11 @@ class FastGentleBoosting(object):
         self.classBins = []
         self.model = None
 
-    def ComplexityTxt(self):
+    # Adjust text for the classifier rules panel
+    def panelTxt(self):
+        return 'with'
+
+    def panelTxt2(self):
         return 'max rules'
 
     def CreatePerObjectClassTable(self, labels):

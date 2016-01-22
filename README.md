@@ -27,7 +27,7 @@ For a head start, download example dataset here: [Example Dataset for CPA (zippe
 
 ## Requirements
 
-Builds upon CellProfiler dependencies
+Builds upon CellProfiler dependencies, we need
 
 * Pandas
 * Seaborn

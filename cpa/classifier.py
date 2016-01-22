@@ -202,12 +202,13 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.AddSpacer((5, 20))
-        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, -1, 'display'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.panelTxt = wx.StaticText(self.find_rules_panel, -1, 'display')
+        self.find_rules_sizer.Add(self.panelTxt, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddSpacer((5, 20))
-        self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
+        self.panelTxt2 = wx.StaticText(self.find_rules_panel, -1, '')
         self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddSpacer((5, 20))
-        self.find_rules_sizer.Add(self.complexityTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.panelTxt2, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddSpacer((5, 20))
         # Cross Validation Button
         self.find_rules_sizer.AddSpacer((5, 20))
@@ -283,7 +284,8 @@ class Classifier(wx.Frame):
         # JK - Start Add
         # Define the Random Forest classification algorithm to be default and set the default
         self.algorithm = RandomForestClassifier
-        self.complexityTxt.SetLabel(str(self.algorithm.ComplexityTxt()))
+        self.panelTxt.SetLabel(str(self.algorithm.panelTxt()))
+        self.panelTxt2.SetLabel(str(self.algorithm.panelTxt2()))
 
         self.algorithms = {
             'RandomForestClassifier': RandomForestClassifier,
@@ -381,7 +383,8 @@ class Classifier(wx.Frame):
         try:
             self.algorithm = self.algorithms[selectedItem]
             logging.info("Classifier " + selectedItem + " successfully loaded")
-            self.complexityTxt.SetLabel(str(self.algorithm.ComplexityTxt())) # Set new label to # box
+            self.panelTxt.SetLabel(str(self.algorithm.panelTxt())) # Set new label to # box
+            self.panelTxt2.SetLabel(str(self.algorithm.panelTxt2())) # Set new label to # box
 
             itemId = self.classifier2ItemId[selectedItem] # translate name to select
             self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
@@ -392,8 +395,8 @@ class Classifier(wx.Frame):
             self.algorithm = self.algorithms['RandomForestClassifier']
 
         # Update the GUI complexity text and classifier description
-        # self.complexityTxt.SetLabel(self.algorithm.get_params())
-        self.complexityTxt.Parent.Layout()
+        # self.panelTxt2.SetLabel(self.algorithm.get_params())
+        self.panelTxt2.Parent.Layout()
         self.rules_text.Value = ''
 
         # Make sure the classifier is cleared before running a new training session

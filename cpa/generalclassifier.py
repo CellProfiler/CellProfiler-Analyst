@@ -59,8 +59,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         self.classBins = []
         self.trained = False
 
-    # Adapter to SciKit Learn
-    def ComplexityTxt(self):
+    # Adjust text for the classifier rules panel
+    def panelTxt(self):
+        return 'display'
+        
+    def panelTxt2(self):
         return 'top features'
 
     def CreatePerObjectClassTable(self, classNames):
