@@ -202,7 +202,7 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.AddSpacer((5, 20))
-        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, -1, 'with'), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(wx.StaticText(self.find_rules_panel, -1, 'display'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddSpacer((5, 20))
         self.complexityTxt = wx.StaticText(self.find_rules_panel, -1, '')
         self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
