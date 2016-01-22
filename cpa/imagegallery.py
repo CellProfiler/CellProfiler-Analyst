@@ -465,15 +465,108 @@ class ImageGallery(wx.Frame):
                 else:
                     yield x
 
+        # Fetching all images with filter
         if fetch_sel == 'all':
-            self.FetchAll()
-            return
+            # Easy just fetch all images
+            if fltr_sel == 'experiment':
+                self.FetchAll()
+                return
+            # Fetch all images with self defined filter
+            elif fltr_sel in p._filters_ordered:
+                imKeys = db.GetFilteredImages(fltr_sel)
+                if imKeys == []:
+                    self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
+                    return
 
+                # Are you sure?
+                if len(imKeys) > 100:
+                    dlg = wx.MessageDialog(self,
+                                       'The whole collection consists of %s images. Downloading could be slow. Do you still want to continue?' % (
+                                       len(imKeys)),
+                                       'Load whole image set?', wx.YES_NO | wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    # Call fetch filter with all keys
+                    if response == wx.ID_YES:
+                        self.galleryBin.SelectAll()
+                        self.galleryBin.RemoveSelectedTiles()
+                        # Need to run this after removing all tiles!
+                        def cb():
+                            filteredImKeys = db.GetFilteredImages(fltr_sel)
+                            imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+
+                            self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
+                        wx.CallAfter(cb)
+                        statusMsg += ' from filter "%s"' % (fltr_sel)
+
+                # data set is small, lets go for it!
+                else:
+                    self.galleryBin.SelectAll()
+                    self.galleryBin.RemoveSelectedTiles()
+                    # Need to run this after removing all tiles!
+                    def cb():
+                        filteredImKeys = db.GetFilteredImages(fltr_sel)
+                        imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+
+                        self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
+                    wx.CallAfter(cb)
+                    statusMsg += ' from filter "%s"' % (fltr_sel)
+
+            # fetching all images for predefined filter
+            elif fltr_sel in p._groups_ordered:
+
+                imKeys = db.GetFilteredImages(fltr_sel)
+                if imKeys == []:
+                    self.PostMessage('No images were found in group %s: %s' % (groupName,
+                                                                               ', '.join(['%s=%s' % (n, v) for n, v in
+                                                                                          zip(colNames, groupKey)])))
+                    return
+
+                # Are you sure?
+                if len(imKeys) > 100:
+                    dlg = wx.MessageDialog(self,
+                                       'The whole collection consists of %s images. Downloading could be slow. Do you still want to continue?' % (
+                                       len(imKeys)),
+                                       'Load whole image set?', wx.YES_NO | wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    # Yes, I am sure!
+                    if response == wx.ID_YES:
+                        self.galleryBin.SelectAll()
+                        self.galleryBin.RemoveSelectedTiles()
+                        groupName = fltr_sel
+                        groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+                        filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
+                        colNames = dm.GetGroupColumnNames(groupName)
+                        def cb():
+                            imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                            self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
+                        
+                        statusMsg += ' from group %s: %s' % (groupName,
+                                                             ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+                        wx.CallAfter(cb)
+
+                # dataset is small, lets go for it!
+                else:
+                    self.galleryBin.SelectAll()
+                    self.galleryBin.RemoveSelectedTiles()
+                    groupName = fltr_sel
+                    groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+                    filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
+                    colNames = dm.GetGroupColumnNames(groupName)
+                    def cb():
+                        imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                        self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
+                    
+                    statusMsg += ' from group %s: %s' % (groupName,
+                                                         ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+                    wx.CallAfter(cb)
+
+        # Fetching individual images
         elif fetch_sel == 'individual':
             imviewer = ImageViewer(parent=None)
             imviewer.Show(True)
             return
 
+        # Fetching images with range
         elif fltr_sel == 'experiment':
                 self.galleryBin.SelectAll()
                 self.galleryBin.RemoveSelectedTiles()
@@ -554,6 +647,16 @@ class ImageGallery(wx.Frame):
                     self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     self.PostMessage("Loaded all images")
                 wx.CallAfter(cb)
+        else: 
+            self.galleryBin.SelectAll()
+            self.galleryBin.RemoveSelectedTiles()
+            # Need to run this after removing all tiles!
+            def cb():
+                imKeys = db.GetAllImageKeys()
+                imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+                self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
+                self.PostMessage("Loaded all images")
+            wx.CallAfter(cb)
 
 
     def AddSortClass(self, label):
@@ -705,7 +808,7 @@ class ImageGallery(wx.Frame):
             self.endId.Hide()
             #self.startId.Disable()
             #self.endId.Disable()
-            self.filterChoice.Disable()
+            self.filterChoice.Enable()
             self.fetch_panel.SetSizerAndFit(self.fetchSizer)
             self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
