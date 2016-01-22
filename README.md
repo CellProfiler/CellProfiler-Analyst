@@ -17,6 +17,8 @@ Distributed under the GPLv2.
 
 Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://drive.google.com/file/d/0B_Rfj3esFDX8XzBGbE1uV2NXTjg/view?usp=sharing)
 
+Download untested beta of Version 2.2.0 for Windows here: [App for Windows](https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4ejJyeXotZ25LLW8/view?usp=sharing)
+
 The app requires JDK 1.8 installed.
 
 Please note that CPA 2.2.0 is WIP and we will update the link on regular basis. 
