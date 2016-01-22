@@ -15,10 +15,10 @@ AppSupportURL=http://cellprofiler.org
 AppUpdatesURL=http://cellprofiler.org
 DefaultDirName={pf64}\CellProfiler-Analyst
 DefaultGroupName=CellProfiler-Analyst
-LicenseFile=D:\CellProfiler-Analyst\LICENSE
-OutputDir=d:\CellProfiler-Analyst\output
+LicenseFile=.\LICENSE
+OutputDir=.\output
 OutputBaseFilename=CellProfiler-Analyst
-SetupIconFile=D:\CellProfiler-Analyst\cpa\icons\cpa.ico
+SetupIconFile=.\cpa\icons\cpa.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -29,8 +29,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "D:\CellProfiler-Analyst\dist\CellProfiler-Analyst.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\CellProfiler-Analyst\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: ".\dist\CellProfiler-Analyst.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: ".\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
