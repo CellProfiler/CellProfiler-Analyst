@@ -88,7 +88,7 @@ class ImageTile(ImagePanel):
             popupMenuItems += ['Predict class']
 
         if self.bin.label == 'image gallery':
-            popupMenuItems += ['Fetch all objects of image']
+            popupMenuItems += ['Fetch all objects from image']
 
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()

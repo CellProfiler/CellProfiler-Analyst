@@ -218,7 +218,7 @@ class ImageGallery(wx.Frame):
 
         # add the default classes
         #for class in range(1, num_classes+1):
-        self.AddSortClass(p.object_name[0] + ' objects of selected image')
+        self.AddSortClass('objects of selected image')
         #self.AddSortClass('negative')
 
         self.Layout()
@@ -453,7 +453,7 @@ class ImageGallery(wx.Frame):
         end = int(self.endId.Value)
         fltr_sel = self.filterChoice.GetStringSelection()
         fetch_sel = self.fetchChoice.GetStringSelection()
-        statusMsg = 'Fetched %d - %d %s images' % (start, end, p.object_name[1])
+        statusMsg = 'Fetched images %d - %d ' % (start, end)
 
         # Need to flatten it due to the fact that img key can look like this:
         # (image_id,) or this (table_id, image_id)
