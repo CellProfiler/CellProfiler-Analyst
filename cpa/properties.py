@@ -295,7 +295,7 @@ class Properties(Singleton):
         f.close()
 
         #if image_classification is defined
-        if self.field_defined('image_classification') and self.image_classification.lower() in ['true', 'yes', 'on', 't', 'y']:
+        if self.field_defined('image_classification') and self.image_classification.lower() in ['true', 'yes', 'on', 't', 'y', '1']:
             self.image_classification = 'yes'
             #2 cases:
             # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables

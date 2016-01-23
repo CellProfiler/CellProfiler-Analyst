@@ -146,12 +146,12 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
         # tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', cpa.icons.pixelclassifier.ConvertToBitmap(), shortHelp='Pixel-based Classifier', longHelp='Launch pixel-based Classifier')
         tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
-        tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
         # tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
         tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
         tb.AddLabelTool(ID_DENSITY, 'DensityPlot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
+        tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs 
         # Not the Case anymore with wx.Python 3
@@ -177,12 +177,12 @@ class MainGUI(wx.Frame):
         imageGalleryMenuItem = toolsMenu.Append(ID_IMAGE_GALLERY, 'Image Gallery Viewer\tCtrl+Shift+I', help='Launches the Image Gallery Viewer')
         classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
         plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
-        dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
-        imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
+        #imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
         scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
         boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
+        dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', help='Launches the Table Viewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()

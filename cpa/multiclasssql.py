@@ -143,7 +143,7 @@ def processData(data):
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
     try:
-        cell_data = np.reshape(np.genfromtxt(cell_data.ravel()), data_shape)
+        cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
         cell_data = np.nan_to_num(cell_data)
         logging.info('Any values that cannot be converted to float are set to 0')
     except:
@@ -245,7 +245,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                                   silent=(idx > 10))
 
             cell_data, image_keys = processData(data)
-
+            
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i], predicted_classes[i]))
