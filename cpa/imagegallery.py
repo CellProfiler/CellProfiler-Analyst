@@ -171,7 +171,8 @@ class ImageGallery(wx.Frame):
         self.fetchSizer.AddSpacer((5, 20))
         #self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
         #self.fetchSizer.AddSpacer((5, 20))
-        self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, ' '.join((p.object_name[0] if not p.image_classification == 'yes' else '','images'))), flag=wx.ALIGN_CENTER_VERTICAL)
+        self.fetchTxt3 = wx.StaticText(self.fetch_panel, -1, label='images')
+        self.fetchSizer.Add(self.fetchTxt3, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddSpacer((5, 20))
@@ -562,8 +563,13 @@ class ImageGallery(wx.Frame):
 
         # Fetching individual images
         elif fetch_sel == 'individual':
-            imviewer = ImageViewer(parent=None)
-            imviewer.Show(True)
+
+            if p.table_id:
+                imgKey = [(start,end,-1)]
+            else:
+                imgKey = [(end,-1)]
+
+            self.galleryBin.AddObjects(imgKey, self.chMap, pos='last', display_whole_image=True)
             return
 
         # Fetching images with range
@@ -795,6 +801,8 @@ class ImageGallery(wx.Frame):
             self.fetchTxt.SetLabel('of image IDs:')
             self.fetchTxt2.SetLabel('to')
             self.fetchTxt2.Show()
+            self.fetchTxt3.SetLabel('images')
+            self.fetchTxt3.Show()
             self.startId.Show()
             self.endId.Show()
             self.filterChoice.Enable()
@@ -804,6 +812,8 @@ class ImageGallery(wx.Frame):
         elif fetchChoice == 'all':
             self.fetchTxt.SetLabel('')
             self.fetchTxt2.Hide()
+            self.fetchTxt3.SetLabel('images')
+            self.fetchTxt3.Show()
             self.startId.Hide()
             self.endId.Hide()
             #self.startId.Disable()
@@ -813,17 +823,18 @@ class ImageGallery(wx.Frame):
             self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
         elif fetchChoice == 'individual':
-            self.startId.Hide()
-            self.endId.Hide()
-            self.fetchTxt.SetLabel('')
+
+            self.fetchTxt.SetLabel('image ID:')
+            if p.table_id:
+                self.startId.Show()
+            else:
+                self.startId.Hide()
+            self.endId.Show()
             self.fetchTxt2.Hide()
+            self.fetchTxt3.Hide()
             self.filterChoice.Disable()
             self.fetch_panel.SetSizerAndFit(self.fetchSizer)
             self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
-
-
-
-
             
 
     def OnSelectFilter(self, evt):
