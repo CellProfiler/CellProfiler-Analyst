@@ -1004,12 +1004,11 @@ class Classifier(wx.Frame):
         '''
         self.PostMessage('Loading classifier model from: %s' % filename)
         # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
-        os.chdir(os.path.split(filename)[0])
+        #os.chdir(os.path.split(filename)[0])
         self.defaultModelFileName = os.path.split(filename)[1]
         # self.RemoveAllSortClasses(False) # Don't remove sorted classes
 
         try:
-
             # Get the name of the loaded file
             model, bin_labels, load_name = self.GetModelData(filename)
 

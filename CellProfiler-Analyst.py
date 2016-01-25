@@ -449,6 +449,7 @@ class CPAnalyst(wx.App):
             from cpa.guiutils import show_load_dialog
             splash.Destroy()
             if not show_load_dialog():
+                splash.Destroy()
                 example_link_address = 'http://www.cellprofiler.org/linked_files/Examplezips/cpa_2.0_example.zip'
                 dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
                                            example_link_address), 'Properties file required', wx.OK)
