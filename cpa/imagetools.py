@@ -57,7 +57,6 @@ def FetchImage(imKey):
     else:
         ir = ImageReader()
         filenames = db.GetFullChannelPathsForImage(imKey)
-        print filenames
         imgs = ir.ReadImages(filenames)                       
         cache[imKey] = imgs
         cachedkeys += [imKey]

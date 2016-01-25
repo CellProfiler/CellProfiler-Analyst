@@ -224,7 +224,7 @@ class SortBin(wx.ScrolledWindow):
                 self.tiles.remove(t)
                 self.sizer.Remove(t)
                 wx.CallAfter(t.Destroy) # Call After?
-        self.UpdateSizer()
+        wx.CallAfter(self.UpdateSizer)
         self.UpdateQuantity()
 
     def RemoveSelectedTiles(self):
@@ -232,7 +232,7 @@ class SortBin(wx.ScrolledWindow):
             self.tiles.remove(tile)
             self.sizer.Remove(tile)
             wx.CallAfter(tile.Destroy)
-        self.UpdateSizer()
+        wx.CallAfter(self.UpdateSizer)
         self.UpdateQuantity()
     
     def Clear(self):
