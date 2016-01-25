@@ -147,7 +147,7 @@ def processData(data):
         cell_data = np.nan_to_num(cell_data)
         logging.info('Any values that cannot be converted to float are set to 0')
     except:
-        pass
+        cell_data = np.nan_to_num(cell_data)
     return cell_data, object_keys
 
 def _objectify(p, field):
