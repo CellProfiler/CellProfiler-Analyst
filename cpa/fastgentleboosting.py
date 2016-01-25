@@ -128,6 +128,7 @@ class FastGentleBoosting(object):
             self.model = None
             self.bin_labels = None
             logging.error('Loading trained model failed')
+            raise TypeError
 
     def ParseModel(self, string):
         self.model = []
@@ -159,7 +160,7 @@ class FastGentleBoosting(object):
 
         # For loading scikit learn library
         from sklearn.externals import joblib
-        joblib.dump((self.model, bin_labels, self.name), model_filename)
+        joblib.dump((self.model, bin_labels, self.name), model_filename, compress=1)
 
     def ShowModel(self):
         '''

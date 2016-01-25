@@ -989,6 +989,15 @@ class Classifier(wx.Frame):
             filename = dlg.GetPath()
             self.LoadModel(filename)
 
+    # Get the name of the loaded model file
+    def GetModelData(self, filename):
+        from sklearn.externals import joblib
+
+        try: 
+            return joblib.load(filename)
+        except:
+            logging.error("Couldn't check model!")
+
     def LoadModel(self, filename):
         '''
         Loads the selected file and parses the classifier model.
@@ -998,45 +1007,37 @@ class Classifier(wx.Frame):
         os.chdir(os.path.split(filename)[0])
         self.defaultModelFileName = os.path.split(filename)[1]
         # self.RemoveAllSortClasses(False) # Don't remove sorted classes
-        if True:
-
-            # Save old name for checking
-            tmp_name = self.algorithm.name
-
-            # Now algorithm.name is different! Don't move it before tmp_name
-            self.algorithm.LoadModel(filename)
-            # Save to select for later
-            select = self.algorithm.name
-
-            if self.algorithm.name != tmp_name:
-                logging.info("Detected different setted classifier: " + tmp_name + ", switching to " + self.algorithm.name)
-                # Restore the name
-                self.algorithm.name = tmp_name
-                self.algorithm = self.algorithms[select]
-                # Load again
-                self.algorithm.LoadModel(filename)
-
-            itemId = self.classifier2ItemId[select]
-            # Checks the MenuItem
-            self.classifierMenu.Check(itemId, True)
-            self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
-
-            # for label in self.algorithm.bin_labels:
-            #     self.AddSortClass(label)
-            for bin in self.classBins:
-                 bin.trained = True
-            self.scoreAllBtn.Enable()
-            self.scoreImageBtn.Enable()
-            self.PostMessage('Classifier model succesfully loaded')
-
-            # Some User Information about the loaded Algorithm
-            self.PostMessage('Loaded trained classifier: ' + self.algorithm.name + ' on classes:')
-            for label in self.algorithm.bin_labels:
-                self.PostMessage(label)
-            self.PostMessage('CAUTION: Classifier needs to be trained on the current data set!')
 
         try:
-            pass
+
+            # Get the name of the loaded file
+            model, bin_labels, load_name = self.GetModelData(filename)
+
+            if self.algorithm.name != load_name:
+                logging.info("Detected different setted classifier: " + self.algorithm.name + ", switching to " + load_name)
+                if load_name in self.algorithms:
+                    self.algorithm = self.algorithms[load_name]
+                    itemId = self.classifier2ItemId[load_name]
+                    # Checks the MenuItem
+                    self.classifierMenu.Check(itemId, True)
+                    self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
+                    self.algorithm.LoadModel(filename)
+
+                    # for label in self.algorithm.bin_labels:
+                    for bin in self.classBins:
+                        bin.trained = True
+                    self.scoreAllBtn.Enable()
+                    self.scoreImageBtn.Enable()
+                    self.PostMessage('Classifier model succesfully loaded')
+
+                    # Some User Information about the loaded Algorithm
+                    self.PostMessage('Loaded trained classifier: ' + self.algorithm.name + ' on classes:')
+                    for label in self.algorithm.bin_labels:
+                        self.PostMessage(label)
+                    self.PostMessage('CAUTION: Classifier needs to be trained on the current data set!')
+                else:
+                    logging.error("Algorithm: %s doesn't exists", load_name)
+            
         except:
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()

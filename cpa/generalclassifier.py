@@ -127,7 +127,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             logging.info("Selected algorithm doesn't provide probabilities")
            
     def SaveModel(self, model_filename, bin_labels):
-        joblib.dump((self.classifier, bin_labels, self.name), model_filename, compress=9)
+        joblib.dump((self.classifier, bin_labels, self.name), model_filename, compress=1)
 
     def ShowModel(self):#SKLEARN TODO
         '''
