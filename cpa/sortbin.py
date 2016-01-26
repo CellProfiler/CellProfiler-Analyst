@@ -7,6 +7,8 @@ from properties import Properties
 import imagetools
 import cPickle
 import wx
+import logging
+
 
 p  = Properties.getInstance()
 db = DBConnect.getInstance()

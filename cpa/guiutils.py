@@ -414,11 +414,12 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
             self.Select(0)
         
     def get_gatename_or_none(self):
-        if self.GetStringSelection() in (GateComboBox.NO_GATE, 
+        selection = self.GetSelection() # Fix to replace self.GetStringSelection()
+        if self.GetString(selection) in (GateComboBox.NO_GATE, 
                                          GateComboBox.NEW_GATE, 
                                          GateComboBox.MANAGE_GATES):
             return None
-        return self.GetStringSelection()
+        return self.GetString(selection) 
         
     def get_item_bitmap(self, n):
         '''returns the bitmap corresponding with the nth item'''
