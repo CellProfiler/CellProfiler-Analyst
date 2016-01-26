@@ -531,8 +531,8 @@ class Classifier(wx.Frame):
         self.evalMenu = wx.Menu()
 
         # Plotting options
+        confusionMenuItem = self.evalMenu.AppendRadioItem(-1, text=u'Confusion Matrix', help='Visualizes the Normalized Confusion Matrix')
         reportMenuItem = self.evalMenu.AppendRadioItem(-1, text=u'Classification Report', help='Visualization of Accuracy, Recall and F1 Scores')
-        confusionMenuItem = self.evalMenu.AppendRadioItem(-1, text=u'Confusion Matrix', help='Visualizes the Confusion Matrix')
         #paramsEditMenuItem = self.evalMenu.AppendRadioItem(2, text=u'ROC Curve', help='Plots a One vs all ROC Curve and calculates the area under the curve')
         #featureSelectMenuItem = self.evalMenu.AppendRadioItem(3, text=u'Precision Recall Curve', help='Plots a One vs all Precision Recall Curve')
         #learningMenuItem = self.evalMenu.AppendRadioItem(4, text=u'Learning Curve', help='Plots a One vs all Learning Curve')

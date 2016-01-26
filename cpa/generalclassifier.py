@@ -384,7 +384,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         for x in xrange(width):
             for y in xrange(height):
                 if conf_arr[x][y] != 0:
-                    ax.annotate(str(conf_arr[x][y]), xy=(y, x), 
+                    ax.annotate("%.2f" % conf_arr[x][y], xy=(y, x), 
                                 horizontalalignment='center',
                                 verticalalignment='center')
         plt.title(title)
@@ -413,7 +413,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         logging.info('Confusion matrix, without normalization')
         logging.info(cm)
         #plt.figure()
-        self.plot_confusion_matrix(cm)
+        self.plot_confusion_matrix(cm_normalized)
 
         # Normalize the confusion matrix by row (i.e by the number of samples
         # in each class)

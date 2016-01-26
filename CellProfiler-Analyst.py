@@ -157,6 +157,7 @@ class MainGUI(wx.Frame):
         # Not the Case anymore with wx.Python 3
         # self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
 
+
         #
         # Setup menu items
         #
