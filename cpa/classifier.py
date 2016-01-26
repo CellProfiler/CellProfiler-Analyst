@@ -216,7 +216,7 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.AddSpacer((5, 20))
         self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddSpacer((5, 20))
-        self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluation')
+        self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluate')
         self.evaluationBtn.Disable()
         self.find_rules_sizer.AddSpacer((5, 20))
         self.find_rules_sizer.Add(self.evaluationBtn, flag=wx.ALIGN_CENTER_VERTICAL)
