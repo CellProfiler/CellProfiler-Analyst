@@ -160,6 +160,7 @@ class PlateViewer(wx.Frame, CPATool):
 
         self.sourceChoice.Bind(wx.EVT_COMBOBOX, self.UpdateMeasurementChoice)
         self.measurementsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectMeasurement)
+        self.measurementsChoice.Select(0)
         self.aggregationMethodsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectAggregationMethod)
         self.colorMapsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectColorMap)
         self.numberOfPlatesTE.Bind(wx.EVT_TEXT_ENTER, self.OnEnterNumberOfPlates)
@@ -496,7 +497,7 @@ class PlateViewer(wx.Frame, CPATool):
             self.measurementsChoice.SetStringSelection(column)
             self.UpdatePlateMaps()
         else:
-            self.measurementsChoice.SetSelection(current_selection)
+            self.measurementsChoice.SetSelection(current_selection[0])
         self.annotationShowVals.Enable()
         self.outlineMarked.Enable()
         self.OnSelectWell()
