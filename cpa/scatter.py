@@ -215,7 +215,7 @@ class ScatterControlPanel(wx.Panel):
     def update_gate_helper(self):
         gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
-            #Deactivate the lasso tool
+            # Deactivate the lasso tool
             self.figpanel.get_toolbar().toggle_user_tool('lasso', False)
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
         else:

@@ -340,13 +340,15 @@ class DensityPanel(FigureCanvasWxAgg):
                                  yscale=self.y_scale,
                                  bins=self.color_scale,
                                  cmap=matplotlib.cm.get_cmap(self.cmap))
+
         
         if self.cb:
             # Remove the existing colorbar and reclaim the space so when we add
             # a colorbar to the new hexbin subplot, it doesn't get indented.
-            self.figure.delaxes(self.figure.axes[1])
+            #self.figure.delaxes(self.figure.axes[1])
+            self.cb.remove()
             self.figure.subplots_adjust(right=0.90)
-        self.cb = self.figure.colorbar(hb)
+        self.cb = self.figure.colorbar(hb, fraction=0.046, pad=0.04)
         if self.color_scale==LOG_SCALE:
             self.cb.set_label('log10(N)')
         
