@@ -470,18 +470,18 @@ class Classifier(wx.Frame):
     def CreateMenus(self):
         ''' Create file menu and menu items '''
         self.fileMenu = wx.Menu()
-        self.loadTSMenuItem = self.fileMenu.Append(-1, text='Load training set\tCtrl+O',
+        self.loadTSMenuItem = self.fileMenu.Append(-1, text='Load Training Set\tCtrl+O',
                                                    help='Loads objects and classes specified in a training set file.')
-        self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save training set\tCtrl+S',
+        self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save Training Set\tCtrl+S',
                                                    help='Save your training set to file so you can reload these classified cells again.')
-        self.loadFullTSMenuItem = self.fileMenu.Append(-1, text='Load training set (CSV)',
+        self.loadFullTSMenuItem = self.fileMenu.Append(-1, text='Load Training Set (CSV)',
                                                    help='Loads objects and classes specified in a training set file.')
-        self.saveFullTSMenuItem = self.fileMenu.Append(-1, text='Save training set (CSV)',
+        self.saveFullTSMenuItem = self.fileMenu.Append(-1, text='Save Training Set (CSV)',
                                                    help='Save your training data as CSV')
         self.fileMenu.AppendSeparator()
         # JEN - Start Add
-        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load classifier model', help='Loads a classifier model specified in a text file')
-        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save classifier model', help='Save your classifier model to file so you can use it again on this or other experiments.')
+        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load Classifier Model', help='Loads a classifier model specified in a text file')
+        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save Classifier Model', help='Save your classifier model to file so you can use it again on this or other experiments.')
         self.fileMenu.AppendSeparator()
         # JEN - End Add
         self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
@@ -542,8 +542,8 @@ class Classifier(wx.Frame):
 
         # Advanced menu
         advancedMenu = wx.Menu()
-        rulesEditMenuItem = advancedMenu.Append(-1, text=u'Edit Rules', help='Lets you edit the rules')
-        paramsEditMenuItem = advancedMenu.Append(-1, text=u'Edit Parameters', help='Lets you edit the hyperparameters')
+        rulesEditMenuItem = advancedMenu.Append(-1, text=u'Edit Rules...', help='Lets you edit the rules')
+        paramsEditMenuItem = advancedMenu.Append(-1, text=u'Edit Parameters...', help='Lets you edit the hyperparameters')
         featureSelectMenuItem = advancedMenu.Append(-1, text=u'Check Features', help='Check the variance of your Training Data')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
@@ -1118,7 +1118,7 @@ class Classifier(wx.Frame):
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
-                    num_objs += 1
+                    num_objs += len(keysPerBin[bin.label])
 
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
@@ -1147,7 +1147,7 @@ class Classifier(wx.Frame):
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
-                    num_objs += 1
+                    num_objs += len(keysPerBin[bin.label])
 
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
