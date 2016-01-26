@@ -41,7 +41,7 @@ class DataSourcePanel(wx.Panel):
         self.x_columns = [] # column names to plot if selecting multiple columns
 
         self.table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
-        self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
+        self.x_choice = ComboBox(self, -1, size=(200,-1))
         self.x_multiple = wx.Button(self, -1, 'select multiple')
         self.group_choice = ComboBox(self, -1, choices=[NO_GROUP]+p._groups_ordered, style=wx.CB_READONLY)
         self.group_choice.Select(0)
