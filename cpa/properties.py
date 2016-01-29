@@ -57,7 +57,7 @@ string_vars = ['db_type',
                'link_tables_table',
                'link_columns_table',
                'image_rescale',
-               'image_classification',
+               'classification_type',
                'image_size',
                'image_width',
                'image_height'
@@ -117,7 +117,7 @@ optional_vars = ['db_port',
                  'plate_shape',
                  'image_tile_size',
                  'image_size',
-                 'image_classification',
+                 'classification_type',
                  'image_width',
                  'image_height'
                  ]
@@ -294,9 +294,9 @@ class Properties(Singleton):
                 
         f.close()
 
-        #if image_classification is defined
-        if self.field_defined('image_classification') and self.image_classification.lower() in ['true', 'yes', 'on', 't', 'y', '1']:
-            self.image_classification = 'yes'
+        #if classification_type is defined
+        if self.field_defined('classification_type') and self.classification_type.lower() in ['image']:
+            self.classification_type = 'image'
             #2 cases:
             # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
             # object_table/object_id/cell_x_loc/cell_y_loc don't exist
@@ -319,6 +319,8 @@ class Properties(Singleton):
                 self.image_tile_size = min([self.image_width, self.image_height])
 
             self.image_tile_size = int(self.image_tile_size)
+        else:
+            self.classification_type = "object"
 
         # For image gallery
         if self.field_defined('image_size'):

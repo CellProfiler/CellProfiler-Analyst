@@ -259,16 +259,26 @@ classifier_ignore_columns  =  <your_object_x_location_column>, <your_object_y_lo
 image_tile_size  =  50
 
 # OPTIONAL
+# Provides the image width and height. Used for per-image classification.
+# If not set, it will be obtained from the Image_Width and Image_Height 
+# measurements in CellProfiler.
+
+image_width  = 
+image_height = 
+
+# OPTIONAL
 # Image Gallery can use a different tile size (in pixels) to create thumbnails for images
 # If not set, it will be the same as image_tile_size
 
 image_size = 
 
-# ======== Image Classification =======
-# CPA 2.2.0 allows image classification instead of object classification
-# If set to yes, then Classifier will fetch whole images instead of objects 
+# ======== Classification type =======
+# OPTIONAL
+# CPA 2.2.0 allows image classification instead of object classification.
+# If left blank or set to "object", then Classifier will fetch objects (default).
+# If set to "image", then Classifier will fetch whole images instead of objects.
 
-image_classification = no 
+classification_type =  
 
 
 # ======== Auto Load Training Set ========

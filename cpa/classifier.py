@@ -84,7 +84,7 @@ class Classifier(wx.Frame):
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.required_fields = []
-        if not p.image_classification == 'yes':
+        if not p.classification_type == 'image':
             self.scale = 1.0
             self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
         else:
@@ -1509,7 +1509,7 @@ class Classifier(wx.Frame):
 
         # GET GROUPING METHOD AND FILTER FROM USER
         enrichments = True
-        if p.image_classification == 'yes':
+        if p.classification_type == 'image':
             enrichments = False
 
         dlg = ScoreDialog(self, groupChoices, filterChoices, enrichments)
