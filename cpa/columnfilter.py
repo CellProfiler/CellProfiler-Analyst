@@ -90,9 +90,9 @@ class ColumnFilterPanel(wx.Panel):
         colidx = self.colChoice.GetSelection()
         coltype = db.GetColumnTypes(table)[colidx]
         vals = []
-        if coltype == str:# or coltype == int or coltype == long:
-            res = db.execute('SELECT DISTINCT %s FROM %s ORDER BY %s'%(column, table, column))
-            vals = [str(row[0]) for row in res]
+        # if coltype == str:# or coltype == int or coltype == long:
+        #     res = db.execute('SELECT DISTINCT %s FROM %s ORDER BY %s'%(column, table, column))
+        #     vals = [str(row[0]) for row in res]
         self.valueField.SetItems(vals)
 
     def get_filter(self):
