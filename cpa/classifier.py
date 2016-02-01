@@ -350,7 +350,14 @@ class Classifier(wx.Frame):
                                    'Load Default Training Set?', wx.YES_NO | wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response == wx.ID_YES:
-                self.LoadTrainingSet(p.training_set)
+                name, file_extension = os.path.splitext(p.training_set)
+                if '.txt' == file_extension: 
+                    self.LoadTrainingSet(p.training_set)
+                elif '.csv' == file_extension:
+                    self.LoadTrainingSetCSV(p.training_set)
+                else:
+                    logging.error("Couldn't load the file! Make sure it is .txt or .csv")
+                #self.LoadTrainingSet(p.training_set)
 
         self.AutoSave() # Autosave try out
 
@@ -1082,18 +1089,17 @@ class Classifier(wx.Frame):
             else:
                 logging.error("Couldn't load the file! Make sure it is .txt or .csv")
 
-
-    def OnLoadFullTrainingSet(self, evt):
-        '''
-        Present user with file select dialog, then load selected training set.
-        '''
-        dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
-                            defaultDir=os.getcwd(),
-                            wildcard='Text files(*.csv)|*.csv|All files(*.*)|*.*',
-                            style=wx.OPEN | wx.FD_CHANGE_DIR)
-        if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetPath()
-            self.LoadTrainingSetCSV(filename)
+    # def OnLoadFullTrainingSet(self, evt):
+    #     '''
+    #     Present user with file select dialog, then load selected training set.
+    #     '''
+    #     dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
+    #                         defaultDir=os.getcwd(),
+    #                         wildcard='Text files(*.csv)|*.csv|All files(*.*)|*.*',
+    #                         style=wx.OPEN | wx.FD_CHANGE_DIR)
+    #     if dlg.ShowModal() == wx.ID_OK:
+    #         filename = dlg.GetPath()
+    #         self.LoadTrainingSetCSV(filename)
 
     def LoadTrainingSet(self, filename):
         '''
