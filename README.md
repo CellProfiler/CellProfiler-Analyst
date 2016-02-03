@@ -11,7 +11,7 @@ Website: cellprofiler.org
 
 Copyright 2016, The Broad Institute of MIT and Harvard.
 
-Distributed under the GPLv2.
+Distributed under the BSD license.
 
 ## Beta Apps
 
