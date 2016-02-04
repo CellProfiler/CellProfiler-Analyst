@@ -11,7 +11,7 @@ Website: cellprofiler.org
 
 Copyright 2016, The Broad Institute of MIT and Harvard.
 
-Distributed under the GPLv2.
+Distributed under the BSD license.
 
 ## Beta Apps
 
@@ -19,7 +19,8 @@ Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://dr
 
 Download untested beta of Version 2.2.0 for Windows here: [App for Windows](https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4ejJyeXotZ25LLW8/view?usp=sharing)
 
-The app requires JDK 1.8 installed.
+The app requires JDK 1.8 to be installed (not just JRE). http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html 
+Check the Java path.
 
 Please note that CPA 2.2.0 is WIP and we will update the link on regular basis. 
 

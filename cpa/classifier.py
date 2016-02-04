@@ -350,7 +350,14 @@ class Classifier(wx.Frame):
                                    'Load Default Training Set?', wx.YES_NO | wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response == wx.ID_YES:
-                self.LoadTrainingSet(p.training_set)
+                name, file_extension = os.path.splitext(p.training_set)
+                if '.txt' == file_extension: 
+                    self.LoadTrainingSet(p.training_set)
+                elif '.csv' == file_extension:
+                    self.LoadTrainingSetCSV(p.training_set)
+                else:
+                    logging.error("Couldn't load the file! Make sure it is .txt or .csv")
+                #self.LoadTrainingSet(p.training_set)
 
         self.AutoSave() # Autosave try out
 
@@ -474,10 +481,6 @@ class Classifier(wx.Frame):
                                                    help='Loads objects and classes specified in a training set file.')
         self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save Training Set\tCtrl+S',
                                                    help='Save your training set to file so you can reload these classified cells again.')
-        self.loadFullTSMenuItem = self.fileMenu.Append(-1, text='Load Training Set (CSV)',
-                                                   help='Loads objects and classes specified in a training set file.')
-        self.saveFullTSMenuItem = self.fileMenu.Append(-1, text='Save Training Set (CSV)',
-                                                   help='Save your training data as CSV')
         self.fileMenu.AppendSeparator()
         # JEN - Start Add
         self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load Classifier Model', help='Loads a classifier model specified in a text file')
@@ -552,9 +555,7 @@ class Classifier(wx.Frame):
 
         # Bind events to different menu items
         self.Bind(wx.EVT_MENU, self.OnLoadTrainingSet, self.loadTSMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnLoadFullTrainingSet, self.loadFullTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveTrainingSet, self.saveTSMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnSaveFullTrainingSet, self.saveFullTSMenuItem)
         self.Bind(wx.EVT_MENU, self.OnLoadModel, self.loadModelMenuItem) # JEN - Added
         self.Bind(wx.EVT_MENU, self.SaveModel, self.saveModelMenuItem) # JEN - Added
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
@@ -1076,23 +1077,29 @@ class Classifier(wx.Frame):
         '''
         dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(),
-                            wildcard='Text files(*.txt)|*.txt|All files(*.*)|*.*',
+                            wildcard='Text files(*.txt)|*.txt|CSV files(*.csv)|*.csv',
                             style=wx.OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
-            self.LoadTrainingSet(filename)
+            name, file_extension = os.path.splitext(filename)
+            if '.txt' == file_extension: 
+                self.LoadTrainingSet(filename)
+            elif '.csv' == file_extension:
+                self.LoadTrainingSetCSV(filename)
+            else:
+                logging.error("Couldn't load the file! Make sure it is .txt or .csv")
 
-    def OnLoadFullTrainingSet(self, evt):
-        '''
-        Present user with file select dialog, then load selected training set.
-        '''
-        dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
-                            defaultDir=os.getcwd(),
-                            wildcard='Text files(*.csv)|*.csv|All files(*.*)|*.*',
-                            style=wx.OPEN | wx.FD_CHANGE_DIR)
-        if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetPath()
-            self.LoadTrainingSetCSV(filename)
+    # def OnLoadFullTrainingSet(self, evt):
+    #     '''
+    #     Present user with file select dialog, then load selected training set.
+    #     '''
+    #     dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
+    #                         defaultDir=os.getcwd(),
+    #                         wildcard='Text files(*.csv)|*.csv|All files(*.*)|*.*',
+    #                         style=wx.OPEN | wx.FD_CHANGE_DIR)
+    #     if dlg.ShowModal() == wx.ID_OK:
+    #         filename = dlg.GetPath()
+    #         self.LoadTrainingSetCSV(filename)
 
     def LoadTrainingSet(self, filename):
         '''
@@ -1156,22 +1163,7 @@ class Classifier(wx.Frame):
     def OnSaveTrainingSet(self, evt):
         self.SaveTrainingSet()
 
-    def OnSaveFullTrainingSet(self, evt):
-        self.SaveFullTrainingSet()
-
     def SaveTrainingSet(self):
-        if not self.defaultTSFileName:
-            self.defaultTSFileName = 'MyTrainingSet.txt'
-        saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(),
-                                   defaultFile=self.defaultTSFileName,
-                                   wildcard='Text files (*.txt)|*.txt|All files (*.*)|*.*',
-                                   style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
-        if saveDialog.ShowModal() == wx.ID_OK:
-            filename = saveDialog.GetPath()
-            self.defaultTSFileName = os.path.split(filename)[1]
-            self.SaveTrainingSetAs(filename)
-
-    def SaveFullTrainingSet(self):
         if not self.defaultTSFileName:
             self.defaultTSFileName = 'MyTrainingSet.csv'
         saveDialog = wx.FileDialog(self, message="Save as:", defaultDir=os.getcwd(),
@@ -1182,17 +1174,6 @@ class Classifier(wx.Frame):
             filename = saveDialog.GetPath()
             self.defaultTSFileName = os.path.split(filename)[1]
             self.SaveTrainingSetAsCSV(filename)
-
-    def SaveTrainingSetAs(self, filename):
-        classDict = {}
-        trainingSet = self.trainingSet # Create Save Copy
-        try:
-            self.trainingSet = TrainingSet(p)
-            self.trainingSet.Create([bin.label for bin in self.classBins], [bin.GetObjectKeys() for bin in self.classBins])
-        except:
-            logging.info("Couldn't update TrainingSet. Using last AutoSave.")
-            self.trainingSet = trainingSet # Use backup
-        self.trainingSet.Save(filename)
 
     def SaveTrainingSetAsCSV(self, filename):
         classDict = {}
@@ -1253,36 +1234,36 @@ class Classifier(wx.Frame):
             if item.IsChecked():
                 selectedText = item.GetText()
 
-        if selectedText == "ROC Curve":
-            self.PlotROC()
-        elif selectedText == "Learning Curve":
-            self.PlotLearningCurveWrapper()
-        elif selectedText == "Precision Recall Curve":
-            self.PlotPrecisionRecall()
-        elif selectedText == "Confusion Matrix":
+        # if selectedText == "ROC Curve":
+        #     self.PlotROC()
+        # elif selectedText == "Learning Curve":
+        #     self.PlotLearningCurveWrapper()
+        # elif selectedText == "Precision Recall Curve":
+        #     self.PlotPrecisionRecall()
+        if selectedText == "Confusion Matrix":
             self.algorithm.ConfusionMatrix()
         else:
             self.algorithm.CheckProgress()
 
-    def PlotLearningCurveWrapper(self):
-        from sklearn import cross_validation
-        model = self.algorithm
-        clf = model.classifier
-        X_train = self.trainingSet.values
-        y_train = self.trainingSet.label_array
+    # def PlotLearningCurveWrapper(self):
+    #     from sklearn import cross_validation
+    #     model = self.algorithm
+    #     clf = model.classifier
+    #     X_train = self.trainingSet.values
+    #     y_train = self.trainingSet.label_array
 
-        # Training Set is currently sorted. I will shuffle it
-        y_trans = y_train.reshape(y_train.shape[0],1)
-        df_values = pd.DataFrame(X_train, columns=self.trainingSet.colnames)
-        df_class = pd.DataFrame(y_trans, columns=["Class"])
-        df = pd.concat([df_class, df_values],axis=1)
-        df = df.reindex(np.random.permutation(df.index))
-        X_train = df[self.trainingSet.colnames].values
-        y_train = df["Class"].values
+    #     # Training Set is currently sorted. I will shuffle it
+    #     y_trans = y_train.reshape(y_train.shape[0],1)
+    #     df_values = pd.DataFrame(X_train, columns=self.trainingSet.colnames)
+    #     df_class = pd.DataFrame(y_trans, columns=["Class"])
+    #     df = pd.concat([df_class, df_values],axis=1)
+    #     df = df.reindex(np.random.permutation(df.index))
+    #     X_train = df[self.trainingSet.colnames].values
+    #     y_train = df["Class"].values
 
-        #cv = cross_validation.StratifiedKFold(y_train, n_folds=3, shuffle=False)
-        plot_title = 'Learning Curves ({})'.format(model.name)
-        self.PlotLearningCurve(clf, plot_title, X_train, y_train, cv=5)
+    #     #cv = cross_validation.StratifiedKFold(y_train, n_folds=3, shuffle=False)
+    #     plot_title = 'Learning Curves ({})'.format(model.name)
+    #     self.PlotLearningCurve(clf, plot_title, X_train, y_train, cv=5)
 
     from utils import delay
     # Add AutoSave by DD
