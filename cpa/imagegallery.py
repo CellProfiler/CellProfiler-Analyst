@@ -849,7 +849,7 @@ class ImageGallery(wx.Frame):
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
             from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600, 150))
+            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600, 300))
             if cff.ShowModal() == wx.OK:
                 fltr = cff.get_filter()
                 fname = cff.get_filter_name()
