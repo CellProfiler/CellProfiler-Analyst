@@ -1088,7 +1088,7 @@ class Classifier(wx.Frame):
         '''
         dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(),
-                            wildcard='Text files(*.txt)|*.txt|CSV files(*.csv)|*.csv',
+                            wildcard='Text files (*.txt)|*.txt|CSV files (*.csv)|*.csv',
                             style=wx.OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
