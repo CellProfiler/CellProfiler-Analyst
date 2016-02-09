@@ -301,12 +301,7 @@ class Properties(Singleton):
             # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
             # object_table/object_id/cell_x_loc/cell_y_loc don't exist
 
-            try:
-                len(self.object_table)
-                self.object_table = self.image_table + '_AsObjectTable'
-            except:
-                FINAL_PER_OBJ_NAME = 'ObjectTable'
-                self.object_table = FINAL_PER_OBJ_NAME
+            self.object_table = self.image_table + '_ObjectTable'
 
             self.object_id = 'ObjectNumber'
             self.cell_x_loc = 'Image_x_loc'
