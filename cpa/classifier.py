@@ -84,12 +84,22 @@ class Classifier(wx.Frame):
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.required_fields = []
+        
         if not p.classification_type == 'image':
+            self.image_tile_size = p.image_tile_size
             self.scale = 1.0
-            self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
         else:
-            self.scale = 100.0/p.image_tile_size
+            if p.field_defined('image_width') and p.field_defined('image_height'):
+                self.image_tile_size = min([p.image_width, p.image_height])        
+            else:
+                cols = [x for x in db.GetColumnNames(p.image_table)]
+                list_of_cols = [str(x) for x in cols]
+                image_width, image_height = db.GetImageWidthHeight(list_of_cols) 
+                self.image_tile_size = min([image_width, image_height]) 
+            self.scale = 100.0/float(self.image_tile_size)
 
+        self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']        
+        
         for field in self.required_fields:
             if not p.field_defined(field):
                 errdlg = wx.MessageDialog(self, 'Properties field "%s" is required for Classifier.'% (field),
@@ -968,7 +978,7 @@ class Classifier(wx.Frame):
                     attempts = 0
             statusMsg += loopMsg
 
-        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last')
+        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last',display_whole_image=p.classification_type == 'image')
         self.PostMessage(statusMsg)
 
     def OnTileUpdated(self, evt):
@@ -1124,7 +1134,7 @@ class Classifier(wx.Frame):
             num_objs = 0
             for bin in self.classBins:
                 if bin.label in keysPerBin.keys():
-                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])
 
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))

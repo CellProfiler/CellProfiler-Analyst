@@ -75,20 +75,6 @@ class ImageGallery(wx.Frame):
             logging.critical('ImageGallery requires a properties file. Exiting.')
             raise Exception('ImageGallery requires a properties file. Exiting.')
 
-        # self.required_fields = []
-
-        # if not p.classification_type == 'image':
-        #     self.scale = 1.0
-        #     self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
-        # else:
-        #     self.scale = 100.0/p.image_tile_size
-
-        # for field in self.required_fields:
-        #     if not p.field_defined(field):
-        #         raise Exception('Properties field "%s" is required for ImageGallery.' % (field))
-        #         self.Destroy()
-        #         return
-
         self.pmb = None
         self.worker = None
         self.trainingSet = None
@@ -98,10 +84,8 @@ class ImageGallery(wx.Frame):
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
-        if p.classification_type == 'image':
-            self.scale = 100.0 / float(p.image_tile_size) # guarantee it is parsed as float
-        else:
-            self.scale = 1.0 
+        self.scale = 1.0 
+        
         self.contrast = 'Linear'
         self.defaultTSFileName = None
         self.defaultModelFileName = None

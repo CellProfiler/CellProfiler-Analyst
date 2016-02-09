@@ -1437,27 +1437,27 @@ class DBConnect(Singleton):
         if dlg:
             dlg.Destroy()
 
+    def GetImageWidthHeight(self,list_of_cols):
+        # Get image width and height
+        try:
+            width_col = next(name for name in list_of_cols if 'width' in name.lower())
+            height_col = next(name for name in list_of_cols if 'height' in name.lower())
+            width_query = 'SELECT %s FROM %s LIMIT 1'%(width_col, p.image_table)
+            height_query = 'SELECT %s FROM %s LIMIT 1'%(height_col, p.image_table)
+            width = self.execute(width_query)
+            height = self.execute(height_query)
+            width = int(width[0][0])
+            height = int(height[0][0])
+        except:
+            if p.image_width and p.image_height:
+                width = int(p.image_width)
+                height = int(p.image_height)
+            else:
+                raise Exception('Input image_width and image_height fields in properties file')
+        return width, height    
+
     def CreateObjectImageTable(self):
         # Create object table for image classification
-        def getImageWidthHeight(list_of_cols):
-            #get width and height
-            try:
-                width_col = next(name for name in list_of_cols if 'width' in name.lower())
-                height_col = next(name for name in list_of_cols if 'height' in name.lower())
-                width_query = 'SELECT %s FROM %s LIMIT 1'%(width_col, p.image_table)
-                height_query = 'SELECT %s FROM %s LIMIT 1'%(height_col, p.image_table)
-                width = self.execute(width_query)
-                height = self.execute(height_query)
-                width = int(width[0][0])
-                height = int(height[0][0])
-            except:
-                if p.image_width and p.image_height:
-                    width = int(p.image_width)
-                    height = int(p.image_height)
-                else:
-                    raise Exception('Input image_width and image_height fields in properties file')
-            return width, height
-
         DB_NAME = p.db_name
         DB_TYPE = p.db_type.lower()
         if DB_TYPE == 'mysql':
@@ -1466,7 +1466,7 @@ class DBConnect(Singleton):
             list_of_cols = []
             cols = [x for x in self.GetColumnNames(p.image_table)]
             list_of_cols.extend([str(x) for x in cols])
-            width, height = getImageWidthHeight(list_of_cols)
+            width, height = self.GetImageWidthHeight(list_of_cols)
 
             query = "CREATE OR REPLACE VIEW %s AS SELECT 1 AS %s, %d AS %s, %d AS %s, %s.* FROM %s"%(p.object_table, p.object_id, width/2, p.cell_x_loc, height/2, p.cell_y_loc, p.image_table,p.image_table)
             self.execute(query)
@@ -1488,7 +1488,7 @@ class DBConnect(Singleton):
             self.execute(query)
 
             #Get info on image width and height (assuming they are fields in the image table) to get image center
-            width, height = getImageWidthHeight(list_of_cols)
+            width, height = self.GetImageWidthHeight(list_of_cols)
 
             query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(p.object_table, p.object_id,
                                                               p.cell_x_loc, width/2,

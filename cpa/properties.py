@@ -313,10 +313,12 @@ class Properties(Singleton):
             self.cell_y_loc = 'Image_y_loc'
             self.object_name = ['image','images']
 
-            # image_width and image_height refer to the full image width and height while image_tile_size refers to the size of tiles for classification
+            # image_width and image_height refer to the full image width and height while 
+            # image_tile_size refers to the size of tiles for classification
             # NB: if image_width and image_height are defined, they override image_tile_size
             if self.field_defined('image_width') and self.field_defined('image_height'):
-                self.image_tile_size = min([self.image_width, self.image_height])
+                self.image_width, self.image_height = int(self.image_width), int(self.image_height)
+                self.image_tile_size = min([self.image_width,self.image_height])
 
             self.image_tile_size = int(self.image_tile_size)
         else:
