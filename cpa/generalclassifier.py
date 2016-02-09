@@ -22,8 +22,13 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         self.trained = False
         self.env = env # Env is Classifier in Legacy Code -- maybe renaming ?
         self.name = self.name()
+        self.features = []
 
         logging.info('Initialized New Classifier: ' + self.name)
+
+    # Set features
+    def _set_features(self, features):
+        self.features = features
 
     # Return name
     def name(self):
@@ -78,7 +83,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def LoadModel(self, model_filename):
 
         try:
-            self.classifier, self.bin_labels, self.name = joblib.load(model_filename)
+            self.classifier, self.bin_labels, self.name, self.features = joblib.load(model_filename)
         except:
             self.classifier = None
             self.bin_labels = None
@@ -127,7 +132,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             logging.info("Selected algorithm doesn't provide probabilities")
            
     def SaveModel(self, model_filename, bin_labels):
-        joblib.dump((self.classifier, bin_labels, self.name), model_filename, compress=1)
+        joblib.dump((self.classifier, bin_labels, self.name, self.features), model_filename, compress=1)
 
     def ShowModel(self):#SKLEARN TODO
         '''
