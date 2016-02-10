@@ -1064,7 +1064,8 @@ class DBConnect(Singleton):
             col_names = self.GetColumnNames(p.object_table)
             col_types = self.GetColumnTypes(p.object_table)
             # automatically ignore all string-type columns
-            self.classifierColNames = [col for col, type in zip(col_names, col_types) if type!=str]
+            #print col_names, col_types
+            self.classifierColNames = [col for col, type in zip(col_names, col_types) if type not in [str, None]]
             # automatically ignore ID columns
             if p.table_id in self.classifierColNames:
                 self.classifierColNames.remove(p.table_id)
@@ -1477,12 +1478,17 @@ class DBConnect(Singleton):
             query = "PRAGMA table_info(%s)"%p.image_table
             self.execute(query)
             list_of_cols = [str(x) for x in self.GetColumnNames(p.image_table)]
+            list_of_colTypes = [str(x) for x in self.GetColumnTypeStrings(p.image_table)]
             all_cols = list(list_of_cols)
+            all_colTypes = list(list_of_colTypes)
+            pid_index = all_cols.index(p.image_id)
             all_cols.remove(p.image_id)
+            all_colTypes.remove(list_of_colTypes[pid_index])
             all_cols = [p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc] + all_cols
+            list_of_colTypes = [list_of_colTypes[pid_index], list_of_colTypes[pid_index], 'float', 'float'] + all_colTypes
             query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
             self.execute(query)
-            query = 'CREATE TEMP TABLE %s (%s)'%(p.object_table, ",".join(all_cols))
+            query = 'CREATE TEMP TABLE %s (%s)'%(p.object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
             self.execute(query)
             query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
             self.execute(query)
@@ -1494,6 +1500,7 @@ class DBConnect(Singleton):
                                                               p.cell_x_loc, width/2,
                                                               p.cell_y_loc, height/2)
             self.execute(query)
+
 
 
     def table_exists(self, name):
