@@ -1076,7 +1076,7 @@ class Classifier(wx.Frame):
             filename = saveDialog.GetPath()
             self.defaultModelFileName = os.path.split(filename)[1]
             bin_labels = [bin.label for bin in self.classBins]
-            self.algorithm._set_features(self.trainingset.colnames)
+            self.algorithm._set_features(self.trainingSet.colnames)
             self.algorithm.SaveModel(filename, bin_labels)
             self.PostMessage('Classifier model succesfully saved.')
 
