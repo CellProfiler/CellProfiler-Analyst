@@ -132,15 +132,19 @@ class ImageTile(ImagePanel):
                 self.DisplayObjects()                
 
     def DisplayObjects(self):
-        self.classifier.classBins[0].SelectAll()
-        self.classifier.classBins[0].RemoveSelectedTiles()
-        # Need to run this after removing all tiles!
-        def cb():
-            pseudo_obKeys = self.bin.SelectedKeys()
-            imKey = pseudo_obKeys[0][:-1] # Get image key
-            obKeys = db.GetObjectsFromImage(imKey)
-            self.classifier.classBins[0].AddObjects(obKeys, self.chMap, pos='last', display_whole_image=False)
-        wx.CallAfter(cb)
+        if self.bin.SelectedKeys():
+            self.classifier.classBins[0].SelectAll()
+            self.classifier.classBins[0].RemoveSelectedTiles()
+            # Need to run this after removing all tiles!
+            def cb():
+                pseudo_obKeys = self.bin.SelectedKeys()
+                imKey = pseudo_obKeys[0][:-1] # Get image key
+                obKeys = db.GetObjectsFromImage(imKey)
+                self.classifier.classBins[0].AddObjects(obKeys, self.chMap, pos='last', display_whole_image=False)
+            wx.CallAfter(cb)
+        else:
+            import logging
+            logging.info("No image selected. Please select an image first.")            
 
     def DisplayProbs(self):
         try:
