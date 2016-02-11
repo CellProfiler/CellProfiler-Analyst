@@ -500,7 +500,10 @@ class ImageGallery(wx.Frame):
             # fetching all images for predefined filter
             elif fltr_sel in p._groups_ordered:
 
-                imKeys = db.GetFilteredImages(fltr_sel)
+                
+                groupName = fltr_sel
+                groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+                imKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
                 if imKeys == []:
                     self.PostMessage('No images were found in group %s: %s' % (groupName,
                                                                                ', '.join(['%s=%s' % (n, v) for n, v in
