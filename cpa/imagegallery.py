@@ -878,9 +878,10 @@ class ImageGallery(wx.Frame):
             if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == long:
                 fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80, -1))
             else:
-                fieldInp = wx.ComboBox(self.fetch_panel, -1, value=validVals[0], size=(80, -1),
+                fieldInp = wx.Choice(self.fetch_panel, -1, size=(80, -1),
                                        choices=['__ANY__'] + validVals)
             validVals = ['__ANY__'] + validVals
+            fieldInp.SetSelection(0)
             # Create and bind to a text Validator
             def ValidateGroupField(evt, validVals=validVals):
                 ctrl = evt.GetEventObject()
@@ -916,7 +917,7 @@ class ImageGallery(wx.Frame):
         groupKey = []
         for input, ftype in zip(self.groupInputs, fieldTypes):
             # GetValue returns unicode from ComboBox, but we need a string
-            val = str(input.GetValue())
+            val = str(input.GetStringSelection())
             # if the value is blank, don't bother typing it, it is a wildcard
             if val != '__ANY__':
                 val = ftype(val)
