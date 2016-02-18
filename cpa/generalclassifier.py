@@ -412,13 +412,17 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         print 'y_pred', y_pred
 
         cm = confusion_matrix(y_test, y_pred)
+
+        nObjects = cm.sum()
+        misRate = float(nObjects - np.diag(cm).sum()) * 100 / nObjects
+
         cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
         np.set_printoptions(precision=2)
-        logging.info('Confusion matrix, without normalization')
+        logging.info('Confusion matrix (Classification Accuracy: %3.2f%%)' % (100 - misRate))
         logging.info(cm)
         #plt.figure()
-        self.plot_confusion_matrix(cm_normalized)
+        self.plot_confusion_matrix(cm_normalized, title='Confusion matrix (Classification Accuracy: %3.2f%%)' % (100 - misRate))
 
         # Normalize the confusion matrix by row (i.e by the number of samples
         # in each class)
