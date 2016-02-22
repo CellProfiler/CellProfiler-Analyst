@@ -15,6 +15,11 @@ class FastGentleBoosting(object):
         self.model = None
         self.classBins = []
         self.classifier = classifier
+        self.features = []
+
+    # Set features
+    def _set_features(self, features):
+        self.features = features
 
     def name(self):
         return self.__class__.__name__
