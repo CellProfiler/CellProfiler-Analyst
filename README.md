@@ -15,7 +15,7 @@ Distributed under the BSD license.
 
 ## Beta Apps
 
-Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://drive.google.com/file/d/0B_Rfj3esFDX8XzBGbE1uV2NXTjg/view?usp=sharing)
+Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://drive.google.com/file/d/0B2aYwrhHkhm4TndsZzNGZ1BkQXc/view?usp=sharing)
 
 Download untested beta of Version 2.2.0 for Windows here: [App for Windows](https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4ejJyeXotZ25LLW8/view?usp=sharing)
 
