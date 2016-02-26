@@ -1,19 +1,16 @@
-![CPA Logo](http://i.imgur.com/45Iosp1.png)
-# CellProfiler Analyst 2.2.0 (Development)
+![CPA](http://i.imgur.com/TmujaUa.png)
 
-*Note: This version is heavily under development and not production-ready yet*
-
-Authors: Adam Fraser, Thouis R. Jones, David Dao, Jane Hung
-
-Current Developers: David Dao, Jane Hung
-
-Website: cellprofiler.org
 
 Copyright 2016, The Broad Institute of MIT and Harvard.
-
 Distributed under the BSD license.
 
-## Beta Apps
+## About CellProfiler Analyst
+
+![Workflow](http://i.imgur.com/j12EQH5.png)
+
+CellProfiler Analyst allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
+
+## Installation
 
 Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://drive.google.com/file/d/0B2aYwrhHkhm4TndsZzNGZ1BkQXc/view?usp=sharing)
 
@@ -26,7 +23,7 @@ Please note that CPA 2.2.0 is WIP and we will update the link on regular basis.
 
 For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://cellprofiler.org/linked_files/Examplezips/cpa_2.0_example.zip)
 
-## Requirements
+## Requirements when installing from source
 
 Builds upon CellProfiler dependencies, we need
 
@@ -37,12 +34,6 @@ Builds upon CellProfiler dependencies, we need
 * Verlib
 * Python-bioformats
 
-## About CellProfiler Analyst
-
-![Workflow](http://i.imgur.com/j12EQH5.png)
-
-CellProfiler Analyst allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
-
 ## Current Development
 
 * Restoring visualization functionalities
@@ -50,7 +41,8 @@ CellProfiler Analyst allows interactive exploration and analysis of data, partic
 * Improving Evaluation for Classifier
 * Including testing
 * Include documentation
-* Pixel-based Classifier (Deep Learning)
+* Pixel-based Classifier 
+* Profiling Toolbox
 * Image Gallery
 * Image Classification
 
@@ -70,4 +62,8 @@ list.
 Please attach sufficient information to reproduce the bug. For many
 bugs, it is appropriate to attach a properties file, a training set,
 or a screenshot.
+
+## Contributors
+
+Adam Fraser, David Dao, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Anne Carpenter
 
