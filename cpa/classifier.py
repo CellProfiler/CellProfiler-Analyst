@@ -155,6 +155,7 @@ class Classifier(wx.Frame):
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
+
         # find rules interface
         self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30, -1))
         algorithmChoices = ['RandomForest Classifier',
@@ -558,6 +559,7 @@ class Classifier(wx.Frame):
         rulesEditMenuItem = advancedMenu.Append(-1, text=u'Edit Rules...', help='Lets you edit the rules')
         paramsEditMenuItem = advancedMenu.Append(-1, text=u'Edit Parameters...', help='Lets you edit the hyperparameters')
         featureSelectMenuItem = advancedMenu.Append(-1, text=u'Check Features', help='Check the variance of your Training Data')
+        saveMenuItem = advancedMenu.Append(-1, text=u'Save Thumbnails as JPG', help='Save TrainingSet thumbnails as JPG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -572,6 +574,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnParamsEdit, paramsEditMenuItem) 
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnFeatureSelect, featureSelectMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSave ,saveMenuItem)
 
 
         # Bind events for algorithms
@@ -851,6 +854,26 @@ class Classifier(wx.Frame):
                 self.trainClassifierBtn.Disable()
                 if hasattr(self, 'evaluationBtn'):
                     self.evaluationBtn.Disable()
+
+    def OnSave(self, evt):
+
+        saveDialog = wx.DirDialog(self, "Choose input directory", 
+                                   style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+        if saveDialog.ShowModal() == wx.ID_OK:
+            directory = saveDialog.GetPath()
+
+            for bin in self.classBins:
+                label = bin.label
+
+                if not os.path.exists(directory + '/trainingSet'):
+                    os.makedirs(directory + '/trainingSet')
+
+                if not os.path.exists(directory + '/trainingSet' +  '/' + str(label)):
+                    os.makedirs(directory + '/trainingSet' +  '/' + str(label))
+
+                for tile in bin.tiles:
+                    imagetools.SaveBitmap(tile.bitmap, directory + '/trainingSet/' + str(label) + '/' + str(tile.obKey) + '.jpg')
+
 
     def OnFetch(self, evt):
         # Parse out the GUI input values
