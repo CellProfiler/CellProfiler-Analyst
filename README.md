@@ -12,9 +12,9 @@ CellProfiler Analyst allows interactive exploration and analysis of data, partic
 
 ## Installation
 
-Download current beta of Version 2.2.0 for Mac here: [App for Mac OS](https://drive.google.com/file/d/0B2aYwrhHkhm4TndsZzNGZ1BkQXc/view?usp=sharing)
+Download nightly Version 2.2.0 for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.dmg)
 
-Download untested beta of Version 2.2.0 for Windows here: [App for Windows](https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4ejJyeXotZ25LLW8/view?usp=sharing)
+Download beta of Version 2.2.0 for Windows here: [App for Windows](https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4ejJyeXotZ25LLW8/view?usp=sharing)
 
 The app requires JDK 1.8 to be installed (not just JRE). http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html 
 Check the Java path.
