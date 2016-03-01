@@ -19,6 +19,8 @@ import subprocess
 import _winreg
 import javabridge
 import bioformats
+from shutil import rmtree
+
 
 import cpa.util.version
 
@@ -64,7 +66,11 @@ OutputBaseFilename=CellProfilerAnalyst_win32_%d
 # if os.path.exists('build'):
 #    raise Exception("Please delete the build directory before running setup.")
 if os.path.exists('dist'):
-    raise Exception("Please delete the dist directory before running setup.")
+  rmtree('./dist')
+
+if os.path.exists('build'):
+  rmtree('./build')
+  #raise Exception("Please delete the dist directory before running setup.")
 #
 # Write the frozen version
 #
