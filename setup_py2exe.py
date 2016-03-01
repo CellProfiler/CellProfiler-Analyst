@@ -8,7 +8,7 @@
 
 import distutils
 import sys
-from distutils.core import setup, Extension
+import setuptools
 import py2exe
 import matplotlib
 import os
@@ -23,6 +23,34 @@ from shutil import rmtree
 
 
 import cpa.util.version
+
+# Recipe needed to get real distutils if virtualenv.
+# Error message is "ImportError: cannot import name dist"
+# when running app.
+# See http://sourceforge.net/p/py2exe/mailman/attachment/47C45804.9030206@free.fr/1/
+#
+if hasattr(sys, 'real_prefix'):
+    # Running from a virtualenv
+    assert hasattr(distutils, 'distutils_path'), \
+        "Can't get real distutils path"
+    libdir = os.path.dirname(distutils.distutils_path)
+    sys.path.insert(0, libdir)
+    #
+    # Get the system "site" package, not the virtualenv one. This prevents
+    # site.virtual_install_main_packages from being called, resulting in
+    # "IOError: [Errno 2] No such file or directory: 'orig-prefix.txt'
+    #
+    del sys.modules["site"]
+    import site
+
+    assert not hasattr(site, "virtual_install_main_packages")
+
+
+#
+# These imports help distutils discover modules
+#
+import scipy.sparse.csgraph._validation
+import scipy.linalg
 
 class CellProfilerAnalystMSI(distutils.core.Command):
     description = "Make CellProfilerAnalyst.msi using InnoSetup"
@@ -66,10 +94,10 @@ OutputBaseFilename=CellProfilerAnalyst_win32_%d
 # if os.path.exists('build'):
 #    raise Exception("Please delete the build directory before running setup.")
 if os.path.exists('dist'):
-  rmtree('./dist')
+    rmtree('./dist')
 
 if os.path.exists('build'):
-  rmtree('./build')
+    rmtree('./build')
   #raise Exception("Please delete the dist directory before running setup.")
 #
 # Write the frozen version
@@ -78,27 +106,68 @@ f = open("cpa/util/frozen_version.py", "w")
 f.write("# MACHINE_GENERATED\nversion_string = '%s'" % cpa.util.version._semantic_version)
 f.close()
 
-if not 'py2exe' in sys.argv:
-    sys.argv.append('py2exe')
-
-setup(windows=[{'script':'CellProfiler-Analyst.py',
-				'icon_resources':[(1,'.\cpa\icons\cpa.ico')]}],
-      options={
+setuptools.setup(
+    name="cellprofiler-analyst",
+    windows=[{'script':'CellProfiler-Analyst.py',
+                'icon_resources':[(1,'.\cpa\icons\cpa.ico')]}],
+    options={
         'py2exe': {
             'skip_archive' : 1,
-            'packages' : ['matplotlib', 'pytz', 'MySQLdb','bioformats','sklearn','javabridge','cpa','numpy','PIL','pandas','cpa.icons'],
-            'includes' : ['scipy.sparse.csgraph._validation','cpa.pilfix', "xml.etree.cElementTree", "xml.etree.ElementTree",'scipy.special._ufuncs_cxx','scipy.linalg.cython_blas',"scipy.linalg.cython_lapack"],
+            'includes' : [
+                'scipy.linalg.*',
+                'scipy.special',
+                'scipy.special.*',
+                'scipy.sparse.csgraph._validation',
+                'skimage.draw',
+                'skimage._shared.geometry',
+                'sklearn.*',
+                'sklearn.neighbors.*',
+                'sklearn.tree.*',
+                'sklearn.utils.*',
+                'sklearn.utils.sparsetools.*',
+                'cpa.pilfix', 
+                "xml.etree.cElementTree", 
+                "xml.etree.ElementTree"
+                ],
             "excludes" : ['_gtkagg', '_tkagg', "nose",
                           "wx.tools", "pylab", "scipy.weave",
-                          "Tkconstants","Tkinter","tcl",
-                          "Cython", "imagej", 'h5py', 'vigra',
-                          'PyQt4', 'zmq','AppKit','CoreFoundation','objc'],
-            "dll_excludes": ['libgdk-win32-2.0-0.dll',
-                             'libgobject-2.0-0.dll', 
-                             'libgdk_pixbuf-2.0-0.dll',
-                             'tcl84.dll', 'tk84.dll', 'jvm.dll', 'MSVCP90.dll'],
+                          "Tkconstants","Tkinter", "tcl",
+                          "Cython", 'h5py',
+                          'PyQt4', 'zmq','AppKit','CoreFoundation','objc',
+                          'matplotlib.tests',
+                          'matplotlib.backends.backend_tk*'],
+            "dll_excludes": [
+                'libgdk-win32-2.0-0.dll',
+                'libgobject-2.0-0.dll', 
+                'libgdk_pixbuf-2.0-0.dll',
+                'tcl84.dll', 
+                'tk84.dll', 
+                'jvm.dll', 
+                'MSVCP90.dll',
+                'crypt32.dll',
+                'iphlpapi.dll',
+                'kernelbase.dll',
+                'mpr.dll',
+                'msasn1.dll',
+                'msvcr90.dll',
+                'msvcm90.dll',
+                'msvcp90.dll',
+                'nsi.dll',
+                'uxtheme.dll',
+                'winnsi.dll'],
             }
         },
+      install_requires=[
+          "javabridge", "matplotlib", "MySQL-python", "numpy",
+          "python-bioformats", "scipy"],
+      include_package_data=True,
+      packages = setuptools.find_packages(
+          exclude = [
+              "*.tests",
+              "*.tests.*",
+              "tests.*",
+              "tests"]
+          ) + ["cpa.icons"],
       data_files=(
               matplotlib.get_py2exe_datafiles() +
               [('cpa\\icons', glob.glob('cpa\\icons\\*.png')),
