@@ -94,17 +94,21 @@ class ScatterControlPanel(wx.Panel):
         
         # the panel to draw charts on
         self.figpanel = figpanel
-        
+        self.SetBackgroundColour('white') # color for the background of panel
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.x_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
         self.y_table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
-        self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
-        self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
+        self.x_choice = ComboBox(self, -1, choices=[''], size=(200,-1), style=wx.CB_READONLY)
+        self.x_choice.Select(0)
+        self.y_choice = ComboBox(self, -1, choices=[''], size=(200,-1), style=wx.CB_READONLY)
+        self.y_choice.Select(0)
         self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], size=(90,-1), style=wx.CB_READONLY)
         self.x_scale_choice.Select(0)
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], size=(90,-1), style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
         self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
@@ -115,7 +119,7 @@ class ScatterControlPanel(wx.Panel):
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
         sz.AddSpacer((3,-1))
-        sz.Add(self.x_table_choice, 1, wx.EXPAND)
+        sz.Add(self.x_table_choice, 1, wx.EXPAND) 
         sz.AddSpacer((3,-1))
         sz.Add(self.x_choice, 2, wx.EXPAND)
         sz.AddSpacer((3,-1))
@@ -161,12 +165,16 @@ class ScatterControlPanel(wx.Panel):
         
     @property
     def x_column(self):
-        return sql.Column(self.x_table_choice.GetStringSelection(), 
-                          self.x_choice.GetStringSelection())
+        x_table_choice_id = self.x_table_choice.GetSelection()
+        x_choice_id = self.x_choice.GetSelection()
+        return sql.Column(self.x_table_choice.GetString(x_table_choice_id), 
+                          self.x_choice.GetString(x_choice_id))
     @property
     def y_column(self):
-        return sql.Column(self.y_table_choice.GetStringSelection(), 
-                          self.y_choice.GetStringSelection())
+        y_table_choice_id = self.y_table_choice.GetSelection()
+        y_choice_id = self.y_choice.GetSelection()
+        return sql.Column(self.y_table_choice.GetString(y_table_choice_id), 
+                          self.y_choice.GetString(y_choice_id))
     @property
     def filter(self):
         return self.filter_choice.get_filter_or_none()
@@ -207,7 +215,7 @@ class ScatterControlPanel(wx.Panel):
     def update_gate_helper(self):
         gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
-            #Deactivate the lasso tool
+            # Deactivate the lasso tool
             self.figpanel.get_toolbar().toggle_user_tool('lasso', False)
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
         else:
@@ -249,7 +257,8 @@ class ScatterControlPanel(wx.Panel):
             key_indices = list(xrange(len(object_key_columns())))
         else:
             key_indices = list(xrange(len(image_key_columns())))
-        keys = kps[:,key_indices].astype(int)
+        print len(kps)
+        keys = kps[:,key_indices].astype(int) 
         # Strip out x coords
         if col_types[0] in [float, int, long]:
             xpoints = kps[:,-2].astype('float32')
@@ -264,10 +273,10 @@ class ScatterControlPanel(wx.Panel):
         # plot the points
         self.figpanel.set_points(xpoints, ypoints)
         self.figpanel.set_keys(keys)
-        self.figpanel.set_x_label(self.x_column.col)
-        self.figpanel.set_y_label(self.y_column.col)
         self.figpanel.set_x_scale(self.x_scale_choice.Value)
         self.figpanel.set_y_scale(self.y_scale_choice.Value)
+        self.figpanel.set_x_label(self.x_column.col)
+        self.figpanel.set_y_label(self.y_column.col)
         self.update_gate_helper()
         self.figpanel.redraw()
         self.figpanel.draw()
@@ -290,6 +299,7 @@ class ScatterControlPanel(wx.Panel):
             q.add_filter(self.filter)
         q.add_where(sql.Expression(self.x_column, 'IS NOT NULL'))
         q.add_where(sql.Expression(self.y_column, 'IS NOT NULL'))
+        print "x_column:", self.x_column
         return db.execute(str(q))
     
     def get_selected_column_types(self):
@@ -313,7 +323,8 @@ class ScatterControlPanel(wx.Panel):
              'version' : '1',
              }
         if self.gate_choice.get_gatename_or_none():
-            d['gate'] = self.gate_choice.GetStringSelection()
+            gate_choice_id = self.gate_choice.GetSelection() 
+            d['gate'] = self.gate_choice.GetString(gate_choice_id)
         return d
     
     def load_settings(self, settings):
@@ -916,10 +927,14 @@ class ScatterPanel(FigureCanvasWxAgg):
     
     def set_x_label(self, label):
         self.x_label = label
+        if self.x_scale == LOG_SCALE:
+            self.x_label = 'Log(%s)'%(self.x_label)
+
     
     def set_y_label(self, label):
         self.y_label = label
-    
+        if self.y_scale == LOG_SCALE:
+            self.y_label = 'Log(%s)'%(self.y_label)
         
 
 class Scatter(wx.Frame, CPATool):
@@ -930,7 +945,7 @@ class Scatter(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Scatter Plot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         
         figpanel = ScatterPanel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -947,6 +962,41 @@ class Scatter(wx.Frame, CPATool):
         #
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
+
+    # Hack: See http://stackoverflow.com/questions/6124419/matplotlib-navtoolbar-doesnt-realize-in-wx-2-9-mac-os-x
+    def SetToolBar(self, toolbar):
+        from matplotlib.backends.backend_wx import _load_bitmap
+        toolbar.Hide()
+        tb = self.CreateToolBar((wx.TB_HORIZONTAL|wx.TB_TEXT))
+
+        _NTB2_HOME = wx.NewId()
+        _NTB2_BACK = wx.NewId()
+        _NTB2_FORWARD = wx.NewId()
+        _NTB2_PAN = wx.NewId()
+        _NTB2_ZOOM = wx.NewId()
+        _NTB2_SAVE = wx.NewId()
+        _NTB2_SUBPLOT = wx.NewId()
+        tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original view')
+        tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
+        tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
+
+        tb.AddCheckTool(_NTB2_PAN, _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+
+        tb.AddSeparator()
+        tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
+        tb.AddSimpleTool(_NTB2_SAVE, _load_bitmap('filesave.png'), 'Save', 'Save plot contents to file')
+
+        self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
+        self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
+        self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
+        self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
+        self.Bind(wx.EVT_TOOL, toolbar.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+
+        tb.Realize()  
+        # Hack end
 
 
 class CustomNavToolbar(NavigationToolbar2WxAgg):

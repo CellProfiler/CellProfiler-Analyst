@@ -117,6 +117,7 @@ class QueryBuilder(object):
             tables += wh.get_tables()
         # add the tables from the group columns
         tables += [col.table for col in self.group_cols]
+
         return list(set(tables))
 
     def get_tables(self):

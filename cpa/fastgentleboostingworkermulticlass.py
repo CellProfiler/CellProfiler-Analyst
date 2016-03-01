@@ -10,16 +10,16 @@ def train_weak_learner(labels, weights, values):
     finds the optimal weak learner in O(M * N logN) time.
     Optimality is defined by Eq. 7 of Torralba et al., 'Sharing visual
     features...', 2007, IEEE PAMI.
-    
+
     We differ from Torralba et al. in two ways:
     - we do not share a's and b's between classes
     - we always solve for the complete set of examples, regardless of label
-    
-    Labels should be 1 and -1, only.  
+
+    Labels should be 1 and -1, only.
     label_matrix and weights are NxC.
     values is Nx1
     '''
-
+    
     global order, s_values, s_labels, s_weights, s_weights_times_labels, num_a, den_a, a, b, sless0, sgrtr0, w_below_neg, w_below_pos, w_above_neg, w_above_pos, J
 
     # Sort labels and weights by values (AKA possible thresholds).  By
@@ -27,7 +27,7 @@ def train_weak_learner(labels, weights, values):
     # slightly with the number of workers.  Add kind="mergesort" to
     # get a stable sort, which avoids this.
     order = argsort(values)
-    s_values = values[order, :]
+    s_values = values[order]
     s_labels = labels[order, :]
     s_weights = weights[order, :]
 
@@ -73,15 +73,15 @@ def train_classifier(labels, values, iterations):
     # make sure these are arrays (not matrices)
     labels = array(labels)
     values = array(values)
-    
+
     num_examples = labels.shape[0]
-    
+
     learners = []
     weights = ones(labels.shape)
     output = zeros(labels.shape)
     for n in range(iterations):
         best_error = float(Infinity)
-        
+
         for feature_idx in range(values.shape[1]):
             val, err, a, b = train_weak_learner(labels, weights, values[:, feature_idx])
             if err < best_error:
@@ -90,7 +90,7 @@ def train_classifier(labels, values, iterations):
                 best_val = val
                 best_a = a
                 best_b = b
-        
+
         delta = values[:, best_idx] > best_val
         delta.shape = (len(delta), 1)
         feature_thresh_mask = tile(delta, (1, labels.shape[1]))
@@ -98,7 +98,7 @@ def train_classifier(labels, values, iterations):
         weights = exp(- output * labels)
         weights = weights / sum(weights)
         err = sum((output * labels) <= 0)
-    return 
+    return
 
 def myfromfile(stream, type, sh):
     if len(sh) == 2:
@@ -172,4 +172,3 @@ if __name__ == '__main__':
         h.call('teardown')
     except:
         pass
-

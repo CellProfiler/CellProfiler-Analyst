@@ -35,12 +35,14 @@ class DataSourcePanel(wx.Panel):
         wx.Panel.__init__(self, parent, **kwargs)
         
         # the panel to draw charts on
+        self.SetBackgroundColour('white') # color for the background of panel
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
-        self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
+        self.x_choice = ComboBox(self, -1, size=(200,-1), choices=[''], style=wx.CB_READONLY)
+        self.x_choice.Select(0)
         self.bins_input = wx.SpinCtrl(self, -1, '100')
         self.bins_input.SetRange(1,400)
         self.x_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE, LOG2_SCALE], style=wx.CB_READONLY)
@@ -48,6 +50,7 @@ class DataSourcePanel(wx.Panel):
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
         self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         self.gate_choice.set_gatable_columns([self.x_column])
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
@@ -100,8 +103,8 @@ class DataSourcePanel(wx.Panel):
         
     @property
     def x_column(self):
-        return sql.Column(self.table_choice.GetStringSelection(), 
-                          self.x_choice.GetStringSelection())
+        return sql.Column(self.table_choice.GetString(self.table_choice.GetSelection()), 
+                          self.x_choice.GetString(self.x_choice.GetSelection()))
     @property
     def filter(self):
         return self.filter_choice.get_filter_or_none()
@@ -129,7 +132,7 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.gate_helper.disable()        
 
     def update_column_fields(self):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         fieldnames = self.get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
@@ -152,8 +155,8 @@ class DataSourcePanel(wx.Panel):
         points = self._load_points()
         bins = int(self.bins_input.GetValue())
         self.figpanel.set_x_label(self.x_column.col)
-        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
-        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
+        self.figpanel.set_x_scale(self.x_scale_choice.GetString(self.x_scale_choice.GetSelection()))
+        self.figpanel.set_y_scale(self.y_scale_choice.GetString(self.y_scale_choice.GetSelection()))
         self.figpanel.setpoints(points, bins)
         self.update_gate_helper()
         self.figpanel.draw()
@@ -171,17 +174,17 @@ class DataSourcePanel(wx.Panel):
         '''save_settings is called when saving a workspace to file.
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        d = {'table'   : self.table_choice.GetStringSelection(),
-             'x-axis'  : self.x_choice.GetStringSelection(),
+        d = {'table'   : self.table_choice.GetString(self.table_choice.GetSelection()),
+             'x-axis'  : self.x_choice.GetString(self.x_choice.GetSelection()),
              'bins'    : self.bins_input.GetValue(),
-             'x-scale' : self.x_scale_choice.GetStringSelection(),
-             'y-scale' : self.y_scale_choice.GetStringSelection(),
-             'filter'  : self.filter_choice.GetStringSelection(),
+             'x-scale' : self.x_scale_choice.GetString(self.x_scale_choice.GetSelection()),
+             'y-scale' : self.y_scale_choice.GetString(self.y_scale_choice.GetSelection()),
+             'filter'  : self.filter_choice.GetString(self.filter_choice.GetSelection()),
              'x-lim'   : self.figpanel.subplot.get_xlim(),
              'y-lim'   : self.figpanel.subplot.get_ylim(),
              }
         if self.gate_choice.get_gatename_or_none():
-            d['gate'] = self.gate_choice.GetStringSelection()
+            d['gate'] = self.gate_choice.GetString(self.gate_choice.GetSelection())
         return d
     
     def load_settings(self, settings):
@@ -227,7 +230,7 @@ class HistogramPanel(FigureCanvasWxAgg):
         self.gate_helper = GatingHelper(self.subplot, self)
         
         self.navtoolbar = NavigationToolbar(self.canvas)
-        self.navtoolbar.Realize()
+        #self.navtoolbar.Realize()
             
         self.x_label = ''
         self.log_y = False
@@ -358,12 +361,14 @@ class Histogram(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Histogram', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         points = []
         figpanel = HistogramPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
         figpanel.set_configpanel(configpanel)
+
         self.SetToolBar(figpanel.get_toolbar())
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
@@ -375,6 +380,42 @@ class Histogram(wx.Frame, CPATool):
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
         self.fig = figpanel
+
+    # Hack: See http://stackoverflow.com/questions/6124419/matplotlib-navtoolbar-doesnt-realize-in-wx-2-9-mac-os-x
+    def SetToolBar(self, toolbar):
+        from matplotlib.backends.backend_wx import _load_bitmap
+        toolbar.Hide()
+        tb = self.CreateToolBar((wx.TB_HORIZONTAL|wx.TB_TEXT))
+
+        _NTB2_HOME = wx.NewId()
+        _NTB2_BACK = wx.NewId()
+        _NTB2_FORWARD = wx.NewId()
+        _NTB2_PAN = wx.NewId()
+        _NTB2_ZOOM = wx.NewId()
+        _NTB2_SAVE = wx.NewId()
+        _NTB2_SUBPLOT = wx.NewId()
+        tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original view')
+        tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
+        tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
+
+        tb.AddCheckTool(_NTB2_PAN, _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+
+        tb.AddSeparator()
+        tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
+        tb.AddSimpleTool(_NTB2_SAVE, _load_bitmap('filesave.png'), 'Save', 'Save plot contents to file')
+
+        self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
+        self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
+        self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
+        self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
+        self.Bind(wx.EVT_TOOL, toolbar.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+
+        tb.Realize()  
+        # Hack end
+
         
         
 if __name__ == "__main__":

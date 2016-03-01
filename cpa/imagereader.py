@@ -6,8 +6,8 @@ import urlparse
 import os.path
 import logging
 import bioformats
-from .properties import Properties
-from .errors import ClearException
+from properties import Properties
+from errors import ClearException
 
 p = Properties.getInstance()
 
@@ -52,7 +52,7 @@ class ImageReader(object):
                             'Please update the channels_per_image field '
                             'in your properties file, or make sure your '
                             'images are in the right format.'
-                            %(1, 
+                            %(1,
                               image_name,
                               filename_or_url,
                               channels_per_image))
@@ -64,7 +64,7 @@ class ImageReader(object):
                             'Please update the channels_per_image field '
                             'in your properties file, or make sure your '
                             'images are in the right format.'
-                            %(image.shape[2], 
+                            %(image.shape[2],
                               image_name,
                               filename_or_url,
                               channels_per_image))
@@ -73,20 +73,20 @@ class ImageReader(object):
             logging.warn('WARNING: CPA found %d channels in the "%s" image '
                          'at %s, but it will only load the first %s as '
                          'specified by properties field channels_per_image.'
-                         %(image.shape[2], 
+                         %(image.shape[2],
                            image_name,
                            filename_or_url,
                            channels_per_image))
-            return [image[:, :, j] 
+            return [image[:, :, j]
                     for j in range(int(channels_per_image))]
         else:
             # Got as many channels as expected
             if image.ndim == 2:
                 return [image]
             else:
-                return [image[:, :, j] 
+                return [image[:, :, j]
                         for j in range(image.shape[2])]
-        
+
     def read_images_via_bioformats(self, filenames_or_urls):
         '''Uses Bioformats to load images.
 
@@ -97,10 +97,11 @@ class ImageReader(object):
         channels = []
         for i, filename_or_url in enumerate(filenames_or_urls):
             image = self._read_image_via_bioformats(filename_or_url)
-            channels += self._extract_channels(filename_or_url, image, 
+
+            channels += self._extract_channels(filename_or_url, image,
                                                p.image_names[i],
                                                int(p.channels_per_image[i]))
-                
+
         # Check if any images need to be rescaled, and if they are the same
         # aspect ratio. If so, do the scaling.
         from imagetools import check_image_shape_compatibility
@@ -114,12 +115,12 @@ class ImageReader(object):
         return channels
 
 
-####################### FOR TESTING ######################### 
+####################### FOR TESTING #########################
 if __name__ == "__main__":
     import wx
     from datamodel import DataModel
     from dbconnect import DBConnect
-    from imageviewer import ImageViewer 
+    from imageviewer import ImageViewer
     import sys
 
     app = wx.PySimpleApp()
@@ -128,7 +129,7 @@ if __name__ == "__main__":
     dm = DataModel.getInstance()
     db = DBConnect.getInstance()
     ir = ImageReader()
-    
+
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]
@@ -143,5 +144,3 @@ if __name__ == "__main__":
     ImageViewer(images, img_key=obkey[:-1]).Show()
 
     app.MainLoop()
-
-

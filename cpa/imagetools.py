@@ -18,29 +18,37 @@ db = dbconnect.DBConnect.getInstance()
 cache = {}
 cachedkeys = []
 
-def FetchTile(obKey):
+def FetchTile(obKey, display_whole_image=False):
     '''returns a list of image channel arrays cropped around the object
     coordinates
     '''
     imKey = obKey[:-1]
-    pos = list(db.GetObjectCoords(obKey))
-    if None in pos:
-        message = ('Failed to load coordinates for object key %s. This may '
-                   'indicate a problem with your per-object table.\n'
-                   'You can check your per-object table "%s" in TableViewer'
-                   %(', '.join(['%s:%s'%(col, val) for col, val in 
-                                zip(dbconnect.object_key_columns(), obKey)]), 
-                   p.object_table))
-        wx.MessageBox(message, 'Error')
-        logging.error(message)
-        return None
-    size = (int(p.image_tile_size), int(p.image_tile_size))
     # Could transform object coords here
     imgs = FetchImage(imKey)
-    if p.rescale_object_coords:
-        pos[0] *= p.image_rescale[0] / p.image_rescale_from[0]
-        pos[1] *= p.image_rescale[1] / p.image_rescale_from[1]
-    return [Crop(im, size, pos) for im in imgs]
+    
+    size = (int(p.image_size),int(p.image_size))
+
+    if display_whole_image:
+        return imgs
+
+    else:
+        size = (int(p.image_tile_size), int(p.image_tile_size))
+        pos = list(db.GetObjectCoords(obKey))
+        if None in pos:
+            message = ('Failed to load coordinates for object key %s. This may '
+                       'indicate a problem with your per-object table.\n'
+                       'You can check your per-object table "%s" in TableViewer'
+                       %(', '.join(['%s:%s'%(col, val) for col, val in 
+                                    zip(dbconnect.object_key_columns(), obKey)]), 
+                       p.object_table))
+            wx.MessageBox(message, 'Error')
+            logging.error(message)
+            return None
+        if p.rescale_object_coords:
+            pos[0] *= p.image_rescale[0] / p.image_rescale_from[0]
+            pos[1] *= p.image_rescale[1] / p.image_rescale_from[1]
+    
+        return [Crop(im, size, pos) for im in imgs]
 
 def FetchImage(imKey):
     global cachedkeys
@@ -49,7 +57,7 @@ def FetchImage(imKey):
     else:
         ir = ImageReader()
         filenames = db.GetFullChannelPathsForImage(imKey)
-        imgs = ir.ReadImages(filenames)                    
+        imgs = ir.ReadImages(filenames)                       
         cache[imKey] = imgs
         cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
@@ -98,7 +106,7 @@ def Crop(imgdata, (w,h), (x,y)):
 
     return crop
 
-def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None):
+def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None, display_whole_image=False):
     '''
     imgs  - list of np arrays containing pixel data for each channel of an image
     chMap - list of colors to map each corresponding channel onto.  
@@ -121,15 +129,24 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         imData = MergeChannels(imgs, chMap, masks=masks)
         
     h,w = imgs[0].shape
-    
+
     # Convert from float [0-1] to 8bit
     imData *= 255.0
+
     imData[imData>255] = 255
 
     # Write wx.Image
     img = wx.EmptyImage(w,h)
     img.SetData(imData.astype('uint8').flatten())
-    
+
+    tmp_h = int(p.image_size)
+    tmp_w = int(p.image_size)
+
+    if display_whole_image and h != tmp_h and h!= tmp_w:
+        h = tmp_h
+        w = tmp_w
+        img.Rescale(h,w)
+
     # Apply brightness & scale
     if brightness != 1.0:
         img = img.AdjustChannels(brightness, brightness, brightness)
@@ -138,7 +155,8 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
             img.Rescale(w*scale, h*scale)
         else:
             img.Rescale(10,10)
-    
+
+
     return img.ConvertToBitmap()
 
 def MergeChannels(imgs, chMap, masks=[]):
@@ -309,7 +327,7 @@ def SaveBitmap(bitmap, filename, format='PNG'):
 def ImageToPIL(image):
     '''Convert wx.Image to PIL Image.'''
     pil = Image.new('RGB', (image.GetWidth(), image.GetHeight()))
-    pil.fromstring(image.GetData())
+    pil.frombytes(image.GetData())
     return pil
 
 def BitmapToPIL(bitmap):
@@ -327,7 +345,7 @@ def npToPIL(imdata):
         assert imdata.shape[2] >=3, 'Cannot convert the given numpy array to PIL'
     if buf.dtype != 'uint8':
         buf = (buf * 255.0).astype('uint8')
-    im = Image.fromstring(mode='RGB', size=(buf.shape[1],buf.shape[0]),
+    im = Image.frombytes(mode='RGB', size=(buf.shape[1],buf.shape[0]),
                           data=buf.tostring())
     return im
 
@@ -341,7 +359,7 @@ def pil_to_np( pilImage ):
     def toarray(im):
         'return a 1D array of floats'
         x_str = im.tostring('raw', im.mode)
-        x = np.fromstring(x_str,np.uint8)
+        x = np.frombytes(x_str,np.uint8)
         return x
     
     if pilImage.mode[0] == 'P':

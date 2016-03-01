@@ -101,9 +101,10 @@ class ImageViewerPanel(ImagePanel):
                             y = y * self.scale - 6
                             dc.DrawText(clnum, x, y)
                         else:
-                            x = x * self.scale - 2
-                            y = y * self.scale - 2
                             w = h = 4
+                            x = x * self.scale - w/2
+                            y = y * self.scale - h/2
+
                             dc.SetPen(wx.Pen(color,1))
                             dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                             dc.DrawRectangle(x,y,w,h)
@@ -115,9 +116,10 @@ class ImageViewerPanel(ImagePanel):
         dc.SetPen(wx.Pen("WHITE",1))
         dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
         for (x,y) in self.selectedPoints:
-            x = x * self.scale - 3
-            y = y * self.scale - 3
             w = h = 6
+            x = x * self.scale - w/2
+            y = y * self.scale - h/2
+
             dc.BeginDrawing()
             dc.DrawRectangle(x,y,w,h)
             dc.EndDrawing()
@@ -201,7 +203,7 @@ class ImageViewer(wx.Frame):
         '''
         wx.Frame.__init__(self, parent, -1, title)
         self.SetName('ImageViewer')
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         self.img_key     = img_key
         self.classifier  = parent
         self.sw          = wx.ScrolledWindow(self)
@@ -213,6 +215,8 @@ class ImageViewer(wx.Frame):
         self.cp          = None
         self.controls    = None
         self.first_layout = True
+        self.inspect_release = True
+
         if chMap is None:
             try:
                 chMap = p.image_channel_colors
@@ -442,11 +446,13 @@ class ImageViewer(wx.Frame):
         if self.imagePanel:
             if not self.cp:
                 self.cp = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
+                self.SetBackgroundColour('white') # color for the background of panel
                 self.controls  = ImageControlPanel(self.cp.GetPane(), self.imagePanel, 
                                                    brightness=self.imagePanel.brightness,
                                                    scale=self.imagePanel.scale, 
                                                    contrast=self.imagePanel.contrast)
                 self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.cp)
+                # self.cp.Collapse(collapse=False) # default open controls
             else:
                 self.controls.SetListener(self.imagePanel)
             self.Sizer.Clear()
@@ -458,8 +464,16 @@ class ImageViewer(wx.Frame):
                                      min(self.maxSize[1], h*self.imagePanel.scale+55)) )
                 self.Center()
                 self.first_layout = False
-            self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)    
+            self.sw.SetScrollbars(1, 1, w*self.imagePanel.scale, h*self.imagePanel.scale)
+            #self.sw.SetScrollRate(1, 1)
             self.CreateChannelMenus()
+
+            # Annoying: Need to bind 3 windows to KEY_DOWN in case focus changes.
+            self.Bind(wx.EVT_KEY_DOWN, self.HoldKey) 
+            self.sw.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
+            self.cp.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
+            self.imagePanel.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
+
             # Annoying: Need to bind 3 windows to KEY_UP in case focus changes.
             self.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
@@ -513,6 +527,19 @@ class ImageViewer(wx.Frame):
         self.chMap = chMap
         self.imagePanel.MapChannels(chMap)
 
+    def HoldKey(self, evt):
+        keycode = evt.GetKeyCode()
+        chIdx = keycode-49
+        if evt.CmdDown() or evt.ControlDown():
+            if keycode == ord('F'): # When holding, make it dark
+                # Check if evt before was already released
+                if(self.inspect_release):
+                    self.imagePanel.tmp_brightness = self.imagePanel.brightness
+                    self.inspect_release = False
+                self.imagePanel.SetBrightness(0)
+        else:
+            evt.Skip()
+
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
         keycode = evt.GetKeyCode()
@@ -531,6 +558,10 @@ class ImageViewer(wx.Frame):
             elif keycode == ord('L'):
                 self.imagePanel.SetContrastMode('Log')
                 self.controls.SetContrastMode('Log')
+            elif keycode == ord('F'): # Release the darkness :)
+                brightness = self.imagePanel.tmp_brightness
+                self.imagePanel.SetBrightness(brightness)
+                self.inspect_release = True # Tell the panel, F key is not pressed anymore, otherwise it is stuck in key down events.
             elif len(self.chMap) > chIdx >= 0:   
                 # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)

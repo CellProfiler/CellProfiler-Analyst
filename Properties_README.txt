@@ -1,6 +1,6 @@
 # =============================================================================
 #
-#             Properties file README for CellProfiler Analyst 2.0
+#             Properties file README for CellProfiler Analyst 2.2
 #
 # NOTE: CPA 2.0 will not read old CPA properties files, nor will CPA read this
 #       properties file format.  The two formats can, however be easily 
@@ -257,6 +257,28 @@ classifier_ignore_columns  =  <your_object_x_location_column>, <your_object_y_lo
 # diameter of your objects (in pixels) is a good start.
 
 image_tile_size  =  50
+
+# OPTIONAL
+# Provides the image width and height. Used for per-image classification.
+# If not set, it will be obtained from the Image_Width and Image_Height 
+# measurements in CellProfiler.
+
+image_width  = 
+image_height = 
+
+# OPTIONAL
+# Image Gallery can use a different tile size (in pixels) to create thumbnails for images
+# If not set, it will be the same as image_tile_size
+
+image_size = 
+
+# ======== Classification type =======
+# OPTIONAL
+# CPA 2.2.0 allows image classification instead of object classification.
+# If left blank or set to "object", then Classifier will fetch objects (default).
+# If set to "image", then Classifier will fetch whole images instead of objects.
+
+classification_type =  
 
 
 # ======== Auto Load Training Set ========

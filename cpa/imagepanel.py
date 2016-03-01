@@ -10,7 +10,7 @@ class ImagePanel(wx.Panel):
     image channels which can be recombined to mix different bitmaps.
     '''
     def __init__(self, images, channel_map, parent, 
-                 scale=1.0, brightness=1.0, contrast=None):
+                 scale=1.0, brightness=1.0, contrast=None, display_whole_image=False):
         """
         images -- list of numpy arrays
         channel_map -- list of strings naming the color to map each channel 
@@ -23,19 +23,25 @@ class ImagePanel(wx.Panel):
         self.chMap       = channel_map
         self.toggleChMap = channel_map[:]
         self.images      = images
+
         # Displayed bitmap
         self.bitmap      = imagetools.MergeToBitmap(images,
                                chMap = channel_map,
                                scale = scale,
                                brightness = brightness,
-                               contrast = contrast)
+                               contrast = contrast,
+                               display_whole_image = display_whole_image)
         
-        wx.Panel.__init__(self, parent, wx.NewId(), size=self.bitmap.Size)
+        max_size = 1000
+        sizex = min(max_size, self.bitmap.Size[0])
+        sizey = min(max_size, self.bitmap.Size[1])
+        wx.Panel.__init__(self, parent, wx.NewId(), size=(sizex, sizey))
         
         self.scale         = scale
         self.brightness    = brightness
         self.contrast      = contrast
         self.selected      = False
+        self.display_whole_image = display_whole_image
         
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         
@@ -58,7 +64,8 @@ class ImagePanel(wx.Panel):
                                                chMap = self.chMap,
                                                brightness = self.brightness,
                                                scale = self.scale,
-                                               contrast = self.contrast)
+                                               contrast = self.contrast,
+                                               display_whole_image = self.display_whole_image)
         self.Refresh()
             
     

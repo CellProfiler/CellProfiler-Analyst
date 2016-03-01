@@ -331,6 +331,8 @@ class DBConnect(Singleton):
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
                                                (p.db_passwd or None), p.db_name)
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
+                if p.classification_type == 'image':
+                    self.CreateObjectImageTable()
             except DBError(), e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
             
@@ -443,7 +445,10 @@ class DBConnect(Singleton):
                         self.CreateSQLiteDB()
                     else:
                         raise DBException, 'Database at %s appears to be empty.'%(p.db_sqlite_file)
+            if p.classification_type == 'image':
+                self.CreateObjectImageTable()
             logging.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
+
         # Unknown database type (this should never happen)
         else:
             raise DBException, "Unknown db_type in properties: '%s'\n"%(p.db_type)
@@ -614,7 +619,7 @@ class DBConnect(Singleton):
         '''
         if p.object_table is None or p.object_id is None:
             return []
-                
+
         select = 'SELECT '+UniqueImageClause(p.object_table)+', COUNT('+p.object_table+'.'+p.object_id + ') FROM '+p.object_table + ' GROUP BY '+UniqueImageClause(p.object_table)
         result1 = self.execute(select)
         select = 'SELECT '+UniqueImageClause(p.image_table)+' FROM '+p.image_table
@@ -758,8 +763,9 @@ class DBConnect(Singleton):
         f = p._filters[filter_name]
         import sqltools
         if isinstance(f, sqltools.Filter):
+            unique_tables = np.unique(f.get_tables()) 
             return 'SELECT %s FROM %s WHERE %s' % (UniqueImageClause(), 
-                                                   ','.join(f.get_tables()), 
+                                                   ','.join(unique_tables), 
                                                    str(f))
         elif isinstance(f, sqltools.OldFilter):
             return str(f)
@@ -769,6 +775,7 @@ class DBConnect(Singleton):
     def GetFilteredImages(self, filter_name):
         ''' Returns a list of imKeys from the given filter. '''
         try:
+            f = p._filters[filter_name]
             return self.execute(self.filter_sql(filter_name))
         except Exception, e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
@@ -781,10 +788,10 @@ class DBConnect(Singleton):
         '''
         if p.db_type.lower()=='mysql':
             res = self.execute('SHOW TABLES')
-            return [t[0] for t in res]
+            return [t[0] for t in res] 
         elif p.db_type.lower()=='sqlite':
             res = self.execute('SELECT name FROM sqlite_master WHERE type="table" ORDER BY name')
-            return [t[0] for t in res]
+            return [t[0] for t in res] 
 
     def get_other_table_names(self):
         '''
@@ -958,9 +965,10 @@ class DBConnect(Singleton):
         if p.link_tables_table not in self.GetTableNames():
             return None
         res = self.execute('SELECT link FROM %s '
-                           'WHERE src="%s" AND dest="%s" ORDER BY ord'
-                           %(p.link_tables_table, table_from, table_to))
-        return [row[0] for row in res] or None
+                          'WHERE src="%s" AND dest="%s" ORDER BY ord'
+                          %(p.link_tables_table, table_from, table_to))
+
+        return [row[0] for row in res] or None 
     
     def get_linking_table_pairs(self, table_from, table_to):
         '''returns: an ordered list of table pairs that must be used to join 
@@ -1056,7 +1064,8 @@ class DBConnect(Singleton):
             col_names = self.GetColumnNames(p.object_table)
             col_types = self.GetColumnTypes(p.object_table)
             # automatically ignore all string-type columns
-            self.classifierColNames = [col for col, type in zip(col_names, col_types) if type!=str]
+            #print col_names, col_types
+            self.classifierColNames = [col for col, type in zip(col_names, col_types) if type not in [str, None]]
             # automatically ignore ID columns
             if p.table_id in self.classifierColNames:
                 self.classifierColNames.remove(p.table_id)
@@ -1248,25 +1257,26 @@ class DBConnect(Singleton):
         logging.info('Creating table: %s'%(p.image_table))
         self.execute('DROP TABLE IF EXISTS %s'%(p.image_table))
         self.execute(statement)
-        
-        # CREATE THE OBJECT TABLE
-        # For the object table we assume that all values are type FLOAT
-        # except for the primary keys
-        f = open(p.object_csv_file, 'U')
-        r = csv.reader(f)
-        columnLabels = r.next()
-        columnLabels = [lbl.strip() for lbl in columnLabels]
-        dtable = get_data_table_from_csv_reader(r)
-        colTypes = self.InferColTypesFromData(dtable, len(columnLabels))
-        statement = 'CREATE TABLE '+p.object_table+' ('
-        statement += ',\n'.join([lbl+' '+colTypes[i] for i, lbl in enumerate(columnLabels)])
-        keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
-        statement += ',\nPRIMARY KEY (' + keys + ') )'
-        f.close()
-    
-        logging.info('Creating table: %s'%(p.object_table))
-        self.execute('DROP TABLE IF EXISTS '+p.object_table)
-        self.execute(statement)
+
+        if not p.classification_type == 'image':
+            # CREATE THE OBJECT TABLE
+            # For the object table we assume that all values are type FLOAT
+            # except for the primary keys
+            f = open(p.object_csv_file, 'U')
+            r = csv.reader(f)
+            columnLabels = r.next()
+            columnLabels = [lbl.strip() for lbl in columnLabels]
+            dtable = get_data_table_from_csv_reader(r)
+            colTypes = self.InferColTypesFromData(dtable, len(columnLabels))
+            statement = 'CREATE TABLE '+p.object_table+' ('
+            statement += ',\n'.join([lbl+' '+colTypes[i] for i, lbl in enumerate(columnLabels)])
+            keys = ','.join([x for x in [p.table_id, p.image_id, p.object_id] if x in columnLabels])
+            statement += ',\nPRIMARY KEY (' + keys + ') )'
+            f.close()
+
+            logging.info('Creating table: %s'%(p.object_table))
+            self.execute('DROP TABLE IF EXISTS '+p.object_table)
+            self.execute(statement)
         
         # POPULATE THE IMAGE TABLE
         f = open(p.image_csv_file, 'U')
@@ -1283,17 +1293,18 @@ class DBConnect(Singleton):
         f.close()
         
         # POPULATE THE OBJECT TABLE
-        f = open(p.object_csv_file, 'U')
-        r = csv.reader(f)
-        row = r.next() # skip the headers
-        row = r.next()
-        while row: 
-            self.execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
-                         silent=True)
-            try:
-                row = r.next()
-            except StopIteration: break
-        f.close()
+        if not p.classification_type == 'image':
+            f = open(p.object_csv_file, 'U')
+            r = csv.reader(f)
+            row = r.next() # skip the headers
+            row = r.next()
+            while row:
+                self.execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
+                             silent=True)
+                try:
+                    row = r.next()
+                except StopIteration: break
+            f.close()
         
         self.Commit()
         
@@ -1309,20 +1320,15 @@ class DBConnect(Singleton):
         # Verify that the CSVs exist
         csv_dir = os.path.split(p.db_sql_file)[0] or '.'
         dir_files = os.listdir(csv_dir)
-        print dir_files
         for file in imcsvs + obcsvs:
-            print file
             assert file in dir_files, ('File "%s" was specified in %s but was '
                                       'not found in %s.'%(file, os.path.split(p.db_sql_file)[1], csv_dir))
+
         assert len(imcsvs)>0, ('Failed to parse image csv filenames from %s. '
                               'Make sure db_sql_file in your properties file is'
                               ' set to the .SQL file output by CellProfiler\'s '
                               'ExportToDatabase module.'%(os.path.split(p.db_sql_file)[1]))
-        assert len(obcsvs)>0, ('Failed to parse object csv filenames from %s. '
-                              'Make sure db_sql_file in your properties file is'
-                              ' set to the .SQL file output by CellProfiler\'s '
-                              'ExportToDatabase module.'%(os.path.split(p.db_sql_file)[1]))
-        
+
         # parse out create table statements and execute them
         f = open(p.db_sql_file)
         lines = f.readlines()
@@ -1386,44 +1392,116 @@ class DBConnect(Singleton):
             logging.info("... loaded %d%% of CSV data"%(pct))
 
         line_count = 0
-        for file in obcsvs:
-            logging.info('Populating object table with data from %s'%file)
-            f = open(csv_dir+os.path.sep+file, 'U')
-            r = csv.reader(f)
-            row1 = r.next()
-            command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
-            # guess at a good number of lines, about 250 megabytes, assuming floats)
-            nlines = (250*1024*1024) / (len(row1) * 64)
-            self.cursors[connID].execute(command, row1)
-            while True:
-                # fetch a certain number of lines efficiently
-                args = [l for idx, l in zip(range(nlines), r) if len(l) > 0]
-                if args == []:
-                    break
-                self.cursors[connID].executemany(command, args)
-                line_count += len(args)
+        if not p.classification_type == 'image':
+            assert len(obcsvs)>0, ('Failed to parse object csv filenames from %s. '
+                              'Make sure db_sql_file in your properties file is'
+                              ' set to the .SQL file output by CellProfiler\'s '
+                              'ExportToDatabase module.'%(os.path.split(p.db_sql_file)[1]))
 
-                pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
-                if dlg:
-                    c, s = dlg.Update(pct, '%d%% Complete'%(pct))
-                    if not c:
-                        try:
-                            os.remove(p.db_sqlite_file)
-                        except OSError:
-                            wx.MessageBox('Could not remove incomplete database'
-                                          ' at "%s". This file must be removed '
-                                          'manually or CPAnalyst will load it '
-                                          'the next time use use the current '
-                                          'database settings.', 'Error')
-                        raise Exception, 'cancelled load'
-                logging.info("... loaded %d%% of CSV data"%(pct))
-            f.close()
-            base_bytes += os.path.getsize(os.path.join(csv_dir, file))
+            for file in obcsvs:
+                logging.info('Populating object table with data from %s'%file)
+                f = open(csv_dir+os.path.sep+file, 'U')
+                r = csv.reader(f)
+                row1 = r.next()
+                command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
+                # guess at a good number of lines, about 250 megabytes, assuming floats)
+                nlines = (250*1024*1024) / (len(row1) * 64)
+                self.cursors[connID].execute(command, row1)
+                while True:
+                    # fetch a certain number of lines efficiently
+                    args = [l for idx, l in zip(range(nlines), r) if len(l) > 0]
+                    if args == []:
+                        break
+                    self.cursors[connID].executemany(command, args)
+                    line_count += len(args)
+
+                    pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
+                    if dlg:
+                        c, s = dlg.Update(pct, '%d%% Complete'%(pct))
+                        if not c:
+                            try:
+                                os.remove(p.db_sqlite_file)
+                            except OSError:
+                                wx.MessageBox('Could not remove incomplete database'
+                                              ' at "%s". This file must be removed '
+                                              'manually or CPAnalyst will load it '
+                                              'the next time use use the current '
+                                              'database settings.', 'Error')
+                            raise Exception, 'cancelled load'
+                    logging.info("... loaded %d%% of CSV data"%(pct))
+                f.close()
+                logging.info("Finished loading CSV data")
+                base_bytes += os.path.getsize(os.path.join(csv_dir, file))
 
         # Commit only at very end. No use in committing if the db is incomplete.
         self.Commit()
         if dlg:
             dlg.Destroy()
+
+    def GetImageWidthHeight(self,list_of_cols):
+        # Get image width and height
+        try:
+            width_col = next(name for name in list_of_cols if 'width' in name.lower())
+            height_col = next(name for name in list_of_cols if 'height' in name.lower())
+            width_query = 'SELECT %s FROM %s LIMIT 1'%(width_col, p.image_table)
+            height_query = 'SELECT %s FROM %s LIMIT 1'%(height_col, p.image_table)
+            width = self.execute(width_query)
+            height = self.execute(height_query)
+            width = int(width[0][0])
+            height = int(height[0][0])
+        except:
+            if p.image_width and p.image_height:
+                width = int(p.image_width)
+                height = int(p.image_height)
+            else:
+                raise Exception('Input image_width and image_height fields in properties file')
+        return width, height    
+
+    def CreateObjectImageTable(self):
+        # Create object table for image classification
+        DB_NAME = p.db_name
+        DB_TYPE = p.db_type.lower()
+        if DB_TYPE == 'mysql':
+            query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'"%(DB_NAME, p.image_table)
+            self.execute(query)
+            list_of_cols = []
+            cols = [x for x in self.GetColumnNames(p.image_table)]
+            list_of_cols.extend([str(x) for x in cols])
+            width, height = self.GetImageWidthHeight(list_of_cols)
+
+            query = "CREATE OR REPLACE VIEW %s AS SELECT 1 AS %s, %d AS %s, %d AS %s, %s.* FROM %s"%(p.object_table, p.object_id, width/2, p.cell_x_loc, height/2, p.cell_y_loc, p.image_table,p.image_table)
+            self.execute(query)
+
+        elif DB_TYPE == 'sqlite':
+            pass
+            # Copy image table and add more columns
+            query = "PRAGMA table_info(%s)"%p.image_table
+            self.execute(query)
+            list_of_cols = [str(x) for x in self.GetColumnNames(p.image_table)]
+            list_of_colTypes = [str(x) for x in self.GetColumnTypeStrings(p.image_table)]
+            all_cols = list(list_of_cols)
+            all_colTypes = list(list_of_colTypes)
+            pid_index = all_cols.index(p.image_id)
+            all_cols.remove(p.image_id)
+            all_colTypes.remove(list_of_colTypes[pid_index])
+            all_cols = [p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc] + all_cols
+            list_of_colTypes = [list_of_colTypes[pid_index], list_of_colTypes[pid_index], 'float', 'float'] + all_colTypes
+            query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
+            self.execute(query)
+            query = 'CREATE TEMP TABLE %s (%s)'%(p.object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
+            self.execute(query)
+            query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
+            self.execute(query)
+
+            #Get info on image width and height (assuming they are fields in the image table) to get image center
+            width, height = self.GetImageWidthHeight(list_of_cols)
+
+            query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(p.object_table, p.object_id,
+                                                              p.cell_x_loc, width/2,
+                                                              p.cell_y_loc, height/2)
+            self.execute(query)
+
+
 
     def table_exists(self, name):
         res = []

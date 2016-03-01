@@ -33,6 +33,7 @@ class DataSourcePanel(wx.Panel):
         wx.Panel.__init__(self, parent, **kwargs)
         
         # the panel to draw charts on
+        self.SetBackgroundColour('white') # color for the background of panel
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -40,11 +41,12 @@ class DataSourcePanel(wx.Panel):
         self.x_columns = [] # column names to plot if selecting multiple columns
 
         self.table_choice = ui.TableComboBox(self, -1, style=wx.CB_READONLY)
-        self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
+        self.x_choice = ComboBox(self, -1, size=(200,-1))
         self.x_multiple = wx.Button(self, -1, 'select multiple')
         self.group_choice = ComboBox(self, -1, choices=[NO_GROUP]+p._groups_ordered, style=wx.CB_READONLY)
         self.group_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
@@ -87,7 +89,7 @@ class DataSourcePanel(wx.Panel):
         self.Show(1)
 
     def on_select_multiple(self, evt):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         column_names = self.get_numeric_columns_from_table(tablename)
         dlg = wx.MultiChoiceDialog(self, 
                                    'Select the columns you would like to plot',
@@ -117,7 +119,7 @@ class DataSourcePanel(wx.Panel):
         self.group_choice.Enable()        
     
     def update_column_fields(self):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         fieldnames = self.get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
@@ -202,7 +204,7 @@ class DataSourcePanel(wx.Panel):
         if self.x_choice.Value == SELECT_MULTIPLE:
             cols = self.x_columns
         else:
-            cols = [self.x_choice.GetStringSelection()]
+            cols = [self.x_choice.GetString(self.x_choice.GetSelection())]
         return {'table'  : self.table_choice.Value,
                 'x-axis' : ','.join(cols),
                 'filter' : self.filter_choice.Value,
@@ -326,7 +328,7 @@ class BoxPlot(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='BoxPlot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         points = {}
         figpanel = BoxPlotPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
@@ -341,6 +343,41 @@ class BoxPlot(wx.Frame, CPATool):
         #
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
+
+    # Hack: See http://stackoverflow.com/questions/6124419/matplotlib-navtoolbar-doesnt-realize-in-wx-2-9-mac-os-x
+    def SetToolBar(self, toolbar):
+        from matplotlib.backends.backend_wx import _load_bitmap
+        toolbar.Hide()
+        tb = self.CreateToolBar((wx.TB_HORIZONTAL|wx.TB_TEXT))
+
+        _NTB2_HOME = wx.NewId()
+        _NTB2_BACK = wx.NewId()
+        _NTB2_FORWARD = wx.NewId()
+        _NTB2_PAN = wx.NewId()
+        _NTB2_ZOOM = wx.NewId()
+        _NTB2_SAVE = wx.NewId()
+        _NTB2_SUBPLOT = wx.NewId()
+        tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original view')
+        tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
+        tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
+
+        tb.AddCheckTool(_NTB2_PAN, _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+
+        tb.AddSeparator()
+        tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
+        tb.AddSimpleTool(_NTB2_SAVE, _load_bitmap('filesave.png'), 'Save', 'Save plot contents to file')
+
+        self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
+        self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
+        self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
+        self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
+        self.Bind(wx.EVT_TOOL, toolbar.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+
+        tb.Realize()  
+        # Hack end
 
                     
 if __name__ == "__main__":

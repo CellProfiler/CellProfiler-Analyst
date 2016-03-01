@@ -270,13 +270,19 @@ class DataModel(Singleton):
                 assert re.match(well_re, well), 'Well "%s" did not match well naming format "%s"'%(r[0], p.well_format)
             elif type(well) in [int, long]:
                 if not p.well_format == '123':
+                    '''
                     import wx
                     wx.MessageBox('Well "%s" did not match well naming format "%s".\n'
                                   'If your wells are in numerical format then add\n'
                                   'the line "well_format = 123" to your properties'
                                   'file. Trying well_format = 123.'%(r[0], p.well_format), 'Error')
+                    '''
                     p.well_format = '123'
-                    self.populate_plate_maps()
+                    try:
+                        self.populate_plate_maps()
+                    except:
+                        import wx
+                        wx.MessageBox('Error when trying well_format = 123. Try another well naming format.', 'Error')
                     return
 
             if p.well_format == 'A01':

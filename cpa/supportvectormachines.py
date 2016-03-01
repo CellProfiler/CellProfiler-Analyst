@@ -115,7 +115,7 @@ class SupportVectorMachines(object):
         self.feat_min, self.feat_max = None, None
         self.svm_train_labels, self.svm_train_values = None, None
 
-    def ComplexityTxt(self):
+    def panelTxt2(self):
         return '# of cross-validations: '
 
     def ConfusionMatrix(self, actual = None, predicted = None):
