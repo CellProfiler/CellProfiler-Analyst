@@ -12,16 +12,16 @@ CellProfiler Analyst allows interactive exploration and analysis of data, partic
 
 ## Installation
 
-Download nightly Version 2.2.0 for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.dmg)
+Download nightly version 2.2.0 for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.dmg)
 
-Download beta of Version 2.2.0 for Windows here: [App for Windows](https://drive.google.com/a/broadinstitute.com/file/d/0B2aYwrhHkhm4ejJyeXotZ25LLW8/view?usp=sharing)
+Download nightly version 2.2.0 for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.exe)
 
-The app requires JDK 1.8 to be installed (not just JRE). http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html 
+The app requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE). 
 Check the Java path.
 
 Please note that CPA 2.2.0 is WIP and we will update the link on regular basis. 
 
-For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://cellprofiler.org/linked_files/Examplezips/cpa_2.0_example.zip)
+For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip)
 
 ## Requirements when installing from source
 
@@ -33,18 +33,6 @@ Builds upon CellProfiler dependencies, we need
 * Javabridge
 * Verlib
 * Python-bioformats
-
-## Current Development
-
-* Restoring visualization functionalities
-* Cleaning up files
-* Improving Evaluation for Classifier
-* Including testing
-* Include documentation
-* Pixel-based Classifier 
-* Profiling Toolbox
-* Image Gallery
-* Image Classification
 
 ## Wiki
 
@@ -63,7 +51,14 @@ Please attach sufficient information to reproduce the bug. For many
 bugs, it is appropriate to attach a properties file, a training set,
 or a screenshot.
 
+## Current Developer
+
+David Dao
+
 ## Contributors
 
-Adam Fraser, David Dao, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Anne Carpenter
+Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Mark Bray, Anne Carpenter, Lee Kamentsky
 
+## Kudos
+
+David Logan, Allen Goodman
