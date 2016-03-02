@@ -1,0 +1,498 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>V. Classifier &mdash; CellProfiler Analyst 2.2.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="CellProfiler Analyst 2.2.0 documentation" href="index.html"/>
+        <link rel="next" title="XII. Table Viewer" href="6_table_viewer.html"/>
+        <link rel="prev" title="IV. The CellProfiler Analyst Interface" href="4_cpa_interface.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CellProfiler Analyst
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Sweet Docs</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="0_introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1_preliminary_requirements.html">I. Preliminary data requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">II. Installation and getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_properties_file.html">III. Setting up the properties file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_cpa_interface.html">IV. The CellProfiler Analyst Interface</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">V. Classifier</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#v-a-classifier-quick-start-guide">V.A Classifier quick-start guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#v-b-in-depth-guidance-for-using-classifier">V.B In-depth guidance for using Classifier</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#v-b-1-configuring-classifier">V.B.1 Configuring Classifier</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#adding-deleting-and-renaming-bins"><em>Adding, Deleting, and Renaming Bins</em></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#adjusting-the-display"><em>Adjusting the display</em></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#v-b-2-fetch-an-initial-batch-of-objects">V.B.2 Fetch an initial batch of objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v-b-3-sort-the-initial-batch-of-objects">V.B.3 Sort the initial batch of objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v-b-4-saving-and-loading-training-sets">V.B.4 Saving and loading training sets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v-b-5-find-rules-training-classifier">V.B.5 Find rules / training Classifier</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#assessing-accuracy"><em>Assessing accuracy</em></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#v-b-6-scoring">V.B.6 Scoring</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#score-image"><em>Score image</em></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#score-all"><em>Score all</em></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="6_table_viewer.html">XII. Table Viewer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_image_viewer.html">VII. Image Viewer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="8_plate_viewer.html">VIII. Plate Viewer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="9_scatter_plot.html">IX. Scatter Plot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="10_histogram_plot.html">X. Histogram Plot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="11_density_plot.html">XI. Density Plot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="12_boxplot.html">XII. Box Plot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="13_workspaces.html">XIII. Workspaces</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">CellProfiler Analyst</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>V. Classifier</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/5_classifier.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="v-classifier">
+<h1>V. Classifier<a class="headerlink" href="#v-classifier" title="Permalink to this headline">¶</a></h1>
+<p>Classifier allows you to train the computer to identify objects of interest by applying iterative,
+user-supervised machine learning methods to object measurements.</p>
+<p>You first request (<strong>Fetch</strong>) object tiles (cropped from their original images), then manually sort
+them into classification bins, one for each object class, to form a training set. Once each bin
+contains many example objects, you can start training Classifier, asking it to generate rules for
+differentiating among objects in each bin. Once Classifier generates some initial rules, you can
+continue training in either by fetching and sorting more random objects, or by fetching objects
+that Classifier scores as being in a particular class based on the rules it has already found;
+correcting errors in these classifications rapidly improves subsequent rule sets. Usually several
+rounds of refinement are necessary to train the Classifier to generate rules that recognize the
+classes of interest.</p>
+<p>Once classification reaches a desirable accuracy, Classifier can “score” your experiment. This
+entails classifying all objects, counting how many objects of each class are in each image or
+group (if you have defined groups in your properties file; see section II.G), and computing the
+enrichment/depletion of each class per image or per group.</p>
+<div class="section" id="v-a-classifier-quick-start-guide">
+<h2>V.A Classifier quick-start guide<a class="headerlink" href="#v-a-classifier-quick-start-guide" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Launch Classifier and enter the number of objects you want Classifier to fetch.</li>
+<li>Specify whether Classifier should select these objects from the entire experiment, a single image or a group, and whether it should apply any filters. Groups and filters will only be available if defined in your properties file (section II).</li>
+<li>Click <strong>Fetch</strong>. Objects will appear in the Unclassified bin.</li>
+<li>Manually sort the unclassified objects into classification bins, adding additional bins if needed. Often, two bins are used: <strong>positive</strong> and <strong>negative</strong>.</li>
+<li>Enter the maximum number of rules you want Classifier to look for and click <strong>Find Rules</strong>.</li>
+<li>Repeat steps 2–6 to fetch and sort more objects until you are satisfied with the rules Classifier has generated. With a rule set established, you will be able to specify that Classifier only retrieve objects that it deems to be in a particular class so that you can correct errors. Classifier’s rules for each class will become more refined with each iteration of this process.</li>
+<li>Click <strong>Score Image</strong> to visualize object classifications in a particular image (you will be asked to enter an image ID number). Objects can be dragged and dropped into bins from the Image Viewer to further refine rules.</li>
+<li>It is important to save the training set for future refinement, to re-generate scores, and as a record of your experiment. It is advisable to do so before proceeding to scoring your experiment since scoring may take a long time for large screens. Select File &gt; <strong>Save Training Set</strong> from the menu bar (or <strong>ctrl+S</strong>).</li>
+<li>Click <strong>Score All</strong> to have Classifier score your entire experiment (optionally with groups or filters). Classifier will present the results in a Table Viewer (described in section IV).</li>
+<li>You can click on column headings to sort the data by that column, helping you identify images that are highly enriched in a given object class, or images that simply have a high count of those objects. You can double-click the headers of rows to view the corresponding images and then drag and drop objects from the resulting image(s) into classification bins to further refine rules.</li>
+<li>You can save Classifier’s scores for each image (or group) from the Table Viewer using File &gt; <strong>Save data to CSV</strong> or <strong>Save per-image counts</strong> to CSV to create comma-separated value files. You can also view the scores with CPA’s visualization tool, Plate Viewer, by using <strong>Database &gt; Write Temporary Table in Database</strong> and running the Plate Viewer (section IV).</li>
+</ol>
+</div>
+<div class="section" id="v-b-in-depth-guidance-for-using-classifier">
+<h2>V.B In-depth guidance for using Classifier<a class="headerlink" href="#v-b-in-depth-guidance-for-using-classifier" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">We recommend running only a single instance of CPA 2.0 at any one time. Otherwise, significant delays in processing may result, particularly if you are working with very large training sets and/or data sets.</p>
+</div>
+<div class="section" id="v-b-1-configuring-classifier">
+<h3>V.B.1 Configuring Classifier<a class="headerlink" href="#v-b-1-configuring-classifier" title="Permalink to this headline">¶</a></h3>
+<p>Launch Classifier by clicking the Classifier icon in the CPA toolbar. The main Classifier screen will appear. If you have previously saved a training set, you can load it using <strong>File &gt; Load Training Set:</strong></p>
+<div class="figure align-center">
+<img alt="_images/05_01.jpg" src="_images/05_01.jpg" />
+</div>
+<div class="figure align-center" id="id1">
+<img alt="_images/05_f.jpg" src="_images/05_f.jpg" />
+<p class="caption"><span class="caption-text">Initial Classifier screen.</span></p>
+</div>
+<div class="section" id="adding-deleting-and-renaming-bins">
+<h4><em>Adding, Deleting, and Renaming Bins</em><a class="headerlink" href="#adding-deleting-and-renaming-bins" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li><strong>Tip:</strong> Use as few bins as necessary for the relevant downstream analysis; adding too many bins can decrease the overall accuracy.</li>
+</ul>
+<p>To add more bins at any time, click the <strong>Add new class</strong>. button in the extreme lower right-hand corner of the window. You will see the <strong>Rename class</strong> popup window:</p>
+<div class="figure align-center" id="id2">
+<img alt="_images/05_03.jpg" src="_images/05_03.jpg" />
+<p class="caption"><span class="caption-text">Adding a sorting bin.</span></p>
+</div>
+<p>Right-clicking inside any bin displays a popup menu that contains a number of options, including <strong>deleting</strong> and <strong>renaming</strong> bins. The remaining options in this menu apply to the <em>contents</em> of the 17 bin. See section III.C.3 for more information.</p>
+<div class="figure align-center">
+<img alt="_images/05_04.jpg" src="_images/05_04.jpg" />
+</div>
+<div class="figure align-center" id="id3">
+<img alt="_images/05_04b.jpg" src="_images/05_04b.jpg" />
+<p class="caption"><span class="caption-text">Right clicking on a sorting bin.</span></p>
+</div>
+</div>
+<div class="section" id="adjusting-the-display">
+<h4><em>Adjusting the display</em><a class="headerlink" href="#adjusting-the-display" title="Permalink to this headline">¶</a></h4>
+<p>The menu bar at the top of the screen contains options for adjusting the display of the image tiles that will be displayed.** View &gt; Image Controls** will bring up the same control panel found in the <strong>Image Viewer</strong> tool (section V), and the <strong>channel menus</strong> can be used to map different colors onto the respective channels. (<strong>Actin</strong>, <strong>pH3</strong>, and <strong>DNA</strong>, in this example; named so in the properties file as described in section II.)</p>
+<div class="figure align-center" id="id4">
+<img alt="_images/05_01.jpg" src="_images/05_01.jpg" />
+<p class="caption"><span class="caption-text">Classifier menu bar.</span></p>
+</div>
+</div>
+</div>
+<div class="section" id="v-b-2-fetch-an-initial-batch-of-objects">
+<h3>V.B.2 Fetch an initial batch of objects<a class="headerlink" href="#v-b-2-fetch-an-initial-batch-of-objects" title="Permalink to this headline">¶</a></h3>
+<p>Objects are fetched (retrieved) using the top portion of the main Classifier window:</p>
+<div class="figure align-center" id="id5">
+<img alt="_images/05_05.jpg" src="_images/05_05.jpg" />
+<p class="caption"><span class="caption-text">Controls to fetch objects.</span></p>
+</div>
+<p><em>How many objects</em>? Enter the number of objects you want Classifier to fetch (default = <strong>20</strong>)</p>
+<p><em>Which class of objects should be retrieved</em>? At this stage, <strong>random</strong> will be the only option available in the left-hand menu. After you ask Classifier to <strong>Find Rules</strong> (section III.C.5, following), new options will appear corresponding to each classification bin.</p>
+<p><em>From which images?</em> <strong>Experiment</strong> and <strong>image</strong> are the two system-supplied default values in the right-hand menu. Select <strong>experiment</strong> to have Classifier retrieve objects from your entire experiment; select <strong>image</strong> to retrieve objects from a particular image (you will be asked to type 18 its ID number from your image table). If you want to fetch objects from particular subsets of images in the experiment (e.g., control samples), you can set up filters and groups of images by defining them in your properties file (described earlier in section II.G); these <strong>filters</strong> or <strong>groups</strong> will be available for selection here.</p>
+<p>Click the <strong>Fetch</strong> button (located next to the right-hand menu) when you are ready to proceed, and you will see results like this:</p>
+<div class="figure align-center" id="id6">
+<img alt="_images/05_f.jpg" src="_images/05_f.jpg" />
+<p class="caption"><span class="caption-text">Twenty unclassified cells have been fetched and are ready for initial sorting.</span></p>
+</div>
+</div>
+<div class="section" id="v-b-3-sort-the-initial-batch-of-objects">
+<h3>V.B.3 Sort the initial batch of objects<a class="headerlink" href="#v-b-3-sort-the-initial-batch-of-objects" title="Permalink to this headline">¶</a></h3>
+<p>Use your mouse to drag and drop object tiles into the classification bins you configured in step
+III.C.1. If you are uncertain about the classification of a particular object, it can be ignored or
+removed by selecting it and pushing the Delete key. Keep in mind, however, that classifier will
+ultimately score ALL objects found in your table unless you define filters to ignore certain
+images (see section II.F).</p>
+<p><strong>Important:</strong> A small dot is displayed in the center of each tile as your mouse hovers over it. The
+object that falls under this dot is the object that must be sorted. In the example below, the tile
+under the mouse should be sorted based on the blue cell underneath the dot, NOT the cells
+surrounding it. To change cropping size of the tile “window”, adjust the field <code class="docutils literal"><span class="pre">image_tile_size</span></code> in the properties file (section II.D).</p>
+<div class="figure align-center" id="id7">
+<img alt="_images/05_07.jpg" src="_images/05_07.jpg" />
+<p class="caption"><span class="caption-text">The object to be sorted is indicated by a small dot.</span></p>
+</div>
+<p>Once you have placed tiles in at least two bins, you have created Classifier’s initial <strong>training set</strong>,
+which will be used to generate rules to differentiate objects in different classes.</p>
+<ul class="simple">
+<li><strong>Tip:</strong> Clicking on a tile will select it. Holding shift will allow you to add and remove tiles from the selection. All the tiles in a selection can be moved at once by dragging one of them to another bin.</li>
+</ul>
+<p>Some helpful tools are available when you right-click on a tile:</p>
+<div class="figure align-center" id="id8">
+<img alt="_images/05_08.jpg" src="_images/05_08.jpg" />
+<p class="caption"><span class="caption-text">Right-clicking on a tile.</span></p>
+</div>
+<ul class="simple">
+<li>Select <strong>View full images of selected</strong> or double-click an individual tile to show the object in the context of the image from which it was drawn. This launches the <strong>Image Viewer</strong> tool (section V)</li>
+</ul>
+<p><strong>Tip:</strong> Objects can dragged and dropped from the Image Viewer into class bins just as they are from the bins themselves. Use Shift+click to add/remove multiple objects to/from a selection, and <code class="docutils literal"><span class="pre">ctrl+A/Ctrl+D</span></code> to select/deselect all objects in the image</p>
+<ul class="simple">
+<li><strong>Select all/Deselect all</strong> (<code class="docutils literal"><span class="pre">ctrl+A/ctrl+D</span></code>) selects/deselects all tiles in the bin so they can be dragged and dropped together.</li>
+<li><strong>Invert selection</strong> (<code class="docutils literal"><span class="pre">ctrl+I</span></code>) to invert your selection (that is, select all non-selected tiles in the current bin and deselect all selected tiles).</li>
+<li><strong>Remove selected</strong> (<code class="docutils literal"><span class="pre">Delete</span></code>) removes the selected tiles from the current bin.</li>
+</ul>
+</div>
+<div class="section" id="v-b-4-saving-and-loading-training-sets">
+<h3>V.B.4 Saving and loading training sets<a class="headerlink" href="#v-b-4-saving-and-loading-training-sets" title="Permalink to this headline">¶</a></h3>
+<p>Objects sorted into the bins are known as the <strong>training set</strong>. You can save the training set at any time, allowing you to close CPA and pick up where you left off later by re-loading the training set. Save and load training sets using <strong>File &gt; Save training set or File &gt; Load training set</strong>.</p>
+<p><strong>Warning</strong>: Loading a training set will cause all existing bins and tiles to be cleared.</p>
+</div>
+<div class="section" id="v-b-5-find-rules-training-classifier">
+<h3>V.B.5 Find rules / training Classifier<a class="headerlink" href="#v-b-5-find-rules-training-classifier" title="Permalink to this headline">¶</a></h3>
+<p>When you have finished your initial sorting, enter the maximum number of rules you want Classifier to find (default = <strong>5</strong>).</p>
+<ul class="simple">
+<li>During initial training, it is best to use a small number of rules (5-10) to make sure that you do not define your phenotype too narrowly. That is, you want to identify a wide variety of objects that represent your object class but differ in their other characteristics.</li>
+<li>As training proceeds, you may want to increase the number of rules to allow Classifier to capture more subtle distinctions between classes.</li>
+<li>Using more rules does not always result in greater accuracy.</li>
+<li>Increasing the number of rules above 100 is unlikely to improve classification accuracy. Although there is little risk of over-fitting with this machine learning method, too many rules wastes calculation time, since this is an intensive step.</li>
+<li>For complex object classes (that is, to the human eye, one that involves the assessment of many features of the objects simultaneously), we recommend ultimately using <strong>50</strong> rules, based on our experience with 14 phenotypes in human cells (Jones, T.R., et al., PNAS 2009).</li>
+<li><strong>SQLite Limitation</strong>: With our current implementation, SQLite limits the number of rules that can be used depending on how many classes you have. E.g.: For 2 classes, no more than 23 rules can be used, for 3 classes, no more than 18.</li>
+</ul>
+<p>Click <strong>Find Rules</strong>. You will note that the large text field near the top of the screen contains the initial rules Classifier has identified based on the objects you deposited into the bins, as a series of IF statements:</p>
+<div class="figure align-center" id="id9">
+<img alt="_images/05_e.jpg" src="_images/05_e.jpg" />
+<p class="caption"><span class="caption-text">Classifier, after finding rules. In this example, only 2 rules were found out of the specified maximum of 5, both pertaining to the feature Nuclei_Intensity_pH3_MeanIntensity, indicating that this feature was sufficient to achieve perfect classification on the training set.</span></p>
+</div>
+<p>Usually the number of rules shown in the window is equal to the maximum number you selected, unless fewer rules are able to achieve perfect classification of the training set.</p>
+<p>At this point, your goal is to refine the rules by adding more objects to the training set. You can continue to fetch objects at random, but note that the left-most drop-down menu in the fetch controls (top part of the window) now lists the classes that you have trained Classifier to recognize. This allows you to fetch objects that Classifier deems as belonging to a particular
+class. Correcting for misclassified objects by sorting them into the appropriate bins and retraining will help you to rapidly improve the accuracy of Classifier’s rules.</p>
+<div class="figure align-center" id="id10">
+<img alt="_images/05_10.jpg" src="_images/05_10.jpg" />
+<p class="caption"><span class="caption-text">Object class selection options.</span></p>
+</div>
+<p>Continue repeating the process of finding rules, fetching objects, sorting them into their appropriate classes, and finding more rules. Scoring (section III.C.6, following) can be used when you have finished creating a <strong>training set</strong> (that is, you are satisfied by its performance), but note that, as described later, scoring can also be used as another iterative step in creating the training set.</p>
+<div class="section" id="assessing-accuracy">
+<h4><em>Assessing accuracy</em><a class="headerlink" href="#assessing-accuracy" title="Permalink to this headline">¶</a></h4>
+<p>The most accurate way to gauge Classifier’s performance is to fetch a large number of objects of a given class (e.g., positive) from the whole experiment. The fraction of the retrieved objects correctly matching the requested phenotype indicates the classifier’s general performance. For
+example, if you fetch 100 positive objects but find upon inspection that 5 of the retrieved objects are not positives, then you can expect Classifier to have a positive predictive value of 95% on individual cells (and similarly for negative predictive value in the case of two classes). Note that sensitivity, specificity, and negative and positive predictive values must be interpreted in the context of the actual prevalence of individual phenotypes, which may be difficult to assess a priori.</p>
+<p>The <strong>Check Progress</strong> button plots the cross-validation accuracy for the training set as an increasing number of rules are used. Values closer to 1 indicate better performance. Two features of the plot are useful for guiding further classification. First, if the accuracy increases (that is, slopes upward) at larger numbers of rules, adding more rules is likely to help improve the classifier (if the line slopes downward, this may indicate more training examples are needed). Second, accuracy is displayed for two versions of cross-validation, with 50% or 95%
+of the examples used for training and the remainder for testing. If the two accuracies are
+essentially the same, adding more cells to the training set is unlikely to improve performance.
+Note that the accuracy in these plots should not be interpreted as the accuracy for the overall
+experiment (see the discussion below).</p>
+<p>These plots tend to be pessimistic, as the training set often includes a large number of difficultto-classify
+examples. The most accurate way to judge accuracy is by requesting a large number
+of cells of a certain class and counting mistakes, as described above.</p>
+<p>Another way to gauge the classifier’s performance is to use the <strong>Score Image</strong> button on positive
+and negative controls (see the following section). <strong>Score Image</strong> allows you to see qualitatively
+how Classifier performs on a single image. Although the results cannot be reliably extrapolated
+to other images, it can be useful to examine control images and further refine the rules by
+adding misclassified objects in those images to the proper bins.</p>
+<div class="figure align-center" id="id11">
+<img alt="_images/5_d.jpg" src="_images/5_d.jpg" />
+<p class="caption"><span class="caption-text">Check Accuracy plot displaying the cross-validation accuracy of a 3-class classifier with 30 rules. Accuracy does not increase for more than 10 rules.</span></p>
+</div>
+<p>The relationship between accuracy on individual cells versus performance scoring wells for
+follow-up is complicated, because false positive and false negatives are not evenly distributed
+throughout an experiment. In practice, improving accuracy on individual cells leads to better
+accuracy on wells, and in general, the accuracy on wells is better than the per-cell accuracy.</p>
+</div>
+</div>
+<div class="section" id="v-b-6-scoring">
+<h3>V.B.6 Scoring<a class="headerlink" href="#v-b-6-scoring" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="score-image">
+<h4><em>Score image</em><a class="headerlink" href="#score-image" title="Permalink to this headline">¶</a></h4>
+<p>Scoring a single image can be useful in several ways:</p>
+<ul class="simple">
+<li>You can display an image and rapidly identify and correct classification errors in the image, by dragging and dropping objects from the image into bins.</li>
+<li>You can use it as visual feedback to verify your classifier’s accuracy on a given image (especially a control image) at any point in the training process.</li>
+<li>You can also use it to check Classifier’s classifications for individual images with unusual scores displayed in the Table Viewer produced by <strong>Score All</strong> (described in the next section).</li>
+</ul>
+<p>To score a single image qualitatively, select <strong>Score Image</strong> and enter an image number.
+Classifier displays the image in <strong>Image Viewer</strong> (described in section V), with objects marked
+according to their classifications, based on the rules most recently found by Classifier. To save
+the resulting image as either a .jpg or .png file, select <strong>File &gt; Save Image</strong> from the menu bar (or
+shortcut <strong>Ctrl+S</strong>).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><strong>Note</strong>: This function is not yet capable of saving the classification markings.</p>
+</div>
+<div class="align-center figure" id="id12">
+<img alt="_images/05_a.jpg" src="_images/05_a.jpg" />
+<p class="caption"><span class="caption-text">Scoring an image: Identifying classes by color (blue and yellow squares, left) and by number (right). Note that we have chosen to hide the blue channel (DNA stain) while viewing these images.</span></p>
+</div>
+<p>To display the object classes by number rather than color, select <strong>View &gt; View object classes
+as numbers</strong> from the menu bar.</p>
+<div class="figure align-center" id="id13">
+<img alt="_images/05_14.jpg" src="_images/05_14.jpg" />
+<p class="caption"><span class="caption-text">The Image Viewer control panel after scoring an image.</span></p>
+</div>
+<p>The brightness, contrast, and zoom controls work exactly as described for <strong>Image Viewer</strong>
+(section V). Note, however, the two checkboxes under <strong>Phenotypes</strong>: you can now
+select/deselect <strong>positive</strong> and <strong>negative</strong> results to display or hide only these objects in the image
+as requested.</p>
+</div>
+<div class="section" id="score-all">
+<h4><em>Score all</em><a class="headerlink" href="#score-all" title="Permalink to this headline">¶</a></h4>
+<p>Click <strong>Score All</strong> to classify all objects in your database using the current rule set. It can be
+helpful to score all images in the experiment and open some of the top-scoring images with
+<strong>Score Image</strong> to check classification accuracy. Rules can be further refined by dragging and
+dropping objects from the image into bins in order to correct classification errors in images.</p>
+<p>The result of <strong>Score All</strong> is a table of object counts and enrichment values for each classification
+you defined. You can then sort by these columns to find images (or groups, e.g., wells as
+collections of images) that are enriched or depleted for a particular classification, based on
+object counts or enrichment scores (see figure below for details).</p>
+<div class="figure align-center" id="id14">
+<img alt="_images/05_b.jpg" src="_images/05_b.jpg" />
+<p class="caption"><span class="caption-text">Description of enrichment score calculation. (A) While machine-learning methods are used to produce per-cell scores,  the challenge remains to model the sample distributions to generate a per-sample enrichment score. (B) Samples with  varied positive/negative counts can be viewed as being drawn from a Beta distribution. (C) The full population is treated  as independent samples to yield C = Beta(, ) which is used as the full-population-level prior for future observations.  This prior is updated with new observations by computing the distribution of the positive fraction as the posterior T =  Beta( + npos,  + nneg), where npos and nneg are the positive and negative counts, respectively. The enrichment score for  each sample is then calculated as the logit of P(T &gt; C).</span></p>
+</div>
+<p><strong>Note</strong>: <em>Enrichment</em> scores are computed for each sample as the logit area under the ROC curve
+for the prior versus the posterior distribution. The prior is computed from the full experiment
+using a Dirichlet-Multinomial distribution (a multi-class extension of Beta-Binomial) fit to the
+groups, and the posterior is computed for each group independently; that is, each
+phenotype is treated as positive and all others as negative for each phenotype in turn.
+-
+<strong>Tip</strong>: In most cases results should be ranked by enrichment score because this score takes into account both the number of objects in the class of interest as well as the total number of objects in the group.</p>
+<p>If you have defined any groups or filters in your properties file, you will have the option to select
+them here for use in scoring. If no groups or filters are defined, the window will contain only the
+default group <strong>Image</strong> and the default filter <strong>None</strong>.</p>
+<div class="figure align-center" id="id15">
+<img alt="_images/05_18.jpg" src="_images/05_18.jpg" />
+<p class="caption"><span class="caption-text">Classifier group/filter selection window.</span></p>
+</div>
+<p>Classifier presents its results in the <strong>Table Viewer</strong> tool, described in the next section. The table
+shows object counts and enrichment values for each phenotype you trained Classifier to
+recognize. To view this information graphically, return to the main Classifier screen and select
+<strong>Tools &gt; Plate Viewer</strong> from the menu bar (see section VI for details).</p>
+<div class="figure align-center">
+<img alt="_images/05_19.jpg" src="_images/05_19.jpg" />
+</div>
+<div class="figure align-center" id="id16">
+<img alt="_images/05_y.jpg" src="_images/05_y.jpg" />
+<p class="caption"><span class="caption-text">Enrichment Table Viewer produced by Classifier. Here we have grouped the counts and statistics on a per-image basis. We have ordered the data by the “Enriched Score Positive” column. The most highly enriched images were  172, 171, 169, and 170. With the “Positive Cell Count” column selected, we can see in the status bar that there are a  total of 2331 positive cells in our experiment, with a mean of 6.07 positive cells per image, and a standard deviation  of 7.74.</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="6_table_viewer.html" class="btn btn-neutral float-right" title="XII. Table Viewer" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="4_cpa_interface.html" class="btn btn-neutral" title="IV. The CellProfiler Analyst Interface" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Broad Institute Inc.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'2.2.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
