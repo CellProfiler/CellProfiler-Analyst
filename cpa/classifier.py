@@ -2191,7 +2191,6 @@ class Classifier(wx.Frame):
         df = pd.DataFrame(values,columns=["Probs"])
         df = pd.concat([df,tmp_df],axis=1)
         df = df.sort_values("Probs",ascending=False)
-        # print df
         sns.set(style="whitegrid")
         if(len(df) > 7):
             sns.barplot(x="Probs", y="Class", data=df, palette="RdBu_r",ax=ax)

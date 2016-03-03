@@ -408,9 +408,6 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         y_pred = self.XValidatePredict(self.env.trainingSet.label_array, self.env.trainingSet.values, folds, stratified=True)
         y_test = self.env.trainingSet.label_array
 
-        print 'y_test', y_test
-        print 'y_pred', y_pred
-
         cm = confusion_matrix(y_test, y_pred)
 
         nObjects = cm.sum()

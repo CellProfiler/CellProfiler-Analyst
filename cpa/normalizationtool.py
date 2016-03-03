@@ -169,6 +169,9 @@ class NormalizationUI(wx.Frame, CPATool):
         #
         tables = ([p.image_table] or []) + ([p.object_table] if p.object_table else [])
         self.table_choice = wx.Choice(self, -1, choices=tables)
+        select_all_btn = wx.Button(self, -1, 'Select all columns')
+        select_all_btn.SetHelpText("Click this button to check all columns.")
+
         self.table_choice.Select(0)
         self.table_choice.SetHelpText("Select the table containing the measurement columns to normalize.")
         self.col_choices = wx.CheckListBox(self, -1, choices=[], size=(-1, 100))
@@ -203,6 +206,7 @@ class NormalizationUI(wx.Frame, CPATool):
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, 'Select a table:'), 0, wx.EXPAND|wx.RIGHT, 5)
         sz.Add(self.table_choice, 0)
+        sz.Add(select_all_btn, 0, wx.EXPAND)
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
         self.col_choices_desc = wx.StaticText(self, -1, 'Select measurements to normalize:')
         self.Sizer.Add(self.col_choices_desc, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
@@ -251,6 +255,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.ALL, 15)
         
         self.table_choice.Bind(wx.EVT_CHOICE, self.on_select_table)
+        select_all_btn.Bind(wx.EVT_BUTTON, self.on_select_all_columns)
         add_norm_step_btn.Bind(wx.EVT_BUTTON, self.on_add_norm_step)
         self.col_choices.Bind(wx.EVT_CHECKLISTBOX, lambda(e):self.validate())
         self.norm_meas_checkbox.Bind(wx.EVT_CHECKBOX, lambda(e):self.validate())
@@ -280,7 +285,13 @@ class NormalizationUI(wx.Frame, CPATool):
         else:
             for panel in self.norm_steps:
                 panel.set_group_choices(GROUP_CHOICES)
-        
+
+    def on_select_all_columns(self, evt):
+        self.select_all_columns()
+
+    def select_all_columns(self):
+        self.col_choices.SetCheckedStrings(self.col_choices.GetItems())
+
     def on_add_norm_step(self, evt):
         self.add_norm_step()
 
@@ -373,7 +384,7 @@ class NormalizationUI(wx.Frame, CPATool):
         else:
             BATCH_SIZE = 1
         if input_table == p.object_table: 
-            FIRST_MEAS_INDEX += 1
+            FIRST_MEAS_INDEX += 1 # Original
         if wellkey_cols:
             if input_table == p.image_table:
                 WELL_KEY_INDEX = len(imkey_cols)
@@ -403,16 +414,41 @@ class NormalizationUI(wx.Frame, CPATool):
                             input_table)
         elif input_table == p.object_table:
             if p.image_table and wellkey_cols:
-                # If there are well columns, fetch them from the per-image table.
-                query = "SELECT %s, %s, %s FROM %s, %s WHERE %s"%(
-                            dbconnect.UniqueObjectClause(p.object_table),
-                            well_clause(p.image_table), 
-                            ', '.join(['%s.%s'%(p.object_table, col) for col in meas_cols]),
-                            p.image_table, p.object_table,
-                            ' AND '.join(['%s.%s=%s.%s'%(p.image_table, c, p.object_table, c) 
-                                          for c in imkey_cols]) )
+
+                # If we have x and y from cells, we can use that for classifier
+                if p.cell_x_loc and p.cell_y_loc:
+                    FIRST_MEAS_INDEX += 2 # Cell X and Y Location are fixed to for classifier
+                    # If there are well columns, fetch them from the per-image table.
+                    query = "SELECT %s, %s, %s, %s, %s FROM %s, %s WHERE %s"%(
+                                dbconnect.UniqueObjectClause(p.object_table),
+                                well_clause(p.image_table),
+                                p.cell_x_loc,
+                                p.cell_y_loc,
+                                ', '.join(['%s.%s'%(p.object_table, col) for col in meas_cols]),
+                                p.image_table, p.object_table,
+                                ' AND '.join(['%s.%s=%s.%s'%(p.image_table, c, p.object_table, c) 
+                                              for c in imkey_cols]) )
+
+                else:
+                    # If there are well columns, fetch them from the per-image table.
+                    query = "SELECT %s, %s, %s FROM %s, %s WHERE %s"%(
+                                dbconnect.UniqueObjectClause(p.object_table),
+                                well_clause(p.image_table), 
+                                ', '.join(['%s.%s'%(p.object_table, col) for col in meas_cols]),
+                                p.image_table, p.object_table,
+                                ' AND '.join(['%s.%s=%s.%s'%(p.image_table, c, p.object_table, c) 
+                                              for c in imkey_cols]) )
             else:
-                query = "SELECT %s, %s FROM %s"%(
+
+                if p.cell_x_loc and p.cell_y_loc:
+                    FIRST_MEAS_INDEX += 2 # Cell X and Y Location are fixed to for classifier
+                    
+                    query = "SELECT %s, %s, %s, %s FROM %s"%(
+                            im_clause(), p.cell_x_loc, p.cell_y_loc, ', '.join(meas_cols),
+                            input_table)
+
+                else:
+                    query = "SELECT %s, %s FROM %s"%(
                             im_clause(), ', '.join(meas_cols),
                             input_table)
         if wellkey_cols:
@@ -426,9 +462,10 @@ class NormalizationUI(wx.Frame, CPATool):
         dlg.Pulse()
         #
         # MAKE THE QUERY
-        #
-        input_data = np.array(db.execute(query), dtype=object)
-                
+        # 
+
+        input_data = np.array(db.execute(query), dtype=object)  
+
         output_columns = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape) * np.nan
         output_factors = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape) * np.nan
         for colnum, col in enumerate(input_data[:,FIRST_MEAS_INDEX:].T):
@@ -484,12 +521,19 @@ class NormalizationUI(wx.Frame, CPATool):
             norm_table_cols += wellkey_cols
             col_defs +=  ', '+ ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                                         for col in wellkey_cols])
+
+        if input_table == p.object_table:
+            if p.cell_x_loc and p.cell_y_loc:
+                norm_table_cols += [p.cell_x_loc, p.cell_y_loc]
+                col_defs += ', %s %s'%(p.cell_x_loc, db.GetColumnTypeString(p.object_table, p.cell_x_loc)) + ', ' + '%s %s'%(p.cell_y_loc, db.GetColumnTypeString(p.object_table, p.cell_y_loc))
+
         if wants_norm_meas:
             col_defs += ', '+ ', '.join(['%s_NmM %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
         if wants_norm_factor:
             col_defs += ', '+ ', '.join(['%s_NmF %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
+
         for col in meas_cols:
             if wants_norm_meas:
                 norm_table_cols += ['%s_NmM'%(col)]
