@@ -12,6 +12,7 @@ import os
 import sys
 import re
 import wx
+import seaborn as sns
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
@@ -283,7 +284,7 @@ class BoxPlotPanel(FigureCanvasWxAgg):
         if len(self.points)==0:
             logging.warn('No data to plot.')
             return
-        self.subplot.boxplot(self.points)
+        self.subplot.boxplot(self.points, sym='k.')
         if len(self.points) > 1:
             self.figure.autofmt_xdate()
         self.subplot.set_xticklabels(self.xlabels)
