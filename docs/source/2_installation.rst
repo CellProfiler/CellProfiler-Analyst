@@ -2,6 +2,11 @@
 II. Installation and getting started
 ====================================
 
+CPA releases
+============
+
+All CellProfiler-Analyst releases can be found `here <http://cellprofiler.org/releases>`_
+
 Prerequisites
 =============
 
@@ -10,7 +15,7 @@ Install JDK 1.8 and Java
 II.A Mac OS X
 =============
 
-Open the zip file and copy CellProfiler-Analyst.app to /Applications.
+Open dmg file and copy CellProfiler-Analyst.app to /Applications.
 
 II.B Windows 7
 ==============
@@ -20,7 +25,7 @@ Run the setup.exe to create the executable and shortcuts.
 II.C Using the example dataset
 ==============================
 
-Download the CPA example dataset from http://cellprofiler.org/ and unzip it to create the cpa_example directory. This directory contains:
+Download the CPA example dataset from http://cellprofiler.org/ or `here <http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip>`_ and unzip it to create the cpa_example directory. This directory contains:
 
 1. example.properties - Configuration file for CPA (see section III).
 2. MyTrainingSet.txt - Example training set file to be used in the Classifier (see section V).

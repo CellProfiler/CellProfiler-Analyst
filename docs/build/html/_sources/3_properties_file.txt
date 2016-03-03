@@ -312,8 +312,8 @@ The previous example, but for a database including a table_id column TableNumber
 
 Image Classification
 --------------------
-CellProfiler Analyst 2.0 also supports classification directly from image features. To allow this, the biologist has to set the image classification flag to yes
+CellProfiler Analyst 2.2 also supports classification directly from image features. To allow this, the biologist has to set the classification type flag to image
 
 .. code-block:: text
 
-    image_classification = yes
+    classification_type = image

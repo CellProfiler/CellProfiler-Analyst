@@ -151,7 +151,8 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
         tb.AddLabelTool(ID_DENSITY, 'Density Plot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.AddLabelTool(ID_BOXPLOT, 'Box Plot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
-        tb.AddLabelTool(ID_TABLE_VIEWER, 'Table Viewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
+        tb.AddLabelTool(ID_TABLE_VIEWER, 'Table Viewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch Table Viewer')
+        tb.AddLabelTool(ID_NORMALIZE, 'Normalize', cpa.icons.normalize.ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs 
         # Not the Case anymore with wx.Python 3
@@ -184,6 +185,7 @@ class MainGUI(wx.Frame):
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
         boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
         dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', help='Launches the Table Viewer tool.')
+        normalizeMenuItem   = toolsMenu.Append(ID_NORMALIZE, 'Normalization Tool\tCtrl+Shift+T', help='Launches a tool for generating normalized values for measurement columns in your tables.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()
@@ -196,7 +198,7 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(logMenu, 'Logging')
 
         advancedMenu = wx.Menu()
-        normalizeMenuItem = advancedMenu.Append(-1, 'Launch feature normalization tool', help='Launches a tool for generating normalized values for measurement columns in your tables.')
+        #normalizeMenuItem = advancedMenu.Append(-1, 'Launch feature normalization tool', help='Launches a tool for generating normalized values for measurement columns in your tables.')
         queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', help='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
         clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
@@ -245,6 +247,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
         self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
+        self.Bind(wx.EVT_TOOL, self.launch_normalization_tool, id=ID_NORMALIZE)
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
@@ -286,12 +289,6 @@ class MainGUI(wx.Frame):
         imviewer.Show(True)
 
     def launch_image_gallery(self, evt=None):
-        # colViewer = wx.FindWindowById(ID_IMAGE_GALLERY) or wx.FindWindowByName('ImageGallery')
-        # if colViewer:
-        #     colViewer.Show()
-        #     colViewer.SetFocus()
-        #     logging.warn('You may only run one instance of ImageGallery at a time.')
-        #     return
         colViewer = ImageGallery(parent=self, properties=self.properties)
         colViewer.Show(True)
 
@@ -451,7 +448,7 @@ class CPAnalyst(wx.App):
             splash.Destroy()
             if not show_load_dialog():
                 splash.Destroy()
-                example_link_address = 'http://www.cellprofiler.org/linked_files/Examplezips/cpa_2.0_example.zip'
+                example_link_address = 'cellprofiler.org'
                 dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
                                            example_link_address), 'Properties file required', wx.OK)
                 response = dlg.ShowModal()

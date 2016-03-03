@@ -23,3 +23,16 @@ Below the toolbar is a logging console that all the tools will use to provide fe
 You can save the log to a file by selecting File > Save Log, or copied by selecting the text and using Ctrl+C (or your operating system default copy command).
 
 You will also find menu items to save and load workspaces under the File menu. See Section XIII for more on workspaces in CPA and how they can help you analyze new data more quickly.
+
+
+
+SQL query tool
+--------------
+
+The advanced menu provides a SQL query tool for writing SQL statements to query 
+the DB
+
+.. figure:: static/04_03.jpg
+	:align: center
+
+
