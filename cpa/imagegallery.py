@@ -274,6 +274,7 @@ class ImageGallery(wx.Frame):
     def CreateMenus(self):
         ''' Create file menu and menu items '''
         # View Menu
+
         viewMenu = wx.Menu()
         imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I',
                                                 help='Launches a control panel for adjusting image brightness, size, etc.')
@@ -287,9 +288,15 @@ class ImageGallery(wx.Frame):
         # Channel Menus
         self.CreateChannelMenus()
 
+        # Advanced menu
+        advancedMenu = wx.Menu()
+        saveMenuItem = advancedMenu.Append(-1, text=u'Save image thumbnails as JPG', help='Save image thumbnails as JPG')
+        self.GetMenuBar().Append(advancedMenu, 'Advanced')
+
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
 
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
 
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
@@ -932,6 +939,22 @@ class ImageGallery(wx.Frame):
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale,
                           contrast=self.contrast)
         self.imageControlFrame.Show(True)
+
+
+    # Saving image thumbnails
+    def OnSaveThumbnails(self, evt):
+
+        saveDialog = wx.DirDialog(self, "Choose input directory", 
+                                   style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+        if saveDialog.ShowModal() == wx.ID_OK:
+            directory = saveDialog.GetPath()
+
+            if not os.path.exists(directory + '/image_gallery'):
+                os.makedirs(directory + '/image_gallery')
+
+            for tile in self.galleryBin.tiles:
+                imagetools.SaveBitmap(tile.bitmap, directory + '/image_gallery/' + str(tile.obKey) + '.jpg')
+
 
     def SetBrightness(self, brightness):
         ''' Updates the global image brightness across all tiles. '''

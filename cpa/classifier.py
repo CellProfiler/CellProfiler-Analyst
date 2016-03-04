@@ -574,7 +574,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnParamsEdit, paramsEditMenuItem) 
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnFeatureSelect, featureSelectMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnSave ,saveMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
 
 
         # Bind events for algorithms
@@ -855,7 +855,8 @@ class Classifier(wx.Frame):
                 if hasattr(self, 'evaluationBtn'):
                     self.evaluationBtn.Disable()
 
-    def OnSave(self, evt):
+    # Save object thumbnails of training set
+    def OnSaveThumbnails(self, evt):
 
         saveDialog = wx.DirDialog(self, "Choose input directory", 
                                    style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
@@ -865,14 +866,14 @@ class Classifier(wx.Frame):
             for bin in self.classBins:
                 label = bin.label
 
-                if not os.path.exists(directory + '/trainingSet'):
-                    os.makedirs(directory + '/trainingSet')
+                if not os.path.exists(directory + '/training_set'):
+                    os.makedirs(directory + '/training_set')
 
-                if not os.path.exists(directory + '/trainingSet' +  '/' + str(label)):
-                    os.makedirs(directory + '/trainingSet' +  '/' + str(label))
+                if not os.path.exists(directory + '/training_set' +  '/' + str(label)):
+                    os.makedirs(directory + '/training_set' +  '/' + str(label))
 
                 for tile in bin.tiles:
-                    imagetools.SaveBitmap(tile.bitmap, directory + '/trainingSet/' + str(label) + '/' + str(tile.obKey) + '.jpg')
+                    imagetools.SaveBitmap(tile.bitmap, directory + '/training_set/' + str(label) + '/' + str(tile.obKey) + '.jpg')
 
 
     def OnFetch(self, evt):
