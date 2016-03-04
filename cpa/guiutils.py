@@ -816,8 +816,11 @@ def show_load_dialog():
             load_harmony(filename)            
         else:
             p.load_file(filename)
+
+        dlg.Destroy() # Force it to destroy
         return True
     else:
+        dlg.Destroy()
         return False
             
         

@@ -217,6 +217,7 @@ class ImageGallery(wx.Frame):
         # JEN - Start Add
         # self.Bind(wx.EVT_BUTTON, self.OpenDimensRedux, self.openDimensReduxBtn)
         # JEN - End Add
+
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
         self.startId.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.startId.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
@@ -276,6 +277,14 @@ class ImageGallery(wx.Frame):
         # View Menu
 
         viewMenu = wx.Menu()
+
+        self.fileMenu = wx.Menu()
+        loadMenuItem = self.fileMenu.Append(-1, text='Load Image Set\tCtrl+O',
+                                                   help='Loads images specfied in a csv file.')
+        # JEN - End Add
+        exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit Image Gallery')
+        self.GetMenuBar().Append(self.fileMenu, 'File')
+
         imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I',
                                                 help='Launches a control panel for adjusting image brightness, size, etc.')
         self.GetMenuBar().Append(viewMenu, 'View')
@@ -297,6 +306,12 @@ class ImageGallery(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnClose, exitMenuItem)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_MENU, self.OnLoadImageSet, loadMenuItem)
+
+
+
 
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
@@ -441,6 +456,49 @@ class ImageGallery(wx.Frame):
         # /OnFetchImage
         #######################################
 
+    def OnLoadImageSet(self, evt):
+        '''
+        Present user with file select dialog, then load selected training set.
+        '''
+        dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
+                            defaultDir=os.getcwd(),
+                            wildcard='CSV files (*.csv)|*.csv',
+                            style=wx.OPEN | wx.FD_CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            filename = dlg.GetPath()
+            name, file_extension = os.path.splitext(filename)
+            if '.csv' == file_extension:
+                self.LoadImageSet(filename)
+            else:
+                logging.error("Couldn't load the file! Make sure it is .csv")
+
+    # Loads a CSV file with ImageNumber column and fetches all images with this number
+    def LoadImageSet(self, filename):
+        '''
+        Loads the selected file, parses out object keys, and fetches the tiles for CSV
+        '''
+        # pause tile loading
+        with tilecollection.load_lock():
+            self.PostMessage('Loading image set from %s' % filename)
+            import pandas as pd
+            df = pd.read_csv(filename)
+            if df.shape[0] > 100:
+                dlg = wx.MessageDialog(self,
+                                       'The whole collection consists of %s images. Downloading could be slow. Do you still want to continue?' % (
+                                       df.shape[0]),
+                                       'Load whole image set?', wx.YES_NO | wx.ICON_QUESTION)
+                response = dlg.ShowModal()
+                # Call fetch filter with all keys
+                if response == wx.ID_YES:
+                    self.galleryBin.SelectAll()
+                    self.galleryBin.RemoveSelectedTiles()
+                    # Need to run this after removing all tiles!
+                    def cb():
+                        keys = [tuple([k,-1]) for k in df['ImageNumber']]    
+                        self.galleryBin.AddObjects(keys, self.chMap, pos='last', display_whole_image=True)
+                        self.PostMessage('Image set loaded')
+                    wx.CallAfter(cb)
+
     def OnFetch(self, evt):
         start = int(self.startId.Value)
         end = int(self.endId.Value)
@@ -486,7 +544,6 @@ class ImageGallery(wx.Frame):
                         def cb():
                             filteredImKeys = db.GetFilteredImages(fltr_sel)
                             imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
-
                             self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                         wx.CallAfter(cb)
                         statusMsg += ' from filter "%s"' % (fltr_sel)
