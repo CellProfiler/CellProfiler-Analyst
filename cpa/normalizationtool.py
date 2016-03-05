@@ -163,6 +163,9 @@ class NormalizationUI(wx.Frame, CPATool):
         wx.HelpProvider_Set(wx.SimpleHelpProvider())
 
         self.n_steps = 1
+
+        self.SetBackgroundColour("white")
+
         
         #
         # Define the controls
