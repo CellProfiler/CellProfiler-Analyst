@@ -457,7 +457,9 @@ class CPAnalyst(wx.App):
 
         # self.frame = MainGUI(p, None, size=(860,-1))
         self.frame = MainGUI(p, None, size=(1000,-1))
-        self.frame.Show(True)
+        def show_frame():
+            self.frame.Show(True)
+        wx.CallAfter(show_frame)
         db = cpa.dbconnect.DBConnect.getInstance()
         # Black magic: Bus errors occur on Mac OS X if we wait until
         # the JVM or the wx event look has started to connect. But it

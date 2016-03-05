@@ -817,10 +817,10 @@ def show_load_dialog():
         else:
             p.load_file(filename)
 
-        dlg.Destroy() # Force it to destroy
+        wx.CallAfter(dlg.Destroy) # Force it to destroy
         return True
     else:
-        dlg.Destroy()
+        wx.CallAfter(dlg.Destroy)
         return False
             
         
