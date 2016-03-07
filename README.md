@@ -12,14 +12,16 @@ CellProfiler Analyst allows interactive exploration and analysis of data, partic
 
 ## Installation
 
-Download nightly version 2.2.0 for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.dmg)
+Download nightly version 2.2.1 for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.dmg) 
 
-Download nightly version 2.2.0 for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.exe)
+Note: [Starting a properties file #170](https://github.com/CellProfiler/CellProfiler-Analyst/issues/170#issuecomment-192354140)
+
+Download nightly version 2.2.1 for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.exe)
 
 The app requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE). 
 Check the Java path.
 
-Please note that CPA 2.2.0 is WIP and we will update the link on regular basis. 
+Please note that CPA 2.2.1 is WIP and we will update the link on regular basis. 
 
 For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip)
 
@@ -57,8 +59,8 @@ David Dao
 
 ## Contributors
 
-Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Mark Bray, Anne Carpenter, Lee Kamentsky
+Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Mark Bray, Lee Kamentsky, Anne Carpenter
 
 ## Kudos
 
-David Logan, Allen Goodman
+David Logan, Allen Goodman, Alison Kozol
