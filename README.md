@@ -25,7 +25,7 @@ Please note that CPA 2.2.1 is WIP and we will update the link on regular basis.
 
 For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip)
 
-## Requirements when installing from source
+## Requirements when running from source
 
 Builds upon CellProfiler dependencies, we need
 
@@ -35,6 +35,10 @@ Builds upon CellProfiler dependencies, we need
 * Javabridge
 * Verlib
 * Python-bioformats
+
+## Documentation
+
+> http://cellprofiler.github.io/CellProfiler-Analyst
 
 ## Wiki
 
