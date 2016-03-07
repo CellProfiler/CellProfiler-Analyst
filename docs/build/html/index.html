@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Manual 2.2.0 &mdash; CellProfiler Analyst 2.2.0 documentation</title>
+  <title>Manual 2.2.1 &mdash; CellProfiler Analyst 2.2.1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="CellProfiler Analyst 2.2.0 documentation" href="#"/>
+    <link rel="top" title="CellProfiler Analyst 2.2.1 documentation" href="#"/>
         <link rel="next" title="Introduction" href="0_introduction.html"/> 
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                2.2.0
+                2.2.1
               </div>
             
           
@@ -80,8 +80,7 @@
           
             
             
-                <p class="caption"><span class="caption-text">Sweet Docs</span></p>
-<ul>
+                <ul>
 <li class="toctree-l1"><a class="reference internal" href="0_introduction.html">Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="1_preliminary_requirements.html">I. Preliminary data requirements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="2_installation.html">II. Installation and getting started</a></li>
@@ -96,6 +95,8 @@
 <li class="toctree-l1"><a class="reference internal" href="11_density_plot.html">XI. Density Plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="12_boxplot.html">XII. Box Plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="13_workspaces.html">XIII. Workspaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="14_image_gallery.html">XIV. Image Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="15_normalization_tool.html">XV. Normalization Tool</a></li>
 </ul>
 
             
@@ -126,7 +127,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="#">Docs</a> &raquo;</li>
       
-    <li>Manual 2.2.0</li>
+    <li>Manual 2.2.1</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -140,48 +141,19 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="manual-2-2-0">
-<h1>Manual 2.2.0<a class="headerlink" href="#manual-2-2-0" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="manual-2-2-1">
+<h1>Manual 2.2.1<a class="headerlink" href="#manual-2-2-1" title="Permalink to this headline">¶</a></h1>
 <img alt="http://i.imgur.com/lNJcJPC.png" src="http://i.imgur.com/lNJcJPC.png" />
-<p>Contents:</p>
-<div class="toctree-wrapper compound" id="sweet-docs">
-<p class="caption"><span class="caption-text">Sweet Docs</span><a class="headerlink" href="#sweet-docs" title="Permalink to this toctree">¶</a></p>
+<p>Table of Contents:</p>
+<div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="0_introduction.html">Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="1_preliminary_requirements.html">I. Preliminary data requirements</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="1_preliminary_requirements.html#i-a-example-image-table">I.A Example image table</a></li>
-<li class="toctree-l2"><a class="reference internal" href="1_preliminary_requirements.html#i-b-example-object-table">I.B Example  object table</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="2_installation.html">II. Installation and getting started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="2_installation.html#prerequisites">Prerequisites</a></li>
-<li class="toctree-l2"><a class="reference internal" href="2_installation.html#ii-a-mac-os-x">II.A Mac OS X</a></li>
-<li class="toctree-l2"><a class="reference internal" href="2_installation.html#ii-b-windows-7">II.B Windows 7</a></li>
-<li class="toctree-l2"><a class="reference internal" href="2_installation.html#ii-c-using-the-example-dataset">II.C Using the example dataset</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="3_properties_file.html">III. Setting up the properties file</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="3_properties_file.html#iii-a-properies-file-example">III.A Properies file example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="3_properties_file.html#iii-b-database-access-values">III.B Database access values</a></li>
-<li class="toctree-l2"><a class="reference internal" href="3_properties_file.html#iii-c-database-structure-values">III.C Database Structure Values</a></li>
-<li class="toctree-l2"><a class="reference internal" href="3_properties_file.html#iii-d-image-access-values">III.D Image access values</a></li>
-<li class="toctree-l2"><a class="reference internal" href="3_properties_file.html#iii-f-other-optional-settings">III.F Other optional settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="3_properties_file.html#iii-g-advanced-settings">III.G Advanced settings</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="4_cpa_interface.html">IV. The CellProfiler Analyst Interface</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="4_cpa_interface.html#sql-query-tool">SQL query tool</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="5_classifier.html">V. Classifier</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="5_classifier.html#v-a-classifier-quick-start-guide">V.A Classifier quick-start guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="5_classifier.html#v-b-in-depth-guidance-for-using-classifier">V.B In-depth guidance for using Classifier</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="6_table_viewer.html">XII. Table Viewer</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="6_table_viewer.html#features-available-in-the-table-viewer">Features available in the Table Viewer</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="1_preliminary_requirements.html">I. Preliminary data requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">II. Installation and getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_properties_file.html">III. Setting up the properties file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_cpa_interface.html">IV. The CellProfiler Analyst Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_classifier.html">V. Classifier</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_table_viewer.html">XII. Table Viewer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="7_image_viewer.html">VII. Image Viewer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="8_plate_viewer.html">VIII. Plate Viewer</a></li>
 <li class="toctree-l1"><a class="reference internal" href="9_scatter_plot.html">IX. Scatter Plot</a></li>
@@ -189,6 +161,8 @@
 <li class="toctree-l1"><a class="reference internal" href="11_density_plot.html">XI. Density Plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="12_boxplot.html">XII. Box Plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="13_workspaces.html">XIII. Workspaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="14_image_gallery.html">XIV. Image Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="15_normalization_tool.html">XV. Normalization Tool</a></li>
 </ul>
 </div>
 </div>
@@ -232,7 +206,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'2.2.0',
+            VERSION:'2.2.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

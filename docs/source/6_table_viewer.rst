@@ -3,9 +3,12 @@ XII. Table Viewer
 =================
 Certain tools, such as Classifier, produce a table that will be opened in the Table Viewer. As well, any CSV file or database table can be viewed by using this tool.
 
-TODO Image
+.. figure:: static/06_01.jpg
+  :align: center
+.. figure:: static/06_02.jpg
+  :align: center
 
-  Table Viewer produced by Classifier, grouped by well number and gene (only positive Enrichment Score column.
+  Table Viewer produced by Classifier, grouped by well number and gene (only positive Enrichment Score column).
 
 Features available in the Table Viewer
 --------------------------------------

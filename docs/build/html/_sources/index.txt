@@ -4,16 +4,15 @@
    contain the root `toctree` directive.
 
 ============
-Manual 2.2.0
+Manual 2.2.1
 ============
 
 .. image:: http://i.imgur.com/lNJcJPC.png
 
-Contents:
+Table of Contents:
 
 .. toctree::
-    :maxdepth: 2
-    :caption: Sweet Docs
+    :maxdepth: 1
 
     0_introduction
     1_preliminary_requirements
@@ -29,4 +28,6 @@ Contents:
     11_density_plot
     12_boxplot
     13_workspaces
+    14_image_gallery
+    15_normalization_tool
 

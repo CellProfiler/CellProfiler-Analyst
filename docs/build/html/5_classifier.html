@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>V. Classifier &mdash; CellProfiler Analyst 2.2.0 documentation</title>
+  <title>V. Classifier &mdash; CellProfiler Analyst 2.2.1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="CellProfiler Analyst 2.2.0 documentation" href="index.html"/>
+    <link rel="top" title="CellProfiler Analyst 2.2.1 documentation" href="index.html"/>
         <link rel="next" title="XII. Table Viewer" href="6_table_viewer.html"/>
         <link rel="prev" title="IV. The CellProfiler Analyst Interface" href="4_cpa_interface.html"/> 
 
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                2.2.0
+                2.2.1
               </div>
             
           
@@ -81,8 +81,7 @@
           
             
             
-                <p class="caption"><span class="caption-text">Sweet Docs</span></p>
-<ul class="current">
+                <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="0_introduction.html">Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="1_preliminary_requirements.html">I. Preliminary data requirements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="2_installation.html">II. Installation and getting started</a></li>
@@ -120,6 +119,8 @@
 <li class="toctree-l1"><a class="reference internal" href="11_density_plot.html">XI. Density Plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="12_boxplot.html">XII. Box Plot</a></li>
 <li class="toctree-l1"><a class="reference internal" href="13_workspaces.html">XIII. Workspaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="14_image_gallery.html">XIV. Image Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="15_normalization_tool.html">XV. Normalization Tool</a></li>
 </ul>
 
             
@@ -210,7 +211,7 @@ enrichment/depletion of each class per image or per group.</p>
 <img alt="_images/05_01.jpg" src="_images/05_01.jpg" />
 </div>
 <div class="figure align-center" id="id1">
-<img alt="_images/05_f.jpg" src="_images/05_f.jpg" />
+<img alt="_images/05_02.jpg" src="_images/05_02.jpg" />
 <p class="caption"><span class="caption-text">Initial Classifier screen.</span></p>
 </div>
 <div class="section" id="adding-deleting-and-renaming-bins">
@@ -253,7 +254,7 @@ enrichment/depletion of each class per image or per group.</p>
 <p><em>From which images?</em> <strong>Experiment</strong> and <strong>image</strong> are the two system-supplied default values in the right-hand menu. Select <strong>experiment</strong> to have Classifier retrieve objects from your entire experiment; select <strong>image</strong> to retrieve objects from a particular image (you will be asked to type 18 its ID number from your image table). If you want to fetch objects from particular subsets of images in the experiment (e.g., control samples), you can set up filters and groups of images by defining them in your properties file (described earlier in section II.G); these <strong>filters</strong> or <strong>groups</strong> will be available for selection here.</p>
 <p>Click the <strong>Fetch</strong> button (located next to the right-hand menu) when you are ready to proceed, and you will see results like this:</p>
 <div class="figure align-center" id="id6">
-<img alt="_images/05_f.jpg" src="_images/05_f.jpg" />
+<img alt="_images/05_06.jpg" src="_images/05_06.jpg" />
 <p class="caption"><span class="caption-text">Twenty unclassified cells have been fetched and are ready for initial sorting.</span></p>
 </div>
 </div>
@@ -310,7 +311,7 @@ which will be used to generate rules to differentiate objects in different class
 </ul>
 <p>Click <strong>Find Rules</strong>. You will note that the large text field near the top of the screen contains the initial rules Classifier has identified based on the objects you deposited into the bins, as a series of IF statements:</p>
 <div class="figure align-center" id="id9">
-<img alt="_images/05_e.jpg" src="_images/05_e.jpg" />
+<img alt="_images/05_09.jpg" src="_images/05_09.jpg" />
 <p class="caption"><span class="caption-text">Classifier, after finding rules. In this example, only 2 rules were found out of the specified maximum of 5, both pertaining to the feature Nuclei_Intensity_pH3_MeanIntensity, indicating that this feature was sufficient to achieve perfect classification on the training set.</span></p>
 </div>
 <p>Usually the number of rules shown in the window is equal to the maximum number you selected, unless fewer rules are able to achieve perfect classification of the training set.</p>
@@ -467,7 +468,7 @@ recognize. To view this information graphically, return to the main Classifier s
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'2.2.0',
+            VERSION:'2.2.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -59,7 +59,7 @@ Launch Classifier by clicking the Classifier icon in the CPA toolbar. The main C
 
 .. figure:: static/05_01.jpg
   :align: center
-.. figure:: static/05_f.jpg
+.. figure:: static/05_02.jpg
   :align: center
 
   Initial Classifier screen.
@@ -112,7 +112,7 @@ Objects are fetched (retrieved) using the top portion of the main Classifier win
 
 Click the **Fetch** button (located next to the right-hand menu) when you are ready to proceed, and you will see results like this:
 
-.. figure:: static/05_f.jpg
+.. figure:: static/05_06.jpg
   :align: center
 
   Twenty unclassified cells have been fetched and are ready for initial sorting.
@@ -184,10 +184,10 @@ When you have finished your initial sorting, enter the maximum number of rules y
 
 Click **Find Rules**. You will note that the large text field near the top of the screen contains the initial rules Classifier has identified based on the objects you deposited into the bins, as a series of IF statements:
 
-.. figure:: static/05_e.jpg
+.. figure:: static/05_09.jpg
   :align: center
 
-  Classifier, after finding rules. In this example, only 2 rules were found out of the specified maximum of 5, both pertaining to the feature Nuclei_Intensity_pH3_MeanIntensity, indicating that this feature was sufficient to achieve perfect classification on the training set.
+  Classifier, after finding rules. In this example, 5 rules were found out of the specified maximum of 5.
 
 
 Usually the number of rules shown in the window is equal to the maximum number you selected, unless fewer rules are able to achieve perfect classification of the training set.

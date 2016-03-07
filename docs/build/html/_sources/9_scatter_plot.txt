@@ -5,7 +5,7 @@ IX. Scatter Plot
 Launch **Scatter Plot** from the main CPA interface by clicking the button in the toolbar. This tool
 will allow you create scatter plots from the numeric columns in your tables.
 
-.. figure:: static/09_z.jpg
+.. figure:: static/09_01.jpg
 	:align: center
 
 Using Scatter Plot to visualize the relationship between the Image_Intensity_DNA_Mean_intensity and the Image_Intensity_pH3_Mean_intensity image measurements.

@@ -14,7 +14,7 @@ high-throughput biological screens. Supported formats are:
 To launch this tool click the Plate Viewer icon in the CPA toolbar or select **Tools > Plate Viewer**
 from the CPA menu bar.
 
-.. figure:: static/08_z.jpg
+.. figure:: static/08_01.jpg
   :align: center
 
 	Sample Plate Viewer for a single 96-well plate, viewing the mean positive enrichment score output by Classifier. We can see that well D07 is very highly enriched for our “positive” cell phenotype.

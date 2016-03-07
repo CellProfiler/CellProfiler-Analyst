@@ -2,6 +2,11 @@
 II. Installation and getting started
 ====================================
 
+CPA releases
+============
+
+All CellProfiler-Analyst releases can be found `here <http://cellprofiler.org/releases>`_
+
 Prerequisites
 =============
 

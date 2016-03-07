@@ -35,4 +35,11 @@ the DB
 .. figure:: static/04_03.jpg
 	:align: center
 
+	Querying for all unique genes in per_image table
+
+.. figure:: static/04_04.jpg
+	:align: center
+
+	Result of the query above for cpa_example dataset
+
 
