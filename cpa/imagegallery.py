@@ -299,13 +299,19 @@ class ImageGallery(wx.Frame):
 
         # Advanced menu
         advancedMenu = wx.Menu()
-        saveMenuItem = advancedMenu.Append(-1, text=u'Save image thumbnails as JPG', help='Save image thumbnails as JPG')
+        fetchObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects from displayed images', help='Fetch all objects from displayed images')
+        fetchAllObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects', help='Fetch all objects')
+        saveImgMenuItem = advancedMenu.Append(-1, text=u'Save image thumbnails as JPG', help='Save image thumbnails as JPG')
+        saveObjMenuItem = advancedMenu.Append(-1, text=u'Save object thumbnails as JPG', help='Save object thumbnails as JPG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
 
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnFetchObjThumbnails ,fetchObjMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnFetchAllObjThumbnails ,fetchAllObjMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSaveImgThumbnails ,saveImgMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSaveObjThumbnails ,saveObjMenuItem)
         self.Bind(wx.EVT_MENU, self.OnClose, exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnLoadImageSet, loadMenuItem)
@@ -482,6 +488,10 @@ class ImageGallery(wx.Frame):
             self.PostMessage('Loading image set from %s' % filename)
             import pandas as pd
             df = pd.read_csv(filename)
+            def cb():
+                keys = [tuple([k,-1]) for k in df['ImageNumber']]    
+                self.galleryBin.AddObjects(keys, self.chMap, pos='last', display_whole_image=True)
+                self.PostMessage('Image set loaded')
             if df.shape[0] > 100:
                 dlg = wx.MessageDialog(self,
                                        'The whole collection consists of %s images. Downloading could be slow. Do you still want to continue?' % (
@@ -493,11 +503,12 @@ class ImageGallery(wx.Frame):
                     self.galleryBin.SelectAll()
                     self.galleryBin.RemoveSelectedTiles()
                     # Need to run this after removing all tiles!
-                    def cb():
-                        keys = [tuple([k,-1]) for k in df['ImageNumber']]    
-                        self.galleryBin.AddObjects(keys, self.chMap, pos='last', display_whole_image=True)
-                        self.PostMessage('Image set loaded')
                     wx.CallAfter(cb)
+            else:
+                self.galleryBin.SelectAll()
+                self.galleryBin.RemoveSelectedTiles()
+                # Need to run this after removing all tiles!
+                wx.CallAfter(cb)
 
     def OnFetch(self, evt):
         start = int(self.startId.Value)
@@ -999,7 +1010,7 @@ class ImageGallery(wx.Frame):
 
 
     # Saving image thumbnails
-    def OnSaveThumbnails(self, evt):
+    def OnSaveImgThumbnails(self, evt):
 
         saveDialog = wx.DirDialog(self, "Choose input directory", 
                                    style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
@@ -1011,6 +1022,64 @@ class ImageGallery(wx.Frame):
 
             for tile in self.galleryBin.tiles:
                 imagetools.SaveBitmap(tile.bitmap, directory + '/image_gallery/' + str(tile.obKey) + '.jpg')
+
+    # Fetch all object thumbnails from displayed images
+    def OnFetchObjThumbnails(self, evt):
+
+        self.classBins[0].SelectAll()
+        self.classBins[0].RemoveSelectedTiles()
+        # Need to run this after removing all tiles!
+        def cb():
+            for tile in self.galleryBin.tiles:
+                pseudo_obKeys = tile.obKey
+                imKey = pseudo_obKeys[:-1] # Get image key
+                obKeys = db.GetObjectsFromImage(imKey)
+                self.classBins[0].AddObjects(obKeys, self.chMap, pos='last', display_whole_image=False)
+            
+        wx.CallAfter(cb)
+
+    # Fetch all object thumbnails from displayed images
+    def OnFetchAllObjThumbnails(self, evt):
+
+        self.classBins[0].SelectAll()
+        self.classBins[0].RemoveSelectedTiles()
+        # Need to run this after removing all tiles!
+        def flatten(*args):
+            for x in args:
+                if hasattr(x, '__iter__'):
+                    for y in flatten(*x):
+                        yield y
+                else:
+                    yield x
+
+
+        def cb():
+            imKeys = db.GetAllImageKeys()
+            imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+
+            for imKey in imKeys:
+                pseudo_obKeys = imKey
+                imKey = pseudo_obKeys[:-1] # Get image key
+                obKeys = db.GetObjectsFromImage(imKey)
+                self.classBins[0].AddObjects(obKeys, self.chMap, pos='last', display_whole_image=False)
+            
+        wx.CallAfter(cb)
+
+
+
+    # Saving image thumbnails
+    def OnSaveObjThumbnails(self, evt):
+
+        saveDialog = wx.DirDialog(self, "Choose input directory", 
+                                   style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+        if saveDialog.ShowModal() == wx.ID_OK:
+            directory = saveDialog.GetPath()
+
+            if not os.path.exists(directory + '/object_gallery'):
+                os.makedirs(directory + '/object_gallery')
+
+            for tile in self.classBins[0].tiles:
+                imagetools.SaveBitmap(tile.bitmap, directory + '/object_gallery/' + str(tile.obKey) + '.jpg')
 
 
     def SetBrightness(self, brightness):
