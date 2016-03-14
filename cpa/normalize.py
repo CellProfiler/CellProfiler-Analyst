@@ -12,6 +12,7 @@ G_CONSTANT = "Constant"
 M_MEDIAN = "Median"
 M_MEAN = "Mean"
 M_MODE = "Mode"
+M_NEGCTRL = "Negative Control" # DMSO Standardization
 M_ZSCORE = "Z score"
 
 W_SQUARE = "Square"
@@ -111,7 +112,9 @@ def do_normalization(data, aggregate_type_or_const):
     aggregate_type_or_const -- specify an aggregation type or a numeric constant
        to divide by
     '''
-    if aggregate_type_or_const == M_MEDIAN:
+    if aggregate_type_or_const == M_NEGCTRL:
+        normalization_value = 1 # Keep data the same
+    elif aggregate_type_or_const == M_MEDIAN:
         normalization_value = np.median(data.flatten())
     elif aggregate_type_or_const == M_MEAN:
         normalization_value = np.mean(data.flatten())
@@ -130,7 +133,6 @@ def do_normalization(data, aggregate_type_or_const):
     try:
         res = data / normalization_value
     except:
-        logging.error("Division by zero, replace value with 0")
-        res = 0
+        logging.error("Division by zero, replace value with 0!")
 
     return res

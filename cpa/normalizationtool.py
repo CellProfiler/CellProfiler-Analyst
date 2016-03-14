@@ -6,7 +6,7 @@ import normalize as norm
 # Grouping options
 from normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 # Aggregation options
-from normalize import M_MEDIAN, M_MEAN, M_MODE
+from normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
 # Window options
 from normalize import W_SQUARE, W_MEANDER
 import numpy as np
@@ -20,7 +20,7 @@ import guiutils as ui
 from cpatool import CPATool
 
 GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT]
-AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE]
+AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL]
 WINDOW_CHOICES = [W_MEANDER, W_SQUARE]
 
 p = properties.Properties.getInstance()
@@ -37,6 +37,10 @@ class NormalizationStepPanel(wx.Panel):
             GROUP_CHOICES.remove(G_PLATE)
             GROUP_CHOICES.remove(G_QUADRANT)
             GROUP_CHOICES.remove(G_WELL_NEIGHBORS)
+
+        if not p.negative_control:
+            AGG_CHOICES.remove(M_NEGCTRL)
+            
         self.window_group = wx.Choice(self, -1, choices=GROUP_CHOICES)
         self.window_group.Select(0)
         self.window_group.SetHelpText("Set the grouping to be used for the normalization.\n"
@@ -89,7 +93,6 @@ class NormalizationStepPanel(wx.Panel):
         self.Sizer.Add(sz, 1, wx.EXPAND|wx.LEFT, 30)
         
         self.window_group.Bind(wx.EVT_CHOICE, self.on_window_group_selected)
-        self.Fit()
 
     def on_window_group_selected(self, evt):
         self.update_visible_fields()
@@ -441,6 +444,7 @@ class NormalizationUI(wx.Frame, CPATool):
                                 p.image_table, p.object_table,
                                 ' AND '.join(['%s.%s=%s.%s'%(p.image_table, c, p.object_table, c) 
                                               for c in imkey_cols]) )
+
             else:
 
                 if p.cell_x_loc and p.cell_y_loc:
@@ -454,6 +458,10 @@ class NormalizationUI(wx.Frame, CPATool):
                     query = "SELECT %s, %s FROM %s"%(
                             im_clause(), ', '.join(meas_cols),
                             input_table)
+
+        if p.negative_control: # if the user defined negative control, we can use that to fetch the wellkeys
+                    neg_query = query + ' AND ' + p.negative_control # fetch all the negative control elements
+
         if wellkey_cols:
             query += " ORDER BY %s"%(well_clause(p.image_table))
             
@@ -468,6 +476,13 @@ class NormalizationUI(wx.Frame, CPATool):
         # 
 
         input_data = np.array(db.execute(query), dtype=object)  
+        if p.negative_control:
+            import pandas as pd
+            negative_control = pd.DataFrame(db.execute(neg_query), dtype=float)
+            logging.info("# of objects in negative control: " + str(negative_control.shape[0]))
+            logging.info("# of objects queried: " + str(input_data.shape[0]))
+            neg_mean_plate = negative_control.groupby([WELL_KEY_INDEX]).mean()
+            neg_std_plate = negative_control.groupby([WELL_KEY_INDEX]).std()
 
         output_columns = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape) * np.nan
         output_factors = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape) * np.nan
@@ -482,7 +497,7 @@ class NormalizationUI(wx.Frame, CPATool):
                 if d[norm.P_GROUPING] in (norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
                     # Reshape data if normalization step is plate sensitive.
                     assert p.plate_id and p.well_id
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
+                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2) ] 
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
                     for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
@@ -493,12 +508,35 @@ class NormalizationUI(wx.Frame, CPATool):
                     norm_data = new_norm_data
                 elif d[norm.P_GROUPING] == norm.G_PLATE:
                     assert p.plate_id and p.well_id
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
+
+                    if d[norm.P_AGG_TYPE] == norm.M_NEGCTRL:
+                        mean_plate_col = neg_mean_plate[colnum + FIRST_MEAS_INDEX]
+                        std_plate_col = neg_std_plate[colnum + FIRST_MEAS_INDEX]  
+                        print mean_plate_col
+                        print std_plate_col            
+
+                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2)]
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
+                    # print wellkeys_and_vals
                     for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
                         plate_data = np.array(list(plate_grp))[:,-1].flatten()
                         pnorm_data = norm.do_normalization_step(plate_data, **d)
+
+                        if d[norm.P_AGG_TYPE] == norm.M_NEGCTRL:
+                            try:
+                                plate_mean = mean_plate_col[plate]
+                                plate_std = std_plate_col[plate]
+                            except:
+                                plate_mean = mean_plate_col[int(plate)]
+                                plate_std = std_plate_col[int(plate)]
+
+                            try:
+                                pnorm_data = (pnorm_data - plate_mean) / plate_std
+                                print pnorm_data
+                            except:
+                                logging.error("Plate std is zero, division by zero!")
+
                         new_norm_data += pnorm_data.tolist()
                     norm_data = new_norm_data
                 else:
@@ -508,6 +546,7 @@ class NormalizationUI(wx.Frame, CPATool):
             output_factors[:,colnum] = col.astype(float) / np.array(norm_data,dtype=float)
 
         dlg.Destroy()
+        return # Abort here for coding
                 
         norm_table_cols = []
         # Write new table

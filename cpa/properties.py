@@ -60,7 +60,8 @@ string_vars = ['db_type',
                'classification_type',
                'image_size',
                'image_width',
-               'image_height'
+               'image_height',
+               'negative_control' # For DMSO normalization, but optional
                ]
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
@@ -119,7 +120,8 @@ optional_vars = ['db_port',
                  'image_size',
                  'classification_type',
                  'image_width',
-                 'image_height'
+                 'image_height',
+                 'negative_control'
                  ]
 
 # map deprecated fields to new fields
