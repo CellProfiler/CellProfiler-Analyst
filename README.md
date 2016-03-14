@@ -57,14 +57,10 @@ Please attach sufficient information to reproduce the bug. For many
 bugs, it is appropriate to attach a properties file, a training set,
 or a screenshot.
 
-## Current Developer
-
-David Dao
-
 ## Contributors
 
-Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Mark Bray, Lee Kamentsky, Anne Carpenter
+David Dao, Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Mark Bray, Lee Kamentsky, Anne Carpenter
 
 ## Kudos
 
-David Logan, Allen Goodman, Alison Kozol
+David Logan, Allen Goodman, Alison Kozol, Mohammad Hossein Rohban
