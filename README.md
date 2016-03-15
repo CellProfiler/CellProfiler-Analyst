@@ -1,14 +1,13 @@
-![CPA](http://i.imgur.com/TmujaUa.png)
+<div align="center">
+  <img src="http://i.imgur.com/TmujaUa.png"><br><br>
+</div>
+-----------------
 
+**CellProfiler Analyst** allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
 
-Copyright 2016, The Broad Institute of MIT and Harvard.
-Distributed under the BSD license.
-
-## About CellProfiler Analyst
-
-![Workflow](http://i.imgur.com/j12EQH5.png)
-
-CellProfiler Analyst allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
+<div align="center">
+  <img src="http://i.imgur.com/j12EQH5.png"><br><br>
+</div>
 
 ## Installation
 
@@ -25,9 +24,9 @@ Please note that CPA 2.2.1 is WIP and we will update the link on regular basis.
 
 For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip)
 
-## Requirements when running from source
+## Developer build
 
-Builds upon CellProfiler dependencies, we need
+Building CPA on your machine requires CellProfiler dependencies. 
 
 * Pandas
 * Seaborn
@@ -35,10 +34,6 @@ Builds upon CellProfiler dependencies, we need
 * Javabridge
 * Verlib
 * Python-bioformats
-
-## Documentation
-
-> http://cellprofiler.github.io/CellProfiler-Analyst
 
 ## Wiki
 
@@ -64,3 +59,6 @@ David Dao, Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Sing
 ## Kudos
 
 David Logan, Allen Goodman, Alison Kozol, Mohammad Hossein Rohban
+
+*Copyright 2016, The Broad Institute of MIT and Harvard.
+Distributed under the BSD license.*
