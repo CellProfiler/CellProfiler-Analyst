@@ -1304,12 +1304,13 @@ class Classifier(wx.Frame):
     # Add AutoSave by DD
     @delay(360.0) # every 5 min
     def AutoSave(self):
-        logging.info("Autosaving ...")
+        #logging.info("Autosaving ...")
         try:
             self.AutoSaveTrainingSet() # Saves only labels
             self.AutoSave()
         except:
-            logging.error("Autosaving failed.")
+            #logging.error("Autosaving failed.")
+            pass
 
     # Same as Update Training Set, just without box
     def AutoSaveTrainingSet(self):

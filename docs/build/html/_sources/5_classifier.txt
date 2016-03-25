@@ -6,13 +6,13 @@ Classifier allows you to train the computer to identify objects of interest by a
 user-supervised machine learning methods to object measurements.
 
 You first request (**Fetch**) object tiles (cropped from their original images), then manually sort
-them into classification bins, one for each object class, to form a training set. Once each bin
-contains many example objects, you can start training Classifier, asking it to generate rules for
-differentiating among objects in each bin. Once Classifier generates some initial rules, you can
-continue training in either by fetching and sorting more random objects, or by fetching objects
-that Classifier scores as being in a particular class based on the rules it has already found;
-correcting errors in these classifications rapidly improves subsequent rule sets. Usually several
-rounds of refinement are necessary to train the Classifier to generate rules that recognize the
+them into classification bins (representing object classes), to form an annotated set. Once each bin
+contains several example objects, you can start training Classifier on the annotated set, i.e., asking the machine to learn how to
+differentiate the classes. Once Classifier is trained, you can
+continue training by fetching and sorting either more random objects or those objects
+that Classifier scores as being in a particular class;
+by fetching the objects predicted by Classifier to belong to a certain class and correcting errors in these classifications, subsequent Classifiers rapidly improve. Usually several
+rounds of refinement are necessary to train Classifier to recognize the
 classes of interest.
 
 Once classification reaches a desirable accuracy, Classifier can “score” your experiment. This
@@ -187,7 +187,7 @@ Click **Find Rules**. You will note that the large text field near the top of th
 .. figure:: static/05_09.jpg
   :align: center
 
-  Classifier, after finding rules. In this example, only 2 rules were found out of the specified maximum of 5, both pertaining to the feature Nuclei_Intensity_pH3_MeanIntensity, indicating that this feature was sufficient to achieve perfect classification on the training set.
+  Classifier, after finding rules. In this example, 5 rules were found out of the specified maximum of 5.
 
 
 Usually the number of rules shown in the window is equal to the maximum number you selected, unless fewer rules are able to achieve perfect classification of the training set.
@@ -208,15 +208,7 @@ Continue repeating the process of finding rules, fetching objects, sorting them 
 The most accurate way to gauge Classifier’s performance is to fetch a large number of objects of a given class (e.g., positive) from the whole experiment. The fraction of the retrieved objects correctly matching the requested phenotype indicates the classifier’s general performance. For
 example, if you fetch 100 positive objects but find upon inspection that 5 of the retrieved objects are not positives, then you can expect Classifier to have a positive predictive value of 95% on individual cells (and similarly for negative predictive value in the case of two classes). Note that sensitivity, specificity, and negative and positive predictive values must be interpreted in the context of the actual prevalence of individual phenotypes, which may be difficult to assess a priori.
 
-The **Check Progress** button plots the cross-validation accuracy for the training set as an increasing number of rules are used. Values closer to 1 indicate better performance. Two features of the plot are useful for guiding further classification. First, if the accuracy increases (that is, slopes upward) at larger numbers of rules, adding more rules is likely to help improve the classifier (if the line slopes downward, this may indicate more training examples are needed). Second, accuracy is displayed for two versions of cross-validation, with 50% or 95%
-of the examples used for training and the remainder for testing. If the two accuracies are
-essentially the same, adding more cells to the training set is unlikely to improve performance.
-Note that the accuracy in these plots should not be interpreted as the accuracy for the overall
-experiment (see the discussion below).
-
-These plots tend to be pessimistic, as the training set often includes a large number of difficultto-classify
-examples. The most accurate way to judge accuracy is by requesting a large number
-of cells of a certain class and counting mistakes, as described above.
+The **Evaluate** button calculates cross-validation metrics given the annotated set. Values closer to 1 indicate better performance. The cross-validation is 5 fold, and for each fold, the annotated set is split into a training and testing set (the split is stratified, meaning class proportions remain intact) and the algorithm is trained on the training set, then evaluated on the test set. To get final values, the evaluations are averaged over all folds. The evaluation can display a classification report, which is the recall, precision, and F1 score per class, or a confusion matrix, which is a matrix where the element in row i, column j has true class i and predicted class j.
 
 Another way to gauge the classifier’s performance is to use the **Score Image** button on positive
 and negative controls (see the following section). **Score Image** allows you to see qualitatively
@@ -227,7 +219,6 @@ adding misclassified objects in those images to the proper bins.
 .. figure:: static/5_d.jpg
   :align: center
 
-  Check Accuracy plot displaying the cross-validation accuracy of a 3-class classifier with 30 rules. Accuracy does not increase for more than 10 rules.
 
 The relationship between accuracy on individual cells versus performance scoring wells for
 follow-up is complicated, because false positive and false negatives are not evenly distributed

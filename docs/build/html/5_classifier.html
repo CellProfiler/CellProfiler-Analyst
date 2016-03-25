@@ -170,13 +170,13 @@
 <p>Classifier allows you to train the computer to identify objects of interest by applying iterative,
 user-supervised machine learning methods to object measurements.</p>
 <p>You first request (<strong>Fetch</strong>) object tiles (cropped from their original images), then manually sort
-them into classification bins, one for each object class, to form a training set. Once each bin
-contains many example objects, you can start training Classifier, asking it to generate rules for
-differentiating among objects in each bin. Once Classifier generates some initial rules, you can
-continue training in either by fetching and sorting more random objects, or by fetching objects
-that Classifier scores as being in a particular class based on the rules it has already found;
-correcting errors in these classifications rapidly improves subsequent rule sets. Usually several
-rounds of refinement are necessary to train the Classifier to generate rules that recognize the
+them into classification bins (representing object classes), to form an annotated set. Once each bin
+contains several example objects, you can start training Classifier on the annotated set, i.e., asking the machine to learn how to
+differentiate the classes. Once Classifier is trained, you can
+continue training by fetching and sorting either more random objects or those objects
+that Classifier scores as being in a particular class;
+by fetching the objects predicted by Classifier to belong to a certain class and correcting errors in these classifications, subsequent Classifiers rapidly improve. Usually several
+rounds of refinement are necessary to train Classifier to recognize the
 classes of interest.</p>
 <p>Once classification reaches a desirable accuracy, Classifier can “score” your experiment. This
 entails classifying all objects, counting how many objects of each class are in each image or
@@ -312,7 +312,7 @@ which will be used to generate rules to differentiate objects in different class
 <p>Click <strong>Find Rules</strong>. You will note that the large text field near the top of the screen contains the initial rules Classifier has identified based on the objects you deposited into the bins, as a series of IF statements:</p>
 <div class="figure align-center" id="id9">
 <img alt="_images/05_09.jpg" src="_images/05_09.jpg" />
-<p class="caption"><span class="caption-text">Classifier, after finding rules. In this example, only 2 rules were found out of the specified maximum of 5, both pertaining to the feature Nuclei_Intensity_pH3_MeanIntensity, indicating that this feature was sufficient to achieve perfect classification on the training set.</span></p>
+<p class="caption"><span class="caption-text">Classifier, after finding rules. In this example, 5 rules were found out of the specified maximum of 5.</span></p>
 </div>
 <p>Usually the number of rules shown in the window is equal to the maximum number you selected, unless fewer rules are able to achieve perfect classification of the training set.</p>
 <p>At this point, your goal is to refine the rules by adding more objects to the training set. You can continue to fetch objects at random, but note that the left-most drop-down menu in the fetch controls (top part of the window) now lists the classes that you have trained Classifier to recognize. This allows you to fetch objects that Classifier deems as belonging to a particular
@@ -326,22 +326,14 @@ class. Correcting for misclassified objects by sorting them into the appropriate
 <h4><em>Assessing accuracy</em><a class="headerlink" href="#assessing-accuracy" title="Permalink to this headline">¶</a></h4>
 <p>The most accurate way to gauge Classifier’s performance is to fetch a large number of objects of a given class (e.g., positive) from the whole experiment. The fraction of the retrieved objects correctly matching the requested phenotype indicates the classifier’s general performance. For
 example, if you fetch 100 positive objects but find upon inspection that 5 of the retrieved objects are not positives, then you can expect Classifier to have a positive predictive value of 95% on individual cells (and similarly for negative predictive value in the case of two classes). Note that sensitivity, specificity, and negative and positive predictive values must be interpreted in the context of the actual prevalence of individual phenotypes, which may be difficult to assess a priori.</p>
-<p>The <strong>Check Progress</strong> button plots the cross-validation accuracy for the training set as an increasing number of rules are used. Values closer to 1 indicate better performance. Two features of the plot are useful for guiding further classification. First, if the accuracy increases (that is, slopes upward) at larger numbers of rules, adding more rules is likely to help improve the classifier (if the line slopes downward, this may indicate more training examples are needed). Second, accuracy is displayed for two versions of cross-validation, with 50% or 95%
-of the examples used for training and the remainder for testing. If the two accuracies are
-essentially the same, adding more cells to the training set is unlikely to improve performance.
-Note that the accuracy in these plots should not be interpreted as the accuracy for the overall
-experiment (see the discussion below).</p>
-<p>These plots tend to be pessimistic, as the training set often includes a large number of difficultto-classify
-examples. The most accurate way to judge accuracy is by requesting a large number
-of cells of a certain class and counting mistakes, as described above.</p>
+<p>The <strong>Evaluate</strong> button calculates cross-validation metrics given the annotated set. Values closer to 1 indicate better performance. The cross-validation is 5 fold, and for each fold, the annotated set is split into a training and testing set (the split is stratified, meaning class proportions remain intact) and the algorithm is trained on the training set, then evaluated on the test set. To get final values, the evaluations are averaged over all folds. The evaluation can display a classification report, which is the recall, precision, and F1 score per class, or a confusion matrix, which is a matrix where the element in row i, column j has true class i and predicted class j.</p>
 <p>Another way to gauge the classifier’s performance is to use the <strong>Score Image</strong> button on positive
 and negative controls (see the following section). <strong>Score Image</strong> allows you to see qualitatively
 how Classifier performs on a single image. Although the results cannot be reliably extrapolated
 to other images, it can be useful to examine control images and further refine the rules by
 adding misclassified objects in those images to the proper bins.</p>
-<div class="figure align-center" id="id11">
+<div class="figure align-center">
 <img alt="_images/5_d.jpg" src="_images/5_d.jpg" />
-<p class="caption"><span class="caption-text">Check Accuracy plot displaying the cross-validation accuracy of a 3-class classifier with 30 rules. Accuracy does not increase for more than 10 rules.</span></p>
 </div>
 <p>The relationship between accuracy on individual cells versus performance scoring wells for
 follow-up is complicated, because false positive and false negatives are not evenly distributed
@@ -368,13 +360,13 @@ shortcut <strong>Ctrl+S</strong>).</p>
 <p class="first admonition-title">Note</p>
 <p class="last"><strong>Note</strong>: This function is not yet capable of saving the classification markings.</p>
 </div>
-<div class="align-center figure" id="id12">
+<div class="align-center figure" id="id11">
 <img alt="_images/05_a.jpg" src="_images/05_a.jpg" />
 <p class="caption"><span class="caption-text">Scoring an image: Identifying classes by color (blue and yellow squares, left) and by number (right). Note that we have chosen to hide the blue channel (DNA stain) while viewing these images.</span></p>
 </div>
 <p>To display the object classes by number rather than color, select <strong>View &gt; View object classes
 as numbers</strong> from the menu bar.</p>
-<div class="figure align-center" id="id13">
+<div class="figure align-center" id="id12">
 <img alt="_images/05_14.jpg" src="_images/05_14.jpg" />
 <p class="caption"><span class="caption-text">The Image Viewer control panel after scoring an image.</span></p>
 </div>
@@ -393,7 +385,7 @@ dropping objects from the image into bins in order to correct classification err
 you defined. You can then sort by these columns to find images (or groups, e.g., wells as
 collections of images) that are enriched or depleted for a particular classification, based on
 object counts or enrichment scores (see figure below for details).</p>
-<div class="figure align-center" id="id14">
+<div class="figure align-center" id="id13">
 <img alt="_images/05_b.jpg" src="_images/05_b.jpg" />
 <p class="caption"><span class="caption-text">Description of enrichment score calculation. (A) While machine-learning methods are used to produce per-cell scores,  the challenge remains to model the sample distributions to generate a per-sample enrichment score. (B) Samples with  varied positive/negative counts can be viewed as being drawn from a Beta distribution. (C) The full population is treated  as independent samples to yield C = Beta(, ) which is used as the full-population-level prior for future observations.  This prior is updated with new observations by computing the distribution of the positive fraction as the posterior T =  Beta( + npos,  + nneg), where npos and nneg are the positive and negative counts, respectively. The enrichment score for  each sample is then calculated as the logit of P(T &gt; C).</span></p>
 </div>
@@ -407,7 +399,7 @@ phenotype is treated as positive and all others as negative for each phenotype i
 <p>If you have defined any groups or filters in your properties file, you will have the option to select
 them here for use in scoring. If no groups or filters are defined, the window will contain only the
 default group <strong>Image</strong> and the default filter <strong>None</strong>.</p>
-<div class="figure align-center" id="id15">
+<div class="figure align-center" id="id14">
 <img alt="_images/05_18.jpg" src="_images/05_18.jpg" />
 <p class="caption"><span class="caption-text">Classifier group/filter selection window.</span></p>
 </div>
@@ -418,7 +410,7 @@ recognize. To view this information graphically, return to the main Classifier s
 <div class="figure align-center">
 <img alt="_images/05_19.jpg" src="_images/05_19.jpg" />
 </div>
-<div class="figure align-center" id="id16">
+<div class="figure align-center" id="id15">
 <img alt="_images/05_y.jpg" src="_images/05_y.jpg" />
 <p class="caption"><span class="caption-text">Enrichment Table Viewer produced by Classifier. Here we have grouped the counts and statistics on a per-image basis. We have ordered the data by the “Enriched Score Positive” column. The most highly enriched images were  172, 171, 169, and 170. With the “Positive Cell Count” column selected, we can see in the status bar that there are a  total of 2331 positive cells in our experiment, with a mean of 6.07 positive cells per image, and a standard deviation  of 7.74.</span></p>
 </div>

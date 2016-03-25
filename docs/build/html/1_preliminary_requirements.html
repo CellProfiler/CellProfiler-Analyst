@@ -152,21 +152,21 @@
 <ul>
 <li><p class="first">An image table and an object table containing measurements and metadata</p>
 <blockquote>
-<div><p>These may reside in a MySQL or SQLite database or in a set of comma-separated value (CSV) files. A MySQL database is recommended, though you may need to consult with your local information technology staff to set up a database server. See section II.B for more information. The tables must contain a few datacolumns needed by CellProfiler Analyst to access images and data properly, such as an Image ID column to link the per-image and per-object tables, file path and file name columns to specify where images are stored, and X, Y location columns to specify where each object resides within the image. These configuration details are specified in a properties file.</p>
+<div><p>These may reside in a MySQL or SQLite database or in a set of comma-separated value (CSV) files. A MySQL database is recommended, though you may need to consult with your local information technology staff to set up a database server. See section II.B for more information. The tables must contain a few datacolumns needed by CellProfiler Analyst to access images and data properly, such as an Image ID column to link the per-image and per-object tables, file path and file name columns to specify where images are stored, and X, Y location columns to specify where each object resides within the image. These configuration details are specified in a properties file. Note: if image classification is specified in the properties file, an object table is not required. See section III.</p>
 </div></blockquote>
 </li>
-<li><p class="first">The images that were analyzed to generate the above-mentioned Table Viewers.</p>
+<li><p class="first">The images that were analyzed to generate the above-mentioned Table Viewers</p>
 <blockquote>
-<div><p>These can be stored either locally or remotely and accessed via HTTP.Thedirectory structure does not matter as long as the file paths stored in the image table point to the correct images.
+<div><p>These can be stored either locally or remotely and accessed via HTTP. The directory structure does not matter as long as the file paths stored in the image table point to the correct images.
 Throughout CPA, the term image is meant to include all image data associated with an analyzed field-of-view. An image in this sense usually includes several individual monochromatic images that show the different wavelengths (channels) as well as images that show outlines of identified objects. You can specify any number of image channels (including, for example, outlines of objects that resulted from image processing) by adding path and filename columns to the image table of your database for each channel.
-CPA currently requires imagefiles to be monochromatic; several individual channels can be combined into a color image for viewing within the software.
-CPA currently supports the following image file types: BMP, CUR, DCX, Cellomics DIB, FLI, FLC, FPX, GBR, GD, GIF, ICO, IM, IMT, IPTC/NAA, JPG/JPEG, MCIDAS, MIC, MSP, PCD, PCX, PIXAR, PNG, PPM, PSD, SGI, SPIDER, TGA, TIF/TIFF, WAL, XBM, XPM, XV Thumbnails</p>
+CPA currently requires image files to be monochromatic; several individual channels can be combined into a color image for viewing within the software.
+CPA currently supports the following image file types: BMP, CUR, DCX, Cellomics DIB, FLI, FLC, FPX, GBR, GD, GIF, ICO, IM, IMT, IPTC/NAA, JPG/JPEG, MCIDAS, MIC, MSP, PCD, PCX, PIXAR, PNG, PPM, PSD, SGI, SPIDER, TGA, TIF/TIFF, WAL, XBM, XPM, XV Thumbnails.</p>
 </div></blockquote>
 </li>
 </ul>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">While designed for high-throughput, image-based, biological experiments, CellProfiler Analyst is also useful for the exploration of other multi-dimensional data sets, particularly when data points are linked to images.</p>
+<p class="last">While designed for high-throughput, image-based biological experiments, CellProfiler Analyst is also useful for the exploration of other multi-dimensional data sets, particularly when data points are linked to images.</p>
 </div>
 <div class="section" id="i-a-example-image-table">
 <h2>I.A Example image table<a class="headerlink" href="#i-a-example-image-table" title="Permalink to this headline">¶</a></h2>
@@ -182,7 +182,7 @@ CPA currently supports the following image file types: BMP, CUR, DCX, Cellomics 
 </div>
 <div class="section" id="i-b-example-object-table">
 <h2>I.B Example  object table<a class="headerlink" href="#i-b-example-object-table" title="Permalink to this headline">¶</a></h2>
-<p>The object table requires four columns: a foreign key image ID column that corresponds to the image ID in the image table, a unique object ID column, a column for the object x-location, and a column for the object y-location. CellProfiler Analyst expects the location columns to correspond to the x-y pixel coordinates of the objects’ centroids; the corresponding column names that are produced by CellProfiler depend on the name of the objects; for example, if nuclei were measured, the column names would be Nuclei_Location_Center_X and Nuclei_Location_Center_Y. Again, these columns do not need to have specific names; you indicate which column names correspond to these functionalities when configuring the properties file. Additional columns in this table typically contain measurements for each object, but are completely up to the user.</p>
+<p>The object table requires four columns: a foreign key image ID column that corresponds to the image ID in the image table, a unique object ID column, a column for the object x-location, and a column for the object y-location. CPA expects the location columns to correspond to the x-y pixel coordinates of the objects’ centroids; the corresponding column names that are produced by CellProfiler depend on the name of the objects; for example, if nuclei were measured, the column names would be Nuclei_Location_Center_X and Nuclei_Location_Center_Y. Again, these columns do not need to have specific names; you indicate which column names correspond to these functionalities when configuring the properties file. Additional columns in this table typically contain measurements for each object, but are completely up to the user.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">While MySQL and SQLite support diverse column names, CPA will not handle column names that contain commas. In general, we advise that you use only alphanumeric characters and underscores in the names of your table columns.</p>

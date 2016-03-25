@@ -58,12 +58,12 @@ class PlateViewer(wx.Frame, CPATool):
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
-        self.sourceChoice = TableComboBox(self, -1, style=wx.CB_READONLY, size=fixed_width)
+        self.sourceChoice = TableComboBox(self, -1, size=fixed_width)
         dataSourceSizer.Add(self.sourceChoice)
         dataSourceSizer.AddSpacer((-1,3))
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = get_non_blob_types_from_table(p.image_table)
-        self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY, size=fixed_width)
+        self.measurementsChoice = ComboBox(self, choices=measurements, size=fixed_width)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         dataSourceSizer.Add(wx.StaticText(self, label='Filter:'))
@@ -73,7 +73,7 @@ class PlateViewer(wx.Frame, CPATool):
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
         aggregation = ['mean', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
-        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation, style=wx.CB_READONLY, size=fixed_width)
+        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation, size=fixed_width)
         self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
 
@@ -81,7 +81,7 @@ class PlateViewer(wx.Frame, CPATool):
         viewSizer.Add(wx.StaticText(self, label='Color map:'))
         maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
         maps.sort()
-        self.colorMapsChoice = ComboBox(self, choices=maps, style=wx.CB_READONLY, size=fixed_width)
+        self.colorMapsChoice = ComboBox(self, choices=maps, size=fixed_width)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
 
@@ -92,7 +92,7 @@ class PlateViewer(wx.Frame, CPATool):
         else:
             choices = list(pmp.all_well_shapes)
             choices.remove(pmp.THUMBNAIL)
-        self.wellDisplayChoice = ComboBox(self, choices=choices, style=wx.CB_READONLY, size=fixed_width)
+        self.wellDisplayChoice = ComboBox(self, choices=choices, size=fixed_width)
         self.wellDisplayChoice.Select(0)
         viewSizer.Add(self.wellDisplayChoice)
 
@@ -108,13 +108,13 @@ class PlateViewer(wx.Frame, CPATool):
         annotationColSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.annotation_cols = dict([(col, db.GetColumnType(p.image_table, col)) 
                                      for col in db.GetUserColumnNames(p.image_table)])
-        self.annotationCol = ComboBox(self, choices=self.annotation_cols.keys(), size=(120,-1), style=wx.CB_READONLY)
+        self.annotationCol = ComboBox(self, choices=self.annotation_cols.keys(), size=(120,-1))
         if len(self.annotation_cols) > 0:
             self.annotationCol.SetSelection(0)
-        annotationColSizer.Add(self.annotationCol)
+        annotationColSizer.Add(self.annotationCol, flag=wx.ALIGN_CENTER_VERTICAL)
         annotationColSizer.AddSpacer((3,-1))
         self.addAnnotationColBtn = wx.Button(self, -1, 'Add', size=(44,-1))
-        annotationColSizer.Add(self.addAnnotationColBtn, 0, wx.TOP, 3)
+        annotationColSizer.Add(self.addAnnotationColBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         annotationSizer.Add(annotationColSizer)
         annotationSizer.AddSpacer((-1,3))
         annotationSizer.Add(wx.StaticText(self, label='Label:'))
@@ -186,8 +186,7 @@ class PlateViewer(wx.Frame, CPATool):
                          (dbconnect.UniqueWellClause(), p.image_table, p.well_id, p.well_id))
 
         if p.plate_id:
-            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), 
-                                              style=wx.CB_READONLY, size=(100,-1))]
+            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), size=(100,-1))]
             self.plateMapChoices[-1].Select(plateIndex)
             self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
     
@@ -195,8 +194,8 @@ class PlateViewer(wx.Frame, CPATool):
             plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
             
             plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
-            plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), 0, wx.EXPAND)
-            plateMapChoiceSizer.Add(self.plateMapChoices[-1])
+            plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), flag=wx.ALIGN_CENTER_VERTICAL)
+            plateMapChoiceSizer.Add(self.plateMapChoices[-1], flag=wx.ALIGN_CENTER_VERTICAL)
         well_keys = res
 
         platemap = pmp.PlateMapPanel(self, data, well_keys, p.plate_shape,
