@@ -143,7 +143,7 @@ def processData(data):
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
     try:
-        cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
+        cell_data = np.reshape(np.genfromtxt(cell_data.ravel(),missing_values=0, delimiter=','), data_shape)
         cell_data = np.nan_to_num(cell_data)
         logging.info('Any values that cannot be converted to float are set to 0')
     except:
