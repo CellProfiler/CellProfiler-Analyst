@@ -61,14 +61,21 @@ def create_perobject_class_table(classifier, classNames):
         cell_data, object_keys = processData(data)
 
         predicted_classes = classifier.Predict(cell_data)
-
         #print('Writing to database...')
-        expr = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
-            object_keys[ii][0], object_keys[ii][1], object_keys[ii][2], predicted_classes[ii] )
-            for ii in range(0, len(predicted_classes))])+ " END"
-        expr2 = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
-            object_keys[ii][0], object_keys[ii][1], object_keys[ii][2],
-            classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
+        if len(object_keys.shape) > 2:
+            expr = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
+                object_keys[ii][0], object_keys[ii][1], object_keys[ii][2], predicted_classes[ii] )
+                for ii in range(0, len(predicted_classes))])+ " END"
+            expr2 = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
+                object_keys[ii][0], object_keys[ii][1], object_keys[ii][2],
+                classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
+        elif len(object_keys.shape) == 2:
+            expr = 'CASE '+ ''.join(["WHEN ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
+                object_keys[ii][0], object_keys[ii][1], predicted_classes[ii] )
+                for ii in range(0, len(predicted_classes))])+ " END"
+            expr2 = 'CASE '+ ''.join(["WHEN ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
+                object_keys[ii][0], object_keys[ii][1], classNames[predicted_classes[ii] - 1])
+                for ii in range(0, len(predicted_classes))])+ " END"
         db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
             silent=True)
         print(idx)
@@ -142,12 +149,13 @@ def processData(data):
 
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
+    cell_data = np.where(cell_data == np.array(None), 0, cell_data)
     try:
-        cell_data = np.reshape(np.genfromtxt(cell_data.ravel(),missing_values=0, delimiter=','), data_shape)
+        cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
         cell_data = np.nan_to_num(cell_data)
-        logging.info('Any values that cannot be converted to float are set to 0')
     except:
         cell_data = np.nan_to_num(cell_data)
+    logging.info('Any values that cannot be converted to float are set to 0')
     return cell_data, object_keys
 
 def _objectify(p, field):
@@ -245,7 +253,12 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                                   silent=(idx > 10))
 
             cell_data, image_keys = processData(data)
-            
+            for i in range(cell_data.shape[0]):
+                for j in range(cell_data.shape[1]):
+                    try:
+                        float(cell_data[i,j])
+                    except:
+                        print i,j, cell_data[i,j], type(cell_data[i,j])
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i], predicted_classes[i]))
