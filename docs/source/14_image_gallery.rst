@@ -12,7 +12,7 @@ For each image loaded in the image gallery area, right-click to show the options
 - **Remove selected** (``Delete``) removes the selected tiles from the current bin.
 - **Fetch all objects from image** populates the objects of segmented image area below with all objects belonging to the selected image(s).
 
-Images loaded in the area for the objects of segmented image have the same right-click options except for **Fetch all objects from image**.
+Images loaded in the area for the objects of segmented image have the same right-click options except for **Fetch all objects from image**. Tiles in this area can be dragged and dropped into the Classifier.
 
 .. figure:: static/14_01.jpg
   :align: center
