@@ -13,7 +13,7 @@ Note: CPA 2.0 is not compatible with properties files from CellProfiler Analyst 
 
 Note: All fields described in the sections below (after the properties file example) are required unless explicitly described as “optional.” In your own properties file, you would replace values surrounded with <> with the relevant information.
 
-III.A Properies file example
+III.A Properties file example
 ============================
 
 .. code-block:: text
@@ -68,7 +68,7 @@ A MySQL database is recommended for storing extremely large data that may need t
 
 To connect to an SQLite database
 --------------------------------
-SQLite is another mode of data storage, in which tables are stored in a large, database-like file on your local computer rather than a database server. This is easier to set up than a full- featured MySQL database and is at least as fast, but it is not a good choice of storage if the data is to be accessed by multiple concurrent connections. This mode of storage also puts a limitation on the number of rules used in the FastGentleBoosting Algorithm in Classifier (see section III.B.5). CellProfiler is able to export data in this format using the ExportToDatabase module.
+SQLite is another mode of data storage, in which tables are stored in a large, database-like file on your local computer rather than a database server. This is easier to set up than a full- featured MySQL database and is at least as fast, but it is not a good choice of storage if the data is to be accessed by multiple concurrent connections. This mode of storage also puts a limitation on the number of rules used in the FastGentleBoosting Algorithm in Classifier. CellProfiler is able to export data in this format using the ExportToDatabase module.
 
 .. code-block:: text
 
@@ -191,7 +191,7 @@ The following field tells PlateMapBrowser what size plates were used. Supported 
 
 Columns ignored by Classifier
 -----------------------------
-The following field (optional) specifies columns in the per-object table that you want Classifier to ignore when finding rules for classifying objects. Classifier automatically ignores columns defined by the table_id, image_id, and object_id fields, as well as any columns that contain non-numeric data. When using this field to specify additional columns to ignore, note that your column names cannot contain commas because commas are used to separate each column name. You can also use regular expressions to refer to a set of column names for Classifier to ignore:
+The following field (optional) specifies columns in the per-object table that you want Classifier to ignore when classifying objects. Classifier automatically ignores columns defined by the table_id, image_id, and object_id fields, as well as any columns that contain non-numeric data. When using this field to specify additional columns to ignore, note that your column names cannot contain commas because commas are used to separate each column name. You can also use regular expressions to refer to a set of column names for Classifier to ignore:
 
 .. code-block:: text
 

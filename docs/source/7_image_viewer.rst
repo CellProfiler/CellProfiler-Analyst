@@ -31,7 +31,7 @@ your properties file, those colors specified there should appear under each chan
 default.
 
 The Classifier menu provides an item that will let you classify the objects in the current image.
-This item is only enabled if Classifier is running and trained (via the find rules button). For more
+This item is only enabled if Classifier is running and trained. For more
 on this feature see the **Score image** discussion in section III.C.6.
 
 - **Tip**: You can use keyboard shortcuts to toggle each channel on/off: Ctrl+1, +2, +3, … will toggle first, second, third, etc. color channels.
