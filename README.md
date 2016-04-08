@@ -3,6 +3,10 @@
 </div>
 -----------------
 
+|  **`Version`**  |  **`Documentation`** | **`Forum`** |
+|---------------|----------------|-----------------|
+| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)]() | [![Build Status](https://img.shields.io/badge/documentation-2.2.1-brightgreen.svg)](http://cellprofiler.org/CPA/) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](http://forum.cellprofiler.org/) |
+
 **CellProfiler Analyst** allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
 
 <div align="center">
@@ -34,6 +38,10 @@ Building CPA on your machine requires CellProfiler dependencies.
 * Javabridge
 * Verlib
 * Python-bioformats
+
+## Documentation
+
+> http://cellprofiler.org/CPA/
 
 ## Wiki
 
