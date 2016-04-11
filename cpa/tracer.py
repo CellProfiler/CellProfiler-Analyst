@@ -32,6 +32,8 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from textwrap import wrap
 
 # traits imports
+from traits.etsconfig.api import ETSConfig
+ETSConfig.toolkit = 'wx'
 from traits.api import HasTraits, Int, Instance, on_trait_change
 from traitsui.api import View, Item, HSplit, Group
 
