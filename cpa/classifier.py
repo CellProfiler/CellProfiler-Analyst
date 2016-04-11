@@ -1369,7 +1369,6 @@ class Classifier(wx.Frame):
             return
         self.TrainClassifier()
 
-#SKLEARN TODO
     def TrainClassifier(self):
         try:
             nRules = int(self.nRulesTxt.GetValue())
@@ -1594,7 +1593,7 @@ class Classifier(wx.Frame):
                 errdlg.ShowModal()
                 errdlg.Destroy()
                 return
-#SKLEARN TODO
+
             if p.class_table and overwrite_class_table:
                 self.PostMessage('Saving %s classes to database...' % (p.object_name[0]))
                 self.algorithm.CreatePerObjectClassTable([bin.label for bin in self.classBins])
@@ -1715,14 +1714,16 @@ class Classifier(wx.Frame):
             else:
                 for i in xrange(nClasses):
                     labels += ['Enriched Score\n' + self.classBins[i].label]
-
-        title = "Hit table (grouped by %s)" % (group,)
-        if filter:
-            title += " filtered by %s" % (filter,)
-        title += ' (%s)' % (os.path.split(p._filename)[1])
-        grid = tableviewer.TableViewer(self, title=title)
-        grid.table_from_array(tableData, labels, group, key_col_indices)
-        grid.Show()
+        try:
+            title = "Hit table (grouped by %s)" % (group,)
+            if filter:
+                title += " filtered by %s" % (filter,)
+            title += ' (%s)' % (os.path.split(p._filename)[1])
+            grid = tableviewer.TableViewer(self, title=title)
+            grid.table_from_array(tableData, labels, group, key_col_indices)
+            grid.Show()
+        except(Exception):
+            wx.MessageDialog(self, 'Unable to calculate enrichment scores.', 'Error', style=wx.OK).ShowModal()
 
         # self.openDimensReduxBtn.Enable()  # JEN - Added
 
