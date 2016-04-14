@@ -152,7 +152,7 @@ class MainGUI(wx.Frame):
         tb.AddLabelTool(ID_DENSITY, 'Density Plot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
         tb.AddLabelTool(ID_BOXPLOT, 'Box Plot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
         tb.AddLabelTool(ID_TABLE_VIEWER, 'Table Viewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch Table Viewer')
-        tb.AddLabelTool(ID_NORMALIZE, 'Normalize', cpa.icons.normalize.ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
+        # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', cpa.icons.normalize.ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs 
         # Not the Case anymore with wx.Python 3

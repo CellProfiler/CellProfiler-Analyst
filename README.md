@@ -5,7 +5,7 @@
 
 |  **`Version`**  |  **`Documentation`** | **`Forum`** |
 |---------------|----------------|-----------------|
-| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)]() | [![Build Status](https://img.shields.io/badge/documentation-2.2.1-brightgreen.svg)](http://cellprofiler.org/CPA/) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](http://forum.cellprofiler.org/) |
+| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)](http://cellprofiler.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-2.2.1-brightgreen.svg)](http://cellprofiler.org/CPA/) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](http://forum.cellprofiler.org/) |
 
 **CellProfiler Analyst** allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
 
@@ -15,16 +15,16 @@
 
 ## Installation
 
-Download nightly version 2.2.1 for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.dmg) 
+Download version for Mac here: [App for Mac OS](https://docs.google.com/uc?export=download&confirm=E8mD&id=0B_Rfj3esFDX8MVdOaDdnUDdZOUE) 
 
-Note: [Starting a properties file #170](https://github.com/CellProfiler/CellProfiler-Analyst/issues/170#issuecomment-192354140)
-
-Download nightly version 2.2.1 for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.exe)
+Download version for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.exe)
 
 The app requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE). 
 Check the Java path.
 
-Please note that CPA 2.2.1 is WIP and we will update the link on regular basis. 
+Please note that this is the development branch of CPA and it we will be updated on regular basis. 
+
+Find all releases [here](http://cellprofiler.org/releases).
 
 For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip)
 
