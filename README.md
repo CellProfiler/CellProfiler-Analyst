@@ -22,9 +22,9 @@ Download version for Windows here: [App for Windows](http://d1zymp9ayga15t.cloud
 The app requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE). 
 Check the Java path.
 
-Please note that this is the development branch of CPA and it we will be updated on regular basis. 
+Please note that this is the development branch of CPA and it will be updated on regular basis. 
 
-Find all releases [here](http://cellprofiler.org/releases).
+Find all releases [here](http://cellprofiler.org/releases#CPA).
 
 For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip)
 

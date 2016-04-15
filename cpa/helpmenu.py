@@ -4,13 +4,13 @@ import cpa.icons
 
 def _on_manual(self):
     import webbrowser
-    webbrowser.open("http://cellprofiler.org/linked_files/Documentation/cpa2_manual.pdf")
+    webbrowser.open("http://cellprofiler.org/CPA")
 
 def _on_about(self):
     ''' Shows a message box with the version number etc.'''
     message = ('CellProfiler Analyst was developed at The Broad Institute\n'
-               'Imaging Platform and is distributed under the GNU General\n'
-               'Public License version 2.')
+               'Imaging Platform and is distributed under the\n'
+               'BSD 3-Clause License.')
     info = wx.AboutDialogInfo()
     info.SetIcon(cpa.icons.get_cpa_icon())
     #info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(cpa.__version__) or 'unknown revision'))
