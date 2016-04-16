@@ -17,7 +17,7 @@
 
 Download version for Mac here: [App for Mac OS](https://docs.google.com/uc?export=download&confirm=E8mD&id=0B_Rfj3esFDX8MVdOaDdnUDdZOUE) 
 
-Download version for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-nightly.exe)
+Download version for Windows here: [App for Windows](https://docs.google.com/uc?id=0B_Rfj3esFDX8WEttRlF6eUJZTFE&export=download)
 
 The app requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE). 
 Check the Java path.

@@ -410,7 +410,7 @@ def new_version_cb(new_version, new_version_info):
 
         import cpa.gui.newversiondialog as nvd
         dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
-                                   new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
+                                   new_version_info, 'http://cellprofiler.org/releases#CPA',
                                    cpa.cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
         dlg.Show()
 
@@ -439,7 +439,7 @@ class CPAnalyst(wx.App):
         dc.DrawBitmap(splashimage, 0, 0)
         dc.Destroy() # necessary to avoid a crash in splashscreen
         splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN |
-                                 wx.SPLASH_TIMEOUT, 2000, None, -1)
+                                wx.SPLASH_TIMEOUT, 2000, None, -1)
         self.splash = splash
 
         p = Properties.getInstance()
@@ -455,11 +455,11 @@ class CPAnalyst(wx.App):
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
 
-        # self.frame = MainGUI(p, None, size=(860,-1))
         self.frame = MainGUI(p, None, size=(1000,-1))
-        def show_frame():
-            self.frame.Show(True)
-        wx.CallAfter(show_frame)
+        # def show_frame():
+        #     import time
+        #     res = self.frame.Show()
+        # wx.CallAfter(show_frame)
         db = cpa.dbconnect.DBConnect.getInstance()
         # Black magic: Bus errors occur on Mac OS X if we wait until
         # the JVM or the wx event look has started to connect. But it
@@ -487,7 +487,8 @@ class CPAnalyst(wx.App):
                                       user_agent='CPAnalyst/%s'%(__version__))
         except ImportError:
             logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
-
+        
+        self.frame.Show() # Show frame
         return True
 
     def get_plots(self):
