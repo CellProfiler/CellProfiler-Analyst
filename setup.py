@@ -24,7 +24,7 @@ import cpa.util.version
 
 APPNAME = 'CellProfiler Analyst'
 APP = ['CellProfiler-Analyst.py']
-OPTIONS = {'argv_emulation': True,
+OPTIONS = {'argv_emulation': False,
            'iconfile' : "cpa/icons/cpa.icns",
            'includes' : [ 'scipy.sparse'],
            'packages' : ['numpy', 'cpa', 'javabridge', 'bioformats', 'PIL','sklearn'],
