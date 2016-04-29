@@ -557,4 +557,4 @@ if __name__ == "__main__":
        sys.excepthook = show_exception_as_dialog
 
     app.MainLoop()
-    os._exit(0) # Enforces Exit, see issue #101
+    os._exit(0) # Enforces Exit, see issue #102
