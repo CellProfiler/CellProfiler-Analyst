@@ -15,7 +15,7 @@
 
 ## Installation
 
-Download version for Mac here: [App for Mac OS](https://docs.google.com/uc?export=download&confirm=E8mD&id=0B_Rfj3esFDX8MVdOaDdnUDdZOUE) 
+Download version for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.dmg) 
 
 Download version for Windows here: [App for Windows](https://docs.google.com/uc?id=0B_Rfj3esFDX8WEttRlF6eUJZTFE&export=download)
 
