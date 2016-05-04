@@ -301,8 +301,8 @@ class ImageGallery(wx.Frame):
         advancedMenu = wx.Menu()
         fetchObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects from displayed images', help='Fetch all objects from displayed images')
         fetchAllObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects', help='Fetch all objects')
-        saveImgMenuItem = advancedMenu.Append(-1, text=u'Save image thumbnails as JPG', help='Save image thumbnails as JPG')
-        saveObjMenuItem = advancedMenu.Append(-1, text=u'Save object thumbnails as JPG', help='Save object thumbnails as JPG')
+        saveImgMenuItem = advancedMenu.Append(-1, text=u'Save image thumbnails as PNG', help='Save image thumbnails as PNG')
+        saveObjMenuItem = advancedMenu.Append(-1, text=u'Save object thumbnails as PNG', help='Save object thumbnails as PNG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -1021,7 +1021,7 @@ class ImageGallery(wx.Frame):
                 os.makedirs(directory + '/image_gallery')
 
             for tile in self.galleryBin.tiles:
-                imagetools.SaveBitmap(tile.bitmap, directory + '/image_gallery/' + str(tile.obKey) + '.jpg')
+                imagetools.SaveBitmap(tile.bitmap, directory + '/image_gallery/' + str(tile.obKey) + '.png')
 
     # Fetch all object thumbnails from displayed images
     def OnFetchObjThumbnails(self, evt):
@@ -1079,7 +1079,7 @@ class ImageGallery(wx.Frame):
                 os.makedirs(directory + '/object_gallery')
 
             for tile in self.classBins[0].tiles:
-                imagetools.SaveBitmap(tile.bitmap, directory + '/object_gallery/' + str(tile.obKey) + '.jpg')
+                imagetools.SaveBitmap(tile.bitmap, directory + '/object_gallery/' + str(tile.obKey) + '.png')
 
 
     def SetBrightness(self, brightness):
