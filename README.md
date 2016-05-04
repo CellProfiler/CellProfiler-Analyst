@@ -17,7 +17,7 @@
 
 Download version for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.dmg) 
 
-Download version for Windows here: [App for Windows](https://docs.google.com/uc?id=0B_Rfj3esFDX8WEttRlF6eUJZTFE&export=download)
+Download version for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.exe)
 
 The app requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE). 
 Check the Java path.
