@@ -559,7 +559,7 @@ class Classifier(wx.Frame):
         rulesEditMenuItem = advancedMenu.Append(-1, text=u'Edit Rules...', help='Lets you edit the rules')
         paramsEditMenuItem = advancedMenu.Append(-1, text=u'Edit Parameters...', help='Lets you edit the hyperparameters')
         featureSelectMenuItem = advancedMenu.Append(-1, text=u'Check Features', help='Check the variance of your Training Data')
-        saveMenuItem = advancedMenu.Append(-1, text=u'Save Thumbnails as JPG', help='Save TrainingSet thumbnails as JPG')
+        saveMenuItem = advancedMenu.Append(-1, text=u'Save Thumbnails as PNG', help='Save TrainingSet thumbnails as PNG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -873,7 +873,7 @@ class Classifier(wx.Frame):
                     os.makedirs(directory + '/training_set' +  '/' + str(label))
 
                 for tile in bin.tiles:
-                    imagetools.SaveBitmap(tile.bitmap, directory + '/training_set/' + str(label) + '/' + str(tile.obKey) + '.jpg')
+                    imagetools.SaveBitmap(tile.bitmap, directory + '/training_set/' + str(label) + '/' + str(tile.obKey) + '.png')
 
 
     def OnFetch(self, evt):
