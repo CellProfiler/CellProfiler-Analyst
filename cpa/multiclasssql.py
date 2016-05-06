@@ -150,10 +150,15 @@ def processData(data):
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
     cell_data = np.where(cell_data == np.array(None), 0, cell_data)
+    if cell_data.dtype == object:
+        raise Exception('data type is object')
+        
     try:
         cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
+        print 'data type 1 ', cell_data.dtype
         cell_data = np.nan_to_num(cell_data)
     except:
+        print 'data type 2 ', cell_data.dtype
         cell_data = np.nan_to_num(cell_data)
     logging.info('Any values that cannot be converted to float are set to 0')
     return cell_data, object_keys
