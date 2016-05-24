@@ -307,6 +307,7 @@ class DataModel(Singleton):
         '''returns the plate position tuple (row, col) corresponding to 
         the given well_name.
         '''
+        well_name = well_name.strip()
         if self.plate_map == {}:
             self.populate_plate_maps()
         if well_name in self.plate_map.keys():
