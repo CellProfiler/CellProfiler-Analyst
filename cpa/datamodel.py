@@ -264,7 +264,7 @@ class DataModel(Singleton):
         
         res = db.execute('SELECT DISTINCT %s FROM %s '%(p.well_id, p.image_table))
         for r in res:
-            well = r[0]
+            well = r[0].strip()
             # Make sure all well entries match the naming format
             if type(well) == str:
                 assert re.match(well_re, well), 'Well "%s" did not match well naming format "%s"'%(r[0], p.well_format)
