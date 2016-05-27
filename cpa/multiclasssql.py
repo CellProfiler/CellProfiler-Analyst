@@ -149,7 +149,7 @@ def processData(data):
 
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
-    cell_data = np.where(cell_data == np.array(None), '0', cell_data)
+    cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
     try:
         cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
