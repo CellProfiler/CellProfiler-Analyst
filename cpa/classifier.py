@@ -1517,11 +1517,10 @@ class Classifier(wx.Frame):
         Calculates object counts for each class and enrichment values,
         then builds a table and displays it in a DataGrid.
         '''
-        groupChoices = ['Image'] + p._groups_ordered
+        groupChoices = ['Image', 'None'] + p._groups_ordered
         filterChoices = [None] + p._filters_ordered
         nClasses = len(self.classBins)
         two_classes = nClasses == 2
-        nKeyCols = len(dbconnect.image_key_columns())
 
         # GET GROUPING METHOD AND FILTER FROM USER
         enrichments = True
@@ -1538,11 +1537,17 @@ class Classifier(wx.Frame):
             dlg.Destroy()
             return
 
+        if group != groupChoices[0]:
+            wants_enrichments = False
+            logging.info('Enrichments not calculated')
+            nKeyCols = len(dbconnect.object_key_columns())
+        else:
+            nKeyCols = len(dbconnect.image_key_columns())
         t1 = time()
 
         # FETCH PER-IMAGE COUNTS FROM DB
         if not self.keysAndCounts or filter != self.lastScoringFilter:
-            # If hit counts havn't been calculated since last training or if the
+            # If hit counts haven't been calculated since last training or if the
             # user is filtering the data differently then classify all objects
             # into phenotype classes and count phenotype-hits per-image.
             self.lastScoringFilter = filter
@@ -1572,12 +1577,15 @@ class Classifier(wx.Frame):
                     raise StopCalculating()
 
             try:
-                # Adapter Pattern to switch between Legacy code and SciKit Learn
+                # Adapter Pattern to switch between Legacy code and Sci-kit Learn
+                object_only = False
+                if group != groupChoices[0]:
+                    object_only = True
                 if self.algorithm.name == "FastGentleBoosting":
-                    self.keysAndCounts = self.algorithm.PerImageCounts(filter_name=filter, cb=update)
+                    self.keysAndCounts = self.algorithm.PerImageCounts(filter_name=filter, cb=update, object_only=object_only)
                 else:
                     number_of_classes = self.GetNumberOfClasses()
-                    self.keysAndCounts = self.algorithm.PerImageCounts(number_of_classes, filter, update)
+                    self.keysAndCounts = self.algorithm.PerImageCounts(number_of_classes, filter, update, object_only)
             except StopCalculating:
                 dlg.Destroy()
                 self.SetStatusText('Scoring canceled.')
@@ -1603,23 +1611,17 @@ class Classifier(wx.Frame):
         self.PostMessage('time to calculate hits: %.3fs' % (t2 - t1))
 
         # AGGREGATE PER_IMAGE COUNTS TO GROUPS IF NOT GROUPING BY IMAGE
-        if group != groupChoices[0]:
-            self.PostMessage('Grouping %s counts by %s...' % (p.object_name[0], group))
-            imData = {}
-            for row in self.keysAndCounts:
-                key = tuple(row[:nKeyCols])
-                imData[key] = np.array([float(v) for v in row[nKeyCols:]])
-            groupedKeysAndCounts = np.array([list(k) + vals.tolist() for k, vals
-                                             in dm.SumToGroup(imData, group).items()], dtype=object)
-            nKeyCols = len(dm.GetGroupColumnNames(group))
-        else:
-            groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
-            if p.plate_id and p.well_id:
-                pw = db.GetPlatesAndWellsPerImage()
-                platesAndWells = {}
-                for row in pw:
-                    platesAndWells[tuple(row[:nKeyCols])] = list(row[nKeyCols:])
+        self.PostMessage('Grouping %s counts by %s...' % (p.object_name[0], group))
+        #if group == groupChoices[0]:
+        groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
 
+        if p.plate_id and p.well_id:
+            pw = db.GetPlatesAndWellsPerImage()
+            platesAndWells = {}
+            for row in pw:
+                #platesAndWells[tuple(row[:nKeyCols])] = list(row[nKeyCols:])
+                platesAndWells[tuple(row[:1])] = list(row[1:])
+        print platesAndWells
         t3 = time()
         self.PostMessage('time to group per-image counts: %.3fs' % (t3 - t2))
 
@@ -1640,13 +1642,18 @@ class Classifier(wx.Frame):
         for i, row in enumerate(groupedKeysAndCounts):
             # Start this row with the group key:
             tableRow = list(row[:nKeyCols])
-            if group != 'Image':
+            if p.plate_id and p.well_id:
+                tableRow += platesAndWells[tuple(row[:1])]#platesAndWells[tuple(row[:nKeyCols])]
+            '''
+            if group != groupChoices[0]:
                 # Append the # of images in this group
-                tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols]), filter))]
+                1
+                #tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols]), filter))]
             else:
                 # Append the plate and well ids
                 if p.plate_id and p.well_id:
                     tableRow += platesAndWells[tuple(row[:nKeyCols])]
+            '''
             # Append the counts:
             countsRow = [int(v) for v in row[nKeyCols:nKeyCols + nClasses]]
             tableRow += [sum(countsRow)]
@@ -1679,6 +1686,7 @@ class Classifier(wx.Frame):
                     tableRow += ['NaN'] * 2 * len(countsRow)
             tableData.append(tableRow)
         tableData = np.array(tableData, dtype=object)
+        print tableData
 
         if wants_enrichments:
             t5 = time()
@@ -1687,18 +1695,21 @@ class Classifier(wx.Frame):
         # CREATE COLUMN LABELS LIST
         # if grouping isn't per-image, then get the group key column names.
         if group != groupChoices[0]:
-            labels = dm.GetGroupColumnNames(group)
+            #labels = dm.GetGroupColumnNames(group)
+            labels = list(dbconnect.object_key_columns())
         else:
             labels = list(dbconnect.image_key_columns())
+
         # record the column indices for the keys
         key_col_indices = [i for i in range(len(labels))]
-        if group != 'Image':
+        if p.plate_id and p.well_id:
+            labels += ['Plate ID']
+            labels += [p.well_id]
+        '''
+        if group != groupChoices[0]:
             labels += ['Images']
-        else:
-            if p.plate_id and p.well_id:
-                #                labels += [p.plate_id]
-                labels += ['Plate ID']
-                labels += [p.well_id]
+        '''
+
         labels += ['Total %s Count' % (p.object_name[0].capitalize())]
         for i in xrange(nClasses):
             labels += ['%s %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
@@ -1723,7 +1734,7 @@ class Classifier(wx.Frame):
             grid.table_from_array(tableData, labels, group, key_col_indices)
             grid.Show()
         except(Exception):
-            wx.MessageDialog(self, 'Unable to calculate enrichment scores.', 'Error', style=wx.OK).ShowModal()
+            wx.MessageDialog(self, 'Unable to show table.', 'Error', style=wx.OK).ShowModal()
 
         # self.openDimensReduxBtn.Enable()  # JEN - Added
 

@@ -113,8 +113,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             return scores, detailedResults
         return scores
 
-    def PerImageCounts(self, number_of_classes, filter_name=None, cb=None):
-        return multiclasssql.PerImageCounts(self, number_of_classes, filter_name, cb)
+    def PerImageCounts(self, number_of_classes, filter_name=None, cb=None, object_only=False):
+        return multiclasssql.PerImageCounts(self, number_of_classes, filter_name, cb, object_only)
 
     def Predict(self, test_values, fout=None):
         '''RETURNS: np array of predicted classes of input data test_values '''

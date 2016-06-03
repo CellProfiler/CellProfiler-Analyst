@@ -196,7 +196,7 @@ def _where_clauses(p, dm, filter_name):
                  %(_objectify(p, p.image_id), lo[0], _objectify(p, p.image_id), hi[0])
                  for lo, hi in zip(key_thresholds[:-1], key_thresholds[1:])])
 
-def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
+def PerImageCounts(classifier, num_classes, filter_name=None, cb=None, object_only=False):
     '''
     classifier: trained classifier object
     filter: name of filter, or None.
@@ -248,9 +248,17 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                 area_score = data[-1] #separate area from data
                 data = data[:-1]
             else:
-                data = db.execute('SELECT %s, %s FROM %s '
+                if not object_only:
+                    data = db.execute('SELECT %s, %s FROM %s '
+                                      '%s WHERE %s'
+                                      %(UniqueImageClause(p.object_table),
+                                        ",".join(db.GetColnamesForClassifier()), tables,
+                                        join_clause, where_clause),
+                                      silent=(idx > 10))
+                else:
+                    data = db.execute('SELECT %s, %s FROM %s '
                                   '%s WHERE %s'
-                                  %(UniqueImageClause(p.object_table),
+                                  %(UniqueObjectClause(p.object_table),
                                     ",".join(db.GetColnamesForClassifier()), tables,
                                     join_clause, where_clause),
                                   silent=(idx > 10))
@@ -265,13 +273,16 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i], predicted_classes[i]))
-                oneCount = np.array([1])
-                if area_score:
-                    oneCount = np.append(oneCount, area_score[i])
-                if row_cls in counts:
-                    counts[row_cls] += oneCount
+                if object_only:
+                    counts[row_cls] = np.array([1])
                 else:
-                    counts[row_cls] = oneCount
+                    oneCount = np.array([1])
+                    if area_score:
+                        oneCount = np.append(oneCount, area_score[i])
+                    if row_cls in counts:
+                        counts[row_cls] += oneCount
+                    else:
+                        counts[row_cls] = oneCount
 
             if cb:
                 cb(min(1, idx/float(num_clauses))) #progress
@@ -286,11 +297,15 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
         return counts.get(im_key + (classnum, ), np.array([0, 0]))[1]
 
     def get_results():
-        for imkey in dm.GetImageKeysAndObjectCounts(filter_name):
-            if p.area_scoring_column is None:
-                yield list(imkey[0]) + [get_count(imkey[0], cl) for cl in range(1, num_classes+1)]
-            else:
-                yield list(imkey[0]) + [get_count(imkey[0], cl) for cl in range(1, num_classes+1)] + [get_area(imkey[0], cl) for cl in range(1, num_classes+1)]
+        if object_only:
+            for count in counts:
+                yield list(count[:-1]) + [1 if count[-1]==cl else 0 for cl in range(1, num_classes+1)]
+        else:
+            for imkey in dm.GetImageKeysAndObjectCounts(filter_name):
+                if p.area_scoring_column is None:
+                    yield list(imkey[0]) + [get_count(imkey[0], cl) for cl in range(1, num_classes+1)]
+                else:
+                    yield list(imkey[0]) + [get_count(imkey[0], cl) for cl in range(1, num_classes+1)] + [get_area(imkey[0], cl) for cl in range(1, num_classes+1)]
 
     return list(get_results())
 
