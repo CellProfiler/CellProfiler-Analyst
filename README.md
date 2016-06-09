@@ -7,7 +7,10 @@
 |---------------|----------------|-----------------|
 | [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)](http://cellprofiler.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-2.2.1-brightgreen.svg)](http://cellprofiler.org/CPA/) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](http://forum.cellprofiler.org/) |
 
-**CellProfiler Analyst** allows interactive exploration and analysis of data, particularly from high-throughput, image-based experiments. Included is a supervised machine learning system which can be trained to recognize complicated and subtle phenotypes, for automatic scoring of millions of cells.
+**CellProfiler Analyst** allows interactive exploration and analysis of data,
+particularly from high-throughput, image-based experiments. Included is a
+supervised machine learning system which can be trained to recognize complex
+and subtle phenotypes, for automatic scoring of millions of cells.
 
 <div align="center">
   <img src="http://i.imgur.com/j12EQH5.png"><br><br>
@@ -15,11 +18,11 @@
 
 ## Installation
 
-Download version for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.dmg) 
+Download CellProfiler Analyst for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.dmg) 
 
-Download version for Windows here: [App for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.exe)
+Download CellProfiler Analyst for Windows here: [Exe for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.exe)
 
-The app requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE). 
+CellProfiler Analyst requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE).
 Check the Java path.
 
 Please note that this is the development branch of CPA and it will be updated on regular basis. 
@@ -30,7 +33,8 @@ For a head start, download example dataset here: [Example Dataset for CPA (zippe
 
 ## Developer build
 
-Building CPA on your machine requires CellProfiler dependencies. 
+Building CPA on your machine requires CellProfiler dependencies. Check the wiki
+for more detailed installation instructions.
 
 * Pandas
 * Seaborn
@@ -45,7 +49,7 @@ Building CPA on your machine requires CellProfiler dependencies.
 
 ## Wiki
 
-> http://cellprofiler.org/wiki/index.php
+> https://github.com/CellProfiler/CellProfiler-Analyst/wiki
 
 ## Forum
 
