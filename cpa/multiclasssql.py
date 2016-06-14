@@ -58,7 +58,7 @@ def create_perobject_class_table(classifier, classNames):
                           silent=(idx > 10))
         #data.extend(result)
         #print('Getting predictions...')
-        cell_data, object_keys = processData(data)
+        cell_data, object_keys = processData(data, p.check_tables=='yes')
 
         predicted_classes = classifier.Predict(cell_data)
         #print('Writing to database...')
@@ -124,7 +124,7 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
         data = db.execute('SELECT %s, %s FROM %s WHERE %s'%(UniqueObjectClause(p.object_table),
         ",".join(db.GetColnamesForClassifier()), p.object_table, whereclause))
 
-    cell_data, object_keys = processData(data)
+    cell_data, object_keys = processData(data, p.check_tables=='yes')
     res = [] # list
     if uncertain:
         # Our requirement: if the two largest scores are smaller than threshold
@@ -134,13 +134,13 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
         diff = sorted_p[:,1] - sorted_p[:,0]
 
         indices = np.where(diff < threshold)[0] # get all indices where this is true
-        res = [object_keys[i] for i in indices] 
+        res = [object_keys[i] for i in indices]
     else:
         predicted_classes = classifier.Predict(cell_data)
-        res = object_keys[predicted_classes == classNum * np.ones(predicted_classes.shape)].tolist() #convert to list 
+        res = object_keys[predicted_classes == classNum * np.ones(predicted_classes.shape)].tolist() #convert to list
     return map(tuple,res) # ... and then to tuples
 
-def processData(data):
+def processData(data, remove_rows=False):
     #takes data from query and returns arrays for feature values and object keys
     number_of_features = len(db.GetColnamesForClassifier())
 
@@ -149,7 +149,11 @@ def processData(data):
 
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
-    cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
+    if remove_rows:
+        cell_data = cell_data[np.all(cell_data != np.array(None) and np.char.lstrip(cell_data) != '' and np.char.lower(np.char.lstrip(cell_data)) != 'null', axis=1)].astype(str)
+        logging.info('Any object with missing data is removed')
+    else:
+        cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
     try:
         cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
@@ -249,13 +253,13 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                 data = data[:-1]
             else:
                 data = db.execute('SELECT %s, %s FROM %s '
-                                  '%s WHERE %s'
-                                  %(UniqueImageClause(p.object_table),
-                                    ",".join(db.GetColnamesForClassifier()), tables,
-                                    join_clause, where_clause),
-                                  silent=(idx > 10))
+                              '%s WHERE %s'
+                              %(UniqueObjectClause(p.object_table),
+                                ",".join(db.GetColnamesForClassifier()), tables,
+                                join_clause, where_clause),
+                              silent=(idx > 10))
 
-            cell_data, image_keys = processData(data)
+            cell_data, image_keys = processData(data, p.check_tables=='yes')
             for i in range(cell_data.shape[0]):
                 for j in range(cell_data.shape[1]):
                     try:
