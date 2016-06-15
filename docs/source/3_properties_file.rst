@@ -230,7 +230,7 @@ The following field (optional) specifies a MySQL table name for Classifier to cr
 
 Checking your tables
 --------------------
-The following field (optional) tells Classifier whether to check your tables at startup for anomalies such as missing column indices (an index is a database structure that greatly improves the speed of data retrieval) or orphaned objects (objects that do not correspond to an image in the image table). The operation can take up to a minute if your object table is extremely large.
+The following field (optional) tells Classifier whether to check your tables at startup for anomalies such as missing/None/NULL values. 
 
 .. code-block:: text
 
