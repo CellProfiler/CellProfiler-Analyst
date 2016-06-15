@@ -178,7 +178,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         print "Class labels should be integers > 0."
         exit(1)
 
-    def XValidate(self, labels, values, folds, stratified=False, scoring=None):
+    def XValidate(self, labels, values, folds, stratified=True, scoring=None):
         '''
         Performs K fold cross validation based on input folds.
         Takes a subset of the input data label_array and values to do the cross validation.
@@ -401,10 +401,10 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
 
-    def ConfusionMatrix(self):
+    def ConfusionMatrix(self, folds):
         from sklearn.metrics import confusion_matrix
         # Compute confusion matrix
-        folds = 5 # like classification report
+
         y_pred = self.XValidatePredict(self.env.trainingSet.label_array, self.env.trainingSet.values, folds, stratified=True)
         y_test = self.env.trainingSet.label_array
 
