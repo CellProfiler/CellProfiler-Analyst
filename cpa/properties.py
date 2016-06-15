@@ -359,9 +359,9 @@ class Properties(Singleton):
         self._filename = filename
         
         # Write revision first
-        import util.version
-        __version__ = util.version.version_number
-        fd.write('# CellProfiler Analyst revision: %s\n'%(__version__))
+        #import util.version
+        #__version__ = util.version.
+        #fd.write('# CellProfiler Analyst revision: %s\n'%(__version__))
         
         fields_to_write = sorted([k for k, v in self.__dict__.items() 
                                   if not k.startswith('_') and v is not None])
