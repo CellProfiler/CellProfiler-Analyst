@@ -501,12 +501,7 @@ class ImageViewer(wx.Frame):
             logging.error('Could not find Classifier!')
             return
         # Score the Image
-        classHits = classifier.ScoreImage(self.img_key)
-        # Get object coordinates in image and display
-        classCoords = {}
-        for className, obKeys in classHits.items():
-            classCoords[className] = [db.GetObjectCoords(key) for key in obKeys]
-        self.SetClasses(classCoords)
+        classifier.ClassifyImage(self.img_key)
 
     def OnPaneChanged(self, evt=None):
         self.Layout()

@@ -1465,12 +1465,17 @@ class Classifier(wx.Frame):
         else:
             imKey = (imgNum,)
 
+        self.ClassifyImage(imKey)
+
+    def ClassifyImage(self, imKey):
         # Score the Image
         classHits = self.ScoreImage(imKey)
         # Get object coordinates in image and display
         classCoords = {}
         for className, obKeys in classHits.items():
-            classCoords[className] = [db.GetObjectCoords(key) for key in obKeys]
+            training_obKeys = self.trainingSet.get_object_keys()
+            classCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
+            classCoords['test ' + className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
         # Show the image
         imViewer = imagetools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale,
@@ -1888,7 +1893,6 @@ class Classifier(wx.Frame):
                           contrast=self.contrast)
         self.imageControlFrame.Show(True)
 
-#SKLEARN TODO
     def OnRulesEdit(self, evt):
         '''Lets the user edit the rules.'''
         if self.algorithm.name == "FastGentleBoosting":
