@@ -59,7 +59,6 @@ def create_perobject_class_table(classifier, classNames):
         #data.extend(result)
         #print('Getting predictions...')
         cell_data, object_keys = processData(data, p.check_tables=='yes')
-
         predicted_classes = classifier.Predict(cell_data)
         #print('Writing to database...')
         if len(object_keys.shape) > 2:
@@ -144,16 +143,18 @@ def processData(data, remove_rows=False):
     #takes data from query and returns arrays for feature values and object keys
     number_of_features = len(db.GetColnamesForClassifier())
 
-    cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
-    object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+    if remove_rows:
+        include_rows = [row_num for row_num in range(len(data)) if None not in data[row_num][-number_of_features:] and 'null' not in map(lambda x:str(x).lower(), data[row_num][-number_of_features:]) and '' not in map(lambda x:str(x).strip(), data[row_num][-number_of_features:])]
+        cell_data = np.array([map(lambda x:str(x), data[row_num][-number_of_features:]) for row_num in range(len(data)) if row_num in include_rows]) #last number_of_features columns in row
+        object_keys = np.array([data[row_num][:-number_of_features] for row_num in range(len(data)) if row_num in include_rows]) #all elements in row before last (number_of_features) elements
+        logging.info('Any object with missing data is removed')
+    else:
+        cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
+        object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+        cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
-    if remove_rows:
-        cell_data = cell_data[np.all(cell_data != np.array(None) and np.char.lstrip(cell_data) != '' and np.char.lower(np.char.lstrip(cell_data)) != 'null', axis=1)].astype(str)
-        logging.info('Any object with missing data is removed')
-    else:
-        cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
     try:
         cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
@@ -268,7 +269,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                         print i,j, cell_data[i,j], type(cell_data[i,j])
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
-                row_cls = tuple(np.append(image_keys[i], predicted_classes[i]))
+                row_cls = tuple(np.append(image_keys[i][0], predicted_classes[i]))
                 oneCount = np.array([1])
                 if area_score:
                     oneCount = np.append(oneCount, area_score[i])
@@ -280,9 +281,8 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
             if cb:
                 cb(min(1, idx/float(num_clauses))) #progress
         return counts
-
+    print 'area scoring column ', p.area_scoring_column
     counts = do_by_steps(p.object_table, filter_name, p.area_scoring_column)
-
     def get_count(im_key, classnum):
         return counts.get(im_key + (classnum, ), np.array([0]))[0]
 
