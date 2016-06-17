@@ -86,7 +86,7 @@ class DataModel(Singleton):
         self._if_empty_populate()
         return self.obCount
         
-    def GetRandomObject(self):
+    def GetRandomObject(self, N):
         '''
         Returns a random object key
         We expect self.data.keys() to return the keys in the SAME ORDER
@@ -94,19 +94,23 @@ class DataModel(Singleton):
         need not necessarily be in sorted order.
         '''
         self._if_empty_populate()
-        obIdx = randint(1, self.obCount)
-        imIdx = np.searchsorted(self.cumSums, obIdx, 'left')
-        # SUBTLETY: images which have zero objects will appear as repeated
-        #    sums in the cumulative array, so we must pick the first index
-        #    of any repeated sum, otherwise we are picking an image with no
-        #    objects
-        while self.cumSums[imIdx] == self.cumSums[imIdx-1]:
-            imIdx -= 1
-        imKey = self.data.keys()[imIdx-1]
-        obIdx = obIdx-self.cumSums[imIdx-1]  # object number relative to this image
-                    
-        obKey = db.GetObjectIDAtIndex(imKey, obIdx)
-        return obKey
+        if N > self.obCount:
+            logging.info(str(N) +' is greater than the number of objects. Fetching ' + str(self.obCount) + ' objects.')
+            N = self.obCount
+        obIdxs = random.sample(range(1, self.obCount + 1), N)
+        obKeys = []
+        for obIdx in obIdxs:
+            imIdx = np.searchsorted(self.cumSums, obIdx, 'left')
+            # SUBTLETY: images which have zero objects will appear as repeated
+            #    sums in the cumulative array, so we must pick the first index
+            #    of any repeated sum, otherwise we are picking an image with no
+            #    objects
+            while self.cumSums[imIdx] == self.cumSums[imIdx-1]:
+                imIdx -= 1
+            imKey = self.data.keys()[imIdx-1]
+            obIdx = obIdx-self.cumSums[imIdx-1]  # object number relative to this image
+            obKeys.append(db.GetObjectIDAtIndex(imKey, obIdx))
+        return obKeys
 
     def GetRandomObjects(self, N, imKeys=None):
         '''
@@ -116,7 +120,7 @@ class DataModel(Singleton):
         '''
         self._if_empty_populate()
         if imKeys == None:
-            return [self.GetRandomObject() for i in xrange(N)]
+            return self.GetRandomObject(N)
         elif imKeys == []:
             return []
         else:
