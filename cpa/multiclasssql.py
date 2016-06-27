@@ -143,30 +143,9 @@ def processData(data, remove_rows=False):
     #takes data from query and returns arrays for feature values and object keys
     col_names = db.GetColnamesForClassifier()
     number_of_features = len(col_names)
-    for i in range(number_of_features):
-        if 'AreaShape_Area' in col_names[i]:
-            AreaShape_Area_index = i
-    if remove_rows:
-        print len(data)
-        try:
-            include_rows = [row_num for row_num in range(len(data)) if None not in data[row_num][-number_of_features:]
-                            and 'null' not in map(lambda x:str(x).lower(), data[row_num][-number_of_features:])
-                            and '' not in map(lambda x:str(x).strip(), data[row_num][-number_of_features:])
-                            and data[row_num][AreaShape_Area_index] != 0]
-        except:
-            logging.info('No AreaShape_Area')
-            include_rows = [row_num for row_num in range(len(data)) if None not in data[row_num][-number_of_features:]
-                            and 'null' not in map(lambda x:str(x).lower(), data[row_num][-number_of_features:])
-                            and '' not in map(lambda x:str(x).strip(), data[row_num][-number_of_features:])]
-        cell_data = np.array([map(lambda x:str(x), data[row_num][-number_of_features:]) for row_num in range(len(data)) if row_num in include_rows]) #last number_of_features columns in row
-        object_keys = np.array([data[row_num][:-number_of_features] for row_num in range(len(data)) if row_num in include_rows]) #all elements in row before last (number_of_features) elements
-        logging.info('Any object with missing data is removed')
-        logging.info('Any object with AreaShape_Area = 0 is removed')
-        print len(cell_data)
-    else:
-        cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
-        object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
-        cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
+    cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
+    object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+    cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert

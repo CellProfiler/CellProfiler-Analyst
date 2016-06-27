@@ -333,6 +333,8 @@ class DBConnect(Singleton):
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
                 if p.classification_type == 'image':
                     self.CreateObjectImageTable()
+                if p.check_tables == 'yes':
+                    self.CreateObjectCheckedTable()
             except DBError(), e:
                 raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
             
@@ -447,6 +449,8 @@ class DBConnect(Singleton):
                         raise DBException, 'Database at %s appears to be empty.'%(p.db_sqlite_file)
             if p.classification_type == 'image':
                 self.CreateObjectImageTable()
+            if p.check_tables == 'yes':
+                self.CreateObjectCheckedTable()
             logging.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
 
         # Unknown database type (this should never happen)
@@ -1244,6 +1248,7 @@ class DBConnect(Singleton):
         r = csv.reader(f)
         columnLabels = r.next()
         columnLabels = [lbl.strip() for lbl in columnLabels]
+
         dtable = get_data_table_from_csv_reader(r)
         colTypes = self.InferColTypesFromData(dtable, len(columnLabels))
         
@@ -1283,7 +1288,7 @@ class DBConnect(Singleton):
         r = csv.reader(f)
         row = r.next() # skip the headers
         row = r.next()
-        while row: 
+        while row:
             self.execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                          silent=True)
             try:
@@ -1456,6 +1461,22 @@ class DBConnect(Singleton):
             else:
                 raise Exception('Input image_width and image_height fields in properties file')
         return width, height    
+
+    def CreateObjectCheckedTable(self):
+        # Create object (checked) table where there are no rows with missing/null values
+        DB_NAME = p.db_name
+        DB_TYPE = p.db_type.lower()
+        if DB_TYPE == 'mysql':
+            query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s"%(p.object_table, p.object_table[:-8])
+        elif DB_TYPE == 'sqlite':
+            query = "PRAGMA table_info(%s)"%p.object_table[:-8]
+            self.execute(query)
+            all_cols = [str(x) for x in self.GetColumnNames(p.object_table[:-8])]
+            AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
+            query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
+            self.execute(query)
+            query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE %s AND %s AND %s'%(p.object_table, p.object_table[:-8], " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+        self.execute(query)
 
     def CreateObjectImageTable(self):
         # Create object table for image classification
