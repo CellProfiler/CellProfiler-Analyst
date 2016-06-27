@@ -321,10 +321,6 @@ class Properties(Singleton):
         else:
             self.classification_type = "object"
 
-        #if check_tables is defined
-        if self.field_defined('check_tables') and self.check_tables.lower() in ['yes']:
-            self.object_table = self.object_table + '_Checked'
-
         # For image gallery
         if self.field_defined('image_size'):
             self.image_size = int(self.image_size)
@@ -332,6 +328,10 @@ class Properties(Singleton):
             self.image_size = self.image_tile_size
 
         self.Validate()
+
+        #if check_tables is defined
+        if self.field_defined('check_tables') and self.check_tables.lower() in ['yes']:
+            self.object_table = self.object_table + '_Checked'
         self._initialized = True
 
     LoadFile = load_file
