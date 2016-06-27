@@ -94,9 +94,6 @@ class DataModel(Singleton):
         need not necessarily be in sorted order.
         '''
         self._if_empty_populate()
-        if N > self.obCount:
-            logging.info(str(N) +' is greater than the number of objects. Fetching ' + str(self.obCount) + ' objects.')
-            N = self.obCount
         obIdxs = random.sample(range(1, self.obCount + 1), N)
         obKeys = []
         for obIdx in obIdxs:
@@ -119,6 +116,10 @@ class DataModel(Singleton):
         objects from only these images.
         '''
         self._if_empty_populate()
+        if N > self.obCount:
+            logging.info(str(N) +' is greater than the number of objects. Fetching ' + str(self.obCount) + ' objects.')
+            N = self.obCount
+            print self.obCount
         if imKeys == None:
             return self.GetRandomObject(N)
         elif imKeys == []:
@@ -128,8 +129,8 @@ class DataModel(Singleton):
             if sums[-1] < 1:
                 return []
             obs = []
-            for i in xrange(N):
-                obIdx = randint(1, sums[-1])
+            obIdxs = random.sample(range(1, sums[-1]), N)#randint(1, sums[-1])
+            for obIdx in obIdxs:
                 index = np.searchsorted(sums, obIdx, 'left')
                 if index != 0:
                     while sums[index] == sums[index-1]:
