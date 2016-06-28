@@ -1818,10 +1818,12 @@ class Classifier(wx.Frame):
             validVals = [str(col) for col in validVals]
             if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == long:
                 fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80, -1))
+                fieldInp.SetSelection(-1,-1) # Fix #203, textCtrl has different API since wx3
             else:
                 fieldInp = wx.Choice(self.fetch_panel, -1, size=(80, -1),
                                        choices=['__ANY__'] + validVals)
-            fieldInp.SetSelection(0)
+                fieldInp.SetSelection(0)
+
             validVals = ['__ANY__'] + validVals
             # Create and bind to a text Validator
             def ValidateGroupField(evt, validVals=validVals):
@@ -1879,7 +1881,8 @@ class Classifier(wx.Frame):
         groupKey = []
         for input, ftype in zip(self.groupInputs, fieldTypes):
             # GetValue returns unicode from ComboBox, but we need a string
-            val = str(input.GetStringSelection())
+            #val = str(input.GetStringSelection())
+            val = str(input.Value) # Fix issue #203
             # if the value is blank, don't bother typing it, it is a wildcard
             if val != '__ANY__':
                 val = ftype(val)
