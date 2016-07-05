@@ -312,8 +312,10 @@ The previous example, but for a database including a table_id column TableNumber
 
 Image Classification
 --------------------
-CellProfiler Analyst 2.2 also supports classification directly from image features. To allow this, the biologist has to set the classification type flag to image
+CellProfiler Analyst 2.2 also supports classification directly from image features. To allow this, the biologist has to set the classification type flag to image and set the image_width and image_height fields to be a set number of pixels (e.g., 512 pixels).
 
 .. code-block:: text
 
     classification_type = image
+    image_width = 512
+    image_height = 512
