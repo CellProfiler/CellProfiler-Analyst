@@ -1653,7 +1653,8 @@ class Classifier(wx.Frame):
         fraction = 0.0
         for i, row in enumerate(groupedKeysAndCounts):
             # Start this row with the group key:
-            tableRow = list(row[:nKeyCols])
+            imageNumber = list(row[:nKeyCols])
+            tableRow = imageNumber
             if group != 'Image':
                 # Append the # of images in this group
                 tableRow += [len(dm.GetImagesInGroup(group, tuple(row[:nKeyCols]), filter))]
@@ -1691,6 +1692,10 @@ class Classifier(wx.Frame):
                                      scores]  # compute logit of each probability
                 else:
                     tableRow += ['NaN'] * 2 * len(countsRow)
+            #training set counts
+            trainingCountsRow = [np.sum([(self.trainingSet.get_class_per_object()[i] == v)*(self.trainingSet.get_object_keys()[i][0] == imageNumber[0]) for i in range(len(self.trainingSet.get_class_per_object()))]) for v in self.trainingSet.labels]
+            tableRow += [sum(trainingCountsRow)]
+            tableRow += trainingCountsRow
             tableData.append(tableRow)
         tableData = np.array(tableData, dtype=object)
 
@@ -1728,6 +1733,10 @@ class Classifier(wx.Frame):
             else:
                 for i in xrange(nClasses):
                     labels += ['Enriched Score\n' + self.classBins[i].label]
+        #Training cell count
+        labels += ['Total Training %s Count' % (p.object_name[0].capitalize())]
+        for i in xrange(nClasses):
+            labels += ['%s Training %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         try:
             title = "Hit table (grouped by %s)" % (group,)
             if filter:
