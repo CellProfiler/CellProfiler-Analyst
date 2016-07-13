@@ -1027,7 +1027,6 @@ class Classifier(wx.Frame):
     # Get the name of the loaded model file
     def GetModelData(self, filename):
         from sklearn.externals import joblib
-
         try: 
             return joblib.load(filename)
         except:
@@ -1045,33 +1044,33 @@ class Classifier(wx.Frame):
 
         try:
             # Get the name of the loaded file
-            model, bin_labels, load_name = self.GetModelData(filename)
+            model, bin_labels, load_name, features = self.GetModelData(filename)
 
             if self.algorithm.name != load_name:
                 logging.info("Detected different setted classifier: " + self.algorithm.name + ", switching to " + load_name)
-                if load_name in self.algorithms:
-                    self.algorithm = self.algorithms[load_name]
-                    itemId = self.classifier2ItemId[load_name]
-                    # Checks the MenuItem
-                    self.classifierMenu.Check(itemId, True)
-                    self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
-                    self.algorithm.LoadModel(filename)
+            if load_name in self.algorithms:
+                self.algorithm = self.algorithms[load_name]
+                itemId = self.classifier2ItemId[load_name]
+                # Checks the MenuItem
+                self.classifierMenu.Check(itemId, True)
+                self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
+                self.algorithm.LoadModel(filename)
 
-                    # for label in self.algorithm.bin_labels:
-                    for bin in self.classBins:
-                        bin.trained = True
-                    self.scoreAllBtn.Enable()
-                    self.scoreImageBtn.Enable()
-                    self.PostMessage('Classifier model succesfully loaded')
+                # for label in self.algorithm.bin_labels:
+                for bin in self.classBins:
+                    bin.trained = True
+                self.scoreAllBtn.Enable()
+                self.scoreImageBtn.Enable()
+                self.PostMessage('Classifier model succesfully loaded')
 
-                    # Some User Information about the loaded Algorithm
-                    self.PostMessage('Loaded trained classifier: ' + self.algorithm.name + ' on classes:')
-                    for label in self.algorithm.bin_labels:
-                        self.PostMessage(label)
-                    self.PostMessage('CAUTION: Classifier needs to be trained on the current data set!')
-                else:
-                    logging.error("Algorithm: %s doesn't exists", load_name)
-            
+                # Some User Information about the loaded Algorithm
+                self.PostMessage('Loaded trained classifier: ' + self.algorithm.name + ' on classes:')
+                for label in self.algorithm.bin_labels:
+                    self.PostMessage(label)
+                self.PostMessage('CAUTION: Classifier needs to be trained on the current data set!')
+            else:
+                logging.error("Algorithm: %s doesn't exists", load_name)
+
         except:
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
@@ -1475,7 +1474,7 @@ class Classifier(wx.Frame):
         for className, obKeys in classHits.items():
             training_obKeys = self.trainingSet.get_object_keys()
             classCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
-            classCoords['test ' + className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
+            classCoords[className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
         # Show the image
         imViewer = imagetools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale,
