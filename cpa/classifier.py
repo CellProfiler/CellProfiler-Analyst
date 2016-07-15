@@ -1530,6 +1530,7 @@ class Classifier(wx.Frame):
         Calculates object counts for each class and enrichment values,
         then builds a table and displays it in a DataGrid.
         '''
+        self.UpdateTrainingSet()
         groupChoices = ['Image'] + p._groups_ordered
         filterChoices = [None] + p._filters_ordered
         nClasses = len(self.classBins)
