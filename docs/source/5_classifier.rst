@@ -28,7 +28,7 @@ V.A Classifier quick-start guide
 
 2. Specify whether Classifier should select these objects from the entire experiment, a single image or a group, and whether it should apply any filters. Groups will only be available if defined in your properties file (section II).
 
-3. Click **Fetch**. Objects will appear in the unclassified bin.
+3. Click **Fetch**. n distinct objects will appear in the unclassified bin.
 
 4. Manually sort the unclassified objects into classification bins, adding additional bins if needed. Often, two bins are used: **positive** and **negative**. Bin names can be changed by right clicking empty space in the relevant bin.
 
@@ -94,14 +94,14 @@ The menu bar at the top of the screen contains options for adjusting the display
 
 V.B.2 Fetch an initial batch of objects
 ----------------------------------------
-Objects are fetched (retrieved) using the top portion of the main Classifier window:
+n distinct objects are fetched (retrieved) using the top portion of the main Classifier window:
 
 .. figure:: static/05_05.jpg
   :align: center
 
   Controls to fetch objects.
 
-*How many objects*? Enter the number of objects you want Classifier to fetch (default = **20**)
+*How many objects*? Enter the number of distinct objects you want Classifier to fetch (default = **20**)
 
 *Which class of objects should be retrieved*? At this stage, **random** will be the only option available in the left-hand menu. After you **Train** Classifier (section III.C.5, following), new options will appear relating to each classification bin.
 
