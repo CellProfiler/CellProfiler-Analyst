@@ -317,8 +317,14 @@ class Classifier(wx.Frame):
 
         # add the default classes
         #for class in range(1, num_classes+1):
-        self.AddSortClass('positive')
-        self.AddSortClass('negative')
+        if p.class_names:
+            bins = p.class_names.split(',')
+            for bin in bins:
+                bin = bin.strip()
+                self.AddSortClass(bin)
+        else:
+            self.AddSortClass('positive')
+            self.AddSortClass('negative')
 
         self.Layout()
 
