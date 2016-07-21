@@ -1437,6 +1437,7 @@ class Classifier(wx.Frame):
         self.UpdateClassChoices()#
 
     def OnScoreImage(self, evt):
+        self.UpdateTrainingSet()
         # Get the image key
         # Start with the table_id if there is one
         tblNum = None
@@ -1471,8 +1472,8 @@ class Classifier(wx.Frame):
         classHits = self.ScoreImage(imKey)
         # Get object coordinates in image and display
         classCoords = {}
+        training_obKeys = self.trainingSet.get_object_keys()
         for className, obKeys in classHits.items():
-            training_obKeys = self.trainingSet.get_object_keys()
             classCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
             classCoords[className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
         # Show the image
@@ -1522,7 +1523,6 @@ class Classifier(wx.Frame):
                 classHits[bin.label] = self.algorithm.FilterObjectsFromClassN(clNum + 1, [imKey])
                 self.PostMessage('%s of %s %s classified as %s in image %s' % (
                 len(classHits[bin.label]), len(obKeys), p.object_name[1], bin.label, imKey))
-
         return classHits
 
     def ScoreAll(self, evt=None):
