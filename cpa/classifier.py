@@ -765,7 +765,7 @@ class Classifier(wx.Frame):
                 wx.CallAfter(bin.Destroy)
                 self.classified_bins_panel.Layout()
                 break
-        self.algorithm.UpdateBins([]);
+        self.algorithm.UpdateBins([])
         if clearModel:
             self.algorithm.ClearModel()
         self.rules_text.SetValue('')
