@@ -129,7 +129,7 @@ class DataModel(Singleton):
             if sums[-1] < 1:
                 return []
             obs = []
-            obIdxs = random.sample(range(1, sums[-1]), N)#randint(1, sums[-1])
+            obIdxs = random.sample(range(1, sums[-1]+1ge), N)#randint(1, sums[-1])
             for obIdx in obIdxs:
                 index = np.searchsorted(sums, obIdx, 'left')
                 if index != 0:
