@@ -114,22 +114,33 @@ class ImageControlPanel(wx.Panel):
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
             colors = [np.array(cm.jet(val)) * 255 for val in vals]
-            
+            colors_dict = {}
+            i=0
+            for name in classCoords:
+                colors_dict[name] = colors[i]
+                i+=1
             self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Classes:'))
             i=1
-            for (name, keys), color in zip(classCoords.items(), colors):
+            classCoords_ordered = [name for name in classCoords if name[:8] != 'training']
+            classCoords_ordered.extend([name for name in classCoords if name[:8] == 'training'])
+            for name in classCoords_ordered:
+                if i == len(classCoords)/2 + 1:
+                    self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Training:'))
                 checkBox = wx.CheckBox(self.Parent, wx.NewId(), '%d) %s'%(i,name))
-                checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
+      
+                #checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
+                checkBox.SetBackgroundColour(colors_dict[name])
                 checkBox.SetValue(True)
                 self.sizer4.Add(checkBox, flag=wx.EXPAND)
-                
+
                 def OnTogglePhenotype(evt):
                     className = evt.EventObject.Label
                     for listener in self.listeners:
                         listener.ToggleClass(className[3:], evt.Checked())
-                
+
                 checkBox.Bind(wx.EVT_CHECKBOX, OnTogglePhenotype)
                 i+=1
+
 
 
     def OnBrightnessSlider(self, evt):
