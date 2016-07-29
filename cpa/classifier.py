@@ -1493,7 +1493,7 @@ class Classifier(wx.Frame):
         title = "Hit table (Image key %s)" % (imKey)
         title += ' (%s)' % (os.path.split(p._filename)[1])
         grid = tableviewer.TableViewer(self, title=title)
-        labels = list(dbconnect.image_key_columns())
+
         # record the column indices for the keys
         # CONSTRUCT ARRAY OF TABLE DATA
         classCounts = []
@@ -1503,13 +1503,15 @@ class Classifier(wx.Frame):
         tableData += imKey
         tableData += [sum(classCounts)]
         tableData += classCounts
-        key_col_indices = [i for i in range(len(labels))]
 
-        labels += ['Total %s Count' % (p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
-            labels += ['%s %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
-        tableData = np.array([tableData])
-        grid.table_from_array(tableData, labels, 'Image', key_col_indices)
+        labels = list(dbconnect.image_key_columns())
+        key_col_indices = [i for i in range(len(labels))]
+        labels = self.getLabels(labels, nClasses)
+        trainingCountsRow = [np.sum([(self.trainingSet.get_class_per_object()[i] == v)*(self.trainingSet.get_object_keys()[i][0] == imKey[0]) for i in range(len(self.trainingSet.get_class_per_object()))]) for v in self.trainingSet.labels]
+        tableRow = [sum(trainingCountsRow)]
+        tableRow.extend(trainingCountsRow)
+        tableData.extend(tableRow)
+        grid.table_from_array(np.array([tableData]), labels, 'Image', key_col_indices)
         grid.Show()
 
     def ScoreImage(self, imKey):
@@ -1656,7 +1658,6 @@ class Classifier(wx.Frame):
 
         # CONSTRUCT ARRAY OF TABLE DATA
         tableData = []
-        fraction = 0.0
         for i, row in enumerate(groupedKeysAndCounts):
             # Start this row with the group key:
             imageNumber = list(row[:nKeyCols])
@@ -1713,36 +1714,14 @@ class Classifier(wx.Frame):
         # if grouping isn't per-image, then get the group key column names.
         if group != groupChoices[0]:
             labels = dm.GetGroupColumnNames(group)
-        else:
-            labels = list(dbconnect.image_key_columns())
-        # record the column indices for the keys
-        key_col_indices = [i for i in range(len(labels))]
-        if group != 'Image':
             labels += ['Images']
         else:
+            labels = list(dbconnect.image_key_columns())
             if p.plate_id and p.well_id:
-                #                labels += [p.plate_id]
-                labels += ['Plate ID']
+                labels += [p.plate_id]#labels += ['Plate ID']
                 labels += [p.well_id]
-        labels += ['Total %s Count' % (p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
-            labels += ['%s %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
-        if p.area_scoring_column is not None:
-            labels += ['Total %s Area' % (p.object_name[0].capitalize())]
-            for i in xrange(nClasses):
-                labels += ['%s %s Area' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
-        if wants_enrichments:
-            for i in xrange(nClasses):
-                labels += ['p(Enriched)\n' + self.classBins[i].label]
-            if two_classes:
-                labels += ['Enriched Score\n' + self.classBins[0].label]
-            else:
-                for i in xrange(nClasses):
-                    labels += ['Enriched Score\n' + self.classBins[i].label]
-        #Training cell count
-        labels += ['Total Training %s Count' % (p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
-            labels += ['%s Training %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
+        labels = self.getLabels(labels, nClasses, wants_enrichments=wants_enrichments)
+        key_col_indices = [i for i in range(len(labels))]
         try:
             title = "Hit table (grouped by %s)" % (group,)
             if filter:
@@ -1757,6 +1736,31 @@ class Classifier(wx.Frame):
         # self.openDimensReduxBtn.Enable()  # JEN - Added
 
         self.SetStatusText('')
+
+    def getLabels(self, firstLabel, nClasses, wants_enrichments=False):
+        labels = firstLabel
+        # record the column indices for the keys
+
+        labels += ['Total\n %s Count' % (p.object_name[0].capitalize())]
+        for i in xrange(nClasses):
+            labels += ['%s\n %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
+        if p.area_scoring_column is not None:
+            labels += ['Total\n %s Area' % (p.object_name[0].capitalize())]
+            for i in xrange(nClasses):
+                labels += ['%s\n %s Area' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
+        if wants_enrichments:
+            for i in xrange(nClasses):
+                labels += ['p(Enriched)\n' + self.classBins[i].label]
+            if nClasses==2:
+                labels += ['Enriched Score\n' + self.classBins[0].label]
+            else:
+                for i in xrange(nClasses):
+                    labels += ['Enriched Score\n' + self.classBins[i].label]
+        #Training cell count
+        labels += ['Training Total\n %s Count' % (p.object_name[0].capitalize())]
+        for i in xrange(nClasses):
+            labels += ['Training %s\n %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
+        return labels
 
     # JK - Start Add
     def ShowConfusionMatrix(self, confusionMatrix, axes):
