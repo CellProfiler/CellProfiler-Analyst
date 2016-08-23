@@ -489,7 +489,7 @@ class FastGentleBoosting(object):
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
 
-    def ConfusionMatrix(self):
+    def ConfusionMatrix(self, folds):
 
         from sklearn.metrics import confusion_matrix
         import wx
@@ -513,7 +513,10 @@ class FastGentleBoosting(object):
         #base = 0.0
         #scale = 1.0
 
-        folds = 5
+        if(folds):
+            folds = folds
+        else:
+            folds = 5
         
         class StopXValidation(Exception):
             pass
