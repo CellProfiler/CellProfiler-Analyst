@@ -62,18 +62,18 @@ def create_perobject_class_table(classifier, classNames):
         predicted_classes = classifier.Predict(cell_data)
         #print('Writing to database...')
         if len(object_keys.shape) > 2:
-            expr = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
-                object_keys[ii][0], object_keys[ii][1], object_keys[ii][2], predicted_classes[ii] )
+            expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
+                object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2], predicted_classes[ii] )
                 for ii in range(0, len(predicted_classes))])+ " END"
-            expr2 = 'CASE '+ ''.join(["WHEN TableNumber=%d AND ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
-                object_keys[ii][0], object_keys[ii][1], object_keys[ii][2],
+            expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
+                object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2],
                 classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
         elif len(object_keys.shape) == 2:
-            expr = 'CASE '+ ''.join(["WHEN ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
-                object_keys[ii][0], object_keys[ii][1], predicted_classes[ii] )
+            expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id, 
+                object_keys[ii][0], p.object_id, object_keys[ii][1], predicted_classes[ii] )
                 for ii in range(0, len(predicted_classes))])+ " END"
-            expr2 = 'CASE '+ ''.join(["WHEN ImageNumber=%d AND ObjectNumber=%d THEN '%s'"%(
-                object_keys[ii][0], object_keys[ii][1], classNames[predicted_classes[ii] - 1])
+            expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
+                object_keys[ii][0], p.object_id, object_keys[ii][1], classNames[predicted_classes[ii] - 1])
                 for ii in range(0, len(predicted_classes))])+ " END"
         db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
             silent=True)
