@@ -660,8 +660,8 @@ class Properties(Singleton):
         elif not self.field_defined('check_tables') or self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.check_tables = 'yes'
         else:
-            logging.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "yes".'%(self.check_tables))
-            self.check_tables = 'yes'
+            logging.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "no".'%(self.check_tables))
+            self.check_tables = 'no'
             
         if self.use_larger_image_scale in [True, False]:
             pass
