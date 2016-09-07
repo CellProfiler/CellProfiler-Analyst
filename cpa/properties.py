@@ -654,11 +654,11 @@ class Properties(Singleton):
                 raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
                                 %(self.__dict__['plate_type'], ', '.join(supported_values)))
             self.plate_shape = supported_plate_types[self.__dict__['plate_type']]
-            
-        if self.field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
-            self.check_tables = 'no'
-        elif not self.field_defined('check_tables') or self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
+
+        if self.field_defined('check_tables') and self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.check_tables = 'yes'
+        elif self.field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.check_tables = 'no'
         else:
             logging.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "no".'%(self.check_tables))
             self.check_tables = 'no'
