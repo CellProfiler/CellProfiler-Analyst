@@ -47,37 +47,33 @@ def create_perobject_class_table(classifier, classNames):
     db.execute('CREATE INDEX idx_%s ON %s (%s)'%(p.class_table, p.class_table, index_cols))
 
     print('Getting data...')
-    number_of_features = len(db.GetColnamesForClassifier())
-    wheres = _where_clauses(p, dm, None)
-    data = []
-    for idx, where_clause in enumerate(wheres):
-        data = db.execute('SELECT %s, %s FROM %s '
-                          '%s WHERE %s'
+    data = db.execute('SELECT %s, %s FROM %s %s'
                           %(UniqueObjectClause(p.object_table),
-                            ",".join(db.GetColnamesForClassifier()), p.object_table,'', where_clause),
-                          silent=(idx > 10))
-        #data.extend(result)
-        #print('Getting predictions...')
-        cell_data, object_keys = processData(data, p.check_tables=='yes')
-        predicted_classes = classifier.Predict(cell_data)
-        #print('Writing to database...')
-        if len(object_keys.shape) > 2:
-            expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
-                object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2], predicted_classes[ii] )
-                for ii in range(0, len(predicted_classes))])+ " END"
-            expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
-                object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2],
-                classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
-        elif len(object_keys.shape) == 2:
-            expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id, 
-                object_keys[ii][0], p.object_id, object_keys[ii][1], predicted_classes[ii] )
-                for ii in range(0, len(predicted_classes))])+ " END"
-            expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
-                object_keys[ii][0], p.object_id, object_keys[ii][1], classNames[predicted_classes[ii] - 1])
-                for ii in range(0, len(predicted_classes))])+ " END"
-        db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
-            silent=True)
-        print(idx)
+                            ",".join(db.GetColnamesForClassifier()), p.object_table,''))
+    #data.extend(result)
+    print('Getting predictions...')
+    cell_data, object_keys = processData(data)#, p.check_tables=='yes')
+    predicted_classes = classifier.Predict(cell_data)
+    print('Writing to database...')
+    if len(object_keys.shape) > 2:
+        expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
+            object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2], predicted_classes[ii] )
+            for ii in range(0, len(predicted_classes))])+ " END"
+        expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
+            object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2],
+            classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
+    elif len(object_keys.shape) == 2:
+        expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
+            object_keys[ii][0], p.object_id, object_keys[ii][1], predicted_classes[ii] )
+            for ii in range(0, len(predicted_classes))])+ " END"
+        expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
+            object_keys[ii][0], p.object_id, object_keys[ii][1], classNames[predicted_classes[ii] - 1])
+            for ii in range(0, len(predicted_classes))])+ " END"
+    else:
+        raise Exception('object keys have length ' + len(object_keys.shape) + ' but should have length >= 2')
+    db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
+        silent=True)
+
     db.Commit()
 
 
@@ -123,7 +119,7 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
         data = db.execute('SELECT %s, %s FROM %s WHERE %s'%(UniqueObjectClause(p.object_table),
         ",".join(db.GetColnamesForClassifier()), p.object_table, whereclause))
 
-    cell_data, object_keys = processData(data, p.check_tables=='yes')
+    cell_data, object_keys = processData(data)#, p.check_tables=='yes')
     res = [] # list
     if uncertain:
         # Our requirement: if the two largest scores are smaller than threshold
@@ -139,17 +135,21 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
         res = object_keys[predicted_classes == classNum * np.ones(predicted_classes.shape)].tolist() #convert to list
     return map(tuple,res) # ... and then to tuples
 
-def processData(data, remove_rows=False):
+def processData(data):
     #takes data from query and returns arrays for feature values and object keys
     col_names = db.GetColnamesForClassifier()
     number_of_features = len(col_names)
-    cell_data = np.array([row[-number_of_features:] for row in data]) #last number_of_features columns in row
-    object_keys = np.array([row[:-number_of_features] for row in data]) #all elements in row before last (number_of_features) elements
+    cell_data = []
+    object_keys = []
+    for row in data:
+        cell_data.append(row[-number_of_features:])#last number_of_features columns in row
+        object_keys.append(row[:-number_of_features])#all elements in row before last (number_of_features) elements
+    cell_data = np.array(cell_data)
+    object_keys = np.array(object_keys)
     cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
     data_shape = cell_data.shape
     # if numpy array is already floats, pass; if numpy array contains strings, convert
-
     try:
         cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
         print 'data type 1 ', cell_data.dtype
@@ -254,7 +254,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                                 join_clause, where_clause),
                               silent=(idx > 10))
 
-            cell_data, image_keys = processData(data, p.check_tables=='yes')
+            cell_data, image_keys = processData(data)
             for i in range(cell_data.shape[0]):
                 for j in range(cell_data.shape[1]):
                     try:
