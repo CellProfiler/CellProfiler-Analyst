@@ -230,7 +230,7 @@ The following field (optional) specifies a MySQL table name for Classifier to cr
 
 Checking your tables
 --------------------
-The following field (optional) tells Classifier whether to check your tables at startup for anomalies such as missing/None/NULL values. 
+The following field (optional) tells Classifier whether to check your tables at startup for anomalies such as missing/None/NULL values. If yes, a new object table with "_Checked" appended to the original object table name is created.
 
 .. code-block:: text
 

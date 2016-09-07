@@ -1466,6 +1466,8 @@ class DBConnect(Singleton):
         # Create object (checked) table where there are no rows with missing/null values
         DB_NAME = p.db_name
         DB_TYPE = p.db_type.lower()
+        print p.object_table
+        print p.object_table[:-8]
         all_cols = [str(x) for x in self.GetColumnNames(p.object_table[:-8])]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':

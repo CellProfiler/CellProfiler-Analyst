@@ -587,6 +587,7 @@ class TableViewer(wx.Frame):
         view_menu.AppendMenu(-1, 'Column widths', column_width_menu)
         fixed_cols_menu_item = column_width_menu.Append(-1, 'Fixed width', kind=wx.ITEM_RADIO)
         fit_cols_menu_item = column_width_menu.Append(-1, 'Fit to table', kind=wx.ITEM_RADIO)
+        auto_cols_menu_item = column_width_menu.Append(-1, 'Auto width', kind=wx.ITEM_RADIO)
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
         
@@ -600,6 +601,7 @@ class TableViewer(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_show_hide_cols, show_hide_cols_item)
         self.Bind(wx.EVT_MENU, self.on_set_fixed_col_widths, fixed_cols_menu_item)
         self.Bind(wx.EVT_MENU, self.on_set_fitted_col_widths, fit_cols_menu_item)
+        self.Bind(wx.EVT_MENU, self.on_set_auto_col_widths, auto_cols_menu_item)
 ##        self.Bind(wx.EVT_MENU, self.on_compute_tsne, tsne_menu_item)
         
         #
@@ -663,15 +665,23 @@ class TableViewer(wx.Frame):
         self.set_fixed_col_widths()
     def set_fixed_col_widths(self):
         self.Disconnect(-1, -1, wx.wxEVT_SIZE)
+        print 'default ', gridlib.GRID_DEFAULT_COL_WIDTH
         self.grid.SetDefaultColSize(gridlib.GRID_DEFAULT_COL_WIDTH, True)
         self.Refresh()
-    
+
+    def on_set_auto_col_widths(self, evt):
+        self.set_auto_col_widths()
+    def set_auto_col_widths(self):
+        self.Disconnect(-1, -1, wx.wxEVT_SIZE)
+        self.grid.AutoSize()
+        self.Refresh()
+
     def on_set_fitted_col_widths(self, evt):
         self.set_fitted_col_widths()
     def set_fitted_col_widths(self):
         # Note: I disconnect EVT_SIZE before binding in case it's already bound.
         # Otherwise it will get bound twice and set_fixed_col_widths won't work 
-        # unles called twice.
+        # unless called twice.
         self.Disconnect(-1, -1, wx.wxEVT_SIZE)
         wx.EVT_SIZE(self, self.on_size)
         self.RescaleGrid()
