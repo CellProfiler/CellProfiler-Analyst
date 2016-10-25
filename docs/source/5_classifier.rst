@@ -278,3 +278,24 @@ recognize. To view this information graphically, return to the main Classifier s
   :align: center
 
   Enrichment Table Viewer produced by Classifier. Here we have grouped the counts and statistics on a per-image basis. We have ordered the data by the “Enriched Score Positive” column. The most highly enriched images were  172, 171, 169, and 170. With the “Positive Cell Count” column selected, we can see in the status bar that there are a  total of 2331 positive cells in our experiment, with a mean of 6.07 positive cells per image, and a standard deviation of 7.74.
+
+  
+V.B.7 Data preparation
+-------------
+
+Typically one wouldn't use the raw features as input for the machine learning, but the data is cleaned in some ways (e.g., by removing zero variance features) and normalized. Data preparation takes place before the machine learning is done, i.e., before training a classifier.  We here describe how you can perform data preparation steps in CPA. 
+
+*Normalization Tool*
+*************
+
+Typically the features are normalized before training a classifier. For example, the features are centered to have mean 0 and scaled to have standard deviation 1. This can be done in CPA with the Normalization Tool. From the main menu, navigate to Tools > Normalization Tool. You can choose which features to normalize.
+
+*Removing zero variance features*
+*************
+
+A zero variance feature is a feature that has the same entry for all objects, for example a feature that is equal to a constant value of 1 for all cells, which doesn't provide information to classify the cells. Usually these features therefore are removed before training a classifier. You can analyze all zero variance features using Classifier->Advanced->Check features. Then either drop those features manually in the properties file or use the normalization tool to delete them.
+
+*Removing NANs*
+*************
+
+A standard procedure is finding features with NAN (not a number) entries in the data and removing those cells. CPA automatically ignores cells with NANs, so this step is already been taken take of.
