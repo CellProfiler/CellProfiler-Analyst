@@ -4,7 +4,7 @@ import sqltools as sql
 from multiclasssql import filter_table_prefix
 from properties import Properties
 import guiutils as ui
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 import imagetools
 import logging
 import numpy as np

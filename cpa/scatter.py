@@ -5,7 +5,7 @@ from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhere
 import sqltools as sql
 import multiclasssql
 from properties import Properties
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 import guiutils as ui
 from gating import GatingHelper
 import imagetools
@@ -18,7 +18,7 @@ import sys
 import re
 from time import time
 import wx
-import wx.combo
+#import wx.combo
 from matplotlib.widgets import Lasso
 from matplotlib import __version__ as mpl_version     
 from matplotlib.colors import colorConverter

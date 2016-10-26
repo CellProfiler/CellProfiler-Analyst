@@ -1,5 +1,5 @@
 import wx
-import wx.combo
+#import wx.combo
 import os
 import re
 import icons
@@ -9,8 +9,8 @@ import logging
 import sqltools
 import numpy as np
 from utils import Observable
-from wx.combo import OwnerDrawnComboBox as ComboBox
-from wx.lib.combotreebox import ComboTreeBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from wx.lib import combotreebox as ComboTreeBox
 
 p = properties.Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
@@ -282,7 +282,7 @@ class TableComboBox(ComboBox):
             self.Select(0)
 
 
-class FilterComboBox(wx.combo.BitmapComboBox):
+class FilterComboBox(wx.adv.BitmapComboBox):
     '''A combobox for selecting/creating filters. This box will automatically
     update it's choices as filters and gates are created and deleted.
     '''
@@ -290,7 +290,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
     NEW_FILTER = 'CREATE NEW FILTER'
     def __init__(self, parent, id=-1, **kwargs):
         choices = kwargs.get('choices', self.get_choices())
-        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=choices, **kwargs)
+        wx.adv.BitmapComboBox.__init__(self, parent, id, choices=choices, **kwargs)
         self.Select(0)
         self.reset_bitmaps()
         p._filters.addobserver(self.update_choices)
@@ -378,7 +378,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
             evt.Skip()
 
 
-class GateComboBox(wx.combo.BitmapComboBox, Observable):
+class GateComboBox(wx.adv.BitmapComboBox, Observable):
     '''A combobox for selecting/creating gates. This box will automatically 
     update it's choices as gates are created and deleted.
     '''
@@ -387,7 +387,7 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
     MANAGE_GATES = 'MANAGE GATES'
     def __init__(self, parent, id=-1, **kwargs):
         self.gatable_columns = None
-        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
+        wx.adv.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
         self.Select(0)
         self.reset_bitmaps()
         p.gates.addobserver(self.update_choices)
@@ -658,11 +658,11 @@ class GateManager(wx.Dialog):
             p.gates.pop(gate)
 
             
-class CheckListComboBox(wx.combo.ComboCtrl):
+class CheckListComboBox(wx.ComboCtrl):
     '''A handy concoction for doing selecting multiple items with a ComboBox.
     '''
     def __init__(self, parent, choices=[], **kwargs):
-        wx.combo.ComboCtrl.__init__(self, parent, -1, **kwargs)
+        wx.ComboCtrl.__init__(self, parent, -1, **kwargs)
         self.popup = CheckListComboPopup(choices)
         self.SetPopupControl(self.popup)
         
@@ -683,11 +683,11 @@ class CheckListComboBox(wx.combo.ComboCtrl):
         self.Value = self.popup.GetStringValue()
 
         
-class CheckListComboPopup(wx.combo.ComboPopup):
+class CheckListComboPopup(wx.ComboPopup):
     '''A ComboBox that provides a CheckList for multiple selection. Hurray!
     '''
     def __init__(self, choices=[]):
-        wx.combo.ComboPopup.__init__(self)
+        wx.ComboPopup.__init__(self)
         self.choices = choices
 
     def on_dclick(self, evt):

@@ -6,7 +6,7 @@ import sqltools as sql
 import platemappanel as pmp
 from datamodel import DataModel
 from guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 import imagetools
 import properties
 import logging

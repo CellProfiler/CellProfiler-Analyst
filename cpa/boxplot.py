@@ -3,7 +3,7 @@ from multiclasssql import filter_table_prefix
 from properties import Properties
 import datamodel
 import guiutils as ui 
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 import sqltools as sql
 import imagetools
 import logging

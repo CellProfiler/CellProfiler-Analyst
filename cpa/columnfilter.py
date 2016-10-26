@@ -3,7 +3,7 @@ import re
 import sqltools as sql
 from properties import Properties
 from dbconnect import DBConnect
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()

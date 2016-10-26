@@ -23,8 +23,8 @@ import logging
 from operator import itemgetter
 import numpy as np
 import wx
-import wx.aui
-from wx.combo import OwnerDrawnComboBox as ComboBox
+import wx.lib.agw.aui
+from wx.adv import OwnerDrawnComboBox as ComboBox
 from matplotlib import cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
