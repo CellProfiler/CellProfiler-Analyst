@@ -878,11 +878,13 @@ class DBConnect(Singleton):
         assert len(src_cols) == len(dest_cols), 'Column lists were not the same length.'
         
         # create the tables if they don't exist
-        if p.link_tables_table not in self.GetTableNames():
+        print self.GetTableNames()
+        print p.link_columns_table
+        if p.link_tables_table.lower() not in [x.lower() for x in self.GetTableNames()]:
             self.execute('CREATE TABLE %s (src VARCHAR(100), '
                          'dest VARCHAR(100), link VARCHAR(100), ord INTEGER)'
                          %(p.link_tables_table))
-        if p.link_columns_table not in self.GetTableNames():
+        if p.link_columns_table.lower() not in [x.lower() for x in self.GetTableNames()]:
             self.execute('CREATE TABLE %s (table1 VARCHAR(100), '
                     'table2 VARCHAR(100), col1 VARCHAR(200), col2 VARCHAR(200))'
                     %(p.link_columns_table))

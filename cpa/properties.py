@@ -297,7 +297,7 @@ class Properties(Singleton):
                     logging.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
                 
         f.close()
-
+        
         #if classification_type is defined
         if self.field_defined('classification_type') and self.classification_type.lower() in ['image']:
             self.classification_type = 'image'
@@ -305,7 +305,7 @@ class Properties(Singleton):
             # object_table/object_id/cell_x_loc/cell_y_loc exist and point to a table/view of object tables
             # object_table/object_id/cell_x_loc/cell_y_loc don't exist
 
-            self.object_table = self.image_table + '_ObjectTable'
+            self.object_table = self.image_table + '_objecttable'
 
             self.object_id = 'ObjectNumber'
             self.cell_x_loc = 'Image_x_loc'
@@ -333,7 +333,7 @@ class Properties(Singleton):
 
         #if check_tables is defined
         if self.field_defined('check_tables') and self.check_tables.lower() in ['yes']:
-            self.object_table = self.object_table + '_Checked'
+            self.object_table = self.object_table + '_checked'
         self._initialized = True
 
     LoadFile = load_file
