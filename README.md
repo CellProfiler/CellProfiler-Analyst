@@ -18,9 +18,7 @@ and subtle phenotypes, for automatic scoring of millions of cells.
 
 ## Installation
 
-Download CellProfiler Analyst for Mac here: [App for Mac OS](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.dmg) 
-
-Download CellProfiler Analyst for Windows here: [Exe for Windows](http://d1zymp9ayga15t.cloudfront.net/CellProfiler-Analyst-stable.exe)
+Download [CellProfiler Analyst](http://cellprofiler.org/releases/#CPA)
 
 CellProfiler Analyst requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE).
 Check the Java path.
