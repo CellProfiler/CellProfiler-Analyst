@@ -476,7 +476,7 @@ class CPAnalyst(wx.App):
         try:
             if __version__ != -1:
                 import cpa.util.check_for_updates as cfu
-                cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html',
+                cfu.check_for_updates('http://cellprofiler.org/updates/CPA.html',
                                       max(__version__, cpa.cpaprefs.get_skip_version()),
                                       new_version_cb,
                                       user_agent='CPAnalyst/%s'%(__version__))

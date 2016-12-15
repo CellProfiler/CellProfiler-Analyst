@@ -28,9 +28,11 @@ class VersionChecker(threading.Thread):
             new_version = int(new_version)
             if new_version > self.current_version:
                 self.callback(new_version, info)
+            print 'version %s'%new_version
         except Exception, e:
             logger.warning("Exception fetching new version information from %s: %s"%(self.url, e))
             pass # no worries
+
 
 def check_for_updates(url, current_version, callback, user_agent='CellProfiler_cfu'):
     vc = VersionChecker(url, current_version, callback, user_agent)
