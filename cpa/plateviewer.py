@@ -186,12 +186,12 @@ class PlateViewer(wx.Frame, CPATool):
                          (dbconnect.UniqueWellClause(), p.image_table, p.well_id, p.well_id))
 
         if p.plate_id:
-            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), size=(100,-1))]
+            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), size=(200,-1))]
             self.plateMapChoices[-1].Select(plateIndex)
             self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
     
-            plate_col_type = db.GetColumnType(p.image_table, p.plate_id)
-            plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
+            #plate_col_type = db.GetColumnType(p.image_table, p.plate_id)
+            #plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
             
             plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
             plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), flag=wx.ALIGN_CENTER_VERTICAL)
