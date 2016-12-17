@@ -186,7 +186,7 @@ class PlateViewer(wx.Frame, CPATool):
                          (dbconnect.UniqueWellClause(), p.image_table, p.well_id, p.well_id))
 
         if p.plate_id:
-            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), size=(200,-1))]
+            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), size=(400,-1))]
             self.plateMapChoices[-1].Select(plateIndex)
             self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
     
