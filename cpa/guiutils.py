@@ -365,12 +365,13 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         ftr = self.Value
         if ftr == FilterComboBox.NEW_FILTER:
             from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
+            cff = ColumnFilterDialog(self, tables=[p.image_table, p.object_table], size=(600,150))
             if cff.ShowModal()==wx.OK:
                 fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
                 p._filters[fname] = fltr
                 self.SetStringSelection(fname)
+                print fname, p._filters[fname]
             else:
                 self.Select(0)
             cff.Destroy()
@@ -457,6 +458,9 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
                 self.Items = self.Items[:-1] + [dlg.Value] + self.Items[-1:]
                 self.SetStringSelection(dlg.Value)
                 p.gates[dlg.Value] = sqltools.Gate()
+
+                p._filters[dlg.Value] = ''
+
             else:
                 self.Select(0)
             dlg.Destroy()
@@ -636,9 +640,11 @@ class GateManager(wx.Dialog):
         self.deletebtn.Enable(gate in p.gates)
         if gate:
             self.gateinfo.Value = str(p.gates[gate])
+            p._filters[gate] = p.gates[gate].as_filter()
         else:
             self.gateinfo.Value = ''
-        
+        print gate, p._filters[gate]
+
     def update_choices(self, evt):
         sel = self.gatelist.GetStringSelection()
         self.gatelist.SetItems(p.gates_ordered)

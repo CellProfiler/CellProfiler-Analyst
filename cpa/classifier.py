@@ -930,7 +930,6 @@ class Classifier(wx.Frame):
                     return
                 statusMsg += ' from group %s: %s' % (groupName,
                                                      ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
-
         # classified
         else:
             hits = 0
@@ -1797,7 +1796,7 @@ class Classifier(wx.Frame):
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
             from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600, 150))
+            cff = ColumnFilterDialog(self, tables=[p.image_table, p.object_table], size=(600, 150))
             if cff.ShowModal() == wx.OK:
                 fltr = cff.get_filter()
                 fname = cff.get_filter_name()
