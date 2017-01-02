@@ -381,7 +381,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
 
 class GateComboBox(wx.combo.BitmapComboBox, Observable):
     '''A combobox for selecting/creating gates. This box will automatically 
-    update it's choices as gates are created and deleted.
+    update its choices as gates are created and deleted.
     '''
     NO_GATE = 'NO GATE'
     NEW_GATE = 'CREATE NEW GATE'
@@ -394,6 +394,7 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
         p.gates.addobserver(self.update_choices)
         self.Bind(wx.EVT_COMBOBOX, self.on_select)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
+        self.update_info()
         
     def get_choices(self):
         choices = [GateComboBox.NO_GATE]
@@ -413,6 +414,12 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
             self.SetStringSelection(selected_string)
         else:
             self.Select(0)
+
+    def update_info(self):
+        gate = self.get_gatename_or_none()
+        if gate:
+            p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
+            print gate, p._filters[gate]
         
     def get_gatename_or_none(self):
         selection = self.GetSelection() # Fix to replace self.GetStringSelection()
@@ -459,7 +466,7 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
                 self.SetStringSelection(dlg.Value)
                 p.gates[dlg.Value] = sqltools.Gate()
 
-                p._filters[dlg.Value] = ''
+                p._filters[dlg.Value] = sqltools.Filter()
 
             else:
                 self.Select(0)
@@ -640,7 +647,7 @@ class GateManager(wx.Dialog):
         self.deletebtn.Enable(gate in p.gates)
         if gate:
             self.gateinfo.Value = str(p.gates[gate])
-            p._filters[gate] = p.gates[gate].as_filter()
+            p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
         else:
             self.gateinfo.Value = ''
         print gate, p._filters[gate]

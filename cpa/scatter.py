@@ -244,6 +244,7 @@ class ScatterControlPanel(wx.Panel):
         
     def update_figpanel(self, evt=None):
         self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
+        self.gate_choice.update_info()
         keys_and_points = self._load_points()
         col_types = self.get_selected_column_types()
                 
@@ -257,7 +258,7 @@ class ScatterControlPanel(wx.Panel):
             key_indices = list(xrange(len(object_key_columns())))
         else:
             key_indices = list(xrange(len(image_key_columns())))
-        print len(kps)
+
         keys = kps[:,key_indices].astype(int) 
         # Strip out x coords
         if col_types[0] in [float, int, long]:
@@ -299,7 +300,6 @@ class ScatterControlPanel(wx.Panel):
             q.add_filter(self.filter)
         q.add_where(sql.Expression(self.x_column, 'IS NOT NULL'))
         q.add_where(sql.Expression(self.y_column, 'IS NOT NULL'))
-        print "x_column:", self.x_column
         return db.execute(str(q))
     
     def get_selected_column_types(self):
@@ -688,7 +688,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         show_images_in_gate_item.Enable(selected_gate is not None)
         self.Bind(wx.EVT_MENU, self.show_images_from_gate, show_images_in_gate_item)
         if p.object_table:
-            show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate'%(p.object_name[1]))
+            show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate (montage)'%(p.object_name[1]))
             show_objects_in_gate_item.Enable(selected_gate is not None)
             self.Bind(wx.EVT_MENU, self.show_objects_from_gate, show_objects_in_gate_item)
 
