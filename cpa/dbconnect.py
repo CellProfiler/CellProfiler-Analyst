@@ -1408,7 +1408,12 @@ class DBConnect(Singleton):
                 f = open(csv_dir+os.path.sep+file, 'U')
                 r = csv.reader(f)
                 row1 = r.next()
-                command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
+                if p.check_tables:
+                    object_table = p.object_table
+                    object_table = object_table.split('_checked')[0]
+                    command = 'INSERT INTO '+object_table+' VALUES ('+','.join(['?' for i in row1])+')'
+                else:
+                    command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
                 # guess at a good number of lines, about 250 megabytes, assuming floats)
                 nlines = (250*1024*1024) / (len(row1) * 64)
                 self.cursors[connID].execute(command, row1)
