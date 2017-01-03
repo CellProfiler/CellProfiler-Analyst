@@ -1472,8 +1472,10 @@ class DBConnect(Singleton):
         DB_NAME = p.db_name
         DB_TYPE = p.db_type.lower()
         print p.object_table
-        print p.object_table[:-8]
-        all_cols = [str(x) for x in self.GetColumnNames(p.object_table[:-8])]
+        object_table = p.object_table
+        object_table = object_table.split('_checked')[0]
+        print object_table
+        all_cols = [str(x) for x in self.GetColumnNames(object_table)]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
             query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, p.object_table[:-8], " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
@@ -1516,7 +1518,7 @@ class DBConnect(Singleton):
             list_of_colTypes = [list_of_colTypes[pid_index], list_of_colTypes[pid_index], 'float', 'float'] + all_colTypes
             query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
             self.execute(query)
-            query = 'CREATE TEMP TABLE %s (%s)'%(p.object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
+            query = 'CREATE TABLE %s (%s)'%(p.object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
             self.execute(query)
             query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
             self.execute(query)
@@ -1528,7 +1530,7 @@ class DBConnect(Singleton):
                                                               p.cell_x_loc, width/2,
                                                               p.cell_y_loc, height/2)
             self.execute(query)
-
+        logging.info('%s table added to database'%p.object_table)
 
 
     def table_exists(self, name):
