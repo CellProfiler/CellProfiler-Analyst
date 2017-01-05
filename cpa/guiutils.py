@@ -365,7 +365,11 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         ftr = self.Value
         if ftr == FilterComboBox.NEW_FILTER:
             from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table, p.object_table], size=(600,150))
+            tables = []
+            for t in [p.image_table, p.object_table, p.class_table]:
+                if isinstance(t, basestring):
+                    tables.append(t)
+            cff = ColumnFilterDialog(self, tables=tables, size=(600,150))
             if cff.ShowModal()==wx.OK:
                 fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
