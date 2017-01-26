@@ -1471,20 +1471,24 @@ class DBConnect(Singleton):
         # Create object (checked) table where there are no rows with missing/null values
         DB_NAME = p.db_name
         DB_TYPE = p.db_type.lower()
-        print p.object_table
+
         object_table = p.object_table
         object_table = object_table.split('_checked')[0]
+
+        if p.classification_type == 'image':
+            object_table = object_table.split('_objecttable')[0]
         print object_table
+
         all_cols = [str(x) for x in self.GetColumnNames(object_table)]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
-            query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, p.object_table[:-8], " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
         elif DB_TYPE == 'sqlite':
-            query = "PRAGMA table_info(%s)"%p.object_table[:-8]
+            query = "PRAGMA table_info(%s)"%object_table
             self.execute(query)
             query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
             self.execute(query)
-            query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, p.object_table[:-8], " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
         self.execute(query)
 
     def CreateObjectImageTable(self):
