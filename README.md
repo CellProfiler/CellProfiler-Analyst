@@ -43,7 +43,7 @@ for more detailed installation instructions.
 
 ## Documentation
 
-> http://cellprofiler.org/CPA/
+> http://cellprofiler.org/cpa/
 
 ## Wiki
 
