@@ -31,7 +31,7 @@ over a particular well will display a tooltip showing the value pertaining to th
 
 The left-hand column contains many options for generating different views into your data.
 
-- **Data source**: Allows you to select a table for visualization. To load fresh data from a CSV file directly into the Plate Viewer, select **File > Load CSV** from the menu bar at the top of the screen.
+- **Data source**: Allows you to select a table for visualization. You cannot load a CSV directly into the Plate Viewer. You must open the CSV in Table Viewer first, save it to the database, and then open it in Plate Viewer.
 - **Measurement**: The column from the selected table that you would like to visualize.
 - **Aggregation Method**: Measurements must be aggregated to a single number for each well so that they can be represented by a color. Options are **mean**, **sum**, **median**, **standard deviation**, **cv%** (coefficient of variation), **minimum**, and **maximum**. If you’re viewing ``object_count`` from the image table, for example, you might select **sum** to visualize the sum of the object counts for all images that constitute a well.
 
