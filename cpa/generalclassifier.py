@@ -6,14 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
 from time import time
-from sklearn import ensemble, naive_bayes, grid_search, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors
-#from sklearn.externals import joblib
-from sklearn import cross_validation
+from sklearn import ensemble, naive_bayes, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn import metrics
 import cPickle, json
 from sklearn.externals import joblib
 import seaborn as sns
+from sklearn.model_selection import LeaveOneOut, KFold, cross_val_predict, cross_val_score
 
 class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None):
@@ -102,7 +101,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         scores = np.zeros(num_samples)
         detailedResults = np.zeros(num_samples)
         # get training and testing set, train on training set, score on test set
-        for train, test in cross_validation.LeaveOneOut(num_samples):
+        for train, test in LeaveOneOut(num_samples):
             values_test = values[test]
             label_test = labels[test]
             self.Train(labels[train], values[train], fout=None)
@@ -189,9 +188,9 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         if stratified:
             CV = folds
         else:
-            CV = cross_validation.KFold(num_samples, folds)
+            CV = KFold(num_samples, folds)
         #scores = cross_validation.cross_val_score(self.classifier, scoring=scoring, X=values, y=labels, cv=CV, n_jobs=-1, verbose=1)
-        scores = cross_validation.cross_val_score(self.classifier, X=values, y=labels, cv=folds, n_jobs=1)
+        scores = cross_val_score(self.classifier, X=values, y=labels, cv=folds, n_jobs=1)
 
         return np.array(scores)
 
@@ -234,9 +233,9 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         if stratified:
             CV = folds
         else:
-            CV = cross_validation.KFold(num_samples, folds)
+            CV = KFold(num_samples, folds)
 
-        predictions = cross_validation.cross_val_predict(self.classifier, X=values, y=labels, cv=CV, n_jobs=1)
+        predictions = cross_val_predict(self.classifier, X=values, y=labels, cv=CV, n_jobs=1)
         return np.array(predictions)
 
     # Classification Report Start

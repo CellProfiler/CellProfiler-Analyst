@@ -34,8 +34,15 @@ from dimensredux import PlotMain
 import fastgentleboostingmulticlass
 from fastgentleboosting import FastGentleBoosting
 
-#from supportvectormachines import SupportVectorMachines
 from generalclassifier import GeneralClassifier
+
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import label_binarize
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.metrics import roc_curve, auc
+
 
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
@@ -2094,12 +2101,6 @@ class Classifier(wx.Frame):
 
     # Buggy?
     def PlotPrecisionRecall(self):
-        from sklearn.metrics import precision_recall_curve
-        from sklearn.metrics import average_precision_score
-        from sklearn.cross_validation import train_test_split
-        from sklearn.preprocessing import label_binarize
-        from sklearn.multiclass import OneVsRestClassifier
-
         # Import some data to play with
         X = self.trainingSet.normalize()
         y = self.trainingSet.get_class_per_object()
@@ -2165,12 +2166,6 @@ class Classifier(wx.Frame):
 
     # ROC Curve for multi class # TODO: Binary class ROC Curve
     def PlotROC(self):
-        from matplotlib import offsetbox
-        from sklearn.metrics import roc_curve, auc
-        from sklearn.cross_validation import train_test_split
-        from sklearn.preprocessing import label_binarize
-        from sklearn.multiclass import OneVsRestClassifier
-
         # Import some data to play with
         X = self.trainingSet.normalize()
         y = self.trainingSet.get_class_per_object()
