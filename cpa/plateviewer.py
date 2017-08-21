@@ -216,9 +216,10 @@ class PlateViewer(wx.Frame, CPATool):
         self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
 
     def UpdatePlateMaps(self):
-        measurement = self.measurementsChoice.Value
+        self.measurement = self.measurementsChoice.Value
+        measurement = self.measurement
         table       = self.sourceChoice.Value
-        aggMethod   = self.aggregationMethodsChoice.Value
+        self.aggMethod   = self.aggregationMethodsChoice.Value
         categorical = measurement not in get_numeric_columns_from_table(table)
         fltr        = self.filterChoice.Value
         self.colorBar.ClearNotifyWindows()
@@ -227,24 +228,24 @@ class PlateViewer(wx.Frame, CPATool):
         well_key_cols = [sql.Column(p.image_table, col) for col in well_key_columns()]
         select = list(well_key_cols)
         if not categorical:
-            if aggMethod=='mean': 
+            if self.aggMethod=='mean':
                 select += [sql.Column(table, measurement, 'AVG')]
-            elif aggMethod=='stdev': 
+            elif self.aggMethod=='stdev':
                 select += [sql.Column(table, measurement, 'STDDEV')]
-            elif aggMethod=='cv%':
+            elif self.aggMethod=='cv%':
                 # stddev(col) / avg(col) * 100
                 select += [sql.Expression(
-                              sql.Column(table, measurement, 'STDDEV'), ' / ', 
+                              sql.Column(table, measurement, 'STDDEV'), ' / ',
                               sql.Column(table, measurement, 'AVG'), ' * 100')]
-            elif aggMethod=='sum':    
+            elif self.aggMethod=='sum':
                 select += [sql.Column(table, measurement, 'SUM')]
-            elif aggMethod=='min':    
+            elif self.aggMethod=='min':
                 select += [sql.Column(table, measurement, 'MIN')]
-            elif aggMethod=='max':    
+            elif self.aggMethod=='max':
                 select += [sql.Column(table, measurement, 'MAX')]
-            elif aggMethod=='median': 
+            elif self.aggMethod=='median':
                 select += [sql.Column(table, measurement, 'MEDIAN')]
-            elif aggMethod=='none':   
+            elif self.aggMethod=='none':
                 select += [sql.Column(table, measurement)]
         else:
             select += [sql.Column(table, measurement)]
@@ -275,13 +276,13 @@ class PlateViewer(wx.Frame, CPATool):
                 plate = plateChoice.Value
                 plateMap.SetPlate(plate)
                 self.colorBar.AddNotifyWindow(plateMap)
-                keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
-                platedata, wellkeys, ignore = FormatPlateMapData(keys_and_vals, categorical)
+                self.keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
+                platedata, wellkeys, ignore = FormatPlateMapData(self.keys_and_vals, categorical)
                 data += [platedata]
                 key_lists += [wellkeys]
                 if not categorical:
-                    dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
-                    dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
+                    dmin = np.nanmin([float(kv[-1]) for kv in self.keys_and_vals]+[dmin])
+                    dmax = np.nanmax([float(kv[-1]) for kv in self.keys_and_vals]+[dmax])
         else:
             self.colorBar.AddNotifyWindow(self.plateMaps[0])
             platedata, wellkeys, ignore = FormatPlateMapData(wellkeys_and_values, categorical)
@@ -372,14 +373,11 @@ class PlateViewer(wx.Frame, CPATool):
         saveDialog.Destroy()
 
     def save_to_csv(self, filename):
-        f = open(filename, 'wb')
-        w = csv.writer(f)
-        w.writerow([self.grid.Table.GetColLabelValueWithoutDecoration(col)
-                    for col in range(self.grid.Table.GetNumberCols())])
-        for row in range(self.grid.Table.GetNumberRows()):
-            w.writerow([self.grid.Table.GetValue(row, col)
-                        for col in range(self.grid.Table.GetNumberCols())])
-        f.close()
+        with open(filename, 'wb') as f:
+            w = csv.writer(f)
+            w.writerow(['Plate', 'Well', self.measurement + ' ' + self.aggMethod])
+            w.writerows(self.keys_and_vals)
+
         logging.info('Table saved to %s'%filename)
 
     def OnSelectPlate(self, evt):
