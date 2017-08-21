@@ -251,13 +251,22 @@ class ColorBarPanel(wx.Panel):
         
         w0 = max(low_slider_pos, local_x0) - local_x0
         w1 = local_x1 - min(high_slider_pos, local_x1)
-        
+
         # create array of values to be used for the color bar
         if self.clipmode=='rescale':
-            a1 = np.zeros(w0)
-            a2 = np.arange(abs(min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)), dtype=float) / (min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0))
-            a3 = np.ones(w1)
-            a = np.hstack([a1,a2,a3])
+            a1 = np.array([])
+            if w0 > 0:
+                a1 = np.zeros(w0)
+            a2 = np.arange(abs(min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)), dtype=np.float) / (min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)) * 255
+            a3 = np.array([])
+            if w1 > 0:
+                a3 = np.ones(w1)
+            if len(a1) > 0 and len(a3) > 0:
+                a = np.hstack([a1,a2,a3])
+            else:
+                a = a2
+
+
         elif self.clipmode=='clip':
             a = np.arange(w_local, dtype=float) / w_local
             a[:w0] = 0.
@@ -271,8 +280,9 @@ class ColorBarPanel(wx.Panel):
         
         dc.SetPen(wx.Pen((0,0,0)))
         dc.DrawLine(0, (h-14)/2, local_x0, (h-14)/2)
-        
+
         for x, v in enumerate(a):
+            v = int(v)
             color = np.array(self.cm(v)) * 255
             dc.SetPen(wx.Pen(color))
             dc.DrawLine(x+local_x0, 0, x+local_x0, h-14)

@@ -18,6 +18,7 @@ import sys
 import re
 import wx
 import cpa.helpmenu
+import csv
 
 p = properties.Properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
@@ -53,6 +54,8 @@ class PlateViewer(wx.Frame, CPATool):
         self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
         self.menuBar.Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        save_csv_menu_item = self.fileMenu.Append(-1, 'Save table to CSV\tCtrl+S')
+        self.Bind(wx.EVT_MENU, self.on_save_csv, save_csv_menu_item)
         
         wx.EVT_MENU(self, wx.ID_EXIT, lambda(_):self.Close())
 
@@ -171,9 +174,10 @@ class PlateViewer(wx.Frame, CPATool):
         self.outlineMarked.Bind(wx.EVT_CHECKBOX, self.OnOutlineMarked)
         self.annotationShowVals.Bind(wx.EVT_CHECKBOX, self.OnShowAnnotationValues)
         self.filterChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectFilter)
-        
+
         self.AddPlateMap()
         self.OnSelectMeasurement()
+
 
     def AddPlateMap(self, plateIndex=0):
         '''
@@ -352,6 +356,31 @@ class PlateViewer(wx.Frame, CPATool):
         self.measurementsChoice.Select(0)
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
+
+    def on_save_csv(self, evt):
+        defaultFileName = 'my_plate_table.csv'
+        saveDialog = wx.FileDialog(self, message="Save as:",
+                                   defaultDir=os.getcwd(),
+                                   defaultFile=defaultFileName,
+                                   wildcard='csv|*',
+                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                          wx.FD_CHANGE_DIR))
+        if saveDialog.ShowModal() == wx.ID_OK:
+            filename = saveDialog.GetPath()
+            self.save_to_csv(filename)
+            self.Title = filename
+        saveDialog.Destroy()
+
+    def save_to_csv(self, filename):
+        f = open(filename, 'wb')
+        w = csv.writer(f)
+        w.writerow([self.grid.Table.GetColLabelValueWithoutDecoration(col)
+                    for col in range(self.grid.Table.GetNumberCols())])
+        for row in range(self.grid.Table.GetNumberRows()):
+            w.writerow([self.grid.Table.GetValue(row, col)
+                        for col in range(self.grid.Table.GetNumberCols())])
+        f.close()
+        logging.info('Table saved to %s'%filename)
 
     def OnSelectPlate(self, evt):
         ''' Handles the selection of a plate from the plate choice box. '''

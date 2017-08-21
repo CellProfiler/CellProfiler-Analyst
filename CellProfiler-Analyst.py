@@ -473,6 +473,7 @@ class CPAnalyst(wx.App):
         javabridge.attach()
         # javabridge.activate_awt()
 
+        # TODO: check for updates
         try:
             if __version__ != -1:
                 import cpa.util.check_for_updates as cfu
@@ -482,7 +483,7 @@ class CPAnalyst(wx.App):
                                       user_agent='CPAnalyst/%s'%(__version__))
         except ImportError:
             logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
-        
+
         self.frame.Show() # Show frame
         return True
 
