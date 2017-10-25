@@ -451,10 +451,7 @@ class CPAnalyst(wx.App):
                 return False
 
         self.frame = MainGUI(p, None, size=(1000,-1))
-        # def show_frame():
-        #     import time
-        #     res = self.frame.Show()
-        # wx.CallAfter(show_frame)
+
         db = cpa.dbconnect.DBConnect.getInstance()
         # Black magic: Bus errors occur on Mac OS X if we wait until
         # the JVM or the wx event look has started to connect. But it
@@ -468,10 +465,7 @@ class CPAnalyst(wx.App):
         javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
 
         # removes the log4j warnings
-        from bioformats import log4j
-        log4j.basic_config()
         javabridge.attach()
-        # javabridge.activate_awt()
 
         # TODO: check for updates
         try:
