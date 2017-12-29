@@ -1007,9 +1007,8 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
     '''
     def __init__(self, canvas):
         super(NavigationToolbar2WxAgg, self).__init__(canvas)
-        from matplotlib import __version__ as mpl_version
-        self.PAN = self.wx_ids['Pan']  if mpl_version.split('.')[1] >= '2' else self._NTB2_PAN
-        self.ZOOM =  self.wx_ids['Zoom'] if mpl_version.split('.')[1] >= '2' else self._NTB2_ZOOM
+        self.PAN = self.wx_ids['Pan']
+        self.ZOOM =  self.wx_ids['Zoom']
         self.pan_tool  = self.FindById(self.PAN)
         self.zoom_tool = self.FindById(self.ZOOM)
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
