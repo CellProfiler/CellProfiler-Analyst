@@ -64,6 +64,8 @@ or a screenshot.
 
 ## How to cite
 
+BibTeX snippets for these papers are in the [`CITATION` file](CITATION).
+
 *David Dao, Adam N Fraser, Jane Hung, Vebjorn Ljosa, Shantanu Singh and Anne E Carpenter*  
 __[CellProfiler Analyst: interactive data exploration, analysis and classification of large biological image sets][bioinformatics]__  
 Bioinformatics (2016) doi:10.1093/bioinformatics/btw390
