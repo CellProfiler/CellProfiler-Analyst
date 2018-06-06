@@ -5,6 +5,7 @@ Plot distances between profiles.
 
 """
 
+import sys
 from optparse import OptionParser
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -12,6 +13,7 @@ import matplotlib.pyplot as plt
 import pylab
 import cpa
 from .profiles import Profiles
+
 
 def plot_distances(profiles, output_group_name=None):
     if output_group_name:
