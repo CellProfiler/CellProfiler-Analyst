@@ -89,7 +89,9 @@ OutputBaseFilename=CellProfilerAnalyst_win32_%d
         except WindowsError:
             if key:
                 key.Close()
-            raise DistutilsFileError, "Inno Setup does not seem to be installed properly. Specifically, there is no entry in the HKEY_CLASSES_ROOT for InnoSetupScriptFile\\shell\\Compile\\command"
+            raise distutils.errors.DistutilsFileError("Inno Setup does not seem to be installed properly. "
+                                                      "Specifically, there is no entry in the HKEY_CLASSES_ROOT "
+                                                      "for InnoSetupScriptFile\\shell\\Compile\\command")
 
 # if os.path.exists('build'):
 #    raise Exception("Please delete the build directory before running setup.")
