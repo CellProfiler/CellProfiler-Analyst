@@ -1,4 +1,4 @@
-from scipy.ndimage import median_filter
+from scipy.ndimage import median_filter, uniform_filter
 import numpy as np
 import logging
 
@@ -81,7 +81,7 @@ def square_filter_normalization(data, aggregate_type, win_size):
         raise ValueError('Programming Error: Unknown window type supplied.')
     
     try:
-        res = data / normalization_value
+        res = data / normalization_values
     except:
         logging.error("Division by zero, replace value with 0")
         res = 0
@@ -99,7 +99,7 @@ def linear_filter_normalization(data, aggregate_type, win_size):
         raise ValueError('Programming Error: Unknown window type supplied.')
     
     try:
-        res = data / normalization_value
+        res = data / normalization_values
     except:
         logging.error("Division by zero, replace value with 0")
         res = 0
