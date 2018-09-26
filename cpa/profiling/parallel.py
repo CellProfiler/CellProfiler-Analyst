@@ -1,6 +1,7 @@
 import logging
 import itertools
 from optparse import OptionGroup
+from cpa.profiling.lsf import LSF
 
 logger = logging.getLogger(__name__)
 
