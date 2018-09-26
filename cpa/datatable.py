@@ -1,8 +1,8 @@
 # -*- Encoding: utf-8 -*-
+from cpa import dbconnect
 from cpa.dbconnect import DBConnect
 from datamodel import DataModel
 from properties import Properties
-from sys import stderr
 from tempfile import gettempdir
 from time import ctime, time
 #from wx.lib.embeddedimage import PyEmbeddedImage
@@ -11,7 +11,6 @@ import csv
 import logging
 import numpy as np
 import os
-import sys
 import weakref
 import wx
 import wx.grid
