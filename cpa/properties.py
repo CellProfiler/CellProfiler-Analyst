@@ -652,7 +652,7 @@ class Properties(Singleton):
                 assert self.plate_shape == supported_plate_types[self.__dict__['plate_type']], "Your properties file has incompatible values for plate_type and plate_shape."
             if self.__dict__['plate_type'] not in supported_plate_types.keys():
                 raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
-                                %(self.__dict__['plate_type'], ', '.join(supported_values)))
+                                %(self.__dict__['plate_type'], ', '.join(supported_plate_types)))
             self.plate_shape = supported_plate_types[self.__dict__['plate_type']]
 
         if self.field_defined('check_tables') and self.check_tables.lower() in ['true', 'yes', 'on', 't', 'y']:
