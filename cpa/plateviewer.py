@@ -800,7 +800,7 @@ if __name__ == "__main__":
     #
     try:
         import javavbridge
-        javabridge.kill_vm()
+        javabridge.kill_vm()  # noqa: F821
     except:
         import traceback
         traceback.print_exc()
