@@ -1,11 +1,11 @@
 # -*- Encoding: utf-8 -*-
+from cpa.dbconnect import DBConnect
 from datamodel import DataModel
 from properties import Properties
 from sys import stderr
 from tempfile import gettempdir
 from time import ctime, time
 #from wx.lib.embeddedimage import PyEmbeddedImage
-import dbconnect
 import imagetools
 import csv
 import logging
@@ -17,7 +17,7 @@ import wx
 import wx.grid
 
 dm = DataModel.getInstance()
-db = dbconnect.DBConnect.getInstance()
+db = DBConnect.getInstance()
 p = Properties.getInstance()
 
 ID_LOAD_CSV = wx.NewId()
@@ -644,7 +644,7 @@ if __name__ == "__main__":
     propsfile = sys.argv[2]
     
     p = Properties.getInstance()
-    db = dbconnect.DBConnect.getInstance()
+    db = DBConnect.getInstance()
     dm = DataModel.getInstance()
 
     p.LoadFile(propsfile)
