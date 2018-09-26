@@ -1609,7 +1609,7 @@ class DBConnect(Singleton):
     def CreateTempTableFromData(self, dtable, colnames, tablename, temporary=True):
         '''Creates and populates a temporary table in the database.
         '''
-        return CreateTableFromData(dtable, colnames, tablename, temporary=temporary)
+        return self.CreateTableFromData(dtable, colnames, tablename, temporary=temporary)
     
     def CreateTableFromData(self, dtable, colnames, tablename, temporary=False, coltypes=None):
         '''Creates and populates a table in the database.
