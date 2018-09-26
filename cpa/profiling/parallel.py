@@ -44,7 +44,6 @@ class ParallelProcessor(object):
             from IPython.parallel import Client, LoadBalancedView
             client = Client(profile=ipython_profile)
             return IPython(client)
-            return view.imap
         elif ipython_profile == False:
             return Uniprocessing()
         else:
