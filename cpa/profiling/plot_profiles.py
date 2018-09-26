@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import pylab
 import cpa
+import sys
 from .profiles import Profiles
 
 def plot_profiles(profiles, output_group_name=None):
