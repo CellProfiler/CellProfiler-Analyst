@@ -11,6 +11,7 @@ from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
 import pylab
 import cpa
+import sys
 from .profiles import Profiles
 
 def plot_distances(profiles, output_group_name=None):

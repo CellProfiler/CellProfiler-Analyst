@@ -22,6 +22,7 @@ for f in glob.glob(os.path.join(search_path, "*.png")):
 
 def get_cpa_icon(size=None):
     '''The CellProfiler Analyst icon as a wx.Icon'''
+    global cpa_32, cpa_128  # hopefully these two variables were created above
     icon = wx.EmptyIcon()
     if size == None and sys.platform.startswith('win'):
         icon.CopyFromBitmap(wx.BitmapFromImage(cpa_32))

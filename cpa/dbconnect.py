@@ -1609,7 +1609,7 @@ class DBConnect(Singleton):
     def CreateTempTableFromData(self, dtable, colnames, tablename, temporary=True):
         '''Creates and populates a temporary table in the database.
         '''
-        return CreateTableFromData(dtable, colnames, tablename, temporary=temporary)
+        return self.CreateTableFromData(dtable, colnames, tablename, temporary=temporary)
     
     def CreateTableFromData(self, dtable, colnames, tablename, temporary=False, coltypes=None):
         '''Creates and populates a table in the database.
@@ -1731,7 +1731,7 @@ class DBConnect(Singleton):
         nbins and bin_edges is a numpy array of size nbins + 1.
         """
         if ' ' in table_or_query:
-            table_clause = "(%s) as foo"%(query,)
+            table_clause = "(%s) as foo"%(table_or_query,)
         else:
             table_clause = table_or_query
 

@@ -394,7 +394,7 @@ if __name__ == "__main__":
         # necessary in case other modal dialogs are up
         wx.GetApp().Exit()
         sys.exit()
-        afraser
+
     boxplot = BoxPlot(None)
     boxplot.Show()
     

@@ -31,10 +31,10 @@ import re
 import cpa.helpmenu
 from imageviewer import ImageViewer
 
-
 import fastgentleboostingmulticlass
 from fastgentleboosting import FastGentleBoosting
 
+from cpa.profiling.classifier import Classifier
 #from supportvectormachines import SupportVectorMachines
 from generalclassifier import GeneralClassifier
 

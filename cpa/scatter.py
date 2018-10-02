@@ -728,7 +728,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     def get_key_lists(self):
         return self.key_lists
                                 
-    def set_colors(self):
+    def set_colors(self, colors):
         assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
         self.colors = colors
 

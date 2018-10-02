@@ -915,6 +915,7 @@ def lzwdecode(encoded):
 
     bitw, shr, mask = switchbitch[255]
     bitcount = 0
+    oldcode = None
     result = []
     while 1:
         code = next_code() # ~5% faster when inlining this function

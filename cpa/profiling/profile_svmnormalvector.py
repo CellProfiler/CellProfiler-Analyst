@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import functools
 import io
 import sys
 import os

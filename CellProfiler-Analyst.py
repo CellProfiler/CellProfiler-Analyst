@@ -95,7 +95,6 @@ from cpa.cpatool import CPATool
 import inspect
 
 from cpa.icons import get_cpa_icon
-import cpa.dbconnect
 import cpa.multiclasssql
 # ---
 import wx
@@ -351,7 +350,7 @@ class MainGUI(wx.Frame):
         response = dlg.ShowModal()
         if response != wx.ID_YES:
             return
-        db = dbconnect.DBConnect.getInstance()
+        db = DBConnect.getInstance()
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_tables_table))
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_columns_table))
         db.Commit()
@@ -452,7 +451,7 @@ class CPAnalyst(wx.App):
 
         self.frame = MainGUI(p, None, size=(1000,-1))
 
-        db = cpa.dbconnect.DBConnect.getInstance()
+        db = DBConnect.getInstance()
         # Black magic: Bus errors occur on Mac OS X if we wait until
         # the JVM or the wx event look has started to connect. But it
         # has to be done after we have read the properties file. So we
