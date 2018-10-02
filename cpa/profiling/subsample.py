@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 def _compute_group_subsample((cache_dir, normalization_name, image_key, 
                               indices)):
     import numpy as np
@@ -87,7 +88,7 @@ class Subsample(object):
         if sample_size is None:
             sample_size = int(round(0.001 * ncells))
         if verbose:
-            print 'Subsampling {0} of {1} cells'.format(sample_size, ncells)
+            print('Subsampling {0} of {1} cells'.format(sample_size, ncells))
         if group is None:
             return self._compute1([(sample_size, image_keys)], count_cells,
                                   parallel, show_progress)

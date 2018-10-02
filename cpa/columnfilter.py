@@ -1,3 +1,4 @@
+from __future__ import print_function
 import wx
 import re
 import sqltools as sql
@@ -282,7 +283,7 @@ if __name__ == "__main__":
 
     cff = ColumnFilterDialog(None, tables=[p.image_table])
     if cff.ShowModal()==wx.OK:
-        print cff.get_filter()
+        print(cff.get_filter())
 
     cff.Destroy()
     app.MainLoop()

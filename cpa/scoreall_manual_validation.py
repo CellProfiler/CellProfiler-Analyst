@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from dbconnect import *
 from datamodel import DataModel
 from properties import Properties
@@ -75,20 +76,20 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
         
     if results_table:
         if db.table_exists(results_table) and not overwrite:
-            print 'Table "%s" already exists. Delete this table before running scoreall.'%(results_table)
+            print('Table "%s" already exists. Delete this table before running scoreall.'%(results_table))
             return None
 
-    print ''
-    print 'properties:    ', properties
-    print 'initial training set:  ', ts
-    print 'ground truth training set:  ', gt
-    print '# rules:       ', nRules
-    print 'filter:        ', filter_name
-    print 'grouping by:   ', group
-    print 'show results:  ', show_results
-    print 'results table: ', results_table
-    print 'overwrite:     ', overwrite
-    print ''
+    print('')
+    print('properties:    ', properties)
+    print('initial training set:  ', ts)
+    print('ground truth training set:  ', gt)
+    print('# rules:       ', nRules)
+    print('filter:        ', filter_name)
+    print('grouping by:   ', group)
+    print('show results:  ', show_results)
+    print('results table: ', results_table)
+    print('overwrite:     ', overwrite)
+    print('')
             
     nClasses = len(ts.labels)
     nKeyCols = len(image_key_columns())
@@ -129,18 +130,18 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
     percent = [100*cm[i,i]/float(s[i]) for i in range(len(s))]
     avg = np.mean(percent)
     avgTotal = 100 * np.trace(cm) / float(np.sum(cm))    
-    print 'accuracy = %f' % avgTotal
-    print 'Confusion Matrix = ... '
-    print cm
+    print('accuracy = %f' % avgTotal)
+    print('Confusion Matrix = ... ')
+    print(cm)
     my_sens = cm[0,0] / float(cm[0,0] + cm[0,1]) #TP/(TP+FN)
     my_spec = cm[1,1] / float(cm[1,1] + cm[1,0]) #TN/(TN+FP)
-    print 'My_Sensitivity = %f' % my_sens
-    print 'My_Specificity = %f' % my_spec
-    print 'Sensitivity = ...'
-    print sens
-    print 'Specificity = ...'
-    print spec
-    print 'Done calculating'
+    print('My_Sensitivity = %f' % my_sens)
+    print('My_Specificity = %f' % my_spec)
+    print('Sensitivity = ...')
+    print(sens)
+    print('Specificity = ...')
+    print(spec)
+    print('Done calculating')
     
     ############
     ## Confusion Matrix code from here: http://stackoverflow.com/questions/5821125/how-to-plot-confusion-matrix-with-string-axis-rather-than-integer-in-python
@@ -183,7 +184,7 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
             plt.yticks(range(height), alphabet[:height])
         plt.show()
             
-    print 'Done'
+    print('Done')
     #plt.savefig('confusion_matrix.png', format='png')    
 ######
 #
@@ -193,7 +194,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
     if len(sys.argv) < 4:
-        print USAGE
+        print(USAGE)
         sys.exit()
 
     props_file = sys.argv[1]

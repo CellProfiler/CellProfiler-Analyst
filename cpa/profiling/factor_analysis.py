@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import logging
 from optparse import OptionParser
 import progressbar
@@ -82,7 +83,7 @@ def _main(args=None):
     output_file = args[2]
 
     subsample = cpa.util.unpickle1(subsample_file)
-    print kaiser(subsample.data)
+    print(kaiser(subsample.data))
     preprocessor = cpa.profiling.factor_analysis.FactorAnalysisPreprocessor(
         standardize(subsample.data), subsample.variables, nfactors)
     if options.variable_selection_only:

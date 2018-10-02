@@ -1,3 +1,4 @@
+from __future__ import print_function
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from multiclasssql import filter_table_prefix
 from properties import Properties
@@ -390,7 +391,7 @@ if __name__ == "__main__":
         p = Properties.getInstance()
         p.LoadFile(sys.argv[1])
     elif not p.show_load_dialog():
-        print 'BoxPlot requires a properties file.  Exiting.'
+        print('BoxPlot requires a properties file.  Exiting.')
         # necessary in case other modal dialogs are up
         wx.GetApp().Exit()
         sys.exit()
@@ -409,4 +410,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

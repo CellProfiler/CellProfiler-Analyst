@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 import wx
 import sys
@@ -52,7 +53,7 @@ class QueryMaker(wx.Frame):
             grid.table_from_array(res, colnames)
             grid.Show()
             logging.info('Query successful')
-        except Exception, e:
+        except Exception as e:
             logging.error('Query failed:')
             logging.error(e)
 
@@ -68,7 +69,7 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
     else:
         if not p.show_load_dialog():
-            print 'Query Maker requires a properties file.  Exiting.'
+            print('Query Maker requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()

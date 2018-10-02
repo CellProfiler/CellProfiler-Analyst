@@ -192,7 +192,7 @@ class ColorBarPanel(wx.Panel):
         popupMenu = wx.Menu()
         popupMenu.SetTitle('Colorbar')
         reset = popupMenu.AppendItem(wx.MenuItem(popupMenu, -1, 'Reset sliders'))
-        self.Bind(wx.EVT_MENU, lambda(evt):self.ResetInterval(), reset)
+        self.Bind(wx.EVT_MENU, lambda evt:self.ResetInterval(), reset)
         if self.clipmode == 'clip':
             bracket_mode = popupMenu.AppendItem(wx.MenuItem(popupMenu, -1, 'Value bracketing: RESCALE'))
         else:

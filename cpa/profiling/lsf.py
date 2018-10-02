@@ -1,3 +1,4 @@
+from __future__ import print_function
 import types
 import errno
 import re
@@ -54,7 +55,7 @@ class LSFView(object):
                      '"%s/out/j%%Ja%%I.out"' % self.directory, sys.executable,
                      '-m', 'cpa.profiling.lsf', self.directory])
         cmd = ' '.join(args)
-        print cmd
+        print(cmd)
         os.system(cmd)
 
     def list_precomputed_results(self):
@@ -92,7 +93,7 @@ class LSFView(object):
         done_tasks = self.list_precomputed_results()
         # Divide the paramaters into batches (tasks).
         batch_size = 1 + len(parameters) // 4000
-        print 'Batch size:', batch_size
+        print('Batch size:', batch_size)
         all_batches = []
         while parameters:
             all_batches.append(parameters[:batch_size])
@@ -114,7 +115,7 @@ class LSFView(object):
             try:
                 npending = len(os.listdir(os.path.join(self.directory, 'new')))
                 nrunning = len(os.listdir(os.path.join(self.directory, 'cur')))
-            except OSError, e:
+            except OSError as e:
                 if e.errno == errno.EIO:
                     continue
                 else:
@@ -139,10 +140,10 @@ def test_function((seconds)):
 
 def test():
     view = LSFView(3, 'lsf_test')
-    print view.directory
+    print(view.directory)
     for result in view.imap(test_function, [random.randint(1, 10)
                                             for task in range(10)]):
-        print 'Task returned', result
+        print('Task returned', result)
 
 class Worker(object):
 
@@ -156,10 +157,10 @@ class Worker(object):
         while True:
             task = self.get_task()
             if task is None:
-                print 'No more tasks.'
+                print('No more tasks.')
                 break
             task_id = task['task_id']
-            print 'Got task', task_id
+            print('Got task', task_id)
             start_time = time.time()
             try:
                 code = marshal.loads(task['function'])
@@ -187,7 +188,7 @@ class Worker(object):
             os.rename(self.filename('tmp', task_id), self.filename('done', task_id))
             os.unlink(self.filename('cur', task_id))
             if self.is_too_old():
-                print "I'm too old and will kill myself."
+                print("I'm too old and will kill myself.")
                 break
 
     def filename(self, subdir, task_id):
@@ -204,7 +205,7 @@ class Worker(object):
                 if os.path.exists(os.path.join(self.directory, 'submitted')):
                     return None
                 else:
-                    print 'Waiting for more tasks to be submitted.'
+                    print('Waiting for more tasks to be submitted.')
                     time.sleep(5)
                     continue
             task_basename = tasks[random.randint(0, len(tasks) - 1)]
@@ -218,10 +219,10 @@ class Worker(object):
                 cur_filename = self.filename('cur', task_id)
                 os.rename(new_filename, cur_filename)
                 return task
-            except IOError, e:
+            except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
 

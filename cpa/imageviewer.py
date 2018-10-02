@@ -479,8 +479,8 @@ class ImageViewer(wx.Frame):
             self.sw.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.cp.Bind(wx.EVT_KEY_UP, self.OnKey)
             self.imagePanel.Bind(wx.EVT_KEY_UP, self.OnKey)
-            self.Bind(wx.EVT_MENU, lambda(e):self.SelectAll(), self.sel_all)
-            self.Bind(wx.EVT_MENU, lambda(e):self.DeselectAll(), self.deselect)
+            self.Bind(wx.EVT_MENU, lambda e: self.SelectAll(), self.sel_all)
+            self.Bind(wx.EVT_MENU, lambda e: self.DeselectAll(), self.deselect)
 
         self.fileMenu.Bind(wx.EVT_MENU_OPEN, self.OnOpenFileMenu)
         self.classifyMenu.Bind(wx.EVT_MENU_OPEN, self.OnOpenClassifyMenu)
@@ -822,5 +822,3 @@ if __name__ == "__main__":
     #imagetools.SaveBitmap(frame.imagePanel.bitmap, '/Users/afraser/Desktop/TEST.png')
 
     app.MainLoop()
-
-

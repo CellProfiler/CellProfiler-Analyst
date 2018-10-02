@@ -2,6 +2,7 @@
 Determine a number of factors using the Kaiser rule.
 See http://yatani.jp/HCIstats/FA
 """
+from __future__ import print_function
 
 from optparse import OptionParser
 import numpy as np
@@ -25,8 +26,8 @@ if __name__ == '__main__':
 
     if options.output_filename:
         with replace_atomically(options.output_filename) as f:
-            print >>f, nfactors
+            print(nfactors, file=f)
     else:
-        print nfactors
+        print(nfactors)
 
 

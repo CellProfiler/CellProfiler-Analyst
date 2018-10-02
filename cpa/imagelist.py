@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 import wx
 import numpy as np
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG,)
     
     if not p.show_load_dialog():
-        print 'Props file required'
+        print('Props file required')
         sys.exit()
     
     ilf = ImageListFrame(None, db.execute('SELECT %s from %s'%(UniqueImageClause(), p.image_table)))

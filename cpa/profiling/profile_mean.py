@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os
 import sys
 #import csv
@@ -151,7 +152,7 @@ if __name__ == '__main__':
                             method=options.method,
                             show_progress=not options.no_progress,
                             full_group_header=options.full_group_header)
-    print profiles
+    print(profiles)
     if options.csv:
         profiles.save_csv(options.output_filename)
     else:

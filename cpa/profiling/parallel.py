@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 import itertools
 from optparse import OptionGroup
@@ -116,7 +117,7 @@ def test():
     view = parallel.view('foo')
     for result in view.imap(test_function, [random.randint(1, 10)
                                             for task in range(10)]):
-        print 'Task returned', result
+        print('Task returned', result)
     
 if __name__ == '__main__':
     test()

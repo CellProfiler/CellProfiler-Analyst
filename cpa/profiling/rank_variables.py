@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 import sys
 from optparse import OptionParser
@@ -42,20 +43,20 @@ def write_result_text(f, result):
     for i, class_ in enumerate(sorted(result.keys())):
         variables = result[class_]
         if i > 0:
-            print >>f
-        print >>f, class_
+            print(file=f)
+        print(class_, file=f)
         for score, variable in variables:
-            print >>f, '%f %s' % (score, variable)
+            print('%f %s' % (score, variable), file=f)
 
 def write_result_latex(f, result):
     for i, class_ in enumerate(sorted(result.keys())):
         variables = result[class_]
         if i > 0:
-            print >>f, '\\addlinespace'
+            print('\\addlinespace', file=f)
         for j, (score, variable) in enumerate(variables):
             label = class_ if j == 0 else ''
-            print >>f, '%s & %d & %f & %s \\\\' % (
-                label, j + 1, score, re.sub('_', r'\_', variable))
+            print('%s & %d & %f & %s \\\\' % (
+                label, j + 1, score, re.sub('_', r'\_', variable)), file=f)
 
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [options] PROPERTIES-FILE PROFILES-FILENAME")

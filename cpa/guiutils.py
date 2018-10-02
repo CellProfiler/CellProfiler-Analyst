@@ -1,3 +1,4 @@
+from __future__ import print_function
 import wx
 import wx.combo
 import os
@@ -235,7 +236,7 @@ def prompt_user_to_link_table(parent, table):
         else:
             # There should never be an object table without another object 
             # table existing first. Connecting this table to the image_table is
-            # asking for trouble.            
+            # asking for trouble.
             return None
 
     else:
@@ -313,7 +314,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         if the selection is NO_FILTER or NEW_FILTER
         '''
         kind = self.get_item_kind(self.GetSelection()) # Fix selection issue
-        print kind
+        print(kind)
         if kind == 'filter':
             return p._filters[self.Value]
         elif kind == 'gate':
@@ -375,7 +376,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
                 fname = str(cff.get_filter_name())
                 p._filters[fname] = fltr
                 self.SetStringSelection(fname)
-                print fname, p._filters[fname]
+                print(fname, p._filters[fname])
             else:
                 self.Select(0)
             cff.Destroy()
@@ -423,7 +424,7 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
         gate = self.get_gatename_or_none()
         if gate:
             p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
-            print gate, p._filters[gate]
+            print(gate, p._filters[gate])
         
     def get_gatename_or_none(self):
         selection = self.GetSelection() # Fix to replace self.GetStringSelection()
@@ -582,7 +583,7 @@ class CreateLoadImagesTableDialog(wx.Dialog):
         btnsizer = wx.StdDialogButtonSizer()
 
         helpbtn = wx.Button(self, wx.ID_HELP)
-        helpbtn.Bind(wx.EVT_BUTTON, lambda(evt): wx.TipWindow(
+        helpbtn.Bind(wx.EVT_BUTTON, lambda evt: wx.TipWindow(
             self, 'This dialog a list of per_image gates which you may apply'
             'to your per_image data to generate a filtered list of images for'
             'input to CellProfiler LoadImages.\n\n'
@@ -654,7 +655,7 @@ class GateManager(wx.Dialog):
             p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
         else:
             self.gateinfo.Value = ''
-        print gate, p._filters[gate]
+        print(gate, p._filters[gate])
 
     def update_choices(self, evt):
         sel = self.gatelist.GetStringSelection()
@@ -742,7 +743,7 @@ class BitmapPopup(wx.MiniFrame):
         self.SetPosition(kwargs.get('pos', (-1,-1)))
         self.SetSize(bitmap.Size)
 
-        self.Bind(wx.EVT_LEFT_DOWN, lambda(e): self.Destroy())
+        self.Bind(wx.EVT_LEFT_DOWN, lambda e: self.Destroy())
         self.Bind(wx.EVT_PAINT, self._on_paint)
 
     def _on_paint(self, evt):

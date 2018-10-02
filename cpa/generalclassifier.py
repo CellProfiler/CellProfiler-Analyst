@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 import dbconnect
 import logging
@@ -119,7 +120,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         '''RETURNS: np array of predicted classes of input data test_values '''
         predictions = self.classifier.predict(test_values)
         if fout:
-            print predictions
+            print(predictions)
         return np.array(predictions)
 
     # Return probabilities
@@ -142,7 +143,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
                 colnames = self.env.trainingSet.colnames
                 importances = self.classifier.feature_importances_
                 indices = np.argsort(importances)[::-1]
-                print self.classifier
+                print(self.classifier)
                 return "\n".join([str(colnames[indices[f]]) for f in range(self.env.nRules)])
             except:
                 return ''
@@ -156,25 +157,25 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         self.trained = True
 
         if fout:
-            print self.classifier
+            print(self.classifier)
 
     def UpdateBins(self, classBins):
         self.classBins = classBins
 
     def Usage(self):
-        print "usage :"
-        print " classifier              - read from stdin, write to stdout"
-        print " classifier file         - read from file, write to stdout"
-        print " classifier file1 file2  - read from file1, write to file2"
-        print ""
-        print "Input files should be tab delimited."
-        print "Example:"
-        print "ClassLabel   Value1_name Value2_name Value3_name"
-        print "2    0.1 0.3 1.5"
-        print "1    0.5 -0.3    0.5"
-        print "3    0.1 1.0 0.5"
-        print ""
-        print "Class labels should be integers > 0."
+        print("usage :")
+        print(" classifier              - read from stdin, write to stdout")
+        print(" classifier file         - read from file, write to stdout")
+        print(" classifier file1 file2  - read from file1, write to file2")
+        print("")
+        print("Input files should be tab delimited.")
+        print("Example:")
+        print("ClassLabel   Value1_name Value2_name Value3_name")
+        print("2    0.1 0.3 1.5")
+        print("1    0.5 -0.3    0.5")
+        print("3    0.1 1.0 0.5")
+        print("")
+        print("Class labels should be integers > 0.")
         exit(1)
 
     def XValidate(self, labels, values, folds, stratified=True, scoring=None):
@@ -463,7 +464,7 @@ if __name__ == '__main__':
         if strlabel in label_to_labelidx:
             return label_to_labelidx[strlabel]
         global curlabel
-        print "LABEL: ", curlabel, strlabel
+        print("LABEL: ", curlabel, strlabel)
         label_to_labelidx[strlabel] = curlabel
         curlabel += 1
         return label_to_labelidx[strlabel]

@@ -4,6 +4,7 @@
 Cross validation.
 
 '''
+from __future__ import print_function
 
 import sys
 import csv
@@ -50,7 +51,7 @@ def get_confusion_matrix(classifier, ckdata, keysize, K=None, exclude_subkey=Non
 
       if exclude_subkey != None:
          if test_data.shape[0] > 1:
-            print 'A group exclusion cannot be used for a k fold cross validation that is not a leave one out (K=%s)' % K
+            print('A group exclusion cannot be used for a k fold cross validation that is not a leave one out (K=%s)' % K)
       
          training_exclude = training_keys[:,exclude_subkey]
          test_exclude = test_keys[0,exclude_subkey]
@@ -63,7 +64,7 @@ def get_confusion_matrix(classifier, ckdata, keysize, K=None, exclude_subkey=Non
          
          if include_subkey != None:
             if test_data.shape[0] > 1:
-               print 'A group inclusion cannot be used for a k fold cross validation that is not a leave one out (K=%s)' % K
+               print('A group inclusion cannot be used for a k fold cross validation that is not a leave one out (K=%s)' % K)
          
             training_include = training_keys[:,include_subkey]
             test_include = test_keys[0,include_subkey]
@@ -173,13 +174,13 @@ def concentration_selection(compound1, compound2, compoundKeyIndex):
 def _display_as_text(classes, confusion, percent, avg, numprofiles):
    
    s = np.sum(confusion,axis=1)
-   print 'Classifying %d profiles:' % numprofiles
+   print('Classifying %d profiles:' % numprofiles)
    for i, v in enumerate(confusion):
       for u in v:
-         print "%2d " % u ,
-      print "(%02d)  %3d%%  %s " % (s[i],percent[i],classes[i])
+         print("%2d " % u, end=' ')
+      print("(%02d)  %3d%%  %s " % (s[i],percent[i],classes[i]))
    
-   print 'Average: %3d%%' % avg
+   print('Average: %3d%%' % avg)
 
 
 def _display_as_graph(classes, confusion, percent, avg, filename=None):   

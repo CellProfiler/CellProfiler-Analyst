@@ -46,7 +46,7 @@ def setup_frozen_logging():
             if self._file is None and self._error is None:
                 try:
                     self._file = open(fname, 'w')
-                except Exception, details:
+                except Exception as details:
                     self._error = details
             if self._file is not None:
                 self._file.write(text)
@@ -220,11 +220,11 @@ class MainGUI(wx.Frame):
         # log_levels are 10,20,30,40,50
         logMenu.GetMenuItems()[(log_level/10)-1].Check()
 
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.DEBUG), debugMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.INFO), infoMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.WARN), warnMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.ERROR), errorMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.CRITICAL), criticalMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.DEBUG), debugMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.INFO), infoMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.WARN), warnMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.ERROR), errorMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.CRITICAL), criticalMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_properties, savePropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
         self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)

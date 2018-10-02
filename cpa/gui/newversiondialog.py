@@ -1,6 +1,7 @@
 """ A new version dialog with buttons for going to the website and
 turning off new version checking.
 """
+from __future__ import print_function
 
 import wx
 import wx.html
@@ -67,10 +68,10 @@ class NewVersionDialog(wx.Dialog):
 
 if __name__ == "__main__":
     def cb(new_pref):
-        print "Pref changed to", new_pref
+        print("Pref changed to", new_pref)
         
     def sk():
-        print "skip this version"
+        print("skip this version")
 
     app = wx.PySimpleApp()
     dialog = NewVersionDialog(None, "New version available", 

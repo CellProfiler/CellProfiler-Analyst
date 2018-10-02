@@ -1,3 +1,4 @@
+from __future__ import print_function
 import tempfile
 import numpy as np
 import unittest
@@ -234,9 +235,9 @@ class CacheTestCase(unittest.TestCase):
     def test_colnames(self):
         with tempfile.NamedTemporaryFile(suffix='.txt') as file:
             with open(file.name, 'w') as f:
-                print >>f, 'foo'
-                print >>f, 'bar'
-                print >>f, 'baz'
+                print('foo', file=f)
+                print('bar', file=f)
+                print('baz', file=f)
             c = cache.Cache('foo')
             c._colnames_filename = file.name
             self.assertEqual(c._cached_colnames, None)

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import xml.dom.minidom as dom
 import os
 import re
@@ -61,25 +62,25 @@ def load_harmony(plate_results):
     channels = get_channel_names(plates, wells, images)
     object_results_files = get_object_results_files_harmony(results_dir)
     
-    print 'Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    print('Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME)))
     create_properties_file(image_index, channels, len(object_results_files)>0)
     db.connect(empty_sqlite_db = True)
     p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
     
-    print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
-    print 'Creating per_image table...'
+    print('Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME)))
+    print('Creating per_image table...')
     imagesets = create_image_set_dict(plates, wells, images)
     create_per_image_table(plates, channels, imagesets, image_dir)
-    print '...done'
+    print('...done')
     
-    print 'Creating per_well table...'
+    print('Creating per_well table...')
     create_harmony_per_well_table(plate_results)
-    print '...done'
+    print('...done')
     
     if object_results_files:
-        print 'Creating per_object table...'
+        print('Creating per_object table...')
         create_per_object_table(object_results_files)
-        print '...done'
+        print('...done')
     
     
 
@@ -104,23 +105,23 @@ def load_columbus(measurements_index):
     plates, wells, images = get_plates_wells_and_images(image_index)
     channels = get_channel_names(plates, wells, images)
 
-    print 'Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    print('Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME)))
     create_properties_file(image_index, channels)
     db.connect(empty_sqlite_db = True)
     p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
 
-    print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
-    print 'Creating per_image table...'
+    print('Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME)))
+    print('Creating per_image table...')
     imagesets = create_image_set_dict(plates, wells, images)
     create_per_image_table(plates, channels, imagesets, image_dir)
-    print '...done'
+    print('...done')
     
-    print 'Creating per_object table...'
+    print('Creating per_object table...')
     from time import time
     t = time()
     object_results_files = get_object_results_files_columbus(doc)
     create_per_object_table(object_results_files)
-    print '...done in %.2f seconds'%(time() - t)
+    print('...done in %.2f seconds'%(time() - t))
     
 
 def create_properties_file(image_index, channels, has_per_object=True):
@@ -573,4 +574,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

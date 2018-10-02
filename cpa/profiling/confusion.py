@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 
 def load_confusion(filename):
@@ -27,4 +28,4 @@ def confusion_reduce(operation, confusions):
 
 def write_confusion(confusion, stream):
     for (a, b), v in confusion.items():
-        print >>stream, '\t'.join([' '.join(a), ' '.join(b), str(v)])
+        print('\t'.join([' '.join(a), ' '.join(b), str(v)]), file=stream)

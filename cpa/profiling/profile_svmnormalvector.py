@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import functools
 import io
 import sys
@@ -31,9 +32,9 @@ def _compute_rfe(x, y, target_accuracy=1.0):
     clf = SVC(kernel='linear', C=1.) #LinearSVC(C=1.0)
     #clf = LinearSVC(C=1.0)
     rfecv = RFECV(clf, step=0.1, cv=cv, loss_func=zero_one)
-    print 'About to call RFECV.fit on', x.shape, 'and', y.shape
+    print('About to call RFECV.fit on', x.shape, 'and', y.shape)
     rfecv.fit(x, y)
-    print 'RFECV done'
+    print('RFECV done')
     # The percentage correct for each # of variables in the cross validation
     perccorrect_tot = [100 - ((100 * i) / y.shape[0]) 
                        for i in rfecv.cv_scores_]

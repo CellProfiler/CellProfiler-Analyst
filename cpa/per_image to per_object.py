@@ -1,3 +1,4 @@
+from __future__ import print_function
 import dbconnect
 import properties
 import os
@@ -70,7 +71,7 @@ def run():
          if not conflict_table(fake_obj_table):
               temp=conflict_resolution(fake_obj_table)
               if temp == '':
-                   print 'Error: No name recorded.'
+                   print('Error: No name recorded.')
               else:
                    fake_obj_table=temp
          else:
@@ -146,7 +147,7 @@ def run():
          if not conflict_file(filename):
               temp=conflict_resolution(filename)
               if temp == '':
-                   print 'Error: No name recorded.'
+                   print('Error: No name recorded.')
               else:
                    filename=temp
          else:

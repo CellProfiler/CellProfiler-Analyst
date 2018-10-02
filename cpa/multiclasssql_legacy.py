@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy
 import sys
 import cpa.sqltools
@@ -278,7 +279,7 @@ if __name__ == "__main__":
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
     output = StringIO()
-    print 'Training classifier with '+str(nRules)+' rules...'
+    print('Training classifier with '+str(nRules)+' rules...')
     weaklearners = fastgentleboostingmulticlass.train(trainingSet.colnames,
                                                       nRules, trainingSet.label_matrix, 
                                                       trainingSet.values, output)
@@ -286,9 +287,9 @@ if __name__ == "__main__":
     table.sort()
 
     labels = ['table', 'image'] + list(trainingSet.labels) + list(trainingSet.labels)
-    print labels
+    print(labels)
     for row in table:
-        print row
+        print(row)
 #    app = wx.PySimpleApp()
 #    grid = DataGrid(numpy.array(table), labels, key_col_indices=[0,1])
 #    grid.Show()

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import sys
 import math
@@ -31,17 +32,17 @@ def parse_incell(sqlite_filename, incell_filename, properties):
         if len(cursor.fetchall()) > 0:
             logging.info("%s already imported into %s", incell_filename, sqlite_filename)
             return
-    except Exception, e:
+    except Exception as e:
         # Assume failure is lack of the relevant table, i.e., no tables imported yet
-        print e
+        print(e)
         cursor.execute('CREATE TABLE ImportedIncellFiles (signature TEXT, incell_filename TEXT)')
 
     # Find the maximum image number.  Note that the table might not exist, yet.
     try:
         cursor.execute('SELECT MAX(ImageNumber) from Images')
         start_image_number = next_image_number = cursor.fetchone()[0] + 1
-    except Exception, e:
-        print "no image number info", e
+    except Exception as e:
+        print("no image number info", e)
         start_image_number = next_image_number = 1
 
     # create the object table
@@ -70,7 +71,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
                     next_image_number += 1
                 
                 if element.get('cell') == 'Summary':
-                    print well, field
+                    print(well, field)
                 else:
                     # extract features and values
                     objectnumber = int(element.get('cell'))
@@ -83,9 +84,9 @@ def parse_incell(sqlite_filename, incell_filename, properties):
                             ','.join(colnames), ','.join('?'*(len(colnames) + 2))),
                                    [imagenumber, objectnumber] + list(values))
                     element.clear()
-            except Exception, e:
-                print "Failed to load well object data", imagenumber, objectnumber, element, element.attrib, e
-                print colnames, values
+            except Exception as e:
+                print("Failed to load well object data", imagenumber, objectnumber, element, element.attrib, e)
+                print(colnames, values)
                 raise
                 pass
 
@@ -101,7 +102,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
     cursor.execute('UPDATE Objects SET %s = %d - %s WHERE ImageNumber>=%s'%(properties.cell_y_loc, image_height, properties.cell_y_loc, start_image_number))
     dbconn.commit()
 
-    print "done parsing object data"
+    print("done parsing object data")
 
 
     # Create image table
@@ -122,7 +123,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
         diameter = 2 * math.sqrt(float(segmentation.get('size')) / math.pi)
         properties.image_tile_size = int(2 * diameter / float(calibration.get('pixel_height')))
     except:
-        print "unable to find nucleus size in pixels"
+        print("unable to find nucleus size in pixels")
         properties.image_tile_size = 50
 
     # cell location
@@ -131,7 +132,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
         properties.cell_x_loc = [col for col in object_data_columns if 'cgX' in col][0]
         properties.cell_y_loc = [col for col in object_data_columns if 'cgY' in col][0]
     except:
-        print "No location information found"
+        print("No location information found")
         pass
 
     # db_type
@@ -152,7 +153,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
         plate_info = tree.find('.//AutoLeadAcquisitionProtocol/Plate')
         properties.plate_type = '%d'%(int(plate_info.get('rows')) * int(plate_info.get('columns')))
     except:
-        print "unable to find plate type"
+        print("unable to find plate type")
 
     return tree
 
@@ -168,7 +169,7 @@ def get_object_data(values):
                 val = -val
             vals.append(val)
                 
-        except Exception, e:
+        except Exception as e:
             pass
     return names, vals
 

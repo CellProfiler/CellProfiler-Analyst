@@ -14,6 +14,7 @@ Please see the AUTHORS file for credits.
 
 Website: http://www.cellprofiler.org
 '''
+from __future__ import print_function
 
 import re
 import sys
@@ -61,7 +62,7 @@ def _get_description():
 
     if git_description and git_description != _cached_description:
         with open(description_file, 'w') as f:
-            print >>f, '__description__ = "%s"' % git_description
+            print('__description__ = "%s"' % git_description, file=f)
 
     return git_description or _cached_description
 
@@ -133,10 +134,10 @@ if __name__ == '__main__':
     elif len(sys.argv) == 1:
         description = _get_description()
     else:
-        print >>sys.stderr, "Usage: %s [DESCRIPTION]" % os.path.basename(sys.argv[0])
+        print("Usage: %s [DESCRIPTION]" % os.path.basename(sys.argv[0]), file=sys.stderr)
         sys.exit(64) # EX_USAGE
-    print 'Description:', description
-    print 'Normalized version:', get_normalized_version(description)
-    print 'Bundle version:', get_bundle_version(description)
-    print 'Commit:', get_commit(description)
-    print 'Display version:', get_display_version(description)
+    print('Description:', description)
+    print('Normalized version:', get_normalized_version(description))
+    print('Bundle version:', get_bundle_version(description))
+    print('Commit:', get_commit(description))
+    print('Display version:', get_display_version(description))

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 from dbconnect import *
 from datamodel import DataModel
@@ -196,7 +197,7 @@ class TestDBConnect(unittest.TestCase):
     def test_GetFilteredImages(self):
         self.setup_mysql()
         test = set(self.db.GetFilteredImages('MAPs'))
-        print test
+        print(test)
         vals = set([(239L,), (21L,), (32L,), (197L,), (86L,), (23L,), (61L,), (72L,), (213L,), (222L,), (63L,), (229L,), (221L,), (38L,), (224L,), (231L,), (13L,), (24L,), (78L,), (214L,), (15L,), (223L,), (53L,), (64L,), (246L,), (55L,), (93L,), (232L,), (30L,), (206L,), (95L,), (215L,), (5L,), (16L,), (70L,), (7L,), (45L,), (56L,), (238L,), (198L,), (47L,), (207L,), (85L,), (96L,), (22L,), (87L,), (253L,), (8L,), (62L,), (254L,), (255L,), (199L,), (37L,), (48L,), (205L,), (230L,), (208L,), (39L,), (77L,), (88L,), (14L,), (79L,), (245L,), (256L,), (54L,), (247L,), (29L,), (40L,), (94L,), (31L,), (240L,), (69L,), (80L,), (6L,), (216L,), (71L,), (237L,), (248L,), (200L,), (46L,)])
         assert test == vals
         assert self.db.GetFilteredImages('IMPOSSIBLE') == []

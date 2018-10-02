@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 from random import randint
 import numpy as np
@@ -119,7 +120,7 @@ class DataModel(Singleton):
         if N > self.obCount:
             logging.info(str(N) +' is greater than the number of objects. Fetching ' + str(self.obCount) + ' objects.')
             N = self.obCount
-            print self.obCount
+            print(self.obCount)
         if imKeys == None:
             return self.GetRandomObject(N)
         elif imKeys == []:

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from colorbarpanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns
 from platemappanel import *
@@ -110,7 +111,7 @@ class DataSourcePanel(wx.Panel):
             
             
         else:
-            print 'CellDistributionViewer requires a properties file.  Don\'t make me exit :-(.'
+            print('CellDistributionViewer requires a properties file.  Don\'t make me exit :-(.')
 
     def selecttable(self, event):
         tablename = event.GetString()

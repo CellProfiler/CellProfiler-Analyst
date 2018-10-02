@@ -1,3 +1,4 @@
+from __future__ import print_function
 from sys import stderr
 import logging
 import numpy
@@ -338,6 +339,6 @@ if __name__ == "__main__":
     tr = TrainingSet(p)
     tr.Load(argv[2])
     for i in range(len(tr.labels)):
-        print tr.labels[i],
-        print " ".join([str(v) for v in tr.values[i]])
+        print(tr.labels[i], end=' ')
+        print(" ".join([str(v) for v in tr.values[i]]))
         

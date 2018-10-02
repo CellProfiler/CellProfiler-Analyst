@@ -1,3 +1,4 @@
+from __future__ import print_function
 from cpatool import CPATool
 from colorbarpanel import ColorBarPanel
 from dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
@@ -57,7 +58,7 @@ class PlateViewer(wx.Frame, CPATool):
         save_csv_menu_item = self.fileMenu.Append(-1, 'Save table to CSV\tCtrl+S')
         self.Bind(wx.EVT_MENU, self.on_save_csv, save_csv_menu_item)
         
-        wx.EVT_MENU(self, wx.ID_EXIT, lambda(_):self.Close())
+        wx.EVT_MENU(self, wx.ID_EXIT, lambda _:self.Close())
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
@@ -715,7 +716,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     # compute the number of sites-per-well as the max number of rows with the same well-key
     nsites = max([len(list(grp))
                   for k, grp in groupby(keys_and_vals, 
-                                        lambda(row): tuple(row[:nkeycols]))
+                                        lambda row: tuple(row[:nkeycols]))
                   ])
     if nsites > 1:
         # add a sites dimension to the array shape if there's >1 site per well
@@ -734,7 +735,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     dm = DataModel.getInstance()
     ind = keys_and_vals.argsort(axis=0)
     for i, (k, well_grp) in enumerate(groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
-                                              lambda(row): tuple(row[:len(dummy_key)]))):
+                                              lambda row: tuple(row[:len(dummy_key)]))):
         (row, col) = dm.get_well_position_from_name(k[-1])
         well_data = np.array(list(well_grp))[:,-1]
         if len(well_data) == 1:
@@ -782,7 +783,7 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
     else:
         if not p.show_load_dialog():
-            print 'Plate Viewer requires a properties file.  Exiting.'
+            print('Plate Viewer requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
@@ -804,4 +805,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
 from icons import lasso_tool
 import sqltools as sql
@@ -428,7 +429,7 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
     else:
         if not p.show_load_dialog():
-            print 'Histogram requires a properties file.  Exiting.'
+            print('Histogram requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
@@ -445,4 +446,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

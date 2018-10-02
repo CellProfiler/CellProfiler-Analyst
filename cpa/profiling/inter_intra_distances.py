@@ -1,3 +1,4 @@
+from __future__ import print_function
 from optparse import OptionParser
 import numpy as np
 from scipy.spatial.distance import pdist, cdist
@@ -23,7 +24,7 @@ def compute_inter_intra_distances(profiles, true_group_name):
 def plot_inter_intra_distances(profiles, true_group_name):
     inter_distances, intra_distances = compute_inter_intra_distances(profiles,
                                                                      true_group_name)
-    print 'AUC:', auc(inter_distances, intra_distances)
+    print('AUC:', auc(inter_distances, intra_distances))
     h_intra, e_intra = np.histogram(intra_distances, 15, normed=True)
     h_inter, e_inter = np.histogram(inter_distances, 15, normed=True)
     pylab.bar(e_intra[:-1], h_intra, e_intra[1] - e_intra[0], color='r', 

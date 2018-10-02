@@ -1,3 +1,4 @@
+from __future__ import print_function
 import wx
 import numpy as np
 import sqltools as sql
@@ -84,7 +85,7 @@ class GatingHelper(object):
         assert isinstance(gate, sql.Gate)
         for col in gate.get_columns():
             if col not in (x_column, y_column):
-                print 'can not display this gate'
+                print('can not display this gate')
                 self.disable()
                 return
         if self.gate:
