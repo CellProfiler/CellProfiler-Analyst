@@ -1,7 +1,8 @@
+from __future__ import absolute_import
 import cpa
-from dbconnect import *
-from properties import Properties
-from utils import Observable
+from .dbconnect import *
+from .properties import Properties
+from .utils import Observable
 p = Properties.getInstance()
 
 def image_cols():
@@ -319,7 +320,7 @@ class Gate(object, Observable):
     
     def as_filter(self):
         if len(self._gate_list) == 0:
-            import sqltools
+            from . import sqltools
             return sqltools.Filter()
         fltr = self._gate_list[0].as_filter()
         for g in self._gate_list[1:]:

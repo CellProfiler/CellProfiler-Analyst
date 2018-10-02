@@ -1,8 +1,9 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import re
-import dbconnect
+from . import dbconnect
 import logging
-import multiclasssql
+from . import multiclasssql
 import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
@@ -456,7 +457,7 @@ if __name__ == '__main__':
 
     import csv
     reader = csv.reader(fin, delimiter='    ')
-    header = reader.next()
+    header = next(reader)
     label_to_labelidx = {}
     curlabel = 1
  

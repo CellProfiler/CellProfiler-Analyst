@@ -58,7 +58,7 @@ class SingletonException(Exception):
 
 class MetaSingleton(type):
     def __new__(metaclass, strName, tupBases, dict):
-        if dict.has_key('__new__'):
+        if '__new__' in dict:
             raise SingletonException('Can not override __new__ in a Singleton')
         return super(MetaSingleton,metaclass).__new__(metaclass, strName, tupBases, dict)
         
@@ -94,7 +94,7 @@ class Singleton(object):
     _isInstantiated = classmethod(_isInstantiated)  
 
     def _getConstructionArgCountNotCountingSelf(cls):
-        return cls.__init__.im_func.func_code.co_argcount - 1
+        return cls.__init__.__func__.__code__.co_argcount - 1
     _getConstructionArgCountNotCountingSelf = classmethod(_getConstructionArgCountNotCountingSelf)
 
     def _forgetClassInstanceReferenceForTesting(cls):

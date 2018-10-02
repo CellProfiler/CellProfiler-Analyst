@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import absolute_import
 # CellProfiler is distributed under the GNU General Public License,
 # but this file is licensed under the more permissive BSD license.
 # See the accompanying file LICENSE for details.
@@ -7,7 +8,7 @@ from numpy import *
 from scipy.integrate import quadrature, romberg, fixed_quad
 from scipy.special import gammaln, betaln, digamma, polygamma, betainc, gamma
 import pdb
-from hypergeom import hyper3F2regularizedZ1, hyper3F2Z1, hyper3F2aZ1
+from .hypergeom import hyper3F2regularizedZ1, hyper3F2Z1, hyper3F2aZ1
 
 
 def dirichlet_integrate(alpha):
@@ -156,7 +157,7 @@ def logit(p):
      return log2(p) - log2(1-p)
 
 if __name__ == '__main__':
-    from polyafit import fit_to_data_infile
+    from .polyafit import fit_to_data_infile
     alpha, converged, wellnums, wellcounts = fit_to_data_infile('PBcounts.txt')
     print("Fit alpha:", alpha, "\tconverged:", converged)
     for idx, wellnum in enumerate(wellnums):

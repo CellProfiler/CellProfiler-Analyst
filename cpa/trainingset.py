@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import absolute_import
 from sys import stderr
 import logging
 import numpy
@@ -9,8 +10,8 @@ import wx
 import collections
 
 import pandas as pd
-from dbconnect import *
-from singleton import Singleton
+from .dbconnect import *
+from .singleton import Singleton
 
 db = DBConnect.getInstance()
 
@@ -158,7 +159,7 @@ class TrainingSet:
         self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
         
     def Renumber(self, label_dict):
-        from properties import Properties
+        from .properties import Properties
         obkey_length = 3 if Properties.getInstance().table_id else 2
         
         have_asked = False
@@ -215,7 +216,7 @@ class TrainingSet:
 
         f = open(filename, 'w')
         try:
-            from properties import Properties
+            from .properties import Properties
             p = Properties.getInstance()
             f.write('# Training set created while using properties: %s\n'%(p._filename))
             f.write('label '+' '.join(self.labels)+'\n')
@@ -246,7 +247,7 @@ class TrainingSet:
             df = pd.DataFrame([]) # empty
 
         try:
-            from properties import Properties
+            from .properties import Properties
             # getting feature values
 
             # getting object key
@@ -333,7 +334,7 @@ class CellCache(Singleton):
 
 if __name__ == "__main__":
     from sys import argv
-    from properties import Properties
+    from .properties import Properties
     p = Properties.getInstance()
     p.LoadFile(argv[1])
     tr = TrainingSet(p)

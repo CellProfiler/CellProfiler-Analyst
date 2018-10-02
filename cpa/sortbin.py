@@ -1,10 +1,11 @@
-from dbconnect import DBConnect
-import tilecollection
-from imagetile import ImageTile
-from imagetilesizer import ImageTileSizer
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-import imagetools
+from __future__ import absolute_import
+from .dbconnect import DBConnect
+from . import tilecollection
+from .imagetile import ImageTile
+from .imagetilesizer import ImageTileSizer
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from . import imagetools
 import cPickle
 import wx
 import logging
@@ -353,7 +354,7 @@ if __name__ == '__main__':
     app = wx.PySimpleApp()
  
     p.show_load_dialog()    
-    import datamodel
+    from . import datamodel
     dm = datamodel.DataModel.getInstance()
     
     f = wx.Frame(None)

@@ -1,23 +1,24 @@
 from __future__ import print_function
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
-from icons import lasso_tool
-import sqltools as sql
-from multiclasssql import filter_table_prefix
-from properties import Properties
-import guiutils as ui
+from __future__ import absolute_import
+from .dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
+from .icons import lasso_tool
+from . import sqltools as sql
+from .multiclasssql import filter_table_prefix
+from .properties import Properties
+from . import guiutils as ui
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
+from . import imagetools
 import logging
 import numpy as np
 import os
 import sys
 import re
 import wx
-from gating import GatingHelper
+from .gating import GatingHelper
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
-from cpatool import CPATool
+from .cpatool import CPATool
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -316,8 +317,9 @@ class HistogramPanel(FigureCanvasWxAgg):
         if evt.button == 3: # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
-    def show_popup_menu(self, (x,y), data):
+    def show_popup_menu(self, coordnates, data):
         '''Show context sensitive popup menu.'''
+        (x, y) = coordnates
         self.popup_menu_filters = {}
         popup = wx.Menu()
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
@@ -326,7 +328,7 @@ class HistogramPanel(FigureCanvasWxAgg):
         if selected_gate:
             selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
-                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  lambda e:ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')

@@ -1,5 +1,6 @@
+from __future__ import absolute_import
 import wx
-from properties import Properties
+from .properties import Properties
 import numpy as np
 from matplotlib.pyplot import cm
 from StringIO import StringIO

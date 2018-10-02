@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #######################
 # Notes: Christina 09.16.2011
 # The following is an example of properties file data that work with this imageviewer:
@@ -10,12 +11,12 @@
 #########################
 
 import cpa.helpmenu
-from dbconnect import *
-from datamodel import DataModel
-from imagecontrolpanel import *
-from imagepanel import ImagePanel
-from properties import Properties
-import imagetools
+from .dbconnect import *
+from .datamodel import DataModel
+from .imagecontrolpanel import *
+from .imagepanel import ImagePanel
+from .properties import Properties
+from . import imagetools
 import cPickle
 import logging
 import numpy as np
@@ -32,7 +33,7 @@ ID_SELECT_ALL = wx.NewId()
 ID_DESELECT_ALL = wx.NewId()
 
 def get_classifier_window():
-    from classifier import ID_CLASSIFIER
+    from .classifier import ID_CLASSIFIER
     win = wx.FindWindowById(ID_CLASSIFIER)
     if win:
         return win
@@ -766,9 +767,9 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
-    from datamodel import DataModel
-    import imagetools
-    from imagereader import ImageReader
+    from .datamodel import DataModel
+    from . import imagetools
+    from .imagereader import ImageReader
 
     p = Properties.getInstance()
     p.image_channel_colors = ['red','green','blue']

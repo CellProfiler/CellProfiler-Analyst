@@ -1,15 +1,16 @@
 from __future__ import print_function
-from cpatool import CPATool
-from colorbarpanel import ColorBarPanel
-from dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
-import dbconnect
-import sqltools as sql
-import platemappanel as pmp
-from datamodel import DataModel
-from guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
+from __future__ import absolute_import
+from .cpatool import CPATool
+from .colorbarpanel import ColorBarPanel
+from .dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
+from . import dbconnect
+from . import sqltools as sql
+from . import platemappanel as pmp
+from .datamodel import DataModel
+from .guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
-import properties
+from . import imagetools
+from . import properties
 import logging
 import matplotlib.cm
 import numpy as np

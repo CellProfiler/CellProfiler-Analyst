@@ -14,8 +14,9 @@ from .normalization import DummyNormalization, RobustLinearNormalization, Robust
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
-def _compute_group_mean((cache_dir, images, normalization_name, 
-                         preprocess_file, method)):
+def _compute_group_mean(cache_dir__images__normalization_name__preprocess_file__method):
+    (cache_dir, images, normalization_name, preprocess_file,
+     method) = cache_dir__images__normalization_name__preprocess_file__method
     try:
         import numpy as np
         from cpa.profiling.cache import Cache

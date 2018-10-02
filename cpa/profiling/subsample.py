@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-def _compute_group_subsample((cache_dir, normalization_name, image_key, 
-                              indices)):
+from functools import reduce
+def _compute_group_subsample(cache_dir__normalization_name__image_key__indices):
+    (cache_dir, normalization_name, image_key,
+        indices) = cache_dir__normalization_name__image_key__indices
     import numpy as np
     from .cache import Cache, normalizations
     cache = Cache(cache_dir)

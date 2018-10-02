@@ -1,10 +1,11 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import numpy
 import sys
 import cpa.sqltools
-from dbconnect import *
-from properties import Properties
-from datamodel import DataModel
+from .dbconnect import *
+from .properties import Properties
+from .datamodel import DataModel
 
 db = DBConnect.getInstance()
 p = Properties.getInstance()
@@ -255,10 +256,10 @@ if __name__ == "__main__":
 #    print keys_and_counts[0,:]
 #    print sum(keys_and_counts[:,-2:])
 
-    from trainingset import TrainingSet
+    from .trainingset import TrainingSet
     from StringIO import StringIO
-    import fastgentleboostingmulticlass
-    from datatable import DataGrid
+    from . import fastgentleboostingmulticlass
+    from .datatable import DataGrid
     import wx
     p = Properties.getInstance()
     db = DBConnect.getInstance()

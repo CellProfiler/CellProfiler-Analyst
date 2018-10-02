@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from dbconnect import *
-from datamodel import DataModel
-from properties import Properties
+from __future__ import absolute_import
+from .dbconnect import *
+from .datamodel import DataModel
+from .properties import Properties
 from StringIO import StringIO, StringIO
-from trainingset import TrainingSet
+from .trainingset import TrainingSet
 from time import time
-import dirichletintegrate
-import fastgentleboostingmulticlass
-import multiclasssql
-import polyafit
+from . import dirichletintegrate
+from . import fastgentleboostingmulticlass
+from . import multiclasssql
+from . import polyafit
 import logging
 import numpy as np
 import os

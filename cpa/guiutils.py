@@ -1,15 +1,16 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import wx
 import wx.combo
 import os
 import re
-import icons
-import properties
-import dbconnect
+from . import icons
+from . import properties
+from . import dbconnect
 import logging
-import sqltools
+from . import sqltools
 import numpy as np
-from utils import Observable
+from .utils import Observable
 from wx.combo import OwnerDrawnComboBox as ComboBox
 from wx.lib.combotreebox import ComboTreeBox
 
@@ -191,7 +192,7 @@ def prompt_user_to_link_table(parent, table):
     dlg.Sizer.Children[2].GetSizer().Insert(0, show_table_button, 0, wx.ALL, 10)
     dlg.Sizer.Children[2].GetSizer().InsertStretchSpacer(1, 1)
     def on_show_table(evt):
-        from tableviewer import TableViewer
+        from .tableviewer import TableViewer
         tableview = TableViewer(get_main_frame_or_none())
         tableview.Show()
         tableview.load_db_table(table)
@@ -365,7 +366,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         '''Show the ColumnFilterDialog if user wants to make a new filter.'''
         ftr = self.Value
         if ftr == FilterComboBox.NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             tables = []
             for t in [p.image_table, p.object_table, p.class_table]:
                 if isinstance(t, basestring):
@@ -551,7 +552,7 @@ class TableSelectionDialog(wx.SingleChoiceDialog):
 def prompt_user_to_create_loadimages_table(parent, select_gates=[]):
     dlg = CreateLoadImagesTableDialog(parent, select_gates)
     if dlg.ShowModal() == wx.ID_OK:
-        import tableviewer
+        from . import tableviewer
         return tableviewer.show_loaddata_table(dlg.get_selected_gates(), dlg.get_gates_as_columns())
     else:
         return None
@@ -779,7 +780,7 @@ def show_objects_from_gate(gatename, warn=100):
         except ValueError:
             wx.MessageDialog(get_main_frame_or_none(), 'You have entered an invalid number', 'Error').ShowModal()
             return
-    import sortbin
+    from . import sortbin
     f = sortbin.CellMontageFrame(get_main_frame_or_none())
     f.Show()
     f.add_objects(keys)
@@ -804,7 +805,7 @@ def show_images_from_gate(gatename, warn=10):
         if response != wx.ID_YES:
             return
     logging.info('Opening %s images.'%(len(res)))
-    import imagetools
+    from . import imagetools
     for row in res:
         imagetools.ShowImage(tuple(row), p.image_channel_colors, parent=get_main_frame_or_none())
         
@@ -827,10 +828,10 @@ def show_load_dialog():
         filename = dlg.GetPath()
         os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         if filename.endswith('ColumbusIDX.xml'):
-            from parseperkinelmer import load_columbus
+            from .parseperkinelmer import load_columbus
             load_columbus(filename)
         elif filename.endswith('.xml'):
-            from parseperkinelmer import load_harmony
+            from .parseperkinelmer import load_harmony
             load_harmony(filename)            
         else:
             p.load_file(filename)

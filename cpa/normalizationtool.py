@@ -1,24 +1,25 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import re
 import wx
 import wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
-import normalize as norm
+from . import normalize as norm
 # Grouping options
-from normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
+from .normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 # Aggregation options
-from normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
+from .normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
 # Window options
-from normalize import W_SQUARE, W_MEANDER
+from .normalize import W_SQUARE, W_MEANDER
 import numpy as np
-import dbconnect
+from . import dbconnect
 import logging
-import properties
+from . import properties
 from itertools import groupby
-from plateviewer import FormatPlateMapData
-import sqltools as sql
-import guiutils as ui
-from cpatool import CPATool
+from .plateviewer import FormatPlateMapData
+from . import sqltools as sql
+from . import guiutils as ui
+from .cpatool import CPATool
 
 GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT]
 AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL]
@@ -630,7 +631,7 @@ class NormalizationUI(wx.Frame, CPATool):
         #
         # Show the resultant table        
         #
-        import tableviewer
+        from . import tableviewer
         tv = tableviewer.TableViewer(ui.get_main_frame_or_none())
         tv.Show()
         tv.load_db_table(output_table)

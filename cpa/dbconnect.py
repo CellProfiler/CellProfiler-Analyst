@@ -1,9 +1,10 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import decimal
 import types
 import random
-from properties import Properties
-from singleton import Singleton
+from .properties import Properties
+from .singleton import Singleton
 from sys import stderr
 import exceptions
 import numpy as np
@@ -93,13 +94,13 @@ def get_data_table_from_csv_reader(reader):
     '''reads a csv table into a 2d list'''
     dtable = []
     try:
-        row = reader.next()
+        row = next(reader)
     except:
         return []
     while row:
         dtable += [row]
         try:
-            row = reader.next()
+            row = next(reader)
         except StopIteration: break
     return dtable
 
@@ -542,7 +543,7 @@ class DBConnect(Singleton):
     def GetNextResult(self):
         connID = threading.currentThread().getName()
         try:
-            return self.cursors[connID].next()
+            return next(self.cursors[connID])
         except DBError() as e:
             raise DBException('Error retrieving next result from database: %s'%(e,))
             return None
@@ -579,11 +580,11 @@ class DBConnect(Singleton):
                         break
             else:
                 fun2 = conversion
-            if fun2 in [decimal.Decimal, types.FloatType]:
+            if fun2 in [decimal.Decimal, float]:
                 dtype = 'f8'
-            elif fun2 in [types.IntType, types.LongType]:
+            elif fun2 in [int, int]:
                 dtype = 'i4'
-            elif fun2 in [types.StringType]:
+            elif fun2 in [bytes]:
                 dtype = '|S%d'%(internal_size,)
             descr.append((name, dtype))
         return descr
@@ -765,7 +766,7 @@ class DBConnect(Singleton):
     
     def filter_sql(self, filter_name):
         f = p._filters[filter_name]
-        import sqltools
+        from . import sqltools
         if isinstance(f, sqltools.Filter):
             unique_tables = np.unique(f.get_tables()) 
             return 'SELECT %s FROM %s WHERE %s' % (UniqueImageClause(), 
@@ -941,7 +942,7 @@ class DBConnect(Singleton):
          Expression(('per_well', 'Well'),  '=', ('per_image', 'Well')),
          Expression(('per_image', 'ImageNumber'),  '=', ('per_object', 'ImageNumber'))]
         '''
-        import sqltools as sql
+        from . import sqltools as sql
         for t in tables[1:]:
             if self.get_linking_table_pairs(tables[0], t) is None:
                 raise Exception('Tables "%s" and "%s" are not linked.'%(tables[0], t))
@@ -1246,7 +1247,7 @@ class DBConnect(Singleton):
         # so we can form a proper CREATE TABLE statement.
         f = open(p.image_csv_file, 'U')
         r = csv.reader(f)
-        columnLabels = r.next()
+        columnLabels = next(r)
         columnLabels = [lbl.strip() for lbl in columnLabels]
 
         dtable = get_data_table_from_csv_reader(r)
@@ -1269,7 +1270,7 @@ class DBConnect(Singleton):
             # except for the primary keys
             f = open(p.object_csv_file, 'U')
             r = csv.reader(f)
-            columnLabels = r.next()
+            columnLabels = next(r)
             columnLabels = [lbl.strip() for lbl in columnLabels]
             dtable = get_data_table_from_csv_reader(r)
             colTypes = self.InferColTypesFromData(dtable, len(columnLabels))
@@ -1286,13 +1287,13 @@ class DBConnect(Singleton):
         # POPULATE THE IMAGE TABLE
         f = open(p.image_csv_file, 'U')
         r = csv.reader(f)
-        row = r.next() # skip the headers
-        row = r.next()
+        row = next(r) # skip the headers
+        row = next(r)
         while row:
             self.execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                          silent=True)
             try:
-                row = r.next()
+                row = next(r)
             except StopIteration:
                 break
         f.close()
@@ -1301,13 +1302,13 @@ class DBConnect(Singleton):
         if not p.classification_type == 'image':
             f = open(p.object_csv_file, 'U')
             r = csv.reader(f)
-            row = r.next() # skip the headers
-            row = r.next()
+            row = next(r) # skip the headers
+            row = next(r)
             while row:
                 self.execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                              silent=True)
                 try:
-                    row = r.next()
+                    row = next(r)
                 except StopIteration: break
             f.close()
         
@@ -1375,7 +1376,7 @@ class DBConnect(Singleton):
             logging.info('Populating image table with data from %s'%file)
             f = open(os.path.join(csv_dir, file), 'U')
             r = csv.reader(f)
-            row1 = r.next()
+            row1 = next(r)
             command = 'INSERT INTO '+p.image_table+' VALUES ('+','.join(['?' for i in row1])+')'
             self.cursors[connID].execute(command, row1)
             self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
@@ -1407,7 +1408,7 @@ class DBConnect(Singleton):
                 logging.info('Populating object table with data from %s'%file)
                 f = open(csv_dir+os.path.sep+file, 'U')
                 r = csv.reader(f)
-                row1 = r.next()
+                row1 = next(r)
                 if p.check_tables:
                     object_table = p.object_table
                     object_table = object_table.split('_checked')[0]
@@ -1556,7 +1557,7 @@ class DBConnect(Singleton):
         f = open(filename, 'U')
         r = csv.reader(f)
         self.execute('DROP TABLE IF EXISTS %s'%(tablename))
-        colnames = r.next()
+        colnames = next(r)
         dtable = np.array(get_data_table_from_csv_reader(r))
         typed_table = []
         for i in xrange(dtable.shape[1]):

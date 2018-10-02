@@ -1,10 +1,11 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import logging
 from random import randint
 import numpy as np
-from dbconnect import *
-from singleton import *
-from properties import Properties
+from .dbconnect import *
+from .singleton import *
+from .properties import Properties
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -324,10 +325,11 @@ class DataModel(Singleton):
         else:
             raise KeyError('Well name "%s" could not be mapped to a plate position.' % well_name)
 
-    def get_well_name_from_position(self, (row, col)):
+    def get_well_name_from_position(self, row__col):
         '''returns the well name (eg: "A01") corresponding to the given 
         plate position tuple.
         '''
+        (row, col) = row__col
         if self.plate_map == {}:
             self.populate_plate_maps()
         if (row, col) in self.rev_plate_map.keys():

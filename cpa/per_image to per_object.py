@@ -1,8 +1,9 @@
 from __future__ import print_function
-import dbconnect
-import properties
+from __future__ import absolute_import
+from . import dbconnect
+from . import properties
 import os
-import imagereader
+from . import imagereader
 import re
 import wx
 import sys

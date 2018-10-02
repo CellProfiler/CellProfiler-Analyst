@@ -1,12 +1,13 @@
 '''
 A collection of tools to modify images used in CPA.
 '''
+from __future__ import absolute_import
 
 import PIL.Image as Image
-import pilfix
-from properties import Properties
-import dbconnect
-from imagereader import ImageReader
+from . import pilfix
+from .properties import Properties
+from . import dbconnect
+from .imagereader import ImageReader
 import logging
 import matplotlib.image
 import numpy as np
@@ -65,7 +66,7 @@ def FetchImage(imKey):
         return cache[imKey]
 
 def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
-    from imageviewer import ImageViewer
+    from .imageviewer import ImageViewer
     imgs = FetchImage(imKey)
     frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
                         parent=parent, title=str(imKey),
@@ -74,11 +75,13 @@ def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=Non
     frame.Show(True)
     return frame
 
-def Crop(imgdata, (w,h), (x,y)):
+def Crop(imgdata, width__height, coordnates):
     '''
     Crops an image to the width (w,h) around the point (x,y).
     Area outside of the image is filled with the color specified.
     '''
+    (w,h) = width__height
+    (x,y) = coordnates
     im_width = imgdata.shape[1]
     im_height = imgdata.shape[0]
 

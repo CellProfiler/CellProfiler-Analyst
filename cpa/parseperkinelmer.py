@@ -1,10 +1,11 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import xml.dom.minidom as dom
 import os
 import re
 import numpy as np
-from properties import Properties
-import dbconnect
+from .properties import Properties
+from . import dbconnect
 import wx
 import logging
 logging.basicConfig(level=logging.DEBUG)

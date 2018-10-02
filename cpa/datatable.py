@@ -1,13 +1,14 @@
 # -*- Encoding: utf-8 -*-
 from __future__ import print_function
+from __future__ import absolute_import
 from cpa import dbconnect
 from cpa.dbconnect import DBConnect
-from datamodel import DataModel
-from properties import Properties
+from .datamodel import DataModel
+from .properties import Properties
 from tempfile import gettempdir
 from time import ctime, time
 #from wx.lib.embeddedimage import PyEmbeddedImage
-import imagetools
+from . import imagetools
 import csv
 import logging
 import numpy as np
@@ -475,7 +476,7 @@ class DataGrid(wx.Frame):
             self.colmenu.Destroy()
         except: pass
         r = csv.reader(open(csvfile))
-        labels = r.next()
+        labels = next(r)
         dtable = dbconnect.get_data_table_from_csv_reader(r)
         coltypes = db.InferColTypesFromData(dtable, len(labels))
         for i in range(len(coltypes)):
@@ -483,7 +484,7 @@ class DataGrid(wx.Frame):
             elif coltypes[i] == 'FLOAT': coltypes[i] = float
             else: coltypes[i] = str
         r = csv.reader(open(csvfile))
-        r.next() # skip col-headers
+        next(r) # skip col-headers
         data = []
         for row in r:
             data += [[coltypes[i](v) for i,v in enumerate(row)]]
@@ -570,7 +571,7 @@ class DataGrid(wx.Frame):
         self.file = filename
         
     def OnWriteTempTableToDB(self, evt):
-        from classifier import Classifier
+        from .classifier import Classifier
         db.CreateTempTableFromData(self.grid.GetTable().data, 
                            dbconnect.clean_up_colnames(self.grid.GetTable().col_labels), 
                            '__Classifier_output')
@@ -649,7 +650,7 @@ if __name__ == "__main__":
 
     p.LoadFile(propsfile)
     r = csv.reader(open(csvfile))
-    labels = r.next()
+    labels = next(r)
     dtable = DBConnect.get_data_table_from_csv_reader(r)
     coltypes = db.InferColTypesFromData(dtable, len(labels))
     for i in range(len(coltypes)):
@@ -657,7 +658,7 @@ if __name__ == "__main__":
         elif coltypes[i] == 'FLOAT': coltypes[i] = float
         else: coltypes[i] = str
     r = csv.reader(open(csvfile))
-    r.next() # skip col-headers
+    next(r) # skip col-headers
     data = []
     for row in r:
         data += [[coltypes[i](v) for i,v in enumerate(row)]]

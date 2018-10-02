@@ -1,9 +1,10 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import wx
 import re
-import sqltools as sql
-from properties import Properties
-from dbconnect import DBConnect
+from . import sqltools as sql
+from .properties import Properties
+from .dbconnect import DBConnect
 from wx.combo import OwnerDrawnComboBox as ComboBox
 
 p = Properties.getInstance()

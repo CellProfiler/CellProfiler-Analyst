@@ -8,6 +8,7 @@ import operator
 import cPickle
 from contextlib import contextmanager
 import numpy as np
+from functools import reduce
 # This module should be usable on systems without wx.
 
 def bin_centers(x):
@@ -169,7 +170,7 @@ class sample(object):
     def next(self):
         import random
         while True:
-            e = self.s.next()
+            e = next(self.s)
             i = self.i
             self.i += 1
             u = random.random()

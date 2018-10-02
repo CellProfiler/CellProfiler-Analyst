@@ -1,7 +1,8 @@
 from __future__ import print_function
+from __future__ import absolute_import
 from numpy import *
 import sys
-from fastgentleboostingworkermulticlass import train_weak_learner
+from .fastgentleboostingworkermulticlass import train_weak_learner
 
 
 def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False, test_values=None, callback=None):
@@ -173,7 +174,7 @@ if __name__ == '__main__':
 
     import csv
     reader = csv.reader(fin, delimiter='	')
-    header = reader.next()
+    header = next(reader)
     label_to_labelidx = {}
     curlabel = 1
     def get_numlabel(strlabel):

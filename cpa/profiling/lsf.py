@@ -106,7 +106,7 @@ class LSFView(object):
         if len(batches) > 0:
             progress = self.progress('Submitting tasks: ', len(batches))
             for task_id, batch in progress(batches):
-                self.submit_task(task_id, dict(function=marshal.dumps(function.func_code), 
+                self.submit_task(task_id, dict(function=marshal.dumps(function.__code__), 
                                                batch=batch,
                                                task_id=task_id, attempts=3))
             self.signal_done_submitting()
@@ -133,7 +133,8 @@ class LSFView(object):
                 return
             time.sleep(1)
 
-def test_function((seconds)):
+def test_function(seconds_tuple):
+    (seconds) = seconds_tuple
     import time
     time.sleep(seconds)
     return seconds
@@ -241,5 +242,3 @@ if __name__ == '__main__':
         worker.run()    
     elif len(sys.argv) == 1:
         test()
-
-

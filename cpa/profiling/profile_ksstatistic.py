@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-def _compute_ksstatistic((cache_dir, images, control_images, normalization_name,
-                          preprocess_file)):
+from __future__ import absolute_import
+def _compute_ksstatistic(cache_dir__images__control_images__normalization_name__preprocess_file):
+    (cache_dir, images, control_images, normalization_name,
+     preprocess_file) = cache_dir__images__control_images__normalization_name__preprocess_file
     import numpy as np 
     import sys
     import cpa
@@ -38,7 +40,7 @@ import numpy as np
 import cpa
 from .cache import Cache
 from .normalization import RobustLinearNormalization, normalizations
-from profiles import Profiles, add_common_options
+from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
 logger = logging.getLogger(__name__)

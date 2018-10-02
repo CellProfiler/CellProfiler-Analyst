@@ -1,6 +1,7 @@
 # Encoding: utf-8
 from __future__ import with_statement
 from __future__ import print_function
+from __future__ import absolute_import
 
 import matplotlib
 matplotlib.use('WXAgg')
@@ -9,35 +10,35 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-import tableviewer
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import tilecollection
-from trainingset import TrainingSet
+from . import tableviewer
+from .datamodel import DataModel
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from .scoredialog import ScoreDialog
+from . import tilecollection
+from .trainingset import TrainingSet
 from cStringIO import StringIO
 from time import time
-import icons
-import dbconnect
-import dirichletintegrate
-import imagetools
-import polyafit
-import sortbin
+from . import icons
+from . import dbconnect
+from . import dirichletintegrate
+from . import imagetools
+from . import polyafit
+from . import sortbin
 import logging
 import numpy as np
 import os
 import wx
 import re
 import cpa.helpmenu
-from imageviewer import ImageViewer
+from .imageviewer import ImageViewer
 
-import fastgentleboostingmulticlass
-from fastgentleboosting import FastGentleBoosting
+from . import fastgentleboostingmulticlass
+from .fastgentleboosting import FastGentleBoosting
 
 from cpa.profiling.classifier import Classifier
 #from supportvectormachines import SupportVectorMachines
-from generalclassifier import GeneralClassifier
+from .generalclassifier import GeneralClassifier
 
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
@@ -914,7 +915,7 @@ class ImageGallery(wx.Frame):
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600, 300))
             if cff.ShowModal() == wx.OK:
                 fltr = cff.get_filter()
@@ -1133,7 +1134,7 @@ class StopCalculating(Exception):
 if __name__ == "__main__":
     import sys
     import logging
-    from errors import show_exception_as_dialog
+    from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )
 

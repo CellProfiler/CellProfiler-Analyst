@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-def _compute_mixture_probabilities((cache_dir, normalization_name, 
-                                    preprocess_file, images, gmm, meanvector, 
-                                    loadings)):
-    import numpy as np        
+from __future__ import absolute_import
+def _compute_mixture_probabilities(
+        cache_dir__normalization_name__preprocess_file__images__gmm__meanvector__loadings):
+    (cache_dir, normalization_name, preprocess_file, images, gmm, meanvector, 
+     loadings) = cache_dir__normalization_name__preprocess_file__images__gmm__meanvector__loadings
+    import numpy as np
     from cpa.profiling import cache
     cache = Cache(cache_dir)
     normalization = normalizations[normalization_name]
@@ -29,7 +31,7 @@ from scipy import linalg
 from sklearn.mixture import GMM
 import cpa
 from .cache import Cache
-from normalization import RobustLinearNormalization, normalizations
+from .normalization import RobustLinearNormalization, normalizations
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
     

@@ -1,16 +1,17 @@
 from __future__ import print_function
+from __future__ import absolute_import
 # TODO: add hooks to change point size, alpha, numsides etc.
-from cpatool import CPATool
-import tableviewer
-from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
-import sqltools as sql
-import multiclasssql
-from properties import Properties
+from .cpatool import CPATool
+from . import tableviewer
+from .dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
+from . import sqltools as sql
+from . import multiclasssql
+from .properties import Properties
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import guiutils as ui
-from gating import GatingHelper
-import imagetools
-import icons
+from . import guiutils as ui
+from .gating import GatingHelper
+from . import imagetools
+from . import icons
 import logging
 import numpy as np
 from bisect import bisect
@@ -39,7 +40,8 @@ SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
 class Datum:
-    def __init__(self, (x, y), color):
+    def __init__(self, coordinates, color):
+        (x, y) = coordinates
         self.x = x
         self.y = y
         self.color = color
@@ -498,7 +500,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             keys = self.key_lists[i][sel]
             show_keys += list(set([tuple(k) for k in keys]))
         if len(show_keys[0]) == len(image_key_columns()):
-            import datamodel
+            from . import datamodel
             dm = datamodel.DataModel.getInstance()
             obkeys = []
             for key in show_keys:
@@ -518,7 +520,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             except ValueError:
                 wx.MessageDialog('You have entered an invalid number', 'Error').ShowModal()
                 return
-        import sortbin
+        from . import sortbin
         f = sortbin.CellMontageFrame(None)
         f.Show()
         f.add_objects(show_keys)
@@ -672,7 +674,8 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.redraw()
         self.figure.canvas.draw_idle()
     
-    def show_popup_menu(self, (x,y), data):
+    def show_popup_menu(self, coordinates, data):
+        (x, y) = coordinates
         self.popup_menu_filters = {}
         popup = wx.Menu()
 
@@ -682,7 +685,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         if selected_gate:
             selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
-                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  lambda e:ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')

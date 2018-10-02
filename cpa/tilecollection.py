@@ -1,10 +1,11 @@
 from __future__ import with_statement
-from dbconnect import DBConnect
-from properties import Properties
-from singleton import Singleton
+from __future__ import absolute_import
+from .dbconnect import DBConnect
+from .properties import Properties
+from .singleton import Singleton
 from heapq import heappush, heappop
 from weakref import WeakValueDictionary
-import imagetools
+from . import imagetools
 import logging
 import numpy
 import threading
@@ -169,7 +170,7 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
 
 
-    from datamodel import DataModel
+    from .datamodel import DataModel
     p = Properties.getInstance()
     p.LoadFile('../properties/nirht_test.properties')
     db = DBConnect.getInstance()

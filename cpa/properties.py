@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-from singleton import Singleton
+from __future__ import absolute_import
+from .singleton import Singleton
 from StringIO import StringIO
 import re
 import os
 import logging
-import incell
+from . import incell
 import sys
 import subprocess
-from utils import ObservableDict
+from .utils import ObservableDict
 
 #
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
@@ -168,7 +169,7 @@ class Properties(Singleton):
         
     def __getattr__(self, field):
         # The name may not be loaded for optional fields.
-        if (not self.__dict__.has_key(field)) and (field in valid_vars):
+        if (field not in self.__dict__) and (field in valid_vars):
             return None
         else:
             return self.__dict__[field]
@@ -205,7 +206,7 @@ class Properties(Singleton):
         
     def load_file(self, filename):
         ''' Loads variables in from a properties file. '''
-        from sqltools import Gate, Filter, OldFilter
+        from .sqltools import Gate, Filter, OldFilter
         
         self.clear()
         self._filename        = filename
@@ -361,7 +362,7 @@ class Properties(Singleton):
         Saves the file.
         This function skips vars that start with _ (underscore)
         '''
-        import sqltools
+        from . import sqltools
         fd = open(filename, 'w')
         self._filename = filename
         
@@ -446,7 +447,7 @@ class Properties(Singleton):
 ##        fd.close()
         
     def clear(self):
-        from utils import ObservableDict
+        from .utils import ObservableDict
         # only clear known variables
         for k in valid_vars & set(self.__dict__.keys()):
             del self.__dict__[k]
@@ -701,7 +702,7 @@ class Properties(Singleton):
                 self.link_columns_table = '_link_columns_%s'%(md5(self.image_table+(self.object_table or '')).hexdigest())
             
         if not self.field_defined('gates'):
-            from utils import ObservableDict
+            from .utils import ObservableDict
             self.gates = ObservableDict()
         
 

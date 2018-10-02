@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import absolute_import
 
 # -*- Encoding: utf-8 -*-
 import os
@@ -6,8 +7,8 @@ import re
 import wx
 import wx.wizard as wiz
 from wx.lib.dialogs import ScrolledMessageDialog
-from dbconnect import DBConnect
-from properties import Properties
+from .dbconnect import DBConnect
+from .properties import Properties
 import logging
 logging.basicConfig()
 
@@ -196,13 +197,13 @@ def find_master_tables():
         res = db.execute('SHOW INDEX FROM %s'%(t))
         if t.lower().endswith('per_image'):
             if 'TableNumber' in [r[4] for r in res]:
-                if not masters.has_key(t[:-10]):
+                if t[:-10] not in masters:
                     masters[t[:-10]] = t
                 else:
                     masters[t[:-10]] = t + ',' + masters[t[:-10]] 
         if t.lower().endswith('per_object'):
             if 'TableNumber' in [r[4] for r in res]:
-                if not masters.has_key(t[:-11]):
+                if t[:-11] not in masters:
                     masters[t[:-11]] = t
                 else:
                     masters[t[:-11]] += ',' + t

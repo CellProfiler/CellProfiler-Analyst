@@ -17,6 +17,7 @@ http://jmlr.csail.mit.edu/papers/volume9/vandermaaten08a/vandermaaten08a.pdf
 By: Juan Escribano Navarro (Intelligent Systems Department, Radboud Universiteit Nijmegen) - 01/05/2010
 Modified By: Joris Kraak (Department of Electrical Engineering, Signal Processing Systems Group, Eindhoven University of Technology) - 28-12-2010
 '''
+from __future__ import absolute_import
 
 import sys
 import logging
@@ -29,9 +30,9 @@ from matplotlib import cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
-from imagetools import ShowImage
-from dbconnect import DBConnect
-from properties import Properties
+from .imagetools import ShowImage
+from .dbconnect import DBConnect
+from .properties import Properties
 
 SVD = 'SVD: Singular Value Decomposition'
 TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
@@ -261,7 +262,7 @@ class PlotPanel(wx.Panel):
         except:
             logging.warning('''Could not use fast t-SNE. You may need to install the Intel Integrated Performance Libraries. Will use normal t-SNE instead.''')
             try:
-                from tsne import tsne
+                from .tsne import tsne
                 U = tsne(standardized, 2, 50, 20.0)
             except:
                 logging.error('''Both t-SNE versions failed. Your dataset may be too large for t-SNE to handle. Will not plot t-SNE results.''')

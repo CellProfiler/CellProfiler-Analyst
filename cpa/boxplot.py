@@ -1,12 +1,13 @@
 from __future__ import print_function
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from multiclasssql import filter_table_prefix
-from properties import Properties
-import datamodel
-import guiutils as ui 
+from __future__ import absolute_import
+from .dbconnect import DBConnect, UniqueImageClause, image_key_columns
+from .multiclasssql import filter_table_prefix
+from .properties import Properties
+from . import datamodel
+from . import guiutils as ui 
 from wx.combo import OwnerDrawnComboBox as ComboBox
-import sqltools as sql
-import imagetools
+from . import sqltools as sql
+from . import imagetools
 import logging
 import numpy as np
 import os
@@ -18,7 +19,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
-from cpatool import CPATool
+from .cpatool import CPATool
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()

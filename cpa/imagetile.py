@@ -1,14 +1,15 @@
 '''
 A special image panel meant to be dragged and dropped.
 '''
-from dbconnect import DBConnect
-from imagepanel import ImagePanel
-from properties import Properties
-import imagetools
+from __future__ import absolute_import
+from .dbconnect import DBConnect
+from .imagepanel import ImagePanel
+from .properties import Properties
+from . import imagetools
 import cPickle
 import wx
 
-from trainingset import CellCache
+from .trainingset import CellCache
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()

@@ -1,6 +1,7 @@
 # Encoding: utf-8
 from __future__ import with_statement
 from __future__ import print_function
+from __future__ import absolute_import
 
 import matplotlib
 matplotlib.use('WXAgg')
@@ -9,33 +10,33 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-import tableviewer
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import tilecollection
-from trainingset import TrainingSet
+from . import tableviewer
+from .datamodel import DataModel
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from .scoredialog import ScoreDialog
+from . import tilecollection
+from .trainingset import TrainingSet
 from cStringIO import StringIO
 from time import time
-import icons
-import dbconnect
-import dirichletintegrate
-import imagetools
-import polyafit
-import sortbin
+from . import icons
+from . import dbconnect
+from . import dirichletintegrate
+from . import imagetools
+from . import polyafit
+from . import sortbin
 import logging
 import numpy as np
 import os
 import wx
 import re
 import cpa.helpmenu
-from dimensredux import PlotMain
+from .dimensredux import PlotMain
 
-import fastgentleboostingmulticlass
-from fastgentleboosting import FastGentleBoosting
+from . import fastgentleboostingmulticlass
+from .fastgentleboosting import FastGentleBoosting
 
-from generalclassifier import GeneralClassifier
+from .generalclassifier import GeneralClassifier
 
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
@@ -1321,7 +1322,7 @@ class Classifier(wx.Frame):
     #     plot_title = 'Learning Curves ({})'.format(model.name)
     #     self.PlotLearningCurve(clf, plot_title, X_train, y_train, cv=5)
 
-    from utils import delay
+    from .utils import delay
     # Add AutoSave by DD
     @delay(360.0) # every 5 min
     def AutoSave(self):
@@ -1803,7 +1804,7 @@ class Classifier(wx.Frame):
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             tables = []
             for t in [p.image_table, p.object_table, p.class_table]:
                 if isinstance(t, basestring):
@@ -2310,7 +2311,7 @@ class StopCalculating(Exception):
 if __name__ == "__main__":
     import sys
     import logging
-    from errors import show_exception_as_dialog
+    from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )
 

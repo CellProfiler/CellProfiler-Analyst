@@ -1,9 +1,10 @@
 from __future__ import print_function
+from __future__ import absolute_import
 import wx
 import numpy as np
-import sqltools as sql
+from . import sqltools as sql
 from matplotlib.patches import Rectangle
-from properties import Properties
+from .properties import Properties
 p = Properties.getInstance()
 
 class GatingHelper(object):
@@ -49,7 +50,8 @@ class GatingHelper(object):
             self.gate.removeobserver(self.redraw)
         p.gates.removeobserver(self.on_gate_list_changed)
             
-    def on_gate_list_changed(self, (name, gate)):
+    def on_gate_list_changed(self, name__gate):
+        (name, gate) = name__gate
         if gate is None:
             # a gate was deleted, check to see if it was this gate.
             if self.gate not in p.gates.values():

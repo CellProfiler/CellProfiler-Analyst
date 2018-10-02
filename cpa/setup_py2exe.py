@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import distutils
 import sys
 from distutils.core import setup, Extension
@@ -11,7 +12,7 @@ import numpy
 import subprocess
 import _winreg
 
-import util.version
+from .util import version
 
 class CellProfilerAnalystMSI(distutils.core.Command):
     description = "Make CellProfilerAnalyst.msi using InnoSetup"

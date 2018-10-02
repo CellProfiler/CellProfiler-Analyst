@@ -273,14 +273,14 @@ class CacheTestCase(unittest.TestCase):
     def test_create_cache_features(self, plate_map, make_progress_bar):
         cache_dir = tempfile.mkdtemp()
         c = cache.Cache(cache_dir)
-        plate_map.__get__ = Mock(return_value={(0L, 42L): 'p1', (1L, 23L): 'p2'})
+        plate_map.__get__ = Mock(return_value={(0, 42): 'p1', (1, 23): 'p2'})
         make_progress_bar.return_value = lambda x: x
         c._create_cache_image = Mock()
         c._create_cache_features(False)
         calls = c._create_cache_image.call_args_list
         assert len(calls) == 2
-        assert call('p1', (0L, 42L), False) in calls
-        assert call('p2', (1L, 23L), False) in calls
+        assert call('p1', (0, 42), False) in calls
+        assert call('p2', (1, 23), False) in calls
 
     # TODO: test_create_image
 

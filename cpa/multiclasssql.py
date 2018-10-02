@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import absolute_import
 
 import numpy as np
 import sys
@@ -8,9 +9,9 @@ sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/cpa');
 sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/')
 
 import cpa.sqltools
-from dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_key_columns, GetWhereClauseForImages, GetWhereClauseForObjects, object_key_defs
-from properties import Properties
-from datamodel import DataModel
+from .dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_key_columns, GetWhereClauseForImages, GetWhereClauseForObjects, object_key_defs
+from .properties import Properties
+from .datamodel import DataModel
 from sklearn.ensemble import AdaBoostClassifier
 
 db = DBConnect.getInstance()
@@ -295,10 +296,10 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
 
 
 if __name__ == "__main__":
-    from trainingset import TrainingSet
+    from .trainingset import TrainingSet
     from StringIO import StringIO
-    import generalclassifier
-    from datatable import DataGrid
+    from . import generalclassifier
+    from .datatable import DataGrid
     import wx
     p = Properties.getInstance()
     db = DBConnect.getInstance()

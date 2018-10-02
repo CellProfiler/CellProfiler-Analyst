@@ -12,7 +12,10 @@ from .profiles import Profiles
 from .parallel import ParallelProcessor, Uniprocessing
 import string
 
-def _transform_cell_feats((cache_dir, images, normalization_name, output_filename, key, header)):
+def _transform_cell_feats(
+        cache_dir__images__normalization_name__output_filename__key__header):
+    (cache_dir, images, normalization_name, output_filename, key,
+     header) = cache_dir__images__normalization_name__output_filename__key__header
     try:
         import numpy as np
         from .cache import Cache

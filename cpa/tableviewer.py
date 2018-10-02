@@ -7,6 +7,7 @@
 #
 
 from __future__ import print_function
+from __future__ import absolute_import
 import csv
 import os
 import re
@@ -18,10 +19,10 @@ import numpy as np
 import wx
 import wx.grid as  gridlib
 import cpa.helpmenu
-from properties import Properties
-import dbconnect
-from datamodel import DataModel
-import imagetools
+from .properties import Properties
+from . import dbconnect
+from .datamodel import DataModel
+from . import imagetools
 
 p = Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
@@ -774,7 +775,7 @@ class TableViewer(wx.Frame):
         self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
         
     def on_load_db_table(self, evt=None):
-        from guiutils import TableSelectionDialog
+        from .guiutils import TableSelectionDialog
         dlg = TableSelectionDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
             table_name = dlg.GetStringSelection()
@@ -831,7 +832,7 @@ class TableViewer(wx.Frame):
         # read data
         r = csv.reader(open(filename))
         if has_header_row:
-            labels = r.next()
+            labels = next(r)
         else:
             labels = None
         data = []

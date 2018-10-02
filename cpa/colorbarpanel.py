@@ -1,8 +1,9 @@
+from __future__ import absolute_import
 import wx
 import logging
 import matplotlib.cm
 import numpy as np
-import properties
+from . import properties
 
 p = properties.Properties.getInstance()
 
@@ -214,10 +215,10 @@ class ColorBarPanel(wx.Panel):
     def create_gate_from_interval(self):
         table = self.Parent.sourceChoice.GetStringSelection()
         colname = self.Parent.measurementsChoice.GetStringSelection()
-        from guiutils import GateDialog
+        from .guiutils import GateDialog
         dlg = GateDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
-            from sqltools import Gate, Gate1D
+            from .sqltools import Gate, Gate1D
             p.gates[dlg.Value] = Gate([Gate1D((table, colname), self.interval)])
         dlg.Destroy()
         
