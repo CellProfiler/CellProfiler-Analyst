@@ -59,11 +59,11 @@ class SingletonException(Exception):
 class MetaSingleton(type):
     def __new__(metaclass, strName, tupBases, dict):
         if dict.has_key('__new__'):
-            raise SingletonException, 'Can not override __new__ in a Singleton'
+            raise SingletonException('Can not override __new__ in a Singleton')
         return super(MetaSingleton,metaclass).__new__(metaclass, strName, tupBases, dict)
         
     def __call__(cls, *lstArgs, **dictArgs):
-        raise SingletonException, 'Singletons may only be instantiated through getInstance()'
+        raise SingletonException('Singletons may only be instantiated through getInstance()')
         
 class Singleton(object):
     __metaclass__ = MetaSingleton
@@ -82,7 +82,7 @@ class Singleton(object):
 #                raise SingletonException, 'If no supplied args, singleton must already be instantiated, or __init__ must require no args'
         else:
             if cls._getConstructionArgCountNotCountingSelf() > 0 and len(lstArgs) <= 0:
-                raise SingletonException, 'If the singleton requires __init__ args, supply them on first instantiation'
+                raise SingletonException('If the singleton requires __init__ args, supply them on first instantiation')
             instance = cls.__new__(cls)
             instance.__init__(*lstArgs)
             cls.cInstance = instance

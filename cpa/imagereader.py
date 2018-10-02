@@ -32,7 +32,7 @@ class ImageReader(object):
             if parsed.scheme:
                 try:
                     filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
-                except IOError, e:
+                except IOError as e:
                     if e.args[0] == 'http error':
                         status_code, message = e.args[1:3]
                         raise ClearException(

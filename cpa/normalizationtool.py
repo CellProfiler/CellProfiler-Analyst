@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 import wx
 import wx.lib.intctrl
@@ -263,10 +264,10 @@ class NormalizationUI(wx.Frame, CPATool):
         self.table_choice.Bind(wx.EVT_CHOICE, self.on_select_table)
         select_all_btn.Bind(wx.EVT_BUTTON, self.on_select_all_columns)
         add_norm_step_btn.Bind(wx.EVT_BUTTON, self.on_add_norm_step)
-        self.col_choices.Bind(wx.EVT_CHECKLISTBOX, lambda(e):self.validate())
-        self.norm_meas_checkbox.Bind(wx.EVT_CHECKBOX, lambda(e):self.validate())
-        self.norm_factor_checkbox.Bind(wx.EVT_CHECKBOX, lambda(e):self.validate())
-        self.output_table.Bind(wx.EVT_TEXT, lambda(e):self.validate())
+        self.col_choices.Bind(wx.EVT_CHECKLISTBOX, lambda e: self.validate())
+        self.norm_meas_checkbox.Bind(wx.EVT_CHECKBOX, lambda e: self.validate())
+        self.norm_factor_checkbox.Bind(wx.EVT_CHECKBOX, lambda e: self.validate())
+        self.output_table.Bind(wx.EVT_TEXT, lambda e: self.validate())
         self.do_norm_btn.Bind(wx.EVT_BUTTON, self.on_do_normalization)
         
         self.update_measurement_choices()
@@ -500,7 +501,7 @@ class NormalizationUI(wx.Frame, CPATool):
                     well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2) ] 
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
-                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
+                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda row: row[0]):
                         keys_and_vals = np.array(list(plate_grp))
                         plate_data, wks, ind = FormatPlateMapData(keys_and_vals)
                         pnorm_data = norm.do_normalization_step(plate_data, **d)
@@ -512,14 +513,14 @@ class NormalizationUI(wx.Frame, CPATool):
                     if d[norm.P_AGG_TYPE] == norm.M_NEGCTRL:
                         mean_plate_col = neg_mean_plate[colnum + FIRST_MEAS_INDEX]
                         std_plate_col = neg_std_plate[colnum + FIRST_MEAS_INDEX]  
-                        print mean_plate_col
-                        print std_plate_col            
+                        print(mean_plate_col)
+                        print(std_plate_col)            
 
                     well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2)]
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
                     # print wellkeys_and_vals
-                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
+                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda row: row[0]):
                         plate_data = np.array(list(plate_grp))[:,-1].flatten()
                         pnorm_data = norm.do_normalization_step(plate_data, **d)
 
@@ -533,7 +534,7 @@ class NormalizationUI(wx.Frame, CPATool):
 
                             try:
                                 pnorm_data = (pnorm_data - plate_mean) / plate_std
-                                print pnorm_data
+                                print(pnorm_data)
                             except:
                                 logging.error("Plate std is zero, division by zero!")
 

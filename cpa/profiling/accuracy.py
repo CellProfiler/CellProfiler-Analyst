@@ -1,6 +1,7 @@
 """
 Compute the overall accuracy of a confusion matrix
 """
+from __future__ import print_function
 
 import sys
 from optparse import OptionParser
@@ -21,7 +22,7 @@ cm = confusion_matrix(confusion, 'if'[options.float or 0])
 acc = 100.0 * np.diag(cm).sum() / cm.sum()
 
 def write_output(f):
-    print >>f, '%.0f%%' % acc
+    print('%.0f%%' % acc, file=f)
 
 if options.output_filename:
     with cpa.util.replace_atomically(options.output_filename) as f:

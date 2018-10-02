@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 # -*- Encoding: utf-8 -*-
 import os
@@ -425,7 +426,7 @@ class Page4(wiz.WizardPageSimple):
             try:
                 db.execute('INSERT INTO CPA_Merged_Tables.merged (per_image, per_object, table_index) VALUES("'+self.Parent.outDB+'.'+self.Parent.outPerImage+'", "'+self.Parent.outDB+'.'+self.Parent.outPerObject+'", "'+self.Parent.outDB+'.'+prefix+'_table_index")' )
             except:
-                print 'Logging merge to CPA_Merged_Tables.merged failed.'
+                print('Logging merge to CPA_Merged_Tables.merged failed.')
             
             dlg.Destroy()
             

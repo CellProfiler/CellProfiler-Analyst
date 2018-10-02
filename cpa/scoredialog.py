@@ -1,3 +1,4 @@
+from __future__ import print_function
 import wx
 
 class ScoreDialog(wx.Dialog):
@@ -61,8 +62,8 @@ if __name__ == "__main__":
     d = ScoreDialog(None, [str(a) for a in range(15)],
                     [(None, 'None'), 'Untreated', 'HRG'])
     if d.ShowModal() == wx.ID_OK:
-        print 'a'
-        print "Group:", repr(d.group)
-        print "Filter:", repr(d.filter)
-        print (d.wants_enrichments and 'Wants' or 'Does not want') + ' enrichments'
+        print('a')
+        print("Group:", repr(d.group))
+        print("Filter:", repr(d.filter))
+        print((d.wants_enrichments and 'Wants' or 'Does not want') + ' enrichments')
     d.Destroy()

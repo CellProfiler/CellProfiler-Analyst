@@ -6,6 +6,7 @@
 # when user requests images.
 #
 
+from __future__ import print_function
 import csv
 import os
 import re
@@ -524,7 +525,7 @@ class DBTable(TableData):
         return self.cache[row][col]
 
     def SetValue(self, row, col, value):
-        print 'SetValue(%d, %d, "%s") ignored.\n' % (row, col, value)
+        print('SetValue(%d, %d, "%s") ignored.\n' % (row, col, value))
         
     def GetColValues(self, col):
         colname = self.col_labels[self.shown_columns][col]
@@ -665,7 +666,7 @@ class TableViewer(wx.Frame):
         self.set_fixed_col_widths()
     def set_fixed_col_widths(self):
         self.Disconnect(-1, -1, wx.wxEVT_SIZE)
-        print 'default ', gridlib.GRID_DEFAULT_COL_WIDTH
+        print('default ', gridlib.GRID_DEFAULT_COL_WIDTH)
         self.grid.SetDefaultColSize(gridlib.GRID_DEFAULT_COL_WIDTH, True)
         self.Refresh()
 

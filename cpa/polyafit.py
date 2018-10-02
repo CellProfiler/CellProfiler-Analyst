@@ -1,3 +1,4 @@
+from __future__ import print_function
 from numpy import *
 from scipy.integrate import fixed_quad
 from scipy.special import gammaln, betaln, digamma, polygamma
@@ -212,4 +213,4 @@ def fit_to_data_infile(fname):
     
 
 if __name__ == '__main__':
-    print fit_to_data_infile('PBscores.txt')[0]
+    print(fit_to_data_infile('PBscores.txt')[0])

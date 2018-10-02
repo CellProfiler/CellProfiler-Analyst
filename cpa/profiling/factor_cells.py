@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import re
 import logging
@@ -67,10 +68,10 @@ if __name__ == '__main__':
         min_profile = np.minimum(min_profile, np.min(data, 0))
         max_profile = np.maximum(max_profile, np.max(data, 0))
 
-    print >>sys.stderr, 'RANGES:'
+    print('RANGES:', file=sys.stderr)
     for i in range(nfactors):
-        print >>sys.stderr, i + 1, min_profile[i], max_profile[i]
-    print >>sys.stderr
+        print(i + 1, min_profile[i], max_profile[i], file=sys.stderr)
+    print(file=sys.stderr)
 
     values = np.vstack([np.linspace(min_profile[i], max_profile[i], nsteps)
                         for i in range(nfactors)])
@@ -94,7 +95,7 @@ if __name__ == '__main__':
             min_distances[j] = distances[i, j]
             nearest_neighbors[j] = image_key + (object_keys[i],)
 
-    print 'label', ' '.join([re.sub(' ', '_', v) for v in preprocessor.variables])
+    print('label', ' '.join([re.sub(' ', '_', v) for v in preprocessor.variables]))
     for i, label in enumerate(preprocessor.variables):
         for j in range(nsteps):
-            print re.sub(' ', '_', label), ' '.join(map(str, nearest_neighbors[i * nsteps + j]))
+            print(re.sub(' ', '_', label), ' '.join(map(str, nearest_neighbors[i * nsteps + j])))

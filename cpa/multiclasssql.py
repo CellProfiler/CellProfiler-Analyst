@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import numpy as np
 import sys
@@ -152,10 +153,10 @@ def processData(data):
     # if numpy array is already floats, pass; if numpy array contains strings, convert
     try:
         cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
-        print 'data type 1 ', cell_data.dtype
+        print('data type 1 ', cell_data.dtype)
         cell_data = np.nan_to_num(cell_data)
     except:
-        print 'data type 2 ', cell_data.dtype
+        print('data type 2 ', cell_data.dtype)
         cell_data = np.nan_to_num(cell_data)
     logging.info('Any values that cannot be converted to float are set to 0')
     return cell_data, object_keys
@@ -260,7 +261,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                     try:
                         float(cell_data[i,j])
                     except:
-                        print i,j, cell_data[i,j], type(cell_data[i,j])
+                        print(i,j, cell_data[i,j], type(cell_data[i,j]))
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i][0], predicted_classes[i]))
@@ -275,7 +276,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
             if cb:
                 cb(min(1, idx/float(num_clauses))) #progress
         return counts
-    print 'area scoring column ', p.area_scoring_column
+    print('area scoring column ', p.area_scoring_column)
     counts = do_by_steps(p.object_table, filter_name, p.area_scoring_column)
     def get_count(im_key, classnum):
         return counts.get(im_key + (classnum, ), np.array([0]))[0]
@@ -314,15 +315,15 @@ if __name__ == "__main__":
     p.LoadFile(props)
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
-    print trainingSet.label_matrix.shape
-    print trainingSet.labels
-    print len(trainingSet.colnames)
-    print trainingSet.values.shape
+    print(trainingSet.label_matrix.shape)
+    print(trainingSet.labels)
+    print(len(trainingSet.colnames))
+    print(trainingSet.values.shape)
     output = StringIO()
-    print 'Training classifier with '+str(nRules)+' rules...'
+    print('Training classifier with '+str(nRules)+' rules...')
 
     labels = np.nonzero(trainingSet.label_matrix+1)[1] + 1 #base 1 classes
-    print len(labels)
+    print(len(labels))
     GC.Train(labels,trainingSet.values)
     num_classes = trainingSet.label_matrix.shape[1]
 

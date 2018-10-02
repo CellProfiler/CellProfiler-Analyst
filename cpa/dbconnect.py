@@ -1,3 +1,4 @@
+from __future__ import print_function
 import decimal
 import types
 import random
@@ -317,7 +318,7 @@ class DBConnect(Singleton):
                                                (p.db_passwd or None), p.db_name):
                 logging.warn('A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
             else:
-                raise DBException, 'A connection already exists for this thread (%s). Close this connection first.'%(connID,)
+                raise DBException('A connection already exists for this thread (%s). Close this connection first.'%(connID,))
 
         # MySQL database: connect normally
         if p.db_type.lower() == 'mysql':
@@ -335,8 +336,8 @@ class DBConnect(Singleton):
                     self.CreateObjectImageTable()
                 if p.check_tables == 'yes':
                     self.CreateObjectCheckedTable()
-            except DBError(), e:
-                raise DBException, 'Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e)
+            except DBError() as e:
+                raise DBException('Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e))
             
         # SQLite database: create database from CSVs
         elif p.db_type.lower() == 'sqlite':
@@ -434,7 +435,7 @@ class DBConnect(Singleton):
                         logging.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
                         try:
                             self.CreateSQLiteDBFromCSVs()
-                        except Exception, e:
+                        except Exception as e:
                             try:
                                 if os.path.isfile(p.db_sqlite_file):
                                     os.remove(p.db_sqlite_file)
@@ -446,7 +447,7 @@ class DBConnect(Singleton):
                         logging.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
                         self.CreateSQLiteDB()
                     else:
-                        raise DBException, 'Database at %s appears to be empty.'%(p.db_sqlite_file)
+                        raise DBException('Database at %s appears to be empty.'%(p.db_sqlite_file))
             if p.classification_type == 'image':
                 self.CreateObjectImageTable()
             if p.check_tables == 'yes':
@@ -455,7 +456,7 @@ class DBConnect(Singleton):
 
         # Unknown database type (this should never happen)
         else:
-            raise DBException, "Unknown db_type in properties: '%s'\n"%(p.db_type)
+            raise DBException("Unknown db_type in properties: '%s'\n"%(p.db_type))
 
     def setup_sqlite_classifier(self, thresh, a, b):
         self.sqlite_classifier.setup_classifier(thresh, a, b)
@@ -500,8 +501,8 @@ class DBConnect(Singleton):
 
         try:
             cursor = self.cursors[connID]
-        except KeyError, e:
-            raise DBException, 'No such connection: "%s".\n' %(connID)
+        except KeyError as e:
+            raise DBException('No such connection: "%s".\n' %(connID))
         
         # Finally make the query
         try:
@@ -514,42 +515,41 @@ class DBConnect(Singleton):
                 cursor.execute(query, args=args)
             if return_result:
                 return self._get_results_as_list()
-        except Exception, e:
+        except Exception as e:
             try:
                 if isinstance(e, DBOperationalError()) and e.args[0] in [2006, 2013, 1053]:
                     raise DBDisconnectedException()
                 else:
-                    raise DBException, ('Database query failed for connection "%s"'
-                                    '\nQuery was: "%s"'
-                                    '\nException was: %s'%(connID, query, e))
-            except Exception, e2:
-                raise DBException, ('Database query failed for connection "%s" and failed to reconnect'
-                                    '\nQuery was: "%s"'
-                                    '\nFirst exception was: %s'
-                                    '\nSecond exception was: %s'%(connID, query, e, e2))
+                    raise DBException('Database query failed for connection "%s"'
+                                     '\nQuery was: "%s"'
+                                     '\nException was: %s'%(connID, query, e))
+            except Exception as e2:
+                raise DBException('Database query failed for connection "%s" and failed to reconnect'
+                                  '\nQuery was: "%s"'
+                                  '\nFirst exception was: %s'
+                                  '\nSecond exception was: %s'%(connID, query, e, e2))
             
     def Commit(self):
         connID = threading.currentThread().getName()
         try:
             logging.debug('[%s] Commit'%(connID))
             self.connections[connID].commit()
-        except DBError(), e:
-            raise DBException, 'Commit failed for connection "%s"\n\t%s\n' %(connID, e)
-        except KeyError, e:
-            raise DBException, 'No such connection: "%s".\n' %(connID)
+        except DBError() as e:
+            raise DBException('Commit failed for connection "%s"\n\t%s\n' %(connID, e))
+        except KeyError as e:
+            raise DBException('No such connection: "%s".\n' %(connID))
 
     def GetNextResult(self):
         connID = threading.currentThread().getName()
         try:
             return self.cursors[connID].next()
-        except DBError(), e:
-            raise DBException, \
-                'Error retrieving next result from database: %s'%(e,)
+        except DBError() as e:
+            raise DBException('Error retrieving next result from database: %s'%(e,))
             return None
-        except StopIteration, e:
+        except StopIteration as e:
             return None
-        except KeyError, e:
-            raise DBException, 'No such connection: "%s".\n' %(connID)
+        except KeyError as e:
+            raise DBException('No such connection: "%s".\n' %(connID))
 
     def _get_results_as_list(self):
         '''
@@ -595,7 +595,7 @@ class DBConnect(Singleton):
         records = []
         while True:
             r = self.cursors[connID].fetchmany(n)
-            print len(r)
+            print(len(r))
             if len(r) == 0:
                 break
             records.extend(list(r))
@@ -734,7 +734,7 @@ class DBConnect(Singleton):
             query = query[:where_idx] + join_clause + query[where_idx:]
         try:
             res = self.execute(query)
-        except DBException, e:
+        except DBException as e:
             raise DBException('Group query failed for group "%s". Check the SQL'
                               ' syntax in your properties file.\n'
                               'Error was: "%s"'%(group, e))
@@ -781,10 +781,10 @@ class DBConnect(Singleton):
         try:
             f = p._filters[filter_name]
             return self.execute(self.filter_sql(filter_name))
-        except Exception, e:
+        except Exception as e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)
-            raise Exception, 'Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name)
+            raise Exception('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
     
     def GetTableNames(self):
         '''
@@ -997,7 +997,7 @@ class DBConnect(Singleton):
                  link_columns_table is not found.
 
         usage: >>> get_linking_columns(per_well, per_image)
-               [(plateid, plate), (wellid, well)]        
+               [(plateid, plate), (wellid, well)]
         '''
         if p.link_columns_table not in self.GetTableNames():
             raise Exception('Could not find link_columns table "%s".'%(p.link_columns_table))
@@ -1183,7 +1183,7 @@ class DBConnect(Singleton):
         try:
             tabledata[0][0]
         except: 
-            raise Exception, 'Cannot infer column types from an empty table.'
+            raise Exception('Cannot infer column types from an empty table.')
         for row in tabledata:
             for i, e in enumerate(row):
                 if colTypes[i]!='FLOAT' and not colTypes[i].startswith('VARCHAR'):
@@ -1203,7 +1203,7 @@ class DBConnect(Singleton):
                     maxLen[i] = max(len(x), maxLen[i])
                     colTypes[i] = 'VARCHAR(%d)'%(maxLen[i])
                 except ValueError: 
-                    raise Exception, 'Value in table could not be converted to string!'
+                    raise Exception('Value in table could not be converted to string!')
         return colTypes
     
     def AppendColumn(self, table, colname, coltype):
@@ -1393,7 +1393,7 @@ class DBConnect(Singleton):
                                       'manually or CPAnalyst will load it '
                                       'the next time use use the current '
                                       'database settings.', 'Error')
-                    raise Exception, 'cancelled load'
+                    raise Exception('cancelled load')
             logging.info("... loaded %d%% of CSV data"%(pct))
 
         line_count = 0
@@ -1437,7 +1437,7 @@ class DBConnect(Singleton):
                                               'manually or CPAnalyst will load it '
                                               'the next time use use the current '
                                               'database settings.', 'Error')
-                            raise Exception, 'cancelled load'
+                            raise Exception('cancelled load')
                     logging.info("... loaded %d%% of CSV data"%(pct))
                 f.close()
                 logging.info("Finished loading CSV data")
@@ -1465,7 +1465,7 @@ class DBConnect(Singleton):
                 height = int(p.image_height)
             else:
                 raise Exception('Input image_width and image_height fields in properties file')
-        return width, height    
+        return width, height
 
     def CreateObjectCheckedTable(self):
         # Create object (checked) table where there are no rows with missing/null values
@@ -1477,7 +1477,7 @@ class DBConnect(Singleton):
 
         if p.classification_type == 'image':
             object_table = object_table.split('_objecttable')[0]
-        print object_table
+        print(object_table)
 
         all_cols = [str(x) for x in self.GetColumnNames(object_table)]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
@@ -1809,7 +1809,7 @@ class Entity(object):
                 else:
                     raise StopIteration
             except GeneratorExit:
-                print "GeneratorExit"
+                print("GeneratorExit")
                 self.db.cursors[connID].fetchall()
 
     def __init__(self):
@@ -1939,8 +1939,8 @@ class Images(Entity):
 
     def objects(self):
         if self._offset is not None or self._limit is not None:
-            raise ValueError, "Cannot join with objects after applying "\
-                "offset/limit."
+            raise ValueError("Cannot join with objects after applying "
+                "offset/limit.")
         return Objects(images=self)
 
     def columns(self):

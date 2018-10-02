@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 from optparse import OptionParser
 import numpy as np
@@ -20,18 +21,18 @@ def get_loadings(preprocessor):
 def write_loadings_text(f, loadings):
     for i, (factor, l) in enumerate(loadings):
         if i > 0:
-            print >>f
-        print >>f, factor
+            print(file=f)
+        print(factor, file=f)
         for weight, variable in l:
-            print >>f, '%f %s' % (weight, variable)
+            print('%f %s' % (weight, variable), file=f)
 
 def write_loadings_latex(f, loadings):
     for i, (factor, l) in enumerate(loadings):
         if i > 0:
-            print >>f, '\\addlinespace'
+            print('\\addlinespace', file=f)
         for j, (weight, variable) in enumerate(l):
             label = factor if j == 0 else ''
-            print >>f, '%s & %f & %s \\\\' % (label, weight, variable)
+            print('%s & %f & %s \\\\' % (label, weight, variable), file=f)
 
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog FACTOR-MODEL")

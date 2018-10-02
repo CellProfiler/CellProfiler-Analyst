@@ -1,4 +1,5 @@
 # -*- Encoding: utf-8 -*-
+from __future__ import print_function
 from cpa import dbconnect
 from cpa.dbconnect import DBConnect
 from datamodel import DataModel
@@ -616,7 +617,7 @@ if __name__ == "__main__":
 #        p.LoadFile('/Users/afraser/CPA/properties/nirht_test.properties')
         p.LoadFile('/Users/afraser/cpa_example/example.properties')
         
-        print 'TESTING DATA GRID' 
+        print('TESTING DATA GRID') 
         classes = ['a', 'b']
         data = np.array([['key 0',10,20,-30,40.123456789],
                          ['key 1',11,21,31,41.1],
@@ -632,12 +633,12 @@ if __name__ == "__main__":
 #        grid = DataGrid()
         grid = DataGrid(data, labels, key_col_indices=[0,1], title='TEST', autosave=False)
         grid.Show()
-        print grid.GetData()
+        print(grid.GetData())
         app.MainLoop()
         # -------------------
       
     if not (3 <= len(sys.argv) <= 4):
-        print usage
+        print(usage)
         sys.exit()
     csvfile = sys.argv[1]
     propsfile = sys.argv[2]
@@ -679,4 +680,3 @@ if __name__ == "__main__":
     grid.Show()
     
     app.MainLoop()
-

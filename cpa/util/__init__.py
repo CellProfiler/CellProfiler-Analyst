@@ -146,8 +146,8 @@ class sample(object):
         if n is None or n > length:
             n = length
         if n < 0:
-            raise ValueError, \
-                "N must be at least 0 and at most the length of the sequence."
+            raise ValueError(
+                "N must be at least 0 and at most the length of the sequence.")
         self.m = 0
         self.i = 0
         self.n = n

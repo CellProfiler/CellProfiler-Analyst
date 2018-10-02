@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 from singleton import Singleton
 from StringIO import StringIO
 import re
@@ -239,13 +240,13 @@ class Properties(Singleton):
                 elif name.startswith('group_SQL_'):
                     group_name = name[10:]
                     if group_name == '':
-                        raise Exception, ('PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\n'
-                                          'Example: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\n'
-                                          'a MySQL query "<QUERY>". See the README.'%(name))
+                        raise Exception('PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\n'
+                                        'Example: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\n'
+                                        'a MySQL query "<QUERY>". See the README.'%(name))
                     if group_name in self._groups.keys():
-                        raise Exception, 'Group "%s" is defined twice in properties file.'%(group_name)
+                        raise Exception('Group "%s" is defined twice in properties file.'%(group_name))
                     if group_name in self._filters.keys():
-                        raise Exception, 'Name "%s" is already taken for a filter.'%(group_name)
+                        raise Exception('Name "%s" is already taken for a filter.'%(group_name))
                     if not val:
                         logging.warn('PROPERTIES WARNING (%s): Undefined group'%(name))
                         continue
@@ -255,15 +256,15 @@ class Properties(Singleton):
                     # Load old-style SQL filters:
                     filter_name = name[11:]
                     if filter_name == '':
-                        raise Exception, ('PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
-                                          'Example: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\n'
-                                          'a MySQL query "<QUERY>". See the README.'%(name))
+                        raise Exception('PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
+                                        'Example: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\n'
+                                        'a MySQL query "<QUERY>". See the README.'%(name))
                     if filter_name in self._filters.keys():
-                        raise Exception, 'Filter "%s" is defined twice in properties file.'%(filter_name)
+                        raise Exception('Filter "%s" is defined twice in properties file.'%(filter_name))
                     if filter_name in self._groups.keys():
-                        raise Exception, 'Name "%s" is already taken for a group.'%(filter_name)
+                        raise Exception('Name "%s" is already taken for a group.'%(filter_name))
                     if re.search('\W', filter_name):
-                        raise Exception, 'PROPERTIES ERROR (%s): Filter names may only contain alphanumeric characters and "_".'%(filter_name)
+                        raise Exception('PROPERTIES ERROR (%s): Filter names may only contain alphanumeric characters and "_".'%(filter_name))
                     if not val:
                         logging.warn('PROPERTIES WARNING (%s): Undefined filter'%(name))
                         continue
@@ -280,7 +281,7 @@ class Properties(Singleton):
                         continue
                     d = eval(val)
                     if type(d) != dict:
-                        raise Exception, 'PROPERTIES ERROR (filters): Error parsing filters. Check the "filters" field in your properties file.'
+                        raise Exception('PROPERTIES ERROR (filters): Error parsing filters. Check the "filters" field in your properties file.')
                     for k, v in d.items():
                         self._filters[k] = Filter.decode(v)
                     del d
@@ -288,7 +289,7 @@ class Properties(Singleton):
                 elif name == 'gates':
                     d = eval(val)
                     if type(d) != dict:
-                        raise Exception, 'PROPERTIES ERROR (gates): Error parsing gates. Check the "gates" field in your properties file.'
+                        raise Exception('PROPERTIES ERROR (gates): Error parsing gates. Check the "gates" field in your properties file.')
                     for k, v in d.items():
                         self.gates[k] = Gate.decode(v)
                     del d
@@ -470,7 +471,7 @@ class Properties(Singleton):
                 if not self.field_defined(new):
                     self.__dict__[new] = self.__dict__[old]
                 else:
-                    raise Exception, ('PROPERTIES ERROR: Both "%s" and "%s" were '
+                    raise Exception('PROPERTIES ERROR: Both "%s" and "%s" were '
                         'found in your properties file. The field "%s" has been '
                         'deprecated and renamed to "%s". Please remove "%s" from '
                         'your properties file.'%(old, new, old, new, old))
@@ -507,7 +508,7 @@ class Properties(Singleton):
                     f = open(self.db_sqlite_file, 'r')
                     f.close()
                 except:
-                    raise Exception, 'PROPERTIES ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file)
+                    raise Exception('PROPERTIES ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file))
             
             if self.field_defined('db_sql_file'):
                 if not os.path.isabs(self.db_sql_file):
@@ -518,7 +519,7 @@ class Properties(Singleton):
                     f = open(self.db_sql_file, 'r')
                     f.close()
                 except:
-                    raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.db_sql_file)
+                    raise Exception('PROPERTIES ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.db_sql_file))
                 
                 for field in ['image_csv_file','object_csv_file']:
                     assert not self.field_defined(field), 'PROPERTIES ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
@@ -534,7 +535,7 @@ class Properties(Singleton):
                             f = open(self.__dict__[field], 'r')
                             f.close()
                         except:
-                            raise Exception, 'PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field])                
+                            raise Exception('PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field]))
             
         if self.db_type.lower()=='mysql':
             for field in ['db_host', 'db_name', 'db_user',]:
@@ -717,4 +718,4 @@ if __name__ == "__main__":
 
     p.load_file(filename)
     
-    print p
+    print(p)

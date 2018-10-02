@@ -1,5 +1,6 @@
 # Encoding: utf-8
 from __future__ import with_statement
+from __future__ import print_function
 
 import matplotlib
 matplotlib.use('WXAgg')
@@ -1942,7 +1943,7 @@ class Classifier(wx.Frame):
                                          'Rules Error', style=wx.OK).ShowModal()
                         self.OnRulesEdit(evt)
                         return
-                except ValueError, e:
+                except ValueError as e:
                     wx.MessageDialog(self, 'Unable to parse your edited rules:\n\n' + str(e), 'Parse error',
                                      style=wx.OK).ShowModal()
                     self.OnRulesEdit(evt)
@@ -1990,7 +1991,7 @@ class Classifier(wx.Frame):
                         logging.info("Setting params to: " + el)
                         self.algorithm.set_params(eval(el)) # now evaluate
 
-                except ValueError, e:
+                except ValueError as e:
                     wx.MessageDialog(self, 'Unable to parse your edited hyperparameters:\n\n' + str(e), 'Parse error',
                                      style=wx.OK).ShowModal()
                     self.OnParamsEdit(evt)
@@ -2363,4 +2364,4 @@ if __name__ == "__main__":
         import traceback
 
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

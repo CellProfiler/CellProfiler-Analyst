@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from dbconnect import *
 from datamodel import DataModel
 from properties import Properties
@@ -49,19 +50,19 @@ def score(properties, ts, nRules, filter_name=None, group='Image',
         
     if results_table:
         if db.table_exists(results_table) and not overwrite:
-            print 'Table "%s" already exists. Delete this table before running scoreall.'%(results_table)
+            print('Table "%s" already exists. Delete this table before running scoreall.'%(results_table))
             return None
 
-    print ''
-    print 'properties:    ', properties
-    print 'training set:  ', ts
-    print '# rules:       ', nRules
-    print 'filter:        ', filter_name
-    print 'grouping by:   ', group
-    print 'show results:  ', show_results
-    print 'results table: ', results_table
-    print 'overwrite:     ', overwrite
-    print ''
+    print('')
+    print('properties:    ', properties)
+    print('training set:  ', ts)
+    print('# rules:       ', nRules)
+    print('filter:        ', filter_name)
+    print('grouping by:   ', group)
+    print('show results:  ', show_results)
+    print('results table: ', results_table)
+    print('overwrite:     ', overwrite)
+    print('')
             
     nClasses = len(ts.labels)
     nKeyCols = len(image_key_columns())
@@ -182,10 +183,10 @@ def score(properties, ts, nRules, filter_name=None, group='Image',
     title += ' (%s)'%(os.path.split(p._filename)[1])
     
     if results_table:
-        print 'Creating table %s'%(results_table)
+        print('Creating table %s'%(results_table))
         success = db.CreateTableFromData(tableData, colnames, results_table, temporary=False)
         if not success:
-            print 'Failed to create results table :('
+            print('Failed to create results table :(')
     
     if show_results:
         import tableviewer
@@ -207,7 +208,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
     if len(sys.argv) < 3:
-        print USAGE
+        print(USAGE)
         sys.exit()
 
     props_file = sys.argv[1]
@@ -248,4 +249,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

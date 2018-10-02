@@ -18,6 +18,7 @@ Example usage as module:
 >>> normalized, normalized_colnames = cache.load(imKeys, normalization=RobustLinearNormalization)
 
 '''
+from __future__ import print_function
 
 import sys
 import os
@@ -205,7 +206,7 @@ class Cache(object):
         cols = cpa.db.GetColnamesForClassifier()
         with open(self._colnames_filename, 'w') as f:
             for col in cols:
-                print >>f, col
+                print(col, file=f)
 
     def _create_cache_plate_map(self, resume):
         """Create cache of map from image key to plate name"""
@@ -282,4 +283,4 @@ if __name__ == '__main__':
         for Normalization in normalizations.values():
             Normalization(cache)._create_cache(predicate, options.resume)
     else:
-        print 'Not performing normalization because not predicate was specified.'
+        print('Not performing normalization because not predicate was specified.')

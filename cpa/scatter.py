@@ -1,3 +1,4 @@
+from __future__ import print_function
 # TODO: add hooks to change point size, alpha, numsides etc.
 from cpatool import CPATool
 import tableviewer
@@ -1109,7 +1110,7 @@ if __name__ == "__main__":
     else:
 ##        p.load_file('/Users/afraser/cpa_example/example2.properties')
         if not p.show_load_dialog():
-            print 'Scatterplot requires a properties file.  Exiting.'
+            print('Scatterplot requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
@@ -1127,4 +1128,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

@@ -110,7 +110,7 @@ class SortBin(wx.ScrolledWindow):
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
         # stop focus events from propagating to the evil
         # wx.ScrollWindow class which otherwise causes scroll jumping.
-        self.Bind(wx.EVT_SET_FOCUS, (lambda(evt):None))
+        self.Bind(wx.EVT_SET_FOCUS, (lambda evt: None))
         tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
     
         self.CreatePopupMenu()

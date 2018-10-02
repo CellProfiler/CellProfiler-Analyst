@@ -92,6 +92,7 @@ Examples
 """
 
 from __future__ import division
+from __future__ import print_function
 
 import sys
 import os
@@ -767,7 +768,7 @@ def _replace_by(module_function, warn=False):
             module, function = module_function.split('.')
             func, oldfunc = getattr(__import__(module), function), func
             globals()['__old_' + func.__name__] = oldfunc
-        except Exception, e:
+        except Exception as e:
             if warn:
                 warnings.warn("Failed to import %s" % module_function)
         return func
@@ -968,14 +969,14 @@ def test_tifffile(directory='testimages', verbose=True):
     start = time.time()
     for f in glob.glob(os.path.join(directory, '*.*')):
         if verbose:
-            print "\n%s>" % f.lower(),
+            print("\n%s>" % f.lower(), end=' ')
         t0 = time.time()
         try:
             tif = TIFFfile(f)
-        except Exception, e:
+        except Exception as e:
             if not verbose:
-                print f,
-            print "ERROR:", e
+                print(f, end=' ')
+            print("ERROR:", e)
             failed += 1
             continue
         try:
@@ -983,20 +984,20 @@ def test_tifffile(directory='testimages', verbose=True):
         except ValueError:
             try:
                 img = tif[0].asarray()
-            except Exception, e:
+            except Exception as e:
                 if not verbose:
-                    print f,
-                print "ERROR:", e
+                    print(f, end=' ')
+                print("ERROR:", e)
         finally:
             tif.close()
         successful += 1
         if verbose:
-            print "%s, %s %s, %s, %.0f ms" % (str(tif), str(img.shape),
-                img.dtype, tif[0].compression, (time.time()-t0) * 1e3)
+            print("%s, %s %s, %s, %.0f ms" % (str(tif), str(img.shape),
+                img.dtype, tif[0].compression, (time.time()-t0) * 1e3))
 
     if verbose:
-        print "\nSuccessfully read %i of %i files in %.3f s\n" % (
-            successful, successful+failed, time.time()-start)
+        print("\nSuccessfully read %i of %i files in %.3f s\n" % (
+            successful, successful+failed, time.time()-start))
 
 
 # TIFF tag structures. Cases that are irrelevant or not implemented are
@@ -1568,8 +1569,8 @@ def imshow(data, title=None, isrgb=True, vmin=0, vmax=None,
 def main(argv=None):
     """Command line usage main function."""
     if float(sys.version[0:3]) < 2.5:
-        print "This script requires Python version 2.5 or better."
-        print "This is Python version %s" % sys.version
+        print("This script requires Python version 2.5 or better.")
+        print("This is Python version %s" % sys.version)
         return 0
     if argv is None:
         argv = sys.argv
@@ -1618,12 +1619,12 @@ def main(argv=None):
         test_tifffile(path, settings.verbose)
         return 0
 
-    print "Reading file structure...",
+    print("Reading file structure...", end=' ')
     start = time.time()
     tif = TIFFfile(path)
-    print "%.3f ms" % ((time.time()-start) * 1e3)
+    print("%.3f ms" % ((time.time()-start) * 1e3))
 
-    print "Reading image data... ",
+    print("Reading image data... ", end=' ')
     start = time.time()
     try:
         if settings.page < 0:
@@ -1635,23 +1636,23 @@ def main(argv=None):
     except Exception:
         tif.close()
         raise
-    print "%.3f ms" % ((time.time()-start) * 1e3)
+    print("%.3f ms" % ((time.time()-start) * 1e3))
     tif.close()
 
-    print "\nTIFF file:", tif
+    print("\nTIFF file:", tif)
     page = 0 if settings.page < 0 else settings.page
-    print "\nPAGE %i:" % page, tif[page]
+    print("\nPAGE %i:" % page, tif[page])
     page = tif[page]
-    print page.tags
+    print(page.tags)
     if page.is_palette:
-        print "\nColor Map:", page.color_map.shape, page.color_map.dtype
+        print("\nColor Map:", page.color_map.shape, page.color_map.dtype)
 
     for test, attr in (('is_lsm', 'cz_lsm_info'),
                        ('is_stk', 'mm_uic_tags'),
                        ('is_fluoview', 'mm_header'),
                        ('is_nih', 'nih_image_header'),):
         if getattr(page, test):
-            print "\n", attr.upper(), "\n", Record(getattr(page, attr))
+            print("\n", attr.upper(), "\n", Record(getattr(page, attr)))
 
     imshow(img, title=', '.join((str(tif), str(tif[0]))),
            miniswhite=page.photometric=='miniswhite',

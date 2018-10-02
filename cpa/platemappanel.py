@@ -297,7 +297,7 @@ class PlateMapPanel(wx.Panel):
             for wims in wells_and_images:
                 try:
                     ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
-                except IOError, e:
+                except IOError as e:
                     ims = [Image.open(StringIO(b64decode(im)), 'r') for im in wims[1:]]
                 ims = [np.fromstring(im.tobytes(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
                        for im in ims]
@@ -462,7 +462,7 @@ class PlateMapPanel(wx.Panel):
         popupMenu.SetTitle('well: %s'%(well_label))
         if p.image_thumbnail_cols:
             item = popupMenu.Append(-1, 'Show thumbnail montage')
-            show_montage = lambda(e): self.show_thumbnail_montage(wellkey, (self.GetX(evt), self.GetY(evt)))
+            show_montage = lambda e: self.show_thumbnail_montage(wellkey, (self.GetX(evt), self.GetY(evt)))
             popupMenu.Bind(wx.EVT_MENU, show_montage, item)
         for key in imkeys:
             item = popupMenu.Append(-1, ','.join([str(k) for k in key]))
@@ -482,7 +482,7 @@ class PlateMapPanel(wx.Panel):
         for channels in images:
             try:
                 pngs = [Image.open(StringIO(im), 'r') for im in channels]
-            except IOError, e:
+            except IOError as e:
                 pngs = [Image.open(StringIO(b64decode(im)), 'r') for im in channels]
 
             imsets += [[np.fromstring(png.tobytes(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
@@ -520,6 +520,3 @@ if __name__ == "__main__":
     frame.Show()
 
     app.MainLoop()
-
-
-

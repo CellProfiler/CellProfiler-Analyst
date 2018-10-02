@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 from optparse import OptionParser
 import numpy as np
@@ -105,9 +106,9 @@ def crossvalidate(profiles, true_group_name, holdout_group_name=None,
 
 def print_confusion_matrix(confusion):
    cm = confusion_matrix(confusion)
-   print cm
-   print 'Overall: %d / %d = %.0f %%' % (np.diag(cm).sum(), cm.sum(),
-                                         100.0 * np.diag(cm).sum() / cm.sum())
+   print(cm)
+   print('Overall: %d / %d = %.0f %%' % (np.diag(cm).sum(), cm.sum(),
+                                         100.0 * np.diag(cm).sum() / cm.sum()))
 
 if __name__ == '__main__':
     parser = OptionParser("usage: %prog [-c] [-h HOLDOUT-GROUP] PROPERTIES-FILE PROFILES-FILENAME TRUE-GROUP")

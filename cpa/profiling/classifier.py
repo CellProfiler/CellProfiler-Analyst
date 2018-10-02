@@ -4,6 +4,7 @@
 Classifier 
 
 '''
+from __future__ import print_function
 
 import sys
 import numpy as np
@@ -51,8 +52,8 @@ class KNearestNeighborClassifier(Classifier):
       dist = []
       for i, y in enumerate(self.data):
          if(all(y == x)): # should never happen in k-fold validation
-            print 'KNearestNeighborClassifier: how come this happened ??!! sum -> ', 
-            print np.sum(x)
+            print('KNearestNeighborClassifier: how come this happened ??!! sum -> ', end=' ') 
+            print(np.sum(x))
          else:
             dist.append((self.distance(x,y),self.labels[i]))
 

@@ -4,6 +4,7 @@
 Plot distances between profiles.
 
 """
+from __future__ import print_function
 
 from optparse import OptionParser
 import numpy as np
@@ -26,7 +27,7 @@ def plot_distances(profiles, output_group_name=None):
         for i, k in enumerate(profiles.keys()):
             groups = [output_group[image] for image in input_group_r[k]]
             if groups.count(groups[0]) != len(groups):
-                print >>sys.stderr, 'Error: Input group %r contains images in %d output groups' % (key, len(set(groups)))
+                print('Error: Input group %r contains images in %d output groups' % (key, len(set(groups))), file=sys.stderr)
                 sys.exit(1)
             d.setdefault(groups[0], []).append(i)
             labels.append(groups[0])

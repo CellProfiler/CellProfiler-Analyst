@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import itertools
 import logging
@@ -19,10 +20,10 @@ class InputError(Exception):
 
     def __unicode__(self):
         if self.line is None:
-            print >>sys.stderr, '%s: Error: %s' % (self.filename, self.message)
+            print('%s: Error: %s' % (self.filename, self.message), file=sys.stderr)
         else:
-            print >>sys.stderr, '%s:%d: Error: %s' % (self.filename, self.line, 
-                                                      self.message)
+            print('%s:%d: Error: %s' % (self.filename, self.line, 
+                                                      self.message), file=sys.stderr)
 
 class Profiles(object):
     def __init__(self, keys, data, variables, key_size=None, group_name=None, group_header=None):
@@ -117,9 +118,9 @@ class Profiles(object):
         else:
             f = filename
         try:
-            print >>f, '\t'.join(header)
+            print('\t'.join(header), file=f)
             for key, vector in zip(self._keys, self.data):
-                print >>f, '\t'.join(map(str, itertools.chain(key, vector)))
+                print('\t'.join(map(str, itertools.chain(key, vector))), file=f)
         finally:
             f.close()
 
@@ -177,7 +178,7 @@ class Profiles(object):
         data = list(progress(generator))
 
         if all([l is None for l in data]):
-            print "No data returned! Not generating a Profile class"
+            print("No data returned! Not generating a Profile class")
             return
         
         for i, (p, r) in enumerate(zip(parameters, data)):
@@ -222,7 +223,7 @@ class Profiles(object):
                     # No group defined for this image.
                     continue
                 if groups.count(groups[0]) != len(groups):
-                    print >>sys.stderr, 'Error: Input group %r contains images in %d output groups' % (key, len(set(groups)))
+                    print('Error: Input group %r contains images in %d output groups' % (key, len(set(groups))), file=sys.stderr)
                     sys.exit(1)
                 d[key] = groups[0]
             return d
