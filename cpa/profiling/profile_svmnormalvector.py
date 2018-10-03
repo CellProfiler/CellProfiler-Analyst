@@ -74,11 +74,9 @@ class memoized(object):
         """Support instance methods."""
         return functools.partial(self.__call__, obj)
 
-def _compute_svmnormalvector(
-        cache_dir__images__control_images__normalization_name__preprocess_file__rfe):
+def _compute_svmnormalvector(args):
     #try:
-        (cache_dir, images, control_images, normalization_name, preprocess_file,
-         rfe) = cache_dir__images__control_images__normalization_name__preprocess_file__rfe
+        (cache_dir, images, control_images, normalization_name, preprocess_file, rfe) = args
         import numpy as np
         import sys
         from cpa.profiling.cache import Cache

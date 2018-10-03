@@ -2,13 +2,14 @@
 
 from __future__ import print_function
 from functools import reduce
-def _compute_group_subsample(cache_dir__normalization_name__image_key__indices):
-    (cache_dir, normalization_name, image_key,
-        indices) = cache_dir__normalization_name__image_key__indices
+
+
+def _compute_group_subsample(args):
+    (cache_dir, normalization_name, image_key, indices) = args
     import numpy as np
     from .cache import Cache, normalizations
     cache = Cache(cache_dir)
-    normalizeddata, normalized_colnames, _ = cache.load([image_key], 
+    normalizeddata, normalized_colnames, _ = cache.load([image_key],
                                                         normalization=normalizations[normalization_name],
                                                         removeRowsWithNaN=False)
     return normalizeddata[indices], np.hstack((np.array([image_key]*indices.shape[0]), _[indices][:,np.newaxis]))

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import absolute_import
-def _compute_ksstatistic(cache_dir__images__control_images__normalization_name__preprocess_file):
-    (cache_dir, images, control_images, normalization_name,
-     preprocess_file) = cache_dir__images__control_images__normalization_name__preprocess_file
-    import numpy as np 
+
+
+def _compute_ksstatistic(args):
+    (cache_dir, images, control_images, normalization_name, preprocess_file) = args
+    import numpy as np
     import sys
     import cpa
     from cpa.profiling.cache import Cache

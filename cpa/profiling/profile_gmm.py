@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 from __future__ import absolute_import
-def _compute_mixture_probabilities(
-        cache_dir__normalization_name__preprocess_file__images__gmm__meanvector__loadings):
-    (cache_dir, normalization_name, preprocess_file, images, gmm, meanvector, 
-     loadings) = cache_dir__normalization_name__preprocess_file__images__gmm__meanvector__loadings
+
+
+def _compute_mixture_probabilities(args):
+    (cache_dir, normalization_name, preprocess_file, images, gmm, meanvector, loadings) = args
     import numpy as np
     from cpa.profiling import cache
     cache = Cache(cache_dir)
