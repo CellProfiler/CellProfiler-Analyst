@@ -28,7 +28,7 @@ class CellProfilerAnalystMSI(distutils.core.Command):
         fd.write("""
 AppVerName=CellProfiler %d
 OutputBaseFilename=CellProfilerAnalyst_win32_%d
-""" % (util.version.version_number, util.version.version_number))
+""" % (version.version_number, version.version_number))
         fd.close()
         required_files = os.path.join("dist", "cpa.exe")
         compile_command = self.__compile_command()
@@ -36,7 +36,7 @@ OutputBaseFilename=CellProfilerAnalyst_win32_%d
         self.make_file(
             required_files,
             os.path.join("Output", "CellProfilerAnalyst_win32_r%d.exe" % 
-                         util.version.version_number),
+                         version.version_number),
             subprocess.check_call, ([compile_command]))
         
     def __compile_command(self):
@@ -63,7 +63,7 @@ if os.path.exists('dist'):
 # Write the frozen version
 #
 f = open("util/frozen_version.py", "w")
-f.write("# MACHINE_GENERATED\nversion_string = '%s'" % util.version.version_string)
+f.write("# MACHINE_GENERATED\nversion_string = '%s'" % version.version_string)
 f.close()
 
 if not 'py2exe' in sys.argv:
