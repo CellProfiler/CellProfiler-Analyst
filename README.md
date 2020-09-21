@@ -18,14 +18,14 @@ and subtle phenotypes, for automatic scoring of millions of cells.
 
 ## Installation
 
-Download [CellProfiler Analyst](http://cellprofiler.org/releases/#CPA)
+Download [CellProfiler Analyst](https://cellprofileranalyst.org/releases)
 
 CellProfiler Analyst requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE).
 Check the Java path.
 
 Please note that this is the development branch of CPA and it will be updated on regular basis. 
 
-Find all releases [here](http://cellprofiler.org/releases#CPA).
+Find all releases [here](https://cellprofileranalyst.org/previously-released-versions-cellprofiler-analyst).
 
 For a head start, download example dataset here: [Example Dataset for CPA (zipped)](http://d1zymp9ayga15t.cloudfront.net/content/Examplezips/cpa_2.0_example.zip)
 
@@ -43,7 +43,7 @@ for more detailed installation instructions.
 
 ## Documentation
 
-> http://cellprofiler.org/cpa/
+> https://cellprofileranalyst.org/manuals
 
 ## Wiki
 
@@ -54,7 +54,7 @@ for more detailed installation instructions.
 CellProfiler Analyst development is discussed on the CellProfiler Forum
 list.  
 
-> http://forum.cellprofiler.org/
+> https://forum.image.sc/tag/cellprofiler-analyst/
 
 ## How to file new issues
 
