@@ -816,14 +816,14 @@ class Classifier(wx.Frame):
 
     def UpdateClassChoices(self):
         if not self.IsTrained():
-            self.obClassChoice.SetItems(['random'])
+            self.obClassChoice.SetItems(['random', 'all'])
             self.obClassChoice.SetSelection(0)
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
             # self.openDimensReduxBtn.Disable()
             return
         sel = self.obClassChoice.GetSelection()
-        selectableClasses = ['random'] 
+        selectableClasses = ['random', 'all'] 
 
         selectableClasses += [bin.label for bin in self.classBins if bin.trained]
 
