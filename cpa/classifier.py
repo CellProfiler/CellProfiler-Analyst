@@ -148,7 +148,7 @@ class Classifier(wx.Frame):
 
         # fetch objects interface
         self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=-1, value='20', size=(30, -1), style=wx.TE_PROCESS_ENTER)
-        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
+        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random','all'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
                                       choices=['experiment', 'image'] + p._filters_ordered + p._groups_ordered + [
                                           CREATE_NEW_FILTER])
@@ -889,6 +889,44 @@ class Classifier(wx.Frame):
         obKeys = []
         # unclassified:
         if obClass == 0:
+            if fltr_sel == 'experiment':
+                obKeys = dm.GetRandomObjects(nObjects)
+                statusMsg += ' from whole experiment'
+            elif fltr_sel == 'image':
+                imKey = self.GetGroupKeyFromGroupSizer()
+                obKeys = dm.GetRandomObjects(nObjects, [imKey])
+                statusMsg += ' from image %s' % (imKey,)
+            elif fltr_sel in p._filters_ordered:
+                filteredImKeys = db.GetFilteredImages(fltr_sel)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
+                    return
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                statusMsg += ' from filter "%s"' % (fltr_sel)
+            elif fltr_sel in p._groups_ordered:
+                # if the filter name is a group then it's actually a group
+                groupName = fltr_sel
+                groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+                filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
+                colNames = dm.GetGroupColumnNames(groupName)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in group %s: %s' % (groupName,
+                                                                               ', '.join(['%s=%s' % (n, v) for n, v in
+                                                                                          zip(colNames, groupKey)])))
+                    return
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                if not obKeys:
+                    self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
+                                                                                          ', '.join(
+                                                                                              ['%s=%s' % (n, v) for n, v
+                                                                                               in zip(colNames,
+                                                                                                      groupKey)])))
+                    return
+                statusMsg += ' from group %s: %s' % (groupName,
+                                                     ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+
+        # all
+        elif obClass == 1:
             if fltr_sel == 'experiment':
                 obKeys = dm.GetRandomObjects(nObjects)
                 statusMsg += ' from whole experiment'
