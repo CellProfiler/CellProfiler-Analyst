@@ -928,18 +928,18 @@ class Classifier(wx.Frame):
         # all
         elif obClass == 1:
             if fltr_sel == 'experiment':
-                obKeys = dm.GetRandomObjects(nObjects)
+                obKeys = dm.GetAllObjects()
                 statusMsg += ' from whole experiment'
             elif fltr_sel == 'image':
                 imKey = self.GetGroupKeyFromGroupSizer()
-                obKeys = dm.GetRandomObjects(nObjects, [imKey])
+                obKeys = dm.GetAllObjects(imkeys=[imKey])
                 statusMsg += ' from image %s' % (imKey,)
             elif fltr_sel in p._filters_ordered:
-                filteredImKeys = db.GetFilteredImages(fltr_sel)
+                filteredImKeys = dm.GetAllObjects(filter_name=fltr_sel)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                obKeys = filteredImKeys
                 statusMsg += ' from filter "%s"' % (fltr_sel)
             elif fltr_sel in p._groups_ordered:
                 # if the filter name is a group then it's actually a group
@@ -952,7 +952,7 @@ class Classifier(wx.Frame):
                                                                                ', '.join(['%s=%s' % (n, v) for n, v in
                                                                                           zip(colNames, groupKey)])))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                obKeys = dm.GetAllObjects(imkeys=filteredImKeys)
                 if not obKeys:
                     self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
                                                                                           ', '.join(

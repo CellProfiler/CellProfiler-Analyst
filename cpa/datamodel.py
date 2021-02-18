@@ -134,7 +134,16 @@ class DataModel(Singleton):
                 obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
                 obs.append(obKey)
             return obs
-            
+
+    def GetAllObjects(self, filter_name=None, imkeys=[]):
+        self._if_empty_populate()
+        if imkeys == []:
+            all_images = self.GetAllImageKeys(filter_name)
+            obs = [x for im in all_images for x in self.GetObjectsFromImage(im)]
+        else:
+            obs = [x for im in imkeys for x in self.GetObjectsFromImage(im)]
+        return obs
+        
     def GetObjectsFromImage(self, imKey):
         self._if_empty_populate()
         obKeys=[]
