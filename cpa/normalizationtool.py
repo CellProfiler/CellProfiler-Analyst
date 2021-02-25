@@ -1,30 +1,30 @@
-from __future__ import print_function
+
 import re
 import wx
 import wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
-import normalize as norm
+from . import normalize as norm
 # Grouping options
-from normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
+from .normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 # Aggregation options
-from normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
+from .normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
 # Window options
-from normalize import W_SQUARE, W_MEANDER
+from .normalize import W_SQUARE, W_MEANDER
 import numpy as np
-import dbconnect
+from . import dbconnect
 import logging
-import properties
+from . import properties
 from itertools import groupby
-from plateviewer import FormatPlateMapData
-import sqltools as sql
-import guiutils as ui
-from cpatool import CPATool
+from .plateviewer import FormatPlateMapData
+from . import sqltools as sql
+from . import guiutils as ui
+from .cpatool import CPATool
 
 GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT]
 AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL]
 WINDOW_CHOICES = [W_MEANDER, W_SQUARE]
 
-p = properties.Properties.getInstance()
+p = properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
 
 class NormalizationStepPanel(wx.Panel):
@@ -280,7 +280,7 @@ class NormalizationUI(wx.Frame, CPATool):
     def update_measurement_choices(self):
         measurements = db.GetColumnNames(self.table_choice.GetStringSelection())
         types = db.GetColumnTypes(self.table_choice.GetStringSelection())
-        numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, int]]
         self.col_choices.SetItems(numeric_columns)
         self.validate()
         
@@ -498,7 +498,7 @@ class NormalizationUI(wx.Frame, CPATool):
                 if d[norm.P_GROUPING] in (norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
                     # Reshape data if normalization step is plate sensitive.
                     assert p.plate_id and p.well_id
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2) ] 
+                    well_keys = input_data[:, list(range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2)) ] 
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
                     for plate, plate_grp in groupby(wellkeys_and_vals, lambda row: row[0]):
@@ -516,7 +516,7 @@ class NormalizationUI(wx.Frame, CPATool):
                         print(mean_plate_col)
                         print(std_plate_col)            
 
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2)]
+                    well_keys = input_data[:, list(range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2))]
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
                     # print wellkeys_and_vals
@@ -630,7 +630,7 @@ class NormalizationUI(wx.Frame, CPATool):
         #
         # Show the resultant table        
         #
-        import tableviewer
+        from . import tableviewer
         tv = tableviewer.TableViewer(ui.get_main_frame_or_none())
         tv.Show()
         tv.load_db_table(output_table)
@@ -653,7 +653,7 @@ class NormalizationUI(wx.Frame, CPATool):
             self.table_choice.SetStringSelection(settings['table'])
             self.update_measurement_choices()
         if 'columns' in settings:
-            cols = map(str.strip, settings['columns'].split(','))
+            cols = list(map(str.strip, settings['columns'].split(',')))
             self.col_choices.SetCheckedStrings(cols)
         if 'steps' in settings:
             steps = eval(settings['steps'])

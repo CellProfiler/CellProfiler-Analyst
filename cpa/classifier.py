@@ -1,6 +1,6 @@
 # Encoding: utf-8
-from __future__ import with_statement
-from __future__ import print_function
+
+
 
 import matplotlib
 matplotlib.use('WXAgg')
@@ -9,33 +9,33 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-import tableviewer
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import tilecollection
-from trainingset import TrainingSet
-from cStringIO import StringIO
+from . import tableviewer
+from .datamodel import DataModel
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from .scoredialog import ScoreDialog
+from . import tilecollection
+from .trainingset import TrainingSet
+from io import StringIO
 from time import time
-import icons
-import dbconnect
-import dirichletintegrate
-import imagetools
-import polyafit
-import sortbin
+from . import icons
+from . import dbconnect
+from . import dirichletintegrate
+from . import imagetools
+from . import polyafit
+from . import sortbin
 import logging
 import numpy as np
 import os
 import wx
 import re
 import cpa.helpmenu
-from dimensredux import PlotMain
+from .dimensredux import PlotMain
 
-import fastgentleboostingmulticlass
-from fastgentleboosting import FastGentleBoosting
+from . import fastgentleboostingmulticlass
+from .fastgentleboosting import FastGentleBoosting
 
-from generalclassifier import GeneralClassifier
+from .generalclassifier import GeneralClassifier
 
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
@@ -198,19 +198,19 @@ class Classifier(wx.Frame):
         # fetch panel
         self.fetchSizer.AddStretchSpacer()
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.nObjectsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((10, 20))
+        self.fetchSizer.AddSpacer(10)
         self.fetchSizer.Add(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddStretchSpacer()
         self.fetch_panel.SetSizerAndFit(self.fetchSizer)
@@ -222,27 +222,27 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.panelTxt = wx.StaticText(self.find_rules_panel, -1, 'display')
         self.find_rules_sizer.Add(self.panelTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.panelTxt2 = wx.StaticText(self.find_rules_panel, -1, '')
         self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.panelTxt2, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         # Cross Validation Button
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluate')
         self.evaluationBtn.Disable()
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.evaluationBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         # Plot nice graphics Button
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.scoreAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.scoreImageBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddStretchSpacer()
         # JEN - Start Add
@@ -487,13 +487,13 @@ class Classifier(wx.Frame):
 
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
                     item.Check()
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == 'none':
                     item.Check()
             self.chMap[chIdx] = 'None'
@@ -502,23 +502,23 @@ class Classifier(wx.Frame):
     def CreateMenus(self):
         ''' Create file menu and menu items '''
         self.fileMenu = wx.Menu()
-        self.loadTSMenuItem = self.fileMenu.Append(-1, text='Load Training Set\tCtrl+O',
-                                                   help='Loads objects and classes specified in a training set file.')
-        self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save Training Set\tCtrl+S',
-                                                   help='Save your training set to file so you can reload these classified cells again.')
+        self.loadTSMenuItem = self.fileMenu.Append(-1, item='Load Training Set\tCtrl+O',
+                                                   helpString='Loads objects and classes specified in a training set file.')
+        self.saveTSMenuItem = self.fileMenu.Append(-1, item='Save Training Set\tCtrl+S',
+                                                   helpString='Save your training set to file so you can reload these classified cells again.')
         self.fileMenu.AppendSeparator()
         # JEN - Start Add
-        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load Classifier Model', help='Loads a classifier model specified in a text file')
-        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save Classifier Model', help='Save your classifier model to file so you can use it again on this or other experiments.')
+        self.loadModelMenuItem = self.fileMenu.Append(-1, item='Load Classifier Model', helpString='Loads a classifier model specified in a text file')
+        self.saveModelMenuItem = self.fileMenu.Append(-1, item='Save Classifier Model', helpString='Save your classifier model to file so you can use it again on this or other experiments.')
         self.fileMenu.AppendSeparator()
         # JEN - End Add
-        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Exit classifier')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
         # View Menu
         viewMenu = wx.Menu()
-        imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I',
-                                                help='Launches a control panel for adjusting image brightness, size, etc.')
+        imageControlsMenuItem = viewMenu.Append(-1, item='Image Controls\tCtrl+Shift+I',
+                                                helpString='Launches a control panel for adjusting image brightness, size, etc.')
         self.GetMenuBar().Append(viewMenu, 'View')
 
         # Rules menu
@@ -544,14 +544,14 @@ class Classifier(wx.Frame):
             'FastGentleBoosting' : 8
         }
 
-        rfMenuItem = self.classifierMenu.AppendRadioItem(1, text='RandomForest Classifier', help='Uses RandomForest to classify')
-        adaMenuItem = self.classifierMenu.AppendRadioItem(2, text='AdaBoost Classifier', help='Uses AdaBoost to classify.')
-        svcMenuItem = self.classifierMenu.AppendRadioItem(3, text='SVC', help='Uses Support Vector Machines to classify.')
-        gbMenuItem = self.classifierMenu.AppendRadioItem(4, text='GradientBoosting Classifier', help='Uses GradientBoosting to classify')
-        lgMenuItem = self.classifierMenu.AppendRadioItem(5, text='LogisticRegression', help='Uses LogisticRegression to classify.')
-        ldaMenuItem = self.classifierMenu.AppendRadioItem(6, text='LDA', help='Uses LDA to classify.')
-        knnMenuItem = self.classifierMenu.AppendRadioItem(7, text='KNeighbors Classifier', help='Uses the kNN algorithm to classify.')
-        fgbMenuItem = self.classifierMenu.AppendRadioItem(8, text='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
+        rfMenuItem = self.classifierMenu.AppendRadioItem(1, item='RandomForest Classifier', help='Uses RandomForest to classify')
+        adaMenuItem = self.classifierMenu.AppendRadioItem(2, item='AdaBoost Classifier', help='Uses AdaBoost to classify.')
+        svcMenuItem = self.classifierMenu.AppendRadioItem(3, item='SVC', help='Uses Support Vector Machines to classify.')
+        gbMenuItem = self.classifierMenu.AppendRadioItem(4, item='GradientBoosting Classifier', help='Uses GradientBoosting to classify')
+        lgMenuItem = self.classifierMenu.AppendRadioItem(5, item='LogisticRegression', help='Uses LogisticRegression to classify.')
+        ldaMenuItem = self.classifierMenu.AppendRadioItem(6, item='LDA', help='Uses LDA to classify.')
+        knnMenuItem = self.classifierMenu.AppendRadioItem(7, item='KNeighbors Classifier', help='Uses the kNN algorithm to classify.')
+        fgbMenuItem = self.classifierMenu.AppendRadioItem(8, item='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
 
         self.GetMenuBar().Append(self.classifierMenu, 'Classifier')
 
@@ -559,8 +559,8 @@ class Classifier(wx.Frame):
         self.evalMenu = wx.Menu()
 
         # Plotting options
-        confusionMenuItem = self.evalMenu.AppendRadioItem(-1, text=u'Confusion Matrix', help='Visualizes the Normalized Confusion Matrix')
-        reportMenuItem = self.evalMenu.AppendRadioItem(-1, text=u'Classification Report', help='Visualization of Accuracy, Recall and F1 Scores')
+        confusionMenuItem = self.evalMenu.AppendRadioItem(-1, item='Confusion Matrix', help='Visualizes the Normalized Confusion Matrix')
+        reportMenuItem = self.evalMenu.AppendRadioItem(-1, item='Classification Report', help='Visualization of Accuracy, Recall and F1 Scores')
         #paramsEditMenuItem = self.evalMenu.AppendRadioItem(2, text=u'ROC Curve', help='Plots a One vs all ROC Curve and calculates the area under the curve')
         #featureSelectMenuItem = self.evalMenu.AppendRadioItem(3, text=u'Precision Recall Curve', help='Plots a One vs all Precision Recall Curve')
         #learningMenuItem = self.evalMenu.AppendRadioItem(4, text=u'Learning Curve', help='Plots a One vs all Learning Curve')
@@ -570,10 +570,10 @@ class Classifier(wx.Frame):
 
         # Advanced menu
         advancedMenu = wx.Menu()
-        rulesEditMenuItem = advancedMenu.Append(-1, text=u'Edit Rules...', help='Lets you edit the rules')
-        paramsEditMenuItem = advancedMenu.Append(-1, text=u'Edit Parameters...', help='Lets you edit the hyperparameters')
-        featureSelectMenuItem = advancedMenu.Append(-1, text=u'Check Features', help='Check the variance of your Training Data')
-        saveMenuItem = advancedMenu.Append(-1, text=u'Save Thumbnails as PNG', help='Save TrainingSet thumbnails as PNG')
+        rulesEditMenuItem = advancedMenu.Append(-1, item='Edit Rules...', helpString='Lets you edit the rules')
+        paramsEditMenuItem = advancedMenu.Append(-1, item='Edit Parameters...', helpString='Lets you edit the hyperparameters')
+        featureSelectMenuItem = advancedMenu.Append(-1, item='Check Features', helpString='Check the variance of your Training Data')
+        saveMenuItem = advancedMenu.Append(-1, item='Save Thumbnails as PNG', helpString='Save TrainingSet thumbnails as PNG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -607,7 +607,7 @@ class Classifier(wx.Frame):
 
         # Clean up existing channel menus
         try:
-            menus = set([items[2].Menu for items in self.chMapById.values()])
+            menus = set([items[2].Menu for items in list(self.chMapById.values())])
             for menu in menus:
                 for i, mbmenu in enumerate(self.MenuBar.Menus):
                     if mbmenu[0] == menu:
@@ -644,7 +644,7 @@ class Classifier(wx.Frame):
                 channel_names += ['%s [%s]' % (name, x + 1) for x in range(chans)]
 
         # Zip channel names with channel map
-        zippedChNamesChMap = zip(channel_names, self.chMap)
+        zippedChNamesChMap = list(zip(channel_names, self.chMap))
 
         # Loop over all the image names in the properties file
         for i, chans in enumerate(p.image_names):
@@ -700,11 +700,11 @@ class Classifier(wx.Frame):
     def OnFetchImage(self, evt=None):
 
         # Set every channel to black and set all the toggle options to 'none'
-        for ids in self.chMapById.keys():
+        for ids in list(self.chMapById.keys()):
             (chIndex, color, item, channel_menu) = self.chMapById[ids]
             if (color.lower() == 'none'):
                 item.Check()
-        for ids in self.imMapById.keys():
+        for ids in list(self.imMapById.keys()):
             (cpi, itm, si, channelIds) = self.imMapById[ids]
             if cpi == 3:
                 self.chMap[si] = 'none'
@@ -718,7 +718,7 @@ class Classifier(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in self.imMapById.keys():
+        if evt.GetId() in list(self.imMapById.keys()):
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -817,7 +817,7 @@ class Classifier(wx.Frame):
             dlg.Destroy()
             updatedList = self.obClassChoice.GetItems()
             sel = self.obClassChoice.GetSelection()
-            for i in xrange(len(updatedList)):
+            for i in range(len(updatedList)):
                 if updatedList[i] == label:
                     updatedList[i] = newLabel
             self.obClassChoice.SetItems(updatedList)
@@ -1170,7 +1170,7 @@ class Classifier(wx.Frame):
 
             num_objs = 0
             for bin in self.classBins:
-                if bin.label in keysPerBin.keys():
+                if bin.label in list(keysPerBin.keys()):
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])
 
@@ -1199,7 +1199,7 @@ class Classifier(wx.Frame):
 
             num_objs = 0
             for bin in self.classBins:
-                if bin.label in keysPerBin.keys():
+                if bin.label in list(keysPerBin.keys()):
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
                     num_objs += len(keysPerBin[bin.label])
 
@@ -1321,7 +1321,7 @@ class Classifier(wx.Frame):
     #     plot_title = 'Learning Curves ({})'.format(model.name)
     #     self.PlotLearningCurve(clf, plot_title, X_train, y_train, cv=5)
 
-    from utils import delay
+    from .utils import delay
     # Add AutoSave by DD
     @delay(360.0) # every 5 min
     def AutoSave(self):
@@ -1486,7 +1486,7 @@ class Classifier(wx.Frame):
         # Get object coordinates in image and display
         classCoords = {}
         training_obKeys = self.trainingSet.get_object_keys()
-        for className, obKeys in classHits.items():
+        for className, obKeys in list(classHits.items()):
             classCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
             classCoords[className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
         # Show the image
@@ -1505,7 +1505,7 @@ class Classifier(wx.Frame):
         # CONSTRUCT ARRAY OF TABLE DATA
         classCounts = []
         tableData = []
-        for className, obKeys in classHits.items():
+        for className, obKeys in list(classHits.items()):
             classCounts.append(len(classCoords[className]))
         tableData += imKey
         tableData += [sum(classCounts)]
@@ -1639,7 +1639,7 @@ class Classifier(wx.Frame):
                 key = tuple(row[:nKeyCols])
                 imData[key] = np.array([float(v) for v in row[nKeyCols:]])
             groupedKeysAndCounts = np.array([list(k) + vals.tolist() for k, vals
-                                             in dm.SumToGroup(imData, group).items()], dtype=object)
+                                             in list(dm.SumToGroup(imData, group).items())], dtype=object)
             nKeyCols = len(dm.GetGroupColumnNames(group))
         else:
             groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
@@ -1749,23 +1749,23 @@ class Classifier(wx.Frame):
         # record the column indices for the keys
 
         labels += ['Total\n %s Count' % (p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
+        for i in range(nClasses):
             labels += ['%s\n %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         if p.area_scoring_column is not None:
             labels += ['Total\n %s Area' % (p.object_name[0].capitalize())]
-            for i in xrange(nClasses):
+            for i in range(nClasses):
                 labels += ['%s\n %s Area' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         if wants_enrichments:
-            for i in xrange(nClasses):
+            for i in range(nClasses):
                 labels += ['p(Enriched)\n' + self.classBins[i].label]
             if nClasses==2:
                 labels += ['Enriched Score\n' + self.classBins[0].label]
             else:
-                for i in xrange(nClasses):
+                for i in range(nClasses):
                     labels += ['Enriched Score\n' + self.classBins[i].label]
         #Training cell count
         labels += ['Training Total\n %s Count' % (p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
+        for i in range(nClasses):
             labels += ['Training %s\n %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         return labels
 
@@ -1803,10 +1803,10 @@ class Classifier(wx.Frame):
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             tables = []
             for t in [p.image_table, p.object_table, p.class_table]:
-                if isinstance(t, basestring):
+                if isinstance(t, str):
                     tables.append(t)
             cff = ColumnFilterDialog(self, tables=tables, size=(600,150))
             if cff.ShowModal() == wx.OK:
@@ -1846,7 +1846,7 @@ class Classifier(wx.Frame):
             validVals = list(set([col[i] for col in validKeys]))
             validVals.sort()
             validVals = [str(col) for col in validVals]
-            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == long:
+            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == int:
                 fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80, -1))
                 fieldInp.SetSelection(-1,-1) # Fix #203, textCtrl has different API since wx3
             else:
@@ -2310,7 +2310,7 @@ class StopCalculating(Exception):
 if __name__ == "__main__":
     import sys
     import logging
-    from errors import show_exception_as_dialog
+    from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )
 

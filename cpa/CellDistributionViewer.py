@@ -1,9 +1,9 @@
-from __future__ import print_function
-from colorbarpanel import ColorBarPanel
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from platemappanel import *
-import imagetools
-from properties import Properties
+
+from .colorbarpanel import ColorBarPanel
+from .dbconnect import DBConnect, UniqueImageClause, image_key_columns
+from .platemappanel import *
+from . import imagetools
+from .properties import Properties
 import numpy as np
 import os
 import re

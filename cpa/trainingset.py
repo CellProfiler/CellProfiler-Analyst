@@ -1,16 +1,16 @@
-from __future__ import print_function
+
 from sys import stderr
 import logging
 import numpy
-import cPickle
+import pickle
 import base64
 import zlib
 import wx
 import collections
 
 import pandas as pd
-from dbconnect import *
-from singleton import Singleton
+from .dbconnect import *
+from .singleton import Singleton
 
 db = DBConnect.getInstance()
 
@@ -77,7 +77,7 @@ class TrainingSet:
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             self.label_matrix += ([cl_label] * len(keyList))
 
-            self.entries += zip([label] * len(keyList), keyList)
+            self.entries += list(zip([label] * len(keyList), keyList))
 
             if labels_only:
                 self.values += []
@@ -118,7 +118,7 @@ class TrainingSet:
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
                     for labelname in l.strip().split(' ')[1:]:
-                        if labelname not in labelDict.keys():
+                        if labelname not in list(labelDict.keys()):
                             labelDict[labelname] = []
                     continue
                 
@@ -132,7 +132,7 @@ class TrainingSet:
             
         # validate positions and renumber if necessary
         self.Renumber(labelDict)
-        self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
+        self.Create(list(labelDict.keys()), list(labelDict.values()), labels_only=labels_only)
         
         f.close()
         
@@ -146,24 +146,24 @@ class TrainingSet:
         for label in labels:
             keys = df[key_names][df['Class'] == label].values # Get the keys
             if len(key_names) == 2:
-                keys = map(lambda x: tuple((x[0],x[1])), keys) # convert them into tuples
+                keys = [tuple((x[0],x[1])) for x in keys] # convert them into tuples
                 labelDict[label] = keys
             else:
                 assert(len(key_names) == 3)
-                keys = map(lambda x: tuple((x[0],x[1],x[2])), keys)
+                keys = [tuple((x[0],x[1],x[2])) for x in keys]
                 labelDict[label] = keys
             
         # validate positions and renumber if necessary
         self.Renumber(labelDict)
-        self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
+        self.Create(list(labelDict.keys()), list(labelDict.values()), labels_only=labels_only)
         
     def Renumber(self, label_dict):
-        from properties import Properties
+        from .properties import Properties
         obkey_length = 3 if Properties.getInstance().table_id else 2
         
         have_asked = False
         progress = None
-        for label in label_dict.keys():
+        for label in list(label_dict.keys()):
             for idx, key in enumerate(label_dict[label]):
                 if len(key) > obkey_length:
                     obkey = key[:obkey_length]
@@ -181,7 +181,7 @@ class TrainingSet:
                                 label_dict.clear()
                                 return
                         if progress is None:
-                            total = sum([len(v) for v in label_dict.values()])
+                            total = sum([len(v) for v in list(label_dict.values())])
                             done = 0
                             progress = wx.ProgressDialog("Remapping", "0%", maximum=total, style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
                         label_dict[label][idx] = db.GetObjectNear(obkey[:-1], x, y, silent=True)
@@ -192,7 +192,7 @@ class TrainingSet:
                             return
                         
         have_asked = False
-        for label in label_dict.keys():
+        for label in list(label_dict.keys()):
             if None in label_dict[label]:
                 if not have_asked:
                     dlg = wx.MessageDialog(None, 'Some cells from the training set could not be remapped to cells in the database, indicating that the corresponding images are empty.  Continue anyway?',
@@ -215,7 +215,7 @@ class TrainingSet:
 
         f = open(filename, 'w')
         try:
-            from properties import Properties
+            from .properties import Properties
             p = Properties.getInstance()
             f.write('# Training set created while using properties: %s\n'%(p._filename))
             f.write('label '+' '.join(self.labels)+'\n')
@@ -246,7 +246,7 @@ class TrainingSet:
             df = pd.DataFrame([]) # empty
 
         try:
-            from properties import Properties
+            from .properties import Properties
             # getting feature values
 
             # getting object key
@@ -254,11 +254,11 @@ class TrainingSet:
             key_labels = self.key_labels
             # Differentiate between ids
             if len(key_labels) == 2:
-                keyList = map(lambda x : [x[0],x[1]], tuples)
+                keyList = [[x[0],x[1]] for x in tuples]
                 df_keys = pd.DataFrame(keyList, columns=key_labels)
             else:
                 #assert(len(tuples) == 3) # It has to be 3!
-                keyList = map(lambda x : [x[0],x[1],x[2]], tuples)
+                keyList = [[x[0],x[1],x[2]] for x in tuples]
                 df_keys = pd.DataFrame(keyList, columns=key_labels)
 
 
@@ -297,14 +297,14 @@ class CellCache(Singleton):
     def load_from_string(self, str):
         'load data from a string, verifying that the table has not changed since it was created (encoded in string)'
         try:
-            date, colnames, oldcache = cPickle.loads(zlib.decompress(base64.b64decode(str)))
+            date, colnames, oldcache = pickle.loads(zlib.decompress(base64.b64decode(str)))
         except:
             # silent failure
             return
         # Strings started sneaking into some caches when we started classifying entire images.
         # Detect this case and force an update to flush them.
         if len(oldcache) > 0:
-            if oldcache.values()[0].dtype.kind == 'S':
+            if list(oldcache.values())[0].dtype.kind == 'S':
                 return
         # verify the database hasn't been changed
         if db.verify_objects_modify_date_earlier(date):
@@ -318,7 +318,7 @@ class CellCache(Singleton):
             if k in self.data:
                 temp[k] = self.data[k]
         output = (db.get_objects_modify_date(), self.colnames, temp)
-        return base64.b64encode(zlib.compress(cPickle.dumps(output)))
+        return base64.b64encode(zlib.compress(pickle.dumps(output)))
 
     def get_object_data(self, key):
         if key not in self.data:
@@ -333,7 +333,7 @@ class CellCache(Singleton):
 
 if __name__ == "__main__":
     from sys import argv
-    from properties import Properties
+    from .properties import Properties
     p = Properties.getInstance()
     p.LoadFile(argv[1])
     tr = TrainingSet(p)

@@ -1,6 +1,6 @@
 import wx
-import imagetools
-from properties import Properties
+from . import imagetools
+from .properties import Properties
 
 p = Properties.getInstance()
 

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import tempfile
 import numpy as np
 import unittest
@@ -17,7 +17,7 @@ def test_invert_dict():
     inv = cache.invert_dict(d)
     assert inv[1] == ['a', 'c']
     assert inv[2] == ['b']
-    assert len(inv.keys()) == 2
+    assert len(list(inv.keys())) == 2
 
 
 class DummyNormalizationTestCase(unittest.TestCase):
@@ -122,7 +122,7 @@ class RobustLinearNormalizationTestCase(unittest.TestCase):
                     db.execute.assert_called_once_with("select distinct PlateName, TableNumber, ImageNumber from ImageTable where predicate")
                     self.assertEqual(controls['p1'], [(1, 42), (3, 14)])
                     self.assertEqual(controls['p2'], [(0, 11)])
-                    self.assertEqual(len(controls.keys()), 2)
+                    self.assertEqual(len(list(controls.keys())), 2)
 
     def test_create_cache_colmask(self):
         percentiles_file1 = tempfile.NamedTemporaryFile(suffix='.npy')
@@ -179,7 +179,7 @@ class RobustLinearNormalizationTestCase(unittest.TestCase):
         controls = {'p1': [(1, 42), (3, 14)],
                     'p2': [(0, 11)],
                     'p3': [(23, 42)]}
-        progress = Mock(return_value=controls.items())
+        progress = Mock(return_value=list(controls.items()))
         make_progress_bar.return_value = progress
         self.n._get_controls = Mock(return_value=controls)
         self.n._percentiles_filename = lambda p: 'foo/%s.npy' % p
@@ -188,7 +188,7 @@ class RobustLinearNormalizationTestCase(unittest.TestCase):
         check_directory.assert_called_once_with('foo', False)
         self.assertEqual(self.n._create_cache_percentiles_1.call_args_list,
                          [call(plate, image_keys, 'foo/%s.npy' % plate) 
-                          for plate, image_keys in controls.items()])
+                          for plate, image_keys in list(controls.items())])
 
 
 def test_normalizations():
@@ -273,14 +273,14 @@ class CacheTestCase(unittest.TestCase):
     def test_create_cache_features(self, plate_map, make_progress_bar):
         cache_dir = tempfile.mkdtemp()
         c = cache.Cache(cache_dir)
-        plate_map.__get__ = Mock(return_value={(0L, 42L): 'p1', (1L, 23L): 'p2'})
+        plate_map.__get__ = Mock(return_value={(0, 42): 'p1', (1, 23): 'p2'})
         make_progress_bar.return_value = lambda x: x
         c._create_cache_image = Mock()
         c._create_cache_features(False)
         calls = c._create_cache_image.call_args_list
         assert len(calls) == 2
-        assert call('p1', (0L, 42L), False) in calls
-        assert call('p2', (1L, 23L), False) in calls
+        assert call('p1', (0, 42), False) in calls
+        assert call('p2', (1, 23), False) in calls
 
     # TODO: test_create_image
 

@@ -1,14 +1,14 @@
-from datamodel import *
-import dbconnect
-from properties import Properties
-import imagetools
+from .datamodel import *
+from . import dbconnect
+from .properties import Properties
+from . import imagetools
 import wx
 import numpy as np
 import matplotlib.cm
 import PIL.Image as Image
 from base64 import b64decode
-from guiutils import BitmapPopup
-from StringIO import StringIO
+from .guiutils import BitmapPopup
+from io import StringIO
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -65,7 +65,7 @@ class PlateMapPanel(wx.Panel):
         self.SetData(data, shape, data_range=data_range)
         
         self.well_keys = np.ones(np.prod(self.data.shape), dtype=np.object)
-        for i in xrange(len(self.well_keys)):
+        for i in range(len(self.well_keys)):
             self.well_keys[i] = ('Unknown Plate','Unknown Well')
         self.well_keys = self.well_keys.reshape(self.data.shape)
         for key in well_keys:
@@ -353,7 +353,7 @@ class PlateMapPanel(wx.Panel):
                     elif self.well_disp == THUMBNAIL:
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
-                        if imgs.has_key(well):
+                        if well in imgs:
                             size = imgs[well][0].shape
                             scale = r*2./max(size)
                             bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
@@ -362,7 +362,7 @@ class PlateMapPanel(wx.Panel):
                         p.image_buffer_size = p.plate_shape[0] * p.plate_shape[1]
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
-                        if imgs.has_key(well):
+                        if well in imgs:
                             ims = imagetools.FetchImage(imgs[well])
                             size = ims[0].shape
                             scale = r*2./max(size)
@@ -490,7 +490,7 @@ class PlateMapPanel(wx.Panel):
         
         n_channels = len(imsets[0])
         composite = []
-        for i in xrange(n_channels):
+        for i in range(n_channels):
             # composite each channel separately
             composite += [imagetools.tile_images([imset[i] for imset in imsets])]
         bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)

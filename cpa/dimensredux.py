@@ -24,14 +24,14 @@ from operator import itemgetter
 import numpy as np
 import wx
 import wx.aui
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 from matplotlib import cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
-from imagetools import ShowImage
-from dbconnect import DBConnect
-from properties import Properties
+from .imagetools import ShowImage
+from .dbconnect import DBConnect
+from .properties import Properties
 
 SVD = 'SVD: Singular Value Decomposition'
 TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
@@ -107,7 +107,7 @@ class PlotPanel(wx.Panel):
         '''
         self.colormap = cm.get_cmap('hsv')
         num_colors = len(class_array)
-        class_value = np.array(xrange(1, (num_colors + 2)), dtype='float') / num_colors
+        class_value = np.array(list(range(1, (num_colors + 2))), dtype='float') / num_colors
         color_set = np.array(self.colormap(class_value))
         return color_set
 
@@ -200,9 +200,9 @@ class PlotPanel(wx.Panel):
             nOpacity = len(opacities)
             
             # For each class and opacity combination plot the corresponding objects
-            for i in xrange(len(self.class_names)):
+            for i in range(len(self.class_names)):
                 cell_count = np.shape(np.nonzero(self.maskedPCA1[:, i]))
-                for j in xrange(nOpacity):
+                for j in range(nOpacity):
                     showObjects = np.where(self.object_opacity == opacities[j])
                     subHandle = self.subplot.scatter(self.maskedPCA1[showObjects[0], i], self.maskedPCA2[showObjects[0], i], 8, c=self.color_set[i, :], linewidth="0.25", alpha=0.25+0.75*opacities[j])
 
@@ -226,14 +226,14 @@ class PlotPanel(wx.Panel):
         elif self.plot_scores == "Loadings":
             # Plot the first two PCAs' Loadings in the Loading canvas
             weaklearners_mask = np.zeros((np.shape(self.Loadings[0])))
-            for key in self.features_dic.keys():
+            for key in list(self.features_dic.keys()):
                 for value in self.classifier_rules:
                     if value[0] == self.features_dic[key]:
                         weaklearners_mask[key] += 1
             scatter_mask = weaklearners_mask + 1
             colors_mask = []
             size_mask = []
-            for i in xrange(len(scatter_mask)):
+            for i in range(len(scatter_mask)):
                 colors_mask.append(COLORS[int(scatter_mask[i])])
                 size_mask.append((int(scatter_mask[i]) ** 2) * 5)
 
@@ -261,7 +261,7 @@ class PlotPanel(wx.Panel):
         except:
             logging.warning('''Could not use fast t-SNE. You may need to install the Intel Integrated Performance Libraries. Will use normal t-SNE instead.''')
             try:
-                from tsne import tsne
+                from .tsne import tsne
                 U = tsne(standardized, 2, 50, 20.0)
             except:
                 logging.error('''Both t-SNE versions failed. Your dataset may be too large for t-SNE to handle. Will not plot t-SNE results.''')
@@ -287,9 +287,9 @@ class PlotPanel(wx.Panel):
         nOpacity = len(opacities)
             
         # For each class and opacity combination plot the corresponding objects
-        for i in xrange(len(self.class_names)):
+        for i in range(len(self.class_names)):
             cell_count = np.shape(np.nonzero(self.masked_X[:, i]))
-            for j in xrange(nOpacity):
+            for j in range(nOpacity):
                 showObjects = np.where(self.object_opacity == opacities[j])
                 subHandle = self.subplot.scatter(self.masked_X[showObjects, i], self.masked_Y[showObjects, i], 8, c=self.color_set[i, :], linewidth="0.25", alpha=0.25+0.75*opacities[j])
                 # The highest opacity objects are added to the legend
@@ -329,7 +329,7 @@ class PlotPanel(wx.Panel):
         row, col = np.shape(raw_data) 
         centered_data = raw_data
         mean_data = raw_data.mean(axis=0)
-        for i in xrange(row):
+        for i in range(row):
             centered_data[i] -= mean_data
         centered_data = centered_data[:,np.var(centered_data, axis=0) != 0]
         
@@ -355,7 +355,7 @@ class PlotPanel(wx.Panel):
         explained_variance = np.zeros((PCs)) 
         total_explained_variance = 0 
         init_total_error = np.sum(np.square(E))
-        for k in xrange(PCs):
+        for k in range(PCs):
             T = (U[:, k].reshape(row, 1)) * S[k]
             V_t = np.transpose(V)
             P = V_t[:, k].reshape(col, 1)
@@ -411,7 +411,7 @@ class PlotPanel(wx.Panel):
         col = num_classes
         masked_data_X = np.zeros((row, col))
         masked_data_Y = np.zeros((row, col))
-        for i in xrange(num_classes):
+        for i in range(num_classes):
             masked_data_X[:, i] = Scores[:, 0] * class_masks[:, i]
             masked_data_Y[:, i] = Scores[:, 1] * class_masks[:, i]
 
@@ -568,7 +568,7 @@ class PlotMain(wx.Frame):
         '''
         self.filter_col_names(p.object_table)
          
-        all_keys = map(db.GetObjectsFromImage, db.GetAllImageKeys())
+        all_keys = list(map(db.GetObjectsFromImage, db.GetAllImageKeys()))
 
         obj_counts = db.GetPerImageObjectCounts()
         total_obj_count = sum(k[1] for k in obj_counts) 

@@ -6,22 +6,23 @@
 # when user requests images.
 #
 
-from __future__ import print_function
+
 import csv
 import os
 import re
 import logging
-from UserDict import DictMixin
+# from UserDict import DictMixin
+from collections import MutableMapping
 
 import numpy as np
 
 import wx
 import wx.grid as  gridlib
 import cpa.helpmenu
-from properties import Properties
-import dbconnect
-from datamodel import DataModel
-import imagetools
+from .properties import Properties
+from . import dbconnect
+from .datamodel import DataModel
+from . import imagetools
 
 p = Properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
@@ -30,7 +31,7 @@ ABC = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 ABC += [x+y for x in ABC for y in ABC] + [x+y+z for x in ABC for y in ABC for z in ABC]
 ROW_LABEL_SIZE = 30
 
-class odict(DictMixin):
+class odict(MutableMapping):
     ''' Ordered dictionary '''
     def __init__(self):
         self._keys = []
@@ -520,12 +521,12 @@ class DBTable(TableData):
             self.cache.update((lo+i, v) for i,v in enumerate(vals))
             # if cache exceeds 1000 entries, clip to last 500
             if len(self.cache) > 5000:
-                for key in self.cache.keys()[:-500]:
+                for key in list(self.cache.keys())[:-500]:
                     del self.cache[key]
         return self.cache[row][col]
 
     def SetValue(self, row, col, value):
-        print('SetValue(%d, %d, "%s") ignored.\n' % (row, col, value))
+        print(('SetValue(%d, %d, "%s") ignored.\n' % (row, col, value)))
         
     def GetColValues(self, col):
         colname = self.col_labels[self.shown_columns][col]
@@ -646,7 +647,7 @@ class TableViewer(wx.Frame):
             block = np.empty((n, m))
             for k, j in enumerate(self.selected_cols):
                 block[:,k] = self.grid.Table.GetColValues(j)
-                self.SetStatusText(u"Sum: %f — Mean: %f — Std: %f" %
+                self.SetStatusText("Sum: %f — Mean: %f — Std: %f" %
                                                (block.sum(), block.mean(), block.std()))
         except:
             self.SetStatusText("Cannot summarize columns.")
@@ -666,7 +667,7 @@ class TableViewer(wx.Frame):
         self.set_fixed_col_widths()
     def set_fixed_col_widths(self):
         self.Disconnect(-1, -1, wx.wxEVT_SIZE)
-        print('default ', gridlib.GRID_DEFAULT_COL_WIDTH)
+        print(('default ', gridlib.GRID_DEFAULT_COL_WIDTH))
         self.grid.SetDefaultColSize(gridlib.GRID_DEFAULT_COL_WIDTH, True)
         self.Refresh()
 
@@ -774,7 +775,7 @@ class TableViewer(wx.Frame):
         self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
         
     def on_load_db_table(self, evt=None):
-        from guiutils import TableSelectionDialog
+        from .guiutils import TableSelectionDialog
         dlg = TableSelectionDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
             table_name = dlg.GetStringSelection()
@@ -831,7 +832,7 @@ class TableViewer(wx.Frame):
         # read data
         r = csv.reader(open(filename))
         if has_header_row:
-            labels = r.next()
+            labels = next(r)
         else:
             labels = None
         data = []
@@ -1065,7 +1066,7 @@ def show_loaddata_table(gate_names, as_columns=True):
         return None
     grid = TableViewer(None, title="Gated Data")
     grid.table_from_array(np.array(data, dtype='object'), columns, grouping='image', 
-                          key_indices=range(len(dbconnect.image_key_columns())))
+                          key_indices=list(range(len(dbconnect.image_key_columns()))))
     grid.Show()
     return grid
 

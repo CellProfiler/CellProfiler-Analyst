@@ -4,7 +4,7 @@
 Classifier 
 
 '''
-from __future__ import print_function
+
 
 import sys
 import numpy as np
@@ -60,7 +60,7 @@ class KNearestNeighborClassifier(Classifier):
       dist.sort()
       dist = dist[0:min(self.K, len(dist))]
       keys = np.unique(np.array(dist)[:,1])      
-      scores = dict(zip(keys, np.zeros(self.K,dtype=np.int)))
+      scores = dict(list(zip(keys, np.zeros(self.K,dtype=np.int))))
       
       for v in dist:
          scores[v[1]] += v[0]*v[0]

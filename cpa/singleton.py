@@ -58,16 +58,14 @@ class SingletonException(Exception):
 
 class MetaSingleton(type):
     def __new__(metaclass, strName, tupBases, dict):
-        if dict.has_key('__new__'):
+        if '__new__' in dict:
             raise SingletonException('Can not override __new__ in a Singleton')
         return super(MetaSingleton,metaclass).__new__(metaclass, strName, tupBases, dict)
         
     def __call__(cls, *lstArgs, **dictArgs):
         raise SingletonException('Singletons may only be instantiated through getInstance()')
         
-class Singleton(object):
-    __metaclass__ = MetaSingleton
-    
+class Singleton(object, metaclass=MetaSingleton):
     def getInstance(cls, *lstArgs):
         """
         Call this to instantiate an instance or retrieve the existing instance.
@@ -94,7 +92,7 @@ class Singleton(object):
     _isInstantiated = classmethod(_isInstantiated)  
 
     def _getConstructionArgCountNotCountingSelf(cls):
-        return cls.__init__.im_func.func_code.co_argcount - 1
+        return cls.__init__.__code__.co_argcount - 1
     _getConstructionArgCountNotCountingSelf = classmethod(_getConstructionArgCountNotCountingSelf)
 
     def _forgetClassInstanceReferenceForTesting(cls):
@@ -133,7 +131,7 @@ if __name__ == '__main__':
                     
             a1 = A.getInstance()
             a2 = A.getInstance()
-            self.assertEquals(id(a1), id(a2))
+            self.assertEqual(id(a1), id(a2))
             
         def testInstantiateWithMultiArgConstructor(self):
             """
@@ -150,9 +148,9 @@ if __name__ == '__main__':
 
             b1 = B.getInstance('arg1 value', 'arg2 value')
             b2 = B.getInstance()
-            self.assertEquals(b1.arg1, 'arg1 value')
-            self.assertEquals(b1.arg2, 'arg2 value')
-            self.assertEquals(id(b1), id(b2))
+            self.assertEqual(b1.arg1, 'arg1 value')
+            self.assertEqual(b1.arg2, 'arg2 value')
+            self.assertEqual(id(b1), id(b2))
             
             
         def testTryToInstantiateWithoutNeededArgs(self):

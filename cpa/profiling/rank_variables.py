@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import re
 import sys
 from optparse import OptionParser
@@ -8,7 +8,7 @@ from cpa.util import replace_atomically
 from .profiles import Profiles
 
 def rank_variables(profiles):
-    keys = profiles.keys()
+    keys = list(profiles.keys())
     nclasses = len(keys)
     result = {}
     for i in range(nclasses):
@@ -24,7 +24,7 @@ def rank_variables(profiles):
     return result
 
 def rank_variables_all_pairs(profiles):
-    keys = profiles.keys()
+    keys = list(profiles.keys())
     nclasses = len(keys)
     result = {}
     for i in range(nclasses):

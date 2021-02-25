@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 
 def show_exception_as_dialog(type, value, tb):
@@ -7,7 +7,7 @@ def show_exception_as_dialog(type, value, tb):
     import wx
 
     if tb:
-        print(traceback.format_tb(tb))
+        print((traceback.format_tb(tb)))
 
     if isinstance(value, ClearException):
         wx.MessageBox(value.message, value.heading, wx.OK | wx.ICON_ERROR)

@@ -2,7 +2,7 @@
 Determine a number of factors using the Kaiser rule.
 See http://yatani.jp/HCIstats/FA
 """
-from __future__ import print_function
+
 
 from optparse import OptionParser
 import numpy as np

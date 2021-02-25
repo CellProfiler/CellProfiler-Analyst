@@ -20,13 +20,13 @@ class FactorAnalysisPreprocessorTestCase(TestCase):
     @patch.object(factor_analysis.FactorAnalysisPreprocessor, '_train')
     def test_init(self, train):
         d = np.random.normal(size=(500, 50))
-        variables = ['f%d' % (i + 1) for i in xrange(50)]
+        variables = ['f%d' % (i + 1) for i in range(50)]
         p = factor_analysis.FactorAnalysisPreprocessor(d, variables, 5)
         p._train.assert_called_once_with(d)
 
     def test_init_too_many_factors(self):
         d = np.random.normal(size=(500, 5))
-        variables = ['f%d' % (i + 1) for i in xrange(5)]
+        variables = ['f%d' % (i + 1) for i in range(5)]
         self.assertRaises(ValueError,
                           lambda: factor_analysis.FactorAnalysisPreprocessor(d, variables, 6))
     

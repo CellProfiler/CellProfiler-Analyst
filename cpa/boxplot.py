@@ -1,12 +1,12 @@
-from __future__ import print_function
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from multiclasssql import filter_table_prefix
-from properties import Properties
-import datamodel
-import guiutils as ui 
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import sqltools as sql
-import imagetools
+
+from .dbconnect import DBConnect, UniqueImageClause, image_key_columns
+from .multiclasssql import filter_table_prefix
+from .properties import Properties
+from . import datamodel
+from . import guiutils as ui 
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import sqltools as sql
+from . import imagetools
 import logging
 import numpy as np
 import os
@@ -18,7 +18,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
-from cpatool import CPATool
+from .cpatool import CPATool
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -131,7 +131,7 @@ class DataSourcePanel(wx.Panel):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        return [m for m,t in zip(measurements, types) if t in [float, int, int]]
         
     def update_figpanel(self, evt=None):
         table = self.table_choice.Value
@@ -141,7 +141,7 @@ class DataSourcePanel(wx.Panel):
             points_dict = {}
             for col in self.x_columns:
                 pts = self.loadpoints(table, col, fltr, NO_GROUP)
-                for k in pts.keys(): assert k not in points_dict.keys()
+                for k in list(pts.keys()): assert k not in list(points_dict.keys())
                 points_dict.update(pts)
         else:
             col = self.x_choice.Value
@@ -229,7 +229,7 @@ class DataSourcePanel(wx.Panel):
             self.table_choice.SetStringSelection(settings['table'])
             self.update_column_fields()
         if 'x-axis' in settings:
-            cols = map(str.strip, settings['x-axis'].split(','))
+            cols = list(map(str.strip, settings['x-axis'].split(',')))
             if len(cols) == 1:
                 self.x_choice.SetStringSelection(cols[0])
             else:

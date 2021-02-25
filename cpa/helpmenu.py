@@ -27,9 +27,9 @@ def _on_about(self):
 def make_help_menu(frame):
     helpMenu = wx.Menu()
     frame.Bind(wx.EVT_MENU, _on_manual, 
-               helpMenu.Append(-1, text='Online manual'))
+               helpMenu.Append(-1, item='Online manual'))
     frame.Bind(wx.EVT_MENU, _on_about, 
-               helpMenu.Append(-1, text='About', help='About CellProfiler Analyst'))
+               helpMenu.Append(-1, item='About', helpString='About CellProfiler Analyst'))
     return helpMenu
 
 if __name__ == '__main__':

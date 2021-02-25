@@ -3,10 +3,10 @@ A collection of tools to modify images used in CPA.
 '''
 
 import PIL.Image as Image
-import pilfix
-from properties import Properties
-import dbconnect
-from imagereader import ImageReader
+from . import pilfix
+from .properties import Properties
+from . import dbconnect
+from .imagereader import ImageReader
 import logging
 import matplotlib.image
 import numpy as np
@@ -52,7 +52,7 @@ def FetchTile(obKey, display_whole_image=False):
 
 def FetchImage(imKey):
     global cachedkeys
-    if imKey in cache.keys():
+    if imKey in list(cache.keys()):
         return cache[imKey]
     else:
         ir = ImageReader()
@@ -65,7 +65,7 @@ def FetchImage(imKey):
         return cache[imKey]
 
 def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
-    from imageviewer import ImageViewer
+    from .imageviewer import ImageViewer
     imgs = FetchImage(imKey)
     frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
                         parent=parent, title=str(imKey),
@@ -74,11 +74,13 @@ def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=Non
     frame.Show(True)
     return frame
 
-def Crop(imgdata, (w,h), (x,y)):
+def Crop(imgdata, xxx_todo_changeme, xxx_todo_changeme1):
     '''
     Crops an image to the width (w,h) around the point (x,y).
     Area outside of the image is filled with the color specified.
     '''
+    (w,h) = xxx_todo_changeme
+    (x,y) = xxx_todo_changeme1
     im_width = imgdata.shape[1]
     im_height = imgdata.shape[0]
 
@@ -217,29 +219,29 @@ def check_image_shape_compatibility(imgs):
     to choose a shape to resize them to.
     '''
     if not p.image_rescale:
-        if np.any([imgs[i].shape != imgs[0].shape for i in xrange(len(imgs))]):
+        if np.any([imgs[i].shape != imgs[0].shape for i in range(len(imgs))]):
             dims = [im.shape for im in imgs]
-            aspect_ratios = [float(dims[i][0])/dims[i][1] for i in xrange(len(dims))]
+            aspect_ratios = [float(dims[i][0])/dims[i][1] for i in range(len(dims))]
             def almost_equal(expected, actual, rel_err=1e-7, abs_err=1e-20):
                 absolute_error = abs(actual - expected)
                 return absolute_error <= max(abs_err, rel_err * abs(expected))
-            for i in xrange(len(aspect_ratios)):
+            for i in range(len(aspect_ratios)):
                 if not almost_equal(aspect_ratios[0], aspect_ratios[i], abs_err=0.01):
                     raise Exception('Can\'t merge image channels. Aspect ratios do not match.')
-            areas = map(np.product, dims)
+            areas = list(map(np.product, dims))
             max_idx = areas.index(max(areas))
             min_idx = areas.index(min(areas))
             
             s = [imgs[max_idx].shape, imgs[min_idx].shape]
             
             if p.use_larger_image_scale:
-                p.image_rescale = map(float, imgs[max_idx].shape)
+                p.image_rescale = list(map(float, imgs[max_idx].shape))
                 if p.rescale_object_coords:
-                    p.image_rescale_from = map(float, imgs[min_idx].shape)
+                    p.image_rescale_from = list(map(float, imgs[min_idx].shape))
             else:
-                p.image_rescale = map(float, imgs[min_idx].shape)
+                p.image_rescale = list(map(float, imgs[min_idx].shape))
                 if p.rescale_object_coords:
-                    p.image_rescale_from = map(float, imgs[max_idx].shape)
+                    p.image_rescale_from = list(map(float, imgs[max_idx].shape))
             
 #            dlg = wx.SingleChoiceDialog(None, 
 #                     'Some of your images were found to have different\n'

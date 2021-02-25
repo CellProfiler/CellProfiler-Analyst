@@ -1,7 +1,7 @@
 """
 Compute the overall accuracy of a confusion matrix
 """
-from __future__ import print_function
+
 
 import sys
 from optparse import OptionParser

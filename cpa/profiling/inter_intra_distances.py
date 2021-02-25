@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from optparse import OptionParser
 import numpy as np
 from scipy.spatial.distance import pdist, cdist
@@ -9,9 +9,9 @@ from cpa.util import auc
 
 def compute_inter_intra_distances(profiles, true_group_name):
     label_map = profiles.regroup(true_group_name)
-    labels = label_map.values()
+    labels = list(label_map.values())
     label_indices = np.array([labels.index(label_map[k])
-                              for k in profiles.keys()], dtype='i4')
+                              for k in list(profiles.keys())], dtype='i4')
     grouped_data = [profiles.data[label_indices == i]
                     for i in range(label_indices.max() + 1)]
     intra_distances = np.hstack([pdist(data, 'cosine')
@@ -24,7 +24,7 @@ def compute_inter_intra_distances(profiles, true_group_name):
 def plot_inter_intra_distances(profiles, true_group_name):
     inter_distances, intra_distances = compute_inter_intra_distances(profiles,
                                                                      true_group_name)
-    print('AUC:', auc(inter_distances, intra_distances))
+    print(('AUC:', auc(inter_distances, intra_distances)))
     h_intra, e_intra = np.histogram(intra_distances, 15, normed=True)
     h_inter, e_inter = np.histogram(inter_distances, 15, normed=True)
     pylab.bar(e_intra[:-1], h_intra, e_intra[1] - e_intra[0], color='r', 

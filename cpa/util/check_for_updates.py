@@ -1,10 +1,10 @@
 '''Check for new versions on a web page, in a separate thread, and
 call a callback with the new version information if there is one.
 '''
-from __future__ import print_function
+
 import logging
 import threading
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,8 @@ class VersionChecker(threading.Thread):
     
     def run(self):
         try:
-            req = urllib2.Request(self.url, None, {'User-Agent' : self.user_agent})
-            response = urllib2.urlopen(req)
+            req = urllib.request.Request(self.url, None, {'User-Agent' : self.user_agent})
+            response = urllib.request.urlopen(req)
             html = response.read()
             response.close()
             # format should be version number in first line followed by html
@@ -29,7 +29,7 @@ class VersionChecker(threading.Thread):
             new_version = int(new_version)
             if new_version > self.current_version:
                 self.callback(new_version, info)
-            print('version %s'%new_version)
+            print(('version %s'%new_version))
         except Exception as e:
             logger.warning("Exception fetching new version information from %s: %s"%(self.url, e))
             pass # no worries

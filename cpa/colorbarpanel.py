@@ -2,9 +2,8 @@ import wx
 import logging
 import matplotlib.cm
 import numpy as np
-import properties
+from . import properties
 
-p = properties.Properties.getInstance()
 
 slider_width = 30
 s_off = slider_width/2
@@ -214,10 +213,11 @@ class ColorBarPanel(wx.Panel):
     def create_gate_from_interval(self):
         table = self.Parent.sourceChoice.GetStringSelection()
         colname = self.Parent.measurementsChoice.GetStringSelection()
-        from guiutils import GateDialog
+        from .guiutils import GateDialog
         dlg = GateDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
-            from sqltools import Gate, Gate1D
+            from .sqltools import Gate, Gate1D
+            p = properties.Properties.getInstance()
             p.gates[dlg.Value] = Gate([Gate1D((table, colname), self.interval)])
         dlg.Destroy()
         
@@ -296,7 +296,7 @@ class ColorBarPanel(wx.Panel):
         font = dc.GetFont()
         font.SetPixelSize((6,12))
         dc.SetFont(font)
-        for t in xrange(self.ticks):
+        for t in range(self.ticks):
             xpos = t * w_global/(self.ticks-1.)
             val = t * (self.global_extents[1]-self.global_extents[0]) / (self.ticks-1)  + self.global_extents[0]
             dc.DrawLine(xpos,6,xpos,h-14)

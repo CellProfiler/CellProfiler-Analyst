@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import types
 import errno
 import re
@@ -93,7 +93,7 @@ class LSFView(object):
         done_tasks = self.list_precomputed_results()
         # Divide the paramaters into batches (tasks).
         batch_size = 1 + len(parameters) // 4000
-        print('Batch size:', batch_size)
+        print(('Batch size:', batch_size))
         all_batches = []
         while parameters:
             all_batches.append(parameters[:batch_size])
@@ -106,7 +106,7 @@ class LSFView(object):
         if len(batches) > 0:
             progress = self.progress('Submitting tasks: ', len(batches))
             for task_id, batch in progress(batches):
-                self.submit_task(task_id, dict(function=marshal.dumps(function.func_code), 
+                self.submit_task(task_id, dict(function=marshal.dumps(function.__code__), 
                                                batch=batch,
                                                task_id=task_id, attempts=3))
             self.signal_done_submitting()
@@ -133,17 +133,18 @@ class LSFView(object):
                 return
             time.sleep(1)
 
-def test_function((seconds)):
+def test_function(xxx_todo_changeme):
+    (seconds) = xxx_todo_changeme
     import time
     time.sleep(seconds)
     return seconds
 
 def test():
     view = LSFView(3, 'lsf_test')
-    print(view.directory)
+    print((view.directory))
     for result in view.imap(test_function, [random.randint(1, 10)
                                             for task in range(10)]):
-        print('Task returned', result)
+        print(('Task returned', result))
 
 class Worker(object):
 
@@ -160,12 +161,12 @@ class Worker(object):
                 print('No more tasks.')
                 break
             task_id = task['task_id']
-            print('Got task', task_id)
+            print(('Got task', task_id))
             start_time = time.time()
             try:
                 code = marshal.loads(task['function'])
                 function = types.FunctionType(code, globals(), "function")
-                result = map(function, task['batch'])
+                result = list(map(function, task['batch']))
             except:
                 traceback.print_exc(None, sys.stderr)
                 if task['attempts'] > 0:

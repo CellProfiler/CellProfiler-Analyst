@@ -4,7 +4,7 @@ Load a properties file, then start a shell with certain local
 variables exposed.
 '''
 
-from __future__ import absolute_import
+
 import code
 import sys
 from optparse import OptionParser

@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-def _compute_ksstatistic((cache_dir, images, control_images, normalization_name,
-                          preprocess_file)):
+def _compute_ksstatistic(xxx_todo_changeme):
+    (cache_dir, images, control_images, normalization_name,
+                          preprocess_file) = xxx_todo_changeme
     import numpy as np 
     import sys
     import cpa
@@ -38,7 +39,7 @@ import numpy as np
 import cpa
 from .cache import Cache
 from .normalization import RobustLinearNormalization, normalizations
-from profiles import Profiles, add_common_options
+from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
 
 logger = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ def profile_ksstatistic(cache_dir, group_name, control_filter, plate_group,
             return list(set(r for image in treated_images
                             for r in control_images_by_plate[plate_by_image[image]]))
 
-    keys = group.keys()
+    keys = list(group.keys())
     parameters = [(cache_dir, group[k], control_images(group[k]), 
                    normalization.__name__, preprocess_file)
                   for k in keys]

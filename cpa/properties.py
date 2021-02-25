@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-from singleton import Singleton
-from StringIO import StringIO
+
+from .singleton import Singleton
+from io import StringIO
 import re
 import os
 import logging
-import incell
+from . import incell
 import sys
 import subprocess
-from utils import ObservableDict
+from .utils import ObservableDict
 
 #
 # THESE MUST INCLUDE DEPRECATED FIELDS (shown side-by-side)
@@ -168,7 +168,7 @@ class Properties(Singleton):
         
     def __getattr__(self, field):
         # The name may not be loaded for optional fields.
-        if (not self.__dict__.has_key(field)) and (field in valid_vars):
+        if (field not in self.__dict__) and (field in valid_vars):
             return None
         else:
             return self.__dict__[field]
@@ -205,7 +205,7 @@ class Properties(Singleton):
         
     def load_file(self, filename):
         ''' Loads variables in from a properties file. '''
-        from sqltools import Gate, Filter, OldFilter
+        from .sqltools import Gate, Filter, OldFilter
         
         self.clear()
         self._filename        = filename
@@ -218,7 +218,7 @@ class Properties(Singleton):
         self._textfile = lines     # store raw file
         lines = lines.split('\n')
 
-        for idx in xrange(len(lines)):
+        for idx in range(len(lines)):
             line = lines[idx]
             # skip commented and empty lines
             if not line.strip().startswith('#') and line.strip() != '':
@@ -243,9 +243,9 @@ class Properties(Singleton):
                         raise Exception('PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\n'
                                         'Example: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\n'
                                         'a MySQL query "<QUERY>". See the README.'%(name))
-                    if group_name in self._groups.keys():
+                    if group_name in list(self._groups.keys()):
                         raise Exception('Group "%s" is defined twice in properties file.'%(group_name))
-                    if group_name in self._filters.keys():
+                    if group_name in list(self._filters.keys()):
                         raise Exception('Name "%s" is already taken for a filter.'%(group_name))
                     if not val:
                         logging.warn('PROPERTIES WARNING (%s): Undefined group'%(name))
@@ -259,9 +259,9 @@ class Properties(Singleton):
                         raise Exception('PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
                                         'Example: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\n'
                                         'a MySQL query "<QUERY>". See the README.'%(name))
-                    if filter_name in self._filters.keys():
+                    if filter_name in list(self._filters.keys()):
                         raise Exception('Filter "%s" is defined twice in properties file.'%(filter_name))
-                    if filter_name in self._groups.keys():
+                    if filter_name in list(self._groups.keys()):
                         raise Exception('Name "%s" is already taken for a group.'%(filter_name))
                     if re.search('\W', filter_name):
                         raise Exception('PROPERTIES ERROR (%s): Filter names may only contain alphanumeric characters and "_".'%(filter_name))
@@ -282,7 +282,7 @@ class Properties(Singleton):
                     d = eval(val)
                     if type(d) != dict:
                         raise Exception('PROPERTIES ERROR (filters): Error parsing filters. Check the "filters" field in your properties file.')
-                    for k, v in d.items():
+                    for k, v in list(d.items()):
                         self._filters[k] = Filter.decode(v)
                     del d
                         
@@ -290,7 +290,7 @@ class Properties(Singleton):
                     d = eval(val)
                     if type(d) != dict:
                         raise Exception('PROPERTIES ERROR (gates): Error parsing gates. Check the "gates" field in your properties file.')
-                    for k, v in d.items():
+                    for k, v in list(d.items()):
                         self.gates[k] = Gate.decode(v)
                     del d
                     
@@ -361,7 +361,7 @@ class Properties(Singleton):
         Saves the file.
         This function skips vars that start with _ (underscore)
         '''
-        import sqltools
+        from . import sqltools
         fd = open(filename, 'w')
         self._filename = filename
         
@@ -370,7 +370,7 @@ class Properties(Singleton):
         #__version__ = util.version.
         #fd.write('# CellProfiler Analyst revision: %s\n'%(__version__))
         
-        fields_to_write = sorted([k for k, v in self.__dict__.items() 
+        fields_to_write = sorted([k for k, v in list(self.__dict__.items()) 
                                   if not k.startswith('_') and v is not None])
 
         for field in fields_to_write:
@@ -378,14 +378,14 @@ class Properties(Singleton):
             if type(val) == list:
                 fd.write('%s  =  %s\n'%(field, ', '.join([str(v) for v in val if v])))
             elif field == 'gates':
-                encoded = repr(dict([(k, g.encode()) for k, g in val.items() if not g.is_empty()]))
+                encoded = repr(dict([(k, g.encode()) for k, g in list(val.items()) if not g.is_empty()]))
                 fd.write('gates  =  %s\n'%(encoded))
             else:
                 fd.write('%s  =  %s\n'%(field, val))
 
         # Write new filters
         encoded = repr( dict([ (k, f.encode()) 
-                              for k, f in self._filters.items() 
+                              for k, f in list(self._filters.items()) 
                               if isinstance(f,sqltools.Filter) and f.is_not_empty() ])
                         )
         fd.write('# These filters were created while using CPAnalyst. Do not edit.\n')
@@ -446,7 +446,7 @@ class Properties(Singleton):
 ##        fd.close()
         
     def clear(self):
-        from utils import ObservableDict
+        from .utils import ObservableDict
         # only clear known variables
         for k in valid_vars & set(self.__dict__.keys()):
             del self.__dict__[k]
@@ -464,7 +464,7 @@ class Properties(Singleton):
     def backwards_compatiblize(self):
         ''' Update any old fields to new ones in field_mappings.
         '''
-        for old, new in field_mappings.items():
+        for old, new in list(field_mappings.items()):
             if self.field_defined(old):
                 logging.warn('PROPERTIES WARNING (%s): This field name has been '
                           'deprecated, use "%s" instead.'%(old, new)) 
@@ -651,7 +651,7 @@ class Properties(Singleton):
         else:
             if self.field_defined('plate_shape'):
                 assert self.plate_shape == supported_plate_types[self.__dict__['plate_type']], "Your properties file has incompatible values for plate_type and plate_shape."
-            if self.__dict__['plate_type'] not in supported_plate_types.keys():
+            if self.__dict__['plate_type'] not in list(supported_plate_types.keys()):
                 raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
                                 %(self.__dict__['plate_type'], ', '.join(supported_plate_types)))
             self.plate_shape = supported_plate_types[self.__dict__['plate_type']]
@@ -701,7 +701,7 @@ class Properties(Singleton):
                 self.link_columns_table = '_link_columns_%s'%(md5(self.image_table+(self.object_table or '')).hexdigest())
             
         if not self.field_defined('gates'):
-            from utils import ObservableDict
+            from .utils import ObservableDict
             self.gates = ObservableDict()
         
 

@@ -1,6 +1,6 @@
 # Encoding: utf-8
-from __future__ import with_statement
-from __future__ import print_function
+
+
 
 import matplotlib
 matplotlib.use('WXAgg')
@@ -9,35 +9,35 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-import tableviewer
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import tilecollection
-from trainingset import TrainingSet
-from cStringIO import StringIO
+from . import tableviewer
+from .datamodel import DataModel
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from .scoredialog import ScoreDialog
+from . import tilecollection
+from .trainingset import TrainingSet
+from io import StringIO
 from time import time
-import icons
-import dbconnect
-import dirichletintegrate
-import imagetools
-import polyafit
-import sortbin
+from . import icons
+from . import dbconnect
+from . import dirichletintegrate
+from . import imagetools
+from . import polyafit
+from . import sortbin
 import logging
 import numpy as np
 import os
 import wx
 import re
 import cpa.helpmenu
-from imageviewer import ImageViewer
+from .imageviewer import ImageViewer
 
-import fastgentleboostingmulticlass
-from fastgentleboosting import FastGentleBoosting
+from . import fastgentleboostingmulticlass
+from .fastgentleboosting import FastGentleBoosting
 
 from cpa.profiling.classifier import Classifier
 #from supportvectormachines import SupportVectorMachines
-from generalclassifier import GeneralClassifier
+from .generalclassifier import GeneralClassifier
 
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
@@ -261,13 +261,13 @@ class ImageGallery(wx.Frame):
 
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
                     item.Check()
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == 'none':
                     item.Check()
             self.chMap[chIdx] = 'None'
@@ -300,10 +300,10 @@ class ImageGallery(wx.Frame):
 
         # Advanced menu
         advancedMenu = wx.Menu()
-        fetchObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects from displayed images', help='Fetch all objects from displayed images')
-        fetchAllObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects', help='Fetch all objects')
-        saveImgMenuItem = advancedMenu.Append(-1, text=u'Save image thumbnails as PNG', help='Save image thumbnails as PNG')
-        saveObjMenuItem = advancedMenu.Append(-1, text=u'Save object thumbnails as PNG', help='Save object thumbnails as PNG')
+        fetchObjMenuItem = advancedMenu.Append(-1, text='Fetch all objects from displayed images', help='Fetch all objects from displayed images')
+        fetchAllObjMenuItem = advancedMenu.Append(-1, text='Fetch all objects', help='Fetch all objects')
+        saveImgMenuItem = advancedMenu.Append(-1, text='Save image thumbnails as PNG', help='Save image thumbnails as PNG')
+        saveObjMenuItem = advancedMenu.Append(-1, text='Save object thumbnails as PNG', help='Save object thumbnails as PNG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -325,7 +325,7 @@ class ImageGallery(wx.Frame):
 
         # Clean up existing channel menus
         try:
-            menus = set([items[2].Menu for items in self.chMapById.values()])
+            menus = set([items[2].Menu for items in list(self.chMapById.values())])
             for menu in menus:
                 for i, mbmenu in enumerate(self.MenuBar.Menus):
                     if mbmenu[0] == menu:
@@ -362,7 +362,7 @@ class ImageGallery(wx.Frame):
                 channel_names += ['%s [%s]' % (name, x + 1) for x in range(chans)]
 
         # Zip channel names with channel map
-        zippedChNamesChMap = zip(channel_names, self.chMap)
+        zippedChNamesChMap = list(zip(channel_names, self.chMap))
 
         # Loop over all the image names in the properties file
         for i, chans in enumerate(p.image_names):
@@ -418,11 +418,11 @@ class ImageGallery(wx.Frame):
     def OnFetchImage(self, evt=None):
 
         # Set every channel to black and set all the toggle options to 'none'
-        for ids in self.chMapById.keys():
+        for ids in list(self.chMapById.keys()):
             (chIndex, color, item, channel_menu) = self.chMapById[ids]
             if (color.lower() == 'none'):
                 item.Check()
-        for ids in self.imMapById.keys():
+        for ids in list(self.imMapById.keys()):
             (cpi, itm, si, channelIds) = self.imMapById[ids]
             if cpi == 3:
                 self.chMap[si] = 'none'
@@ -436,7 +436,7 @@ class ImageGallery(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in self.imMapById.keys():
+        if evt.GetId() in list(self.imMapById.keys()):
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -555,7 +555,7 @@ class ImageGallery(wx.Frame):
                         # Need to run this after removing all tiles!
                         def cb():
                             filteredImKeys = db.GetFilteredImages(fltr_sel)
-                            imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                            imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                             self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                         wx.CallAfter(cb)
                         statusMsg += ' from filter "%s"' % (fltr_sel)
@@ -567,7 +567,7 @@ class ImageGallery(wx.Frame):
                     # Need to run this after removing all tiles!
                     def cb():
                         filteredImKeys = db.GetFilteredImages(fltr_sel)
-                        imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                        imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
 
                         self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     wx.CallAfter(cb)
@@ -604,7 +604,7 @@ class ImageGallery(wx.Frame):
                         filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
                         colNames = dm.GetGroupColumnNames(groupName)
                         def cb():
-                            imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                            imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                             self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                         
                         statusMsg += ' from group %s: %s' % (groupName,
@@ -620,7 +620,7 @@ class ImageGallery(wx.Frame):
                     filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
                     colNames = dm.GetGroupColumnNames(groupName)
                     def cb():
-                        imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                        imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                         self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     
                     statusMsg += ' from group %s: %s' % (groupName,
@@ -645,7 +645,7 @@ class ImageGallery(wx.Frame):
                 # Need to run this after removing all tiles!
                 def cb():
                     imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+                    imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
                     self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
                 wx.CallAfter(cb)
 
@@ -659,7 +659,7 @@ class ImageGallery(wx.Frame):
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
-                imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
             wx.CallAfter(cb)
             statusMsg += ' from filter "%s"' % (fltr_sel)
@@ -678,7 +678,7 @@ class ImageGallery(wx.Frame):
                                                                                           zip(colNames, groupKey)])))
                     return
                 
-                imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
             
             statusMsg += ' from group %s: %s' % (groupName,
@@ -715,7 +715,7 @@ class ImageGallery(wx.Frame):
                 # Need to run this after removing all tiles!
                 def cb():
                     imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+                    imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
                     self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     self.PostMessage("Loaded all images")
                 wx.CallAfter(cb)
@@ -725,7 +725,7 @@ class ImageGallery(wx.Frame):
             # Need to run this after removing all tiles!
             def cb():
                 imKeys = db.GetAllImageKeys()
-                imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+                imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
                 self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                 self.PostMessage("Loaded all images")
             wx.CallAfter(cb)
@@ -797,7 +797,7 @@ class ImageGallery(wx.Frame):
             dlg.Destroy()
             #updatedList = self.obClassChoice.GetItems()
             #sel = self.obClassChoice.GetSelection()
-            for i in xrange(len(updatedList)):
+            for i in range(len(updatedList)):
                 if updatedList[i] == label:
                     updatedList[i] = newLabel
             #self.obClassChoice.SetItems(updatedList)
@@ -914,7 +914,7 @@ class ImageGallery(wx.Frame):
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600, 300))
             if cff.ShowModal() == wx.OK:
                 fltr = cff.get_filter()
@@ -953,7 +953,7 @@ class ImageGallery(wx.Frame):
             validVals = list(set([col[i] for col in validKeys]))
             validVals.sort()
             validVals = [str(col) for col in validVals]
-            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == long:
+            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == int:
                 fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80, -1))
             else:
                 fieldInp = wx.Choice(self.fetch_panel, -1, size=(80, -1),
@@ -1056,7 +1056,7 @@ class ImageGallery(wx.Frame):
 
         def cb():
             imKeys = db.GetAllImageKeys()
-            imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+            imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
 
             for imKey in imKeys:
                 pseudo_obKeys = imKey
@@ -1133,7 +1133,7 @@ class StopCalculating(Exception):
 if __name__ == "__main__":
     import sys
     import logging
-    from errors import show_exception_as_dialog
+    from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )
 

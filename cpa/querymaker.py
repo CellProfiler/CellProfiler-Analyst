@@ -1,10 +1,10 @@
-from __future__ import print_function
+
 import logging
 import wx
 import sys
-from properties import Properties
-import tableviewer
-import dbconnect
+from .properties import Properties
+from . import tableviewer
+from . import dbconnect
 import numpy as np
 
 # TODO: Wrap queries in "SELECT * FROM (<query>) LIMIT 1000, offset"

@@ -1,15 +1,15 @@
-from __future__ import print_function
-from cpatool import CPATool
-from colorbarpanel import ColorBarPanel
-from dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
-import dbconnect
-import sqltools as sql
-import platemappanel as pmp
-from datamodel import DataModel
-from guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
-import properties
+
+from .cpatool import CPATool
+from .colorbarpanel import ColorBarPanel
+from .dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
+from . import dbconnect
+from . import sqltools as sql
+from . import platemappanel as pmp
+from .datamodel import DataModel
+from .guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import imagetools
+from . import properties
 import logging
 import matplotlib.cm
 import numpy as np
@@ -21,9 +21,10 @@ import wx
 import cpa.helpmenu
 import csv
 
-p = properties.Properties.getInstance()
+p = properties.getInstance()
 # Hack the properties module so it doesn't require the object table.
-properties.optional_vars += ['object_table']
+# TODO: fix this
+# properties.optional_vars += ['object_table']
 db = DBConnect.getInstance()
 
 required_fields = ['plate_shape', 'well_id']
@@ -83,7 +84,7 @@ class PlateViewer(wx.Frame, CPATool):
 
         viewSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='View options:'), wx.VERTICAL)
         viewSizer.Add(wx.StaticText(self, label='Color map:'))
-        maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
+        maps = [m for m in list(matplotlib.cm.datad.keys()) if not m.endswith("_r")]
         maps.sort()
         self.colorMapsChoice = ComboBox(self, choices=maps, size=fixed_width)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
@@ -112,7 +113,7 @@ class PlateViewer(wx.Frame, CPATool):
         annotationColSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.annotation_cols = dict([(col, db.GetColumnType(p.image_table, col)) 
                                      for col in db.GetUserColumnNames(p.image_table)])
-        self.annotationCol = ComboBox(self, choices=self.annotation_cols.keys(), size=(120,-1))
+        self.annotationCol = ComboBox(self, choices=list(self.annotation_cols.keys()), size=(120,-1))
         if len(self.annotation_cols) > 0:
             self.annotationCol.SetSelection(0)
         annotationColSizer.Add(self.annotationCol, flag=wx.ALIGN_CENTER_VERTICAL)
@@ -508,7 +509,7 @@ class PlateViewer(wx.Frame, CPATool):
                     'Number' : ('FLOAT', float)}
         dlg = wx.SingleChoiceDialog(self, 
                 'What type of annotation column would you like to add?\nThis can not be changed.',
-                'Add Annotation Column', coltypes.keys(), wx.CHOICEDLG_STYLE)
+                'Add Annotation Column', list(coltypes.keys()), wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() != wx.ID_OK:
             return
         usertype = dlg.GetStringSelection()
@@ -671,7 +672,7 @@ class PlateViewer(wx.Frame, CPATool):
         if 'number of plates' in settings:
             self.numberOfPlatesTE.SetValue(settings['number of plates'])
             self.OnEnterNumberOfPlates()
-        for s, v in settings.items():
+        for s, v in list(settings.items()):
             if s.startswith('plate '):
                 self.plateMapChoices[int(s.strip('plate ')) - 1].SetValue(v)
         # set well display last since each step currently causes a redraw and
@@ -743,7 +744,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
             sort_indices[row,col] = ind[:,len(dummy_key)-1][i]
         else:
             data[row, col] = well_data
-            sort_indices[row,col] = ind[:,len(dummy_key)-1][i*nsites + np.array(range(nsites))] 
+            sort_indices[row,col] = ind[:,len(dummy_key)-1][i*nsites + np.array(list(range(nsites)))] 
         well_keys[row, col] = k
         
     return data, well_keys, sort_indices
@@ -765,7 +766,7 @@ def get_numeric_columns_from_table(table):
     ''' Fetches names of numeric columns for the given table. '''
     measurements = db.GetColumnNames(table)
     types = db.GetColumnTypes(table)
-    return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+    return [m for m,t in zip(measurements, types) if t in [float, int, int]]
 
 def get_non_blob_types_from_table(table):
     measurements = db.GetColumnNames(table)

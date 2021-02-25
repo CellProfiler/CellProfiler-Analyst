@@ -1,8 +1,8 @@
-from __future__ import print_function
+
 import re
-import dbconnect
+from . import dbconnect
 import logging
-import multiclasssql
+from . import multiclasssql
 import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
@@ -10,8 +10,8 @@ from time import time
 from sklearn import ensemble, naive_bayes, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn import metrics
-import cPickle, json
-from sklearn.externals import joblib
+import pickle, json
+import joblib
 import seaborn as sns
 from sklearn.model_selection import LeaveOneOut, KFold, cross_val_predict, cross_val_score
 
@@ -143,7 +143,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
                 colnames = self.env.trainingSet.colnames
                 importances = self.classifier.feature_importances_
                 indices = np.argsort(importances)[::-1]
-                print(self.classifier)
+                print((self.classifier))
                 return "\n".join([str(colnames[indices[f]]) for f in range(self.env.nRules)])
             except:
                 return ''
@@ -157,7 +157,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         self.trained = True
 
         if fout:
-            print(self.classifier)
+            print((self.classifier))
 
     def UpdateBins(self, classBins):
         self.classBins = classBins
@@ -211,11 +211,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
         #make new data set
         #randomly choose min_labels samples from each class (the rest are thrown away)
-        chosenIndices = [np.random.choice(range(cumSumLabelIndices[i],cumSumLabelIndices[i+1]), min_labels, replace=False) for i in range(n_classes)]
+        chosenIndices = [np.random.choice(list(range(cumSumLabelIndices[i],cumSumLabelIndices[i+1])), min_labels, replace=False) for i in range(n_classes)]
 
         labels_s = np.zeros(min_labels*n_classes)
         values_s = np.zeros((min_labels*n_classes, values.shape[1]))
-        for c in reversed(range(n_classes)):
+        for c in reversed(list(range(n_classes))):
             labels_s[min_labels*c:min_labels*(c+1)] = labels[chosenIndices[c]]
             values_s[min_labels*c:min_labels*(c+1)] = values[chosenIndices[c]]
 
@@ -247,10 +247,10 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         Source: http://stackoverflow.com/a/25074150/395857 
         By HYRY
         '''
-        from itertools import izip
+        
         pc.update_scalarmappable()
         ax = pc.get_axes()
-        for p, color, value in izip(pc.get_paths(), pc.get_facecolors(), pc.get_array()):
+        for p, color, value in zip(pc.get_paths(), pc.get_facecolors(), pc.get_array()):
             x, y = p.vertices[:-2, :].mean(0)
             if np.all(color[:3] > 0.5):
                 color = (0.0, 0.0, 0.0)
@@ -348,8 +348,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             print(v)
             plotMat.append(v)
 
-        print('plotMat: {0}'.format(plotMat))
-        print('support: {0}'.format(support))
+        print(('plotMat: {0}'.format(plotMat)))
+        print(('support: {0}'.format(support)))
 
         xlabel = 'Metrics'
         ylabel = 'Classes'
@@ -386,8 +386,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         width = len(conf_arr)
         height = len(conf_arr[0])
 
-        for x in xrange(width):
-            for y in xrange(height):
+        for x in range(width):
+            for y in range(height):
                 if conf_arr[x][y] != 0:
                     ax.annotate("%.2f" % conf_arr[x][y], xy=(y, x), 
                                 horizontalalignment='center',
@@ -456,7 +456,7 @@ if __name__ == '__main__':
 
     import csv
     reader = csv.reader(fin, delimiter='    ')
-    header = reader.next()
+    header = next(reader)
     label_to_labelidx = {}
     curlabel = 1
  
@@ -464,7 +464,7 @@ if __name__ == '__main__':
         if strlabel in label_to_labelidx:
             return label_to_labelidx[strlabel]
         global curlabel
-        print("LABEL: ", curlabel, strlabel)
+        print(("LABEL: ", curlabel, strlabel))
         label_to_labelidx[strlabel] = curlabel
         curlabel += 1
         return label_to_labelidx[strlabel]

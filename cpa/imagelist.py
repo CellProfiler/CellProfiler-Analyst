@@ -1,11 +1,11 @@
-from __future__ import print_function
+
 import logging
 import wx
 import numpy as np
-from properties import Properties
-from dbconnect import *
+from .properties import Properties
+from .dbconnect import *
 from UserDict import DictMixin
-import imagetools
+from . import imagetools
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()

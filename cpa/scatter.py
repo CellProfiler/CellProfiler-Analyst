@@ -1,16 +1,16 @@
-from __future__ import print_function
+
 # TODO: add hooks to change point size, alpha, numsides etc.
-from cpatool import CPATool
-import tableviewer
-from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
-import sqltools as sql
-import multiclasssql
-from properties import Properties
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import guiutils as ui
-from gating import GatingHelper
-import imagetools
-import icons
+from .cpatool import CPATool
+from . import tableviewer
+from .dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
+from . import sqltools as sql
+from . import multiclasssql
+from .properties import Properties
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import guiutils as ui
+from .gating import GatingHelper
+from . import imagetools
+from . import icons
 import logging
 import numpy as np
 from bisect import bisect
@@ -19,7 +19,6 @@ import sys
 import re
 from time import time
 import wx
-import wx.combo
 from matplotlib.widgets import Lasso
 from matplotlib import __version__ as mpl_version     
 from matplotlib.colors import colorConverter
@@ -39,7 +38,8 @@ SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
 class Datum:
-    def __init__(self, (x, y), color):
+    def __init__(self, xxx_todo_changeme, color):
+        (x, y) = xxx_todo_changeme
         self.x = x
         self.y = y
         self.color = color
@@ -256,18 +256,18 @@ class ScatterControlPanel(wx.Panel):
         kps = np.array(keys_and_points, dtype='object')
         # Strip out keys
         if self._plotting_per_object_data():
-            key_indices = list(xrange(len(object_key_columns())))
+            key_indices = list(range(len(object_key_columns())))
         else:
-            key_indices = list(xrange(len(image_key_columns())))
+            key_indices = list(range(len(image_key_columns())))
 
         keys = kps[:,key_indices].astype(int) 
         # Strip out x coords
-        if col_types[0] in [float, int, long]:
+        if col_types[0] in [float, int, int]:
             xpoints = kps[:,-2].astype('float32')
         else:
             xpoints = kps[:,-2]
         # Strip out y coords
-        if col_types[1] in [float, int, long]:
+        if col_types[1] in [float, int, int]:
             ypoints = kps[:,-1].astype('float32')
         else:
             ypoints = kps[:,-1]
@@ -432,7 +432,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         return not self.is_per_object_data()
         
     def selection_is_empty(self):
-        return self.selection == {} or all([len(s)==0 for s in self.selection.values()])
+        return self.selection == {} or all([len(s)==0 for s in list(self.selection.values())])
         
     def lasso_callback(self, verts):
         # Note: If the mouse is released outside of the canvas, (None,None) is
@@ -465,7 +465,7 @@ class ScatterPanel(FigureCanvasWxAgg):
                     edgecolors[i] = SELECTED_OUTLINE_COLOR
                 else:
                     edgecolors[i] = UNSELECTED_OUTLINE_COLOR
-        logging.info('Selected %s points.'%(np.sum([len(sel) for sel in self.selection.values()])))
+        logging.info('Selected %s points.'%(np.sum([len(sel) for sel in list(self.selection.values())])))
         self.canvas.draw_idle()
         
     def on_press(self, evt):
@@ -494,11 +494,11 @@ class ScatterPanel(FigureCanvasWxAgg):
     def show_objects_from_selection(self, evt=None):
         '''Callback for "Show objects in selection" popup item.'''
         show_keys = []
-        for i, sel in self.selection.items():
+        for i, sel in list(self.selection.items()):
             keys = self.key_lists[i][sel]
             show_keys += list(set([tuple(k) for k in keys]))
         if len(show_keys[0]) == len(image_key_columns()):
-            import datamodel
+            from . import datamodel
             dm = datamodel.DataModel.getInstance()
             obkeys = []
             for key in show_keys:
@@ -518,7 +518,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             except ValueError:
                 wx.MessageDialog('You have entered an invalid number', 'Error').ShowModal()
                 return
-        import sortbin
+        from . import sortbin
         f = sortbin.CellMontageFrame(None)
         f.Show()
         f.add_objects(show_keys)
@@ -538,7 +538,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     def show_images_from_selection(self, evt=None):
         '''Callback for "Show images in selection" popup item.'''
         show_keys = set()
-        for i, sel in self.selection.items():
+        for i, sel in list(self.selection.items()):
             keys = self.key_lists[i][sel]
             show_keys.update([tuple(k) for k in keys])
         if len(show_keys)>10:
@@ -559,7 +559,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             
     def show_selection_in_table(self, evt=None):
         '''Callback for "Show selection in a table" popup item.'''
-        for i, sel in self.selection.items():
+        for i, sel in list(self.selection.items()):
             keys = self.key_lists[i][sel].T.astype('object')
             if len(keys) > 0:
                 xpoints = self.x_points[i][sel]
@@ -572,7 +572,7 @@ class ScatterPanel(FigureCanvasWxAgg):
                 elif self.is_per_object_data():
                     column_labels = list(object_key_columns())
                     group = 'Object'
-                key_col_indices = list(xrange(len(column_labels)))
+                key_col_indices = list(range(len(column_labels)))
                 column_labels += [self.get_current_x_measurement_name(), 
                                   self.get_current_y_measurement_name()]
                 grid = tableviewer.TableViewer(self, title='Selection from collection %d in scatter'%(i))
@@ -644,7 +644,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         sel_xs = []
         sel_ys = []
         for c, col in enumerate(self.subplot.collections):
-            indices = xrange(len(col.get_offsets()))
+            indices = list(range(len(col.get_offsets())))
             sel_indices = self.selection[c]
             unsel_indices = list(set(indices).difference(sel_indices))
             if len(sel_indices) > 0:
@@ -672,7 +672,8 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.redraw()
         self.figure.canvas.draw_idle()
     
-    def show_popup_menu(self, (x,y), data):
+    def show_popup_menu(self, xxx_todo_changeme1, data):
+        (x,y) = xxx_todo_changeme1
         self.popup_menu_filters = {}
         popup = wx.Menu()
 
@@ -682,7 +683,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         if selected_gate:
             selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
-                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  lambda e:ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
@@ -736,7 +737,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     def get_colors(self):
         if self.colors:
             colors = self.colors
-        elif max(map(len, self.x_points))==0:
+        elif max(list(map(len, self.x_points)))==0:
             colors = []
         else:
             # Choose colors from jet colormap starting with light blue (0.28)
@@ -846,11 +847,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         
         # Set ticks and ticklabels if data is categorical
         if xvalmap:
-            self.subplot.set_xticks(range(len(x_categories)))
+            self.subplot.set_xticks(list(range(len(x_categories))))
             self.subplot.set_xticklabels(sorted(x_categories))
             self.figure.autofmt_xdate() # rotates and shifts xtick-labels so they look nice
         if yvalmap:
-            self.subplot.set_yticks(range(len(y_categories)))
+            self.subplot.set_yticks(list(range(len(y_categories))))
             self.subplot.set_yticklabels(sorted(y_categories))
         
         if len(self.x_points) > 1:
@@ -1039,7 +1040,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
     def get_mode(self):
         '''Use this rather than navtoolbar.mode
         '''
-        for mode, tool in self.user_tools.items():
+        for mode, tool in list(self.user_tools.items()):
             if tool.IsToggled():
                 return mode
         return self.mode
@@ -1077,7 +1078,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         if evt.Checked():
             self.untoggle_mpl_tools()
             #untoggle other user tools
-            for tool in self.user_tools.values():
+            for tool in list(self.user_tools.values()):
                 if tool.Id != evt.Id:
                     self.ToggleTool(tool.Id, False)
             
@@ -1086,7 +1087,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         We need to manually untoggle user-defined tools.
         '''
         if evt.Checked():
-            for tool in self.user_tools.values():
+            for tool in list(self.user_tools.values()):
                 self.ToggleTool(tool.Id, False)
         # Make sure the regular pan/zoom handlers get the event
         evt.Skip()

@@ -10,13 +10,13 @@
 #########################
 
 import cpa.helpmenu
-from dbconnect import *
-from datamodel import DataModel
-from imagecontrolpanel import *
-from imagepanel import ImagePanel
-from properties import Properties
-import imagetools
-import cPickle
+from .dbconnect import *
+from .datamodel import DataModel
+from .imagecontrolpanel import *
+from .imagepanel import ImagePanel
+from .properties import Properties
+from . import imagetools
+import pickle
 import logging
 import numpy as np
 import wx
@@ -32,7 +32,7 @@ ID_SELECT_ALL = wx.NewId()
 ID_DESELECT_ALL = wx.NewId()
 
 def get_classifier_window():
-    from classifier import ID_CLASSIFIER
+    from .classifier import ID_CLASSIFIER
     win = wx.FindWindowById(ID_CLASSIFIER)
     if win:
         return win
@@ -91,7 +91,7 @@ class ImageViewerPanel(ImagePanel):
 
         # Draw class numbers over each object
         if self.classes:
-            for (name, cl), clnum, color in zip(self.classes.items(), self.class_nums, self.colors):
+            for (name, cl), clnum, color in zip(list(self.classes.items()), self.class_nums, self.colors):
                 if self.classVisible[name]:
                     dc.BeginDrawing()
                     for (x,y) in cl:
@@ -159,7 +159,7 @@ class ImageViewerPanel(ImagePanel):
         self.class_nums = [str(i+1) for i,_ in enumerate(classes)]
 
         self.classVisible = {}
-        for className in classes.keys():
+        for className in list(classes.keys()):
             self.classVisible[className] = True 
         self.Refresh()
 
@@ -298,7 +298,7 @@ class ImageViewer(wx.Frame):
 
         # Clean up existing channel menus
         try:
-            menus = set([items[2].Menu for items in self.chMapById.values()])
+            menus = set([items[2].Menu for items in list(self.chMapById.values())])
             for menu in menus:
                 for i, mbmenu in enumerate(self.MenuBar.Menus):
                     if mbmenu[0] == menu:
@@ -334,7 +334,7 @@ class ImageViewer(wx.Frame):
             else:
                 channel_names += ['%s [%s]'%(name,x+1) for x in range(chans)]
         # Zip channel names with channel map
-        zippedChNamesChMap = zip(channel_names, self.chMap)
+        zippedChNamesChMap = list(zip(channel_names, self.chMap))
 
         # Loop over all the image names in the properties file
         for i, chans in enumerate(p.image_names):
@@ -396,11 +396,11 @@ class ImageViewer(wx.Frame):
     def OnFetchImage(self, evt=None):
 
         # Set every channel to black and set all the toggle options to 'none'
-        for ids in self.chMapById.keys():
+        for ids in list(self.chMapById.keys()):
             (chIndex, color, item, channel_menu) = self.chMapById[ids] 
             if (color.lower() == 'none'):
                 item.Check()		
-        for ids in self.imMapById.keys():
+        for ids in list(self.imMapById.keys()):
             (cpi, itm, si, channelIds) = self.imMapById[ids]
             if cpi == 3:
                 self.chMap[si] = 'none'
@@ -414,7 +414,7 @@ class ImageViewer(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in self.imMapById.keys():
+        if evt.GetId() in list(self.imMapById.keys()):
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -511,7 +511,7 @@ class ImageViewer(wx.Frame):
             self.cp.SetLabel('Show controls')
 
     def OnMapChannels(self, evt):
-        if evt.GetId() in self.chMapById.keys():
+        if evt.GetId() in list(self.chMapById.keys()):
             (chIdx,color,_,_) = self.chMapById[evt.GetId()]
             self.chMap[chIdx] = color
             if color.lower() != 'none':
@@ -574,13 +574,13 @@ class ImageViewer(wx.Frame):
 
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
                     item.Check()   
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == 'none':
                     item.Check()
             self.chMap[chIdx] = 'None'
@@ -643,7 +643,7 @@ class ImageViewer(wx.Frame):
                 source = wx.DropSource(self)
                 # wxPython crashes unless the data object is assigned to a variable.
                 data_object = wx.CustomDataObject("ObjectKey")
-                data_object.SetData(cPickle.dumps( (self.GetId(), self.selection) ))
+                data_object.SetData(pickle.dumps( (self.GetId(), self.selection) ))
                 source.SetData(data_object)
                 result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
                 if result is 0:
@@ -766,9 +766,9 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
-    from datamodel import DataModel
-    import imagetools
-    from imagereader import ImageReader
+    from .datamodel import DataModel
+    from . import imagetools
+    from .imagereader import ImageReader
 
     p = Properties.getInstance()
     p.image_channel_colors = ['red','green','blue']

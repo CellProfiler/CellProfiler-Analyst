@@ -1,10 +1,10 @@
-from __future__ import print_function
+
 import numpy
 import sys
 import cpa.sqltools
-from dbconnect import *
-from properties import Properties
-from datamodel import DataModel
+from .dbconnect import *
+from .properties import Properties
+from .datamodel import DataModel
 
 db = DBConnect.getInstance()
 p = Properties.getInstance()
@@ -93,11 +93,11 @@ def object_scores(weaklearners):
     [db.execute(score_query) for score_query in score_stmnts]
     col_names = db.GetColumnNames('_scores')
     col_types = db.GetColumnTypes('_scores')
-    type_mapping = { long: 'i4', float: 'f8' }
+    type_mapping = { int: 'i4', float: 'f8' }
     dtype = numpy.dtype([(name, type_mapping[type])
                          for name, type in zip(col_names, col_types)])
     res = db.execute('SELECT * from _scores')
-    return numpy.array(map(tuple, res), dtype)
+    return numpy.array(list(map(tuple, res)), dtype)
 
 
 def create_perobject_class_table(classnames, rules):
@@ -255,10 +255,10 @@ if __name__ == "__main__":
 #    print keys_and_counts[0,:]
 #    print sum(keys_and_counts[:,-2:])
 
-    from trainingset import TrainingSet
-    from StringIO import StringIO
-    import fastgentleboostingmulticlass
-    from datatable import DataGrid
+    from .trainingset import TrainingSet
+    from io import StringIO
+    from . import fastgentleboostingmulticlass
+    from .datatable import DataGrid
     import wx
     p = Properties.getInstance()
     db = DBConnect.getInstance()
@@ -279,7 +279,7 @@ if __name__ == "__main__":
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
     output = StringIO()
-    print('Training classifier with '+str(nRules)+' rules...')
+    print(('Training classifier with '+str(nRules)+' rules...'))
     weaklearners = fastgentleboostingmulticlass.train(trainingSet.colnames,
                                                       nRules, trainingSet.label_matrix, 
                                                       trainingSet.values, output)

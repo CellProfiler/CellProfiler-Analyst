@@ -5,9 +5,10 @@ it is not used by the CPA application itself.
 
 import os
 import operator
-import cPickle
+import pickle
 from contextlib import contextmanager
 import numpy as np
+from functools import reduce
 # This module should be usable on systems without wx.
 
 def bin_centers(x):
@@ -74,10 +75,10 @@ def unpickle(file_or_filename, nobjects=None, new=True):
     else:
         f = open(file_or_filename)
     def unpickle1():
-        o = cPickle.load(f)
+        o = pickle.load(f)
         if isinstance(o, np.dtype):
             if new:
-                shape = cPickle.load(f)
+                shape = pickle.load(f)
             a = np.fromfile(f, dtype=o, count=reduce(operator.mul, shape))
             if new:
                 return a.reshape(shape)
@@ -120,11 +121,11 @@ def pickle(file_or_filename, *objects):
         f = open(file_or_filename, 'wb')
     for o in objects:
         if isinstance(o, np.ndarray):
-            cPickle.dump(o.dtype, f)
-            cPickle.dump(o.shape, f)
+            pickle.dump(o.dtype, f)
+            pickle.dump(o.shape, f)
             o.tofile(f)
         else:
-            cPickle.dump(o, f)
+            pickle.dump(o, f)
     if not isinstance(file_or_filename, file):
         f.close()
 
@@ -166,10 +167,10 @@ class sample(object):
         else:
             return self.n
 
-    def next(self):
+    def __next__(self):
         import random
         while True:
-            e = self.s.next()
+            e = next(self.s)
             i = self.i
             self.i += 1
             u = random.random()

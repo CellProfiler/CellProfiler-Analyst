@@ -101,7 +101,7 @@ def ks_2samp(data1, data2, signed=False):
     (-0.07999999999999996, 0.41126949729859719)
 
     """
-    data1, data2 = map(asarray, (data1, data2))
+    data1, data2 = list(map(asarray, (data1, data2)))
     n1 = data1.shape[0]
     n2 = data2.shape[0]
     n1 = len(data1)

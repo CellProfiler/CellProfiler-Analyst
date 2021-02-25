@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-def _compute_mixture_probabilities((cache_dir, normalization_name, 
+def _compute_mixture_probabilities(xxx_todo_changeme):
+    (cache_dir, normalization_name, 
                                     preprocess_file, images, gmm, meanvector, 
-                                    loadings)):
+                                    loadings) = xxx_todo_changeme
     import numpy as np        
     from cpa.profiling import cache
     cache = Cache(cache_dir)
@@ -29,7 +30,7 @@ from scipy import linalg
 from sklearn.mixture import GMM
 import cpa
 from .cache import Cache
-from normalization import RobustLinearNormalization, normalizations
+from .normalization import RobustLinearNormalization, normalizations
 from .profiles import Profiles, add_common_options
 from .parallel import ParallelProcessor, Uniprocessing
     
@@ -39,7 +40,7 @@ def profile_gmm(cache_dir, subsample_file, group_name, ncomponents=50,
     cache = Cache(cache_dir)
     group, colnames_group = cpa.db.group_map(group_name, reverse=True, filter=filter)
 
-    keys = group.keys()
+    keys = list(group.keys())
     subsample = cpa.util.unpickle1(subsample_file)
     if preprocess_file:
         preprocessor = cpa.util.unpickle1(preprocess_file)

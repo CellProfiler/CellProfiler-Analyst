@@ -1,10 +1,10 @@
-from __future__ import print_function
+
 import logging
 from random import randint
 import numpy as np
-from dbconnect import *
-from singleton import *
-from properties import Properties
+from .dbconnect import *
+from .singleton import *
+from .properties import Properties
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -71,7 +71,7 @@ class DataModel(Singleton):
         self.groupMaps, self.groupColNames = db.GetGroupMaps()
         self.revGroupMaps, _ = db.GetGroupMaps(reverse=True)
         for group in self.groupMaps:
-            self.groupColTypes[group] = [type(col) for col in self.groupMaps[group].items()[0][1]]
+            self.groupColTypes[group] = [type(col) for col in list(self.groupMaps[group].items())[0][1]]
 
     def DeleteModel(self):
         self.data = {}
@@ -95,7 +95,7 @@ class DataModel(Singleton):
         need not necessarily be in sorted order.
         '''
         self._if_empty_populate()
-        obIdxs = random.sample(range(1, self.obCount + 1), N)
+        obIdxs = random.sample(list(range(1, self.obCount + 1)), N)
         obKeys = []
         for obIdx in obIdxs:
             imIdx = np.searchsorted(self.cumSums, obIdx, 'left')
@@ -105,7 +105,7 @@ class DataModel(Singleton):
             #    objects
             while self.cumSums[imIdx] == self.cumSums[imIdx-1]:
                 imIdx -= 1
-            imKey = self.data.keys()[imIdx-1]
+            imKey = list(self.data.keys())[imIdx-1]
             obIdx = obIdx-self.cumSums[imIdx-1]  # object number relative to this image
             obKeys.append(db.GetObjectIDAtIndex(imKey, obIdx))
         return obKeys
@@ -120,7 +120,7 @@ class DataModel(Singleton):
         if N > self.obCount:
             logging.info(str(N) +' is greater than the number of objects. Fetching ' + str(self.obCount) + ' objects.')
             N = self.obCount
-            print(self.obCount)
+            print((self.obCount))
         if imKeys == None:
             return self.GetRandomObject(N)
         elif imKeys == []:
@@ -130,7 +130,7 @@ class DataModel(Singleton):
             if sums[-1] < 1:
                 return []
             obs = []
-            obIdxs = random.sample(range(1, sums[-1]+1), N)#randint(1, sums[-1])
+            obIdxs = random.sample(list(range(1, sums[-1]+1)), N)#randint(1, sums[-1])
             for obIdx in obIdxs:
                 index = np.searchsorted(sums, obIdx, 'left')
                 if index != 0:
@@ -144,7 +144,7 @@ class DataModel(Singleton):
     def GetObjectsFromImage(self, imKey):
         self._if_empty_populate()
         obKeys=[]
-        for i in xrange(1,self.GetObjectCountFromImage(imKey)+1):
+        for i in range(1,self.GetObjectCountFromImage(imKey)+1):
             obKeys.append(db.GetObjectIDAtIndex(imKey, i))
         return obKeys
         # JK - The above code was previously removed in favor of the code below.
@@ -171,7 +171,7 @@ class DataModel(Singleton):
         ''' Returns pairs of imageKeys and object counts. '''
         self._if_empty_populate()
         if filter_name is None:
-            return self.data.items()
+            return list(self.data.items())
         else:
             return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter_name)]
     
@@ -198,12 +198,12 @@ class DataModel(Singleton):
         '''
         self._if_empty_populate()
         groupData = {}
-        nvals = len(imdata.values()[0])
-        for imKey in imdata.keys():
+        nvals = len(list(imdata.values())[0])
+        for imKey in list(imdata.keys()):
             # initialize each entry to [0,0,...]
             groupData[self.groupMaps[group][imKey]] = np.zeros(nvals)
             
-        for imKey, vals in imdata.items():
+        for imKey, vals in list(imdata.items()):
             # add values to running sum of this group
             groupData[self.groupMaps[group][imKey]] += vals
         
@@ -221,7 +221,7 @@ class DataModel(Singleton):
             def matches(key1, key2):
                 return all([(a==b or b=='__ANY__') for a,b in zip(key1,key2)])
             imkeys = []
-            for gkey, ikeys in self.revGroupMaps[group].items():
+            for gkey, ikeys in list(self.revGroupMaps[group].items()):
                 if matches(gkey,groupKey):
                     imkeys += ikeys
             return imkeys
@@ -239,7 +239,7 @@ class DataModel(Singleton):
             
         # apply filter if supplied
         if filter_name is not None:
-            if filter_name not in self.filterkeys.keys():
+            if filter_name not in list(self.filterkeys.keys()):
                 self.filterkeys[filter_name] = db.GetFilteredImages(filter_name)
             imkeys = set(imkeys).intersection(self.filterkeys[filter_name])    
         
@@ -275,7 +275,7 @@ class DataModel(Singleton):
             if type(well) == str:
                 well = well.strip()
                 assert re.match(well_re, well), 'Well "%s" did not match well naming format "%s"'%(r[0], p.well_format)
-            elif type(well) in [int, long]:
+            elif type(well) in [int, int]:
                 if not p.well_format == '123':
                     '''
                     import wx
@@ -319,18 +319,19 @@ class DataModel(Singleton):
             pass
         if self.plate_map == {}:
             self.populate_plate_maps()
-        if well_name in self.plate_map.keys():
+        if well_name in list(self.plate_map.keys()):
             return self.plate_map[well_name]
         else:
             raise KeyError('Well name "%s" could not be mapped to a plate position.' % well_name)
 
-    def get_well_name_from_position(self, (row, col)):
+    def get_well_name_from_position(self, xxx_todo_changeme):
         '''returns the well name (eg: "A01") corresponding to the given 
         plate position tuple.
         '''
+        (row, col) = xxx_todo_changeme
         if self.plate_map == {}:
             self.populate_plate_maps()
-        if (row, col) in self.rev_plate_map.keys():
+        if (row, col) in list(self.rev_plate_map.keys()):
             return self.rev_plate_map[(row, col)]
         else:
             raise KeyError('Plate position "%s" could not be mapped to a well key.' % str((row,col)))

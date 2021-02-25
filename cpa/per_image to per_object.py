@@ -1,8 +1,8 @@
-from __future__ import print_function
-import dbconnect
-import properties
+
+from . import dbconnect
+from . import properties
 import os
-import imagereader
+from . import imagereader
 import re
 import wx
 import sys
@@ -81,7 +81,7 @@ def run():
     # Remove the columns with files names and paths
     cols_im=db.GetColumnNames(p.image_table)
     cols_types=db.GetColumnTypes(p.image_table)
-    cols_names_types=zip(cols_im, cols_types)
+    cols_names_types=list(zip(cols_im, cols_types))
     db.execute('CREATE TABLE %s AS SELECT %s FROM %s' %(fake_obj_table, ', '.join([x[0] for x in cols_names_types if x[1]!=str]), p.image_table))
 
     # Add columns to the new per_image table such that it looks like a per_object table

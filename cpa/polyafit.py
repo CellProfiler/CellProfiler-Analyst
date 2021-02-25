@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from numpy import *
 from scipy.integrate import fixed_quad
 from scipy.special import gammaln, betaln, digamma, polygamma
@@ -206,11 +206,11 @@ def fit_to_data_infile(fname):
     for l in data:
         wellidx = (l[1] - 1) // 4
         wells[wellidx] = l[2:] + wells.get(wellidx, array([0,0,0]))
-    test = array(wells.values())
+    test = array(list(wells.values()))
     atest = fit_betabinom_minka_alternating(test, maxiter=3000)
     aver = fit_betabinom_minka(test, maxiter=3000, initial_guess=atest[0])
-    return aver[0].flatten(), aver[1], array(wells.keys()), array(wells.values())
+    return aver[0].flatten(), aver[1], array(list(wells.keys())), array(list(wells.values()))
     
 
 if __name__ == '__main__':
-    print(fit_to_data_infile('PBscores.txt')[0])
+    print((fit_to_data_infile('PBscores.txt')[0]))

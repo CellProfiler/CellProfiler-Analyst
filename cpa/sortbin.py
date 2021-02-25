@@ -1,11 +1,11 @@
-from dbconnect import DBConnect
-import tilecollection
-from imagetile import ImageTile
-from imagetilesizer import ImageTileSizer
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-import imagetools
-import cPickle
+from .dbconnect import DBConnect
+from . import tilecollection
+from .imagetile import ImageTile
+from .imagetilesizer import ImageTileSizer
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from . import imagetools
+import pickle
 import wx
 import logging
 
@@ -69,7 +69,7 @@ class SortBinDropTarget(wx.DropTarget):
         if not self.GetData():
             return wx.DragNone
         draginfo = self.data.GetData()
-        srcID, obKeys = cPickle.loads(draginfo)
+        srcID, obKeys = pickle.loads(draginfo)
         if not obKeys:
             return wx.DragNone
         return self.bin.ReceiveDrop(srcID, obKeys)
@@ -103,7 +103,7 @@ class SortBin(wx.ScrolledWindow):
 
         (w,h) = self.sizer.GetSize()
         self.SetScrollbars(20,20,w/20,h/20,0,0)
-        self.EnableScrolling(x_scrolling=False, y_scrolling=True)
+        self.EnableScrolling(xScrolling=False, yScrolling=True)
                 
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
@@ -188,7 +188,7 @@ class SortBin(wx.ScrolledWindow):
         if self.tile_collection == None:
             self.tile_collection = tilecollection.TileCollection.getInstance()
         imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority, display_whole_image=display_whole_image) # Gives back the np matrix of an image?
-        for i, obKey, imgs in zip(range(len(obKeys)), obKeys, imgSet):
+        for i, obKey, imgs in zip(list(range(len(obKeys))), obKeys, imgSet):
             
             if self.classifier and self.label == 'image gallery':
                     newTile = ImageTile(self, obKey, imgs, chMap, False,
@@ -353,7 +353,7 @@ if __name__ == '__main__':
     app = wx.PySimpleApp()
  
     p.show_load_dialog()    
-    import datamodel
+    from . import datamodel
     dm = datamodel.DataModel.getInstance()
     
     f = wx.Frame(None)

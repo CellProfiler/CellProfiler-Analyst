@@ -1,9 +1,9 @@
-from __future__ import print_function
+
 import wx
 import re
-import sqltools as sql
-from properties import Properties
-from dbconnect import DBConnect
+from . import sqltools as sql
+from .properties import Properties
+from .dbconnect import DBConnect
 from wx.combo import OwnerDrawnComboBox as ComboBox
 
 p = Properties.getInstance()
@@ -78,9 +78,9 @@ class ColumnFilterPanel(wx.Panel):
     def update_comparator_choice(self):
         coltype = self._get_col_type()
         comparators = []
-        if coltype in [str, unicode]:
+        if coltype in [str, str]:
             comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT']
-        if coltype in [int, float, long]:
+        if coltype in [int, float, int]:
             comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT']
         self.comparatorChoice.SetItems(comparators)
         self.comparatorChoice.Select(0)
@@ -101,7 +101,7 @@ class ColumnFilterPanel(wx.Panel):
         column = self.colChoice.Value
         comparator = self.comparatorChoice.GetValue()
         value = self.valueField.GetValue()
-        if self._get_col_type() in [int, float, long]:
+        if self._get_col_type() in [int, float, int]:
             # Don't quote numbers
             return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
         if comparator.upper() in ['IS', 'IS NOT'] and value.upper() == 'NULL':
@@ -283,7 +283,7 @@ if __name__ == "__main__":
 
     cff = ColumnFilterDialog(None, tables=[p.image_table])
     if cff.ShowModal()==wx.OK:
-        print(cff.get_filter())
+        print((cff.get_filter()))
 
     cff.Destroy()
     app.MainLoop()

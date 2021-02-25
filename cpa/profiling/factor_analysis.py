@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+
 import logging
 from optparse import OptionParser
 import progressbar
@@ -25,7 +25,7 @@ class FactorAnalysisPreprocessor(Preprocessor):
         self.input_variables = input_variables
         self.nfactors = nfactors
         self.variables = ['Factor %d' % (i + 1) for i in range(self.nfactors)]
-        self.selected_variables = range(len(self.variables))
+        self.selected_variables = list(range(len(self.variables)))
         self._train(training_data)
 
     def _train(self, training_data, tol=1e-05):
@@ -56,7 +56,7 @@ class FactorAnalysisPreprocessor(Preprocessor):
         variable_indices = set(np.argmax(loadings, axis=0))
         variable_indices_mapped = [self.selected_variables[i] for i in variable_indices]
         mask = np.array([i in variable_indices_mapped
-                         for i in xrange(len(self.input_variables))])
+                         for i in range(len(self.input_variables))])
         return VariableSelector(mask, self.input_variables)
 
 def kaiser(data):
@@ -83,7 +83,7 @@ def _main(args=None):
     output_file = args[2]
 
     subsample = cpa.util.unpickle1(subsample_file)
-    print(kaiser(subsample.data))
+    print((kaiser(subsample.data)))
     preprocessor = cpa.profiling.factor_analysis.FactorAnalysisPreprocessor(
         standardize(subsample.data), subsample.variables, nfactors)
     if options.variable_selection_only:

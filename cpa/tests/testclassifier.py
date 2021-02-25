@@ -7,7 +7,7 @@ from scoredialog import ScoreDialog
 import sortbin
 from tilecollection import EVT_TILE_UPDATED
 from trainingset import TrainingSet
-from cStringIO import StringIO
+from io import StringIO
 import fastgentleboostingmulticlass
 import imagetools
 import multiclasssql

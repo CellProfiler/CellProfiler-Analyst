@@ -1,7 +1,7 @@
 import cpa
-from dbconnect import *
-from properties import Properties
-from utils import Observable
+from .dbconnect import *
+from .properties import Properties
+from .utils import Observable
 p = Properties.getInstance()
 
 def image_cols():
@@ -201,7 +201,7 @@ class Column(object):
         return [self.table]
 
             
-class Gate1D(object, Observable):
+class Gate1D(Observable):
     '''
     A 1D gate associates a particular column with a value range.
     '''
@@ -281,7 +281,7 @@ class Gate1D(object, Observable):
         return (self.column.table, self.column.col), (self.min, self.max)
 
 
-class Gate(object, Observable):
+class Gate(Observable):
     '''
     A list of 1D gates to be ANDed together
     '''
@@ -319,7 +319,7 @@ class Gate(object, Observable):
     
     def as_filter(self):
         if len(self._gate_list) == 0:
-            import sqltools
+            from . import sqltools
             return sqltools.Filter()
         fltr = self._gate_list[0].as_filter()
         for g in self._gate_list[1:]:

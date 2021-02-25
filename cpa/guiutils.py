@@ -1,19 +1,19 @@
-from __future__ import print_function
+
 import wx
-import wx.combo
+import wx.adv
 import os
 import re
-import icons
-import properties
-import dbconnect
+from . import icons
+from . import properties
+from . import dbconnect
 import logging
-import sqltools
+from . import sqltools
 import numpy as np
-from utils import Observable
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from .utils import Observable
+from wx.adv import OwnerDrawnComboBox as ComboBox
 from wx.lib.combotreebox import ComboTreeBox
 
-p = properties.Properties.getInstance()
+p = properties.getInstance()
 db = dbconnect.DBConnect.getInstance()
 
 def get_main_frame_or_none():
@@ -113,7 +113,7 @@ class LinkTablesDialog(wx.Dialog):
         for cola, colb in zip(a_cols, b_cols):
             self.add_column(cola, colb)
 
-        if 'size' not in kwargs.keys():
+        if 'size' not in list(kwargs.keys()):
             self.resize_to_fit()
 
         self.addbtn.Bind(wx.EVT_BUTTON, self.add_column)
@@ -191,7 +191,7 @@ def prompt_user_to_link_table(parent, table):
     dlg.Sizer.Children[2].GetSizer().Insert(0, show_table_button, 0, wx.ALL, 10)
     dlg.Sizer.Children[2].GetSizer().InsertStretchSpacer(1, 1)
     def on_show_table(evt):
-        from tableviewer import TableViewer
+        from .tableviewer import TableViewer
         tableview = TableViewer(get_main_frame_or_none())
         tableview.Show()
         tableview.load_db_table(table)
@@ -283,7 +283,7 @@ class TableComboBox(ComboBox):
             self.Select(0)
 
 
-class FilterComboBox(wx.combo.BitmapComboBox):
+class FilterComboBox(wx.adv.BitmapComboBox):
     '''A combobox for selecting/creating filters. This box will automatically
     update it's choices as filters and gates are created and deleted.
     '''
@@ -365,10 +365,10 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         '''Show the ColumnFilterDialog if user wants to make a new filter.'''
         ftr = self.Value
         if ftr == FilterComboBox.NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             tables = []
             for t in [p.image_table, p.object_table, p.class_table]:
-                if isinstance(t, basestring):
+                if isinstance(t, str):
                     tables.append(t)
             cff = ColumnFilterDialog(self, tables=tables, size=(600,150))
             if cff.ShowModal()==wx.OK:
@@ -376,7 +376,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
                 fname = str(cff.get_filter_name())
                 p._filters[fname] = fltr
                 self.SetStringSelection(fname)
-                print(fname, p._filters[fname])
+                print((fname, p._filters[fname]))
             else:
                 self.Select(0)
             cff.Destroy()
@@ -384,7 +384,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
             evt.Skip()
 
 
-class GateComboBox(wx.combo.BitmapComboBox, Observable):
+class GateComboBox(wx.adv.BitmapComboBox, Observable):
     '''A combobox for selecting/creating gates. This box will automatically 
     update its choices as gates are created and deleted.
     '''
@@ -393,7 +393,7 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
     MANAGE_GATES = 'MANAGE GATES'
     def __init__(self, parent, id=-1, **kwargs):
         self.gatable_columns = None
-        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
+        wx.adv.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
         self.Select(0)
         self.reset_bitmaps()
         p.gates.addobserver(self.update_choices)
@@ -424,7 +424,7 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
         gate = self.get_gatename_or_none()
         if gate:
             p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
-            print(gate, p._filters[gate])
+            print((gate, p._filters[gate]))
         
     def get_gatename_or_none(self):
         selection = self.GetSelection() # Fix to replace self.GetStringSelection()
@@ -551,7 +551,7 @@ class TableSelectionDialog(wx.SingleChoiceDialog):
 def prompt_user_to_create_loadimages_table(parent, select_gates=[]):
     dlg = CreateLoadImagesTableDialog(parent, select_gates)
     if dlg.ShowModal() == wx.ID_OK:
-        import tableviewer
+        from . import tableviewer
         return tableviewer.show_loaddata_table(dlg.get_selected_gates(), dlg.get_gates_as_columns())
     else:
         return None
@@ -655,7 +655,7 @@ class GateManager(wx.Dialog):
             p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
         else:
             self.gateinfo.Value = ''
-        print(gate, p._filters[gate])
+        print((gate, p._filters[gate]))
 
     def update_choices(self, evt):
         sel = self.gatelist.GetStringSelection()
@@ -676,11 +676,11 @@ class GateManager(wx.Dialog):
             p.gates.pop(gate)
 
             
-class CheckListComboBox(wx.combo.ComboCtrl):
+class CheckListComboBox(wx.ComboCtrl):
     '''A handy concoction for doing selecting multiple items with a ComboBox.
     '''
     def __init__(self, parent, choices=[], **kwargs):
-        wx.combo.ComboCtrl.__init__(self, parent, -1, **kwargs)
+        wx.ComboCtrl.__init__(self, parent, -1, **kwargs)
         self.popup = CheckListComboPopup(choices)
         self.SetPopupControl(self.popup)
         
@@ -701,11 +701,11 @@ class CheckListComboBox(wx.combo.ComboCtrl):
         self.Value = self.popup.GetStringValue()
 
         
-class CheckListComboPopup(wx.combo.ComboPopup):
+class CheckListComboPopup(wx.ComboPopup):
     '''A ComboBox that provides a CheckList for multiple selection. Hurray!
     '''
     def __init__(self, choices=[]):
-        wx.combo.ComboPopup.__init__(self)
+        wx.ComboPopup.__init__(self)
         self.choices = choices
 
     def on_dclick(self, evt):
@@ -779,7 +779,7 @@ def show_objects_from_gate(gatename, warn=100):
         except ValueError:
             wx.MessageDialog(get_main_frame_or_none(), 'You have entered an invalid number', 'Error').ShowModal()
             return
-    import sortbin
+    from . import sortbin
     f = sortbin.CellMontageFrame(get_main_frame_or_none())
     f.Show()
     f.add_objects(keys)
@@ -804,7 +804,7 @@ def show_images_from_gate(gatename, warn=10):
         if response != wx.ID_YES:
             return
     logging.info('Opening %s images.'%(len(res)))
-    import imagetools
+    from . import imagetools
     for row in res:
         imagetools.ShowImage(tuple(row), p.image_channel_colors, parent=get_main_frame_or_none())
         
@@ -820,17 +820,17 @@ def show_load_dialog():
                     'Properties file (*.properties, *.txt)|*.properties;*.txt|'
                     'Columbus MeasurementIndex file (*.ColumbusIDX.xml)|*.ColumbusIDX.xml|'
                     'Harmony PlateResults file (*.xml)|*.xml',
-                    style=wx.OPEN|wx.FD_CHANGE_DIR)
+                    style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
     response = dlg.ShowModal()
     
     if response == wx.ID_OK:
         filename = dlg.GetPath()
         os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         if filename.endswith('ColumbusIDX.xml'):
-            from parseperkinelmer import load_columbus
+            from .parseperkinelmer import load_columbus
             load_columbus(filename)
         elif filename.endswith('.xml'):
-            from parseperkinelmer import load_harmony
+            from .parseperkinelmer import load_harmony
             load_harmony(filename)            
         else:
             p.load_file(filename)

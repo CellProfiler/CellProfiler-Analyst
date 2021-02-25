@@ -21,7 +21,7 @@ class TestOldFilter(unittest.TestCase):
         filter = cpa.properties._filters['MCF7wt']
         with patch.object(cpa.db, 'execute') as execute:
             with patch.object(cpa.db, 'GetResultColumnNames') as GetResultColumnNames:
-                execute.return_value = [(1L, 'SIMPLE', 'Morphology_Per_Image', 'ALL', None, None, None, None, 107760L, 'Using where')]
+                execute.return_value = [(1, 'SIMPLE', 'Morphology_Per_Image', 'ALL', None, None, None, None, 107760, 'Using where')]
                 GetResultColumnNames.return_value = ['id', 'select_type', 'table', 'type', 'possible_keys', 'key', 'key_len', 'ref', 'rows', 'Extra']
                 tables = filter.get_tables()
         self.assertEqual(tables, set(['Morphology_Per_Image']))

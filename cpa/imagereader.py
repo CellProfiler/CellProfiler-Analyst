@@ -1,19 +1,19 @@
 import wx
 import numpy as np
-import urllib2
-import urllib
-import urlparse
+import urllib.request, urllib.error, urllib.parse
+import urllib.request, urllib.parse, urllib.error
+import urllib.parse
 import os.path
 import logging
 import bioformats
-from properties import Properties
-from errors import ClearException
+from .properties import Properties
+from .errors import ClearException
 
 p = Properties.getInstance()
 
-class ThrowingURLopener(urllib.URLopener):
+class ThrowingURLopener(urllib.request.URLopener):
     def http_error_default(*args, **kwargs):
-        return urllib.URLopener.http_error_default(*args, **kwargs)
+        return urllib.request.URLopener.http_error_default(*args, **kwargs)
 
 class ImageReader(object):
 
@@ -28,7 +28,7 @@ class ImageReader(object):
         # opener must not be GC'ed until the image has been loaded.
         opener = ThrowingURLopener()
         if p.image_url_prepend:
-            parsed = urlparse.urlparse(p.image_url_prepend + filename_or_url)
+            parsed = urllib.parse.urlparse(p.image_url_prepend + filename_or_url)
             if parsed.scheme:
                 try:
                     filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
@@ -104,10 +104,10 @@ class ImageReader(object):
 
         # Check if any images need to be rescaled, and if they are the same
         # aspect ratio. If so, do the scaling.
-        from imagetools import check_image_shape_compatibility
+        from .imagetools import check_image_shape_compatibility
         check_image_shape_compatibility(channels)
         if p.image_rescale:
-            from imagetools import rescale
+            from .imagetools import rescale
             for i in range(len(channels)):
                 if channels[i].shape != p.image_rescale:
                     channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
@@ -118,9 +118,9 @@ class ImageReader(object):
 ####################### FOR TESTING #########################
 if __name__ == "__main__":
     import wx
-    from datamodel import DataModel
-    from dbconnect import DBConnect
-    from imageviewer import ImageViewer
+    from .datamodel import DataModel
+    from .dbconnect import DBConnect
+    from .imageviewer import ImageViewer
     import sys
 
     app = wx.PySimpleApp()

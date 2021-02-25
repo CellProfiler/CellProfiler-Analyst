@@ -1,8 +1,8 @@
 import wx
-from properties import Properties
+from .properties import Properties
 import numpy as np
 from matplotlib.pyplot import cm
-from StringIO import StringIO
+from io import StringIO
 from base64 import b64decode
 p = Properties.getInstance()
 

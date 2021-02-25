@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-def _compute_group_subsample((cache_dir, normalization_name, image_key, 
-                              indices)):
+
+def _compute_group_subsample(xxx_todo_changeme):
+    (cache_dir, normalization_name, image_key, 
+                              indices) = xxx_todo_changeme
     import numpy as np
     from .cache import Cache, normalizations
     cache = Cache(cache_dir)
@@ -11,7 +12,7 @@ def _compute_group_subsample((cache_dir, normalization_name, image_key,
                                                         removeRowsWithNaN=False)
     return normalizeddata[indices], np.hstack((np.array([image_key]*indices.shape[0]), _[indices][:,np.newaxis]))
 
-import cPickle as pickle
+import pickle as pickle
 import operator
 import random
 import logging
@@ -22,6 +23,7 @@ from cpa.util import replace_atomically
 from .cache import Cache
 from .normalization import RobustLinearNormalization, normalizations
 from .parallel import ParallelProcessor, Uniprocessing
+from functools import reduce
 
 def _break_indices(indices, image_keys, count_cells):
     """Break the overall list of random indices into per-image indices."""
@@ -88,7 +90,7 @@ class Subsample(object):
         if sample_size is None:
             sample_size = int(round(0.001 * ncells))
         if verbose:
-            print('Subsampling {0} of {1} cells'.format(sample_size, ncells))
+            print(('Subsampling {0} of {1} cells'.format(sample_size, ncells)))
         if group is None:
             return self._compute1([(sample_size, image_keys)], count_cells,
                                   parallel, show_progress)
@@ -111,7 +113,7 @@ class Subsample(object):
         parameters = []
         for sample_size, image_keys in sample_sizes_and_keys:
             ncells = count_cells(image_keys)
-            indices = np.array(random.sample(xrange(ncells), sample_size))
+            indices = np.array(random.sample(list(range(ncells)), sample_size))
             per_image_indices = _break_indices(indices, image_keys, count_cells)
             parameters.extend(_make_parameters(self.cache_dir, self.normalization_name, 
                                                image_keys, per_image_indices))

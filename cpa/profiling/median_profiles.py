@@ -22,18 +22,18 @@ def aggregate_profiles(profiles, group_name, aggregator):
     profiles.assert_not_isnan()
     input_group_r, input_colnames = cpa.db.group_map(profiles.group_name, reverse=True)
     input_group_r = dict((tuple(map(str, k)), v) 
-                         for k, v in input_group_r.items())
+                         for k, v in list(input_group_r.items()))
     output_group, output_colnames = cpa.db.group_map(group_name)
 
     d = {}
-    for key, vector in profiles.items():
+    for key, vector in list(profiles.items()):
         images = input_group_r[key]
         groups = [output_group[image] for image in images]
         if groups.count(groups[0]) != len(groups):
             raise ValueError('Input group %r contains images in %d different output groups' % (key, len(set(groups))))
         d.setdefault(groups[0], []).append(vector)
 
-    keys = d.keys()
+    keys = list(d.keys())
     return Profiles(keys, [aggregator(np.vstack(d[key]), 0)
                            for key in keys], profiles.variables,
                     group_name=group_name)

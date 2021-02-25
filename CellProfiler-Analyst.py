@@ -9,7 +9,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from __future__ import with_statement
+
 import sys
 import sys
 import os
@@ -19,7 +19,6 @@ import re
 import javabridge
 import bioformats
 from cpa import __version__
-import cpa.helpmenu
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
 
@@ -77,24 +76,11 @@ if len(sys.argv) > 1:
     else:
         p.LoadFile(sys.argv[1])
 
+
 import threading
-from cpa.classifier import Classifier
-from cpa.tableviewer import TableViewer
-from cpa.plateviewer import PlateViewer
-from cpa.imageviewer import ImageViewer
-from cpa.imagegallery import ImageGallery
-from cpa.boxplot import BoxPlot
-from cpa.scatter import Scatter
-from cpa.histogram import Histogram
-from cpa.density import Density
-from cpa.querymaker import QueryMaker
-from cpa.normalizationtool import NormalizationUI
-import cpa.icons
-import cpa.cpaprefs
 from cpa.cpatool import CPATool
 import inspect
 
-from cpa.icons import get_cpa_icon
 import cpa.multiclasssql
 # ---
 import wx
@@ -121,6 +107,11 @@ class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
+
+        import cpa.icons
+        import cpa.cpaprefs
+        from cpa.icons import get_cpa_icon
+
         #wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.1.0 (r%s)'%(__version__), **kwargs)
         wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst %s'%(__version__), **kwargs)
         self.properties = properties
@@ -158,28 +149,28 @@ class MainGUI(wx.Frame):
         #
         self.SetMenuBar(wx.MenuBar())
         fileMenu = wx.Menu()
-        savePropertiesMenuItem = fileMenu.Append(-1, 'Save properties\tCtrl+S', help='Save the properties.')
-##        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load properties\tCtrl+O', help='Open another properties file.')
+        savePropertiesMenuItem = fileMenu.Append(-1, 'Save properties\tCtrl+S', helpString='Save the properties.')
+##        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load properties\tCtrl+O', helpString='Open another properties file.')
         fileMenu.AppendSeparator()
-        saveWorkspaceMenuItem = fileMenu.Append(-1, 'Save workspace\tCtrl+Shift+S', help='Save the currently open plots and settings.')
-        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load workspace\tCtrl+Shift+O', help='Open plots saved in a previous workspace.')
+        saveWorkspaceMenuItem = fileMenu.Append(-1, 'Save workspace\tCtrl+Shift+S', helpString='Save the currently open plots and settings.')
+        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load workspace\tCtrl+Shift+O', helpString='Open plots saved in a previous workspace.')
         fileMenu.AppendSeparator()
-        saveLogMenuItem = fileMenu.Append(-1, 'Save log', help='Save the contents of the log window.')
+        saveLogMenuItem = fileMenu.Append(-1, 'Save log', helpString='Save the contents of the log window.')
         fileMenu.AppendSeparator()
-        self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', help='Exit classifier')
+        self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', helpString='Exit classifier')
         self.GetMenuBar().Append(fileMenu, 'File')
 
         toolsMenu = wx.Menu()
-        imageGalleryMenuItem = toolsMenu.Append(ID_IMAGE_GALLERY, 'Image Gallery Viewer\tCtrl+Shift+I', help='Launches the Image Gallery')
-        classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
-        plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
-        #imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
-        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
-        histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
-        densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
-        boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
-        dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', help='Launches the Table Viewer tool.')
-        normalizeMenuItem   = toolsMenu.Append(ID_NORMALIZE, 'Normalization Tool\tCtrl+Shift+T', help='Launches a tool for generating normalized values for measurement columns in your tables.')
+        imageGalleryMenuItem = toolsMenu.Append(ID_IMAGE_GALLERY, 'Image Gallery Viewer\tCtrl+Shift+I', helpString='Launches the Image Gallery')
+        classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', helpString='Launches Classifier.')
+        plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', helpString='Launches the Plate Viewer tool.')
+        #imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', helpString='Launches the ImageViewer tool.')
+        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', helpString='Launches the Scatter Plot tool.')
+        histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', helpString='Launches the Histogram Plot tool.')
+        densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', helpString='Launches the Density Plot tool.')
+        boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', helpString='Launches the Box Plot tool.')
+        dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', helpString='Launches the Table Viewer tool.')
+        normalizeMenuItem   = toolsMenu.Append(ID_NORMALIZE, 'Normalization Tool\tCtrl+Shift+T', helpString='Launches a tool for generating normalized values for measurement columns in your tables.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()
@@ -192,11 +183,11 @@ class MainGUI(wx.Frame):
         self.GetMenuBar().Append(logMenu, 'Logging')
 
         advancedMenu = wx.Menu()
-        #normalizeMenuItem = advancedMenu.Append(-1, 'Launch feature normalization tool', help='Launches a tool for generating normalized values for measurement columns in your tables.')
-        queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', help='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
-        clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables from your database that tell CPA how to link your tables.')
+        #normalizeMenuItem = advancedMenu.Append(-1, 'Launch feature normalization tool', helpString='Launches a tool for generating normalized values for measurement columns in your tables.')
+        queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', helpString='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
+        clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', helpString='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
-
+        import cpa.helpmenu
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
 
         # console and logging
@@ -420,7 +411,7 @@ class CPAnalyst(wx.App):
 
         '''List of tables created by the user during this session'''
         self.user_tables = []
-
+        import wx
         # splashscreen
         splashimage = cpa.icons.cpa_splash.ConvertToBitmap()
         # If the splash image has alpha, it shows up transparently on
@@ -432,8 +423,10 @@ class CPAnalyst(wx.App):
         dc.SelectObject(splashbitmap)
         dc.DrawBitmap(splashimage, 0, 0)
         dc.Destroy() # necessary to avoid a crash in splashscreen
-        splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN |
-                                wx.SPLASH_TIMEOUT, 2000, None, -1)
+        from wx.adv import SplashScreen, SPLASH_CENTRE_ON_SCREEN, SPLASH_TIMEOUT
+
+        splash = SplashScreen(splashbitmap, SPLASH_CENTRE_ON_SCREEN |
+                                SPLASH_TIMEOUT, 2000, None, -1)
         self.splash = splash
 
         p = Properties.getInstance()
@@ -466,16 +459,16 @@ class CPAnalyst(wx.App):
         # removes the log4j warnings
         javabridge.attach()
 
-        # TODO: check for updates
-        try:
-            if __version__ != -1:
-                import cpa.util.check_for_updates as cfu
-                cfu.check_for_updates('http://cellprofiler.org/updates/CPA.html',
-                                      max(__version__, cpa.cpaprefs.get_skip_version()),
-                                      new_version_cb,
-                                      user_agent='CPAnalyst/%s'%(__version__))
-        except ImportError:
-            logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
+        # TODO: check for updates properly
+        # try:
+        #     # if __version__ != -1:
+        #     #     import cpa.util.check_for_updates as cfu
+        #     #     cfu.check_for_updates('http://cellprofiler.org/updates/CPA.html',
+        #     #                           max(__version__, cpa.cpaprefs.get_skip_version()),
+        #     #                           new_version_cb,
+        #     #                           user_agent='CPAnalyst/%s'%(__version__))
+        # except ImportError:
+        #     logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
 
         self.frame.Show() # Show frame
         return True
@@ -505,7 +498,7 @@ class CPAnalyst(wx.App):
                     logging.info('opening plot "%s"'%(lines[i]))
                     while lines[i+1].startswith('\t'):
                         i += 1
-                        setting, value = map(str.strip, lines[i].split(':', 1))
+                        setting, value = list(map(str.strip, lines[i].split(':', 1)))
                         settings[setting] = value
                     pos += 15
                     plot = cpatool(parent=self.frame, pos=(pos,pos))
@@ -524,7 +517,7 @@ class CPAnalyst(wx.App):
         f.write('\n')
         for plot in self.get_plots():
             f.write('%s\n'%(plot.tool_name))
-            for setting, value in plot.save_settings().items():
+            for setting, value in list(plot.save_settings().items()):
                 assert ':' not in setting
                 f.write('\t%s : %s\n'%(setting, str(value)))
             f.write('\n')
@@ -543,6 +536,18 @@ if __name__ == "__main__":
     # Initialize the app early because the fancy exception handler
     # depends on it in order to show a 
     app = CPAnalyst(redirect=False)
+    from cpa.classifier import Classifier
+    from cpa.tableviewer import TableViewer
+    from cpa.plateviewer import PlateViewer
+    from cpa.imageviewer import ImageViewer
+    from cpa.imagegallery import ImageGallery
+    from cpa.boxplot import BoxPlot
+    from cpa.scatter import Scatter
+    from cpa.histogram import Histogram
+    from cpa.density import Density
+    from cpa.querymaker import QueryMaker
+    from cpa.normalizationtool import NormalizationUI
+
     app.Start()
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)

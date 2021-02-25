@@ -1,13 +1,13 @@
-from __future__ import print_function
-from cpatool import CPATool
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
-import sqltools as sql
-from multiclasssql import filter_table_prefix
-from properties import Properties
-import guiutils as ui 
-from gating import GatingHelper
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
+
+from .cpatool import CPATool
+from .dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
+from . import sqltools as sql
+from .multiclasssql import filter_table_prefix
+from .properties import Properties
+from . import guiutils as ui 
+from .gating import GatingHelper
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import imagetools
 import logging
 import numpy as np
 import os
@@ -44,7 +44,7 @@ class DataSourcePanel(wx.Panel):
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.gridsize_input = wx.TextCtrl(self, -1, '50')
-        maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
+        maps = [m for m in list(matplotlib.cm.datad.keys()) if not m.endswith("_r")]
         maps.sort()
         self.colormap_choice = ComboBox(self, -1, choices=maps, style=wx.CB_READONLY)
         self.colormap_choice.SetSelection(maps.index('jet'))
@@ -202,7 +202,7 @@ class DataSourcePanel(wx.Panel):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        return [m for m,t in zip(measurements, types) if t in [float, int, int]]
         
     def _plotting_per_object_data(self):
         return (p.object_table and
@@ -427,7 +427,8 @@ class DensityPanel(FigureCanvasWxAgg):
         if evt.button == 3: # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
-    def show_popup_menu(self, (x,y), data):
+    def show_popup_menu(self, xxx_todo_changeme, data):
+        (x,y) = xxx_todo_changeme
         self.popup_menu_filters = {}
         popup = wx.Menu()
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
@@ -436,7 +437,7 @@ class DensityPanel(FigureCanvasWxAgg):
         if selected_gate:
             selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
-                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  lambda e:ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+
 import functools
 import io
 import sys
@@ -32,7 +32,7 @@ def _compute_rfe(x, y, target_accuracy=1.0):
     clf = SVC(kernel='linear', C=1.) #LinearSVC(C=1.0)
     #clf = LinearSVC(C=1.0)
     rfecv = RFECV(clf, step=0.1, cv=cv, loss_func=zero_one)
-    print('About to call RFECV.fit on', x.shape, 'and', y.shape)
+    print(('About to call RFECV.fit on', x.shape, 'and', y.shape))
     rfecv.fit(x, y)
     print('RFECV done')
     # The percentage correct for each # of variables in the cross validation
@@ -74,9 +74,10 @@ class memoized(object):
         """Support instance methods."""
         return functools.partial(self.__call__, obj)
 
-def _compute_svmnormalvector((cache_dir, images, control_images, 
-                              normalization_name, preprocess_file, rfe)):
+def _compute_svmnormalvector(xxx_todo_changeme):
     #try:
+        (cache_dir, images, control_images, 
+                              normalization_name, preprocess_file, rfe) = xxx_todo_changeme
         import numpy as np 
         import sys
         from cpa.profiling.cache import Cache
@@ -137,7 +138,7 @@ def profile_svmnormalvector(cache_dir, group_name, control_filter,
             return [r for image in treated_images
                     for r in control_images_by_plate[plate_by_image[image]]]
 
-        keys = group.keys()
+        keys = list(group.keys())
         parameters = [(cache_dir, group[k], control_images(group[k]), 
                        normalization.__name__, preprocess_file, rfe)
                       for k in keys]

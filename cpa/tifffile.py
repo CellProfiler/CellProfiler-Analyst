@@ -91,8 +91,8 @@ Examples
 
 """
 
-from __future__ import division
-from __future__ import print_function
+
+
 
 import sys
 import os
@@ -352,13 +352,13 @@ class TIFFpage(object):
         tags = self.tags
         fd.seek(offset, 0)
         numtags = struct.unpack(byte_order+'H', fd.read(2))[0]
-        for i in xrange(numtags):
+        for i in range(numtags):
             tag = TIFFtag(fd, byte_order=byte_order)
             tags[tag.name] = tag
 
         # read custom tags
         pos = fd.tell()
-        for name, readtag in CUSTOM_TAGS.values():
+        for name, readtag in list(CUSTOM_TAGS.values()):
             if name in tags and readtag:
                 value = readtag(fd, byte_order, tags[name])
                 if isinstance(value, dict): # numpy.core.records.record
@@ -370,7 +370,7 @@ class TIFFpage(object):
         """Validate standard tags and initialize attributes."""
         tags = self.tags
 
-        for code, (name, default, dtype, count, validate) in TIFF_TAGS.items():
+        for code, (name, default, dtype, count, validate) in list(TIFF_TAGS.items()):
             if not (name in tags or default is None):
                 tags[name] = TIFFtag(code, dtype=dtype, count=count,
                                      value=default, name=name)
@@ -484,7 +484,7 @@ class TIFFpage(object):
                and self.bits_per_sample in (8, 16, 32) \
                and all(strip_offsets[i] == \
                        strip_offsets[i+1]-strip_byte_counts[i]
-                       for i in xrange(len(strip_offsets)-1)):
+                       for i in range(len(strip_offsets)-1)):
                 strip_byte_counts = (strip_offsets[-1] - strip_offsets[0] +
                                      strip_byte_counts[-1], )
                 strip_offsets = (strip_offsets[0], )
@@ -688,7 +688,7 @@ class TiffTags(Record):
         sortbycode = lambda a, b: cmp(a[0], b[0])
         s = []
         for td in (TIFF_TAGS, CUSTOM_TAGS):
-            for i, t in sorted(td.iteritems(), sortbycode):
+            for i, t in sorted(iter(td.items()), sortbycode):
                 if t[0] in self:
                     t = self[t[0]]
                     typecode = "%i%s" % (t.count * int(t.dtype[0]), t.dtype[1])
@@ -839,7 +839,7 @@ def unpackbits(data, dtype, itemsize, length=0):
     result = numpy.empty((l,), dtype)
 
     bitcount = 0
-    for i in xrange(len(result)):
+    for i in range(len(result)):
         start = bitcount // 8
         s = data[start:start+itembytes]
         try:
@@ -924,7 +924,7 @@ def lzwdecode(encoded):
         if code == 257: # EOI
             break
         if code == 256: # CLEAR
-            table = [chr(i) for i in xrange(256)]
+            table = [chr(i) for i in range(256)]
             table.extend((0, 0))
             lentable = 258
             bitw, shr, mask = switchbitch[255]

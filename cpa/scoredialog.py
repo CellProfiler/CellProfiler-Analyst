@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import wx
 
 class ScoreDialog(wx.Dialog):
@@ -18,8 +18,8 @@ class ScoreDialog(wx.Dialog):
             else:
                 return (item, str(item))
         
-        self.groups = map(key_value, groups)
-        self.filters = map(key_value, filters)
+        self.groups = list(map(key_value, groups))
+        self.filters = list(map(key_value, filters))
 
         self.groups_lb = wx.ListBox(self, choices=[v for k,v in self.groups])
         self.groups_lb.SetSelection(0)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
                     [(None, 'None'), 'Untreated', 'HRG'])
     if d.ShowModal() == wx.ID_OK:
         print('a')
-        print("Group:", repr(d.group))
-        print("Filter:", repr(d.filter))
-        print((d.wants_enrichments and 'Wants' or 'Does not want') + ' enrichments')
+        print(("Group:", repr(d.group)))
+        print(("Filter:", repr(d.filter)))
+        print(((d.wants_enrichments and 'Wants' or 'Does not want') + ' enrichments'))
     d.Destroy()

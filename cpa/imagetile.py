@@ -1,14 +1,14 @@
 '''
 A special image panel meant to be dragged and dropped.
 '''
-from dbconnect import DBConnect
-from imagepanel import ImagePanel
-from properties import Properties
-import imagetools
-import cPickle
+from .dbconnect import DBConnect
+from .imagepanel import ImagePanel
+from .properties import Properties
+from . import imagetools
+import pickle
 import wx
 
-from trainingset import CellCache
+from .trainingset import CellCache
 
 p = Properties.getInstance()
 db = DBConnect.getInstance()
@@ -25,7 +25,7 @@ class ImageTileDropTarget(wx.DropTarget):
         if not self.GetData():
             return wx.DragNone
         draginfo = self.data.GetData()
-        srcID, obKeys = cPickle.loads(draginfo)
+        srcID, obKeys = pickle.loads(draginfo)
         if not obKeys:
             return wx.DragNone
         return self.tile.bin.ReceiveDrop(srcID, obKeys) 
@@ -227,7 +227,7 @@ class ImageTile(ImagePanel):
         
         # wx crashes unless the data object is assigned to a variable.
         data_object = wx.CustomDataObject("ObjectKey")
-        data_object.SetData(cPickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
+        data_object.SetData(pickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
         source = wx.DropSource(self)#, copy=cursor, move=cursor)
         source.SetData(data_object)
         result = source.DoDragDrop(wx.Drag_DefaultMove)

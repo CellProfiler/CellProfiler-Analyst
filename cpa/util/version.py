@@ -14,7 +14,7 @@ Please see the AUTHORS file for credits.
 
 Website: http://www.cellprofiler.org
 '''
-from __future__ import print_function
+
 
 import re
 import sys

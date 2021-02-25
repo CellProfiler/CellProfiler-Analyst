@@ -1,15 +1,15 @@
 #!/usr/bin/env python
-from __future__ import print_function
-from dbconnect import *
-from datamodel import DataModel
-from properties import Properties
-from StringIO import StringIO, StringIO
-from trainingset import TrainingSet
+
+from .dbconnect import *
+from .datamodel import DataModel
+from .properties import Properties
+from io import StringIO, StringIO
+from .trainingset import TrainingSet
 from time import time
-import dirichletintegrate
-import fastgentleboostingmulticlass
-import multiclasssql
-import polyafit
+from . import dirichletintegrate
+from . import fastgentleboostingmulticlass
+from . import multiclasssql
+from . import polyafit
 import logging
 import numpy as np
 import os
@@ -76,27 +76,27 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
         
     if results_table:
         if db.table_exists(results_table) and not overwrite:
-            print('Table "%s" already exists. Delete this table before running scoreall.'%(results_table))
+            print(('Table "%s" already exists. Delete this table before running scoreall.'%(results_table)))
             return None
 
     print('')
-    print('properties:    ', properties)
-    print('initial training set:  ', ts)
-    print('ground truth training set:  ', gt)
-    print('# rules:       ', nRules)
-    print('filter:        ', filter_name)
-    print('grouping by:   ', group)
-    print('show results:  ', show_results)
-    print('results table: ', results_table)
-    print('overwrite:     ', overwrite)
+    print(('properties:    ', properties))
+    print(('initial training set:  ', ts))
+    print(('ground truth training set:  ', gt))
+    print(('# rules:       ', nRules))
+    print(('filter:        ', filter_name))
+    print(('grouping by:   ', group))
+    print(('show results:  ', show_results))
+    print(('results table: ', results_table))
+    print(('overwrite:     ', overwrite))
     print('')
             
     nClasses = len(ts.labels)
     nKeyCols = len(image_key_columns())
     
     assert 200 > nRules > 0, '# of rules must be between 1 and 200.  Value was %s'%(nRules,)
-    assert filter_name in p._filters.keys()+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter_name, ','.join(p._filters.keys()),)
-    assert group in p._groups.keys()+['Image', 'None'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, ','.join(p._groups.keys()),)
+    assert filter_name in list(p._filters.keys())+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter_name, ','.join(list(p._filters.keys())),)
+    assert group in list(p._groups.keys())+['Image', 'None'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, ','.join(list(p._groups.keys())),)
     
     output = StringIO()
     logging.info('Training classifier with %s rules...'%nRules)
@@ -130,13 +130,13 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
     percent = [100*cm[i,i]/float(s[i]) for i in range(len(s))]
     avg = np.mean(percent)
     avgTotal = 100 * np.trace(cm) / float(np.sum(cm))    
-    print('accuracy = %f' % avgTotal)
+    print(('accuracy = %f' % avgTotal))
     print('Confusion Matrix = ... ')
     print(cm)
     my_sens = cm[0,0] / float(cm[0,0] + cm[0,1]) #TP/(TP+FN)
     my_spec = cm[1,1] / float(cm[1,1] + cm[1,0]) #TN/(TN+FP)
-    print('My_Sensitivity = %f' % my_sens)
-    print('My_Specificity = %f' % my_spec)
+    print(('My_Sensitivity = %f' % my_sens))
+    print(('My_Specificity = %f' % my_spec))
     print('Sensitivity = ...')
     print(sens)
     print('Specificity = ...')
@@ -168,8 +168,8 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
         width = len(conf_arr)
         height = len(conf_arr[0])
         
-        for x in xrange(width):
-            for y in xrange(height):
+        for x in range(width):
+            for y in range(height):
                 ax.annotate(str(conf_arr[x][y]), xy=(y, x), 
                             horizontalalignment='center',
                             verticalalignment='center')
@@ -180,8 +180,8 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
             plt.yticks([0,1],['TP','FP'])
         else:
             alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-            plt.xticks(range(width), alphabet[:width])
-            plt.yticks(range(height), alphabet[:height])
+            plt.xticks(list(range(width)), alphabet[:width])
+            plt.yticks(list(range(height)), alphabet[:height])
         plt.show()
             
     print('Done')

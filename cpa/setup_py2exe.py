@@ -9,9 +9,9 @@ import os.path
 import glob
 import numpy
 import subprocess
-import _winreg
+import winreg
 
-import util.version
+from . import util.version
 
 class CellProfilerAnalystMSI(distutils.core.Command):
     description = "Make CellProfilerAnalyst.msi using InnoSetup"
@@ -42,9 +42,9 @@ OutputBaseFilename=CellProfilerAnalyst_win32_%d
         """Return the command to use to compile an .iss file
         """
         try:
-            key = _winreg.OpenKey(_winreg.HKEY_CLASSES_ROOT, 
+            key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, 
                                    "InnoSetupScriptFile\\shell\\Compile\\command")
-            result = _winreg.QueryValueEx(key,None)[0]
+            result = winreg.QueryValueEx(key,None)[0]
             key.Close()
             return result
         except WindowsError:

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import logging
 import itertools
 from optparse import OptionGroup
@@ -40,7 +40,7 @@ class ParallelProcessor(object):
         based on an argument that can be an LSF objct, an ipython
         profile name, False, or None."""
         if isinstance(ipython_profile, LSF):
-            import LSF
+            from . import LSF
         elif ipython_profile:
             from IPython.parallel import Client, LoadBalancedView
             client = Client(profile=ipython_profile)
@@ -58,7 +58,7 @@ class ParallelProcessor(object):
         if noptions > 1:
             parser.error('You can only specify one of --ipython-profile, --lsf-directory, and --multiprocessing.')
         if options.lsf_directory:
-            import lsf
+            from . import lsf
             return lsf.LSF(options.njobs, options.lsf_directory, memory=options.memory, job_array_name = options.jobname)
         elif options.ipython_profile:
             from IPython.parallel import Client, LoadBalancedView
@@ -100,7 +100,8 @@ class Uniprocessing(ParallelProcessor):
 class UniprocessingView(object):
     imap = itertools.imap
 
-def test_function((seconds)):
+def test_function(xxx_todo_changeme):
+    (seconds) = xxx_todo_changeme
     import time
     time.sleep(seconds)
     return seconds
@@ -117,7 +118,7 @@ def test():
     view = parallel.view('foo')
     for result in view.imap(test_function, [random.randint(1, 10)
                                             for task in range(10)]):
-        print('Task returned', result)
+        print(('Task returned', result))
     
 if __name__ == '__main__':
     test()

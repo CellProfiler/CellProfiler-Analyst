@@ -8,7 +8,7 @@ import numpy
 from dbconnect import *
 from properties import Properties
 from datamodel import DataModel
-from StringIO import StringIO
+from io import StringIO
 from scoreall import score
 import base64
 import zlib
@@ -16,7 +16,7 @@ import os
 
 if __name__ == "__main__":
     from trainingset import TrainingSet
-    from StringIO import StringIO
+    from io import StringIO
     import fastgentleboostingmulticlass
     from datatable import DataGrid
     import wx
