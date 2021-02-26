@@ -57,7 +57,9 @@ class Singleton(type):
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
-
+    def forget(cls):
+        if cls in cls._instances:
+            del cls._instances[cls]
 
 #
 # class SingletonException(Exception):

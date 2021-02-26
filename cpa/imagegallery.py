@@ -1121,7 +1121,8 @@ class ImageGallery(wx.Frame):
         # XXX: Hack -- can't figure out what is holding onto TileCollection, but
         #      it needs to be trashed if Classifier is to be reopened since it
         #      will otherwise grab the existing instance with a dead tileLoader
-        tilecollection.TileCollection._forgetClassInstanceReferenceForTesting()
+        tilecollection.TileCollection.forget()
+        # tilecollection.TileCollection._forgetClassInstanceReferenceForTesting()
 
     
 class StopCalculating(Exception):
