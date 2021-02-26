@@ -232,7 +232,9 @@ class SortBin(wx.ScrolledWindow):
     def RemoveSelectedTiles(self):
         for tile in self.Selection():
             self.tiles.remove(tile)
-            self.sizer.Remove(tile)
+            # Todo: Move tiles rather than destroying them
+            # self.sizer.Remove(tile)
+            # Destroying removes from size automatically now
             wx.CallAfter(tile.Destroy)
         wx.CallAfter(self.UpdateSizer)
         self.UpdateQuantity()
@@ -260,8 +262,8 @@ class SortBin(wx.ScrolledWindow):
 
         closure = hack(obKeys)
         if srcID == self.GetId():
-            wx.CallAfter(closure)
-            return
+            # wx.CallAfter(closure)
+            return wx.DragNone
         self.DeselectAll()
         closure()
         [tile.Select() for tile in self.tiles if tile.obKey in obKeys]

@@ -11,12 +11,18 @@ class ImageTileSizer(wx.PySizer):
         
     def pitch(self):
         # get sizes of all tiles
-        sizes = [c.GetSize() + wx.Size(2*c.GetBorder(), 2*c.GetBorder())
-                 for c in self.GetChildren()]
-        if sizes == []:
+        children = self.GetChildren()
+        if len(children) == 0:
             return None
         else:
-            return wx.Size(max([s.width for s in sizes]), max([s.height for s in sizes]))
+            maxi_w = 0
+            maxi_h = 0
+            for child in children:
+                size = child.GetSize()
+                add = 2 * child.GetBorder()
+                maxi_w = max(maxi_w, size.GetWidth() + add)
+                maxi_h = max(maxi_h, size.GetHeight() + add)
+            return wx.Size(maxi_w, maxi_h)
 
     def CalcMin(self):
         n = len(self.GetChildren())
