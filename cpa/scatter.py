@@ -27,8 +27,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
@@ -499,7 +499,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             show_keys += list(set([tuple(k) for k in keys]))
         if len(show_keys[0]) == len(image_key_columns()):
             from . import datamodel
-            dm = datamodel.DataModel.getInstance()
+            dm = datamodel.DataModel()
             obkeys = []
             for key in show_keys:
                 obkeys += dm.GetObjectsFromImage(key)

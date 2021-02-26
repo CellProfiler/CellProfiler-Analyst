@@ -4,10 +4,10 @@ import re
 from . import sqltools as sql
 from .properties import Properties
 from .dbconnect import DBConnect
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 class ColumnFilterPanel(wx.Panel):
     '''

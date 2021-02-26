@@ -7,8 +7,8 @@ from .dbconnect import *
 from UserDict import DictMixin
 from . import imagetools
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 class ImageListCtrl(wx.ListCtrl):
     def __init__(self, parent, imkeys):

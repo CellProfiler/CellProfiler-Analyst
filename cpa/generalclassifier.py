@@ -39,7 +39,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         ''' Called when the Cross Validation Button is pressed. '''
         # get wells if available, otherwise use imagenumbers
 
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         groups = [db.get_platewell_for_object(key) for key in self.env.trainingSet.get_object_keys()]
 
         if not self.env.UpdateTrainingSet():

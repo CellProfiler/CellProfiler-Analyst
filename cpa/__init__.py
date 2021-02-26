@@ -4,5 +4,5 @@ __version__ = get_normalized_version()
 from . import properties
 from . import dbconnect
 
-properties = properties.Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = properties.Properties()
+db = dbconnect.DBConnect()

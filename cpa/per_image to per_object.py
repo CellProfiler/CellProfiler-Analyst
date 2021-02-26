@@ -55,11 +55,11 @@ def conflict_resolution(name):
 
 def run():
     # Get properties file
-    p=properties.Properties.getInstance()
+    p=properties.Properties()
     p.LoadFile(LoadFile())
 
     # Create the DB according to the instructions in the properties file
-    db=dbconnect.DBConnect.getInstance()
+    db=dbconnect.DBConnect()
     db.execute('SELECT 1')
 
     # Create a copy of the per_image table

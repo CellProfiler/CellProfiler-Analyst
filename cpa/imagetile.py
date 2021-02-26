@@ -10,8 +10,8 @@ import wx
 
 from .trainingset import CellCache
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 
 class ImageTileDropTarget(wx.DropTarget):
@@ -50,7 +50,7 @@ class ImageTile(ImagePanel):
         self.showCenter  = False
         self.popupMenu   = None
 
-        self.cache = CellCache.getInstance()
+        self.cache = CellCache()
 
         self.MapChannels(chMap)
         

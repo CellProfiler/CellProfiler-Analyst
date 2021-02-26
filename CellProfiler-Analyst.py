@@ -68,7 +68,7 @@ if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
 
 if len(sys.argv) > 1:
     # Load a properties file if passed in args
-    p = Properties.getInstance()
+    p = Properties()
     if sys.argv[1] == '--incell':
         # GE Incell xml wrapper
         # LOOP
@@ -290,7 +290,7 @@ class MainGUI(wx.Frame):
         normtool.Show(True)
 
     def on_save_properties(self, evt):
-        p = Properties.getInstance()
+        p = Properties()
         dirname, filename = os.path.split(p._filename)
         ext = os.path.splitext(p._filename)[-1]
         dlg = wx.FileDialog(self, message="Save properties as...", defaultDir=dirname,
@@ -300,7 +300,7 @@ class MainGUI(wx.Frame):
             p.save_file(dlg.GetPath())
 
     def on_save_workspace(self, evt):
-        p = Properties.getInstance()
+        p = Properties()
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
                             defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
@@ -329,7 +329,7 @@ class MainGUI(wx.Frame):
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
 
     def clear_link_tables(self, evt=None):
-        p = Properties.getInstance()
+        p = Properties()
         dlg = wx.MessageDialog(self, 'This will delete the tables '
                     '"%s" and "%s" from your database. '
                     'CPA will automatically recreate these tables as it '
@@ -341,7 +341,7 @@ class MainGUI(wx.Frame):
         response = dlg.ShowModal()
         if response != wx.ID_YES:
             return
-        db = DBConnect.getInstance()
+        db = DBConnect()
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_tables_table))
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_columns_table))
         db.Commit()
@@ -429,7 +429,7 @@ class CPAnalyst(wx.App):
                                 SPLASH_TIMEOUT, 2000, None, -1)
         self.splash = splash
 
-        p = Properties.getInstance()
+        p = Properties()
         if not p.is_initialized():
             from cpa.guiutils import show_load_dialog
             splash.Destroy()
@@ -444,7 +444,7 @@ class CPAnalyst(wx.App):
 
         self.frame = MainGUI(p, None, size=(1000,-1))
 
-        db = DBConnect.getInstance()
+        db = DBConnect()
         # Black magic: Bus errors occur on Mac OS X if we wait until
         # the JVM or the wx event look has started to connect. But it
         # has to be done after we have read the properties file. So we

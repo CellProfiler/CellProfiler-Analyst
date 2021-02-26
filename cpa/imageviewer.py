@@ -21,8 +21,8 @@ import logging
 import numpy as np
 import wx
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 REQUIRED_PROPERTIES = ['channels_per_image','image_channel_colors', 'object_name', 'image_names', 'image_id']
 
@@ -692,7 +692,7 @@ class ImageViewer(wx.Frame):
         else:
             imkey = (imgNum,)
 
-        dm = DataModel.getInstance()
+        dm = DataModel()
         if imkey not in dm.GetAllImageKeys():
             errdlg = wx.MessageDialog(self, 'There is no image with that key.', "Couldn't find image", wx.OK|wx.ICON_EXCLAMATION)
             errdlg.ShowModal()
@@ -770,7 +770,7 @@ if __name__ == "__main__":
     from . import imagetools
     from .imagereader import ImageReader
 
-    p = Properties.getInstance()
+    p = Properties()
     p.image_channel_colors = ['red','green','blue']
     p.object_name = ['cell', 'cells']
     p.image_names = ['a', 'b', 'c']
@@ -799,8 +799,8 @@ if __name__ == "__main__":
 ##        wx.GetApp().Exit()
 ##        raise Exception('ImageViewer requires a properties file.  Exiting.')
 ##    
-##    db = DBConnect.getInstance()
-##    dm = DataModel.getInstance()
+##    db = DBConnect()
+##    dm = DataModel()
 ##    ir = ImageReader()
 ##    
 ##    obKey = dm.GetRandomObject()

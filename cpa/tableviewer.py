@@ -24,8 +24,8 @@ from . import dbconnect
 from .datamodel import DataModel
 from . import imagetools
 
-p = Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = Properties()
+db = dbconnect.DBConnect()
 
 ABC = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 ABC += [x+y for x in ABC for y in ABC] + [x+y+z for x in ABC for y in ABC for z in ABC]
@@ -218,7 +218,7 @@ class PlainTable(TableData):
             elif self.grouping.lower() == 'object': 
                 return [tuple(self.data[self.row_order,:][row, self.key_indices[:-1]])]
             else:
-                dm = DataModel.getInstance()
+                dm = DataModel()
                 return dm.GetImagesInGroup(self.grouping, self.get_row_key(row))
         
     def get_object_keys_at_row(self, row):
@@ -228,7 +228,7 @@ class PlainTable(TableData):
         if self.key_indices is None or self.grouping is None:
             return None
         else:
-            dm = DataModel.getInstance()
+            dm = DataModel()
             # If the key index for the row is an object key, just return that key
             if self.grouping.lower() == 'object': 
                 return [tuple(self.data[self.row_order,:][row, self.key_indices])]
@@ -444,7 +444,7 @@ class DBTable(TableData):
             key = self.get_row_key(row)
             if key is None:
                 return None
-            dm = DataModel.getInstance()
+            dm = DataModel()
             n_objects = dm.GetObjectCountFromImage(key)
             return [tuple(list(key) + [i]) for i in range(n_objects)]
         elif self.table_name == p.object_table:
@@ -922,7 +922,7 @@ class TableViewer(wx.Frame):
             else:
                 key_cols = self.grid.Table.get_row_key(evt.Row)
                 if key_cols:
-                    dm = DataModel.getInstance()
+                    dm = DataModel()
                     imkeys = dm.GetImagesInGroup(self.grid.Table.grouping, key_cols)
                     for imkey in imkeys:
                         imagetools.ShowImage(imkey, p.image_channel_colors,

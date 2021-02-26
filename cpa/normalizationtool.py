@@ -24,8 +24,8 @@ GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL]
 WINDOW_CHOICES = [W_MEANDER, W_SQUARE]
 
-p = properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = properties.Properties()
+db = dbconnect.DBConnect()
 
 class NormalizationStepPanel(wx.Panel):
     def __init__(self, parent, id=-1, allow_delete=True, **kwargs):

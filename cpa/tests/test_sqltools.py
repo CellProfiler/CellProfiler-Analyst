@@ -10,7 +10,7 @@ class TestOldFilter(unittest.TestCase):
         fn = os.path.join(os.path.dirname(__file__),
                        'test_sqltools_old_filter.properties')
         cpa.properties.LoadFile(fn)
-        self.db = cpa.dbconnect.DBConnect.getInstance()
+        self.db = cpa.dbconnect.DBConnect()
         cursor = Mock()
         connID = threading.currentThread().getName()
         self.db.connections[connID] = Mock()

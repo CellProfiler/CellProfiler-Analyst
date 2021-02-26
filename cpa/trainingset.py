@@ -12,7 +12,7 @@ import pandas as pd
 from .dbconnect import *
 from .singleton import Singleton
 
-db = DBConnect.getInstance()
+db = DBConnect()
 
 class TrainingSet:
     "A class representing a set of manually labeled cells."
@@ -22,7 +22,7 @@ class TrainingSet:
         self.colnames = db.GetColnamesForClassifier()
         self.key_labels = object_key_columns()
         self.filename = filename
-        self.cache = CellCache.getInstance()
+        self.cache = CellCache()
         if filename != '':
             if csv:
                 self.LoadCSV(filename, labels_only=labels_only)
@@ -159,7 +159,7 @@ class TrainingSet:
         
     def Renumber(self, label_dict):
         from .properties import Properties
-        obkey_length = 3 if Properties.getInstance().table_id else 2
+        obkey_length = 3 if Properties().table_id else 2
         
         have_asked = False
         progress = None
@@ -216,7 +216,7 @@ class TrainingSet:
         f = open(filename, 'w')
         try:
             from .properties import Properties
-            p = Properties.getInstance()
+            p = Properties()
             f.write('# Training set created while using properties: %s\n'%(p._filename))
             f.write('label '+' '.join(self.labels)+'\n')
             i = 0
@@ -283,7 +283,7 @@ class TrainingSet:
     def get_object_keys(self):
         return [e[1] for e in self.entries]
 
-class CellCache(Singleton):
+class CellCache(metaclass=Singleton):
     ''' caching front end for holding cell data '''
     def __init__(self):
         self.data        = {}
@@ -334,7 +334,7 @@ class CellCache(Singleton):
 if __name__ == "__main__":
     from sys import argv
     from .properties import Properties
-    p = Properties.getInstance()
+    p = Properties()
     p.LoadFile(argv[1])
     tr = TrainingSet(p)
     tr.Load(argv[2])

@@ -25,9 +25,9 @@ if __name__ == "__main__":
     
     os.chdir('/Users/afraser/')
     
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
     
     testdata = [
                 # Test 2 classes filtered by MAPs

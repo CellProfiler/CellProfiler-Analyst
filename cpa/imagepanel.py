@@ -2,7 +2,7 @@ import wx
 from . import imagetools
 from .properties import Properties
 
-p = Properties.getInstance()
+p = Properties()
 
 class ImagePanel(wx.Panel):
     '''

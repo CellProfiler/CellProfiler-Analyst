@@ -68,8 +68,8 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
     '''
     
     p = properties
-    #db = DBConnect.getInstance() ## Removed writing to db.  Results_table should be 'None' anyway
-    dm = DataModel.getInstance()
+    #db = DBConnect() ## Removed writing to db.  Results_table should be 'None' anyway
+    dm = DataModel()
 
     #if group == None:
         #group = 'Image'
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     results_table = ''
     
     logging.info('Loading properties file...')
-    p = Properties.getInstance()
+    p = Properties()
     p.LoadFile(props_file)
     logging.info('Loading initial training set...')
     ts = TrainingSet(p)

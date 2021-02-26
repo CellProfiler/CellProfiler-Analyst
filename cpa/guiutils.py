@@ -13,8 +13,8 @@ from .utils import Observable
 from wx.adv import OwnerDrawnComboBox as ComboBox
 from wx.lib.combotreebox import ComboTreeBox
 
-p = properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = properties.Properties()
+db = dbconnect.DBConnect()
 
 def get_main_frame_or_none():
     return wx.GetApp().__dict__.get('frame', None)
@@ -291,7 +291,7 @@ class FilterComboBox(wx.adv.BitmapComboBox):
     NEW_FILTER = 'CREATE NEW FILTER'
     def __init__(self, parent, id=-1, **kwargs):
         choices = kwargs.get('choices', self.get_choices())
-        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=choices, **kwargs)
+        wx.adv.BitmapComboBox.__init__(self, parent, id, choices=choices, **kwargs)
         self.Select(0)
         self.reset_bitmaps()
         p._filters.addobserver(self.update_choices)

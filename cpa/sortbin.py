@@ -10,8 +10,8 @@ import wx
 import logging
 
 
-p  = Properties.getInstance()
-db = DBConnect.getInstance()
+p  = Properties()
+db = DBConnect()
 
 
 # The event type is shared, and there is no information in the event
@@ -186,7 +186,7 @@ class SortBin(wx.ScrolledWindow):
         if chMap is None:
             chMap = p.image_channel_colors
         if self.tile_collection == None:
-            self.tile_collection = tilecollection.TileCollection.getInstance()
+            self.tile_collection = tilecollection.TileCollection()
         imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority, display_whole_image=display_whole_image) # Gives back the np matrix of an image?
         for i, obKey, imgs in zip(list(range(len(obKeys))), obKeys, imgSet):
             
@@ -354,7 +354,7 @@ if __name__ == '__main__':
  
     p.show_load_dialog()    
     from . import datamodel
-    dm = datamodel.DataModel.getInstance()
+    dm = datamodel.DataModel()
     
     f = wx.Frame(None)
     sb = SortBin(f)

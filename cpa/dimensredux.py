@@ -517,7 +517,7 @@ class PlotMain(wx.Frame):
                 logging.critical('Classifier requires a properties file. Exiting.')
                 raise Exception('Classifier requires a properties file. Exiting.')
             global db
-            db = DBConnect.getInstance()
+            db = DBConnect()
 
         global classifier
         classifier = parent
@@ -639,9 +639,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,)
 
     global p
-    p = Properties.getInstance()
+    p = Properties()
     global db
-    db = DBConnect.getInstance()
+    db = DBConnect()
 
     try:
         propsFile = sys.argv[1]

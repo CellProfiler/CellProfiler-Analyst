@@ -40,7 +40,7 @@ class QueryMaker(wx.Frame):
         
     def on_execute(self, evt=None):
         '''Run the query and show the results in a TableViewer'''
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         q = self.query_textctrl.Value
         try:
             res = db.execute(q)
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-    p = Properties.getInstance()
+    p = Properties()
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]

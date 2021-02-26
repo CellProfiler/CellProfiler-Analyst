@@ -7,20 +7,20 @@ import numpy as np
 
 class TestDBConnect(unittest.TestCase):
     def setup_mysql(self):
-        self.p  = Properties.getInstance()
-        self.db = DBConnect.getInstance( )
+        self.p  = Properties()
+        self.db = DBConnect()
         self.db.Disconnect()
         self.p.LoadFile('../../CPAnalyst_test_data/nirht_test.properties')
 
     def setup_sqlite(self):
-        self.p  = Properties.getInstance()
-        self.db = DBConnect.getInstance()
+        self.p  = Properties()
+        self.db = DBConnect()
         self.db.Disconnect()
         self.p.LoadFile('../../CPAnalyst_test_data/nirht_local.properties')
         
     def setup_sqlite2(self):
-        self.p  = Properties.getInstance()
-        self.db = DBConnect.getInstance()
+        self.p  = Properties()
+        self.db = DBConnect()
         self.db.Disconnect()
         self.p.LoadFile('../../CPAnalyst_test_data/export_to_db_test.properties')
         

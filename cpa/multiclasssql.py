@@ -13,9 +13,9 @@ from .properties import Properties
 from .datamodel import DataModel
 from sklearn.ensemble import AdaBoostClassifier
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
-dm = DataModel.getInstance()
+db = DBConnect()
+p = Properties()
+dm = DataModel()
 
 temp_stump_table = "_stump"
 temp_score_table = "_scores"
@@ -300,9 +300,9 @@ if __name__ == "__main__":
     from . import generalclassifier
     from .datatable import DataGrid
     import wx
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
 
     props = '/vagrant/az-dnaonly.properties'
     ts = '/vagrant/Anne_DNA_66.txt'

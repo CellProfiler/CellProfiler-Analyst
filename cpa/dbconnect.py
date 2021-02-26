@@ -19,7 +19,7 @@ import copy
 
 verbose = True
 
-p = Properties.getInstance()
+p = Properties()
 
 class DBException(Exception):
     def __str__(self):
@@ -280,7 +280,7 @@ def _check_colname_user(properties, table, colname):
         raise ValueError('User-defined columns in the image and object tables must have names beginning with "User_".')
 
     
-class DBConnect(Singleton):
+class DBConnect(metaclass=Singleton):
     '''
     DBConnect abstracts calls to MySQLdb/SQLite. It's a singleton that maintains
     unique connections for each thread that uses it.  These connections are 
@@ -1864,13 +1864,13 @@ class Entity(object):
     group_by_clause = property(_get_group_by_clause)
     
     def count(self):
-        c = DBConnect.getInstance().execute(self.all_query(columns=["COUNT(*)"]))[0][0]
+        c = DBConnect().execute(self.all_query(columns=["COUNT(*)"]))[0][0]
         c = max(0, c - (self._offset or 0))
         c = max(c, self._limit or 0)
         return c
 
     def all(self):
-        return self.dbiter(self, DBConnect.getInstance())
+        return self.dbiter(self, DBConnect())
 
     def all_query(self, columns=None):
         return "SELECT %s FROM %s %s %s %s %s" % (
@@ -1926,11 +1926,11 @@ class Images(Entity):
 
     def _get_from_clause(self):
         t = set([col[:col.index('.')] for col in self.columns() if '.' in col])
-        t = t - set(Properties.getInstance().image_table)
-        from_clause = [Properties.getInstance().image_table] + list(t)
+        t = t - set(Properties().image_table)
+        from_clause = [Properties().image_table] + list(t)
         for filter in self.filters:
             from_clause.append("JOIN (%s) AS %s USING (%s)" %
-                               (Properties.getInstance()._filters[filter],
+                               (Properties()._filters[filter],
                                 'filter_SQL_' + filter,
                                 ", ".join(image_key_columns())))
         return " ".join(from_clause)
@@ -1943,7 +1943,7 @@ class Images(Entity):
         return Objects(images=self)
 
     def columns(self):
-        return self._columns or DBConnect.getInstance().GetColumnNames(Properties.getInstance().image_table)
+        return self._columns or DBConnect().GetColumnNames(Properties().image_table)
 
     
 class Objects(Entity):
@@ -1964,14 +1964,14 @@ class Objects(Entity):
             self.filters = images.filters
 
     def _get_from_clause(self):
-        from_clause = [Properties.getInstance().object_table]
+        from_clause = [Properties().object_table]
         if self._images is not None:
             from_clause.append("JOIN %s USING (%s)"%
-                               (Properties.getInstance().image_table,
+                               (Properties().image_table,
                                 ", ".join(image_key_columns())))
         for filter in self.filters:
             from_clause.append("JOIN (%s) AS %s USING (%s)" %
-                               (Properties.getInstance()._filters[filter],
+                               (Properties()._filters[filter],
                                 'filter_SQL_' + filter,
                                 ", ".join(image_key_columns())))
         return " ".join(from_clause)
@@ -1979,12 +1979,12 @@ class Objects(Entity):
 
     def columns(self):
         return self._columns or list(object_key_columns()) + \
-            DBConnect.getInstance().GetColnamesForClassifier()
+            DBConnect().GetColnamesForClassifier()
 
     def standard_deviations(self):
         """Returns a list of the standard deviations of the non-key columns.
         Offsets and limits are ignored here, not sure if they should be."""
-        db = DBConnect.getInstance()
+        db = DBConnect()
         return db.execute("SELECT %s FROM %s %s"%(
                 ",".join(["STD(%s)" % c 
                           for c in db.GetColnamesForClassifier()]),

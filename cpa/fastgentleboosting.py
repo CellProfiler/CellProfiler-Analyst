@@ -40,7 +40,7 @@ class FastGentleBoosting(object):
             return
 
         
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
 
         t1 = time()
@@ -506,7 +506,7 @@ class FastGentleBoosting(object):
             return
 
         
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
 
         #t1 = time()

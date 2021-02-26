@@ -56,7 +56,7 @@ class ImageGallery(wx.Frame):
             global p
             p = properties
             global db
-            db = dbconnect.DBConnect.getInstance()
+            db = dbconnect.DBConnect()
 
         wx.Frame.__init__(self, parent, id=id, title='CPA/ImageGallery - %s' % \
                                                      (os.path.basename(p._filename)), size=(800, 600), **kwargs)
@@ -70,7 +70,7 @@ class ImageGallery(wx.Frame):
         db.register_gui_parent(self)
 
         global dm
-        dm = DataModel.getInstance()
+        dm = DataModel()
 
         if not p.is_initialized():
             logging.critical('ImageGallery requires a properties file. Exiting.')
@@ -1153,9 +1153,9 @@ if __name__ == "__main__":
     if sys.excepthook == sys.__excepthook__:
         sys.excepthook = show_exception_as_dialog
 
-    p = Properties.getInstance()
-    db = dbconnect.DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = dbconnect.DBConnect()
+    dm = DataModel()
 
     # Load a properties file if passed as the first argument
     if len(sys.argv) > 1:

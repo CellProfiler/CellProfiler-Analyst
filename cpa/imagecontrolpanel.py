@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib.pyplot import cm
 from io import StringIO
 from base64 import b64decode
-p = Properties.getInstance()
+p = Properties()
 
 contrast_modes = ['None', 'Linear', 'Log']
 

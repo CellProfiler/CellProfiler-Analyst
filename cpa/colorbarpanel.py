@@ -217,7 +217,7 @@ class ColorBarPanel(wx.Panel):
         dlg = GateDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
             from .sqltools import Gate, Gate1D
-            p = properties.Properties.getInstance()
+            p = properties.Properties()
             p.gates[dlg.Value] = Gate([Gate1D((table, colname), self.interval)])
         dlg.Destroy()
         

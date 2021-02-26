@@ -4,15 +4,15 @@
 import os
 import re
 import wx
-import wx.wizard as wiz
+import wx.adv as wiz
 from wx.lib.dialogs import ScrolledMessageDialog
 from .dbconnect import DBConnect
 from .properties import Properties
 import logging
 logging.basicConfig()
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
+db = DBConnect()
+p = Properties()
 
 def makePageTitle(wizPg, title):
     def __init__(self, parent):
@@ -73,7 +73,7 @@ class Page1(wiz.WizardPageSimple):
     def OnBrowse(self, evt):
         dlg = wx.FileDialog(self, "Select a properties file", defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
-            p = Properties.getInstance()
+            p = Properties()
             p.LoadFile(dlg.GetPath())
             self.lblDBHost.SetLabel(p.db_host)
             self.lblDBName.SetLabel(p.db_name)

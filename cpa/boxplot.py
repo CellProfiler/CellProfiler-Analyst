@@ -20,8 +20,8 @@ from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as Navigat
 
 from .cpatool import CPATool
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 NO_GROUP = "Whole column"
 ID_EXIT = wx.NewId()
@@ -175,7 +175,7 @@ class DataSourcePanel(wx.Panel):
         q = sql.QueryBuilder()
         select = [sql.Column(tablename, col)]
         if grouping != NO_GROUP:
-            dm = datamodel.DataModel.getInstance()
+            dm = datamodel.DataModel()
             group_cols = dm.GetGroupColumnNames(grouping, include_table_name=True)
             select += [sql.Column(*col.split('.')) for col in group_cols]
         q.set_select_clause(select)
@@ -388,7 +388,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1:
         # Load a properties file if passed in args
-        p = Properties.getInstance()
+        p = Properties()
         p.LoadFile(sys.argv[1])
     elif not p.show_load_dialog():
         print('BoxPlot requires a properties file.  Exiting.')

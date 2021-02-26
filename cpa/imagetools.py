@@ -12,8 +12,8 @@ import matplotlib.image
 import numpy as np
 import wx
 
-p = Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = Properties()
+db = dbconnect.DBConnect()
 
 cache = {}
 cachedkeys = []

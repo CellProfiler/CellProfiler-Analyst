@@ -42,8 +42,8 @@ def score(properties, ts, nRules, filter_name=None, group='Image',
     '''
     
     p = properties
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    db = DBConnect()
+    dm = DataModel()
 
     if group == None:
         group = 'Image'
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     results_table = eval(input('Results table name (return for none): '))
 
     logging.info('Loading properties file...')
-    p = Properties.getInstance()
+    p = Properties()
     p.LoadFile(props_file)
     logging.info('Loading training set...')
     ts = TrainingSet(p)

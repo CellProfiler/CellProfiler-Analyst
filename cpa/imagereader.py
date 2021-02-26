@@ -9,7 +9,7 @@ import bioformats
 from .properties import Properties
 from .errors import ClearException
 
-p = Properties.getInstance()
+p = Properties()
 
 class ThrowingURLopener(urllib.request.URLopener):
     def http_error_default(*args, **kwargs):
@@ -125,9 +125,9 @@ if __name__ == "__main__":
 
     app = wx.PySimpleApp()
 
-    p = Properties.getInstance()
-    dm = DataModel.getInstance()
-    db = DBConnect.getInstance()
+    p = Properties()
+    dm = DataModel()
+    db = DBConnect()
     ir = ImageReader()
 
     # Load a properties file if passed in args

@@ -69,7 +69,7 @@ class PlateMapPanel(wx.Panel):
             self.well_keys[i] = ('Unknown Plate','Unknown Well')
         self.well_keys = self.well_keys.reshape(self.data.shape)
         for key in well_keys:
-            self.well_keys[DataModel.getInstance().get_well_position_from_name(key[-1])] = key
+            self.well_keys[DataModel().get_well_position_from_name(key[-1])] = key
 ##        for i, key in enumerate(well_keys):
 ##            if i % self.data.shape[1] == 0:
 ##                self.well_keys += [[]]	
@@ -270,7 +270,7 @@ class PlateMapPanel(wx.Panel):
         wtext, htext = font.GetPixelSize()[0]*2, font.GetPixelSize()[1]
         dc.SetFont(font)
 
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         bmp = {}
         imgs = {}
         if self.well_disp == IMAGE:

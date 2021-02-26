@@ -2,7 +2,7 @@ import unittest
 from ImageReader import ImageReader
 from properties import Properties
 
-p = Properties.getInstance()
+p = Properties()
 
 # fake-up some props
 p._filename = '../../CPAnalyst_test_data/test_images/'

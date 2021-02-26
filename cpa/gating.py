@@ -4,7 +4,7 @@ import numpy as np
 from . import sqltools as sql
 from matplotlib.patches import Rectangle
 from .properties import Properties
-p = Properties.getInstance()
+p = Properties()
 
 class GatingHelper(object):
     '''

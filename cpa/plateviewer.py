@@ -21,11 +21,11 @@ import wx
 import cpa.helpmenu
 import csv
 
-p = properties.getInstance()
+p = properties.Properties()
 # Hack the properties module so it doesn't require the object table.
 # TODO: fix this
-# properties.optional_vars += ['object_table']
-db = DBConnect.getInstance()
+properties.optional_vars += ['object_table']
+db = DBConnect()
 
 required_fields = ['plate_shape', 'well_id']
 
@@ -733,7 +733,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
                          dtype=object).reshape(shape + [nkeycols])
     sort_indices = np.ones(data.shape)*np.nan
     
-    dm = DataModel.getInstance()
+    dm = DataModel()
     ind = keys_and_vals.argsort(axis=0)
     for i, (k, well_grp) in enumerate(groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
                                               lambda row: tuple(row[:len(dummy_key)]))):

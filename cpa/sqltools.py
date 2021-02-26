@@ -2,7 +2,7 @@ import cpa
 from .dbconnect import *
 from .properties import Properties
 from .utils import Observable
-p = Properties.getInstance()
+p = Properties()
 
 def image_cols():
     '''returns the image key columns as a list of Columns'''
@@ -125,7 +125,7 @@ class QueryBuilder(object):
         '''
         tables = self.get_queried_tables()
         # add the tables required to link the above tables together
-        db = DBConnect.getInstance()
+        db = DBConnect()
         exps = db.get_linking_expressions(tables)
         for exp in exps:
             tables += exp.get_tables()
@@ -138,7 +138,7 @@ class QueryBuilder(object):
         '''Build the where clause from conditions given by the user and 
         conditions that link all the tables together.
         '''
-        db = DBConnect.getInstance()
+        db = DBConnect()
         conditions = []
         conditions += ['(%s)'%(str(f)) for f in self.filters]
         queried_tables = self.get_queried_tables()

@@ -11,10 +11,10 @@ import wx
 from PlotPanelTS import *
 
 
-p = Properties.getInstance()
+p = Properties()
 # Hack the properties module so it doesn't require the object table.
 #properties.optional_vars += ['object_table']
-db = DBConnect.getInstance()
+db = DBConnect()
 
 
 ID_IMPORT = 1001

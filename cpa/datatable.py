@@ -16,9 +16,9 @@ import weakref
 import wx
 import wx.grid
 
-dm = DataModel.getInstance()
-db = DBConnect.getInstance()
-p = Properties.getInstance()
+dm = DataModel()
+db = DBConnect()
+p = Properties()
 
 ID_LOAD_CSV = wx.NewId()
 ID_SAVE_CSV = wx.NewId()
@@ -643,9 +643,9 @@ if __name__ == "__main__":
     csvfile = sys.argv[1]
     propsfile = sys.argv[2]
     
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
 
     p.LoadFile(propsfile)
     r = csv.reader(open(csvfile))

@@ -139,7 +139,7 @@ required_vars = list(set(list_vars + string_vars) - set(optional_vars)
 
 valid_vars = set(list_vars + string_vars + dict_vars)
 
-class Properties(Singleton):
+class Properties(metaclass=Singleton):
     '''
     Loads and stores properties files.
     '''
@@ -709,7 +709,7 @@ if __name__ == "__main__":
     import sys
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     
-    p = Properties.getInstance()
+    p = Properties()
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:

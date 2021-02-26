@@ -6,10 +6,10 @@ from .dbconnect import *
 from .singleton import *
 from .properties import Properties
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
-class DataModel(Singleton):
+class DataModel(metaclass=Singleton):
     '''
     DataModel is a dictionary of perImageObjectCounts indexed by (TableNumber,ImageNumber)
     '''
@@ -338,9 +338,9 @@ class DataModel(Singleton):
 
 
 if __name__ == "__main__":
-    p = Properties.getInstance()
+    p = Properties()
     p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
-    db = DBConnect.getInstance()
+    db = DBConnect()
     db.connect()
-    d = DataModel.getInstance()
+    d = DataModel()
     d.PopulateModel()

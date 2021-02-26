@@ -6,9 +6,9 @@ from .dbconnect import *
 from .properties import Properties
 from .datamodel import DataModel
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
-dm = DataModel.getInstance()
+db = DBConnect()
+p = Properties()
+dm = DataModel()
 
 temp_stump_table = "_stump"
 temp_score_table = "_scores"
@@ -260,9 +260,9 @@ if __name__ == "__main__":
     from . import fastgentleboostingmulticlass
     from .datatable import DataGrid
     import wx
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
     
 #    props = '/Volumes/imaging_analysis/2007_10_19_Gilliland_LeukemiaScreens/Screen3_1Apr09_run3/2007_10_19_Gilliland_LeukemiaScreens_Validation_v2_AllBatches_DuplicatesFiltered_FullBarcode_testSinglePlate.properties'
 #    ts = '/Volumes/imaging_analysis/2007_10_19_Gilliland_LeukemiaScreens/Screen3_1Apr09_run3/trainingvalidation3b.txt'

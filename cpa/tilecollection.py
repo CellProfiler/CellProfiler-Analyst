@@ -12,16 +12,16 @@ import wx
 import os
 import javabridge
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
+db = DBConnect()
+p = Properties()
 
 def load_lock():
-    return TileCollection.getInstance().load_lock
+    return TileCollection().load_lock
 
 class List(list):
     pass
 
-class TileCollection(Singleton):
+class TileCollection(metaclass=Singleton):
     '''
     Main access point for loading tiles through the TileLoader.
     '''
@@ -170,13 +170,13 @@ if __name__ == "__main__":
 
 
     from .datamodel import DataModel
-    p = Properties.getInstance()
+    p = Properties()
     p.LoadFile('../properties/nirht_test.properties')
-    db = DBConnect.getInstance()
+    db = DBConnect()
     db.connect()
-    dm = DataModel.getInstance()
+    dm = DataModel()
 
-    test = TileCollection.getInstance()
+    test = TileCollection()
 
     f =  wx.Frame(None)
     for i in range(10):

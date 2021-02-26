@@ -35,8 +35,8 @@ FILE_COLUMN_PREFIX = 'Image_File_'
 DEFAULT_DB_NAME = 'cpa.db'
 DEFAULT_PROPERTIES_FILENAME = 'cpa.properties'
 
-p = Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = Properties()
+db = dbconnect.DBConnect()
 
 
 def load_harmony(plate_results):
