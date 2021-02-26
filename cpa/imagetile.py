@@ -67,12 +67,10 @@ class ImageTile(ImagePanel):
     def OnPaint(self, evt):
         dc = ImagePanel.OnPaint(self, evt)
         if self.showCenter:
-            dc.BeginDrawing()
             dc.SetLogicalFunction(wx.XOR)
             dc.SetPen(wx.Pen("WHITE",1))
             dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
             dc.DrawRectangle(self.bitmap.Width/2.-1, self.bitmap.Height/2.-1, 3, 3)
-            dc.EndDrawing()
         return dc
 
     def CreatePopupMenu(self):

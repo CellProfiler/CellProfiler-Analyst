@@ -88,14 +88,14 @@ def Crop(imgdata, xxx_todo_changeme, xxx_todo_changeme1):
     y = int(y + 0.5)
 
     # find valid cropping region in imgdata
-    lox = max(x - w/2, 0)
-    loy = max(y - h/2, 0)
-    hix = min(x - w/2 + w, im_width)
-    hiy = min(y - h/2 + h, im_height)
+    lox = max(x - w//2, 0)
+    loy = max(y - h//2, 0)
+    hix = min(x - w//2 + w, im_width)
+    hiy = min(y - h//2 + h, im_height)
     
     # find destination
-    dest_lox = lox - (x - w/2)
-    dest_loy = loy - (y - h/2)
+    dest_lox = lox - (x - w//2)
+    dest_loy = loy - (y - h//2)
     dest_hix = dest_lox + hix - lox
     dest_hiy = dest_loy + hiy - loy
 

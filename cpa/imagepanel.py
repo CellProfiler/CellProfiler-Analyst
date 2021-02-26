@@ -52,11 +52,9 @@ class ImagePanel(wx.Panel):
         dc.DrawBitmap(self.bitmap, 0, 0)
         # Outline the whole image
         if self.selected:
-            dc.BeginDrawing()
             dc.SetPen(wx.Pen("WHITE",1))
             dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
             dc.DrawRectangle(0,0,self.bitmap.Width,self.bitmap.Height)
-            dc.EndDrawing()
         return dc
 
     def UpdateBitmap(self):

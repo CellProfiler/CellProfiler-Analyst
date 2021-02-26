@@ -16,7 +16,7 @@ class ImageTileSizer(wx.PySizer):
         if sizes == []:
             return None
         else:
-            return max(sizes)
+            return wx.Size(max([s.width for s in sizes]), max([s.height for s in sizes]))
 
     def CalcMin(self):
         n = len(self.GetChildren())
@@ -34,7 +34,7 @@ class ImageTileSizer(wx.PySizer):
         origin = self.GetPosition()
         pitch = self.pitch()
         for k, item in enumerate(self.GetChildren()):
-            i = k / self.columns
+            i = k // self.columns
             j = k % self.columns
             pos = origin + wx.Point(j * pitch.x, i * pitch.y)
             item = self.GetChildren()[i * self.columns + j]
