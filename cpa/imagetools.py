@@ -138,7 +138,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     imData[imData>255] = 255
 
     # Write wx.Image
-    img = wx.EmptyImage(w,h)
+    img = wx.Image(w,h)
     img.SetData(imData.astype('uint8').flatten())
 
     tmp_h = int(p.image_size)
@@ -292,7 +292,7 @@ def auto_contrast(im, interval=None):
     if np.any((im>min)&(im<max)):
         im -= im.min()
         if im.max() > 0:
-            im /= im.max()
+            im = im / im.max()
     return im
 
 def tile_images(images):

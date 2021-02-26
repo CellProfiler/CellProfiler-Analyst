@@ -82,18 +82,15 @@ class ImageViewerPanel(ImagePanel):
         # Draw object numbers
         if self.show_object_numbers and p.object_table:
             dc.SetLogicalFunction(wx.XOR)
-            dc.BeginDrawing()
             for i, (x,y) in enumerate(self.ob_coords):
                 x = x * self.scale - 6*(len('%s'%i)-1)
                 y = y * self.scale - 6
                 dc.DrawText('%s'%(i + 1), x, y)
-            dc.EndDrawing()
 
         # Draw class numbers over each object
         if self.classes:
             for (name, cl), clnum, color in zip(list(self.classes.items()), self.class_nums, self.colors):
                 if self.classVisible[name]:
-                    dc.BeginDrawing()
                     for (x,y) in cl:
                         if self.class_rep==CL_NUMBERED:
                             dc.SetLogicalFunction(wx.XOR)
@@ -109,7 +106,6 @@ class ImageViewerPanel(ImagePanel):
                             dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                             dc.DrawRectangle(x,y,w,h)
                             dc.DrawRectangle(x-1,y-1,6,6)
-                    dc.EndDrawing()
 
         # Draw small white (XOR) boxes at each selected point
         dc.SetLogicalFunction(wx.XOR)
@@ -120,9 +116,7 @@ class ImageViewerPanel(ImagePanel):
             x = x * self.scale - w/2
             y = y * self.scale - h/2
 
-            dc.BeginDrawing()
             dc.DrawRectangle(x,y,w,h)
-            dc.EndDrawing()
         return dc
 
     def SetSelectedPoints(self, posns):
@@ -248,8 +242,8 @@ class ImageViewer(wx.Frame):
         self.popupMenu = wx.Menu()
         self.sel_all = wx.MenuItem(self.popupMenu, ID_SELECT_ALL, 'Select all\tCtrl+A')
         self.deselect = wx.MenuItem(self.popupMenu, ID_DESELECT_ALL, 'Deselect all\tCtrl+D')
-        self.popupMenu.AppendItem(self.sel_all)
-        self.popupMenu.AppendItem(self.deselect)
+        self.popupMenu.Append(self.sel_all)
+        self.popupMenu.Append(self.deselect)
         accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CMD,ord('A'),ID_SELECT_ALL),
                                                  (wx.ACCEL_CMD,ord('D'),ID_DESELECT_ALL),])
         self.SetAcceleratorTable(accelerator_table)
@@ -271,20 +265,20 @@ class ImageViewer(wx.Frame):
         self.SetMenuBar(wx.MenuBar())
         # File Menu
         self.fileMenu = wx.Menu()
-        self.openImageMenuItem = self.fileMenu.Append(-1, text='Open Image\tCtrl+O')
-        self.saveImageMenuItem = self.fileMenu.Append(-1, text='Save Image\tCtrl+S')
+        self.openImageMenuItem = self.fileMenu.Append(-1, item='Open Image\tCtrl+O')
+        self.saveImageMenuItem = self.fileMenu.Append(-1, item='Save Image\tCtrl+S')
         self.fileMenu.AppendSeparator()
-        self.exitMenuItem      = self.fileMenu.Append(-1, text='Exit\tCtrl+Q')
+        self.exitMenuItem      = self.fileMenu.Append(-1, item='Exit\tCtrl+Q')
         self.GetMenuBar().Append(self.fileMenu, 'File')
         # Classify menu (requires classifier window
         self.classifyMenu = wx.Menu()
-        self.classifyMenuItem = self.classifyMenu.Append(-1, text='Classify Image')
+        self.classifyMenuItem = self.classifyMenu.Append(-1, item='Classify Image')
         self.GetMenuBar().Append(self.classifyMenu, 'Classify')
         # View Menu
         self.viewMenu = wx.Menu()
-        self.objectNumberMenuItem = self.viewMenu.Append(-1, text='Show %s numbers\tCtrl+`'%p.object_name[0])
+        self.objectNumberMenuItem = self.viewMenu.Append(-1, item='Show %s numbers\tCtrl+`'%p.object_name[0])
         self.objectNumberMenuItem.Enable(p.object_table is not None)
-        self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
+        self.classViewMenuItem = self.viewMenu.Append(-1, item='View %s classes as numbers'%p.object_name[0])
         self.classViewMenuItem.Enable(p.object_table is not None)
         self.GetMenuBar().Append(self.viewMenu, 'View')
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -646,7 +640,7 @@ class ImageViewer(wx.Frame):
                 data_object.SetData(pickle.dumps( (self.GetId(), self.selection) ))
                 source.SetData(data_object)
                 result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
-                if result is 0:
+                if result == 0:
                     pass
 
     def OnRightDown(self, evt):
@@ -725,17 +719,17 @@ class ImageViewer(wx.Frame):
 
 
     def OnChangeClassRepresentation(self, evt):
-        if self.classViewMenuItem.Text.endswith('numbers'):
-            self.classViewMenuItem.Text = 'View %s classes as colors'%p.object_name[0]
+        if self.classViewMenuItem.ItemLabel.endswith('numbers'):
+            self.classViewMenuItem.ItemLabel = 'View %s classes as colors'%p.object_name[0]
         else:
-            self.classViewMenuItem.Text = 'View %s classes as numbers'%p.object_name[0]
+            self.classViewMenuItem.ItemLabel = 'View %s classes as numbers'%p.object_name[0]
         self.imagePanel.ToggleClassRepresentation()
 
     def OnShowObjectNumbers(self, evt):
-        if self.objectNumberMenuItem.Text.startswith('Hide'):
-            self.objectNumberMenuItem.Text = 'Show %s numbers\tCtrl+`'%(p.object_name[0])
+        if self.objectNumberMenuItem.ItemLabel.startswith('Hide'):
+            self.objectNumberMenuItem.ItemLabel = 'Show %s numbers\tCtrl+`'%(p.object_name[0])
         else:
-            self.objectNumberMenuItem.Text = 'Hide %s numbers\tCtrl+`'%(p.object_name[0])
+            self.objectNumberMenuItem.ItemLabel = 'Hide %s numbers\tCtrl+`'%(p.object_name[0])
         self.imagePanel.ToggleObjectNumbers()
 
     def OnOpenFileMenu(self, evt=None):

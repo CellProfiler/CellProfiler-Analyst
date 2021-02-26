@@ -58,14 +58,14 @@ class ImageControlPanel(wx.Panel):
         sizer2 = wx.BoxSizer(wx.VERTICAL)
         brightness_sizer = wx.BoxSizer(wx.HORIZONTAL)
 #        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Brightness:'))
-        brightness_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.BitmapFromImage(wx.ImageFromStream(BytesIO(b64decode(brightness_icon))))), proportion=0)
+        brightness_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.Bitmap(wx.Image(BytesIO(b64decode(brightness_icon))))), proportion=0)
         brightness_sizer.AddSpacer(5)
         brightness_sizer.Add(self.brightness_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         brightness_sizer.AddSpacer(5)
         brightness_sizer.Add(self.brightness_percent)
         scale_sizer = wx.BoxSizer(wx.HORIZONTAL)
 #        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Scale:'))
-        scale_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.BitmapFromImage(wx.ImageFromStream(BytesIO(b64decode(zoom_icon))))), proportion=0)
+        scale_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.Bitmap(wx.Image(BytesIO(b64decode(zoom_icon))))), proportion=0)
         scale_sizer.AddSpacer(5)
         scale_sizer.Add(self.scale_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         scale_sizer.AddSpacer(5)
@@ -75,13 +75,13 @@ class ImageControlPanel(wx.Panel):
         text = wx.StaticText(parent, wx.NewId(), 'Find selected objects: Ctrl+F/Cmd+F')
         sizer2.Add(text)
         sizer2.Add(self.reset_btn)
-        sizer2.AddSpacer(10) # Space on the bottom
+        sizer2.Add(0, 10, 0) # Space on the bottom
 
         self.sizer3 = wx.BoxSizer(wx.VERTICAL)
         self.AddContrastControls(contrast)
         self.sizer4 = wx.BoxSizer(wx.VERTICAL)
         self.sizer3.Add(self.sizer4) # place holder for class check boxes
-        self.sizer3.AddSpacer(10) # Space on the bottom
+        self.sizer3.Add(0, 10, 0) # Space on the bottom
 
         if classCoords is not None:
             self.SetClasses(classCoords)
@@ -104,7 +104,7 @@ class ImageControlPanel(wx.Panel):
         except:
             self.contrast_radiobox.SetSelection(1)
         self.sizer3.Add(self.contrast_radiobox, flag=wx.EXPAND)
-        self.sizer3.AddSpacer(10)
+        self.sizer3.Add(-1, 10, 0)
         self.contrast_radiobox.Bind(wx.EVT_RADIOBOX, self.OnSetContrastMode)
         self.UpdateContrastMode()
 

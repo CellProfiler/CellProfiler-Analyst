@@ -404,11 +404,11 @@ class Classifier(wx.Frame):
     def OnClassifierChoice(self, event):
         itemId = self.classifierChoice.GetSelection()
         self.classifierMenu.Check(itemId + 1, True)
-        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(itemId + 1).GetText())
+        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(itemId + 1).GetItemLabel())
         self.SelectAlgorithm(selectedItem)
 
     def OnSelectAlgorithm(self, event):
-        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(event.GetId()).GetText())
+        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(event.GetId()).GetItemLabel())
         self.SelectAlgorithm(selectedItem)
 
     # JK - Start Add
@@ -1279,7 +1279,7 @@ class Classifier(wx.Frame):
         selectedText = ""
         for item in items:
             if item.IsChecked():
-                selectedText = item.GetText()
+                selectedText = item.GetItemLabel()
 
         # if selectedText == "ROC Curve":
         #     self.PlotROC()

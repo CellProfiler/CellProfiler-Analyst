@@ -85,16 +85,16 @@ import cpa.multiclasssql
 # ---
 import wx
 
-ID_CLASSIFIER = wx.NewId()
-ID_IMAGE_GALLERY = wx.NewId()
-ID_PLATE_VIEWER = wx.NewId()
-ID_TABLE_VIEWER = wx.NewId()
-ID_IMAGE_VIEWER = wx.NewId()
-ID_SCATTER = wx.NewId()
-ID_HISTOGRAM = wx.NewId()
-ID_DENSITY = wx.NewId()
-ID_BOXPLOT = wx.NewId()
-ID_NORMALIZE = wx.NewId()
+ID_CLASSIFIER = wx.NewIdRef()
+ID_IMAGE_GALLERY = wx.NewIdRef()
+ID_PLATE_VIEWER = wx.NewIdRef()
+ID_TABLE_VIEWER = wx.NewIdRef()
+ID_IMAGE_VIEWER = wx.NewIdRef()
+ID_SCATTER = wx.NewIdRef()
+ID_HISTOGRAM = wx.NewIdRef()
+ID_DENSITY = wx.NewIdRef()
+ID_BOXPLOT = wx.NewIdRef()
+ID_NORMALIZE = wx.NewIdRef()
 
 def get_cpatool_subclasses():
     '''returns a list of CPATool subclasses.
@@ -127,16 +127,16 @@ class MainGUI(wx.Frame):
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
-        tb.AddLabelTool(ID_IMAGE_GALLERY, 'Image Gallery', cpa.icons.image_gallery.ConvertToBitmap(), shortHelp='Image Gallery', longHelp='Launch Image Gallery Viewer')
-        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
+        tb.AddTool(ID_IMAGE_GALLERY.GetId(), 'Image Gallery', cpa.icons.image_gallery.ConvertToBitmap(), shortHelp='Image Gallery')
+        tb.AddTool(ID_CLASSIFIER.GetId(), 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier')
         # tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', cpa.icons.pixelclassifier.ConvertToBitmap(), shortHelp='Pixel-based Classifier', longHelp='Launch pixel-based Classifier')
-        tb.AddLabelTool(ID_PLATE_VIEWER, 'Plate Viewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
+        tb.AddTool(ID_PLATE_VIEWER.GetId(), 'Plate Viewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer')
         # tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
-        tb.AddLabelTool(ID_SCATTER, 'Scatter Plot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
-        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
-        tb.AddLabelTool(ID_DENSITY, 'Density Plot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
-        tb.AddLabelTool(ID_BOXPLOT, 'Box Plot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
-        tb.AddLabelTool(ID_TABLE_VIEWER, 'Table Viewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch Table Viewer')
+        tb.AddTool(ID_SCATTER.GetId(), 'Scatter Plot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot')
+        tb.AddTool(ID_HISTOGRAM.GetId(), 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram')
+        tb.AddTool(ID_DENSITY.GetId(), 'Density Plot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot')
+        tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot')
+        tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer')
         # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', cpa.icons.normalize.ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs 
@@ -209,7 +209,7 @@ class MainGUI(wx.Frame):
 #        hdlr.setFormatter(logging.Formatter('%(levelname)s | %(name)s | %(message)s [@ %(asctime)s in %(filename)s:%(lineno)d]'))
         self.logr.addHandler(hdlr)
         # log_levels are 10,20,30,40,50
-        logMenu.GetMenuItems()[(log_level/10)-1].Check()
+        logMenu.GetMenuItems()[(log_level//10)-1].Check()
 
         self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.DEBUG), debugMenuItem)
         self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.INFO), infoMenuItem)
@@ -416,9 +416,7 @@ class CPAnalyst(wx.App):
         splashimage = cpa.icons.cpa_splash.ConvertToBitmap()
         # If the splash image has alpha, it shows up transparently on
         # windows, so we blend it into a white background.
-        splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(),
-                                          splashimage.GetHeight(),
-                                          255, 255, 255, 255)
+        splashbitmap = wx.Bitmap.FromRGBA(splashimage.GetWidth(), splashimage.GetHeight(), 255, 255, 255, 255)
         dc = wx.MemoryDC()
         dc.SelectObject(splashbitmap)
         dc.DrawBitmap(splashimage, 0, 0)

@@ -5,9 +5,9 @@ Special sizer for organizing image tiles.
 import wx
 import math
 
-class ImageTileSizer(wx.PySizer):
+class ImageTileSizer(wx.Sizer):
     def __init__(self):
-        wx.PySizer.__init__(self)
+        wx.Sizer.__init__(self)
         
     def pitch(self):
         # get sizes of all tiles
