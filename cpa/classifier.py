@@ -1868,7 +1868,7 @@ class Classifier(wx.Frame):
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)
-            self.fetchFromGroupSizer.AddSpacer((10, 20))
+            self.fetchFromGroupSizer.Add(10, 20, 0)
 
     def ValidateIntegerField(self, evt):
         ''' Validates an integer-only TextCtrl '''

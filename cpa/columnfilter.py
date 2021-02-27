@@ -36,14 +36,14 @@ class ColumnFilterPanel(wx.Panel):
 
         colSizer = wx.BoxSizer(wx.HORIZONTAL)
         colSizer.Add(self.tableChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
         colSizer.Add(self.colChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
         colSizer.Add(self.comparatorChoice, 0.5, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
         colSizer.Add(self.valueField, 1, wx.EXPAND)
         if allow_delete:
-            colSizer.AddSpacer((5,-1))
+            colSizer.AddSpacer(5)
             colSizer.Add(self.x_btn, 0, wx.EXPAND)
 
         self.SetSizer(colSizer)
@@ -145,10 +145,10 @@ class ColumnFilterDialog(wx.Dialog):
         sz.Add(wx.StaticText(self, -1, 'Name your filter: '), 0, wx.CENTER)
         sz.Add(self.filter_name, 1, wx.EXPAND)
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.ALL, 5)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
 
         self.Sizer.Add(wx.StaticText(self, -1, 'Choose constraints for your filter: '), 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
 
         self.sw = wx.ScrolledWindow(self)
         self.panels = [ColumnFilterPanel(self.sw, tables, False)]
@@ -159,17 +159,17 @@ class ColumnFilterDialog(wx.Dialog):
         self.Sizer.Add(self.sw, 1, wx.EXPAND)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.addbtn, 0)
         sz.AddStretchSpacer()
         sz.Add(self.ok, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.cancel, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
 
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(0,10)
         self.Sizer.Add(sz, 0, wx.EXPAND)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1,10)
 
         self.validate_filter_name()
 

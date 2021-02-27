@@ -142,30 +142,30 @@ class ImageGallery(wx.Frame):
         # fetch panel
         self.fetchSizer.AddStretchSpacer()
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch '), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.fetchChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchTxt = wx.StaticText(self.fetch_panel, -1, label='of image IDs:')
         self.fetchSizer.Add(self.fetchTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.startId, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchTxt2 = wx.StaticText(self.fetch_panel, -1, label='to')
         self.fetchSizer.Add(self.fetchTxt2, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.endId, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         #self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        #self.fetchSizer.AddSpacer((5, 20))
+        #self.fetchSizer.Add(5, 20, 0)
         self.fetchTxt3 = wx.StaticText(self.fetch_panel, -1, label='images')
         self.fetchSizer.Add(self.fetchTxt3, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((10, 20))
+        self.fetchSizer.Add(10, 20, 0)
         self.fetchSizer.Add(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddStretchSpacer()
         self.fetch_panel.SetSizerAndFit(self.fetchSizer)
@@ -280,14 +280,14 @@ class ImageGallery(wx.Frame):
         viewMenu = wx.Menu()
 
         self.fileMenu = wx.Menu()
-        loadMenuItem = self.fileMenu.Append(-1, text='Load Image Set\tCtrl+O',
-                                                   help='Loads images specfied in a csv file.')
+        loadMenuItem = self.fileMenu.Append(-1, item='Load Image Set\tCtrl+O',
+                                                   helpString='Loads images specfied in a csv file.')
         # JEN - End Add
-        exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit Image Gallery')
+        exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Exit Image Gallery')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
-        imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I',
-                                                help='Launches a control panel for adjusting image brightness, size, etc.')
+        imageControlsMenuItem = viewMenu.Append(-1, item='Image Controls\tCtrl+Shift+I',
+                                                helpString='Launches a control panel for adjusting image brightness, size, etc.')
         self.GetMenuBar().Append(viewMenu, 'View')
 
         # Rules menu
@@ -300,10 +300,10 @@ class ImageGallery(wx.Frame):
 
         # Advanced menu
         advancedMenu = wx.Menu()
-        fetchObjMenuItem = advancedMenu.Append(-1, text='Fetch all objects from displayed images', help='Fetch all objects from displayed images')
-        fetchAllObjMenuItem = advancedMenu.Append(-1, text='Fetch all objects', help='Fetch all objects')
-        saveImgMenuItem = advancedMenu.Append(-1, text='Save image thumbnails as PNG', help='Save image thumbnails as PNG')
-        saveObjMenuItem = advancedMenu.Append(-1, text='Save object thumbnails as PNG', help='Save object thumbnails as PNG')
+        fetchObjMenuItem = advancedMenu.Append(-1, item='Fetch all objects from displayed images', helpString='Fetch all objects from displayed images')
+        fetchAllObjMenuItem = advancedMenu.Append(-1, item='Fetch all objects', helpString='Fetch all objects')
+        saveImgMenuItem = advancedMenu.Append(-1, item='Save image thumbnails as PNG', helpString='Save image thumbnails as PNG')
+        saveObjMenuItem = advancedMenu.Append(-1, item='Save object thumbnails as PNG', helpString='Save object thumbnails as PNG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -973,7 +973,7 @@ class ImageGallery(wx.Frame):
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)
-            self.fetchFromGroupSizer.AddSpacer((10, 20))
+            self.fetchFromGroupSizer.Add(10, 20, 0)
 
     def ValidateIntegerField(self, evt):
         ''' Validates an integer-only TextCtrl '''

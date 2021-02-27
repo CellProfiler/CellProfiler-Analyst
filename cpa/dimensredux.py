@@ -85,9 +85,9 @@ class PlotPanel(wx.Panel):
 
         tools_sizer = wx.BoxSizer(wx.HORIZONTAL)
         tools_sizer.Add(self.toolbar, 0, wx.RIGHT | wx.EXPAND)
-        tools_sizer.AddSpacer((5, -1))
+        tools_sizer.AddSpacer(5)
         tools_sizer.Add(self.hide_legend_btn, 0, wx.LEFT | wx.EXPAND)    
-        tools_sizer.AddSpacer((5, -1))
+        tools_sizer.AddSpacer(5)
         tools_sizer.Add(self.statusBar, 0, wx.LEFT | wx.EXPAND)    
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -434,18 +434,18 @@ class PlotControl(wx.Panel):
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "Method:"))
-        sz.AddSpacer((5, -1))
+        sz.AddSpacer(5)
         sz.Add(self.method_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1, 5))
+        sizer.Add(-1, 5, 0)
 
         sz2 = wx.BoxSizer(wx.HORIZONTAL)
         sz2.Add(self.help_btn, wx.LEFT)
-        sz2.AddSpacer((400, -1))
+        sz2.AddSpacer(400)
         sz2.Add(self.update_chart_btn, wx.RIGHT)
 
         sizer.Add(sz2, 1, wx.EXPAND)
-        sizer.AddSpacer((-1, 5))
+        sizer.Add(-1, 5, 0)
 
         wx.EVT_BUTTON(self.update_chart_btn, -1, self.on_show_pressed)
         wx.EVT_BUTTON(self.help_btn, -1, self.on_show_about)    

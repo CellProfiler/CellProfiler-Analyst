@@ -109,7 +109,7 @@ class ImageControlPanel(wx.Panel):
         self.UpdateContrastMode()
 
     def SetClassPoints(self, classCoords):
-        self.sizer4.DeleteWindows()
+        self.sizer4.Clear()
         vals = np.arange(float(len(classCoords))) / len(classCoords)
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2

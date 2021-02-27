@@ -65,7 +65,7 @@ class PlateViewer(wx.Frame, CPATool):
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
         self.sourceChoice = TableComboBox(self, -1, size=fixed_width)
         dataSourceSizer.Add(self.sourceChoice)
-        dataSourceSizer.AddSpacer((-1,3))
+        dataSourceSizer.Add(-1, 3, 0)
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = get_non_blob_types_from_table(p.image_table)
         self.measurementsChoice = ComboBox(self, choices=measurements, size=fixed_width)
@@ -90,7 +90,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
 
-        viewSizer.AddSpacer((-1,3))
+        viewSizer.Add(-1, 3, 0)
         viewSizer.Add(wx.StaticText(self, label='Well display:'))
         if p.image_thumbnail_cols:
             choices = pmp.all_well_shapes
@@ -101,7 +101,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.wellDisplayChoice.Select(0)
         viewSizer.Add(self.wellDisplayChoice)
 
-        viewSizer.AddSpacer((-1,3))
+        viewSizer.Add(-1, 3, 0)
         viewSizer.Add(wx.StaticText(self, label='Number of plates:'))
         self.numberOfPlatesTE = wx.TextCtrl(self, -1, '1', style=wx.TE_PROCESS_ENTER)
         viewSizer.Add(self.numberOfPlatesTE)
@@ -117,21 +117,21 @@ class PlateViewer(wx.Frame, CPATool):
         if len(self.annotation_cols) > 0:
             self.annotationCol.SetSelection(0)
         annotationColSizer.Add(self.annotationCol, flag=wx.ALIGN_CENTER_VERTICAL)
-        annotationColSizer.AddSpacer((3,-1))
+        annotationColSizer.AddSpacer(3)
         self.addAnnotationColBtn = wx.Button(self, -1, 'Add', size=(44,-1))
         annotationColSizer.Add(self.addAnnotationColBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         annotationSizer.Add(annotationColSizer)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         annotationSizer.Add(wx.StaticText(self, label='Label:'))
         self.annotationLabel = wx.TextCtrl(self, -1, 'Select wells')#, style=wx.TE_PROCESS_ENTER)
         self.annotationLabel.Disable()
         self.annotationLabel.SetForegroundColour(wx.Colour(80,80,80))
         self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
         annotationSizer.Add(self.annotationLabel)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         self.outlineMarked = wx.CheckBox(self, -1, label='Outline annotated wells')
         annotationSizer.Add(self.outlineMarked)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         self.annotationShowVals = wx.CheckBox(self, -1, label='Show values on plate')
         annotationSizer.Add(self.annotationShowVals)
         if len(db.GetUserColumnNames(p.image_table)) == 0:
@@ -140,11 +140,11 @@ class PlateViewer(wx.Frame, CPATool):
             
         controlSizer = wx.BoxSizer(wx.VERTICAL)
         controlSizer.Add(dataSourceSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(groupingSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(viewSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(annotationSizer, 0 , wx.EXPAND)
 
         self.plateMapSizer = wx.GridSizer(1,1,5,5)

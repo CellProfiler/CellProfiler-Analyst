@@ -39,13 +39,13 @@ class _ColumnLinkerPanel(wx.Panel):
         self.Sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.Sizer.Add(wx.StaticText(self, -1, table_a+'.'), 0, wx.TOP, 4)
         self.Sizer.Add(self.aChoice, 1, wx.EXPAND)
-        self.Sizer.AddSpacer((10,-1))
+        self.Sizer.AddSpacer(10)
         self.Sizer.Add(wx.StaticText(self, -1, '<=>'), 0, wx.TOP, 4)
-        self.Sizer.AddSpacer((10,-1))
+        self.Sizer.AddSpacer(10)
         self.Sizer.Add(wx.StaticText(self, -1, table_b+'.'), 0, wx.TOP, 4)
         self.Sizer.Add(self.bChoice, 1, wx.EXPAND)
         if allow_delete:
-            self.Sizer.AddSpacer((10,-1))
+            self.Sizer.AddSpacer(10)
             self.Sizer.Add(self.x_btn)
             self.x_btn.Bind(wx.EVT_BUTTON, self.GrandParent.on_remove_panel)
 
@@ -81,7 +81,7 @@ class LinkTablesDialog(wx.Dialog):
                                      'columns in "%s" that will be used to join the two tables.'
                                      %(table_a, table_b)), 
                        0, wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.TOP|wx.CENTER, 10)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
 
         self.sw = wx.ScrolledWindow(self)
         if a_cols:
@@ -98,17 +98,17 @@ class LinkTablesDialog(wx.Dialog):
         self.Sizer.Add(self.sw, 1, wx.EXPAND)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.addbtn, 0)
         sz.AddStretchSpacer()
         sz.Add(self.ok, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.cancel, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
 
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
         self.Sizer.Add(sz, 0, wx.EXPAND)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
 
         for cola, colb in zip(a_cols, b_cols):
             self.add_column(cola, colb)
@@ -622,12 +622,12 @@ class GateManager(wx.Dialog):
         
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(wx.StaticText(self, -1, 'Gates:'), 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.gatelist, 1, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.deletebtn, 0, wx.LEFT|wx.RIGHT, 15)
         self.Sizer.Add(wx.StaticText(self, -1, 'Gate info:'), 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.gateinfo, 2, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
         self.Sizer.Add(wx.Button(self, wx.ID_OK, 'Close'), 0, wx.ALIGN_RIGHT|wx.ALL, 15 )
         

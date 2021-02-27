@@ -74,9 +74,9 @@ class NormalizationStepPanel(wx.Panel):
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, 'Divide values by:'))
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(self.window_group)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(self.agg_type)
         sz.Add(self.constant_float)
         if allow_delete:
@@ -217,7 +217,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
         self.col_choices_desc = wx.StaticText(self, -1, 'Select measurements to normalize:')
         self.Sizer.Add(self.col_choices_desc, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.col_choices, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
         
         #
