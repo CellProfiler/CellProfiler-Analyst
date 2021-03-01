@@ -59,14 +59,14 @@ class odict(MutableMapping):
         return copyDict
 
     
-class TableData(gridlib.PyGridTableBase):
+class TableData(gridlib.GridTableBase):
     '''
     Interface connecting the table grid GUI to the underlying table data.
     '''
     def __init__(self):
         self._rows = self.GetNumberRows()
         self._cols = self.GetNumberCols()
-        gridlib.PyGridTableBase.__init__(self)
+        gridlib.GridTableBase.__init__(self)
     
     def set_sort_col(self, col_index, add=False):
         '''Sort rows by the column indicated indexed by col_index. If add is 
@@ -348,7 +348,7 @@ class DBTable(TableData):
         else:
             self.grouping = None
         self.table_name = table_name
-        self.cache = odict()
+        self.cache = {}
         self.col_labels = np.array(db.GetColumnNames(self.table_name))
         self.shown_columns = np.arange(len(self.col_labels))
         self.order_by = [self.col_labels[0]]
@@ -586,7 +586,7 @@ class TableViewer(wx.Frame):
         self.GetMenuBar().Append(view_menu, 'View')
         column_width_menu = wx.Menu()
         show_hide_cols_item = view_menu.Append(-1, 'Show/Hide columns')
-        view_menu.AppendMenu(-1, 'Column widths', column_width_menu)
+        view_menu.Append(-1, 'Column widths', column_width_menu)
         fixed_cols_menu_item = column_width_menu.Append(-1, 'Fixed width', kind=wx.ITEM_RADIO)
         fit_cols_menu_item = column_width_menu.Append(-1, 'Fit to table', kind=wx.ITEM_RADIO)
         auto_cols_menu_item = column_width_menu.Append(-1, 'Auto width', kind=wx.ITEM_RADIO)
@@ -615,16 +615,16 @@ class TableViewer(wx.Frame):
         self.grid.EnableEditing(False)
         self.grid.SetCellHighlightPenWidth(0)
         # Help prevent spurious horizontal scrollbar
-        self.grid.SetMargins(0-wx.SystemSettings_GetMetric(wx.SYS_VSCROLL_X),
-                             0-wx.SystemSettings_GetMetric(wx.SYS_HSCROLL_Y))
+        self.grid.SetMargins(0-wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X),
+                             0-wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y))
         self.grid.SetRowLabelSize(ROW_LABEL_SIZE)
 
         self.grid.Bind(gridlib.EVT_GRID_CMD_LABEL_LEFT_CLICK, self.on_leftclick_label)
-        gridlib.EVT_GRID_LABEL_LEFT_DCLICK(self.grid, self.on_dclick_label)
-        gridlib.EVT_GRID_LABEL_RIGHT_CLICK(self.grid, self.on_rightclick_label)
-        gridlib.EVT_GRID_SELECT_CELL(self.grid, self.on_select_cell)
-        gridlib.EVT_GRID_RANGE_SELECT(self.grid, self.on_select_range)
-        
+        self.grid.Bind(gridlib.EVT_GRID_LABEL_LEFT_DCLICK, self.on_dclick_label)
+        self.grid.Bind(gridlib.EVT_GRID_LABEL_RIGHT_CLICK, self.on_rightclick_label)
+        self.grid.Bind(gridlib.EVT_GRID_SELECT_CELL, self.on_select_cell)
+        self.grid.Bind(gridlib.EVT_GRID_RANGE_SELECT, self.on_select_range)
+
 ##    def on_select_filter(self, evt):
 ##        #
 ##        #  CONSTRUCTION (add filters to dbtable), ignore for plaintable
@@ -726,7 +726,7 @@ class TableViewer(wx.Frame):
         '''
         table_base = PlainTable(self, data, col_labels, key_indices, grouping)
         self.grid.SetTable(table_base, True)
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
 
     def on_new_table(self, evt=None):
         '''Prompts user to for table dimensions and creates the table.
@@ -763,7 +763,7 @@ class TableViewer(wx.Frame):
         frame.Show(True)
         frame.new_blank_table(rows, cols)
         frame.SetTitle('New_Table')
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
         
     def new_blank_table(self, rows, cols):
         '''Sort of pointless since the table can't be edited... yet.
@@ -772,7 +772,7 @@ class TableViewer(wx.Frame):
         table_base = PlainTable(self, data)
         self.grid.SetTable(table_base, True)
         self.RescaleGrid()
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
         
     def on_load_db_table(self, evt=None):
         from .guiutils import TableSelectionDialog
@@ -791,7 +791,7 @@ class TableViewer(wx.Frame):
         self.grid.SetTable(table_base, True)
         self.SetTitle(tablename)
         self.RescaleGrid()
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
 
     def on_load_csv(self, evt=None):
         '''Prompts the user for a csv file and loads it.
@@ -845,7 +845,7 @@ class TableViewer(wx.Frame):
         self.grid.Refresh()
         self.SetTitle(filename)
         self.RescaleGrid()
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
 
     def on_leftclick_label(self, evt):
         if evt.Col >= 0:

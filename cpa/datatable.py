@@ -207,11 +207,11 @@ class HugeTableGrid(wx.grid.Grid):
         # it's Destroy method later.
         self.SetTable(table, True)
         # Avoid self.AutoSize() because it hangs on large tables.
-        self.SetSelectionMode(self.wxGridSelectColumns)
+        self.SetSelectionMode(self.GridSelectColumns)
         self.SetColumnLabels(self.GetTable().col_labels)
         # Help prevent spurious horizontal scrollbar
-        self.SetMargins(0-wx.SystemSettings_GetMetric(wx.SYS_VSCROLL_X),
-                        0-wx.SystemSettings_GetMetric(wx.SYS_HSCROLL_Y))
+        self.SetMargins(0-wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X),
+                        0-wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y))
         self.SetRowLabelSize(ROW_LABEL_SIZE)
         
         wx.grid.EVT_GRID_SELECT_CELL(self, self.OnSelectCell)
@@ -352,19 +352,19 @@ class DataGrid(wx.Frame):
         self.loadCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_LOAD_CSV,
                         text='Load data from CSV\tCtrl+O',
-                        help='Load data from CSV.')
+                        helpString='Load data from CSV.')
         self.saveCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_SAVE_CSV,
                         text='Save data to CSV\tCtrl+S',
-                        help='Saves data as comma separated values.')
+                        helpString='Saves data as comma separated values.')
         self.savePerImageCountsToCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=-1,
                         text='Save per-image counts to CSV',
-                        help='Saves per-image phenotype counts as comma separated values.')
+                        helpString='Saves per-image phenotype counts as comma separated values.')
         self.exitMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_EXIT,
                         text='Exit\tCtrl+Q',
-                        help='Close the Data Table')
+                        helpString='Close the Data Table')
         self.filemenu.AppendItem(self.loadCSVMenuItem)
         self.filemenu.AppendItem(self.saveCSVMenuItem)
         self.filemenu.AppendItem(self.savePerImageCountsToCSVMenuItem)
@@ -377,7 +377,7 @@ class DataGrid(wx.Frame):
         self.writeToTempTableMenuItem = \
             wx.MenuItem(parentMenu=self.dbmenu, id=-1,
                         text='Write temporary table for Plate Viewer',
-                        help='Writes this table to a temporary table in your database so Plate Viewer can access it.')
+                        helpString='Writes this table to a temporary table in your database so Plate Viewer can access it.')
         self.dbmenu.AppendItem(self.writeToTempTableMenuItem)
         self.GetMenuBar().Append(self.dbmenu, 'Database')
         if self.grid:
@@ -450,7 +450,7 @@ class DataGrid(wx.Frame):
     def OnLoadCSV(self, evt):
         dlg = wx.FileDialog(self, message='Choose a CSV file to load',
                             defaultDir=os.getcwd(),
-                            style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() != wx.ID_OK:
             return
         filename = dlg.GetPath()
@@ -511,7 +511,7 @@ class DataGrid(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         res = saveDialog.ShowModal()
         if res==wx.ID_OK:
@@ -525,7 +525,7 @@ class DataGrid(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
             colHeaders = list(dbconnect.image_key_columns())
@@ -650,7 +650,7 @@ if __name__ == "__main__":
     p.LoadFile(propsfile)
     r = csv.reader(open(csvfile))
     labels = next(r)
-    dtable = DBConnect.get_data_table_from_csv_reader(r)
+    dtable = dbconnect.get_data_table_from_csv_reader(r)
     coltypes = db.InferColTypesFromData(dtable, len(labels))
     for i in range(len(coltypes)):
         if coltypes[i] == 'INT': coltypes[i] = int
