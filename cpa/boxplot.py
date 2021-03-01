@@ -81,12 +81,12 @@ class DataSourcePanel(wx.Panel):
         sizer.Add(-1, 3, 0)
         
         sizer.Add(self.update_chart_btn)    
-        
-        wx.EVT_BUTTON(self.x_multiple, -1, self.on_select_multiple)
-        wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
-        wx.EVT_COMBOBOX(self.x_choice, -1, self.on_column_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
-        
+
+        self.x_multiple.Bind(wx.EVT_BUTTON, self.on_select_multiple)
+        self.table_choice.Bind(wx.EVT_COMBOBOX, self.on_table_selected)
+        self.x_choice.Bind(wx.EVT_COMBOBOX, self.on_column_selected)
+        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
+
         self.SetSizer(sizer)
         self.Show(1)
 
@@ -317,8 +317,7 @@ class BoxPlotPanel(FigureCanvasWxAgg):
     def reset_toolbar(self):
         # Cheat since there is no way reset
         if self.navtoolbar:
-            self.navtoolbar._views.clear()
-            self.navtoolbar._positions.clear()
+            self.navtoolbar._nav_stack.clear()
             self.navtoolbar.push_current()
 
 
@@ -359,16 +358,16 @@ class BoxPlot(wx.Frame, CPATool):
         _NTB2_ZOOM = wx.NewId()
         _NTB2_SAVE = wx.NewId()
         _NTB2_SUBPLOT = wx.NewId()
-        tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original view')
-        tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
-        tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
+        tb.AddTool(_NTB2_HOME, "", _load_bitmap('home.png'), 'Home')
+        tb.AddTool(_NTB2_BACK, "", _load_bitmap('back.png'), 'Back')
+        tb.AddTool(_NTB2_FORWARD, "", _load_bitmap('forward.png'), 'Forward')
 
         tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
         tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
 
         tb.AddSeparator()
-        tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
-        tb.AddSimpleTool(_NTB2_SAVE, _load_bitmap('filesave.png'), 'Save', 'Save plot contents to file')
+        tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
+        tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
 
         self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
         self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
