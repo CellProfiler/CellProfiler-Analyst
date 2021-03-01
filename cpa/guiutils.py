@@ -612,7 +612,7 @@ class CreateLoadImagesTableDialog(wx.Dialog):
     
 class GateManager(wx.Dialog):
     def __init__(self, parent, **kwargs):
-        kwargs['style'] = kwargs.get('style',wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER|wx.THICK_FRAME)
+        kwargs['style'] = kwargs.get('style',wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
         wx.Dialog.__init__(self, parent, title="Gate Inspector", **kwargs)
         
         self.gatelist = wx.ListBox(self, choices=p.gates_ordered)

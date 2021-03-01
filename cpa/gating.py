@@ -212,35 +212,35 @@ class GatingHelper(object):
             
             if abs(evt.x - xmin) < 2 and (ymin < evt.y < ymax):
                 self.hover = self.BOUNDARY_LEFT
-                wx.SetCursor(wx.StockCursor(wx.CURSOR_SIZEWE))
+                wx.SetCursor(wx.Cursor(wx.CURSOR_SIZEWE))
                 
             elif abs(evt.x - xmax) < 2 and (ymin < evt.y < ymax):
                 self.hover = self.BOUNDARY_RIGHT
-                wx.SetCursor(wx.StockCursor(wx.CURSOR_SIZEWE))
+                wx.SetCursor(wx.Cursor(wx.CURSOR_SIZEWE))
                 
             elif abs(evt.y - ymin) < 2 and (xmin < evt.x < xmax):
                 self.hover = self.BOUNDARY_BOTTOM
-                wx.SetCursor(wx.StockCursor(wx.CURSOR_SIZENS))
+                wx.SetCursor(wx.Cursor(wx.CURSOR_SIZENS))
                 
             elif abs(evt.y - ymax) < 2 and (xmin < evt.x < xmax):
                 self.hover = self.BOUNDARY_TOP
-                wx.SetCursor(wx.StockCursor(wx.CURSOR_SIZENS))
+                wx.SetCursor(wx.Cursor(wx.CURSOR_SIZENS))
                 
             elif (xmin < evt.x < xmax) and (ymin < evt.y < ymax):
                 self.hover = self.BOUNDARY_INSIDE
-                wx.SetCursor(wx.StockCursor(wx.CURSOR_SIZING))
+                wx.SetCursor(wx.Cursor(wx.CURSOR_SIZING))
                 
             else:
-                wx.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
+                wx.SetCursor(wx.Cursor(wx.CURSOR_ARROW))
         else:
-            wx.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
+            wx.SetCursor(wx.Cursor(wx.CURSOR_ARROW))
             
     def on_motion_new_gate(self, evt):
         '''Mouse motion handler for empty gates that need to be created first.
         Handle cursor changes and gate dragging.
         '''
         if evt.xdata and evt.ydata:
-            wx.SetCursor(wx.StockCursor(wx.CURSOR_CROSS))
+            wx.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
             if self.dragging:
                 if self.x_column:
                     xmin = min(self._mouse_xy_data[0], evt.xdata)
@@ -262,7 +262,7 @@ class GatingHelper(object):
                                 subgate.set_range(ymin, ymax)
             return
         else:
-            wx.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
+            wx.SetCursor(wx.Cursor(wx.CURSOR_ARROW))
                 
     def on_press(self, evt):
         '''Mouse-down handler. Start dragging. Store data coords of xi,yi
