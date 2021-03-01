@@ -314,7 +314,6 @@ class FilterComboBox(wx.adv.BitmapComboBox):
         if the selection is NO_FILTER or NEW_FILTER
         '''
         kind = self.get_item_kind(self.GetSelection()) # Fix selection issue
-        print(kind)
         if kind == 'filter':
             return p._filters[self.Value]
         elif kind == 'gate':

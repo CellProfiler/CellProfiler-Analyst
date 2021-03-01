@@ -415,8 +415,7 @@ class DensityPanel(FigureCanvasWxAgg):
     def reset_toolbar(self):
         # Cheat since there is no way reset
         if self.navtoolbar:
-            self.navtoolbar._views.clear()
-            self.navtoolbar._positions.clear()
+            self.navtoolbar._nav_stack.clear()
             self.navtoolbar.push_current()
     
     def set_configpanel(self,configpanel):
