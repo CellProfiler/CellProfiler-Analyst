@@ -182,36 +182,52 @@ class SortBin(wx.ScrolledWindow):
     def AddObject(self, obKey, chMap=None, priority=1, pos='first'):
         self.AddObjects([obKey], chMap, priority, pos)
                         
-    def AddObjects(self, obKeys, chMap=None, priority=1, pos='first', display_whole_image=False):
+    def AddObjects(self, obKeys, chMap=None, priority=1, pos='first', display_whole_image=False, srcID=None):
         if chMap is None:
             chMap = p.image_channel_colors
         if self.tile_collection == None:
             self.tile_collection = tilecollection.TileCollection()
-        imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority, display_whole_image=display_whole_image) # Gives back the np matrix of an image?
-        for i, obKey, imgs in zip(list(range(len(obKeys))), obKeys, imgSet):
-            
-            if self.classifier and self.label == 'image gallery':
-                    newTile = ImageTile(self, obKey, imgs, chMap, False,
-                                        scale=self.classifier.scale, 
-                                        brightness=self.classifier.brightness,
-                                        contrast=self.classifier.contrast,
-                                        display_whole_image=True)
+        if srcID is not None and wx.FindWindowById(srcID) is not None:
+            source = wx.FindWindowById(srcID)
+            for tile in source.tiles[::-1]:
+                if tile.obKey in obKeys:
+                    source.tiles.remove(tile)
+                    source.sizer.Detach(tile)
+                    tile.Reparent(self)
+                    tile.bin = self
+                    if pos == 'first':
+                        self.tiles.insert(0, tile)
+                        self.sizer.Insert(0, tile, 0, wx.ALL | wx.EXPAND, 1)
+                    else:
+                        self.tiles.append(tile)
+                        self.sizer.Add(tile, 0, wx.ALL | wx.EXPAND, 1)
+            source.UpdateSizer()
+            source.UpdateQuantity()
+        else:
+            imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority, display_whole_image=display_whole_image) # Gives back the np matrix of an image?
+            for i, obKey, imgs in zip(list(range(len(obKeys))), obKeys, imgSet):
+                if self.classifier and self.label == 'image gallery':
+                        newTile = ImageTile(self, obKey, imgs, chMap, False,
+                                            scale=self.classifier.scale,
+                                            brightness=self.classifier.brightness,
+                                            contrast=self.classifier.contrast,
+                                            display_whole_image=True)
 
-            elif self.classifier:
-                newTile = ImageTile(self, obKey, imgs, chMap, False,
-                                    scale=self.classifier.scale, 
-                                    brightness=self.classifier.brightness,
-                                    contrast=self.classifier.contrast)
-                    
-            else:
-                newTile = ImageTile(self, obKey, imgs, chMap, False)
-                
-            if pos == 'first':
-                self.tiles.insert(i, newTile)
-                self.sizer.Insert(i, newTile, 0, wx.ALL|wx.EXPAND, 1 )
-            else:
-                self.tiles.append(newTile)
-                self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
+                elif self.classifier:
+                    newTile = ImageTile(self, obKey, imgs, chMap, False,
+                                        scale=self.classifier.scale,
+                                        brightness=self.classifier.brightness,
+                                        contrast=self.classifier.contrast)
+
+                else:
+                    newTile = ImageTile(self, obKey, imgs, chMap, False)
+
+                if pos == 'first':
+                    self.tiles.insert(i, newTile)
+                    self.sizer.Insert(i, newTile, 0, wx.ALL|wx.EXPAND, 1 )
+                else:
+                    self.tiles.append(newTile)
+                    self.sizer.Add(newTile, 0, wx.ALL|wx.EXPAND, 1)
         self.UpdateSizer()
         self.UpdateQuantity()
 
@@ -232,9 +248,7 @@ class SortBin(wx.ScrolledWindow):
     def RemoveSelectedTiles(self):
         for tile in self.Selection():
             self.tiles.remove(tile)
-            # Todo: Move tiles rather than destroying them
-            # self.sizer.Remove(tile)
-            # Destroying removes from size automatically now
+            # Destroying removes from sizer automatically
             wx.CallAfter(tile.Destroy)
         wx.CallAfter(self.UpdateSizer)
         self.UpdateQuantity()
@@ -255,7 +269,7 @@ class SortBin(wx.ScrolledWindow):
         def hack(obKeys):
             def closure():
                 if self.classifier:
-                    self.AddObjects(obKeys, self.classifier.chMap)
+                    self.AddObjects(obKeys, self.classifier.chMap, srcID=srcID)
                 else:
                     self.AddObjects(obKeys)
             return closure

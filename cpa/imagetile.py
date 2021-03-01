@@ -228,11 +228,13 @@ class ImageTile(ImagePanel):
         data_object.SetData(pickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
         source = wx.DropSource(self)#, copy=cursor, move=cursor)
         source.SetData(data_object)
+        start_bin = self.bin.GetId()
         result = source.DoDragDrop(wx.Drag_DefaultMove)
         # def cb():
         #     self.bin.RemoveKeys(self.bin.SelectedKeys()) # Hack to fix drag move
         # wx.CallAfter(cb)
-        if result == wx.DragMove:
+        if result == wx.DragMove and self.bin.GetId() == start_bin:
+            # Tiles were copied, not moved. Clear the duplicates.
             self.bin.RemoveSelectedTiles() # Removes images which stays during drag and drop
             self.bin.UpdateSizer()
             self.bin.UpdateQuantity()
