@@ -155,11 +155,11 @@ class ScatterControlPanel(wx.Panel):
         sizer.Add(-1, 2, 0)
         
         sizer.Add(self.update_chart_btn)
-        
-        wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
-        wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
+
+        self.x_table_choice.Bind(wx.EVT_COMBOBOX, self.on_x_table_selected)
+        self.y_table_choice.Bind(wx.EVT_COMBOBOX, self.on_y_table_selected)
         self.gate_choice.addobserver(self.on_gate_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
+        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
 
         self.SetSizer(sizer)
         self.Show(1)
@@ -978,16 +978,16 @@ class Scatter(wx.Frame, CPATool):
         _NTB2_ZOOM = wx.NewId()
         _NTB2_SAVE = wx.NewId()
         _NTB2_SUBPLOT = wx.NewId()
-        tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original view')
-        tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
-        tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
+        tb.AddTool(_NTB2_HOME, "", _load_bitmap('home.png'), 'Home')
+        tb.AddTool(_NTB2_BACK, "", _load_bitmap('back.png'), 'Back')
+        tb.AddTool(_NTB2_FORWARD, "", _load_bitmap('forward.png'), 'Forward')
 
-        tb.AddCheckTool(_NTB2_PAN, _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
-        tb.AddCheckTool(_NTB2_ZOOM, _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+        tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
 
         tb.AddSeparator()
-        tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
-        tb.AddSimpleTool(_NTB2_SAVE, _load_bitmap('filesave.png'), 'Save', 'Save plot contents to file')
+        tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
+        tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
 
         self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
         self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
@@ -1008,7 +1008,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
     (2) disable the pan/zoom tool modes in the associated subplot(s).
     '''
     def __init__(self, canvas):
-        super(NavigationToolbar2WxAgg, self).__init__(canvas)
+        super(CustomNavToolbar, self).__init__(canvas)
         self.PAN = self.wx_ids['Pan']
         self.ZOOM =  self.wx_ids['Zoom']
         self.pan_tool  = self.FindById(self.PAN)
@@ -1033,8 +1033,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         shortHelp -- the tooltip shown to the user for the new tool
         '''
         tool_id = wx.NewId()
-        self.user_tools[mode] = self.InsertSimpleTool(pos, tool_id, bmp,
-                            isToggle=istoggle, shortHelpString=shortHelp)
+        self.user_tools[mode] = self.InsertTool(pos, tool_id, "", bmp, kind=wx.ITEM_CHECK if istoggle else wx.ITEM_NORMAL, shortHelp=shortHelp)
         self.Bind(wx.EVT_TOOL, self.on_toggle_user_tool, self.user_tools[mode])
 
     def get_mode(self):
@@ -1093,12 +1092,10 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         evt.Skip()
         
     def reset_history(self):
-        '''More hacky junk to clear/reset the toolbar history.
+        '''Clear/reset the toolbar history.
         '''
-        self._views.clear()
-        self._positions.clear()
+        self._nav_stack.clear()
         self.push_current()
-    
     
 if __name__ == "__main__":
     app = wx.PySimpleApp()
