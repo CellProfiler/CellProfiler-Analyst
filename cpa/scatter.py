@@ -865,9 +865,9 @@ class ScatterPanel(FigureCanvasWxAgg):
             
         # Set axis scales
         if self.x_scale == LOG_SCALE:
-            self.subplot.set_xscale('log', basex=2.1)
+            self.subplot.set_xscale('log', base=2.1)
         if self.y_scale == LOG_SCALE:
-            self.subplot.set_yscale('log', basey=2.1)
+            self.subplot.set_yscale('log', base=2.1)
             
         # Set axis bounds. Clip non-positive values if in log space
         # Must be done after scatter.
@@ -921,7 +921,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         # Set log axes and print warning if any values will be masked out
         ignored = 0
         if self.y_scale == LOG_SCALE:
-            self.subplot.set_yscale('log', basey=2.1, nonposy='mask')
+            self.subplot.set_yscale('log', base=2.1, nonpositive='mask')
             ignored += sum([len(self.y_points[i][ys <= 0]) 
                             for i, ys in enumerate(self.y_points) if len(ys) > 0])
         if ignored > 0:

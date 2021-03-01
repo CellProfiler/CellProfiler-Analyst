@@ -1023,7 +1023,10 @@ def show_loaddata_table(gate_names, as_columns=True):
     for g in gate_names:
         for t in p.gates[g].get_tables():
             assert t == p.image_table, 'this function only takes per-image gates'
-    columns = list(dbconnect.image_key_columns() + dbconnect.well_key_columns()) + p.image_file_cols + p.image_path_cols
+    wellkeys = dbconnect.well_key_columns()
+    if wellkeys is None:
+        wellkeys = ()
+    columns = list(dbconnect.image_key_columns() + wellkeys) + p.image_file_cols + p.image_path_cols
     if as_columns:
         query_columns = columns + ['(%s) AS %s'%(str(p.gates[g]), g) for g in gate_names]
         columns += gate_names
