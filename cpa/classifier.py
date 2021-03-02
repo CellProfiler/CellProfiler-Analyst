@@ -1032,7 +1032,7 @@ class Classifier(wx.Frame):
         Present user with file select dialog, then load selected classifier model.
         '''
         dlg = wx.FileDialog(self, "Select the file containing your classifier model.",
-                            defaultDir=os.getcwd(), style=wx.OPEN | wx.FD_CHANGE_DIR)
+                            defaultDir=os.getcwd(), style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             self.LoadModel(filename)
@@ -1125,7 +1125,7 @@ class Classifier(wx.Frame):
         dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(),
                             wildcard='Text files (*.txt)|*.txt|CSV files (*.csv)|*.csv',
-                            style=wx.OPEN | wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             name, file_extension = os.path.splitext(filename)
