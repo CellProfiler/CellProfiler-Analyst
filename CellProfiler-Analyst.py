@@ -424,13 +424,13 @@ class CPAnalyst(wx.App):
         from wx.adv import SplashScreen, SPLASH_CENTRE_ON_SCREEN, SPLASH_TIMEOUT
 
         splash = SplashScreen(splashbitmap, SPLASH_CENTRE_ON_SCREEN |
-                                SPLASH_TIMEOUT, 2000, None, -1)
+                                SPLASH_TIMEOUT, 1500, None, -1)
         self.splash = splash
+        self.splash.Hide()
 
         p = Properties()
         if not p.is_initialized():
             from cpa.guiutils import show_load_dialog
-            splash.Destroy()
             if not show_load_dialog():
                 splash.Destroy()
                 example_link_address = 'cellprofiler.org'
@@ -439,6 +439,7 @@ class CPAnalyst(wx.App):
                 response = dlg.ShowModal()
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
+            self.splash.Show()
 
         self.frame = MainGUI(p, None, size=(1000,-1))
 
@@ -467,7 +468,7 @@ class CPAnalyst(wx.App):
         #     #                           user_agent='CPAnalyst/%s'%(__version__))
         # except ImportError:
         #     logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
-
+        self.splash.Destroy()
         self.frame.Show() # Show frame
         return True
 
