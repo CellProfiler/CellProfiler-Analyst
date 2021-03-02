@@ -772,7 +772,7 @@ class TableViewer(wx.Frame):
         dlg = wx.FileDialog(self, message='Choose a CSV file to load',
                             defaultDir=os.getcwd(),
                             wildcard='CSV files (*.csv)|*.csv',
-                            style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             pos = (self.Position[0]+10, self.Position[1]+10)
