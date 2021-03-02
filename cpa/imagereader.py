@@ -11,6 +11,7 @@ from .properties import Properties
 from .errors import ClearException
 
 p = Properties()
+IMAGEIO_FORMATS = (".tif", ".tiff", ".bmp", ".png", ".jpeg")
 
 class ThrowingURLopener(urllib.request.URLopener):
     def http_error_default(*args, **kwargs):
@@ -22,51 +23,50 @@ class ImageReader(object):
         '''fds -- list of file descriptors (filenames or urls)
         returns a list of channels as numpy float32 arrays
         '''
-        if all(os.path.splitext(fd)[1].lower() in (".tif", ".tiff") for fd in fds):
-            return self.read_images_via_imageio(fds)
+        channels = []
+        for i, filename_or_url in enumerate(fds):
+            image = self._read_image(filename_or_url)
+
+            channels += self._extract_channels(filename_or_url, image,
+                                               p.image_names[i],
+                                               int(p.channels_per_image[i]))
+
+        # Check if any images need to be rescaled, and if they are the same
+        # aspect ratio. If so, do the scaling.
+        from .imagetools import check_image_shape_compatibility
+        check_image_shape_compatibility(channels)
+        if p.image_rescale:
+            from .imagetools import rescale
+            for i in range(len(channels)):
+                if channels[i].shape != p.image_rescale:
+                    channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
+
+        return channels
+
+    def _read_image(self, filename_or_url):
+        # The opener's destructor deletes the temprary files, so the
+        # opener must not be GC'ed until the image has been loaded.
+        opener = ThrowingURLopener()
+        if p.image_url_prepend:
+            parsed = urllib.parse.urlparse(p.image_url_prepend + filename_or_url)
+            if parsed.scheme:
+                try:
+                    filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
+                except IOError as e:
+                    if e.args[0] == 'http error':
+                        status_code, message = e.args[1:3]
+                        raise ClearException(
+                            'Failed to load image from %s' % parsed.geturl(),
+                            '%d %s' % (status_code, message))
+                    else:
+                        raise
+        # TODO: Add properties setting to force BioFormats
+        if os.path.splitext(filename_or_url)[-1].lower() in IMAGEIO_FORMATS:
+            logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
+            return imageio.imread(filename_or_url)
         else:
-            return self.read_images_via_bioformats(fds)
-
-    def _read_image_via_bioformats(self, filename_or_url):
-        # The opener's destructor deletes the temprary files, so the
-        # opener must not be GC'ed until the image has been loaded.
-        opener = ThrowingURLopener()
-        if p.image_url_prepend:
-            parsed = urllib.parse.urlparse(p.image_url_prepend + filename_or_url)
-            if parsed.scheme:
-                try:
-                    filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
-                except IOError as e:
-                    if e.args[0] == 'http error':
-                        status_code, message = e.args[1:3]
-                        raise ClearException(
-                            'Failed to load image from %s' % parsed.geturl(),
-                            '%d %s' % (status_code, message))
-                    else:
-                        raise
-        logging.info('Loading image from "%s"' % filename_or_url)
-        return bioformats.load_image(filename_or_url)
-
-    def _read_image_via_imageio(self, filename_or_url):
-        # The opener's destructor deletes the temprary files, so the
-        # opener must not be GC'ed until the image has been loaded.
-        opener = ThrowingURLopener()
-        if p.image_url_prepend:
-            parsed = urllib.parse.urlparse(p.image_url_prepend + filename_or_url)
-            if parsed.scheme:
-                try:
-                    filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
-                except IOError as e:
-                    if e.args[0] == 'http error':
-                        status_code, message = e.args[1:3]
-                        raise ClearException(
-                            'Failed to load image from %s' % parsed.geturl(),
-                            '%d %s' % (status_code, message))
-                    else:
-                        raise
-        logging.info('Loading image from "%s"' % filename_or_url)
-        return imageio.imread(filename_or_url)
-
+            logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
+            return bioformats.load_image(filename_or_url, rescale=False)
 
     def _extract_channels(self, filename_or_url, image, image_name, channels_per_image):
         if image.ndim == 2 and channels_per_image != 1:
@@ -112,59 +112,7 @@ class ImageReader(object):
                 return [image[:, :, j]
                         for j in range(image.shape[2])]
 
-    def read_images_via_bioformats(self, filenames_or_urls):
-        '''Uses Bioformats to load images.
 
-        filenames_or_urls -- list
-        returns a list of channels as numpy float32 arrays
-
-        '''
-        channels = []
-        for i, filename_or_url in enumerate(filenames_or_urls):
-            image = self._read_image_via_bioformats(filename_or_url)
-
-            channels += self._extract_channels(filename_or_url, image,
-                                               p.image_names[i],
-                                               int(p.channels_per_image[i]))
-
-        # Check if any images need to be rescaled, and if they are the same
-        # aspect ratio. If so, do the scaling.
-        from .imagetools import check_image_shape_compatibility
-        check_image_shape_compatibility(channels)
-        if p.image_rescale:
-            from .imagetools import rescale
-            for i in range(len(channels)):
-                if channels[i].shape != p.image_rescale:
-                    channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
-
-        return channels
-
-    def read_images_via_imageio(self, filenames_or_urls):
-        '''Uses ImageIO to load images.
-
-        filenames_or_urls -- list
-        returns a list of channels as numpy float32 arrays
-
-        '''
-        channels = []
-        for i, filename_or_url in enumerate(filenames_or_urls):
-            image = self._read_image_via_imageio(filename_or_url)
-
-            channels += self._extract_channels(filename_or_url, image,
-                                               p.image_names[i],
-                                               int(p.channels_per_image[i]))
-
-        # Check if any images need to be rescaled, and if they are the same
-        # aspect ratio. If so, do the scaling.
-        from .imagetools import check_image_shape_compatibility
-        check_image_shape_compatibility(channels)
-        if p.image_rescale:
-            from .imagetools import rescale
-            for i in range(len(channels)):
-                if channels[i].shape != p.image_rescale:
-                    channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
-
-        return channels
 ####################### FOR TESTING #########################
 if __name__ == "__main__":
     import wx
