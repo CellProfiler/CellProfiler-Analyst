@@ -443,12 +443,8 @@ class ScatterPanel(FigureCanvasWxAgg):
         for c, collection in enumerate(self.subplot.collections):
             # Build the selection
             if len(self.xys[c]) > 0:
-                if mpl_version.split('.')[1] >= '2':
-                    from matplotlib.path import Path
-                    new_sel = np.nonzero(Path(verts).contains_points(self.xys[c]))[0]
-                else:
-                    from matplotlib.nxutils import points_inside_poly                
-                    new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
+                from matplotlib.path import Path
+                new_sel = np.nonzero(Path(verts).contains_points(self.xys[c]))[0]
             else:
                 new_sel = []
             if self.selection_key == None:
@@ -729,10 +725,6 @@ class ScatterPanel(FigureCanvasWxAgg):
             
     def get_key_lists(self):
         return self.key_lists
-                                
-    def set_colors(self, colors):
-        assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
-        self.colors = colors
 
     def get_colors(self):
         if self.colors:

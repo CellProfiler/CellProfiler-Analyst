@@ -61,7 +61,7 @@ class CellMontageFrame(wx.Frame):
 class SortBinDropTarget(wx.DropTarget):
     def __init__(self, bin):
         wx.DropTarget.__init__(self)
-        self.data = wx.CustomDataObject("ObjectKey")
+        self.data = wx.CustomDataObject("application.cpa.ObjectKey")
         self.SetDataObject(self.data)
         self.bin = bin
         

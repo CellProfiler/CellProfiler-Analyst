@@ -17,7 +17,7 @@ db = DBConnect()
 class ImageTileDropTarget(wx.DropTarget):
     ''' ImageTiles pass drop events to their parent bin. '''
     def __init__(self, tile):
-        self.data = wx.CustomDataObject("ObjectKey")
+        self.data = wx.CustomDataObject("application.cpa.ObjectKey")
         wx.DropTarget.__init__(self, self.data)
         self.tile = tile
     
@@ -224,7 +224,7 @@ class ImageTile(ImagePanel):
         #cursor = wx.CursorFromImage(cursorImg)
         
         # wx crashes unless the data object is assigned to a variable.
-        data_object = wx.CustomDataObject("ObjectKey")
+        data_object = wx.CustomDataObject("application.cpa.ObjectKey")
         data_object.SetData(pickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
         source = wx.DropSource(self)#, copy=cursor, move=cursor)
         source.SetData(data_object)

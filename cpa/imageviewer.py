@@ -636,7 +636,7 @@ class ImageViewer(wx.Frame):
                 # start drag
                 source = wx.DropSource(self)
                 # wxPython crashes unless the data object is assigned to a variable.
-                data_object = wx.CustomDataObject("ObjectKey")
+                data_object = wx.CustomDataObject("application.cpa.ObjectKey")
                 data_object.SetData(pickle.dumps( (self.GetId(), self.selection) ))
                 source.SetData(data_object)
                 result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
