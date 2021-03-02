@@ -295,7 +295,7 @@ class MainGUI(wx.Frame):
         ext = os.path.splitext(p._filename)[-1]
         dlg = wx.FileDialog(self, message="Save properties as...", defaultDir=dirname,
                             defaultFile=filename, wildcard=ext,
-                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             p.save_file(dlg.GetPath())
 
@@ -303,20 +303,20 @@ class MainGUI(wx.Frame):
         p = Properties()
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
                             defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
-                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().save_workspace(dlg.GetPath())
 
     def on_load_workspace(self, evt):
         dlg = wx.FileDialog(self, "Select the file containing your CPAnalyst workspace...", wildcard="Workspace file (*.workspace)|*.workspace",
-                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            defaultDir=os.getcwd(), style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().load_workspace(dlg.GetPath())
 
     def save_log(self, evt=None):
         dlg = wx.FileDialog(self, message="Save log as...", defaultDir=os.getcwd(),
                             defaultFile='CPA_log.txt', wildcard='txt',
-                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             f = open(filename, 'w')
