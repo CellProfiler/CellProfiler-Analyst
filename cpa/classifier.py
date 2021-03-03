@@ -1288,8 +1288,15 @@ class Classifier(wx.Frame):
         # elif selectedText == "Precision Recall Curve":
         #     self.PlotPrecisionRecall()
         if selectedText == "Confusion Matrix":
-            dlg = wx.TextEntryDialog(self, 'Number of cross validation folds:', 'Enter folds')
-            dlg.SetValue('5')
+            dlg = wx.NumberEntryDialog(
+                self,
+                'Number of cross validation folds:',
+                'Enter folds',
+                "Evaluate Classifier",
+                5,
+                1,
+                1000
+            )
             if dlg.ShowModal() == wx.ID_OK:
                 folds = int(dlg.GetValue())
                 dlg.Destroy()
