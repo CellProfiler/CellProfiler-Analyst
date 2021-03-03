@@ -951,6 +951,7 @@ class Scatter(wx.Frame, CPATool):
         
         self.SetToolBar(figpanel.get_toolbar())            
         self.SetSizer(sizer)
+        self.fig = figpanel
         #
         # Forward save and load settings functionality to the configpanel
         #
@@ -986,11 +987,34 @@ class Scatter(wx.Frame, CPATool):
         self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
         self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
         self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
-        self.Bind(wx.EVT_TOOL, toolbar.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, self.configure_subplots, id=_NTB2_SUBPLOT)
         self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
 
         tb.Realize()  
         # Hack end
+
+    def configure_subplots(self, *args):
+        # Fixed MPL subplot window generator
+        from matplotlib.backends.backend_wx import _set_frame_icon, FigureManagerWx
+        from matplotlib.widgets import SubplotTool
+
+        frame = wx.Frame(None, -1, "Configure subplots")
+        _set_frame_icon(frame)
+
+        toolfig = Figure((6, 3))
+        canvas = FigureCanvasWxAgg(frame, -1, toolfig)
+
+        # Create a figure manager to manage things
+        FigureManagerWx(canvas, 1, frame)
+
+        # Now put all into a sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # This way of adding to sizer allows resizing
+        sizer.Add(canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
+        frame.SetSizer(sizer)
+        frame.Fit()
+        SubplotTool(self.fig.canvas.figure, toolfig)
+        frame.Show()
 
 
 class CustomNavToolbar(NavigationToolbar2WxAgg):
