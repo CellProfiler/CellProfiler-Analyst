@@ -736,6 +736,8 @@ class TableViewer(wx.Frame):
         frame.Show(True)
         frame.new_blank_table(rows, cols)
         frame.SetTitle('New_Table')
+        if self.GetTitle() == "":
+            self.Destroy()
         self.grid.SetSelectionMode(self.grid.GridSelectColumns)
         
     def new_blank_table(self, rows, cols):
@@ -756,6 +758,9 @@ class TableViewer(wx.Frame):
             frame = TableViewer(self.Parent, pos=pos)
             frame.Show(True)
             frame.load_db_table(table_name)
+            if self.GetTitle() == "":
+                self.Destroy()
+
 
     def load_db_table(self, tablename):
         '''Populates the grid with the data found in a given table.
@@ -779,6 +784,8 @@ class TableViewer(wx.Frame):
             frame = TableViewer(self.Parent, pos=pos)
             frame.Show(True)
             frame.load_csv(filename)
+            if self.GetTitle() == "":
+                self.Destroy()
             
     def load_csv(self, filename):
         '''Populates the grid with the the data in a CSV file.
