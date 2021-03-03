@@ -136,7 +136,7 @@ class ImageControlPanel(wx.Panel):
                 def OnTogglePhenotype(evt):
                     className = evt.EventObject.Label
                     for listener in self.listeners:
-                        listener.ToggleClass(className[3:], evt.Checked())
+                        listener.ToggleClass(className[3:], evt.IsChecked())
 
                 checkBox.Bind(wx.EVT_CHECKBOX, OnTogglePhenotype)
                 i+=1

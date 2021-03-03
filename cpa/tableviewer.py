@@ -658,7 +658,7 @@ class TableViewer(wx.Frame):
         # Otherwise it will get bound twice and set_fixed_col_widths won't work 
         # unless called twice.
         self.Disconnect(-1, -1, wx.wxEVT_SIZE)
-        wx.EVT_SIZE(self, self.on_size)
+        self.Bind(wx.EVT_SIZE, self.on_size)
         self.RescaleGrid()
         
     # TODO:
