@@ -719,7 +719,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             item = submenu.Append(id, f)
             self.popup_menu_filters[id] = f
             self.Bind(wx.EVT_MENU, self.on_new_collection_from_filter, item)
-        popup.AppendMenu(-1, 'Create collection from filter', submenu)
+        popup.Append(-1, 'Create collection from filter', submenu)
         
         self.PopupMenu(popup, (x,y))
             
@@ -963,6 +963,7 @@ class Scatter(wx.Frame, CPATool):
         from matplotlib.backends.backend_wx import _load_bitmap
         toolbar.Hide()
         tb = self.CreateToolBar((wx.TB_HORIZONTAL|wx.TB_TEXT))
+        toolbar.tb = tb
 
         _NTB2_HOME = wx.NewId()
         _NTB2_BACK = wx.NewId()
@@ -982,6 +983,14 @@ class Scatter(wx.Frame, CPATool):
         tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
         tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
 
+        def on_toggle_pan(evt):
+            tb.ToggleTool(_NTB2_ZOOM, False)
+            evt.Skip()
+
+        def on_toggle_zoom(evt):
+            tb.ToggleTool(_NTB2_PAN, False)
+            evt.Skip()
+
         self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
         self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
         self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
@@ -989,8 +998,10 @@ class Scatter(wx.Frame, CPATool):
         self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
         self.Bind(wx.EVT_TOOL, self.configure_subplots, id=_NTB2_SUBPLOT)
         self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+        self.Bind(wx.EVT_TOOL, on_toggle_zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, on_toggle_pan, id=_NTB2_PAN)
 
-        tb.Realize()  
+        tb.Realize()
         # Hack end
 
     def configure_subplots(self, *args):
