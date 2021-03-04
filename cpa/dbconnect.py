@@ -510,7 +510,6 @@ class DBConnect(metaclass=Singleton):
                 logging.debug('[%s] %s'%(connID, query))
             if p.db_type.lower() == 'sqlite':
                 assert args is None
-                print("Executing", query)
                 cursor.execute(query)
             else:
                 cursor.execute(query, args=args)
@@ -1480,7 +1479,6 @@ class DBConnect(metaclass=Singleton):
 
         if p.classification_type == 'image':
             object_table = object_table.split('_objecttable')[0]
-        print(object_table)
 
         all_cols = [str(x) for x in self.GetColumnNames(object_table)]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
