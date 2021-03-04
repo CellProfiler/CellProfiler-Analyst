@@ -344,7 +344,7 @@ class DBConnect(metaclass=Singleton):
             
             if not p.db_sqlite_file:
                 # Compute a UNIQUE database name for these files
-                import md5
+                import hashlib
                 dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or \
                     os.path.expanduser('~')
                 dbpath = os.path.join(dbpath,'CPA')
@@ -356,16 +356,17 @@ class DBConnect(metaclass=Singleton):
                     csv_dir = os.path.split(p.db_sql_file)[0] or '.'
                     imcsvs, obcsvs = get_csv_filenames_from_sql_file()
                     files = imcsvs + obcsvs + [os.path.split(p.db_sql_file)[1]]
-                    hash = md5.new()
+                    hash = hashlib.new('md5')
                     for fname in files:
                         t = os.stat(csv_dir + os.path.sep + fname).st_mtime
-                        hash.update('%s%s'%(fname,t))
+                        hash_me = f"{fname}{t}".encode()
+                        hash.update(hash_me)
                     dbname = 'CPA_DB_%s.db'%(hash.hexdigest())
                 else:
                     imtime = os.stat(p.image_csv_file).st_mtime
                     obtime = os.stat(p.object_csv_file).st_mtime
                     l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
-                    dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
+                    dbname = 'CPA_DB_%s.db'%(hashlib.md5(l.encode()).hexdigest())
                     
                 p.db_sqlite_file = os.path.join(dbpath, dbname)
             logging.info('[%s] SQLite file: %s'%(connID, p.db_sqlite_file))
@@ -509,6 +510,7 @@ class DBConnect(metaclass=Singleton):
                 logging.debug('[%s] %s'%(connID, query))
             if p.db_type.lower() == 'sqlite':
                 assert args is None
+                print("Executing", query)
                 cursor.execute(query)
             else:
                 cursor.execute(query, args=args)
@@ -1414,19 +1416,21 @@ class DBConnect(metaclass=Singleton):
                 else:
                     command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
                 # guess at a good number of lines, about 250 megabytes, assuming floats)
-                nlines = (250*1024*1024) / (len(row1) * 64)
+                nlines = (250*1024*1024) // (len(row1) * 64)
                 self.cursors[connID].execute(command, row1)
+                lnum = 1
                 while True:
+                    lnum += 1
                     # fetch a certain number of lines efficiently
                     args = [l for idx, l in zip(list(range(nlines)), r) if len(l) > 0]
                     if args == []:
                         break
                     self.cursors[connID].executemany(command, args)
                     line_count += len(args)
-
-                    pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
+                    prog = line_count
+                    # pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
                     if dlg:
-                        c, s = dlg.Update(pct, '%d%% Complete'%(pct))
+                        c, s = dlg.Update(prog, '%d lines loaded'%(prog))
                         if not c:
                             try:
                                 os.remove(p.db_sqlite_file)
@@ -1437,7 +1441,7 @@ class DBConnect(metaclass=Singleton):
                                               'the next time use use the current '
                                               'database settings.', 'Error')
                             raise Exception('cancelled load')
-                    logging.info("... loaded %d%% of CSV data"%(pct))
+                    logging.info("... loaded %d lines of CSV data"%(prog))
                 f.close()
                 logging.info("Finished loading CSV data")
                 base_bytes += os.path.getsize(os.path.join(csv_dir, file))
