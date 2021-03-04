@@ -53,7 +53,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
-        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Close Plate Viewer')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
         self.menuBar.Append(cpa.helpmenu.make_help_menu(self), 'Help')
         save_csv_menu_item = self.fileMenu.Append(-1, 'Save table to CSV\tCtrl+S')
@@ -154,7 +154,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.rightSizer = wx.BoxSizer(wx.VERTICAL)
         self.rightSizer.Add(self.plateMapSizer, 1, wx.EXPAND|wx.BOTTOM, 10)
         self.colorBar = ColorBarPanel(self, 'jet', size=(-1,25))
-        self.rightSizer.Add(self.colorBar, 0, wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL)
+        self.rightSizer.Add(self.colorBar, 0, wx.EXPAND)
 
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
         mainSizer.Add(controlSizer, 0, wx.LEFT|wx.TOP|wx.BOTTOM, 10)
@@ -213,9 +213,9 @@ class PlateViewer(wx.Frame, CPATool):
         singlePlateMapSizer = wx.BoxSizer(wx.VERTICAL)
         if p.plate_id:
             singlePlateMapSizer.Add(plateMapChoiceSizer, 0, wx.ALIGN_CENTER)
-        singlePlateMapSizer.Add(platemap, 1, wx.EXPAND|wx.ALIGN_CENTER)
+        singlePlateMapSizer.Add(platemap, 1, wx.EXPAND)
 
-        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
+        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND)
 
     def UpdatePlateMaps(self):
         self.measurement = self.measurementsChoice.Value

@@ -304,7 +304,7 @@ class DataModel(metaclass=Singleton):
                 self.plate_map[well] = (row, col)
                 self.rev_plate_map[(row, col)] = well
             elif p.well_format == '123':
-                row = (int(well) - 1) / pshape[1]
+                row = (int(well) - 1) // pshape[1]
                 col = (int(well) - 1) % pshape[1]
                 self.plate_map[well] = (row, col)
                 self.rev_plate_map[(row, col)] = well

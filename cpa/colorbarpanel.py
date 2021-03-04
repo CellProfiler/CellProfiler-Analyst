@@ -35,7 +35,7 @@ class ColorBarPanel(wx.Panel):
         self.global_extents = list(local_extents)
         self.clipmode = 'rescale'
         
-        self.low_slider.SetToolTipString('')
+        self.low_slider.SetToolTip('')
         self.low_slider.GetToolTip().Enable(True)
         
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
@@ -276,8 +276,7 @@ class ColorBarPanel(wx.Panel):
         # draw the color bar
         dc = wx.PaintDC(self)
         dc.Clear()
-        dc.BeginDrawing()
-        
+
         dc.SetPen(wx.Pen((0,0,0)))
         dc.DrawLine(0, (h-14)/2, local_x0, (h-14)/2)
 
@@ -302,5 +301,3 @@ class ColorBarPanel(wx.Panel):
             dc.DrawLine(xpos,6,xpos,h-14)
             textpos = xpos - xpos/w_global * dc.GetFullTextExtent(self.labelformat%(val), font)[0]
             dc.DrawText(self.labelformat%(val), textpos, h-13)
-            
-        dc.EndDrawing()        

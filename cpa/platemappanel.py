@@ -242,7 +242,6 @@ class PlateMapPanel(wx.Panel):
     def OnPaint(self, evt=None):
         dc = wx.PaintDC(self)
         dc.Clear()
-        dc.BeginDrawing()
 
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
         cols_data, rows_data = (self.data.shape[1], self.data.shape[0])
@@ -383,7 +382,6 @@ class PlateMapPanel(wx.Panel):
                         dc.DrawLine(px+3, py+r*2-2, px+r*2-2, py+3)
                 px += 2*r+1
             py += 2*r+1
-        dc.EndDrawing()
         return dc
 
     def OnSize(self, evt):
