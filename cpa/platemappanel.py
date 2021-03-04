@@ -363,6 +363,11 @@ class PlateMapPanel(wx.Panel):
                         well = wellkey[-1]
                         if well in imgs:
                             ims = imagetools.FetchImage(imgs[well])
+                            # Hacky rescale for now
+                            # Todo: Write proper rescale function
+                            for i in range(len(ims)):
+                                if ims[i].max() > 1:
+                                    ims[i] = ims[i] * (1 / np.iinfo(ims[i].dtype).max)
                             size = ims[0].shape
                             scale = r*2./max(size)
                             bmp[well] = imagetools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)

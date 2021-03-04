@@ -517,7 +517,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.annotation_cols[new_column] = coltypes[usertype][1]
         self.annotationCol.Items += [new_column]
         self.annotationCol.SetSelection(len(self.annotation_cols) - 1)
-        current_selection = self.measurementsChoice.Selection
+        current_selection = self.measurementsChoice.GetSelection()
         self.measurementsChoice.SetItems(self.measurementsChoice.Strings + [new_column])
         if self.annotationShowVals.IsChecked():
             column = self.annotationCol.Value
@@ -525,7 +525,7 @@ class PlateViewer(wx.Frame, CPATool):
             self.measurementsChoice.SetStringSelection(column)
             self.UpdatePlateMaps()
         else:
-            self.measurementsChoice.SetSelection(current_selection[0])
+            self.measurementsChoice.SetSelection(current_selection)
         self.annotationShowVals.Enable()
         self.outlineMarked.Enable()
         self.OnSelectWell()
