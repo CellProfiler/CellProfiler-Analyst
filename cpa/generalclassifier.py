@@ -15,6 +15,34 @@ import joblib
 import seaborn as sns
 from sklearn.model_selection import LeaveOneOut, KFold, cross_val_predict, cross_val_score
 
+##########
+# MatPlotLib currently has a bug on Windows which crashes wx if you close an interactive plot window.
+# This should be fixed in MPL 3.4, but for now we'll monkey patch in the fix.
+# See MPL PR #19596 for more details. - dstirling Mar 2021
+import wx
+import matplotlib.backends.backend_wx
+from matplotlib._pylab_helpers import Gcf
+
+def mp_onClose(self, event):
+    self.canvas.close_event()
+    self.canvas.stop_event_loop()
+    self.figmgr.frame = None
+    Gcf.destroy(self.figmgr)
+    event.Skip()
+
+def mp_Destroy(self, *args, **kwargs):
+    try:
+        self.canvas.mpl_disconnect(self.toolbar._id_drag)
+    except AttributeError:
+        pass
+    if self and not self.IsBeingDeleted():
+        wx.Frame.Destroy(self, *args, **kwargs)
+    return True
+
+matplotlib.backends.backend_wx.FigureFrameWx._onClose = mp_onClose
+matplotlib.backends.backend_wx.FigureFrameWx.Destroy = mp_Destroy
+##########
+
 class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None):
         self.classBins = []

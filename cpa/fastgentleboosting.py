@@ -88,7 +88,7 @@ class FastGentleBoosting(object):
             dlg.Destroy()
             figure = plt.figure()
             plt.clf()
-            plt.hold(True)
+            plt.plot()
             plt.plot(list(range(1, nRules + 1)), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
             plt.plot(list(range(1, nRules + 1)), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
             chance_level = 1.0 / len(self.classifier.trainingSet.labels)
