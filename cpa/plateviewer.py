@@ -59,7 +59,7 @@ class PlateViewer(wx.Frame, CPATool):
         save_csv_menu_item = self.fileMenu.Append(-1, 'Save table to CSV\tCtrl+S')
         self.Bind(wx.EVT_MENU, self.on_save_csv, save_csv_menu_item)
         
-        wx.EVT_MENU(self, wx.ID_EXIT, lambda _:self.Close())
+        self.Bind(wx.EVT_MENU, lambda _:self.Close(), id=wx.ID_EXIT)
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))

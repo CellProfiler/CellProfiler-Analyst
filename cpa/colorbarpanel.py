@@ -72,7 +72,7 @@ class ColorBarPanel(wx.Panel):
         slider = evt.EventObject
         if not evt.Dragging() or not evt.LeftIsDown():
             return
-        slider.SetPosition((slider.GetPositionTuple()[0] + evt.GetX() - self.xo - s_off, -1))
+        slider.SetPosition((slider.GetPosition()[0] + evt.GetX() - self.xo - s_off, -1))
         self.xo = 0
         self.UpdateInterval()
         
@@ -97,11 +97,11 @@ class ColorBarPanel(wx.Panel):
         range = self.global_extents[1]-self.global_extents[0]
         w = float(self.Size[0])
         if range > 0 and w > 0:
-            self.interval[0] = self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)
-            self.interval[1] = self.global_extents[0] + ((self.high_slider.GetPositionTuple()[0] + s_off) / w * range)
+            self.interval[0] = self.global_extents[0] + ((self.low_slider.GetPosition()[0] + s_off) / w * range)
+            self.interval[1] = self.global_extents[0] + ((self.high_slider.GetPosition()[0] + s_off) / w * range)
         
-            self.low_slider.SetToolTipString(str(self.global_extents[0] + ((self.low_slider.GetPositionTuple()[0] + s_off) / w * range)))
-            self.high_slider.SetToolTipString(str(self.global_extents[0] + ((self.high_slider.GetPositionTuple()[0] + s_off) / w * range)))
+            self.low_slider.SetToolTip(str(self.global_extents[0] + ((self.low_slider.GetPosition()[0] + s_off) / w * range)))
+            self.high_slider.SetToolTip(str(self.global_extents[0] + ((self.high_slider.GetPosition()[0] + s_off) / w * range)))
         else:
             self.interval = list(self.local_extents)
 
@@ -235,8 +235,8 @@ class ColorBarPanel(wx.Panel):
         w_global, h = self.Size
         if 0 in self.Size:
             return
-        low_slider_pos  = self.low_slider.GetPositionTuple()[0] + s_off
-        high_slider_pos = self.high_slider.GetPositionTuple()[0] + s_off
+        low_slider_pos  = self.low_slider.GetPosition()[0] + s_off
+        high_slider_pos = self.high_slider.GetPosition()[0] + s_off
         
         global_scale = self.global_extents[1] - self.global_extents[0]  # value scale of the global data
         if global_scale == 0:
@@ -248,8 +248,8 @@ class ColorBarPanel(wx.Panel):
             local_x1 = (self.local_extents[1] - self.global_extents[0]) / global_scale * w_global     # x pos (pixels) to stop drawing the local color bar
             w_local = local_x1 - local_x0                                   # pixel width of the local color bar
         
-        w0 = max(low_slider_pos, local_x0) - local_x0
-        w1 = local_x1 - min(high_slider_pos, local_x1)
+        w0 = int(max(low_slider_pos, local_x0) - local_x0)
+        w1 = int(local_x1 - min(high_slider_pos, local_x1))
 
         # create array of values to be used for the color bar
         if self.clipmode=='rescale':
