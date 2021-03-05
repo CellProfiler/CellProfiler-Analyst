@@ -1,4 +1,4 @@
-
+import sys
 import wx
 import re
 from . import sqltools as sql
@@ -178,7 +178,10 @@ class ColumnFilterDialog(wx.Dialog):
         self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
         self.filter_name.Bind(wx.EVT_TEXT, self.validate_filter_name)
 ##        self.filter_name.Bind(wx.EVT_COMBOBOX, self.on_select_existing_filter)
-
+        if sys.platform == 'win32':
+            self.size_mod = 30
+        else:
+            self.size_mod = 7
         self.resize_to_fit()
 
     def reset(self):
@@ -241,8 +244,7 @@ class ColumnFilterDialog(wx.Dialog):
                 wx.GetDisplaySize()[0] - self.Position[0])
         h = min(self.sw.Sizer.MinSize[1] + self.Sizer.MinSize[1],
                 wx.GetDisplaySize()[1] - self.Position[1])
-        self.SetSize((w,h+7))
-        
+        self.SetSize((w, h + self.size_mod))
 ##    def on_select_existing_filter(self, evt):
 ##        self.load_existing_filter(self.filter_name.GetStringSelection())
         
@@ -262,7 +264,6 @@ class ColumnFilterDialog(wx.Dialog):
 
 
 if __name__ == "__main__":
-    import sys
     import logging
     logging.basicConfig(level=logging.DEBUG)
     app = wx.PySimpleApp()
