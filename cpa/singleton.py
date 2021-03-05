@@ -1,5 +1,5 @@
 '''
-A Python Singleton metaclass ensures that only one instance of a
+This Singleton metaclass ensures that only one instance of a
 class can be created. Subsequent calls to make that class will
 return the original instance. In Python 3, specify metaclass=Singleton
 to use this functionality.
