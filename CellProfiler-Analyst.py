@@ -11,7 +11,6 @@
 
 
 import sys
-import sys
 import os
 import os.path
 import logging

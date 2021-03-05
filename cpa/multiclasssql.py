@@ -167,7 +167,7 @@ def _objectify(p, field):
 def _where_clauses(p, dm, filter_name):
     imkeys = dm.GetAllImageKeys(filter_name)
     imkeys.sort()
-    stepsize = max(len(imkeys) / 100, 50)
+    stepsize = max(len(imkeys) // 100, 50)
     key_thresholds = imkeys[-1:1:-stepsize]
     key_thresholds.reverse()
     if len(key_thresholds) == 0:

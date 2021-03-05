@@ -1132,7 +1132,7 @@ class DBConnect(metaclass=Singleton):
             logging.error('No data for obKey: %s'%str(obKey))
             return None
         # This should be the case
-        assert all([type(x) in [int, int, float] for x in data[0]])
+        assert all([type(x) in (int, float) for x in data[0]])
         return np.array(data[0])
 
     def GetCellData(self, obKey):
@@ -1145,7 +1145,7 @@ class DBConnect(metaclass=Singleton):
             logging.error('No data for obKey: %s'%str(obKey))
             return None
         # fetch out only numeric data
-        values = [x if type(x) in [int, int, float] else 0.0 for x in data[0]]
+        values = [x if type(x) in (int, float) else 0.0 for x in data[0]]
         return np.array(values)
 
     def GetPlateNames(self):

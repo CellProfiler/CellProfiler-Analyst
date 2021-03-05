@@ -1,9 +1,9 @@
 
 import unittest
-from dbconnect import *
-from datamodel import DataModel
-from properties import Properties
-import numpy as np
+
+from cpa.dbconnect import *
+from cpa.properties import Properties
+
 
 class TestDBConnect(unittest.TestCase):
     def setup_mysql(self):

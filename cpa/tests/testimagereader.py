@@ -1,6 +1,6 @@
 import unittest
-from ImageReader import ImageReader
-from properties import Properties
+from cpa.imagereader import ImageReader
+from cpa.properties import Properties
 
 p = Properties()
 

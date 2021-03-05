@@ -1039,7 +1039,7 @@ class Classifier(wx.Frame):
 
     # Get the name of the loaded model file
     def GetModelData(self, filename):
-        from sklearn.externals import joblib
+        import joblib
         try: 
             return joblib.load(filename)
         except:

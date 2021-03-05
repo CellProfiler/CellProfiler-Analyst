@@ -9,7 +9,8 @@ class TestOldFilter(unittest.TestCase):
     def setUp(self):
         fn = os.path.join(os.path.dirname(__file__),
                        'test_sqltools_old_filter.properties')
-        cpa.properties.LoadFile(fn)
+        p = cpa.properties.Properties()
+        p.load_file(fn)
         self.db = cpa.dbconnect.DBConnect()
         cursor = Mock()
         connID = threading.currentThread().getName()
@@ -18,7 +19,8 @@ class TestOldFilter(unittest.TestCase):
 
 
     def test_get_tables(self):
-        filter = cpa.properties._filters['MCF7wt']
+        p = cpa.properties.Properties()
+        filter = p._filters['MCF7wt']
         with patch.object(cpa.db, 'execute') as execute:
             with patch.object(cpa.db, 'GetResultColumnNames') as GetResultColumnNames:
                 execute.return_value = [(1, 'SIMPLE', 'Morphology_Per_Image', 'ALL', None, None, None, None, 107760, 'Using where')]

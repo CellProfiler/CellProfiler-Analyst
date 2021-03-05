@@ -1,21 +1,21 @@
-import dbconnect
-from datatable import DataGrid
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import sortbin
-from tilecollection import EVT_TILE_UPDATED
-from trainingset import TrainingSet
+import cpa.dbconnect
+from cpa.datatable import DataGrid
+from cpa.datamodel import DataModel
+from cpa.imagecontrolpanel import ImageControlPanel
+from cpa.properties import Properties
+from cpa.scoredialog import ScoreDialog
+import cpa.sortbin
+from cpa.tilecollection import EVT_TILE_UPDATED
+from cpa.trainingset import TrainingSet
 from io import StringIO
-import fastgentleboostingmulticlass
-import imagetools
-import multiclasssql
-import polyafit
+import cpa.fastgentleboostingmulticlass
+import cpa.imagetools
+import cpa.multiclasssql
+import cpa.polyafit
 import numpy
 import os
 import wx
-from classifier import *
+from cpa.classifier import *
 
 
 import time
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     classifier.Show(True)
     classifier.LoadTrainingSet(ts)
     time.sleep(3)
-    classifier.FindRules()
+    classifier.TrainClassifier()
     classifier.ScoreAll()
     
     app.MainLoop()

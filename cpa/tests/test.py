@@ -1,4 +1,3 @@
-import os
 import wx
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg, NavigationToolbar2WxAgg
 from matplotlib.backends.backend_wx import _load_bitmap
@@ -30,8 +29,8 @@ tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original v
 tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
 tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
 
-tb.AddCheckTool(_NTB2_PAN, _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
-tb.AddCheckTool(_NTB2_ZOOM, _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan')
+tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom')
 
 tb.AddSeparator()
 tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
@@ -42,9 +41,10 @@ f.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
 f.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
 f.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
 f.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
-f.Bind(wx.EVT_TOOL, toolbar.configure_subplot, id=_NTB2_SUBPLOT)
-f.Bind(wx.EVT_TOOL, toolbar.save, id=_NTB2_SAVE)
+f.Bind(wx.EVT_TOOL, toolbar.configure_subplots, id=_NTB2_SUBPLOT)
+f.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
 
 tb.Realize()
 f.Show()
+f.Close()
 app.MainLoop()
