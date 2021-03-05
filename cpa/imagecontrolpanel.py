@@ -2,31 +2,11 @@ import wx
 from .properties import Properties
 import numpy as np
 from matplotlib.pyplot import cm
-from io import BytesIO
-from base64 import b64decode
+from cpa.icons import get_icon
+
 p = Properties()
 
 contrast_modes = ['None', 'Linear', 'Log']
-
-brightness_icon = 'iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAMAAABhEH5lAAAAGXRFWHRTb2Z\
-0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAMBQTFRFOTk5LS0t////YWFhNjY2ZGRk9fX1VFRUf\
-39/l5eX9vb2pqamNTU1oaGhNzc3WlpaNDQ0MzMzMDAwo6OjqampUFBQd3d3qqqq7OzssrKyenp6MTE\
-x2NjY6enpXl5eXV1d7+/vPz8/7e3t29vbdnZ2MjIyQEBAsLCw1dXV8/Pz6+vrfHx8wsLCdHR0pKSkT\
-k5OW1tbwMDAcHBwc3NzioqKjIyM8vLyqKiovr6+v7+/eXl5n5+fnp6emZmZmpqa////TDLFQQAAAAd\
-0Uk5T////////ABpLA0YAAACySURBVHjabNCHCsMgEABQc0YTyd5kkFI6oXvv/v9nVU1NAq1w3vHwT\
-hTR7zJNVaG/dMhFsSjEHmNJ+T5XB+LaahpnPDJCLjxZ7awRQS4sWdUbz0UHoKyjzNV1GwB2kaTinlL\
-MxecEBiUYo3S8otj2g4mghGJcy0bLD8qQy+3RjffKUAM4n3o3VoamwfU4b2nNw0k2T57eDUWGox70m\
-jJJjeCB2Nmw9zmD7c9/eZ6qPgIMAAElDf2nrDqEAAAAAElFTkSuQmCC'
-
-zoom_icon = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6\
-QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAFGSURBVHjalFKxjoJQEFyO6yD\
-RoJ0FH0CJVNYSYsEfYGkiCT2/QE1pZ8M/gJRYA60WUNBgIQWUuufD3IWI+s5JSMjbndmdzDKICO+wW\
-q2wrmtgWRaGwyG4rst068wrgeVyiaIownw+h9ls1r5FUQS73Q6yLIPtdnsXIgKP32KxwP1+j69Aarq\
-uk9/+BoZhoCRJYNv2W2uO40BVVfD1WCiKAlRVBRpIT5qmfQuyLOPlckEaSM90OsXeBrRUuriJ9C0MB\
-gNIkoRKjuMYBEHoC0wmE/B9nyoQBAEoivI8Rk3TqDGSnqcxWpaF4/EYeJ5vY+oe0o3YTj4cDuB5HtO\
-7xPV6jafTCY7HI4xGIwjDkPk9ZQKO42Cz2Tw/ZdM0sSzLNtvr9UpEmP8k8d2d/CmZgM3zHM/n8190n\
-5DbDZqmaScTK5+SCX4EGADRZjaIh/KWhwAAAABJRU5ErkJggg=='
-
 
 class ImageControlPanel(wx.Panel):
     def __init__(self, parent, listeners, brightness=1.0, scale=1.0, 
@@ -58,14 +38,14 @@ class ImageControlPanel(wx.Panel):
         sizer2 = wx.BoxSizer(wx.VERTICAL)
         brightness_sizer = wx.BoxSizer(wx.HORIZONTAL)
 #        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Brightness:'))
-        brightness_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.Bitmap(wx.Image(BytesIO(b64decode(brightness_icon))))), proportion=0)
+        brightness_sizer.Add(wx.StaticBitmap(self.Parent, -1, get_icon('brightness').ConvertToBitmap()), proportion=0)
         brightness_sizer.AddSpacer(5)
         brightness_sizer.Add(self.brightness_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         brightness_sizer.AddSpacer(5)
         brightness_sizer.Add(self.brightness_percent)
         scale_sizer = wx.BoxSizer(wx.HORIZONTAL)
 #        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Scale:'))
-        scale_sizer.Add(wx.StaticBitmap(self.Parent, -1, wx.Bitmap(wx.Image(BytesIO(b64decode(zoom_icon))))), proportion=0)
+        scale_sizer.Add(wx.StaticBitmap(self.Parent, -1, get_icon('zoom').ConvertToBitmap()), proportion=0)
         scale_sizer.AddSpacer(5)
         scale_sizer.Add(self.scale_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         scale_sizer.AddSpacer(5)
@@ -84,7 +64,7 @@ class ImageControlPanel(wx.Panel):
         self.sizer3.Add(0, 10, 0) # Space on the bottom
 
         if classCoords is not None:
-            self.SetClasses(classCoords)
+            self.SetClassPoints(classCoords)
 
         sizer.Add(sizer2, flag=wx.EXPAND)
         sizer.AddSpacer(10)
