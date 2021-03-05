@@ -157,8 +157,8 @@ class Classifier(wx.Frame):
         self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=-1, value='20', size=(30, -1), style=wx.TE_PROCESS_ENTER)
         self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
-                                      choices=['experiment', 'image'] + p._filters_ordered + p._groups_ordered + [
-                                          CREATE_NEW_FILTER])
+                                      choices=['experiment', 'image'] + p._filters_ordered + p.gates_ordered +
+                                              p._groups_ordered + [CREATE_NEW_FILTER])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
@@ -909,6 +909,13 @@ class Classifier(wx.Frame):
                 imKey = self.GetGroupKeyFromGroupSizer()
                 obKeys = dm.GetRandomObjects(nObjects, [imKey])
                 statusMsg += ' from image %s' % (imKey,)
+            elif fltr_sel in p.gates_ordered:
+                filteredImKeys = db.GetGatedImages(fltr_sel)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
+                    return
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                statusMsg += ' from gate "%s"' % (fltr_sel)
             elif fltr_sel in p._filters_ordered:
                 filteredImKeys = db.GetFilteredImages(fltr_sel)
                 if filteredImKeys == []:

@@ -781,7 +781,27 @@ class DBConnect(metaclass=Singleton):
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)
             raise Exception('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
-    
+
+    def GetGatedImages(self, gate_name):
+        ''' Returns a list of imKeys from the given filter. '''
+        # Todo: Reject attempts to call from gates mixing image and object measures. It makes SQL cry.
+        try:
+            g = p.gates[gate_name]
+            from . import sqltools
+            if isinstance(g, sqltools.Gate):
+                unique_tables = np.unique(g.get_tables())
+                return self.execute('SELECT %s FROM %s WHERE %s' % (UniqueImageClause(),
+                                                       ','.join(unique_tables),
+                                                       str(g)))
+            else:
+                raise Exception('Invalid gate type in p.gate')
+
+        except Exception as e:
+            logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(gate_name))
+            logging.error(e)
+            raise Exception('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(gate_name))
+
+
     def GetTableNames(self):
         '''
         returns all table names in the database
