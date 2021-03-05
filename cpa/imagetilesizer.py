@@ -28,8 +28,8 @@ class ImageTileSizer(wx.Sizer):
         n = len(self.GetChildren())
         if n > 0:
             width = self.GetContainingWindow().GetClientSize().GetWidth()
-            self.columns = max(1, width/self.pitch().x)
-            self.rows = math.ceil(1.0 * n / self.columns)
+            self.columns = max(1, width // self.pitch().x)
+            self.rows = math.ceil(1.0 * n // self.columns)
             pitch = self.pitch()
             return wx.Size(self.columns * pitch.x, self.rows * pitch.y)
         else:

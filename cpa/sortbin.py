@@ -262,8 +262,6 @@ class SortBin(wx.ScrolledWindow):
                 return t
         
     def ReceiveDrop(self, srcID, obKeys):
-        # TODO: stop drops from happening on the same board they originated on 
-        
         # Generate a closure to fix the issue, that images dragged into the own bin are deleted
         # Add back the deleted images after deletion
         def hack(obKeys):
