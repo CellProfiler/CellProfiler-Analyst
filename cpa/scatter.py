@@ -898,7 +898,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         # Set log axes and print warning if any values will be masked out
         ignored = 0
         if self.x_scale == LOG_SCALE:
-            self.subplot.set_xscale('log', basex=2.1, nonposx='mask')
+            self.subplot.set_xscale('log', base=2.1, nonpositive='mask')
             ignored = sum([len(self.x_points[i][xs <= 0]) 
                            for i, xs in enumerate(self.x_points) if len(xs) > 0])
         if ignored > 0:
