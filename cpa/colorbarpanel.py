@@ -1,5 +1,4 @@
 import wx
-import logging
 import matplotlib.cm
 import numpy as np
 from . import properties
@@ -257,7 +256,7 @@ class ColorBarPanel(wx.Panel):
             a1 = np.array([])
             if w0 > 0:
                 a1 = np.zeros(w0)
-            a2 = np.arange(abs(min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)), dtype=np.float) / (min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)) * 255
+            a2 = np.arange(abs(min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)), dtype=float) / (min(high_slider_pos, local_x1) - max(low_slider_pos, local_x0)) * 255
             a3 = np.array([])
             if w1 > 0:
                 a3 = np.ones(w1)

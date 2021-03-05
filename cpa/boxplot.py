@@ -1,19 +1,14 @@
 
-from .dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from .multiclasssql import filter_table_prefix
+from .dbconnect import DBConnect
 from .properties import Properties
 from . import datamodel
 from . import guiutils as ui 
 from wx.adv import OwnerDrawnComboBox as ComboBox
 from . import sqltools as sql
-from . import imagetools
 import logging
 import numpy as np
-import os
 import sys
-import re
 import wx
-import seaborn as sns
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar

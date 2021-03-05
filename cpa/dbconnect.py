@@ -293,7 +293,7 @@ class DBConnect(metaclass=Singleton):
         self.gui_parent = None
 
     def __str__(self):
-        return string.join([ (key + " = " + str(val) + "\n")
+        return ''.join([ (key + " = " + str(val) + "\n")
                             for (key, val) in list(self.__dict__.items())])
             
     def connect(self, empty_sqlite_db=False):
@@ -932,7 +932,7 @@ class DBConnect(metaclass=Singleton):
         DBConnect.get_linking_tables first to check that all tables are linked.
                  
         usage: 
-        >>> get_linking_expressions(['per_well', 'per_image', 'per_object'])
+        get_linking_expressions(['per_well', 'per_image', 'per_object'])
         [Expression(('per_well', 'Plate'), '=', ('per_image', 'Plate')),
          Expression(('per_well', 'Well'),  '=', ('per_image', 'Well')),
          Expression(('per_image', 'ImageNumber'),  '=', ('per_object', 'ImageNumber'))]
@@ -959,7 +959,7 @@ class DBConnect(metaclass=Singleton):
         then None is returned.
         
         usage:
-        >>> get_linking_tables(per_well, per_object)
+        get_linking_tables(per_well, per_object)
         [per_image, per_object]
         '''
         if p.link_tables_table not in self.GetTableNames():
@@ -976,7 +976,7 @@ class DBConnect(metaclass=Singleton):
         then None is returned.
         
         usage:
-        >>> get_linking_table_pairs(per_well, per_object)
+        get_linking_table_pairs(per_well, per_object)
         [(per_well, per_image), (per_image, per_object)]        
         '''
         ltables = self.get_linking_tables(table_from, table_to)
@@ -1807,6 +1807,7 @@ class Entity(object):
                     raise StopIteration
             except GeneratorExit:
                 print("GeneratorExit")
+                connID = threading.currentThread().getName()
                 self.db.cursors[connID].fetchall()
 
     def __init__(self):
@@ -1916,7 +1917,7 @@ class Images(Entity):
     Easy access to images and their objects.
 
     # Get all objects treated with 10 uM nocodazole
-    >>> cpa.dbconnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
+    > cpa.dbconnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
     '''
 
     def __init__(self):
@@ -1948,8 +1949,8 @@ class Objects(Entity):
     '''
     Easy access to objects.
 
-    >>> feature = "Cells_NumberNeighbors_SecondClosestDistance"
-    >>> y = [row[0] for row in Objects().ordering([feature]).project([feature]).all()]
+    > feature = "Cells_NumberNeighbors_SecondClosestDistance"
+    > y = [row[0] for row in Objects().ordering([feature]).project([feature]).all()]
     '''
 
     def __init__(self, images=None):

@@ -1,14 +1,11 @@
-
-from .colorbarpanel import ColorBarPanel
-from .dbconnect import DBConnect, UniqueImageClause, image_key_columns
+# Unused module? Mar 2021
 from .platemappanel import *
-from . import imagetools
 from .properties import Properties
 import numpy as np
 import os
-import re
 import wx
-from PlotPanelTS import *
+# This module doesn't exist any more
+# from PlotPanelTS import *
 
 
 p = Properties()

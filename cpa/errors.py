@@ -10,7 +10,7 @@ def show_exception_as_dialog(type, value, tb):
         print((traceback.format_tb(tb)))
 
     if isinstance(value, ClearException):
-        wx.MessageBox(value.message, value.heading, wx.OK | wx.ICON_ERROR)
+        wx.MessageBox(value, value.heading, wx.OK | wx.ICON_ERROR)
     else:
         from wx.lib.dialogs import ScrolledMessageDialog
         lines = ['An error occurred in the program:\n']

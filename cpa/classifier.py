@@ -1,7 +1,5 @@
 # Encoding: utf-8
 
-
-
 import matplotlib
 matplotlib.use('WXAgg')
 
@@ -67,7 +65,8 @@ class Classifier(wx.Frame):
         wx.Frame.__init__(self, parent, id=id, title='CPA/Classifier - %s' % \
                                                      (os.path.basename(p._filename)), size=(900, 600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
-            self.tbicon = wx.TaskBarIcon()
+            from wx.adv import TaskBarIcon
+            self.tbicon = TaskBarIcon()
             self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/Classifier')
         else:
             self.SetIcon(icons.get_cpa_icon())
@@ -1346,7 +1345,7 @@ class Classifier(wx.Frame):
         with tilecollection.load_lock():
             try:
                 def cb(frac):
-                    self.PostMessage('%i % saved',frac * 100.)
+                    self.PostMessage(f'{int(frac*100)}% saved')
                     logging.info("frac %i", frac)
 
                 self.trainingSet = TrainingSet(p)
@@ -1788,7 +1787,8 @@ class Classifier(wx.Frame):
         grid.table_from_array(confusionMatrix, axes)
 
         # We don't want clicks on the header to sort the table, so we remove the event listener
-        grid.grid.Unbind(wx.grid.EVT_GRID_CMD_LABEL_LEFT_CLICK)
+        from wx.grid import EVT_GRID_CMD_LABEL_LEFT_CLICK
+        grid.grid.Unbind(EVT_GRID_CMD_LABEL_LEFT_CLICK)
 
         # We also want to have the classes on the row labels
         grid.grid.Table.row_labels = axes
@@ -2277,8 +2277,8 @@ class Classifier(wx.Frame):
         n_jobs : integer, optional
             Number of jobs to run in parallel (default 1).
         """    
-        from sklearn.learning_curve import learning_curve
-        
+        from sklearn.model_selection import learning_curve
+
         plt.figure()
         plt.title(plot_title)
         if ylim is not None:

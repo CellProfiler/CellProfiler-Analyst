@@ -1,5 +1,4 @@
 
-import re
 from . import dbconnect
 import logging
 from . import multiclasssql

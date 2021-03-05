@@ -2,7 +2,7 @@
 #
 # Worker script called from FastGentleBoosting.py.
 
-from sys import stdin, stdout, stderr, argv, exit
+from sys import stdin, stdout, stderr, argv
 from numpy import *
 
 def train_weak_learner(labels, weights, values):

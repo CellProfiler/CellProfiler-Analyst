@@ -5,7 +5,7 @@ from cpa.dbconnect import DBConnect
 from .datamodel import DataModel
 from .properties import Properties
 from tempfile import gettempdir
-from time import ctime, time
+from time import ctime
 from . import imagetools
 import csv
 import logging
@@ -569,8 +569,7 @@ class DataGrid(wx.Frame):
         self.file = filename
         
     def OnWriteTempTableToDB(self, evt):
-        from .classifier import Classifier
-        db.CreateTempTableFromData(self.grid.GetTable().data, 
+        db.CreateTempTableFromData(self.grid.GetTable().data,
                            dbconnect.clean_up_colnames(self.grid.GetTable().col_labels), 
                            '__Classifier_output')
         try:

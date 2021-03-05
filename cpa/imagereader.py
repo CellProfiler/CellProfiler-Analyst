@@ -1,5 +1,3 @@
-import wx
-import numpy as np
 import urllib.request, urllib.error, urllib.parse
 import urllib.request, urllib.parse, urllib.error
 import urllib.parse

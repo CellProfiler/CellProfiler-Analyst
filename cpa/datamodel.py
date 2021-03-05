@@ -1,7 +1,4 @@
 
-import logging
-from random import randint
-import numpy as np
 from .dbconnect import *
 from .singleton import *
 from .properties import Properties
