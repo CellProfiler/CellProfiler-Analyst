@@ -89,7 +89,7 @@ class LinkTablesDialog(wx.Dialog):
             b_cols = b_cols[1:]
         else:
             self.panels = [_ColumnLinkerPanel(self.sw, table_a, table_b, allow_delete=False)]
-        self.sw.EnableScrolling(x_scrolling=False, y_scrolling=True)
+        self.sw.EnableScrolling(xScrolling=False, yScrolling=True)
         self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
         (w,h) = self.sw.Sizer.GetSize()
         self.sw.SetScrollbars(20,20,w/20,h/20,0,0)
