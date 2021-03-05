@@ -2,25 +2,21 @@
 # TODO: add hooks to change point size, alpha, numsides etc.
 from .cpatool import CPATool
 from . import tableviewer
-from .dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
+from .dbconnect import DBConnect, image_key_columns, object_key_columns
 from . import sqltools as sql
-from . import multiclasssql
 from .properties import Properties
 from wx.adv import OwnerDrawnComboBox as ComboBox
 from . import guiutils as ui
 from .gating import GatingHelper
 from . import imagetools
-from . import icons
+from cpa.icons import get_icon
 import logging
 import numpy as np
 from bisect import bisect
-import os
 import sys
-import re
 from time import time
 import wx
 from matplotlib.widgets import Lasso
-from matplotlib import __version__ as mpl_version     
 from matplotlib.colors import colorConverter
 from matplotlib.pyplot import cm
 from matplotlib.figure import Figure
@@ -1046,8 +1042,8 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         self.user_tools = {}   # user_tools['tool_mode'] : wx.ToolBarToolBase
 
         self.InsertSeparator(5)
-        self.add_user_tool('lasso', 6, icons.lasso_tool.ConvertToBitmap(), True, 'Lasso')
-        #self.add_user_tool('gate', 7, icons.gate_tool.ConvertToBitmap(), True, 'Gate')
+        self.add_user_tool('lasso', 6, get_icon("lasso_tool").ConvertToBitmap(), True, 'Lasso')
+        #self.add_user_tool('gate', 7, get_icon("gate_tool").ConvertToBitmap(), True, 'Gate')
         
     def add_user_tool(self, mode, pos, bmp, istoggle=True, shortHelp=''):
         '''Adds a new user-defined tool to the toolbar.

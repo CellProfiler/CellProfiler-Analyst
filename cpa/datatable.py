@@ -6,7 +6,6 @@ from .datamodel import DataModel
 from .properties import Properties
 from tempfile import gettempdir
 from time import ctime, time
-#from wx.lib.embeddedimage import PyEmbeddedImage
 from . import imagetools
 import csv
 import logging

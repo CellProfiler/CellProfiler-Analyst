@@ -3,10 +3,9 @@ import wx
 import wx.adv
 import os
 import re
-from . import icons
+from cpa.icons import get_icon
 from . import properties
 from . import dbconnect
-import logging
 from . import sqltools
 import numpy as np
 from .utils import Observable
@@ -340,11 +339,11 @@ class FilterComboBox(wx.adv.BitmapComboBox):
         '''returns the bitmap corresponding with the nth item'''
         kind = self.get_item_kind(n)
         if kind == 'filter':
-            return icons.filter.ConvertToBitmap()
+            return get_icon("filter").ConvertToBitmap()
         elif kind == 'gate':
-            return icons.gate.ConvertToBitmap()
+            return get_icon("gate").ConvertToBitmap()
         elif self.get_choices()[n] == FilterComboBox.NEW_FILTER:
-            return icons.filter_new.ConvertToBitmap()
+            return get_icon("filter_new").ConvertToBitmap()
         else:
             return wx.NullBitmap
 
@@ -436,9 +435,9 @@ class GateComboBox(wx.adv.BitmapComboBox, Observable):
     def get_item_bitmap(self, n):
         '''returns the bitmap corresponding with the nth item'''
         if n != 0 and n < len(self.Items)-2:
-            return icons.gate.ConvertToBitmap()
+            return get_icon("gate").ConvertToBitmap()
         elif self.get_choices()[n] == GateComboBox.NEW_GATE:
-            return icons.gate_new.ConvertToBitmap()
+            return get_icon("gate_new").ConvertToBitmap()
         else:
             return wx.NullBitmap
 

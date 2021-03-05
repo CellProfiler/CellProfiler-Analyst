@@ -14,12 +14,22 @@ import sys
 import os
 import os.path
 import logging
-import re
 import javabridge
 import bioformats
 from cpa import __version__
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
+from cpa.classifier import Classifier
+from cpa.tableviewer import TableViewer
+from cpa.plateviewer import PlateViewer
+from cpa.imageviewer import ImageViewer
+from cpa.imagegallery import ImageGallery
+from cpa.boxplot import BoxPlot
+from cpa.scatter import Scatter
+from cpa.histogram import Histogram
+from cpa.density import Density
+from cpa.querymaker import QueryMaker
+from cpa.normalizationtool import NormalizationUI
 
 
 class FuncLog(logging.Handler):
@@ -76,7 +86,6 @@ if len(sys.argv) > 1:
         p.LoadFile(sys.argv[1])
 
 
-import threading
 from cpa.cpatool import CPATool
 import inspect
 
@@ -107,9 +116,8 @@ class MainGUI(wx.Frame):
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
 
-        import cpa.icons
         import cpa.cpaprefs
-        from cpa.icons import get_cpa_icon
+        from cpa.icons import get_icon, get_cpa_icon
 
         #wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.1.0 (r%s)'%(__version__), **kwargs)
         wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst %s'%(__version__), **kwargs)
@@ -126,17 +134,17 @@ class MainGUI(wx.Frame):
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
         tb.SetSize((-1,132))
-        tb.AddTool(ID_IMAGE_GALLERY.GetId(), 'Image Gallery', cpa.icons.image_gallery.ConvertToBitmap(), shortHelp='Image Gallery')
-        tb.AddTool(ID_CLASSIFIER.GetId(), 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier')
-        # tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', cpa.icons.pixelclassifier.ConvertToBitmap(), shortHelp='Pixel-based Classifier', longHelp='Launch pixel-based Classifier')
-        tb.AddTool(ID_PLATE_VIEWER.GetId(), 'Plate Viewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer')
-        # tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
-        tb.AddTool(ID_SCATTER.GetId(), 'Scatter Plot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot')
-        tb.AddTool(ID_HISTOGRAM.GetId(), 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram')
-        tb.AddTool(ID_DENSITY.GetId(), 'Density Plot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot')
-        tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot')
-        tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer')
-        # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', cpa.icons.normalize.ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
+        tb.AddTool(ID_IMAGE_GALLERY.GetId(), 'Image Gallery', get_icon("image_gallery").ConvertToBitmap(), shortHelp='Image Gallery')
+        tb.AddTool(ID_CLASSIFIER.GetId(), 'Classifier', get_icon("classifier").ConvertToBitmap(), shortHelp='Classifier')
+        # tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', get_icon("pixelclassifier").ConvertToBitmap(), shortHelp='Pixel-based Classifier', longHelp='Launch pixel-based Classifier')
+        tb.AddTool(ID_PLATE_VIEWER.GetId(), 'Plate Viewer', get_icon("platemapbrowser").ConvertToBitmap(), shortHelp='Plate Viewer')
+        # tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', get_icon("image_viewer").ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        tb.AddTool(ID_SCATTER.GetId(), 'Scatter Plot', get_icon("scatter").ConvertToBitmap(), shortHelp='Scatter Plot')
+        tb.AddTool(ID_HISTOGRAM.GetId(), 'Histogram', get_icon("histogram").ConvertToBitmap(), shortHelp='Histogram')
+        tb.AddTool(ID_DENSITY.GetId(), 'Density Plot', get_icon("density").ConvertToBitmap(), shortHelp='Density Plot')
+        tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', get_icon("boxplot").ConvertToBitmap(), shortHelp='Box Plot')
+        tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', get_icon("data_grid").ConvertToBitmap(), shortHelp='Table Viewer')
+        # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', get_icon("normalize").ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
         # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs 
         # Not the Case anymore with wx.Python 3
@@ -410,9 +418,9 @@ class CPAnalyst(wx.App):
 
         '''List of tables created by the user during this session'''
         self.user_tables = []
-        import wx
         # splashscreen
-        splashimage = cpa.icons.cpa_splash.ConvertToBitmap()
+        from cpa.icons import get_icon
+        splashimage = get_icon("cpa_splash").ConvertToBitmap()
         # If the splash image has alpha, it shows up transparently on
         # windows, so we blend it into a white background.
         splashbitmap = wx.Bitmap.FromRGBA(splashimage.GetWidth(), splashimage.GetHeight(), 255, 255, 255, 255)
@@ -534,18 +542,6 @@ if __name__ == "__main__":
     # Initialize the app early because the fancy exception handler
     # depends on it in order to show a 
     app = CPAnalyst(redirect=False)
-    from cpa.classifier import Classifier
-    from cpa.tableviewer import TableViewer
-    from cpa.plateviewer import PlateViewer
-    from cpa.imageviewer import ImageViewer
-    from cpa.imagegallery import ImageGallery
-    from cpa.boxplot import BoxPlot
-    from cpa.scatter import Scatter
-    from cpa.histogram import Histogram
-    from cpa.density import Density
-    from cpa.querymaker import QueryMaker
-    from cpa.normalizationtool import NormalizationUI
-
     app.Start()
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)

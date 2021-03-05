@@ -1,17 +1,12 @@
 
-from .dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
-from .icons import lasso_tool
+from .dbconnect import DBConnect
 from . import sqltools as sql
-from .multiclasssql import filter_table_prefix
 from .properties import Properties
 from . import guiutils as ui
 from wx.adv import OwnerDrawnComboBox as ComboBox
-from . import imagetools
 import logging
 import numpy as np
-import os
 import sys
-import re
 import wx
 from .gating import GatingHelper
 from matplotlib.figure import Figure
