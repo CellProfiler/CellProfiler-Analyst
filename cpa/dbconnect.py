@@ -790,7 +790,11 @@ class DBConnect(metaclass=Singleton):
             from . import sqltools
             if isinstance(g, sqltools.Gate):
                 unique_tables = np.unique(g.get_tables())
-                return self.execute('SELECT %s FROM %s WHERE %s' % (UniqueImageClause(),
+                if len(unique_tables) > 1:
+                    select_name = UniqueImageClause(unique_tables[0])
+                else:
+                    select_name = UniqueImageClause()
+                return self.execute('SELECT %s FROM %s WHERE %s' % (select_name,
                                                        ','.join(unique_tables),
                                                        str(g)))
             else:

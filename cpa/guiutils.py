@@ -1,4 +1,4 @@
-
+import logging
 import wx
 import wx.adv
 import os
@@ -418,7 +418,9 @@ class GateComboBox(wx.adv.BitmapComboBox, Observable):
         else:
             self.Select(0)
 
-    # def update_info(self):
+    def update_info(self):
+        # Disabled for now
+        return
     #     gate = self.get_gatename_or_none()
     #     if gate:
     #         p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
@@ -766,7 +768,7 @@ def show_objects_from_gate(gatename, warn=100):
         te = wx.TextEntryDialog(get_main_frame_or_none(), 'You have selected %s %s. '
                     'How many would you like to show at random?'%(len(keys), 
                     p.object_name[1]), 'Choose # of %s'%
-                    (p.object_name[1]), defaultValue='100')
+                    (p.object_name[1]), value='100')
         te.ShowModal()
         try:
             numobs = int(te.Value)

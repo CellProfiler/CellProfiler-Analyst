@@ -952,6 +952,11 @@ class Classifier(wx.Frame):
                 if fltr_sel == 'image':
                     imKey = self.GetGroupKeyFromGroupSizer()
                     filteredImKeys = [imKey]
+                elif fltr_sel in p.gates_ordered:
+                    filteredImKeys = db.GetGatedImages(fltr_sel)
+                    if filteredImKeys == []:
+                        self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
+                        return
                 elif fltr_sel in p._filters_ordered:
                     filteredImKeys = db.GetFilteredImages(fltr_sel)
                     if filteredImKeys == []:
@@ -993,7 +998,9 @@ class Classifier(wx.Frame):
                 else:
                     obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
                     obKeysToTry.sort()
-                    if fltr_sel in p._filters_ordered:
+                    if fltr_sel in p.gates_ordered:
+                        loopMsg = ' from gate %s' % (fltr_sel)
+                    elif fltr_sel in p._filters_ordered:
                         loopMsg = ' from filter %s' % (fltr_sel)
                     elif fltr_sel in p._groups_ordered:
                         loopMsg = ' from group %s: %s' % (fltr_sel,
@@ -1810,7 +1817,7 @@ class Classifier(wx.Frame):
         ''' Handler for fetch filter selection. '''
         filter = self.filterChoice.GetStringSelection()
         # Select from a specific image
-        if filter == 'experiment' or filter in p._filters_ordered:
+        if filter == 'experiment' or filter in p._filters_ordered or filter in p.gates_ordered:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
         elif filter == 'image' or filter in p._groups_ordered:
             self.SetupFetchFromGroupSizer(filter)
