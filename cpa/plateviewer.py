@@ -68,7 +68,7 @@ class PlateViewer(wx.Frame, CPATool):
         dataSourceSizer.Add(-1, 3, 0)
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = get_non_blob_types_from_table(p.image_table)
-        self.measurementsChoice = ComboBox(self, choices=measurements, size=fixed_width)
+        self.measurementsChoice = ComboBox(self, choices=measurements, size=fixed_width, style=wx.CB_READONLY)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         dataSourceSizer.Add(wx.StaticText(self, label='Filter:'))
