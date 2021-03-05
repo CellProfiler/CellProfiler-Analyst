@@ -25,7 +25,7 @@ class ColumnFilterPanel(wx.Panel):
         self.tableChoice.Select(0)
         self.colChoice = ComboBox(self, choices=db.GetColumnNames(p.image_table), size=(150,-1), style=wx.CB_READONLY)
         self.colChoice.Select(0)
-        self.comparatorChoice = ComboBox(self, size=(80,-1))
+        self.comparatorChoice = ComboBox(self, size=(80,-1), style=wx.CB_READONLY)
         self.update_comparator_choice()
         self.valueField = wx.ComboBox(self, -1, value='')
         if allow_delete:

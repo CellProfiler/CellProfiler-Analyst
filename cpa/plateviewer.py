@@ -72,7 +72,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         dataSourceSizer.Add(wx.StaticText(self, label='Filter:'))
-        self.filterChoice = FilterComboBox(self, size=fixed_width)
+        self.filterChoice = FilterComboBox(self, size=fixed_width, style=wx.CB_READONLY)
         dataSourceSizer.Add(self.filterChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
