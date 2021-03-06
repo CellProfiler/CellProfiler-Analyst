@@ -128,6 +128,13 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         newims = [auto_contrast(im) for im in imgs]
         imData = MergeChannels(newims, chMap, masks=masks)
     else:
+        # Ensure we're in float 0-1 range, scale based on bit depth.
+        for i in range(len(imgs)):
+            maxval = imgs[i].max()
+            if maxval > 255:
+                imgs[i] = imgs[i] * (1 / 65535)
+            elif maxval > 1:
+                imgs[i] = imgs[i] * (1 / 255)
         imData = MergeChannels(imgs, chMap, masks=masks)
         
     h,w = imgs[0].shape
