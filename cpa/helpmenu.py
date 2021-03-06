@@ -11,7 +11,8 @@ def _on_about(self):
     message = ('CellProfiler Analyst was developed at The Broad Institute\n'
                'Imaging Platform and is distributed under the\n'
                'BSD 3-Clause License.')
-    info = wx.AboutDialogInfo()
+    from wx.adv import AboutBox, AboutDialogInfo
+    info = AboutDialogInfo()
     info.SetIcon(cpa.icons.get_cpa_icon())
     #info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(cpa.__version__) or 'unknown revision'))
     info.SetName('CellProfiler Analyst (%s)'%(str(cpa.__version__) or 'unknown revision'))
@@ -22,7 +23,7 @@ def _on_about(self):
     info.AddDeveloper('Thouis (Ray) Jones')
     info.AddDeveloper('Vebjorn Ljosa')
     info.SetWebSite('www.CellProfiler.org')
-    wx.AboutBox(info)
+    AboutBox(info)
 
 def make_help_menu(frame):
     helpMenu = wx.Menu()
