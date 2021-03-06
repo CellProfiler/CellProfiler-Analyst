@@ -431,9 +431,8 @@ class CPAnalyst(wx.App):
         from wx.adv import SplashScreen, SPLASH_CENTRE_ON_SCREEN, SPLASH_TIMEOUT
 
         splash = SplashScreen(splashbitmap, SPLASH_CENTRE_ON_SCREEN |
-                                SPLASH_TIMEOUT, 1500, None, -1)
+                                SPLASH_TIMEOUT, 1500, None, -1, style=wx.BORDER_SIMPLE|wx.FRAME_NO_TASKBAR)
         self.splash = splash
-        self.splash.Hide()
 
         p = Properties()
         if not p.is_initialized():
