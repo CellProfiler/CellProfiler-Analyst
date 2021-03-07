@@ -9,11 +9,27 @@ import logging
 import numpy
 import threading
 import wx
-import os
 import javabridge
 
 db = DBConnect()
 p = Properties()
+
+# h_bytes = base64.decodebytes(b'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEB/f39/f39/f0AAAAAAAAAAAH///////////38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH//EgAAAAAS/38AAAAAAAAAACHfzRIAABLN3yEAAAAAAAAAAAAg380SEs3fIAAAAAAAAAAAAAAAIN/Nzd8gAAAAAAAAAAAAAAAAIN/Nzd8gAAAAAAAAAAAAAAAg380SEs3fIAAAAAAAAAAAACDfzRIAABLN3yAAAAAAAAAAAH//EgAAAAAS/38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH///////////38AAAAAAAAAAEB/f39/f39/f0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
+# houricon = numpy.frombuffer(h_bytes, dtype=numpy.uint8) / 255
+# houricon.shape = (18, 18)
+
+houricon = numpy.array([
+[0, 1, 1, 1, 1, 1, 1, 1, 0],
+[0, 1, 0, 0, 0, 0, 0, 1, 0],
+[0, 0, 1, 0, 0, 0, 1, 0, 0],
+[0, 0, 0, 1, 0, 1, 0, 0, 0],
+[0, 0, 0, 0, 1, 0, 0, 0, 0],
+[0, 0, 0, 1, 0, 1, 0, 0, 0],
+[0, 0, 1, 0, 0, 0, 1, 0, 0],
+[0, 1, 0, 0, 0, 0, 0, 1, 0],
+[0, 1, 1, 1, 1, 1, 1, 1, 0],
+], dtype=float)
+
 
 def load_lock():
     return TileCollection().load_lock
@@ -31,10 +47,21 @@ class TileCollection(metaclass=Singleton):
         self.cv        = threading.Condition()
         self.load_lock = threading.Lock()
         self.group_priority = 0
+        self.load_icon_template = None
         # Gray placeholder for unloaded images
-        self.imagePlaceholder = List([numpy.zeros((int(p.image_tile_size),
-                                                   int(p.image_tile_size)))+0.1
-                                      for i in range(sum(map(int,p.channels_per_image)))])
+        tile_size = int(p.image_tile_size)
+        if tile_size > 10:
+            # Draw a loading icon on the blank tile.
+            tgt = (tile_size // 2) - 5
+            self.load_icon_template = numpy.zeros((tile_size, tile_size))
+            self.load_icon_template[tgt:tgt+9, tgt:tgt+9] = houricon
+            self.load_icon_template[self.load_icon_template == 0] = 0.1
+            self.load_icon_template[0, 0] = 0
+            self.imagePlaceholder = [self.load_icon_template] * sum(map(int,p.channels_per_image))
+        else:
+            self.imagePlaceholder = List([numpy.zeros((tile_size,
+                                                       tile_size))+0.1
+                                          for i in range(sum(map(int,p.channels_per_image)))])
         self.loader = TileLoader(self, None)
 
     def GetTileData(self, obKey, notify_window, priority=1):
@@ -60,6 +87,7 @@ class TileCollection(metaclass=Singleton):
                     heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
                     self.group_priority += 1
                     if display_whole_image == True:
+                        # Todo: Add loading icon to full image tiles
                         imagePlaceholder = [numpy.zeros((int(p.image_size),
                                                    int(p.image_size)))+0.1
                                       for i in range(sum(map(int,p.channels_per_image)))]
