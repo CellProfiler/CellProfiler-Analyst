@@ -81,11 +81,18 @@ class TileCollection(metaclass=Singleton):
         self.group_priority -= 1
         tiles = []
         temp = {} # for weakrefs
+        seen = {} # Record priorities associated with specific images.
         with self.cv:
             for order, obKey in enumerate(obKeys):
                 if not obKey in self.tileData:
-                    heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
-                    self.group_priority += 1
+                    if obKey[0] in seen:
+                        # An item in the queue had the same source image, process them together.
+                        # Heapqueue and the inbuilt cache will allow us to only load the source image once.
+                        heappush(self.loadq, ((priority, seen[obKey[0]], order), obKey, display_whole_image))
+                    else:
+                        heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
+                        seen[obKey[0]] = self.group_priority
+                        self.group_priority += 1
                     if display_whole_image == True:
                         # Todo: Add loading icon to full image tiles
                         imagePlaceholder = [numpy.zeros((int(p.image_size),
