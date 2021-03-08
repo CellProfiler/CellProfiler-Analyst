@@ -14,22 +14,20 @@ import javabridge
 db = DBConnect()
 p = Properties()
 
-# h_bytes = base64.decodebytes(b'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAEB/f39/f39/f0AAAAAAAAAAAH///////////38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH//EgAAAAAS/38AAAAAAAAAACHfzRIAABLN3yEAAAAAAAAAAAAg380SEs3fIAAAAAAAAAAAAAAAIN/Nzd8gAAAAAAAAAAAAAAAAIN/Nzd8gAAAAAAAAAAAAAAAg380SEs3fIAAAAAAAAAAAACDfzRIAABLN3yAAAAAAAAAAAH//EgAAAAAS/38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH//AAAAAAAA/38AAAAAAAAAAH///////////38AAAAAAAAAAEB/f39/f39/f0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
-# houricon = numpy.frombuffer(h_bytes, dtype=numpy.uint8) / 255
-# houricon.shape = (18, 18)
-
 houricon = numpy.array([
-[0, 1, 1, 1, 1, 1, 1, 1, 0],
-[0, 1, 0, 0, 0, 0, 0, 1, 0],
-[0, 0, 1, 0, 0, 0, 1, 0, 0],
-[0, 0, 0, 1, 0, 1, 0, 0, 0],
-[0, 0, 0, 0, 1, 0, 0, 0, 0],
-[0, 0, 0, 1, 0, 1, 0, 0, 0],
-[0, 0, 1, 0, 0, 0, 1, 0, 0],
-[0, 1, 0, 0, 0, 0, 0, 1, 0],
-[0, 1, 1, 1, 1, 1, 1, 1, 0],
+[0, 0, 0.4, 0.9, 1, 1, 1, 1, 0.9, 0.4, 0, 0],
+[0, 0, 0.6, 1, 0.3, 0.4, 0.4, 0.3, 1, 0.6, 0, 0],
+[0, 0, 0.6, 0.8, 0, 0, 0, 0, 0.8, 0.6, 0, 0],
+[0, 0, 0.5, 1, 0.2, 0, 0, 0.2, 1, 0.5, 0, 0],
+[0, 0, 0, 0.8, 0.9, 0, 0, 0.9, 0.8, 0, 0, 0],
+[0, 0, 0, 0, 0.7, 0.9, 0.9, 0.7, 0, 0, 0, 0],
+[0, 0, 0, 0, 0.7, 0.9, 0.9, 0.7, 0, 0, 0, 0],
+[0, 0, 0, 0.8, 0.9, 0, 0, 0.9, 0.8, 0, 0, 0],
+[0, 0, 0.5, 1, 0.2, 0, 0, 0.2, 1, 0.5, 0, 0],
+[0, 0, 0.6, 0.8, 0, 0, 0, 0, 0.8, 0.6, 0, 0],
+[0, 0, 0.6, 1, 0.3, 0.4, 0.4, 0.3, 1, 0.6, 0, 0],
+[0, 0, 0.4, 0.9, 1, 1, 1, 1, 0.9, 0.4, 0, 0],
 ], dtype=float)
-
 
 def load_lock():
     return TileCollection().load_lock
@@ -50,11 +48,11 @@ class TileCollection(metaclass=Singleton):
         self.load_icon_template = None
         # Gray placeholder for unloaded images
         tile_size = int(p.image_tile_size)
-        if tile_size > 10:
+        if tile_size > 13:
             # Draw a loading icon on the blank tile.
-            tgt = (tile_size // 2) - 5
+            tgt = (tile_size // 2) - 6
             self.load_icon_template = numpy.zeros((tile_size, tile_size))
-            self.load_icon_template[tgt:tgt+9, tgt:tgt+9] = houricon
+            self.load_icon_template[tgt:tgt+12, tgt:tgt+12] = houricon
             self.load_icon_template[self.load_icon_template == 0] = 0.1
             self.load_icon_template[0, 0] = 0
             self.imagePlaceholder = [self.load_icon_template] * sum(map(int,p.channels_per_image))
