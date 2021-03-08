@@ -474,6 +474,32 @@ class Classifier(wx.Frame):
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
         keycode = evt.GetKeyCode()
+        if keycode == wx.WXK_LEFT:
+            if not self.unclassifiedBin.tiles:
+                return
+            for idx, tile in enumerate(self.unclassifiedBin.tiles):
+                if tile.selected:
+                    if idx == 0:
+                        return
+                    if not evt.ShiftDown():
+                        self.unclassifiedBin.DeselectAll()
+                    self.unclassifiedBin.tiles[idx - 1].Select()
+                    return
+            self.unclassifiedBin.tiles[-1].Select()
+            return
+        elif keycode == wx.WXK_RIGHT:
+            if not self.unclassifiedBin.tiles:
+                return
+            for idx, tile in enumerate(self.unclassifiedBin.tiles[::-1]):
+                if tile.selected:
+                    if idx == 0:
+                        return
+                    if not evt.ShiftDown():
+                        self.unclassifiedBin.DeselectAll()
+                    self.unclassifiedBin.tiles[-idx].Select()
+                    return
+            self.unclassifiedBin.tiles[0].Select()
+            return
         chIdx = keycode - 49
         if evt.ControlDown() or evt.CmdDown():
             # ctrl+N toggles channel #N on/off
@@ -481,6 +507,13 @@ class Classifier(wx.Frame):
                 self.ToggleChannel(chIdx)
             else:
                 evt.Skip()
+        elif 0 <= chIdx <= 9:
+            bin = chIdx
+            if bin < len(self.classBins):
+                self.classBins[bin].AddObjects(self.unclassifiedBin.SelectedKeys(), srcID=self.unclassifiedBin.GetId())
+                if self.unclassifiedBin.tiles:
+                    self.unclassifiedBin.tiles[0].Select()
+            return
         else:
             evt.Skip()
 

@@ -153,6 +153,8 @@ class SortBin(wx.ScrolledWindow):
                 self.DeselectAll()
             elif evt.GetKeyCode() == ord('I'):
                 self.InvertSelection()
+        elif self.classifier:
+            self.classifier.OnKey(evt)
         evt.Skip()
 
     def OnRightDown(self, evt):
