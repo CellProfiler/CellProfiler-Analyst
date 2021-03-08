@@ -351,7 +351,7 @@ class SortBin(wx.ScrolledWindow):
             self.dragging = True
         self.SetFocusIgnoringChildren()
         self.selectbox = wx.Rect(self.anchor, evt.Position)
-        for tile in self.Children:
+        for tile in self.tiles:
             tilebox = tile.GetRect()
             if tile in self.selecting:
                 if not self.selectbox.Intersects(tilebox):
