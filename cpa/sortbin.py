@@ -91,6 +91,10 @@ class SortBin(wx.ScrolledWindow):
         self.trained         = False
         self.empty           = True
         self.tile_collection = None          # tile collection
+        self.dragging = False
+        self.anchor = None
+        self.selecting = set()
+        self.selectbox = None
         if chMap:
             self.chMap = chMap
         else:
@@ -106,11 +110,15 @@ class SortBin(wx.ScrolledWindow):
         self.EnableScrolling(xScrolling=False, yScrolling=True)
                 
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+        self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
         self.Bind(wx.EVT_KEY_DOWN, self.OnKey)
         # stop focus events from propagating to the evil
         # wx.ScrollWindow class which otherwise causes scroll jumping.
         self.Bind(wx.EVT_SET_FOCUS, (lambda evt: None))
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+
         tilecollection.EVT_TILE_UPDATED(self, self.OnTileUpdated)
     
         self.CreatePopupMenu()
@@ -324,12 +332,56 @@ class SortBin(wx.ScrolledWindow):
         ''' Inverts the selection. '''
         for t in self.tiles:
             t.ToggleSelect()
-        
+
     def OnLeftDown(self, evt):
         ''' Deselect all tiles unless shift is held. '''
-        self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
         if not evt.ShiftDown():
-            self.DeselectAll()
+            self.anchor = (evt.x, evt.y)
+            self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
+
+    def OnMotion(self, evt):
+        if evt.ShiftDown() or not self.anchor:
+            return
+        if not evt.LeftIsDown():
+            self.anchor = None
+            self.dragging = False
+            self.selecting.clear()
+            return
+        if not self.dragging and evt.Position != self.anchor:
+            self.dragging = True
+        self.SetFocusIgnoringChildren()
+        self.selectbox = wx.Rect(self.anchor, evt.Position)
+        for tile in self.Children:
+            tilebox = tile.GetRect()
+            if tile in self.selecting:
+                if not self.selectbox.Intersects(tilebox):
+                    tile.Deselect()
+                    self.selecting.remove(tile)
+            else:
+                if not tile.selected and self.selectbox.Intersects(tilebox):
+                    tile.Select()
+                    self.selecting.add(tile)
+        self.Refresh()
+
+    def OnPaint(self, evt):
+        self.SetClientSize((self.sizer.GetSize()))
+        dc = wx.PaintDC(self)
+        dc.SetPen(wx.Pen("WHITE", 1, style=wx.PENSTYLE_SHORT_DASH))
+        dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
+        if self.selectbox:
+            dc.DrawRectangle(self.selectbox)
+
+    def OnLeftUp(self, evt):
+        ''' Deselect all tiles unless shift is held. '''
+        self.anchor = None
+        self.selecting.clear()
+        self.selectbox = None
+        self.Refresh()
+        if not self.dragging:
+            self.SetFocusIgnoringChildren() # prevent children from getting focus (want bin to catch key events)
+            if not evt.ShiftDown():
+                self.DeselectAll()
+        self.dragging = False
 
     def OnTileUpdated(self, evt):
         ''' When the tile loader returns the cropped image update the tile. '''

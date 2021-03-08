@@ -203,6 +203,10 @@ class ImageTile(ImagePanel):
 
     def OnLeftUp(self, evt):
         inMotion = False
+        if self.bin.selectbox:
+            # Handle resetting selection in the sortbin
+            self.bin.selectbox = None
+            self.bin.Refresh()
             
     def OnMouseOver(self, evt):
         self.showCenter = True
@@ -214,6 +218,16 @@ class ImageTile(ImagePanel):
         self.Refresh()
             
     def OnMotion(self, evt):
+        if self.bin.dragging:
+            # A tile has captured a motion event we want to use with sortbin drag selection.
+            # Let's fix the event position to refer to the parent sizer, then pass the event up.
+            x, y = evt.GetPosition()
+            w, h = self.GetPosition()
+            evt.SetPosition((x + w, y + h))
+            evt.ResumePropagation(1)
+            evt.Skip()
+            return
+
         if not evt.LeftIsDown() or not self.leftPressed:
             return
         self.bin.SetFocusIgnoringChildren()
