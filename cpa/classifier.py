@@ -500,7 +500,14 @@ class Classifier(wx.Frame):
                     return
             self.unclassifiedBin.tiles[0].Select()
             return
-        chIdx = keycode - 49
+        # convert from keycode to a channel index to match number keypress to channel
+        # some keyboards match the number 1 to 325; others match 1 to 49
+        # this conditional accounts for those differences
+        # alternatively wx.GetUnicodeKey() will match 1 to 49 consistently, but may not respect numlock
+        if keycode >= 325:
+            chIdx = keycode - 325
+        else:
+            chIdx = keycode - 49
         if evt.ControlDown() or evt.CmdDown():
             # ctrl+N toggles channel #N on/off
             if len(self.chMap) > chIdx >= 0:
