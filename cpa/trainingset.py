@@ -83,14 +83,19 @@ class TrainingSet:
                 self.values += []
                 self.coordinates += [db.GetObjectCoords(k) for k in keyList]
             else:
-                def get_data(k):
-                    d = self.cache.get_object_data(k)
-                    if callback is not None:
-                        callback(num_fetched[0] / float(num_to_fetch))
-                    num_fetched[0] = num_fetched[0] + 1
-                    return d
-                self.values += [get_data(k) for k in keyList]
-                self.coordinates += [db.GetObjectCoords(k) for k in keyList]
+                # Old method - fetched keys one by one
+                # def get_data(k):
+                #     d = self.cache.get_object_data(k)
+                #     if callback is not None:
+                #         callback(num_fetched[0] / float(num_to_fetch))
+                #     num_fetched[0] = num_fetched[0] + 1
+                #     return d
+                # self.values += [get_data(k) for k in keyList]
+                # self.coordinates += [db.GetObjectCoords(k) for k in keyList]
+                # New method - fetch all keys with one db query.
+                if len(keyList) > 0:
+                    self.values += self.cache.get_objects_data(keyList)
+                    self.coordinates += db.GetObjectsCoords(keyList)
 
         self.label_matrix = numpy.array(self.label_matrix)
         self.values = numpy.array(self.values, np.float64)
@@ -324,6 +329,26 @@ class CellCache(metaclass=Singleton):
         if key not in self.data:
             self.data[key] = db.GetCellData(key)
         return self.data[key][self.col_indices]
+
+    def get_objects_data(self, keys):
+        # Get data for a list of object keys
+        databuffer = db.GetCellsData(keys)
+        out = []
+        seen = set()
+        for line in databuffer:
+            key = (line[0], line[1])
+            if key not in keys:
+                raise ValueError("Something is wrong, tell David pls")
+            if key in self.data and key in seen:
+                logging.debug("Duplicate found", self.data[key], line)
+            elif key in self.data:
+                numpy.testing.assert_equal(self.data[key], line)
+                seen.add(key)
+            self.data[key] = line
+        # SQL call didn't care about duplicates, so we'll have to iterate through to ensure they're added
+        for key in keys:
+            out.append(self.data[key][self.col_indices])
+        return out
 
     def clear_if_objects_modified(self):
         if not db.verify_objects_modify_date_earlier(self.last_update):

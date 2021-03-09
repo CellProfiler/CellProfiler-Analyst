@@ -654,6 +654,30 @@ class DBConnect(metaclass=Singleton):
             raise Exception(message)
         else:
             return res[0]
+
+    def GetObjectsCoords(self, obKeys, none_ok=False, silent=False):
+        '''Returns the specified objects' x, y coordinates in an image.
+        '''
+        res = self.execute('SELECT %s, %s, %s, %s FROM %s WHERE %s'%(
+                        p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc, p.object_table,
+                        GetWhereClauseForObjects(obKeys)), silent=silent)
+        if len(res) == 0 or res[0][0] is None or res[0][1] is None:
+            message = ('Failed to load coordinates for object key %s. This may '
+                       'indicate a problem with your per-object table.\n'
+                       'You can check your per-object table "%s" in TableViewer'
+                       %(', '.join(['%s:%s'%(col, val) for col, val in
+                                    zip(object_key_columns(), obKeys)]),
+                       p.object_table))
+            raise Exception(message)
+        else:
+            # Now we need to match the returned lines to the requested keys
+            res_dict = {}
+            buffer = []
+            for tup in res:
+                res_dict[(tup[0], tup[1])] = (tup[2], tup[3])
+            for key in obKeys:
+                buffer.append(res_dict[key])
+            return buffer
     
     def GetAllObjectCoordsFromImage(self, imKey):
         ''' Returns a list of lists x, y coordinates for all objects in the given image. '''
@@ -1167,6 +1191,21 @@ class DBConnect(metaclass=Singleton):
         # fetch out only numeric data
         values = [x if type(x) in (int, float) else 0.0 for x in data[0]]
         return np.array(values)
+
+    def GetCellsData(self, obKeys):
+        '''
+        Returns a list of measurements for multiple objects.
+        '''
+        query = 'SELECT * FROM %s WHERE %s' % (p.object_table, GetWhereClauseForObjects(obKeys))
+        data = self.execute(query, silent=True)
+        if len(data) == 0:
+            logging.error('No data for obKeys: %s'%str(obKeys))
+            return None
+        # fetch out only numeric data
+        buffer = []
+        for line in data:
+            buffer.append(np.array([x if type(x) in (int, float) else 0.0 for x in line]))
+        return buffer
 
     def GetPlateNames(self):
         '''

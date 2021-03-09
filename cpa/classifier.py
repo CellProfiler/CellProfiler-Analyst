@@ -1258,13 +1258,13 @@ class Classifier(wx.Frame):
             keysPerBin = {}
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
-
+            self.Refresh()
             num_objs = 0
             for bin in self.classBins:
                 if bin.label in list(keysPerBin.keys()):
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
                     num_objs += len(keysPerBin[bin.label])
-
+                    bin.Refresh()
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
