@@ -335,10 +335,9 @@ class CellCache(metaclass=Singleton):
         databuffer = db.GetCellsData(keys)
         out = []
         seen = set()
-        for line in databuffer:
-            key = (line[0], line[1])
+        for key, line in databuffer:
             if key not in keys:
-                raise ValueError("Something is wrong, tell David pls")
+                raise ValueError(f"Retrieved key {key} did not match a desired object")
             if key in self.data and key in seen:
                 logging.debug("Duplicate found", self.data[key], line)
             elif key in self.data:
@@ -347,7 +346,10 @@ class CellCache(metaclass=Singleton):
             self.data[key] = line
         # SQL call didn't care about duplicates, so we'll have to iterate through to ensure they're added
         for key in keys:
-            out.append(self.data[key][self.col_indices])
+            if key not in self.data:
+                logging.error(f"Unable to retrieve key {key}, may be missing from database")
+            else:
+                out.append(self.data[key][self.col_indices])
         return out
 
     def clear_if_objects_modified(self):

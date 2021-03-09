@@ -1196,7 +1196,7 @@ class DBConnect(metaclass=Singleton):
         '''
         Returns a list of measurements for multiple objects.
         '''
-        query = 'SELECT * FROM %s WHERE %s' % (p.object_table, GetWhereClauseForObjects(obKeys))
+        query = f'SELECT {p.image_id}, {p.object_id}, * FROM {p.object_table} WHERE {GetWhereClauseForObjects(obKeys)}'
         data = self.execute(query, silent=True)
         if len(data) == 0:
             logging.error('No data for obKeys: %s'%str(obKeys))
@@ -1204,7 +1204,7 @@ class DBConnect(metaclass=Singleton):
         # fetch out only numeric data
         buffer = []
         for line in data:
-            buffer.append(np.array([x if type(x) in (int, float) else 0.0 for x in line]))
+            buffer.append(((line[0], line[1]), np.array([x if type(x) in (int, float) else 0.0 for x in line[2:]])))
         return buffer
 
     def GetPlateNames(self):
