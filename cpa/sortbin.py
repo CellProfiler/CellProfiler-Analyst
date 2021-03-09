@@ -132,7 +132,7 @@ class SortBin(wx.ScrolledWindow):
                           'Deselect all\tCtrl+D',
                           'Invert selection\tCtrl+I',
                           'Remove selected\tDelete']
-        if self.label != 'unclassified' and self.classifier is not None:
+        if self.label != 'unclassified' and " " not in self.label and self.classifier is not None:
             popupMenuItems += ['Rename class', 'Delete bin']
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()

@@ -914,7 +914,7 @@ class TableViewer(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal() == wx.ID_OK:
             filename = saveDialog.GetPath()

@@ -5,39 +5,22 @@
 import matplotlib
 matplotlib.use('WXAgg')
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-
-from . import tableviewer
+import sys
+import logging
 from .datamodel import DataModel
 from .imagecontrolpanel import ImageControlPanel
 from .properties import Properties
-from .scoredialog import ScoreDialog
 from . import tilecollection
-from .trainingset import TrainingSet
-from io import StringIO
-from time import time
 from . import icons
 from . import dbconnect
-from . import dirichletintegrate
 from . import imagetools
-from . import polyafit
 from . import sortbin
-import logging
-import numpy as np
 import os
 import wx
-import re
 import cpa.helpmenu
-from .imageviewer import ImageViewer
 
-from . import fastgentleboostingmulticlass
-from .fastgentleboosting import FastGentleBoosting
 
 from cpa.profiling.classifier import Classifier
-#from supportvectormachines import SupportVectorMachines
-from .generalclassifier import GeneralClassifier
 
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
@@ -61,7 +44,8 @@ class ImageGallery(wx.Frame):
         wx.Frame.__init__(self, parent, id=id, title='CPA/ImageGallery - %s' % \
                                                      (os.path.basename(p._filename)), size=(800, 600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
-            self.tbicon = wx.TaskBarIcon()
+            from wx.adv import TaskBarIcon
+            self.tbicon = TaskBarIcon()
             self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/ImageGallery')
         else:
             self.SetIcon(icons.get_cpa_icon())
@@ -470,7 +454,7 @@ class ImageGallery(wx.Frame):
         dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(),
                             wildcard='CSV files (*.csv)|*.csv',
-                            style=wx.OPEN | wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             name, file_extension = os.path.splitext(filename)
@@ -753,57 +737,7 @@ class ImageGallery(wx.Frame):
         box.Lower()
  
     def RemoveSortClass(self, label, clearModel=True):
-        for bin in self.classBins:
-            if bin.label == label:
-                self.classBins.remove(bin)
-                # Remove the label from the class dropdown menu
-                #self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item != bin.label])
-                #self.obClassChoice.Select(0)
-                # Remove the bin
-                self.classified_bins_sizer.Remove(bin.parentSizer)
-                wx.CallAfter(bin.Destroy)
-                self.objects_bin_panel.Layout()
-                break
-        for bin in self.classBins:
-            bin.trained = False
-        self.UpdateClassChoices()
-        self.QuantityChanged()
-
-    def RemoveAllSortClasses(self, clearModel=True):
-        # Note: can't use "for bin in self.classBins:"
-        for label in [bin.label for bin in self.classBins]:
-            self.RemoveSortClass(label, clearModel)
-
-    def RenameClass(self, label):
-        dlg = wx.TextEntryDialog(self, 'New class name:', 'Rename class')
-        dlg.SetValue(label)
-        if dlg.ShowModal() == wx.ID_OK:
-            newLabel = dlg.GetValue()
-            if newLabel != label and newLabel in [bin.label for bin in self.classBins]:
-                errdlg = wx.MessageDialog(self, 'There is already a class with that name.', "Can't Name Class",
-                                          wx.OK | wx.ICON_EXCLAMATION)
-                if errdlg.ShowModal() == wx.ID_OK:
-                    return self.RenameClass(label)
-            if ' ' in newLabel:
-                errdlg = wx.MessageDialog(self, 'Labels can not contain spaces', "Can't Name Class",
-                                          wx.OK | wx.ICON_EXCLAMATION)
-                if errdlg.ShowModal() == wx.ID_OK:
-                    return self.RenameClass(label)
-            for bin in self.classBins:
-                if bin.label == label:
-                    bin.label = newLabel
-                    bin.UpdateQuantity()
-                    break
-            dlg.Destroy()
-            #updatedList = self.obClassChoice.GetItems()
-            #sel = self.obClassChoice.GetSelection()
-            for i in range(len(updatedList)):
-                if updatedList[i] == label:
-                    updatedList[i] = newLabel
-            #self.obClassChoice.SetItems(updatedList)
-            #self.obClassChoice.SetSelection(sel)
-            return wx.ID_OK
-        return wx.ID_CANCEL
+        pass
 
     def all_sort_bins(self):
         return [self.galleryBin] + self.classBins
@@ -818,12 +752,6 @@ class ImageGallery(wx.Frame):
         self.galleryBin.UpdateTile(evt.data)
         for bin in self.classBins:
             bin.UpdateTile(evt.data)
-
-    def OnAddSortClass(self, evt):
-        label = 'class_' + str(self.binsCreated)
-        self.AddSortClass(label)
-        if self.RenameClass(label) == wx.ID_CANCEL:
-            self.RemoveSortClass(label)
 
     def OnMapChannels(self, evt):
         ''' Responds to selection from the color mapping menus. '''
@@ -842,6 +770,7 @@ class ImageGallery(wx.Frame):
             bin.MapChannels(chMap)
 
     def ValidateImageKey(self, evt):
+        # Unused? Mar 2021
         ''' Checks that the image field specifies an existing image. '''
         txtCtrl = evt.GetEventObject()
         try:
@@ -1132,8 +1061,6 @@ class StopCalculating(Exception):
 # ----------------- Run -------------------
 
 if __name__ == "__main__":
-    import sys
-    import logging
     from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )

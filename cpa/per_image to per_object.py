@@ -14,7 +14,7 @@ def LoadFile():
      path=''
      dlg = wx.FileDialog(app.GetTopWindow(), message="Choose a properties file",
             defaultDir=os.getcwd(), defaultFile="", wildcard=wildcard,
-            style=wx.OPEN | wx.CHANGE_DIR)
+            style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
      if dlg.ShowModal() == wx.ID_OK:
           path=dlg.GetPaths()
      else:

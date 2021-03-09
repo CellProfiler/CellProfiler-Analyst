@@ -702,7 +702,7 @@ class ImageViewer(wx.Frame):
         saveDialog = wx.FileDialog(self, message="Save as:",
                                    defaultDir=self.defaultPath, defaultFile=self.defaultFile,
                                    wildcard='PNG file (*.png)|*.png|JPG file (*.jpg, *.jpeg)|*.jpg', 
-                                   style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+                                   style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         if saveDialog.ShowModal()==wx.ID_OK:
             filename = str(saveDialog.GetPath())
             self.defaultPath, self.defaultFile = os.path.split(filename)
@@ -760,8 +760,6 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
-    from .datamodel import DataModel
-    from . import imagetools
     from .imagereader import ImageReader
 
     p = Properties()
