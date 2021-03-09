@@ -8,7 +8,7 @@ from .properties import Properties
 from . import dbconnect
 from .imagereader import ImageReader
 import logging
-import matplotlib.image
+import scipy.ndimage
 import numpy as np
 import wx
 
@@ -121,11 +121,23 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     blending - list, how to blend this channel with others 'add' or 'subtract'
                eg: ['add','add','add','subtract']
     '''
+    # Before any resizing, record the genuine full intensity range of each image.
+    limits = [(im.min(), im.max()) for im in imgs]
+    if display_whole_image:
+        # Rescaling 2k x 2k images to make a 25 x 25 tile is slow and silly.
+        # Here we check whether the input image is more than 10x the final tile size.
+        # If it is, we'll do a quick and dirty rescale to give a more managable starting point.
+        tgt_h = int(p.image_size) * 10
+        tgt_w = int(p.image_size) * 10
+        h, w = imgs[0].shape
+        if tgt_h < h and tgt_w < w:
+            rescale_factor = max(tgt_h / h, tgt_w / w)
+            imgs = [scipy.ndimage.zoom(im, (rescale_factor, rescale_factor), order=2, prefilter=False, grid_mode=True) for im in imgs]
     if contrast=='Log':
-        logims = [log_transform(im) for im in imgs]
+        logims = [log_transform(im, interval=limits[idx]) for idx, im in enumerate(imgs)]
         imData = MergeChannels(logims, chMap, masks=masks)
     elif contrast=='Linear':
-        newims = [auto_contrast(im) for im in imgs]
+        newims = [auto_contrast(im, interval=limits[idx]) for idx, im in enumerate(imgs)]
         imData = MergeChannels(newims, chMap, masks=masks)
     else:
         # Ensure we're in float 0-1 range, scale based on bit depth.
@@ -151,6 +163,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     tmp_h = int(p.image_size)
     tmp_w = int(p.image_size)
 
+    # Here we do a more careful rescale to the target tile size.
     if display_whole_image and h != tmp_h and h!= tmp_w:
         h = tmp_h
         w = tmp_w
@@ -295,11 +308,12 @@ def auto_contrast(im, interval=None):
     scaled to the interval [0,1] '''
     im = im.copy()
     (min, max) = interval or (im.min(), im.max())
-    # Check that the image isn't binary 
+    # Check that the image isn't binary
     if np.any((im>min)&(im<max)):
-        im -= im.min()
-        if im.max() > 0:
-            im = im / im.max()
+        im -= min
+        im[im < 0] = 0
+        if max > 0:
+            im = im / max
     return im
 
 def tile_images(images):
