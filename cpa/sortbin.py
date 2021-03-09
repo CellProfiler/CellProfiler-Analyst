@@ -205,7 +205,7 @@ class SortBin(wx.ScrolledWindow):
         if srcID is not None and wx.FindWindowById(srcID) is not None:
             source = wx.FindWindowById(srcID)
             for tile in source.tiles[::-1]:
-                if tile.obKey in obKeys:
+                if tile.obKey in obKeys and tile.selected:
                     source.tiles.remove(tile)
                     source.sizer.Detach(tile)
                     tile.Reparent(self)
