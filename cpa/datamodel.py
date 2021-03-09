@@ -107,7 +107,7 @@ class DataModel(metaclass=Singleton):
             obKeys.append(db.GetObjectIDAtIndex(imKey, obIdx))
         return obKeys
 
-    def GetRandomObjects(self, N, imKeys=None):
+    def GetRandomObjects(self, N, imKeys=None, with_replacement=False):
         '''
         Returns N random objects.
         If a list of imKeys is specified, GetRandomObjects will return 
@@ -115,9 +115,8 @@ class DataModel(metaclass=Singleton):
         '''
         self._if_empty_populate()
         if N > self.obCount:
-            logging.info(str(N) +' is greater than the number of objects. Fetching ' + str(self.obCount) + ' objects.')
+            logging.info(f"{N} is greater than the number of objects. Fetching {self.obCount} objects.")
             N = self.obCount
-            print((self.obCount))
         if imKeys == None:
             return self.GetRandomObject(N)
         elif imKeys == []:
@@ -127,7 +126,13 @@ class DataModel(metaclass=Singleton):
             if sums[-1] < 1:
                 return []
             obs = []
-            obIdxs = random.sample(list(range(1, sums[-1]+1)), N)#randint(1, sums[-1])
+            if with_replacement:
+                obIdxs = random.choices(list(range(1, sums[-1] + 1)), k=N)
+            else:
+                if N > sums[-1]:
+                    logging.info(f"Number of available objects is less than {N}. Fetching {sums[-1]} objects.")
+                    N = sums[-1]
+                obIdxs = random.sample(list(range(1, sums[-1]+1)), k=N)
             for obIdx in obIdxs:
                 index = np.searchsorted(sums, obIdx, 'left')
                 if index != 0:

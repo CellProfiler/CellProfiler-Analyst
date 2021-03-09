@@ -91,6 +91,7 @@ class Classifier(wx.Frame):
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.required_fields = []
+        self.with_replacement = False
         
         if not p.classification_type == 'image':
             self.image_tile_size = p.image_tile_size
@@ -613,6 +614,9 @@ class Classifier(wx.Frame):
         paramsEditMenuItem = advancedMenu.Append(-1, item='Edit Parameters...', helpString='Lets you edit the hyperparameters')
         featureSelectMenuItem = advancedMenu.Append(-1, item='Check Features', helpString='Check the variance of your Training Data')
         saveMenuItem = advancedMenu.Append(-1, item='Save Thumbnails as PNG', helpString='Save TrainingSet thumbnails as PNG')
+        sampleReplacementItem = advancedMenu.AppendCheckItem(-1, item='Sample with replacement',
+                                           help='Allow duplicates when fetching objects')
+        sampleReplacementItem.Check(False)
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -628,7 +632,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnFeatureSelect, featureSelectMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
-
+        self.Bind(wx.EVT_MENU, self.OnToggleReplacement, sampleReplacementItem)
 
         # Bind events for algorithms
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, rfMenuItem)
@@ -928,6 +932,11 @@ class Classifier(wx.Frame):
                 for tile in bin.tiles:
                     imagetools.SaveBitmap(tile.bitmap, directory + '/training_set/' + str(label) + '/' + str(tile.obKey) + '.png')
 
+    def OnToggleReplacement(self, evt):
+        if evt.IsChecked():
+            self.with_replacement = True
+        else:
+            self.with_replacement = False
 
     def OnFetch(self, evt):
         # Parse out the GUI input values
@@ -936,32 +945,32 @@ class Classifier(wx.Frame):
         obClassName = self.obClassChoice.GetStringSelection()
         fltr_sel = self.filterChoice.GetStringSelection()
 
-        statusMsg = 'Fetched %d %s %s' % (nObjects, obClassName, p.object_name[1])
+        statusMsg = 'Fetching %d %s %s' % (nObjects, obClassName, p.object_name[1])
 
         # Get object keys
         obKeys = []
         # unclassified:
         if obClass == 0:
             if fltr_sel == 'experiment':
-                obKeys = dm.GetRandomObjects(nObjects)
+                obKeys = dm.GetRandomObjects(nObjects, with_replacement=self.with_replacement)
                 statusMsg += ' from whole experiment'
             elif fltr_sel == 'image':
                 imKey = self.GetGroupKeyFromGroupSizer()
-                obKeys = dm.GetRandomObjects(nObjects, [imKey])
+                obKeys = dm.GetRandomObjects(nObjects, [imKey], with_replacement=self.with_replacement)
                 statusMsg += ' from image %s' % (imKey,)
             elif fltr_sel in p.gates_ordered:
                 filteredImKeys = db.GetGatedImages(fltr_sel)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys, with_replacement=self.with_replacement)
                 statusMsg += ' from gate "%s"' % (fltr_sel)
             elif fltr_sel in p._filters_ordered:
                 filteredImKeys = db.GetFilteredImages(fltr_sel)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys, with_replacement=self.with_replacement)
                 statusMsg += ' from filter "%s"' % (fltr_sel)
             elif fltr_sel in p._groups_ordered:
                 # if the filter name is a group then it's actually a group
@@ -974,7 +983,7 @@ class Classifier(wx.Frame):
                                                                                ', '.join(['%s=%s' % (n, v) for n, v in
                                                                                           zip(colNames, groupKey)])))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys, with_replacement=self.with_replacement)
                 if not obKeys:
                     self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
                                                                                           ', '.join(
@@ -1026,7 +1035,7 @@ class Classifier(wx.Frame):
                         #       100 randomly distributed obkeys to try.
                         obKeysToTry = 'ABS(RANDOM()) %% %s < 100' % (dm.get_total_object_count())
                     else:
-                        obKeysToTry = dm.GetRandomObjects(100)
+                        obKeysToTry = dm.GetRandomObjects(100, with_replacement=self.with_replacement)
                     loopMsg = ' from whole experiment'
                 elif fltr_sel == 'image':
                     # All objects are tried in first pass
@@ -1036,7 +1045,7 @@ class Classifier(wx.Frame):
                     obKeysToTry = [imKey]
                     loopMsg = ' from image %s' % (imKey,)
                 else:
-                    obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
+                    obKeysToTry = dm.GetRandomObjects(100, filteredImKeys, with_replacement=self.with_replacement)
                     obKeysToTry.sort()
                     if fltr_sel in p.gates_ordered:
                         loopMsg = ' from gate %s' % (fltr_sel)
