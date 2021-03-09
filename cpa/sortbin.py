@@ -132,8 +132,11 @@ class SortBin(wx.ScrolledWindow):
                           'Deselect all\tCtrl+D',
                           'Invert selection\tCtrl+I',
                           'Remove selected\tDelete']
-        if self.label != 'unclassified' and " " not in self.label and self.classifier is not None:
-            popupMenuItems += ['Rename class', 'Delete bin']
+        # Spaces in the bin label are only possible in the Image Gallery
+        if " " not in self.label and self.classifier is not None:
+            popupMenuItems += ['Remove duplicates']
+            if self.label != 'unclassified':
+                popupMenuItems += ['Rename class', 'Delete bin']
         self.popupItemIndexById = {}
         self.popupMenu = wx.Menu()
         for i, item in enumerate(popupMenuItems):
@@ -185,8 +188,10 @@ class SortBin(wx.ScrolledWindow):
         elif choice == 4:
             self.RemoveSelectedTiles()
         elif choice == 5:
-            self.classifier.RenameClass(self.label)
+            self.RemoveDuplicateTiles()
         elif choice == 6:
+            self.classifier.RenameClass(self.label)
+        elif choice == 7:
             self.classifier.RemoveSortClass(self.label)
 
     def AddObject(self, obKey, chMap=None, priority=1, pos='first'):
@@ -250,7 +255,6 @@ class SortBin(wx.ScrolledWindow):
         for t in self.tiles:
             if t.obKey in obKeys:
                 self.tiles.remove(t)
-                self.sizer.Remove(t)
                 wx.CallAfter(t.Destroy) # Call After?
         wx.CallAfter(self.UpdateSizer)
         self.UpdateQuantity()
@@ -260,6 +264,20 @@ class SortBin(wx.ScrolledWindow):
             self.tiles.remove(tile)
             # Destroying removes from sizer automatically
             wx.CallAfter(tile.Destroy)
+        wx.CallAfter(self.UpdateSizer)
+        self.UpdateQuantity()
+
+    def RemoveDuplicateTiles(self):
+        seen = set()
+        count = 0
+        for tile in self.tiles[::-1]:
+            if tile.obKey in seen:
+                self.tiles.remove(tile)
+                wx.CallAfter(tile.Destroy)
+                count += 1
+            else:
+                seen.add(tile.obKey)
+        logging.info(f"Removed {count} duplicates from {self.label}")
         wx.CallAfter(self.UpdateSizer)
         self.UpdateQuantity()
 
