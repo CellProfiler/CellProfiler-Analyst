@@ -366,7 +366,7 @@ class SortBin(wx.ScrolledWindow):
         self.Refresh()
 
     def OnPaint(self, evt):
-        self.SetClientSize((self.sizer.GetSize()))
+        # self.SetClientSize((self.sizer.GetSize()))
         dc = wx.PaintDC(self)
         dc.SetPen(wx.Pen("WHITE", 1, style=wx.PENSTYLE_SHORT_DASH))
         dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))

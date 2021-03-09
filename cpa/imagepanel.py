@@ -65,6 +65,7 @@ class ImagePanel(wx.Panel):
                                                contrast = self.contrast,
                                                display_whole_image = self.display_whole_image)
         self.Refresh()
+        self.Update()
             
     
     def MapChannels(self, chMap):
