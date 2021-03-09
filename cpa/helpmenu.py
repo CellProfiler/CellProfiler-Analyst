@@ -22,7 +22,7 @@ def _on_about(self):
     info.AddDeveloper('Jane Hung')
     info.AddDeveloper('Thouis (Ray) Jones')
     info.AddDeveloper('Vebjorn Ljosa')
-    info.SetWebSite('www.CellProfiler.org')
+    info.SetWebSite('cellprofileranalyst.org')
     AboutBox(info)
 
 def make_help_menu(frame):
