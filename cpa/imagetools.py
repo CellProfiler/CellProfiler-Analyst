@@ -52,7 +52,7 @@ def FetchTile(obKey, display_whole_image=False):
 
 def FetchImage(imKey):
     global cachedkeys
-    if imKey in list(cache.keys()):
+    if imKey in cache:
         return cache[imKey]
     else:
         ir = ImageReader()

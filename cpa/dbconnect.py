@@ -4,7 +4,6 @@ import random
 from .properties import Properties
 from .singleton import Singleton
 import numpy as np
-import string
 import sys
 import threading
 import re
@@ -308,7 +307,7 @@ class DBConnect(metaclass=Singleton):
         
         logging.info('[%s] Connecting to the database...'%(connID))
         # If this connection ID already exists print a warning
-        if connID in list(self.connections.keys()):
+        if connID in self.connections:
             if self.connectionInfo[connID] == (p.db_host, p.db_user, 
                                                (p.db_passwd or None), p.db_name):
                 logging.warn('A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
@@ -444,9 +443,10 @@ class DBConnect(metaclass=Singleton):
                         self.CreateSQLiteDB()
                     else:
                         raise DBException('Database at %s appears to be empty.'%(p.db_sqlite_file))
-            if p.classification_type == 'image':
+            # If we're not on the main thread these tables should already have been made.
+            if p.classification_type == 'image' and connID == "MainThread":
                 self.CreateObjectImageTable()
-            if p.check_tables == 'yes':
+            if p.check_tables == 'yes' and connID == "MainThread":
                 self.CreateObjectCheckedTable()
             logging.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
 
@@ -492,7 +492,7 @@ class DBConnect(metaclass=Singleton):
 
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
-        if not connID in list(self.connections.keys()):
+        if not connID in self.connections:
             self.connect()
 
         try:
@@ -591,7 +591,6 @@ class DBConnect(metaclass=Singleton):
         records = []
         while True:
             r = self.cursors[connID].fetchmany(n)
-            print((len(r)))
             if len(r) == 0:
                 break
             records.extend(list(r))
@@ -1567,7 +1566,6 @@ class DBConnect(metaclass=Singleton):
             self.execute(query)
 
         elif DB_TYPE == 'sqlite':
-            pass
             # Copy image table and add more columns
             query = "PRAGMA table_info(%s)"%p.image_table
             self.execute(query)
