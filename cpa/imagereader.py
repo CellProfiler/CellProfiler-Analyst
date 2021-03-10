@@ -58,8 +58,7 @@ class ImageReader(object):
                             '%d %s' % (status_code, message))
                     else:
                         raise
-        # TODO: Add properties setting to force BioFormats
-        if os.path.splitext(filename_or_url)[-1].lower() in IMAGEIO_FORMATS:
+        if not p.force_bioformats and os.path.splitext(filename_or_url)[-1].lower() in IMAGEIO_FORMATS:
             logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
             try:
                 return imageio.imread(filename_or_url)

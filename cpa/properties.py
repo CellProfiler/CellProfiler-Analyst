@@ -63,7 +63,8 @@ string_vars = ['db_type',
                'image_width',
                'image_height',
                'negative_control', # For DMSO normalization, but optional
-               'class_names'
+               'class_names',
+               'force_bioformats'
                ]
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
@@ -124,7 +125,8 @@ optional_vars = ['db_port',
                  'image_width',
                  'image_height',
                  'negative_control',
-                 'class_names'
+                 'class_names',
+                 'force_bioformats'
                  ]
 
 # map deprecated fields to new fields
@@ -200,8 +202,8 @@ class Properties(metaclass=Singleton):
         # allow commas within list values (needed for building SQL queries into
         # lists)
         if list_str.strip().startswith("`") and list_str.strip().endswith("`"):
-            return [v.strip() for v in list_str.strip()[1:-1].split("`,`") if v.strip() is not '']
-        return [v.strip() for v in list_str.split(',') if v.strip() is not '']
+            return [v.strip() for v in list_str.strip()[1:-1].split("`,`") if v.strip() != '']
+        return [v.strip() for v in list_str.split(',') if v.strip() != '']
         
     def load_file(self, filename):
         ''' Loads variables in from a properties file. '''
@@ -663,7 +665,17 @@ class Properties(metaclass=Singleton):
         else:
             logging.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "no".'%(self.check_tables))
             self.check_tables = 'no'
-            
+
+        if self.field_defined('force_bioformats') and self.force_bioformats.lower() in ['true', 'yes', 'on', 't', 'y']:
+            self.force_bioformats = True
+        elif self.field_defined('force_bioformats') and self.force_bioformats.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.force_bioformats = False
+        elif self.field_defined('force_bioformats'):
+            logging.warn(f'PROPERTIES WARNING (force_bioformats): Field was invalid ({self.force_bioformats}), using default of "False".')
+            self.force_bioformats = False
+        else:
+            self.force_bioformats = False
+
         if self.use_larger_image_scale in [True, False]:
             pass
         elif not self.field_defined('use_larger_image_scale') or self.use_larger_image_scale.lower() in ['false', 'no', 'off', 'f', 'n']:

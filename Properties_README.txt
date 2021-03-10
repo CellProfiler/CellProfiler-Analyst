@@ -316,5 +316,15 @@ class_table  =
 
 check_tables = yes
 
+# ======== Force BioFormats ========
+# OPTIONAL
+# [yes/no]  By default, CPA will try to use the imageio library to load images
+# which are in supported formats, then fall back to using the older BioFormats
+# loader if something goes wrong. ImageIO is faster but some unusual file
+# compression formats can cause errors when loading. This option forces CPA to
+# always use the BioFormats reader. Try this if images aren't displayed correctly.
+
+force_bioformats = no
+
 
 
