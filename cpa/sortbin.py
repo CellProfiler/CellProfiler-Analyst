@@ -414,7 +414,8 @@ class SortBin(wx.ScrolledWindow):
                 t.UpdateBitmap()
         if p.classification_type == 'image':
             self.sizer.RecalcSizes()
-                
+            self.UpdateSizer()
+
     def UpdateSizer(self):
         return self.SetVirtualSize(self.sizer.CalcMin())        
 

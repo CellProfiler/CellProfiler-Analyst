@@ -91,14 +91,14 @@ class TileCollection(metaclass=Singleton):
                         heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
                         seen[obKey[0]] = self.group_priority
                         self.group_priority += 1
-                    if display_whole_image == True:
-                        # Todo: Add loading icon to full image tiles
-                        imagePlaceholder = [numpy.zeros((int(p.image_size),
-                                                   int(p.image_size)))+0.1
-                                      for i in range(sum(map(int,p.channels_per_image)))]
-                        temp[order] = List(imagePlaceholder)
-                    else:
-                        temp[order] = List(self.imagePlaceholder)
+                    # We used to generate a full size temporary tile the size of the image,
+                    # but we might as well use a small one since it'll be replaced quickly.
+                    # if display_whole_image == True:
+                    #     imagePlaceholder = [numpy.zeros((int(p.image_size),
+                    #                                int(p.image_size)))+0.1
+                    #                   for i in range(sum(map(int,p.channels_per_image)))]
+                    #     temp[order] = List(imagePlaceholder)
+                    temp[order] = List(self.imagePlaceholder)
                     self.tileData[obKey] = temp[order]
             tiles = [self.tileData[obKey] for obKey in obKeys]
             self.cv.notify()
