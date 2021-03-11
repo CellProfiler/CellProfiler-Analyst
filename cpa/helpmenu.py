@@ -1,10 +1,15 @@
 import wx
 import cpa
 import cpa.icons
+from cpa.updatechecker import check_update
+
 
 def _on_manual(self):
     import webbrowser
     webbrowser.open("http://cellprofiler.org/CPA")
+
+def _on_check_update(self):
+    check_update(self, force=True)
 
 def _on_about(self):
     ''' Shows a message box with the version number etc.'''
@@ -29,7 +34,9 @@ def make_help_menu(frame):
     helpMenu = wx.Menu()
     frame.Bind(wx.EVT_MENU, _on_manual, 
                helpMenu.Append(-1, item='Online manual'))
-    frame.Bind(wx.EVT_MENU, _on_about, 
+    frame.Bind(wx.EVT_MENU, _on_check_update,
+               helpMenu.Append(-1, item='Check for updates', helpString='Check for new versions'))
+    frame.Bind(wx.EVT_MENU, _on_about,
                helpMenu.Append(-1, item='About', helpString='About CellProfiler Analyst'))
     return helpMenu
 
