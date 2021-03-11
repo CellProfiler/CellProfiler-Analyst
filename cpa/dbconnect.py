@@ -1592,6 +1592,7 @@ class DBConnect(metaclass=Singleton):
                                                               p.cell_x_loc, width/2,
                                                               p.cell_y_loc, height/2)
             self.execute(query)
+            self.Commit()
         logging.info('%s table added to database'%p.object_table)
 
 
