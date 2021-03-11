@@ -1,3 +1,4 @@
+from itertools import islice
 
 from .dbconnect import *
 from .singleton import *
@@ -142,7 +143,19 @@ class DataModel(metaclass=Singleton):
                 obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
                 obs.append(obKey)
             return obs
-            
+
+    def GetAllObjects(self, filter_name=None, gate_name=None, imkeys=[], N=None):
+        self._if_empty_populate()
+        if imkeys == []:
+            all_images = self.GetAllImageKeys(filter_name=filter_name, gate_name=gate_name)
+            obs = (x for im in all_images for x in self.GetObjectsFromImage(im))
+        else:
+            obs = (x for im in imkeys for x in self.GetObjectsFromImage(im))
+        if N is None:
+            return list(obs)
+        else:
+            return list(islice(obs, N))
+
     def GetObjectsFromImage(self, imKey):
         self._if_empty_populate()
         obKeys=[]
@@ -155,14 +168,16 @@ class DataModel(metaclass=Singleton):
 #        return [tuple(list(imKey) + [i]) 
 #                for i in xrange(1, self.GetObjectCountFromImage(imKey) + 1)]
     
-    def GetAllImageKeys(self, filter_name=None):
+    def GetAllImageKeys(self, filter_name=None, gate_name=None):
         ''' Returns all object keys. If a filter is passed in, only the image
         keys that fall within the filter will be returned.'''
         self._if_empty_populate()
-        if filter_name is None:
-            return list(self.data.keys())
-        else:
+        if filter_name is not None:
             return list(db.GetFilteredImages(filter_name))
+        elif gate_name is not None:
+            return list(db.GetGatedImages(gate_name))
+        else:
+            return list(self.data.keys())
 
     def GetObjectCountFromImage(self, imKey):
         ''' Returns the number of objects in the specified image. '''

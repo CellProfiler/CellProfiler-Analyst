@@ -156,7 +156,7 @@ class Classifier(wx.Frame):
 
         # fetch objects interface
         self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=-1, value='20', size=(30, -1), style=wx.TE_PROCESS_ENTER)
-        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
+        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random', 'sequential'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
                                       choices=['experiment', 'image'] + p._filters_ordered + p.gates_ordered +
                                               p._groups_ordered + [CREATE_NEW_FILTER])
@@ -873,14 +873,14 @@ class Classifier(wx.Frame):
 
     def UpdateClassChoices(self):
         if not self.IsTrained():
-            self.obClassChoice.SetItems(['random'])
+            self.obClassChoice.SetItems(['random', 'sequential'])
             self.obClassChoice.SetSelection(0)
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
             # self.openDimensReduxBtn.Disable()
             return
         sel = self.obClassChoice.GetSelection()
-        selectableClasses = ['random'] 
+        selectableClasses = ['random', 'sequential']
 
         selectableClasses += [bin.label for bin in self.classBins if bin.trained]
 
@@ -949,7 +949,7 @@ class Classifier(wx.Frame):
 
         # Get object keys
         obKeys = []
-        # unclassified:
+        # unclassified random:
         if obClass == 0:
             if fltr_sel == 'experiment':
                 obKeys = dm.GetRandomObjects(nObjects, with_replacement=self.with_replacement)
@@ -993,6 +993,52 @@ class Classifier(wx.Frame):
                     return
                 statusMsg += ' from group %s: %s' % (groupName,
                                                      ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+        # unclassifier sequential
+        elif obClass == 1:
+            if fltr_sel == 'experiment':
+                obKeys = dm.GetAllObjects(N=nObjects)
+                statusMsg += ' from whole experiment'
+            elif fltr_sel == 'image':
+                imKey = self.GetGroupKeyFromGroupSizer()
+                obKeys = dm.GetAllObjects(imkeys=[imKey], N=nObjects)
+                statusMsg += ' from image %s' % (imKey,)
+
+            elif fltr_sel in p.gates_ordered:
+                filteredImKeys = dm.GetAllObjects(gate_name=fltr_sel, N=nObjects)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
+                    return
+                obKeys = filteredImKeys
+                statusMsg += ' from gate "%s"' % (fltr_sel)
+            elif fltr_sel in p._filters_ordered:
+                filteredImKeys = dm.GetAllObjects(filter_name=fltr_sel, N=nObjects)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
+                    return
+                obKeys = filteredImKeys
+                statusMsg += ' from filter "%s"' % (fltr_sel)
+            elif fltr_sel in p._groups_ordered:
+                # if the filter name is a group then it's actually a group
+                groupName = fltr_sel
+                groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+                filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
+                colNames = dm.GetGroupColumnNames(groupName)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in group %s: %s' % (groupName,
+                                                                               ', '.join(['%s=%s' % (n, v) for n, v in
+                                                                                          zip(colNames, groupKey)])))
+                    return
+                obKeys = dm.GetAllObjects(imkeys=filteredImKeys, N=nObjects)
+                if not obKeys:
+                    self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
+                                                                                          ', '.join(
+                                                                                              ['%s=%s' % (n, v) for n, v
+                                                                                               in zip(colNames,
+                                                                                                      groupKey)])))
+                    return
+                statusMsg += ' from group %s: %s' % (groupName,
+                                                     ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+
         # classified
         else:
             hits = 0
