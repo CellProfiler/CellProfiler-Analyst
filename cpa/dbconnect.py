@@ -442,7 +442,7 @@ class DBConnect(metaclass=Singleton):
                         logging.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
                         self.CreateSQLiteDB()
                     else:
-                        raise DBException('Database at %s appears to be empty.'%(p.db_sqlite_file))
+                        raise DBException('Database at %s appears to be missing specified tables.'%(p.db_sqlite_file))
             # If we're not on the main thread these tables should already have been made.
             if p.classification_type == 'image' and connID == "MainThread":
                 self.CreateObjectImageTable()

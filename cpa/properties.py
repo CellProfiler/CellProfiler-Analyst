@@ -229,7 +229,7 @@ class Properties(metaclass=Singleton):
                     name = name.strip()
                     val = val.strip()
                 except ValueError:
-                    raise Exception('PROPERTIES ERROR: Could not parse line #%d\n'
+                    raise Exception('[Properties] ERROR: Could not parse line #%d\n'
                                     '\t"%s"\n'
                                     'Did you accidentally load your training set instead of your properties file?'%(idx + 1, line))
                 
@@ -242,7 +242,7 @@ class Properties(metaclass=Singleton):
                 elif name.startswith('group_SQL_'):
                     group_name = name[10:]
                     if group_name == '':
-                        raise Exception('PROPERTIES ERROR (%s): "group_SQL_" should be followed by a group name.\n'
+                        raise Exception('[Properties] ERROR (%s): "group_SQL_" should be followed by a group name.\n'
                                         'Example: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\n'
                                         'a MySQL query "<QUERY>". See the README.'%(name))
                     if group_name in list(self._groups.keys()):
@@ -250,7 +250,7 @@ class Properties(metaclass=Singleton):
                     if group_name in list(self._filters.keys()):
                         raise Exception('Name "%s" is already taken for a filter.'%(group_name))
                     if not val:
-                        logging.warn('PROPERTIES WARNING (%s): Undefined group'%(name))
+                        logging.warn('[Properties] WARNING (%s): Undefined group'%(name))
                         continue
                     self._groups[group_name] = val
                     
@@ -258,7 +258,7 @@ class Properties(metaclass=Singleton):
                     # Load old-style SQL filters:
                     filter_name = name[11:]
                     if filter_name == '':
-                        raise Exception('PROPERTIES ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
+                        raise Exception('[Properties] ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
                                         'Example: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\n'
                                         'a MySQL query "<QUERY>". See the README.'%(name))
                     if filter_name in list(self._filters.keys()):
@@ -266,24 +266,24 @@ class Properties(metaclass=Singleton):
                     if filter_name in list(self._groups.keys()):
                         raise Exception('Name "%s" is already taken for a group.'%(filter_name))
                     if re.search('\W', filter_name):
-                        raise Exception('PROPERTIES ERROR (%s): Filter names may only contain alphanumeric characters and "_".'%(filter_name))
+                        raise Exception('[Properties] ERROR (%s): Filter names may only contain alphanumeric characters and "_".'%(filter_name))
                     if not val:
-                        logging.warn('PROPERTIES WARNING (%s): Undefined filter'%(name))
+                        logging.warn('[Properties] WARNING (%s): Undefined filter'%(name))
                         continue
                     self._filters[filter_name] = OldFilter(val)
                 
                 elif name == 'groups':
-                    logging.warn('PROPERTIES WARNING (%s): This field is no longer necessary in the properties file.\n'
+                    logging.warn('[Properties] INFO (%s): This field is no longer necessary in the properties file.\n'
                               'Only the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name))
                     
                 elif name == 'filters':
                     # Load new-style filters
                     if val.strip() == '':
-                        logging.warn('PROPERTIES WARNING (filters): Field should not be left blank')
+                        logging.warn('[Properties] WARNING (filters): Field should not be left blank')
                         continue
                     d = eval(val)
                     if type(d) != dict:
-                        raise Exception('PROPERTIES ERROR (filters): Error parsing filters. Check the "filters" field in your properties file.')
+                        raise Exception('[Properties] ERROR (filters): Error parsing filters. Check the "filters" field in your properties file.')
                     for k, v in list(d.items()):
                         self._filters[k] = Filter.decode(v)
                     del d
@@ -291,13 +291,13 @@ class Properties(metaclass=Singleton):
                 elif name == 'gates':
                     d = eval(val)
                     if type(d) != dict:
-                        raise Exception('PROPERTIES ERROR (gates): Error parsing gates. Check the "gates" field in your properties file.')
+                        raise Exception('[Properties] ERROR (gates): Error parsing gates. Check the "gates" field in your properties file.')
                     for k, v in list(d.items()):
                         self.gates[k] = Gate.decode(v)
                     del d
                     
                 else:
-                    logging.warn('PROPERTIES WARNING: Unrecognized field "%s" in properties file'%(name))
+                    logging.warn('[Properties] INFO: Unrecognized field "%s" in properties file'%(name))
                 
         f.close()
         
@@ -468,12 +468,12 @@ class Properties(metaclass=Singleton):
         '''
         for old, new in list(field_mappings.items()):
             if self.field_defined(old):
-                logging.warn('PROPERTIES WARNING (%s): This field name has been '
-                          'deprecated, use "%s" instead.'%(old, new)) 
+                logging.warn('[Properties] INFO (%s): This field name has been '
+                          'deprecated, use "%s" instead.'%(old, new))
                 if not self.field_defined(new):
                     self.__dict__[new] = self.__dict__[old]
                 else:
-                    raise Exception('PROPERTIES ERROR: Both "%s" and "%s" were '
+                    raise Exception('[Properties] ERROR: Both "%s" and "%s" were '
                         'found in your properties file. The field "%s" has been '
                         'deprecated and renamed to "%s". Please remove "%s" from '
                         'your properties file.'%(old, new, old, new, old))
@@ -488,18 +488,18 @@ class Properties(metaclass=Singleton):
         # check that all required fields are defined
         required_vars_all = required_vars
         for name in required_vars_all:
-            assert self.field_defined(name), 'PROPERTIES ERROR (%s): Field is missing or empty.'%(name)
+            assert self.field_defined(name), '[Properties] ERROR (%s): Field is missing or empty.'%(name)
         
-        assert self.db_type.lower() in ['mysql', 'sqlite'], 'PROPERTIES ERROR (db_type): Value must be either "mysql" or "sqlite".'
+        assert self.db_type.lower() in ['mysql', 'sqlite'], '[Properties] ERROR (db_type): Value must be either "mysql" or "sqlite".'
 
         # BELOW: Check sometimes-optional fields, and print warnings etc
         if self.db_type.lower()=='sqlite':
             for field in ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',]:
                 if self.field_defined(field):
-                    logging.warn('PROPERTIES WARNING (%s): Field not required with db_type=sqlite.'%(field))
+                    logging.info('[Properties] DEBUG (%s): Field not required with db_type=sqlite.'%(field))
             
             assert any([self.field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file','db_sqlite_file']]), \
-                    'PROPERTIES ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR "db_sql_file" OR "db_sqlite_file". See the README.'
+                    '[Properties] ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR "db_sql_file" OR "db_sqlite_file". See the README.'
             
             if self.field_defined('db_sqlite_file'):
                 if not os.path.isabs(self.db_sqlite_file):
@@ -510,7 +510,7 @@ class Properties(metaclass=Singleton):
                     f = open(self.db_sqlite_file, 'r')
                     f.close()
                 except:
-                    raise Exception('PROPERTIES ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file))
+                    raise Exception('[Properties] ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file))
             
             if self.field_defined('db_sql_file'):
                 if not os.path.isabs(self.db_sql_file):
@@ -521,10 +521,10 @@ class Properties(metaclass=Singleton):
                     f = open(self.db_sql_file, 'r')
                     f.close()
                 except:
-                    raise Exception('PROPERTIES ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.db_sql_file))
+                    raise Exception('[Properties] ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.db_sql_file))
                 
                 for field in ['image_csv_file','object_csv_file']:
-                    assert not self.field_defined(field), 'PROPERTIES ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
+                    assert not self.field_defined(field), '[Properties] ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
             else:        
                 for field in ['image_csv_file','object_csv_file']:
                     if self.field_defined(field):
@@ -537,37 +537,37 @@ class Properties(metaclass=Singleton):
                             f = open(self.__dict__[field], 'r')
                             f.close()
                         except:
-                            raise Exception('PROPERTIES ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field]))
+                            raise Exception('[Properties] ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field]))
             
         if self.db_type.lower()=='mysql':
             for field in ['db_host', 'db_name', 'db_user',]:
-                assert self.field_defined(field), 'PROPERTIES ERROR (%s): Field is required with db_type=mysql.'%(field)
+                assert self.field_defined(field), '[Properties] ERROR (%s): Field is required with db_type=mysql.'%(field)
             if not self.field_defined('db_port'):
                 self.db_port = '3306'
-                logging.info('PROPERTIES: Using default db_port=3306 for MySQL.')
+                logging.warn('[Properties]: Using default db_port=3306 for MySQL.')
             for field in ['image_csv_file','object_csv_file']:
                 if self.field_defined(field):
-                    logging.warn('PROPERTIES WARNING (%s): Field not required with db_type=mysql.'%(field))
+                    logging.warn('[Properties] INFO (%s): Field not required with db_type=mysql.'%(field))
         
         if self.field_defined('area_scoring_column'):
-            logging.info('PROPERTIES: Area scoring will be used.')
+            logging.warn('[Properties]: Area scoring will be used.')
                 
         if not self.field_defined('image_channel_colors'):
-            logging.warn('PROPERTIES WARNING (image_channel_colors): No value(s) specified. CPA will use a generic channel-color mapping.')
+            logging.warn('[Properties] INFO (image_channel_colors): No value(s) specified. CPA will use a generic channel-color mapping.')
             self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(97)]
         
         if not self.field_defined('channels_per_image'):
-            logging.warn('PROPERTIES WARNING (channels_per_image): No value(s) specified. CPA will assume 1 channel per image.')
+            logging.warn('[Properties] INFO (channels_per_image): No value(s) specified. CPA will assume 1 channel per image.')
             self.channels_per_image = ['1' for i in range(len(self.image_file_cols))]
 
         if not self.field_defined('image_names'):
-            logging.warn('PROPERTIES WARNING (image_names): No value(s) specified. CPA will use generic channel names.')
+            logging.warn('[Properties] INFO (image_names): No value(s) specified. CPA will use generic channel names.')
             self.image_names = ['channel-%d'%(i+1) for i in range(len(self.image_file_cols))]
 
         if len(self.image_channel_colors) < sum(map(int, self.channels_per_image)):
             self.image_channel_colors = ['red', 'green', 'blue']
             self.image_channel_colors += ['none' for x in range(min(sum(map(int, self.channels_per_image)) - 3, 0))]
-            logging.warn('PROPERTIES WARNING (image_channel_colors): You did not '
+            logging.warn('[Properties] WARNING (image_channel_colors): You did not '
                       'specify enough colors for all the channels in your images. '
                       'One color should be listed for each file column listed in '
                       'image_file_cols unless your images contain multiple '
@@ -576,35 +576,35 @@ class Properties(metaclass=Singleton):
                       'use channel colors %s for this run.'%(self.image_channel_colors,))
 
         assert len(self.image_file_cols) == len(self.image_path_cols), \
-               'PROPERTIES ERROR: image_file_cols and image_path_cols must have an equal number of values.'
+               '[Properties] ERROR: image_file_cols and image_path_cols must have an equal number of values.'
         
         assert len(self.image_file_cols) == len(self.channels_per_image), \
-               'PROPERTIES ERROR: channels_per_image must have the same number of values as image_file_cols  and image_path_cols.'
+               '[Properties] ERROR: channels_per_image must have the same number of values as image_file_cols  and image_path_cols.'
 
         assert len(self.image_file_cols) == len(self.image_names), \
-               'PROPERTIES ERROR: image_names must have the same number of values as image_file_cols  and image_path_cols.'
+               '[Properties] ERROR: image_names must have the same number of values as image_file_cols  and image_path_cols.'
                     
         if self.field_defined('image_channel_blend_modes'):
             for mode in self.image_channel_blend_modes:
-                assert mode in ['add', 'subtract', 'solid'], 'PROPERTIES ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add, subtract and solid.'
+                assert mode in ['add', 'subtract', 'solid'], '[Properties] ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add, subtract and solid.'
             
         if not self.field_defined('classifier_ignore_columns'):
-            logging.warn('PROPERTIES WARNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.')
+            logging.warn('[Properties] INFORNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.')
         
         if not self.field_defined('image_buffer_size'):
-            logging.info('PROPERTIES: Using default image_buffer_size=1')
+            logging.info('[Properties]: Using default image_buffer_size=1')
             self.image_buffer_size = '1'
             
         if not self.field_defined('tile_buffer_size'):
-            logging.info('PROPERTIES: Using default tile_buffer_size=1')
+            logging.info('[Properties]: Using default tile_buffer_size=1')
             self.tile_buffer_size = '1'
             
         if not self.field_defined('object_name'):
-            logging.warn('PROPERTIES WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"')
+            logging.warn('[Properties] WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"')
             self.object_name = ['cell', 'cells']
         else:
             # if it is defined make sure they do it correctly
-            assert len(self.object_name)==2, 'PROPERTIES ERROR (object_name): Found %d names instead of 2! This field should contain the singular and plural name of the objects you are classifying. (Example: object_name=cell,cells)'%(len(self.object_name))
+            assert len(self.object_name)==2, '[Properties] ERROR (object_name): Found %d names instead of 2! This field should contain the singular and plural name of the objects you are classifying. (Example: object_name=cell,cells)'%(len(self.object_name))
 
         if self.field_defined('training_set'):
             if not os.path.isabs(self.training_set):
@@ -615,19 +615,19 @@ class Properties(metaclass=Singleton):
                 f = open(self.training_set)
                 f.close()
             except:
-                logging.warn('PROPERTIES WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set))
-            logging.info('PROPERTIES: Training set found at "%s"'%(self.training_set))
+                logging.warn('[Properties] WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set))
+            logging.warn('[Properties]: Training set found at "%s"'%(self.training_set))
         
         if self.field_defined('class_table'):
-            assert self.class_table != self.image_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as image_table!'
-            assert self.class_table != self.object_table, 'PROPERTIES ERROR (class_table): class_table cannot be the same as object_table!'
-            logging.info('PROPERTIES: Per-Object classes will be written to table "%s"'%(self.class_table))
+            assert self.class_table != self.image_table, '[Properties] ERROR (class_table): class_table cannot be the same as image_table!'
+            assert self.class_table != self.object_table, '[Properties] ERROR (class_table): class_table cannot be the same as object_table!'
+            logging.info('[Properties]: Per-Object classes will be written to table "%s"'%(self.class_table))
             
         if not self.field_defined('plate_id'):
-            logging.warn('PROPERTIES WARNING (plate_id): Field is required for plate map viewer.')
+            logging.warn('[Properties] INFO (plate_id): Field is required for plate map viewer.')
                                     
         if not self.field_defined('well_id'):
-            logging.warn('PROPERTIES WARNING (well_id): Field is required for plate map viewer.')
+            logging.warn('[Properties] INFO (well_id): Field is required for plate map viewer.')
         
         #
         # plate_shape
@@ -635,13 +635,13 @@ class Properties(metaclass=Singleton):
         #
         if self.field_defined('plate_shape'):
             if len(self.__dict__['plate_shape']) != 2:
-                raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_shape. Expected: rows, cols'
+                raise Exception('[Properties] ERROR: invalid value (%s) for plate_shape. Expected: rows, cols'
                                 %(self.__dict__['plate_shape']))
             try:
                 self.__dict__['plate_shape'][0] = int(self.__dict__['plate_shape'][0])
                 self.__dict__['plate_shape'][1] = int(self.__dict__['plate_shape'][1])
             except:
-                raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_shape. Expected: rows, cols'
+                raise Exception('[Properties] ERROR: invalid value (%s) for plate_shape. Expected: rows, cols'
                                 %(self.__dict__['plate_shape']))
             
         #
@@ -649,12 +649,12 @@ class Properties(metaclass=Singleton):
         # This field is used to set the plate_shape field indirectly
         #
         if not self.field_defined('plate_type'):
-            logging.warn('PROPERTIES WARNING (plate_type): Field is required for plate viewer')
+            logging.warn('[Properties] INFO (plate_type): Field is required for plate viewer')
         else:
             if self.field_defined('plate_shape'):
                 assert self.plate_shape == supported_plate_types[self.__dict__['plate_type']], "Your properties file has incompatible values for plate_type and plate_shape."
             if self.__dict__['plate_type'] not in list(supported_plate_types.keys()):
-                raise Exception('PROPERTIES ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
+                raise Exception('[Properties] ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
                                 %(self.__dict__['plate_type'], ', '.join(supported_plate_types)))
             self.plate_shape = supported_plate_types[self.__dict__['plate_type']]
 
@@ -663,7 +663,7 @@ class Properties(metaclass=Singleton):
         elif self.field_defined('check_tables') and self.check_tables.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.check_tables = 'no'
         else:
-            logging.warn('PROPERTIES WARNING (check_tables): Field value "%s" is invalid. Replacing with "no".'%(self.check_tables))
+            logging.warn('[Properties] WARNING (check_tables): Field value "%s" is invalid. Replacing with "no".'%(self.check_tables))
             self.check_tables = 'no'
 
         if self.field_defined('force_bioformats') and self.force_bioformats.lower() in ['true', 'yes', 'on', 't', 'y']:
@@ -671,7 +671,7 @@ class Properties(metaclass=Singleton):
         elif self.field_defined('force_bioformats') and self.force_bioformats.lower() in ['false', 'no', 'off', 'f', 'n']:
             self.force_bioformats = False
         elif self.field_defined('force_bioformats'):
-            logging.warn(f'PROPERTIES WARNING (force_bioformats): Field was invalid ({self.force_bioformats}), using default of "False".')
+            logging.warn(f'[Properties] WARNING (force_bioformats): Field was invalid ({self.force_bioformats}), using default of "False".')
             self.force_bioformats = False
         else:
             self.force_bioformats = False
@@ -683,7 +683,7 @@ class Properties(metaclass=Singleton):
         elif self.field_defined('use_larger_image_scale') and self.use_larger_image_scale.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.use_larger_image_scale = True
         else:
-            logging.warn('PROPERTIES WARNING (use_larger_image_scale): Field value "%s" is invalid. Replacing with "false".'%(self.use_larger_image_scale))
+            logging.warn('[Properties] WARNING (use_larger_image_scale): Field value "%s" is invalid. Replacing with "false".'%(self.use_larger_image_scale))
             self.use_larger_image_scale = False
             
         if self.rescale_object_coords in [True, False]:
@@ -693,12 +693,12 @@ class Properties(metaclass=Singleton):
         elif self.field_defined('rescale_object_coords') and self.rescale_object_coords.lower() in ['true', 'yes', 'on', 't', 'y']:
             self.rescale_object_coords = True
         else:
-            logging.warn('PROPERTIES WARNING (rescale_object_coords): Field value "%s" is invalid. Replacing with "false".'%(self.rescale_object_coords))
+            logging.warn('[Properties] WARNING (rescale_object_coords): Field value "%s" is invalid. Replacing with "false".'%(self.rescale_object_coords))
             self.rescale_object_coords = False
             
         if not self.field_defined('well_format'):
             self.well_format = 'A01'
-            logging.warn('PROPERTIES WARNING (well_format): Field was not defined, using default format of "A01".')
+            logging.info('[Properties] WARNING (well_format): Field was not defined, using default format of "A01".')
             
         if not self.field_defined('link_tables_table'):
             self.link_tables_table = '_link_tables_%s_%s_'%(self.image_table, (self.object_table or ''))
@@ -725,7 +725,6 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
     else:
-        #filename = "../properties/nirht_test.properties"
         filename = '/Users/afraser/cpa_example/example.properties'
 
     p.load_file(filename)

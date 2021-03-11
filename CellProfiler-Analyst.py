@@ -11,6 +11,7 @@
 
 
 import sys
+from io import StringIO
 import os
 import os.path
 import logging
@@ -114,7 +115,7 @@ def get_cpatool_subclasses():
 class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
     '''
-    def __init__(self, properties, parent, id=-1, **kwargs):
+    def __init__(self, properties, parent, id=-1, log_data="", **kwargs):
 
         import cpa.cpaprefs
         from cpa.icons import get_icon, get_cpa_icon
@@ -208,7 +209,7 @@ class MainGUI(wx.Frame):
         log_level = logging.INFO # INFO is the default log level
         self.logr = logging.getLogger()
         self.set_log_level(log_level) 
-        self.log_text = ''
+        self.log_text = log_data
         def update(x):
             self.log_text += x+'\n'
         hdlr = FuncLog(update)
@@ -413,6 +414,13 @@ class CPAnalyst(wx.App):
                                 SPLASH_TIMEOUT, 1500, None, -1, style=wx.BORDER_SIMPLE|wx.FRAME_NO_TASKBAR)
         self.splash = splash
 
+        # Properties are loaded before the main app starts, so we'll capture any resulting log messages and pass them in
+        temp_log_stream = StringIO()
+        log_handler = logging.StreamHandler(temp_log_stream)
+        log_handler.setLevel(logging.INFO)
+        main_logger = logging.getLogger()
+        main_logger.addHandler(log_handler)
+
         p = Properties()
         if not p.is_initialized():
             from cpa.guiutils import show_load_dialog
@@ -424,9 +432,10 @@ class CPAnalyst(wx.App):
                 response = dlg.ShowModal()
                 logging.error('CellProfiler Analyst requires a properties file. Exiting.')
                 return False
-            self.splash.Show()
-
-        self.frame = MainGUI(p, None, size=(1000,-1))
+                self.splash.Show()
+        main_logger.removeHandler(log_handler)
+        log_data = temp_log_stream.getvalue()
+        self.frame = MainGUI(p, None, size=(1000,-1), log_data=log_data)
 
         db = DBConnect()
         # Black magic: Bus errors occur on Mac OS X if we wait until
@@ -515,12 +524,11 @@ if __name__ == "__main__":
     # Initialize the app early because the fancy exception handler
     # depends on it in order to show a 
     app = CPAnalyst(redirect=False)
-    app.Start()
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
        from cpa.errors import show_exception_as_dialog
        sys.excepthook = show_exception_as_dialog
-
+    app.Start()
     app.MainLoop()
     os._exit(0) # Enforces Exit, see issue #102
