@@ -1,4 +1,5 @@
 import datetime
+import logging
 import requests
 import wx
 
@@ -6,10 +7,13 @@ from . import __version__ as current_version
 from .cpaprefs import get_check_update, get_check_update_bool, set_check_update
 
 
-def check_update(event, force=False):
-    parent = event.GetEventObject().GetWindow()
+def check_update(origin, force=False, event=True):
     if not force and not check_date():
         return
+    if event:
+        parent = origin.GetEventObject().GetWindow()
+    else:
+        parent = origin
     try:
         response = requests.get("https://api.github.com/repos/cellprofiler/cellprofiler-analyst/releases/latest", timeout=0.25)
     except:
@@ -28,19 +32,19 @@ def check_update(event, force=False):
                     body_text = body_text[:1000] + "..."
                 elif len(body_text) == 0:
                     body_text = "No information available"
+                logging.info(f"An update for CellProfiler-Analyst is available ({response['tag_name']})")
                 show_message(parent, response['tag_name'], body_text)
                 return
             else:
                 message = "CellProfiler-Analyst is up-to-date"
                 if get_check_update() != "Disabled":
                     set_check_update(datetime.date.today().strftime("%Y%m%d"))
-                if not force:
-                    return
         elif status == 200:
             message = "Unable to read data from GitHub, API may have changed."
         else:
             message = "Invalid response from GitHub server, site may be down."
     if force:
+        # User explicitly asked for a check, display a popup even with no available updates.
         dlg = wx.MessageDialog(
             parent,
             message,
@@ -49,7 +53,7 @@ def check_update(event, force=False):
         )
         dlg.ShowModal()
     else:
-        print(message)
+        logging.info(message)
 
 
 def show_message(parent, version, blurb):

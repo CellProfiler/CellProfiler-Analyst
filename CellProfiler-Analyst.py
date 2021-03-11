@@ -386,27 +386,6 @@ class MainGUI(wx.Frame):
             self.console.AppendText(self.log_text)
             self.log_text = ''
 
-# new version check
-def new_version_cb(new_version, new_version_info):
-    # called from a child thread, so use CallAfter to bump it to the gui thread
-    def cb2():
-        def set_check_pref(val):
-            cpa.cpaprefs.set_check_new_versions(val)
-
-        def skip_this_version():
-            cpa.cpaprefs.set_skip_version(new_version)
-
-        # showing a modal dialog while the splashscreen is up causes a hang
-        try: wx.GetApp().splash.Destroy()
-        except: pass
-
-        import cpa.gui.newversiondialog as nvd
-        dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
-                                   new_version_info, 'http://cellprofiler.org/releases#CPA',
-                                   cpa.cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
-        dlg.Show()
-
-    wx.CallAfter(cb2)
 
 class CPAnalyst(wx.App):
     '''The CPAnalyst application.
@@ -464,18 +443,13 @@ class CPAnalyst(wx.App):
         # removes the log4j warnings
         javabridge.attach()
 
-        # TODO: check for updates properly
-        # try:
-        #     # if __version__ != -1:
-        #     #     import cpa.util.check_for_updates as cfu
-        #     #     cfu.check_for_updates('http://cellprofiler.org/updates/CPA.html',
-        #     #                           max(__version__, cpa.cpaprefs.get_skip_version()),
-        #     #                           new_version_cb,
-        #     #                           user_agent='CPAnalyst/%s'%(__version__))
-        # except ImportError:
-        #     logging.warn("CPA was unable to check for updates. Could not import cpa.util.check_for_updates.")
         self.splash.Destroy()
         self.frame.Show() # Show frame
+        try:
+            from cpa.updatechecker import check_update
+            check_update(self.frame, event=False)
+        except:
+            logging.warn("CPA was unable to check for updates.")
         return True
 
     def get_plots(self):
