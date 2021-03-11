@@ -131,9 +131,9 @@ class Classifier(wx.Frame):
 
         #### Create GUI elements
         # Top level - three split windows
-        self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH)
+        self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
         self.fetch_and_rules_panel = wx.Panel(self.splitter)
-        self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH)
+        self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
 
         # fetch & rules
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
@@ -275,6 +275,7 @@ class Classifier(wx.Frame):
         self.splitter.SetMinimumPaneSize(max(50, self.fetch_and_rules_panel.GetMinHeight()))
         self.bins_splitter.SetMinimumPaneSize(50)
         self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * 50 + self.fetch_and_rules_panel.GetMinHeight()))
+        self.bins_splitter.UpdateSize()
 
         # Set initial state
         self.obClassChoice.SetSelection(0)
