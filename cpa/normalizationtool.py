@@ -280,7 +280,7 @@ class NormalizationUI(wx.Frame, CPATool):
     def update_measurement_choices(self):
         measurements = db.GetColumnNames(self.table_choice.GetStringSelection())
         types = db.GetColumnTypes(self.table_choice.GetStringSelection())
-        numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, int]]
+        numeric_columns = [m for m,t in zip(measurements, types) if t in (float, int)]
         self.col_choices.SetItems(numeric_columns)
         self.validate()
         

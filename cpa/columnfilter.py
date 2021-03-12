@@ -78,9 +78,9 @@ class ColumnFilterPanel(wx.Panel):
     def update_comparator_choice(self):
         coltype = self._get_col_type()
         comparators = []
-        if coltype in [str, str]:
+        if coltype == str:
             comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT']
-        if coltype in [int, float, int]:
+        if coltype in (int, float):
             comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT']
         self.comparatorChoice.SetItems(comparators)
         self.comparatorChoice.Select(0)
@@ -101,7 +101,7 @@ class ColumnFilterPanel(wx.Panel):
         column = self.colChoice.Value
         comparator = self.comparatorChoice.GetValue()
         value = self.valueField.GetValue()
-        if self._get_col_type() in [int, float, int]:
+        if self._get_col_type() in (int, float):
             # Don't quote numbers
             return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
         if comparator.upper() in ['IS', 'IS NOT'] and value.upper() == 'NULL':

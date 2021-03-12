@@ -258,12 +258,12 @@ class ScatterControlPanel(wx.Panel):
 
         keys = kps[:,key_indices].astype(int) 
         # Strip out x coords
-        if col_types[0] in [float, int, int]:
+        if col_types[0] in (float, int):
             xpoints = kps[:,-2].astype('float32')
         else:
             xpoints = kps[:,-2]
         # Strip out y coords
-        if col_types[1] in [float, int, int]:
+        if col_types[1] in (float, int):
             ypoints = kps[:,-1].astype('float32')
         else:
             ypoints = kps[:,-1]

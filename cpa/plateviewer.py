@@ -766,7 +766,7 @@ def get_numeric_columns_from_table(table):
     ''' Fetches names of numeric columns for the given table. '''
     measurements = db.GetColumnNames(table)
     types = db.GetColumnTypes(table)
-    return [m for m,t in zip(measurements, types) if t in [float, int, int]]
+    return [m for m,t in zip(measurements, types) if t in (float, int)]
 
 def get_non_blob_types_from_table(table):
     measurements = db.GetColumnNames(table)

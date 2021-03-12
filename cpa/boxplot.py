@@ -127,7 +127,7 @@ class DataSourcePanel(wx.Panel):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, int]]
+        return [m for m,t in zip(measurements, types) if t in (float, int)]
         
     def update_figpanel(self, evt=None):
         table = self.table_choice.Value

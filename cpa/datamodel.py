@@ -292,7 +292,7 @@ class DataModel(metaclass=Singleton):
             if type(well) == str:
                 well = well.strip()
                 assert re.match(well_re, well), 'Well "%s" did not match well naming format "%s"'%(r[0], p.well_format)
-            elif type(well) in [int, int]:
+            elif type(well) == int:
                 if not p.well_format == '123':
                     '''
                     import wx

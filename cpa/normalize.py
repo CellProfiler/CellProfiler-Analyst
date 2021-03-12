@@ -127,7 +127,7 @@ def do_normalization(data, aggregate_type_or_const):
         h = scipy.ndimage.histogram(data.flatten(), robust_min, robust_max, nbins)
         index = np.argmax(h)
         normalization_value = np.min(data) + float(index)/float(nbins-1)*(np.max(data) - np.min(data))
-    elif type(aggregate_type_or_const) in (float, int, int):
+    elif type(aggregate_type_or_const) in (float, int):
         normalization_value = aggregate_type_or_const
 
     try:

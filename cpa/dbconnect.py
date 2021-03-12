@@ -577,9 +577,9 @@ class DBConnect(metaclass=Singleton):
                 fun2 = conversion
             if fun2 in [decimal.Decimal, float]:
                 dtype = 'f8'
-            elif fun2 in [int, int]:
+            elif fun2 == int:
                 dtype = 'i4'
-            elif fun2 in [bytes]:
+            elif fun2 == bytes:
                 dtype = '|S%d'%(internal_size,)
             descr.append((name, dtype))
         return descr
@@ -1282,7 +1282,7 @@ class DBConnect(metaclass=Singleton):
         # TODO: handle other tables
         assert table == p.image_table
         _check_colname_user(p, table, colname)
-        if type(value) in (str, str):
+        if type(value) == str:
             if re.search(r'["\'`]', value):
                 raise ValueError('No quotes are allowed in values written to the database.')
             value = '"'+value+'"'

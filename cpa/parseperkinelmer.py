@@ -493,7 +493,7 @@ def get_url_protocol(image_index):
     images_node = doc.getElementsByTagName('Images')[0]
     image_node = images_node.getElementsByTagName('Image')[0]
     url = image_node.getElementsByTagName('URL')[0].firstChild.data
-    assert type(url) in [str, str]
+    assert type(url) == str
     if url.lower().startswith('http://'):
         return 'http'
     else:
