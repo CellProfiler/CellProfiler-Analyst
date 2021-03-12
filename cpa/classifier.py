@@ -1106,9 +1106,9 @@ class Classifier(wx.Frame):
                 self.PostMessage('Classifying %s.' % (p.object_name[1]))
 
                 if obClassName == 'uncertain':
-                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass, obKeysToTry, uncertain=True)
+                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass - 1, obKeysToTry, uncertain=True)
                 else:
-                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass, obKeysToTry)
+                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass - 1, obKeysToTry)
 
 
                 attempts += len(obKeysToTry)
