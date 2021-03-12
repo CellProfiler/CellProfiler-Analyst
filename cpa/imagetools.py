@@ -341,11 +341,12 @@ def tile_images(images):
     return composite
 
 def SaveBitmap(bitmap, filename, format='PNG'):
-    im = BitmapToPIL(bitmap)
     if format.lower() in ['jpg', 'jpeg']:
-        im.save(filename, format, quality=95)
+        bitmap.SaveFile(filename, type=wx.BITMAP_TYPE_JPEG)
+    elif format == "PNG":
+        bitmap.SaveFile(filename, type=wx.BITMAP_TYPE_PNG)
     else:
-        im.save(filename, format)
+        raise ValueError(f"Unable to save. Invalid image format '{format}' for {filename}")
 
 def ImageToPIL(image):
     '''Convert wx.Image to PIL Image.'''
