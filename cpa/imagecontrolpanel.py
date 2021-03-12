@@ -24,7 +24,7 @@ class ImageControlPanel(wx.Panel):
             self.listeners = listeners
         else:
             self.listeners = [listeners]
-        
+
         self.contrast = contrast
         
         self.scale_slider      = wx.Slider(parent, -1, scale*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
@@ -75,6 +75,15 @@ class ImageControlPanel(wx.Panel):
         self.brightness_slider.Bind(wx.EVT_SLIDER, self.OnBrightnessSlider)
         self.reset_btn.Bind(wx.EVT_BUTTON, self.OnReset)
 
+        # When a slider is moved wx produces update events extremely quickly.
+        # This will freeze up CPA if there are more than a few tiles displayed.
+        # To solve this, we put the tile updates on a timer. If the slider
+        # changes again before the timeout then the timer resets. This means
+        # tiles will only get redrawn when the slider stops moving.
+        self.throttle_scale = wx.CallLater(100, self.UpdateScale)
+        self.throttle_scale.Stop()
+        self.throttle_brightness = wx.CallLater(100, self.UpdateBrightness)
+        self.throttle_brightness.Stop()
 
     def AddContrastControls(self, mode):
         self.contrast = mode
@@ -124,22 +133,28 @@ class ImageControlPanel(wx.Panel):
 
 
     def OnBrightnessSlider(self, evt):
-        self.UpdateBrightness()
-    
+        self.brightness_percent.SetLabel(str(self.brightness_slider.GetValue())+'%')
+        if self.throttle_brightness.IsRunning():
+            self.throttle_brightness.Restart(100)
+        else:
+            self.throttle_brightness.Start(100)
+
     def UpdateBrightness(self):
         pos = self.brightness_slider.GetValue() / 100.0
         for listener in self.listeners:
             listener.SetBrightness(pos)
-        self.brightness_percent.SetLabel(str(self.brightness_slider.GetValue())+'%')
 
     def OnScaleSlider(self, evt):
-        self.UpdateScale()
-    
+        self.scale_percent.SetLabel(str(self.scale_slider.GetValue())+'%')
+        if self.throttle_scale.IsRunning():
+            self.throttle_scale.Restart(100)
+        else:
+            self.throttle_scale.Start(100)
+
     def UpdateScale(self):
-        pos = self.scale_slider.GetValue() / 100.0      
+        pos = self.scale_slider.GetValue() / 100.0
         for listener in self.listeners:
             listener.SetScale(pos)
-        self.scale_percent.SetLabel(str(self.scale_slider.GetValue())+'%')
 
     def OnSetContrastMode(self, evt):
         self.UpdateContrastMode()
