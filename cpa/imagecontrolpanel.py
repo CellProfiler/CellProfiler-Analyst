@@ -95,7 +95,8 @@ class ImageControlPanel(wx.Panel):
         self.sizer3.Add(self.contrast_radiobox, flag=wx.EXPAND)
         self.sizer3.Add(-1, 10, 0)
         self.contrast_radiobox.Bind(wx.EVT_RADIOBOX, self.OnSetContrastMode)
-        self.UpdateContrastMode()
+        # Disabling this for now, contrast from init should never have changed so no need to update? Mar 2021
+        # self.UpdateContrastMode()
 
     def SetClassPoints(self, classCoords):
         self.sizer4.Clear()
