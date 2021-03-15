@@ -306,7 +306,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         '''
         
         pc.update_scalarmappable()
-        ax = pc.get_axes()
+        ax = pc.axes
         for p, color, value in zip(pc.get_paths(), pc.get_facecolors(), pc.get_array()):
             x, y = p.vertices[:-2, :].mean(0)
             if np.all(color[:3] > 0.5):
@@ -379,9 +379,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
         # resize 
         fig = plt.gcf()
-        #fig.set_size_inches(self.cm2inch(40, 20))
-        #fig.set_size_inches(self.cm2inch(40*4, 20*4))
-        fig.set_size_inches(self.cm2inch(figure_width, figure_height))
+        # Disabling this - not sure why we make the figure so huge, it sizes itself just fine. Mar 2021
+        # fig.set_size_inches(self.cm2inch(figure_width, figure_height))
         plt.show()
 
     def plot_classification_report(self, classification_report, title='Classification report ', cmap='RdBu'):
@@ -395,11 +394,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         plotMat = []
         support = []
         class_names = []
-        for line in lines[2 : (len(lines) - 2)]:
+        for line in lines[2:-4]:
             t = line.strip().split()
             if len(t) < 2: continue
             classes.append(t[0])
-            v = [float(x) for x in t[1: len(t) - 1]]
+            v = [float(x) for x in t[1:-1]]
             support.append(int(t[-1]))
             class_names.append(t[0])
             print(v)
