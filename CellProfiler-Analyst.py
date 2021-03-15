@@ -128,6 +128,7 @@ class MainGUI(wx.Frame):
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
         self.CreateStatusBar()
+        self.log_io = True
 
         #
         # Setup toolbar
@@ -187,7 +188,9 @@ class MainGUI(wx.Frame):
         warnMenuItem     = logMenu.AppendRadioItem(-1, 'Warnings\tCtrl+3', help='Logging window will display warning-level messages.')
         errorMenuItem    = logMenu.AppendRadioItem(-1, 'Errors\tCtrl+4', help='Logging window will display error-level messages.')
         criticalMenuItem = logMenu.AppendRadioItem(-1, 'Critical\tCtrl+5', help='Logging window will only display critical messages.')
+        logioItem = logMenu.AppendCheckItem(-1, item='Log image loading', help='Log image loader events')
         infoMenuItem.Check()
+        logioItem.Check()
         self.GetMenuBar().Append(logMenu, 'Logging')
 
         advancedMenu = wx.Menu()
@@ -224,6 +227,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.WARN), warnMenuItem)
         self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.ERROR), errorMenuItem)
         self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.CRITICAL), criticalMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_toggle_iologging, logioItem)
         self.Bind(wx.EVT_MENU, self.on_save_properties, savePropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
         self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)
@@ -296,6 +300,12 @@ class MainGUI(wx.Frame):
     def launch_normalization_tool(self, evt=None):
         normtool = NormalizationUI(parent=self)
         normtool.Show(True)
+
+    def on_toggle_iologging(self, evt):
+        if evt.IsChecked():
+            self.log_io = True
+        else:
+            self.log_io = False
 
     def on_save_properties(self, evt):
         p = Properties()

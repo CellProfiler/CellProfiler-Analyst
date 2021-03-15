@@ -17,13 +17,13 @@ class ThrowingURLopener(urllib.request.URLopener):
 
 class ImageReader(object):
 
-    def ReadImages(self, fds):
+    def ReadImages(self, fds, log_io=True):
         '''fds -- list of file descriptors (filenames or urls)
         returns a list of channels as numpy float32 arrays
         '''
         channels = []
         for i, filename_or_url in enumerate(fds):
-            image = self._read_image(filename_or_url)
+            image = self._read_image(filename_or_url, log_io=log_io)
 
             channels += self._extract_channels(filename_or_url, image,
                                                p.image_names[i],
@@ -41,7 +41,7 @@ class ImageReader(object):
 
         return channels
 
-    def _read_image(self, filename_or_url):
+    def _read_image(self, filename_or_url, log_io=True):
         # The opener's destructor deletes the temprary files, so the
         # opener must not be GC'ed until the image has been loaded.
         opener = ThrowingURLopener()
@@ -59,14 +59,16 @@ class ImageReader(object):
                     else:
                         raise
         if not p.force_bioformats and os.path.splitext(filename_or_url)[-1].lower() in IMAGEIO_FORMATS:
-            logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
+            if log_io:
+                logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
             try:
                 return imageio.imread(filename_or_url)
             except:
                 logging.info('Loading with ImageIO failed, falling back to BioFormats')
                 return bioformats.load_image(filename_or_url, rescale=False)
         else:
-            logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
+            if log_io:
+                logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
             return bioformats.load_image(filename_or_url, rescale=False)
 
     def _extract_channels(self, filename_or_url, image, image_name, channels_per_image):

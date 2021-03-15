@@ -57,7 +57,11 @@ def FetchImage(imKey):
     else:
         ir = ImageReader()
         filenames = db.GetFullChannelPathsForImage(imKey)
-        imgs = ir.ReadImages(filenames)                       
+        try:
+            log_io = wx.GetApp().frame.log_io
+        except:
+            log_io = True
+        imgs = ir.ReadImages(filenames, log_io)
         cache[imKey] = imgs
         cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
