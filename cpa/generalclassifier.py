@@ -108,9 +108,13 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     # Adjust text for the classifier rules panel
     def panelTxt(self):
+        if self.scaler is not None:
+            return "with"
         return 'display'
         
     def panelTxt2(self):
+        if self.scaler is not None:
+            return "neurons per layer"
         return 'top features'
 
     def CreatePerObjectClassTable(self, classNames):

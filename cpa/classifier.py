@@ -163,9 +163,9 @@ class Classifier(wx.Frame):
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
-
-        # find rules interface
+        # find rules interface/set neurons interface
         self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30, -1))
+        self.nNeuronsTxt = wx.TextCtrl(self.find_rules_panel, -1, value='12,12', size=(50, -1))
         algorithmChoices = ['RandomForest Classifier',
                             'AdaBoost Classifier',
                             'SVC',
@@ -229,6 +229,8 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.AddSpacer(5)
         self.panelTxt2 = wx.StaticText(self.find_rules_panel, -1, '')
         self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.find_rules_sizer.Add(self.nNeuronsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.nNeuronsTxt.Hide()
         self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.panelTxt2, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddSpacer(5)
@@ -359,6 +361,7 @@ class Classifier(wx.Frame):
         # JEN - End Add
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfRules)
+        self.nNeuronsTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfNeurons)
         self.nObjectsTxt.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
 
         self.GetStatusBar().Bind(wx.EVT_SIZE, self.status_bar_onsize)
@@ -431,6 +434,13 @@ class Classifier(wx.Frame):
             # Fall back to default algorithm
             logging.error('Could not load specified algorithm, falling back to RandomForestClassifier.')
             self.algorithm = self.algorithms['RandomForestClassifier']
+
+        if self.algorithm == self.algorithms['NeuralNetwork']:
+            self.nRulesTxt.Hide()
+            self.nNeuronsTxt.Show()
+        else:
+            self.nRulesTxt.Show()
+            self.nNeuronsTxt.Hide()
 
         # Update the GUI complexity text and classifier description
         # self.panelTxt2.SetLabel(self.algorithm.get_params())
@@ -1518,6 +1528,14 @@ class Classifier(wx.Frame):
         except:
             logging.error('Unable to parse number of rules')
             return
+        if self.algorithm == self.algorithms['NeuralNetwork']:
+            nNeurons = self.nNeuronsTxt.GetValue()
+            splitneurons = nNeurons.split(',')
+            if all([level.isdigit() for level in splitneurons]) and all([int(level) > 0 for level in splitneurons]):
+                pass
+            else:
+                logging.error("Unable to parse neuron parameters")
+                return
 
         self.keysAndCounts = None  # Must erase current keysAndCounts so they will be recalculated from new rules
 
@@ -2026,6 +2044,22 @@ class Classifier(wx.Frame):
         except(Exception):
             self.nRulesTxt.SetForegroundColour('#FF0000')
             return False
+
+    def ValidateNumberOfNeurons(self, evt=None):
+        if self.algorithm == self.algorithms['NeuralNetwork']:
+            nNeurons = self.nNeuronsTxt.GetValue()
+            splitneurons = nNeurons.split(',')
+            if all([level.isdigit() for level in splitneurons]) and all([int(level) > 0 for level in splitneurons]):
+                self.nNeuronsTxt.SetForegroundColour('#000001')
+                # Refresh the classifier
+                self.algorithms['NeuralNetwork']  = GeneralClassifier(f"neural_network.MLPClassifier(hidden_layer_sizes=({nNeurons}), solver='lbfgs', max_iter=500)", self)
+                self.algorithm = self.algorithms['NeuralNetwork']
+                return True
+            else:
+                self.nNeuronsTxt.SetForegroundColour('#0000FF')
+                return False
+        else:
+            return True
 
     def GetGroupKeyFromGroupSizer(self, group=None):
         ''' Returns the text in the group text inputs as a group key. '''
