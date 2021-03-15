@@ -173,7 +173,8 @@ class Classifier(wx.Frame):
                             'LogisticRegression',
                             'LDA',
                             'KNeighbors Classifier',
-                            'Fast Gentle Boosting']
+                            'Fast Gentle Boosting',
+                            'Neural Network']
 
         self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
         self.classifierChoice.SetSelection(0) # Windows GUI otherwise doesn't select
@@ -302,6 +303,7 @@ class Classifier(wx.Frame):
         LDA = GeneralClassifier("discriminant_analysis.LinearDiscriminantAnalysis()", self)
         KNeighborsClassifier = GeneralClassifier("neighbors.KNeighborsClassifier()", self)
         FastGentleBoostingClassifier = FastGentleBoosting(self)
+        NeuralNetworkClassifier = GeneralClassifier("neural_network.MLPClassifier(hidden_layer_sizes=(12,12), solver='lbfgs', max_iter=500)", self)
 
         # JK - Start Add
         # Define the Random Forest classification algorithm to be default and set the default
@@ -317,7 +319,8 @@ class Classifier(wx.Frame):
             'LogisticRegression': LogisticRegression,
             'LDA': LDA,
             'KNeighborsClassifier': KNeighborsClassifier,
-            'FastGentleBoosting' : FastGentleBoostingClassifier
+            'FastGentleBoosting' : FastGentleBoostingClassifier,
+            'NeuralNetwork' : NeuralNetworkClassifier
         }
 
         #####################
@@ -582,7 +585,8 @@ class Classifier(wx.Frame):
             'LogisticRegression': 5,
             'LDA': 6,
             'KNeighborsClassifier': 7,
-            'FastGentleBoosting' : 8
+            'FastGentleBoosting' : 8,
+            'NeuralNetwork' : 9
         }
 
         rfMenuItem = self.classifierMenu.AppendRadioItem(1, item='RandomForest Classifier', help='Uses RandomForest to classify')
@@ -593,6 +597,7 @@ class Classifier(wx.Frame):
         ldaMenuItem = self.classifierMenu.AppendRadioItem(6, item='LDA', help='Uses LDA to classify.')
         knnMenuItem = self.classifierMenu.AppendRadioItem(7, item='KNeighbors Classifier', help='Uses the kNN algorithm to classify.')
         fgbMenuItem = self.classifierMenu.AppendRadioItem(8, item='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
+        mlpMenuItem = self.classifierMenu.AppendRadioItem(9, item='Neural Network', help='Uses the multi-layer perceptron neural network to classify.')
 
         self.GetMenuBar().Append(self.classifierMenu, 'Classifier')
 
@@ -644,6 +649,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, ldaMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, knnMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, fgbMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, mlpMenuItem)
 
 
     def CreateChannelMenus(self):
@@ -1191,7 +1197,7 @@ class Classifier(wx.Frame):
                     self.PostMessage(label)
                 self.PostMessage('CAUTION: Classifier needs to be trained on the current data set!')
             else:
-                logging.error("Algorithm: %s doesn't exists", load_name)
+                logging.error("Algorithm: %s doesn't exist", load_name)
 
         except:
             self.scoreAllBtn.Disable()

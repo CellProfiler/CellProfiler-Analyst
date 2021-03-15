@@ -6,13 +6,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
 from time import time
-from sklearn import ensemble, naive_bayes, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors
+from sklearn import ensemble, naive_bayes, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors, neural_network
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn import metrics
 import pickle, json
 import joblib
 import seaborn as sns
 from sklearn.model_selection import LeaveOneOut, KFold, cross_val_predict, cross_val_score
+from sklearn.preprocessing import StandardScaler
 import sys
 
 ##########
@@ -54,6 +55,10 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None):
         self.classBins = []
         self.classifier = eval(classifier)
+        if "neural" in classifier:
+            self.scaler = StandardScaler()
+        else:
+            self.scaler = None
         self.trained = False
         self.env = env # Env is Classifier in Legacy Code -- maybe renaming ?
         self.name = self.name()
@@ -97,6 +102,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     def ClearModel(self):
         self.classBins = []
+        if self.scaler is not None:
+            self.scaler = StandardScaler()
         self.trained = False
 
     # Adjust text for the classifier rules panel
@@ -119,8 +126,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
         try:
             self.classifier, self.bin_labels, self.name, self.features = joblib.load(model_filename)
+            self.scaler = self.classifier.scaler
+            print("Loaded", self.classifier, self.scaler, "models")
         except:
             self.classifier = None
+            self.scaler = None
             self.bin_labels = None
             logging.error('Model not correctly loaded')
             raise TypeError
@@ -153,6 +163,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     def Predict(self, test_values, fout=None):
         '''RETURNS: np array of predicted classes of input data test_values '''
+        if self.scaler is not None:
+            test_values = self.scaler.transform(test_values)
         predictions = self.classifier.predict(test_values)
         if fout:
             print(predictions)
@@ -167,6 +179,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             logging.info("Selected algorithm doesn't provide probabilities")
            
     def SaveModel(self, model_filename, bin_labels):
+        # Attach any scaler to the model object
+        self.classifier.scaler = self.scaler
         joblib.dump((self.classifier, bin_labels, self.name, self.features), model_filename, compress=1)
 
     def ShowModel(self):#SKLEARN TODO
@@ -187,7 +201,10 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     def Train(self, labels, values, fout=None):
         '''Trains classifier using values and label_array '''
-
+        if self.scaler is not None:
+            # Reset the scaler for training
+            self.scaler = StandardScaler()
+            values = self.scaler.fit_transform(values)
         self.classifier.fit(values, labels)
         self.trained = True
 
@@ -270,7 +287,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             CV = folds
         else:
             CV = KFold(num_samples, folds)
-
+        if self.scaler is not None:
+            values = self.scaler.transform(values)
         predictions = cross_val_predict(self.classifier, X=values, y=labels, cv=CV, n_jobs=1)
         return np.array(predictions)
 
