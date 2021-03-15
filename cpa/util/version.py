@@ -19,11 +19,13 @@ Website: http://www.cellprofiler.org
 import re
 import sys
 import os.path
-import verlib
 
 _cached_description = None
 
-_semantic_version = '2.2.1' # New semantic version system
+__version__ = '3.0.0' # Version used by update checker, must be numerical.
+_sub_version = 'rc1' # Use this to tag release candidates, betas, etc.
+
+display_version = __version__ + _sub_version
 
 def _get_description():
     """Get description from git or file system.
@@ -75,55 +77,6 @@ def _parse_description(description):
     else:
         return m.groups()
 
-def _get_parsed():
-    return _parse_description(_get_description())
-
-# def get_display_version(_description=_get_description()):
-#     tag, additional, commit = _parse_description(_description)
-#     version = get_normalized_version()
-#     return '%s (rev. %s)' % (version, commit)
-
-# def get_normalized_version(_description=_get_description()):
-#     """Return the normalized version or None.
-
-#     Normalized versions are defined by PEP 386, and are what should go
-#     in the module's __version__ variable.
-
-#     """
-#     if _description is None:
-#         return None
-#     tag, additional, commit = _parse_description(_description)
-#     if additional == '0':
-#         s = tag
-#     else:
-#         s = tag + '.post' + additional
-#     return verlib.suggest_normalized_version(s)
-
-# def get_bundle_version(_description=_get_description()):
-#     """Get the MacOS X bundle version.
-
-#     The MacOS X bundle version is always three integers separated by
-#     dots. If our version does not match that (e.g., because we have
-#     additional commits past a tag), return "0.0.0".
-
-#     """
-#     if _description is None:
-#         return '0.0.0'
-#     tag, additional, commit = _parse_description(_description)
-#     if additional == '0' and re.match('\d+\.\d+\.\d+$', tag):
-#         return tag
-#     else:
-#         return '0.0.0'
-
-def get_display_version(_description=_get_description()):
-    return _semantic_version
-
-def get_normalized_version(_description=_get_description()):
-    return _semantic_version
-
-def get_bundle_version(_description=_get_description()):
-    return _semantic_version
-
 def get_commit(_description=_get_description()):
     tag, additional, commit = _parse_description(_description)
     return commit
@@ -137,7 +90,5 @@ if __name__ == '__main__':
         print("Usage: %s [DESCRIPTION]" % os.path.basename(sys.argv[0]), file=sys.stderr)
         sys.exit(64) # EX_USAGE
     print('Description:', description)
-    print('Normalized version:', get_normalized_version(description))
-    print('Bundle version:', get_bundle_version(description))
+    print('Version:', __version__)
     print('Commit:', get_commit(description))
-    print('Display version:', get_display_version(description))

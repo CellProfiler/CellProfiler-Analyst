@@ -2,12 +2,8 @@
 #
 #   Main file for CellProfiler-Analyst
 #
-#   Run python setup.py py2app to build a dmg
-#
 # =============================================================================
 
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 
 
 import sys
@@ -17,7 +13,7 @@ import os.path
 import logging
 import javabridge
 import bioformats
-from cpa import __version__
+from cpa.util.version import display_version
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
 from cpa.classifier import Classifier
@@ -44,32 +40,32 @@ class FuncLog(logging.Handler):
         self.update(self.format(record))
 
 
-def setup_frozen_logging():
-    # py2exe has a version of this in boot_common.py, but it causes an
-    # error window to appear if any messages are actually written.
-    class Stderr(object):
-        softspace = 0 # python uses this for printing
-        _file = None
-        _error = None
-        def write(self, text, fname=sys.executable + '.log'):
-            if self._file is None and self._error is None:
-                try:
-                    self._file = open(fname, 'w')
-                except Exception as details:
-                    self._error = details
-            if self._file is not None:
-                self._file.write(text)
-                self._file.flush()
-        def flush(self):
-            if self._file is not None:
-                self._file.flush()
-    # send everything to logfile
-    sys.stderr = Stderr()
-    sys.stdout = sys.stderr
-
-if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
-    # on windows, log to a file (Mac goes to console)
-    setup_frozen_logging()
+# def setup_frozen_logging():
+#     # py2exe has a version of this in boot_common.py, but it causes an
+#     # error window to appear if any messages are actually written.
+#     class Stderr(object):
+#         softspace = 0 # python uses this for printing
+#         _file = None
+#         _error = None
+#         def write(self, text, fname=sys.executable + '.log'):
+#             if self._file is None and self._error is None:
+#                 try:
+#                     self._file = open(fname, 'w')
+#                 except Exception as details:
+#                     self._error = details
+#             if self._file is not None:
+#                 self._file.write(text)
+#                 self._file.flush()
+#         def flush(self):
+#             if self._file is not None:
+#                 self._file.flush()
+#     # send everything to logfile
+#     sys.stderr = Stderr()
+#     sys.stdout = sys.stderr
+#
+# if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
+#     # on windows, log to a file (Mac goes to console)
+#     setup_frozen_logging()
 logging.basicConfig(level=logging.DEBUG)
 
 # Handles args to MacOS "Apps"
@@ -117,11 +113,9 @@ class MainGUI(wx.Frame):
     '''
     def __init__(self, properties, parent, id=-1, log_data="", **kwargs):
 
-        import cpa.cpaprefs
         from cpa.icons import get_icon, get_cpa_icon
 
-        #wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.1.0 (r%s)'%(__version__), **kwargs)
-        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst %s'%(__version__), **kwargs)
+        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst %s'%(display_version), **kwargs)
         self.properties = properties
         self.SetIcon(get_cpa_icon())
         self.tbicon = None
@@ -511,7 +505,7 @@ class CPAnalyst(wx.App):
         f = open(filepath, 'w')
         f.write('CellProfiler Analyst workflow\n')
         f.write('version: 1\n')
-        f.write('CPA version: %s\n'%(__version__))
+        f.write('CPA version: %s\n'%(display_version))
         f.write('\n')
         for plot in self.get_plots():
             f.write('%s\n'%(plot.tool_name))

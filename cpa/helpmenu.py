@@ -2,6 +2,7 @@ import wx
 import cpa
 import cpa.icons
 from cpa.updatechecker import check_update
+from cpa.util.version import display_version
 
 
 def _on_manual(self):
@@ -19,8 +20,7 @@ def _on_about(self):
     from wx.adv import AboutBox, AboutDialogInfo
     info = AboutDialogInfo()
     info.SetIcon(cpa.icons.get_cpa_icon())
-    #info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(cpa.__version__) or 'unknown revision'))
-    info.SetName('CellProfiler Analyst (%s)'%(str(cpa.__version__) or 'unknown revision'))
+    info.SetName('CellProfiler Analyst (%s)'%(str(display_version) or 'unknown revision'))
     info.SetDescription(message)
     info.AddDeveloper('David Dao')
     info.AddDeveloper('Adam Fraser')

@@ -1,7 +1,6 @@
+from cpa.util.version import __version__
 
-from .util.version import get_normalized_version
-__version__ = get_normalized_version()
-from . import properties
+from . import properties, util
 from . import dbconnect
 
 p = properties.Properties()
