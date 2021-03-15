@@ -1601,10 +1601,12 @@ class Classifier(wx.Frame):
         classHits = self.ScoreImage(imKey)
         # Get object coordinates in image and display
         classCoords = {}
+        trainingCoords = {}
         training_obKeys = self.trainingSet.get_object_keys()
-        for className, obKeys in list(classHits.items()):
-            classCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
+        for className, obKeys in classHits.items():
+            trainingCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
             classCoords[className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
+        classCoords.update(trainingCoords)
         # Show the image
         imViewer = imagetools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale,

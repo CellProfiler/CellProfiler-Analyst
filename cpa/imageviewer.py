@@ -153,7 +153,7 @@ class ImageViewerPanel(ImagePanel):
         self.class_nums = [str(i+1) for i,_ in enumerate(classes)]
 
         self.classVisible = {}
-        for className in list(classes.keys()):
+        for className in classes.keys():
             self.classVisible[className] = True 
         self.Refresh()
 

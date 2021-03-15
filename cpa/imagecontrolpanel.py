@@ -101,6 +101,7 @@ class ImageControlPanel(wx.Panel):
     def SetClassPoints(self, classCoords):
         self.sizer4.Clear()
         vals = np.arange(float(len(classCoords))) / len(classCoords)
+        label_lookup = {}
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
             colors = [np.array(cm.jet(val)) * 255 for val in vals]
@@ -111,12 +112,12 @@ class ImageControlPanel(wx.Panel):
                 i+=1
             self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Classes:'))
             i=1
-            classCoords_ordered = [name for name in classCoords if name[:8] != 'training']
-            classCoords_ordered.extend([name for name in classCoords if name[:8] == 'training'])
-            for name in classCoords_ordered:
+            for name in classCoords:
                 if i == len(classCoords)/2 + 1:
                     self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Training:'))
-                checkBox = wx.CheckBox(self.Parent, wx.NewId(), '%d) %s'%(i,name))
+                label = f"{i} - {name} ({len(classCoords[name])})"
+                checkBox = wx.CheckBox(self.Parent, wx.NewId(), label)
+                label_lookup[label] = name
       
                 #checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
                 checkBox.SetBackgroundColour(colors_dict[name])
@@ -126,7 +127,7 @@ class ImageControlPanel(wx.Panel):
                 def OnTogglePhenotype(evt):
                     className = evt.EventObject.Label
                     for listener in self.listeners:
-                        listener.ToggleClass(className[3:], evt.IsChecked())
+                        listener.ToggleClass(label_lookup[className], evt.IsChecked())
 
                 checkBox.Bind(wx.EVT_CHECKBOX, OnTogglePhenotype)
                 i+=1
