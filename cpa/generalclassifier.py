@@ -434,6 +434,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             norm_conf.append(tmp_arr)
 
         fig = plt.figure()
+        fig.canvas.set_window_title(f"{fig.canvas.get_window_title()} - {self.name}")
         plt.clf()
         ax = fig.add_subplot(111)
         ax.set_aspect(1)
