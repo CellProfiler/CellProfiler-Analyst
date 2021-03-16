@@ -704,13 +704,13 @@ class Properties(metaclass=Singleton):
             self.link_tables_table = '_link_tables_%s_%s_'%(self.image_table, (self.object_table or ''))
             if len(self.link_tables_table) >= 64:
                 from hashlib import md5
-                self.link_tables_table = '_link_tables_%s'%(md5(self.image_table+(self.object_table or '')).hexdigest())
+                self.link_tables_table = '_link_tables_%s'%(md5((self.image_table+(self.object_table or '')).encode()).hexdigest())
             
         if not self.field_defined('link_columns_table'):
             self.link_columns_table = '_link_columns_%s_%s_'%(self.image_table, (self.object_table or ''))
             if len(self.link_columns_table) >= 64:
                 from hashlib import md5
-                self.link_columns_table = '_link_columns_%s'%(md5(self.image_table+(self.object_table or '')).hexdigest())
+                self.link_columns_table = '_link_columns_%s'%(md5((self.image_table+(self.object_table or '')).encode()).hexdigest())
             
         if not self.field_defined('gates'):
             from .utils import ObservableDict
