@@ -58,7 +58,7 @@ setuptools.setup(
         "Topic :: Scientific/Engineering :: Image Recognition",
         "Topic :: Scientific/Engineering",
     ],
-    entry_points={"console_scripts": ["cellprofiler-analyst=CellProfiler-Analyst.__main__:main"]},
+    # entry_points={"console_scripts": ["cellprofiler-analyst=CellProfiler-Analyst.__main__:main"]},
     extras_require={
         "build": ["pyinstaller"],
     },
