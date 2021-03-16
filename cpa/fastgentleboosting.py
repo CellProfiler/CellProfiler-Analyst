@@ -16,6 +16,7 @@ class FastGentleBoosting(object):
         self.model = None
         self.classBins = []
         self.classifier = classifier
+        self.scaler = None
         self.features = []
 
     # Set features
@@ -123,6 +124,9 @@ class FastGentleBoosting(object):
 
     def IsTrained(self):
         return self.model is not None
+
+    def toggle_scaler(self, status):
+        logging.info("Scaling is not supported by FastGentleBoosting, will have no effect")
 
     def LoadModel(self, model_filename):
         
