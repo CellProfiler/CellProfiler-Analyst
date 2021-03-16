@@ -59,7 +59,7 @@ jobs:
           pip install --editable .
       - if: ${{ matrix.os == 'windows-2019' }}
         run: |
-          pyinstaller distribution/windows/cellprofileranalyst.spec
+          pyinstaller distribution/windows/CellProfiler-Analyst.spec
           iscc /dMyAppVersion="3.0.0" "distribution/windows/CellProfiler-Analyst.iss"
 #      - if: ${{ matrix.os == 'macos-10.15' }}
 #        uses: actions/upload-artifact@v1
