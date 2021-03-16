@@ -32,8 +32,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\CellProfiler-Analyst.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\CellProfiler-Analyst\CellProfiler-Analyst.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\CellProfiler-Analyst\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "C:\hostedtoolcache\windows\jdk\14.0.1\x64\*"; DestDir: "{app}\java"; Flags: recursesubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
