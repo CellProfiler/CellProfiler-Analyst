@@ -1087,6 +1087,7 @@ class Classifier(wx.Frame):
                         return
 
             total_attempts = attempts = 0
+            time_start = time()
             # Now check which objects fall within the classification
             while len(obKeys) < nObjects:
                 self.PostMessage('Gathering random %s.' % (p.object_name[1]))
@@ -1119,7 +1120,7 @@ class Classifier(wx.Frame):
                                                           ', '.join(
                                                               ['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
 
-                self.PostMessage('Classifying %s.' % (p.object_name[1]))
+                self.PostMessage(f'Classifying {len(obKeysToTry)} {p.object_name[1]}.')
 
                 if obClassName == 'uncertain':
                     obKeys += self.algorithm.FilterObjectsFromClassN(obClass - 1, obKeysToTry, uncertain=True)
@@ -1138,6 +1139,16 @@ class Classifier(wx.Frame):
                     if response == wx.ID_NO:
                         break
                     attempts = 0
+                elif time() - time_start > 30:
+                    dlg = wx.MessageDialog(self, 'Found %d %s after %d seconds. Continue searching?'
+                                           % (len(obKeys), p.object_name[1], time() - time_start),
+                                           'Continue searching?', wx.YES_NO | wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    dlg.Destroy()
+                    if response == wx.ID_NO:
+                        break
+                    time_start = time()
+
             statusMsg += loopMsg
 
         self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last',display_whole_image=p.classification_type == 'image')
