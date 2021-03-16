@@ -21,6 +21,8 @@ datas += [
 
 hiddenimports = []
 
+hiddenimports += PyInstaller.utils.hooks.collect_submodules('sklearn.utils')
+
 a = Analysis(['../../CellProfiler-Analyst.py'],
              pathex=['CellProfiler-Analyst'],
              binaries=binaries,
