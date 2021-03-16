@@ -49,6 +49,8 @@ class ImageTile(ImagePanel):
         self.leftPressed = False
         self.showCenter  = False
         self.popupMenu   = None
+        self.x = None
+        self.y = None
 
         self.cache = CellCache()
 
@@ -195,6 +197,9 @@ class ImageTile(ImagePanel):
     def OnLeftDown(self, evt):
         self.bin.SetFocusIgnoringChildren()
         self.leftPressed = True
+        pointer = wx.GetMouseState()
+        self.x = pointer.GetX()
+        self.y = pointer.GetY()
         if not evt.ShiftDown() and not self.selected:
             self.bin.DeselectAll()
             self.Select()
@@ -203,6 +208,8 @@ class ImageTile(ImagePanel):
 
     def OnLeftUp(self, evt):
         inMotion = False
+        self.x = None
+        self.y = None
         if self.bin.selectbox:
             # Handle resetting selection in the sortbin
             self.bin.selectbox = None
@@ -228,15 +235,15 @@ class ImageTile(ImagePanel):
             evt.Skip()
             return
 
-        if not evt.LeftIsDown() or not self.leftPressed:
+        if not evt.LeftIsDown() or not self.leftPressed or self.x is None:
             return
+        # Only start a drag operation if the item is moved more than a few pixels.
+        pointer = wx.GetMouseState()
+        if abs(pointer.GetX() - self.x) + abs(pointer.GetY() - self.y) < 10:
+            return
+
         self.bin.SetFocusIgnoringChildren()
-        # Removed for Linux compatibility
-        #cursorImg = self.bitmap.ConvertToImage()
-        #cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.bitmap.Size[0])/2)
-        #cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.bitmap.Size[1])/2)
-        #cursor = wx.CursorFromImage(cursorImg)
-        
+
         # wx crashes unless the data object is assigned to a variable.
         data_object = wx.CustomDataObject("application.cpa.ObjectKey")
         data_object.SetData(pickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
