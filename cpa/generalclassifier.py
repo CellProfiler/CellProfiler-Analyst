@@ -52,10 +52,10 @@ if sys.platform == 'win32':
 ##########
 
 class GeneralClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None):
+    def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None, scaler=False):
         self.classBins = []
         self.classifier = eval(classifier)
-        if "neural" in classifier:
+        if scaler:
             self.scaler = StandardScaler()
         else:
             self.scaler = None
@@ -95,6 +95,14 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         logging.info(classificationReport)
         self.plot_classification_report(classificationReport)
 
+    def toggle_scaler(self, enabled):
+        if enabled:
+            if self.scaler is None:
+                # ClearModel will create a scaler for us, no need to do this twice
+                self.scaler = True
+        else:
+            self.scaler = None
+        self.ClearModel()
 
     def ClassificationReport(self, true_labels, predicted_labels, confusion_matrix=False):
 
@@ -178,6 +186,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def PredictProba(self, test_values):
         try:
             if "predict_proba" in dir(self.classifier):
+                if self.scaler is not None:
+                    test_values = self.scaler.transform(test_values)
                 return self.classifier.predict_proba(test_values)
         except:
             logging.info("Selected algorithm doesn't provide probabilities")

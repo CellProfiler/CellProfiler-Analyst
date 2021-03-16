@@ -305,7 +305,7 @@ class Classifier(wx.Frame):
         LDA = GeneralClassifier("discriminant_analysis.LinearDiscriminantAnalysis()", self)
         KNeighborsClassifier = GeneralClassifier("neighbors.KNeighborsClassifier()", self)
         FastGentleBoostingClassifier = FastGentleBoosting(self)
-        NeuralNetworkClassifier = GeneralClassifier("neural_network.MLPClassifier(hidden_layer_sizes=(12,12), solver='lbfgs', max_iter=500)", self)
+        NeuralNetworkClassifier = GeneralClassifier("neural_network.MLPClassifier(hidden_layer_sizes=(12,12), solver='lbfgs', max_iter=500)", self, scaler=True)
 
         # JK - Start Add
         # Define the Random Forest classification algorithm to be default and set the default
@@ -441,7 +441,7 @@ class Classifier(wx.Frame):
         else:
             self.nRulesTxt.Show()
             self.nNeuronsTxt.Hide()
-
+        self.scalerMenuItem.Check(self.algorithm.scaler is not None)
         # Update the GUI complexity text and classifier description
         # self.panelTxt2.SetLabel(self.algorithm.get_params())
         self.panelTxt2.Parent.Layout()
@@ -457,6 +457,7 @@ class Classifier(wx.Frame):
         self.UpdateClassChoices()
 
         # Disable scoring buttons
+        self.evaluationBtn.Disable()
         self.scoreAllBtn.Disable()
         self.scoreImageBtn.Disable()
         # self.openDimensReduxBtn.Disable()
@@ -630,6 +631,9 @@ class Classifier(wx.Frame):
         paramsEditMenuItem = advancedMenu.Append(-1, item='Edit Parameters...', helpString='Lets you edit the hyperparameters')
         featureSelectMenuItem = advancedMenu.Append(-1, item='Check Features', helpString='Check the variance of your Training Data')
         saveMenuItem = advancedMenu.Append(-1, item='Save Thumbnails as PNG', helpString='Save TrainingSet thumbnails as PNG')
+        self.scalerMenuItem = advancedMenu.AppendCheckItem(-1, item='Use Scaler',
+                                                             help='Perform scaling normalization on training data')
+        self.scalerMenuItem.Check(False)
         sampleReplacementItem = advancedMenu.AppendCheckItem(-1, item='Sample with replacement',
                                            help='Allow duplicates when fetching objects')
         sampleReplacementItem.Check(False)
@@ -648,6 +652,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnFeatureSelect, featureSelectMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnToggleScaling, self.scalerMenuItem)
         self.Bind(wx.EVT_MENU, self.OnToggleReplacement, sampleReplacementItem)
 
         # Bind events for algorithms
@@ -892,6 +897,7 @@ class Classifier(wx.Frame):
         if not self.IsTrained():
             self.obClassChoice.SetItems(['random', 'sequential'])
             self.obClassChoice.SetSelection(0)
+            self.evaluationBtn.Disable()
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
             # self.openDimensReduxBtn.Disable()
@@ -917,8 +923,6 @@ class Classifier(wx.Frame):
         empty
         '''
         self.trainClassifierBtn.Enable()
-        if hasattr(self, 'evaluationBtn'):
-            self.evaluationBtn.Enable()
         if len(self.classBins) <= 1:
             self.trainClassifierBtn.Disable()
             if hasattr(self, 'evaluationBtn'):
@@ -948,6 +952,10 @@ class Classifier(wx.Frame):
 
                 for tile in bin.tiles:
                     imagetools.SaveBitmap(tile.bitmap, directory + '/training_set/' + str(label) + '/' + str(tile.obKey) + '.png')
+
+    def OnToggleScaling(self, evt):
+        self.algorithm.toggle_scaler(evt.IsChecked())
+        self.UpdateClassChoices()
 
     def OnToggleReplacement(self, evt):
         if evt.IsChecked():
@@ -1208,6 +1216,7 @@ class Classifier(wx.Frame):
                 # for label in self.algorithm.bin_labels:
                 for bin in self.classBins:
                     bin.trained = True
+                self.evaluationBtn.Enable()
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
                 self.PostMessage('Classifier model succesfully loaded')
@@ -1221,6 +1230,7 @@ class Classifier(wx.Frame):
                 logging.error("Algorithm: %s doesn't exist", load_name)
 
         except:
+            self.evaluationBtn.Disable()
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
             # self.openDimensReduxBtn.Disable()
@@ -1586,6 +1596,7 @@ class Classifier(wx.Frame):
                 dlg.Destroy()
 
                 self.rules_text.SetValue(self.algorithm.ShowModel())
+                self.evaluationBtn.Enable()
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
 
@@ -2120,6 +2131,7 @@ class Classifier(wx.Frame):
                     return
                 self.keysAndCounts = None
                 self.rules_text.SetValue(self.algorithm.ShowModel())
+                self.evaluationBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:
@@ -2168,6 +2180,7 @@ class Classifier(wx.Frame):
                     return
                 self.keysAndCounts = None
                 self.rules_text.SetValue(self.algorithm.ShowModel())
+                self.evaluationBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:
@@ -2246,7 +2259,7 @@ class Classifier(wx.Frame):
         self.Destroy()
 
     def IsTrained(self):
-        return self.algorithm.IsTrained() is not None
+        return self.algorithm.IsTrained()
 
     def Destroy(self):
         ''' Kill off all threads before combusting. '''
@@ -2390,9 +2403,10 @@ class Classifier(wx.Frame):
         plt.legend(loc="lower right")
         plt.show()
 
-    def PlotProbs(self,values):
+    def PlotProbs(self,values, key="object"):
         labels = self.trainingSet.labels
         fig = plt.figure()
+        fig.canvas.set_window_title(f"{fig.canvas.get_window_title()} - {key}")
         ax = fig.add_subplot(111)
 
         tmp_df = pd.DataFrame(labels,columns=["Class"])

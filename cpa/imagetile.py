@@ -161,7 +161,7 @@ class ImageTile(ImagePanel):
                     y_score = clf.PredictProba(values)        
 
                     y_score = y_score[0] # Flatten array
-                    self.classifier.PlotProbs(y_score)
+                    self.classifier.PlotProbs(y_score, key=k)
             else:
                 dlg = wx.MessageDialog(self,'Please train your classifier first', 'No probability scores available', style=wx.OK)
                 dlg.ShowModal()
