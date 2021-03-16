@@ -134,5 +134,6 @@ def do_normalization(data, aggregate_type_or_const):
         res = data / normalization_value
     except:
         logging.error("Division by zero, replace value with 0!")
+        res = 0
 
     return res

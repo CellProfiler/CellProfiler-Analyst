@@ -39,7 +39,7 @@ class NormalizationStepPanel(wx.Panel):
             GROUP_CHOICES.remove(G_QUADRANT)
             GROUP_CHOICES.remove(G_WELL_NEIGHBORS)
 
-        if not p.negative_control:
+        if not p.negative_control and M_NEGCTRL in AGG_CHOICES:
             AGG_CHOICES.remove(M_NEGCTRL)
             
         self.window_group = wx.Choice(self, -1, choices=GROUP_CHOICES)
@@ -164,7 +164,7 @@ class NormalizationUI(wx.Frame, CPATool):
         kwargs['size'] = kwargs.get('size', (500,500))
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
         CPATool.__init__(self)
-        wx.HelpProvider_Set(wx.SimpleHelpProvider())
+        wx.HelpProvider.Set(wx.SimpleHelpProvider())
 
         self.n_steps = 1
 
@@ -305,7 +305,7 @@ class NormalizationUI(wx.Frame, CPATool):
     def validate(self):
         is_valid = True
 
-        if not self.col_choices.GetChecked():
+        if not self.col_choices.GetCheckedItems():
             is_valid = False
             self.col_choices_desc.SetForegroundColour((255,0,0))
         else:
@@ -337,7 +337,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.norm_steps += [NormalizationStepPanel(self.sw)]
         self.boxes += [sz]
         sz.Add(self.norm_steps[-1], 0, wx.EXPAND)
-        self.sw.Sizer.InsertSizer(len(self.norm_steps)-1, sz, 0, wx.EXPAND|wx.TOP, 15)
+        self.sw.Sizer.Insert(len(self.norm_steps)-1, sz, 0, wx.EXPAND|wx.TOP, 15)
         self.sw.FitInside()
         self.Layout()
         self.update_steps()
@@ -547,8 +547,7 @@ class NormalizationUI(wx.Frame, CPATool):
             output_factors[:,colnum] = col.astype(float) / np.array(norm_data,dtype=float)
 
         dlg.Destroy()
-        return # Abort here for coding
-                
+
         norm_table_cols = []
         # Write new table
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
