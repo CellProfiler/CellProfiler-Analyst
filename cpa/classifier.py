@@ -1553,7 +1553,11 @@ class Classifier(wx.Frame):
         if self.algorithm == self.algorithms['NeuralNetwork']:
             nNeurons = self.nNeuronsTxt.GetValue()
             splitneurons = nNeurons.split(',')
-            if all([level.isdigit() for level in splitneurons]) and all([int(level) > 0 for level in splitneurons]):
+            if nNeurons == "":
+                # No layers is fine
+                pass
+            elif all([level.isdigit() for level in splitneurons]) and all([int(level) > 0 for level in splitneurons]):
+                # All layers must have at least 1 neuron
                 pass
             else:
                 logging.error("Unable to parse neuron parameters")
@@ -2071,11 +2075,15 @@ class Classifier(wx.Frame):
     def ValidateNumberOfNeurons(self, evt=None):
         if self.algorithm == self.algorithms['NeuralNetwork']:
             nNeurons = self.nNeuronsTxt.GetValue()
+            if nNeurons == "":
+                self.algorithms['NeuralNetwork']  = GeneralClassifier(f"neural_network.MLPClassifier(hidden_layer_sizes=(), solver='lbfgs', max_iter=500)", self, scaler=self.algorithm.scaler is not None)
+                self.algorithm = self.algorithms['NeuralNetwork']
+                return True
             splitneurons = nNeurons.split(',')
             if all([level.isdigit() for level in splitneurons]) and all([int(level) > 0 for level in splitneurons]):
                 self.nNeuronsTxt.SetForegroundColour('#000001')
                 # Refresh the classifier
-                self.algorithms['NeuralNetwork']  = GeneralClassifier(f"neural_network.MLPClassifier(hidden_layer_sizes=({nNeurons}), solver='lbfgs', max_iter=500)", self)
+                self.algorithms['NeuralNetwork']  = GeneralClassifier(f"neural_network.MLPClassifier(hidden_layer_sizes=({nNeurons}), solver='lbfgs', max_iter=500)", self, scaler=self.algorithm.scaler is not None)
                 self.algorithm = self.algorithms['NeuralNetwork']
                 return True
             else:
