@@ -1212,6 +1212,7 @@ class Classifier(wx.Frame):
                 self.classifierMenu.Check(itemId, True)
                 self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
                 self.algorithm.LoadModel(filename)
+                self.scalerMenuItem.Check(self.algorithm.scaler is not None)
 
                 # for label in self.algorithm.bin_labels:
                 for bin in self.classBins:
