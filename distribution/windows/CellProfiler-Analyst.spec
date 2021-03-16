@@ -47,7 +47,7 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
 		  icon='../../cpa/icons/cpa.ico',
-          console=True )
+          console=False )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
