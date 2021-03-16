@@ -130,8 +130,7 @@ class FastGentleBoosting(object):
 
     def LoadModel(self, model_filename):
         
-        # For loading scikit learn library
-        from sklearn.externals import joblib
+        import joblib
         try:
             self.model, self.bin_labels, self.name = joblib.load(model_filename)
         except:
@@ -169,7 +168,7 @@ class FastGentleBoosting(object):
     def SaveModel(self, model_filename, bin_labels):
 
         # For loading scikit learn library
-        from sklearn.externals import joblib
+        import joblib
         joblib.dump((self.model, bin_labels, self.name), model_filename, compress=1)
 
     def ShowModel(self):
