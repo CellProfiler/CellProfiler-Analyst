@@ -21,8 +21,8 @@ def bin_centers(x):
 def heatmap(datax, datay, resolutionx=200, resolutiony=200, logscale=False, 
             extent=False):
     """
-    >>> heat = heatmap(DNAvals, pH3vals-DNAvals, 200, 200, logscale=True)
-    >>> pylab.imshow(heat[0], origin='lower', extent=heat[1])
+    > heat = heatmap(DNAvals, pH3vals-DNAvals, 200, 200, logscale=True)
+    > pylab.imshow(heat[0], origin='lower', extent=heat[1])
     """
     datax = np.array(datax)
     datay = np.array(datay)
@@ -67,7 +67,7 @@ def unpickle(file_or_filename, nobjects=None, new=True):
     shape tuple and then a (raw) numpy array of that type are assumed to
     immediately follow the dtype objects.
     """
-    if isinstance(file_or_filename, file):
+    if hasattr(file_or_filename, 'read'):
         f = file_or_filename
     elif file_or_filename[-3:] == ".gz":
         import gzip
@@ -97,7 +97,7 @@ def unpickle(file_or_filename, nobjects=None, new=True):
                 raise
         if nobjects is not None and len(results) == nobjects:
             break
-    if not isinstance(file_or_filename, file):
+    if not hasattr(file_or_filename, 'read'):
         f.close()
     return tuple(results)
 
@@ -112,7 +112,7 @@ def pickle(file_or_filename, *objects):
     When encountering a numpy.ndarray in OBJECTS, first pickle the
     dtype, then the shape, then write the raw array data.
     """
-    if isinstance(file_or_filename, file):
+    if hasattr(file_or_filename, 'read'):
         f = file_or_filename
     elif file_or_filename[-3:] == ".gz":
         import gzip
@@ -126,7 +126,7 @@ def pickle(file_or_filename, *objects):
             o.tofile(f)
         else:
             pickle.dump(o, f)
-    if not isinstance(file_or_filename, file):
+    if not hasattr(file_or_filename, 'read'):
         f.close()
 
 

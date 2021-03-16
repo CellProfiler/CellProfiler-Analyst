@@ -7,15 +7,15 @@ $ python -m cpa.profiling.cache CDP2.properties /imaging/analysis/2008_12_04_Ima
 
 Example usage as module:
 
->>> import cpa
->>> from cpa.profiling.cache import Cache
->>> from cpa.profiling.normalization import RobustLinearNormalization
->>> cpa.properties.LoadFile('CDP2.properties')
->>> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
->>> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
->>> imKeys = cc_mapping.values()[0]
->>> unnormalized, unnormalized_colnames = cache.load(imKeys)
->>> normalized, normalized_colnames = cache.load(imKeys, normalization=RobustLinearNormalization)
+> import cpa
+> from cpa.profiling.cache import Cache
+> from cpa.profiling.normalization import RobustLinearNormalization
+> cpa.properties.LoadFile('CDP2.properties')
+> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
+> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
+> imKeys = cc_mapping.values()[0]
+> unnormalized, unnormalized_colnames = cache.load(imKeys)
+> normalized, normalized_colnames = cache.load(imKeys, normalization=RobustLinearNormalization)
 
 '''
 

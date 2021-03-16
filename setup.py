@@ -74,6 +74,7 @@ setuptools.setup(
         "numpy>=1.20.1",
         "pandas>=1.2.2",
         "Pillow>=8.1.0",
+        "progressbar>=2.5",
         "python-bioformats>=4.0.4",
         "python-javabridge>=4.0.3",
         "pytz>=2021.1",
