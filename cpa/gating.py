@@ -133,6 +133,7 @@ class GatingHelper(object):
             rect = Rectangle((x_min, y_min), x_range, y_range, animated=True)
             rect.set_fill(False)
             rect.set_linestyle('dashed')
+            rect.set_edgecolor('dimgrey')
             self.patch = self.subplot.add_patch(rect)
         else:
             self.patch.set_bounds(x_min, y_min, x_range, y_range)
