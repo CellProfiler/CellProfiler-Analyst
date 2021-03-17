@@ -50,7 +50,7 @@ jobs:
           chmod +x add-osx-certificate.sh && ./distribution/macos/add-osx-certificate.sh
           chmod +x osx-codesign.sh && ./distribution/macos/osx-codesign.sh
           ditto -ck --keepParent --rsrc --sequesterRsrc ./dist/CellProfiler-Analyst.app ./dist/CellProfiler-Analyst-macOS-3.0.0.zip
-        - env:
+      - env:
           JDK_HOME: C:\hostedtoolcache\windows\jdk\14.0.1\x64
         if: ${{ matrix.os == 'windows-2019' }}
         run: |
