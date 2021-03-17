@@ -59,9 +59,6 @@ a = Analysis(['../../CellProfiler-Analyst.py'],
              excludes=excludes,
              hiddenimports=hiddenimports,
              hookspath=[],
-             pathex=[
-                'CellProfiler-Analyst'
-                    ],
              runtime_hooks=[],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
