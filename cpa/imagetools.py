@@ -310,7 +310,8 @@ def log_transform(im, interval=None):
 def auto_contrast(im, interval=None):
     '''Takes a single image in the form of a np array and returns it
     scaled to the interval [0,1] '''
-    im = im.copy()
+    # Seems to cause problems in Python 3.
+    # im = im.copy()
     (min, max) = interval or (im.min(), im.max())
     # Check that the image isn't binary
     if np.any((im>min)&(im<max)):
