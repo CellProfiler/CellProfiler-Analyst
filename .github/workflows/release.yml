@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: CellProfiler-Analyst-macOS-3.0.0.zip
-          path: ./distribution/macos/dist/CellProfiler-macOS-3.0.0.zip
+          path: ./distribution/macos/dist/CellProfiler-Analyst-macOS-3.0.0.zip
       - if: ${{ matrix.os == 'windows-2019' }}
         uses: actions/upload-artifact@v2
         with:
