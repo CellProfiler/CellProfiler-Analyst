@@ -54,8 +54,10 @@ class ImageTile(ImagePanel):
 
         self.cache = CellCache()
 
-        self.MapChannels(chMap)
-        
+        # We just made bitmaps, shouldn't need to regenerate them already.
+        # self.MapChannels(chMap)
+        self.chMap = chMap
+
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
