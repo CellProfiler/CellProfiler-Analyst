@@ -1535,9 +1535,6 @@ class DBConnect(metaclass=Singleton):
         object_table = p.object_table
         object_table = object_table.split('_checked')[0]
 
-        if p.classification_type == 'image':
-            object_table = object_table.split('_objecttable')[0]
-
         all_cols = [str(x) for x in self.GetColumnNames(object_table)]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
@@ -1549,6 +1546,16 @@ class DBConnect(metaclass=Singleton):
             self.execute(query)
             query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
         self.execute(query)
+
+        # Check whether we nuked the table.
+        try:
+            query = f"SELECT COUNT(*) FROM {p.object_table}"
+            res = self.execute(query)
+            if res[0][0] == 0:
+                logging.error("Table checking removed all rows, you may have an empty column in your database. "
+                              "Disable check_tables in your properties file if this is expected.")
+        except:
+            logging.error("Unable to validate checked object table")
 
     def CreateObjectImageTable(self):
         # Create object table for image classification
@@ -1578,22 +1585,25 @@ class DBConnect(metaclass=Singleton):
             all_colTypes.remove(list_of_colTypes[pid_index])
             all_cols = [p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc] + all_cols
             list_of_colTypes = [list_of_colTypes[pid_index], list_of_colTypes[pid_index], 'float', 'float'] + all_colTypes
-            query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
+            object_table = p.object_table
+            if object_table.endswith('_checked'):
+                object_table = object_table[:-8]
+            query = 'DROP TABLE IF EXISTS %s'%(object_table)
             self.execute(query)
-            query = 'CREATE TABLE %s (%s)'%(p.object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
+            query = 'CREATE TABLE %s (%s)'%(object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
             self.execute(query)
-            query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
+            query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
             self.execute(query)
 
             #Get info on image width and height (assuming they are fields in the image table) to get image center
             width, height = self.GetImageWidthHeight(list_of_cols)
 
-            query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(p.object_table, p.object_id,
+            query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(object_table, p.object_id,
                                                               p.cell_x_loc, width/2,
                                                               p.cell_y_loc, height/2)
             self.execute(query)
             self.Commit()
-        logging.info('%s table added to database'%p.object_table)
+        logging.info('%s table added to database'%object_table)
 
 
     def table_exists(self, name):
