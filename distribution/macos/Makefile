@@ -17,7 +17,7 @@ CellProfiler-Analyst:
 
 .PHONY: dependencies
 dependencies: CellProfiler-Analyst
-	pip3 install --editable . --upgrade
+	pip3 install --editable CellProfiler-Analyst --upgrade
 
 dist/CellProfiler-Analyst.app: CellProfiler-Analyst dependencies Info.plist
 	pyinstaller --noconfirm CellProfiler-Analyst.spec
