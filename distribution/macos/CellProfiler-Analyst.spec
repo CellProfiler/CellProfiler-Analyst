@@ -29,6 +29,7 @@ for subdir, dirs, files in os.walk(os.environ["JAVA_HOME"]):
 hiddenimports = []
 
 hiddenimports += PyInstaller.utils.hooks.collect_submodules('sklearn.utils')
+hiddenimports += ['cmath']
 
 excludes = []
 
@@ -89,7 +90,7 @@ exe = EXE(
     pyz,
     a.scripts,
     exclude_binaries=True,
-    name="cp",
+    name="cpa",
     debug=True,
     strip=False,
     upx=True,

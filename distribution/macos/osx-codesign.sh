@@ -7,7 +7,7 @@ find . -type f | xargs -I file codesign --timestamp -f -s "Apple Development: al
 cd ../MacOS
 find . -type f | xargs -I file sudo codesign --timestamp -f -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" file
 codesign --timestamp -f -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" _elementtree.cpython-38-darwin.so
-codesign --entitlements entitlements.plist --timestamp -o runtime -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" ./cp
+codesign --entitlements entitlements.plist --timestamp -o runtime -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" ./cpa
 cd ..
 codesign --timestamp -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" Info.plist
 
