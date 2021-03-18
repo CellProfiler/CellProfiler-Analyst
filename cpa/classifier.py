@@ -1203,6 +1203,16 @@ class Classifier(wx.Frame):
             # Get the name of the loaded file
             model, bin_labels, load_name, features = self.GetModelData(filename)
 
+            for bin in self.classBins:
+                if len(bin.GetObjectKeys()) > 0:
+                    dlg = wx.MessageDialog(self, 'Loading a model will clear existing training objects. Continue?',
+                                           'Load model?', wx.YES_NO | wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    dlg.Destroy()
+                    if response == wx.ID_NO:
+                        return
+                break
+
             if self.algorithm.name != load_name:
                 logging.info("Detected different setted classifier: " + self.algorithm.name + ", switching to " + load_name)
             if load_name in self.algorithms:
@@ -1213,7 +1223,9 @@ class Classifier(wx.Frame):
                 self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
                 self.algorithm.LoadModel(filename)
                 self.scalerMenuItem.Check(self.algorithm.scaler is not None)
-
+                self.RemoveAllSortClasses()
+                for label in bin_labels:
+                    self.AddSortClass(label)
                 # for label in self.algorithm.bin_labels:
                 for bin in self.classBins:
                     bin.trained = True
