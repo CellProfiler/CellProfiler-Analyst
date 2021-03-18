@@ -399,7 +399,11 @@ class CPAnalyst(wx.App):
     def Start(self):
         '''Initialize CPA
         '''
-
+        # Temp for debugging
+        if "JAVA_HOME" in os.environ:
+            print("Java directory is:", os.environ["JAVA_HOME"])
+        else:
+            print("JAVA_HOME not found", os.environ)
         '''List of tables created by the user during this session'''
         self.user_tables = []
         # splashscreen
