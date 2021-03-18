@@ -1217,9 +1217,9 @@ class Classifier(wx.Frame):
                 # for label in self.algorithm.bin_labels:
                 for bin in self.classBins:
                     bin.trained = True
-                self.evaluationBtn.Enable()
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
+                self.algorithm.trained = True
                 self.PostMessage('Classifier model succesfully loaded')
 
                 # Some User Information about the loaded Algorithm
