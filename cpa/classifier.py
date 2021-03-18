@@ -1232,7 +1232,7 @@ class Classifier(wx.Frame):
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
                 self.algorithm.trained = True
-                self.PostMessage('Classifier model succesfully loaded')
+                self.PostMessage('Classifier model successfully loaded')
 
                 # Some User Information about the loaded Algorithm
                 self.PostMessage('Loaded trained classifier: ' + self.algorithm.name + ' on classes:')
