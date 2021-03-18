@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>CellProfiler-Analyst</string>
 	<key>CFBundleExecutable</key>
-	<string>MacOS/cpa</string>
+	<string>MacOS/cpanalyst</string>
 	<key>CFBundleIconFile</key>
 	<string>cpa.icns</string>
 	<key>CFBundleIdentifier</key>

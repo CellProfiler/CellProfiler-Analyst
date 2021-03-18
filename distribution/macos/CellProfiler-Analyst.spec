@@ -90,7 +90,7 @@ exe = EXE(
     pyz,
     a.scripts,
     exclude_binaries=True,
-    name="cpa",
+    name="cpanalyst",
     debug=True,
     strip=False,
     upx=True,
