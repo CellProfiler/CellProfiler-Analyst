@@ -125,6 +125,9 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     blending - list, how to blend this channel with others 'add' or 'subtract'
                eg: ['add','add','add','subtract']
     '''
+    # The imageio tile loader is fast enough that it can replace temporary tile data before bitmap merging completes.
+    # So let's make a copy of the original image data stack while we work.
+    imgs = imgs.copy()
     # Before any resizing, record the genuine full intensity range of each image.
     limits = [(im.min(), im.max()) for im in imgs]
     if display_whole_image:
@@ -310,8 +313,6 @@ def log_transform(im, interval=None):
 def auto_contrast(im, interval=None):
     '''Takes a single image in the form of a np array and returns it
     scaled to the interval [0,1] '''
-    # Seems to cause problems in Python 3.
-    # im = im.copy()
     (min, max) = interval or (im.min(), im.max())
     # Check that the image isn't binary
     if np.any((im>min)&(im<max)):
