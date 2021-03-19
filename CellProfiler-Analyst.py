@@ -400,10 +400,11 @@ class CPAnalyst(wx.App):
         '''Initialize CPA
         '''
         # Temp for debugging
-        if "JAVA_HOME" in os.environ:
-            print("Java directory is:", os.environ["JAVA_HOME"])
-        else:
-            print("JAVA_HOME not found", os.environ)
+        print("Starting CPA")
+        if hasattr(sys, "frozen") and sys.platform == "darwin":
+            # Set java home manually
+            print("Made it here")
+            os.environ["CP_JAVA_HOME"] = os.path.join(sys.prefix, "Resources/Home")
         '''List of tables created by the user during this session'''
         self.user_tables = []
         # splashscreen
@@ -455,10 +456,18 @@ class CPAnalyst(wx.App):
 
         # The JVM has to be started after db.connect(), otherwise bus errors
         # occur on Mac OS X.
-        javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+        try:
+            if "CP_JAVA_HOME" in os.environ:
+                logging.error("Java dir", os.environ["CP_JAVA_HOME"])
+            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
 
-        # removes the log4j warnings
-        javabridge.attach()
+            # removes the log4j warnings
+            javabridge.attach()
+        except Exception as e:
+            logging.error("Java init failed")
+            logging.error(e)
+            import javabridge.locate
+            logging.error(javabridge.locate.find_javahome())
 
         self.splash.Destroy()
         self.frame.Show() # Show frame
