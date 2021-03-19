@@ -298,12 +298,12 @@ class Classifier(wx.Frame):
         # Define Classifiers
         RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier(n_estimators=100)", self)
         AdaBoostClassifier = GeneralClassifier("ensemble.AdaBoostClassifier()", self)
-        SVC = GeneralClassifier("svm.SVC(probability=True)", self) # Need to turn on probs
+        SVC = GeneralClassifier("svm.SVC(probability=True)", self, scaler=True)
         
         GradientBoostingClassifier = GeneralClassifier("ensemble.GradientBoostingClassifier()", self)
         LogisticRegression = GeneralClassifier("linear_model.LogisticRegression()", self)
         LDA = GeneralClassifier("discriminant_analysis.LinearDiscriminantAnalysis()", self)
-        KNeighborsClassifier = GeneralClassifier("neighbors.KNeighborsClassifier()", self)
+        KNeighborsClassifier = GeneralClassifier("neighbors.KNeighborsClassifier()", self, scaler=True)
         FastGentleBoostingClassifier = FastGentleBoosting(self)
         NeuralNetworkClassifier = GeneralClassifier("neural_network.MLPClassifier(hidden_layer_sizes=(12,12), solver='lbfgs', max_iter=500)", self, scaler=True)
 
