@@ -466,7 +466,6 @@ class CPAnalyst(wx.App):
         except Exception as e:
             logging.error("Java init failed")
             logging.error(e)
-            import javabridge.locate
             logging.error(javabridge.locate.find_javahome())
 
         self.splash.Destroy()
