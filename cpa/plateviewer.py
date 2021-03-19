@@ -23,7 +23,6 @@ import csv
 
 p = properties.Properties()
 # Hack the properties module so it doesn't require the object table.
-# TODO: fix this
 properties.optional_vars += ['object_table']
 db = DBConnect()
 

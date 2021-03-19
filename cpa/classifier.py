@@ -86,6 +86,7 @@ class Classifier(wx.Frame):
         self.trainingSet = None
         self.classBins = []
         self.binsCreated = 0
+        self.kFolds = 5
         self.chMap = p.image_channel_colors[:]
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
@@ -457,7 +458,6 @@ class Classifier(wx.Frame):
         self.UpdateClassChoices()
 
         # Disable scoring buttons
-        self.evaluationBtn.Disable()
         self.scoreAllBtn.Disable()
         self.scoreImageBtn.Disable()
         # self.openDimensReduxBtn.Disable()
@@ -621,6 +621,7 @@ class Classifier(wx.Frame):
         #paramsEditMenuItem = self.evalMenu.AppendRadioItem(2, text=u'ROC Curve', help='Plots a One vs all ROC Curve and calculates the area under the curve')
         #featureSelectMenuItem = self.evalMenu.AppendRadioItem(3, text=u'Precision Recall Curve', help='Plots a One vs all Precision Recall Curve')
         #learningMenuItem = self.evalMenu.AppendRadioItem(4, text=u'Learning Curve', help='Plots a One vs all Learning Curve')
+        kfoldMenuItem = self.evalMenu.Append(-1, item='Set cross validation folds', helpString='Adjust how many cross validation folds are used in evaluation')
 
         self.GetMenuBar().Append(self.evalMenu, 'Evaluation')
 
@@ -648,7 +649,8 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnLoadModel, self.loadModelMenuItem) # JEN - Added
         self.Bind(wx.EVT_MENU, self.SaveModel, self.saveModelMenuItem) # JEN - Added
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnParamsEdit, paramsEditMenuItem) 
+        self.Bind(wx.EVT_MENU, self.OnChangeEvaluationFolds, kfoldMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnParamsEdit, paramsEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnFeatureSelect, featureSelectMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
@@ -897,7 +899,6 @@ class Classifier(wx.Frame):
         if not self.IsTrained():
             self.obClassChoice.SetItems(['random', 'sequential'])
             self.obClassChoice.SetSelection(0)
-            self.evaluationBtn.Disable()
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
             # self.openDimensReduxBtn.Disable()
@@ -923,6 +924,8 @@ class Classifier(wx.Frame):
         empty
         '''
         self.trainClassifierBtn.Enable()
+        if hasattr(self, 'evaluationBtn'):
+            self.evaluationBtn.Enable()
         if len(self.classBins) <= 1:
             self.trainClassifierBtn.Disable()
             if hasattr(self, 'evaluationBtn'):
@@ -1243,7 +1246,6 @@ class Classifier(wx.Frame):
                 logging.error("Algorithm: %s doesn't exist", load_name)
 
         except:
-            self.evaluationBtn.Disable()
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
             # self.openDimensReduxBtn.Disable()
@@ -1447,22 +1449,8 @@ class Classifier(wx.Frame):
         # elif selectedText == "Precision Recall Curve":
         #     self.PlotPrecisionRecall()
         if selectedText == "Confusion Matrix":
-            dlg = wx.NumberEntryDialog(
-                self,
-                'Number of cross validation folds:',
-                'Enter folds',
-                "Evaluate Classifier",
-                5,
-                1,
-                1000
-            )
-            if dlg.ShowModal() == wx.ID_OK:
-                folds = int(dlg.GetValue())
-                dlg.Destroy()
-            else:
-                dlg.Destroy()
-                return
-
+            folds = min(self.kFolds, min([len(bin.GetObjectKeys()) for bin in self.classBins]))
+            logging.info(f"Evaluating with {folds} cross-validation folds")
             self.algorithm.ConfusionMatrix(folds)
         else:
             self.algorithm.CheckProgress()
@@ -1613,7 +1601,6 @@ class Classifier(wx.Frame):
                 dlg.Destroy()
 
                 self.rules_text.SetValue(self.algorithm.ShowModel())
-                self.evaluationBtn.Enable()
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
 
@@ -2128,6 +2115,24 @@ class Classifier(wx.Frame):
                           contrast=self.contrast)
         self.imageControlFrame.Show(True)
 
+    def OnChangeEvaluationFolds(self, evt):
+        ''' Shows the evaluation k-fold adjustment control. '''
+        dlg = wx.NumberEntryDialog(
+            self,
+            'Number of cross validation folds:',
+            'Enter folds',
+            "Evaluate Classifier",
+            self.kFolds,
+            1,
+            1000
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            self.kFolds = int(dlg.GetValue())
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
+
     def OnRulesEdit(self, evt):
         '''Lets the user edit the rules.'''
         if self.algorithm.name == "FastGentleBoosting":
@@ -2152,7 +2157,6 @@ class Classifier(wx.Frame):
                     return
                 self.keysAndCounts = None
                 self.rules_text.SetValue(self.algorithm.ShowModel())
-                self.evaluationBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:
@@ -2201,7 +2205,6 @@ class Classifier(wx.Frame):
                     return
                 self.keysAndCounts = None
                 self.rules_text.SetValue(self.algorithm.ShowModel())
-                self.evaluationBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreAllBtn.Enable(True if self.algorithm.IsTrained() else False)
                 self.scoreImageBtn.Enable(True if self.algorithm.IsTrained() else False)
                 for bin in self.classBins:
