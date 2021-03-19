@@ -458,7 +458,7 @@ class CPAnalyst(wx.App):
         # occur on Mac OS X.
         try:
             if "CP_JAVA_HOME" in os.environ:
-                logging.error("Java dir", os.environ["CP_JAVA_HOME"])
+                logging.error(f"Java dir is {os.environ['CP_JAVA_HOME']}")
             javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
 
             # removes the log4j warnings
