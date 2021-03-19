@@ -11,8 +11,6 @@ from io import StringIO
 import os
 import os.path
 import logging
-import javabridge
-import bioformats
 from cpa.util.version import display_version
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
@@ -373,7 +371,8 @@ class MainGUI(wx.Frame):
         try:
             logging.debug("Shutting of Java VM")
             import javabridge
-            javabridge.kill_vm()
+            if javabridge.get_env() is not None:
+                javabridge.kill_vm()
         except:
             logging.debug("Failed to kill the Java VM")
 
@@ -400,11 +399,10 @@ class CPAnalyst(wx.App):
         '''Initialize CPA
         '''
         # Temp for debugging
-        print("Starting CPA")
-        if hasattr(sys, "frozen") and sys.platform == "darwin":
-            # Set java home manually
-            print("Made it here")
-            os.environ["CP_JAVA_HOME"] = os.path.join(sys.prefix, "Resources/Home")
+        # Todo: Fix macos build java finding
+        # if hasattr(sys, "frozen") and sys.platform == "darwin":
+        #     # Set java home manually
+        #     os.environ["CP_JAVA_HOME"] = os.path.join(sys.prefix, "Resources/Home")
         '''List of tables created by the user during this session'''
         self.user_tables = []
         # splashscreen
@@ -453,20 +451,6 @@ class CPAnalyst(wx.App):
         # do it here.
         db.connect()
         db.register_gui_parent(self.frame)
-
-        # The JVM has to be started after db.connect(), otherwise bus errors
-        # occur on Mac OS X.
-        try:
-            if "CP_JAVA_HOME" in os.environ:
-                logging.error(f"Java dir is {os.environ['CP_JAVA_HOME']}")
-            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
-
-            # removes the log4j warnings
-            javabridge.attach()
-        except Exception as e:
-            logging.error("Java init failed")
-            logging.error(e)
-            logging.error(javabridge.locate.find_javahome())
 
         self.splash.Destroy()
         self.frame.Show() # Show frame

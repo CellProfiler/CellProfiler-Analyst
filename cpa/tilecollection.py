@@ -146,7 +146,11 @@ class TileLoader(threading.Thread):
         self.start()
 
     def run(self):
-        javabridge.attach()
+        if p.force_bioformats:
+            logging.debug("Starting javabridge")
+            import bioformats
+            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+            javabridge.attach()
         try:
             while 1:
                 self.tile_collection.cv.acquire()
@@ -186,7 +190,8 @@ class TileLoader(threading.Thread):
                             tile_data[i] = new_data[i]
                         wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
         finally:
-            javabridge.detach()
+            if javabridge.get_env() is not None:
+                javabridge.detach()
 
     def abort(self):
         self._want_abort = True

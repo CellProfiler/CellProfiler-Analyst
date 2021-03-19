@@ -5,6 +5,7 @@ import imageio
 import os.path
 import logging
 import bioformats
+import javabridge
 from .properties import Properties
 from .errors import ClearException
 
@@ -65,11 +66,13 @@ class ImageReader(object):
                 return imageio.imread(filename_or_url)
             except:
                 logging.info('Loading with ImageIO failed, falling back to BioFormats')
-                return bioformats.load_image(filename_or_url, rescale=False)
-        else:
-            if log_io:
-                logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
-            return bioformats.load_image(filename_or_url, rescale=False)
+        if javabridge.get_env() is None:
+            logging.debug("Starting javabridge")
+            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+            javabridge.attach()
+        if log_io:
+            logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
+        return bioformats.load_image(filename_or_url, rescale=False)
 
     def _extract_channels(self, filename_or_url, image, image_name, channels_per_image):
         if image.ndim == 2 and channels_per_image != 1:
