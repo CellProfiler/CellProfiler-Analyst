@@ -46,6 +46,11 @@ jobs:
         run: |
           sed -i '' 's/4.0.0/3.0.0/' Info.plist
           brew install mysql
+          git clone https://github.com/CellProfiler/python-javabridge.git
+          cd python-javabridge/ 
+          git checkout print
+          pip install -e .
+          cd ..
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
           chmod +x osx-codesign.sh && ./osx-codesign.sh
