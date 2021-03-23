@@ -40,7 +40,7 @@
 	<key>LSEnvironment</key>
 	<dict>
 		<key>JAVA_HOME</key>
-		<string>./Contents</string>
+		<string>./Contents/Resources/Home</string>
 	</dict>
 <key>NSHighResolutionCapable</key>
     <true/>
