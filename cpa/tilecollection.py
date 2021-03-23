@@ -75,7 +75,8 @@ class TileCollection(metaclass=Singleton):
         Returns: a list of lists of tile data (in numpy arrays) in the order
             of the obKeys that were passed in.
         '''
-        self.loader.notify_window = notify_window
+        if notify_window not in self.loader.notify_window:
+            self.loader.notify_window.append(notify_window)
         self.group_priority -= 1
         tiles = []
         temp = {} # for weakrefs
@@ -140,7 +141,9 @@ class TileLoader(threading.Thread):
     def __init__(self, tc, notify_window):
         threading.Thread.__init__(self)
         self.setName('TileLoader_%s'%(self.getName()))
-        self.notify_window = notify_window
+        self.notify_window = []
+        if notify_window is not None:
+            self.notify_window.append(notify_window)
         self.tile_collection = tc
         self._want_abort = False
         self.start()
@@ -188,7 +191,8 @@ class TileLoader(threading.Thread):
                         # copy each channel
                         for i in range(len(tile_data)):
                             tile_data[i] = new_data[i]
-                        wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
+                        for window in self.notify_window:
+                            wx.PostEvent(window, TileUpdatedEvent(obKey))
         finally:
             if javabridge.get_env() is not None:
                 javabridge.detach()

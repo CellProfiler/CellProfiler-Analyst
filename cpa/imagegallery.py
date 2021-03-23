@@ -1040,18 +1040,19 @@ class ImageGallery(wx.Frame):
         ''' Kill off all threads before combusting. '''
         super(ImageGallery, self).Destroy()
         import threading
-        for thread in threading.enumerate():
-            if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
-                logging.debug('Aborting thread %s' % thread.getName())
-                try:
-                    thread.abort()
-                except:
-                    pass
-        # XXX: Hack -- can't figure out what is holding onto TileCollection, but
-        #      it needs to be trashed if Classifier is to be reopened since it
-        #      will otherwise grab the existing instance with a dead tileLoader
-        tilecollection.TileCollection.forget()
-        # tilecollection.TileCollection._forgetClassInstanceReferenceForTesting()
+        t = tilecollection.TileCollection()
+        if self in t.loader.notify_window:
+            t.loader.notify_window.remove(self)
+        # If no other windows are attached to the loader we shut it down and delete the tilecollection.
+        if len(t.loader.notify_window) == 0:
+            for thread in threading.enumerate():
+                if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
+                    logging.debug('Aborting thread %s' % thread.getName())
+                    try:
+                        thread.abort()
+                    except:
+                        pass
+            tilecollection.TileCollection.forget()
 
     
 class StopCalculating(Exception):
