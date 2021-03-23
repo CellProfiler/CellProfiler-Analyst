@@ -1538,13 +1538,20 @@ class DBConnect(metaclass=Singleton):
         all_cols = [str(x) for x in self.GetColumnNames(object_table)]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
-            query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            if len(AreaShape_Area) > 0:
+                query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            else:
+                query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s" % (
+                p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols))
         elif DB_TYPE == 'sqlite':
             query = "PRAGMA table_info(%s)"%object_table
             self.execute(query)
             query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
             self.execute(query)
-            query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            if len(AreaShape_Area) > 0:
+                query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            else:
+                query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols))
         self.execute(query)
 
         # Check whether we nuked the table.
