@@ -67,13 +67,14 @@ class TrainingSet:
         assert len(labels)==len(keyLists), 'Class labels and keyLists must be of equal size.'
         self.Clear()
         self.labels = numpy.array(labels)
-        self.classifier_labels = 2 * numpy.eye(len(labels), dtype=numpy.int) - 1
+        self.classifier_labels = 2 * numpy.eye(len(labels), dtype=int) - 1
         
         num_to_fetch = sum([len(k) for k in keyLists])
         num_fetched = [0] # use a list to get static scoping
 
         # Populate the label_matrix, entries, and values
         # NB: values that are nonnumeric or Null/None are made to be 0
+        idx = 0
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             self.label_matrix += ([cl_label] * len(keyList))
 
@@ -96,7 +97,9 @@ class TrainingSet:
                 if len(keyList) > 0:
                     self.values += self.cache.get_objects_data(keyList)
                     self.coordinates += db.GetObjectsCoords(keyList)
-
+            idx += 1
+            if callback:
+                callback(idx / len(labels))
         self.label_matrix = numpy.array(self.label_matrix)
         self.values = numpy.array(self.values, np.float64)
         if len(self.label_matrix) > 0:

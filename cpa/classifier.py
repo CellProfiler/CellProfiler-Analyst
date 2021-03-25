@@ -1520,7 +1520,8 @@ class Classifier(wx.Frame):
                         raise StopCalculating()
 
                 dlg = wx.ProgressDialog('Fetching cell data for training set...', '0% Complete', 100, self,
-                                        wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                                        wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME |
+                                        wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
                 self.trainingSet = TrainingSet(p)
                 try:
                     self.trainingSet.Create(labels=[bin.label for bin in self.classBins],
@@ -1579,18 +1580,23 @@ class Classifier(wx.Frame):
 
                 t1 = time()
                 output = StringIO()
-                dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self,
-                                        wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
 
                 # JK - Start Modification
                 # Train the desired algorithm
                 # Legacy Code
                 if self.algorithm.name == "FastGentleBoosting":
+                    print("Here")
+                    dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self,
+                                            wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME |
+                                            wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
                     self.algorithm.Train(
                         self.trainingSet.colnames, nRules, self.trainingSet.label_matrix,
-                        self.trainingSet.values, output, cb
+                        self.trainingSet.values, output, callback=cb
                     )
                 else:
+                    dlg = wx.ProgressDialog('Training classifier...', 'Training in progress', 100, self,
+                                            wx.PD_ELAPSED_TIME | wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
+                    dlg.Pulse()
                     # Convert labels
                     self.algorithm.Train(self.trainingSet.label_array, self.trainingSet.values, output)
                     self.nRules = nRules # Hack 
