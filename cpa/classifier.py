@@ -1761,7 +1761,8 @@ class Classifier(wx.Frame):
 
             dlg = wx.ProgressDialog('Calculating %s counts for each class...' % (p.object_name[0]), '0% Complete', 100,
                                     self,
-                                    wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                                    wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT
+                                    | wx.PD_AUTO_HIDE)
 
             def update(frac):
                 cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete' % (frac * 100.))

@@ -12,6 +12,7 @@ from .dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_k
 from .properties import Properties
 from .datamodel import DataModel
 from sklearn.ensemble import AdaBoostClassifier
+from pandas import to_numeric
 
 db = DBConnect()
 p = Properties()
@@ -140,25 +141,36 @@ def processData(data):
     #takes data from query and returns arrays for feature values and object keys
     col_names = db.GetColnamesForClassifier()
     number_of_features = len(col_names)
-    cell_data = []
-    object_keys = []
-    for row in data:
-        cell_data.append(row[-number_of_features:])#last number_of_features columns in row
-        object_keys.append(row[:-number_of_features])#all elements in row before last (number_of_features) elements
-    cell_data = np.array(cell_data)
-    object_keys = np.array(object_keys)
-    cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
-    data_shape = cell_data.shape
+    # Old method of generating data arrays
+    # cell_data = []
+    # object_keys = []
+    # for row in data:
+    #     cell_data.append(row[-number_of_features:])#last number_of_features columns in row
+    #     object_keys.append(row[:-number_of_features])#all elements in row before last (number_of_features) elements
+    # cell_data = np.array(cell_data)
+    # object_keys = np.array(object_keys)
+    # New method, Mar 2021
+    object_keys, cell_data = np.split(np.array(data), [-number_of_features], axis=1)
+    object_keys = np.array(list(map(tuple, object_keys))).astype(int)
+
     # if numpy array is already floats, pass; if numpy array contains strings, convert
-    try:
-        cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
-        print(('data type 1 ', cell_data.dtype))
-        cell_data = np.nan_to_num(cell_data)
-    except:
-        print(('data type 2 ', cell_data.dtype))
-        cell_data = np.nan_to_num(cell_data)
-    logging.info('Any values that cannot be converted to float are set to 0')
+    if not np.issubdtype(cell_data.dtype, float):
+        cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
+
+        data_shape = cell_data.shape
+        try:
+            cell_data = np.apply_along_axis(to_numeric, 1, cell_data, errors="coerce")
+            # print(('data type 1 ', cell_data.dtype))
+        except Exception as e:
+            logging.info("Data conversion failed, trying slower method - ", e)
+            try:
+                cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
+            except Exception as e:
+                logging.info("Fallback data conversion failed, will try proceeding anyway - ", e)
+            # print(('data type 2 ', cell_data.dtype))
+    cell_data = np.nan_to_num(cell_data)
+    logging.info('Any values that cannot be converted to float were set to 0')
     return cell_data, object_keys
 
 def _objectify(p, field):
@@ -274,7 +286,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                     counts[row_cls] = oneCount
 
             if cb:
-                cb(min(1, idx/float(num_clauses))) #progress
+                cb(min(1, (idx + 1)/num_clauses)) #progress
         return counts
     print(('area scoring column ', p.area_scoring_column))
     counts = do_by_steps(p.object_table, filter_name, p.area_scoring_column)
