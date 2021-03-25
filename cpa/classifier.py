@@ -1585,7 +1585,6 @@ class Classifier(wx.Frame):
                 # Train the desired algorithm
                 # Legacy Code
                 if self.algorithm.name == "FastGentleBoosting":
-                    print("Here")
                     dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self,
                                             wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME |
                                             wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
