@@ -14,6 +14,49 @@ def _on_check_update(self):
 
 def _on_about(self):
     ''' Shows a message box with the version number etc.'''
+    shift = wx.GetKeyState(wx.WXK_SHIFT)
+    ctrl = wx.GetKeyState(wx.WXK_CONTROL)
+
+    if shift or ctrl:
+        import logging
+        import os
+        import sys
+        import javabridge
+        logging.info("\n\nDEBUG - CPA Java State is as follows:")
+
+        # Hold ctrl only: change CP_JAVA_HOME
+        if ctrl and not shift:
+            cd = wx.DirDialog(None, message="Choose new CP_JAVA_HOME",
+                       defaultPath=os.getcwd(), name="Set JAVA location")
+            if cd.ShowModal() == wx.ID_OK:
+                newdir = cd.GetPath()
+                os.environ["CP_JAVA_HOME"] = newdir
+                logging.info(f"Set CP_JAVA_HOME to {str(newdir)}")
+
+        if 'CP_JAVA_HOME' in os.environ:
+            logging.info(f"CP_JAVA_HOME is {os.environ['CP_JAVA_HOME']}")
+        else:
+            logging.info("CP_JAVA_HOME is not set")
+        if 'JAVA_HOME' in os.environ:
+            logging.info(f"JAVA_HOME is {os.environ['JAVA_HOME']}")
+        else:
+            logging.info("JAVA_HOME is not set")
+        logging.info(f"Current working directory is {os.getcwd()}")
+        logging.info(f"Python is running from {sys.prefix}")
+        logging.info(f"Core Python install is at {sys.base_prefix}")
+        logging.info(f"Javabridge java search returned {javabridge.locate.find_javahome()}")
+        # Shift and ctrl/cmd held - test the VM. You'll need to restart CPA after since the VM can't be restarted.
+        if shift and ctrl:
+            try:
+                logging.warning("Attempting to start Javabridge")
+                javabridge.start_vm(run_headless=True)
+                logging.warning("VM started successfully")
+                javabridge.kill_vm()
+                logging.warning("Shut down test vm. You'll need to RESTART CPA to use it again")
+            except Exception as e:
+                logging.info(f"Javabridge test failed")
+                logging.info(e)
+
     message = ('CellProfiler Analyst was developed at The Broad Institute\n'
                'Imaging Platform and is distributed under the\n'
                'BSD 3-Clause License.')
