@@ -68,7 +68,7 @@ setuptools.setup(
         "imagecodecs>=2021.2.26",
         "imageio>=2.9.0",
         "joblib>=1.0.1",
-        "matplotlib>=3.3.4",
+        "matplotlib==3.3.4",
         "mock>=4.0.3",
         "mysqlclient>=2.0.3",
         "numpy>=1.20.1",
