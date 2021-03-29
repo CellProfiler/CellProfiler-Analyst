@@ -400,9 +400,9 @@ class CPAnalyst(wx.App):
         '''
         # Temp for debugging
         # Todo: Fix macos build java finding
-        # if hasattr(sys, "frozen") and sys.platform == "darwin":
-        #     # Set java home manually
-        #     os.environ["CP_JAVA_HOME"] = os.path.join(sys.prefix, "Resources/Home")
+        if hasattr(sys, "frozen") and sys.platform == "darwin":
+            # Set java home manually
+            os.environ["CP_JAVA_HOME"] = os.path.abspath(os.path.join(sys.prefix, "..",  "Resources/Home"))
         '''List of tables created by the user during this session'''
         self.user_tables = []
         # splashscreen
