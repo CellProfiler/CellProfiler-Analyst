@@ -27,7 +27,6 @@ def FetchTile(obKey, display_whole_image=False):
     imgs = FetchImage(imKey)
     
     size = (int(p.image_size),int(p.image_size))
-
     if display_whole_image:
         return imgs
 
@@ -130,12 +129,12 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     imgs = imgs.copy()
     # Before any resizing, record the genuine full intensity range of each image.
     limits = [(im.min(), im.max()) for im in imgs]
-    if display_whole_image:
+    if not display_whole_image:
         # Rescaling 2k x 2k images to make a 25 x 25 tile is slow and silly.
         # Here we check whether the input image is more than 10x the final tile size.
         # If it is, we'll do a quick and dirty rescale to give a more managable starting point.
-        tgt_h = int(p.image_size) * 10
-        tgt_w = int(p.image_size) * 10
+        tgt_h = int(p.image_size) * 5
+        tgt_w = int(p.image_size) * 5
         h, w = imgs[0].shape
         if tgt_h < h and tgt_w < w:
             rescale_factor = max(tgt_h / h, tgt_w / w)
@@ -172,7 +171,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     tmp_w = int(p.image_size)
 
     # Here we do a more careful rescale to the target tile size.
-    if display_whole_image and h != tmp_h and h!= tmp_w:
+    if not display_whole_image and h != tmp_h and h!= tmp_w:
         h = tmp_h
         w = tmp_w
         img.Rescale(h,w)

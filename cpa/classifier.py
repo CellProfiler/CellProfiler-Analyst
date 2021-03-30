@@ -94,18 +94,18 @@ class Classifier(wx.Frame):
         self.required_fields = []
         self.with_replacement = False
         
-        if not p.classification_type == 'image':
-            self.image_tile_size = p.image_tile_size
-            self.scale = 1.0
-        else:
-            if p.field_defined('image_width') and p.field_defined('image_height'):
-                self.image_tile_size = min([p.image_width, p.image_height])        
-            else:
-                cols = [x for x in db.GetColumnNames(p.image_table)]
-                list_of_cols = [str(x) for x in cols]
-                image_width, image_height = db.GetImageWidthHeight(list_of_cols) 
-                self.image_tile_size = min([image_width, image_height]) 
-            self.scale = 100.0/float(self.image_tile_size)
+        # if not p.classification_type == 'image':
+        self.image_tile_size = p.image_tile_size
+        self.scale = 1.0
+        # else:
+        #     if p.field_defined('image_width') and p.field_defined('image_height'):
+        #         self.image_tile_size = min([p.image_width, p.image_height])
+        #     else:
+        #         cols = [x for x in db.GetColumnNames(p.image_table)]
+        #         list_of_cols = [str(x) for x in cols]
+        #         image_width, image_height = db.GetImageWidthHeight(list_of_cols)
+        #         self.image_tile_size = min([image_width, image_height])
+        #     self.scale = 100.0/float(self.image_tile_size)
 
         self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']        
         

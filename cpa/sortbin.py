@@ -221,14 +221,7 @@ class SortBin(wx.ScrolledWindow):
         else:
             imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority, display_whole_image=display_whole_image) # Gives back the np matrix of an image?
             for i, obKey, imgs in zip(list(range(len(obKeys))), obKeys, imgSet):
-                if self.classifier and self.label == 'image gallery':
-                    newTile = ImageTile(self, obKey, imgs, chMap, False,
-                                        scale=self.classifier.scale,
-                                        brightness=self.classifier.brightness,
-                                        contrast=self.classifier.contrast,
-                                        display_whole_image=True)
-
-                elif self.classifier:
+                if self.classifier:
                     newTile = ImageTile(self, obKey, imgs, chMap, False,
                                         scale=self.classifier.scale,
                                         brightness=self.classifier.brightness,

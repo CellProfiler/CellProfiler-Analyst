@@ -64,7 +64,7 @@ class ImageViewerPanel(ImagePanel):
     ImagePanel with selection and object class labels. 
     '''
     def __init__(self, imgs, chMap, img_key, parent, scale=1.0, brightness=1.0, contrast=None):
-        super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast)
+        super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast, display_whole_image=True)
         self.selectedPoints = []
         self.classes        = {}  # {'Positive':[(x,y),..], 'Negative': [(x2,y2),..],..}
         self.classVisible   = {}
