@@ -18,6 +18,9 @@ db = dbconnect.DBConnect()
 cache = {}
 cachedkeys = []
 
+cachedparams = None
+cachedresult = None
+
 def FetchTile(obKey, display_whole_image=False):
     '''returns a list of image channel arrays cropped around the object
     coordinates
@@ -127,6 +130,23 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     # The imageio tile loader is fast enough that it can replace temporary tile data before bitmap merging completes.
     # So let's make a copy of the original image data stack while we work.
     imgs = imgs.copy()
+
+    '''
+    This is a bit hacky, but right now the tileloader needs to see and merge several channels when making temporary tiles.
+    The merging process is pretty slow and makes loading data sets painful. We can't easily avoid tile generation, but we can
+    try to figure out if we're using a temporary tile. Temp tiles will always be identical, so we can cache and send back the
+    completed temporary tile.
+    '''
+    global cachedparams
+    global cachedresult
+    # Laziest "hash" ever, but it'll do.
+    imghash = [im.sum() for im in imgs]
+    # In temporary tiles, [0,0] is always set to 0 to aid contrasting.
+    if cachedparams is not None and imgs[0][0][0] == 0:
+        if cachedparams == [imghash, chMap, brightness, scale, masks, contrast, display_whole_image]:
+            return cachedresult
+    cachedparams = [imghash, chMap, brightness, scale, masks, contrast, display_whole_image]
+
     # Before any resizing, record the genuine full intensity range of each image.
     limits = [(im.min(), im.max()) for im in imgs]
     if not display_whole_image:
@@ -185,8 +205,8 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         else:
             img.Rescale(10,10)
 
-
-    return img.ConvertToBitmap()
+    cachedresult = img.ConvertToBitmap()
+    return cachedresult
 
 def MergeChannels(imgs, chMap, masks=[]):
     '''
