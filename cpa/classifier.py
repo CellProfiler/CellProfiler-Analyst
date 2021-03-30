@@ -1494,7 +1494,6 @@ class Classifier(wx.Frame):
             try:
                 def cb(frac):
                     self.PostMessage(f'{int(frac*100)}% saved')
-                    logging.info("frac %i", frac)
 
                 self.trainingSet = TrainingSet(p)
                 try:
