@@ -1162,7 +1162,8 @@ class Classifier(wx.Frame):
 
             statusMsg += loopMsg
 
-        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last',display_whole_image=p.classification_type == 'image')
+        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last',
+                                        display_whole_image=p.classification_type == 'image')
         self.PostMessage(statusMsg)
 
     def OnTileUpdated(self, evt):
@@ -1332,7 +1333,8 @@ class Classifier(wx.Frame):
             num_objs = 0
             for bin in self.classBins:
                 if bin.label in list(keysPerBin.keys()):
-                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,display_whole_image=p.classification_type == 'image')
+                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,
+                                   display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])
 
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
@@ -1361,7 +1363,8 @@ class Classifier(wx.Frame):
             num_objs = 0
             for bin in self.classBins:
                 if bin.label in list(keysPerBin.keys()):
-                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,
+                                   display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])
                     bin.Refresh()
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
