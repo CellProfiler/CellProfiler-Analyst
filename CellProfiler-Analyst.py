@@ -37,33 +37,6 @@ class FuncLog(logging.Handler):
     def emit(self, record):
         self.update(self.format(record))
 
-
-# def setup_frozen_logging():
-#     # py2exe has a version of this in boot_common.py, but it causes an
-#     # error window to appear if any messages are actually written.
-#     class Stderr(object):
-#         softspace = 0 # python uses this for printing
-#         _file = None
-#         _error = None
-#         def write(self, text, fname=sys.executable + '.log'):
-#             if self._file is None and self._error is None:
-#                 try:
-#                     self._file = open(fname, 'w')
-#                 except Exception as details:
-#                     self._error = details
-#             if self._file is not None:
-#                 self._file.write(text)
-#                 self._file.flush()
-#         def flush(self):
-#             if self._file is not None:
-#                 self._file.flush()
-#     # send everything to logfile
-#     sys.stderr = Stderr()
-#     sys.stdout = sys.stderr
-#
-# if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
-#     # on windows, log to a file (Mac goes to console)
-#     setup_frozen_logging()
 logging.basicConfig(level=logging.DEBUG)
 
 # Handles args to MacOS "Apps"
@@ -140,10 +113,6 @@ class MainGUI(wx.Frame):
         tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', get_icon("data_grid").ConvertToBitmap(), shortHelp='Table Viewer')
         # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', get_icon("normalize").ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
-        # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs 
-        # Not the Case anymore with wx.Python 3
-        # self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
-
 
         #
         # Setup menu items
@@ -242,13 +211,6 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_IDLE, self.on_idle)
 
     def launch_classifier(self, evt=None):
-        # Brave new world! Allowing multiple classifiers
-        # classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
-        # if classifier:
-        #     classifier.Show()
-        #     classifier.SetFocus()
-        #     logging.warn('You may only run one instance of Classifier at a time.')
-        #     return
         classifier = Classifier(parent=self, properties=self.properties)
         classifier.Show(True)
 
@@ -398,10 +360,9 @@ class CPAnalyst(wx.App):
     def Start(self):
         '''Initialize CPA
         '''
-        # Temp for debugging
-        # Todo: Fix macos build java finding
         if hasattr(sys, "frozen") and sys.platform == "darwin":
-            # Set java home manually
+            # Some versions of Macos like to put CPA in a sandbox. If we're frozen Java should be packed in,
+            # so let's just figure out the directory on run time.
             os.environ["CP_JAVA_HOME"] = os.path.abspath(os.path.join(sys.prefix, "..",  "Resources/Home"))
         '''List of tables created by the user during this session'''
         self.user_tables = []
