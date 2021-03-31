@@ -786,8 +786,16 @@ class DBConnect(metaclass=Singleton):
         f = p._filters[filter_name]
         from . import sqltools
         if isinstance(f, sqltools.Filter):
-            unique_tables = np.unique(f.get_tables()) 
-            return 'SELECT %s FROM %s WHERE %s' % (UniqueImageClause(), 
+            unique_tables = np.unique(f.get_tables())
+            if len(unique_tables) > 1:
+                if p.image_table in unique_tables:
+                    select_name = UniqueImageClause(p.image_table)
+                else:
+                    select_name = UniqueImageClause(unique_tables[0])
+                    logging.warn("Mixing multiple object tables in a filter is experimental, use with caution")
+            else:
+                select_name = UniqueImageClause()
+            return 'SELECT %s FROM %s WHERE %s' % (select_name,
                                                    ','.join(unique_tables), 
                                                    str(f))
         elif isinstance(f, sqltools.OldFilter):
@@ -814,7 +822,11 @@ class DBConnect(metaclass=Singleton):
             if isinstance(g, sqltools.Gate):
                 unique_tables = np.unique(g.get_tables())
                 if len(unique_tables) > 1:
-                    select_name = UniqueImageClause(unique_tables[0])
+                    if p.image_table in unique_tables:
+                        select_name = UniqueImageClause(p.image_table)
+                    else:
+                        select_name = UniqueImageClause(unique_tables[0])
+                        logging.warn("Mixing multiple object tables in a filter is experimental, use with caution")
                 else:
                     select_name = UniqueImageClause()
                 return self.execute('SELECT %s FROM %s WHERE %s' % (select_name,
