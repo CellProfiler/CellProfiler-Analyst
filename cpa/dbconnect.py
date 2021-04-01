@@ -609,7 +609,41 @@ class DBConnect(metaclass=Singleton):
                                      %(p.object_id, p.object_table, where_clause, index - 1))
         object_number = object_number[0][0]
         return tuple(list(imKey)+[int(object_number)])
-    
+
+    def GetRandomObjectsSQL(self, imKeys, N):
+        '''
+        Returns a random sampling of object keys from the database.
+        Sampling occurs without replacement.
+        imKeys: a list of image keys to sample objects from.
+        N: number of keys to sample
+        '''
+        if not imKeys:
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} ORDER BY RANDOM() LIMIT {N}"
+
+        else:
+            where_clause = GetWhereClauseForImages(imKeys)
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} WHERE  {where_clause} ORDER BY RANDOM() LIMIT {N}"
+        object_numbers = self.execute(statement)
+        return object_numbers
+
+    def GetAllObjectsSQL(self, imKeys, N=None):
+        '''
+        Returns objects from a list of keys in order.
+        imkeys: a list of image keys
+        N: integer representing the number of objects to fetch.
+        '''
+        if N is None:
+            limit_clause = ""
+        else:
+            limit_clause = f" LIMIT {N}"
+        if not imKeys:
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} ORDER BY {p.image_id}{limit_clause}"
+        else:
+            where_clause = GetWhereClauseForImages(imKeys)
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} WHERE {where_clause} ORDER BY {p.image_id}{limit_clause}"
+        object_numbers = self.execute(statement)
+        return object_numbers
+
     def GetPerImageObjectCounts(self):
         '''
         Returns a list of (imKey, obCount) tuples. 

@@ -119,63 +119,68 @@ class DataModel(metaclass=Singleton):
             logging.info(f"{N} is greater than the number of objects. Fetching {self.obCount} objects.")
             N = self.obCount
         if imKeys == None:
-            return self.GetRandomObject(N)
+            if p.use_legacy_fetcher:
+                return self.GetRandomObject(N)
+            else:
+                return db.GetRandomObjectsSQL(None, N)
         elif imKeys == []:
             return []
         else:
-            sums = np.cumsum([self.data[imKey] for imKey in imKeys])
-            if sums[-1] < 1:
-                return []
-            obs = []
-            if with_replacement:
-                obIdxs = random.choices(list(range(1, sums[-1] + 1)), k=N)
+            if p.use_legacy_fetcher or with_replacement:
+                sums = np.cumsum([self.data[imKey] for imKey in imKeys])
+                if sums[-1] < 1:
+                    return []
+                obs = []
+                if with_replacement:
+                    obIdxs = random.choices(list(range(1, sums[-1] + 1)), k=N)
+                else:
+                    if N > sums[-1]:
+                        logging.info(f"Number of available objects is less than {N}. Fetching {sums[-1]} objects.")
+                        N = sums[-1]
+                    obIdxs = random.sample(list(range(1, sums[-1]+1)), k=N)
+                for obIdx in obIdxs:
+                    index = np.searchsorted(sums, obIdx, 'left')
+                    if index != 0:
+                        while sums[index] == sums[index-1]:
+                            index -= 1
+                        obIdx = obIdx-sums[index-1]
+                    obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
+                    obs.append(obKey)
             else:
-                if N > sums[-1]:
-                    logging.info(f"Number of available objects is less than {N}. Fetching {sums[-1]} objects.")
-                    N = sums[-1]
-                obIdxs = random.sample(list(range(1, sums[-1]+1)), k=N)
-            for obIdx in obIdxs:
-                index = np.searchsorted(sums, obIdx, 'left')
-                if index != 0:
-                    while sums[index] == sums[index-1]:
-                        index -= 1
-                    obIdx = obIdx-sums[index-1]
-                obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
-                obs.append(obKey)
+                obs = db.GetRandomObjectsSQL(imKeys, N)
             return obs
 
     def GetAllObjects(self, filter_name=None, gate_name=None, imkeys=[], N=None):
         self._if_empty_populate()
         if imkeys == []:
-            all_images = self.GetAllImageKeys(filter_name=filter_name, gate_name=gate_name)
-            obs = (x for im in all_images for x in self.GetObjectsFromImage(im))
-        else:
+            imkeys = self.GetAllImageKeys(filter_name=filter_name, gate_name=gate_name)
+        if p.use_legacy_fetcher:
             obs = (x for im in imkeys for x in self.GetObjectsFromImage(im))
-        if N is None:
-            return list(obs)
+            if N is None:
+                return list(obs)
+            else:
+                return list(islice(obs, N))
         else:
-            return list(islice(obs, N))
+            return db.GetAllObjectsSQL(imkeys, N)
 
     def GetObjectsFromImage(self, imKey):
         self._if_empty_populate()
-        obKeys=[]
-        for i in range(1,self.GetObjectCountFromImage(imKey)+1):
-            obKeys.append(db.GetObjectIDAtIndex(imKey, i))
+        if p.use_legacy_fetcher:
+            obKeys=[]
+            for i in range(1,self.GetObjectCountFromImage(imKey)+1):
+                obKeys.append(db.GetObjectIDAtIndex(imKey, i))
+        else:
+            obKeys = db.GetAllObjectsSQL([imKey])
         return obKeys
-        # JK - The above code was previously removed in favor of the code below.
-        # However the new code is sensitive to objects not having consecutive IDs 
-        # in an image, whereas the above code is not making it more robust
-#        return [tuple(list(imKey) + [i]) 
-#                for i in xrange(1, self.GetObjectCountFromImage(imKey) + 1)]
-    
+
     def GetAllImageKeys(self, filter_name=None, gate_name=None):
         ''' Returns all object keys. If a filter is passed in, only the image
         keys that fall within the filter will be returned.'''
         self._if_empty_populate()
         if filter_name is not None:
-            return list(db.GetFilteredImages(filter_name))
+            return list(set(db.GetFilteredImages(filter_name)))
         elif gate_name is not None:
-            return list(db.GetGatedImages(gate_name))
+            return list(set(db.GetGatedImages(gate_name)))
         else:
             return list(self.data.keys())
 

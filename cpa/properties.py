@@ -64,7 +64,8 @@ string_vars = ['db_type',
                'image_height',
                'negative_control', # For DMSO normalization, but optional
                'class_names',
-               'force_bioformats'
+               'force_bioformats',
+               'use_legacy_fetcher'
                ]
 
 list_vars = ['image_path_cols', 'image_channel_paths', 
@@ -126,7 +127,8 @@ optional_vars = ['db_port',
                  'image_height',
                  'negative_control',
                  'class_names',
-                 'force_bioformats'
+                 'force_bioformats',
+                 'use_legacy_fetcher'
                  ]
 
 # map deprecated fields to new fields
@@ -675,6 +677,16 @@ class Properties(metaclass=Singleton):
             self.force_bioformats = False
         else:
             self.force_bioformats = False
+
+        if self.field_defined('use_legacy_fetcher') and self.use_legacy_fetcher.lower() in ['true', 'yes', 'on', 't', 'y']:
+            self.use_legacy_fetcher = True
+        elif self.field_defined('use_legacy_fetcher') and self.use_legacy_fetcher.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.use_legacy_fetcher = False
+        elif self.field_defined('use_legacy_fetcher'):
+            logging.warn(f'[Properties] WARNING (use_legacy_fetcher): Field was invalid ({self.use_legacy_fetcher}), using default of "False".')
+            self.use_legacy_fetcher = False
+        else:
+            self.use_legacy_fetcher = False
 
         if self.use_larger_image_scale in [True, False]:
             pass

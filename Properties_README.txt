@@ -316,6 +316,7 @@ class_table  =
 
 check_tables = yes
 
+
 # ======== Force BioFormats ========
 # OPTIONAL
 # [yes/no]  By default, CPA will try to use the imageio library to load images
@@ -327,4 +328,13 @@ check_tables = yes
 force_bioformats = no
 
 
+# ======== Use Legacy Fetcher ========
+# OPTIONAL
+# [yes/no]  In CPA 3.0 the object fetching system has been revised to be more
+# efficient. In the vast majority of cases it should be faster than the previous
+# versions. However, some complex object filters can still cause problems. If you
+# encounter slowdowns this setting allows you to switch back to the old method of
+# fetching and randomisation.
+
+use_legacy_fetcher = no
 
