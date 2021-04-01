@@ -218,9 +218,7 @@ class ColumnFilterDialog(wx.Dialog):
     def remove(self, panel):
         i = self.panels.index(panel)
         if 0 < i <= len(self.conjunctions):
-            self.sw.Sizer.Remove(self.conjunctions[i-1])
             self.conjunctions.pop(i-1).Destroy()
-        self.Sizer.Remove(panel)
         self.panels.remove(panel)
         panel.Destroy()
         self.sw.FitInside()
