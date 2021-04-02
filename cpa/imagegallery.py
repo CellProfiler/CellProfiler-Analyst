@@ -85,12 +85,10 @@ class ImageGallery(wx.Frame):
         #### Create GUI elements
         # Top level - three split windows
         self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH)
-        self.fetch_and_rules_panel = wx.Panel(self.splitter)
         self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH)
 
         # fetch & rules
-        self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
-        self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
+        self.fetch_panel = wx.Panel(self.splitter)
 
         # sorting bins
         self.gallery_panel = wx.Panel(self.bins_splitter)
@@ -118,8 +116,6 @@ class ImageGallery(wx.Frame):
 
         #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.find_rules_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.fetch_and_rules_sizer = wx.BoxSizer(wx.VERTICAL)
         self.classified_bins_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         #### Add elements to sizers and splitters
@@ -154,26 +150,20 @@ class ImageGallery(wx.Frame):
         self.fetchSizer.AddStretchSpacer()
         self.fetch_panel.SetSizerAndFit(self.fetchSizer)
 
-        # fetch and rules panel
-        self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
-        self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
-
         # classified bins panel
         self.objects_bin_panel.SetSizer(self.classified_bins_sizer)
 
         # splitter windows
-        self.splitter.SplitHorizontally(self.fetch_and_rules_panel, self.bins_splitter,
-                                        self.fetch_and_rules_panel.GetMinSize()[1])
+        self.splitter.SplitHorizontally(self.fetch_panel, self.bins_splitter,
+                                        self.fetch_panel.GetMinSize()[1])
         self.bins_splitter.SplitHorizontally(self.gallery_panel, self.objects_bin_panel)
 
         self.splitter.SetSashGravity(0.0)
         self.bins_splitter.SetSashGravity(0.5)
 
-        self.splitter.SetMinimumPaneSize(max(50, self.fetch_and_rules_panel.GetMinHeight()))
+        self.splitter.SetMinimumPaneSize(max(50, self.fetch_panel.GetMinHeight()))
         self.bins_splitter.SetMinimumPaneSize(50)
-        self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * 50 + self.fetch_and_rules_panel.GetMinHeight()))
+        self.SetMinSize((self.fetch_panel.GetMinWidth(), 4 * 50 + self.fetch_panel.GetMinHeight()))
 
         # Set initial state
         self.filterChoice.SetSelection(0)
@@ -800,8 +790,7 @@ class ImageGallery(wx.Frame):
             self.startId.Show()
             self.endId.Show()
             self.filterChoice.Enable()
-            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
-            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
+            self.fetch_panel.Layout()
 
         elif fetchChoice == 'all':
             self.fetchTxt.SetLabel('')
@@ -810,11 +799,8 @@ class ImageGallery(wx.Frame):
             self.fetchTxt3.Show()
             self.startId.Hide()
             self.endId.Hide()
-            #self.startId.Disable()
-            #self.endId.Disable()
             self.filterChoice.Enable()
-            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
-            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
+            self.fetch_panel.Layout()
 
         elif fetchChoice == 'individual':
 
@@ -827,9 +813,8 @@ class ImageGallery(wx.Frame):
             self.fetchTxt2.Hide()
             self.fetchTxt3.Hide()
             self.filterChoice.Disable()
-            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
-            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
-            
+            self.fetch_panel.Layout()
+
 
     def OnSelectFilter(self, evt):
         ''' Handler for fetch filter selection. '''
