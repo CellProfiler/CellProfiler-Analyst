@@ -841,7 +841,10 @@ class DBConnect(metaclass=Singleton):
         ''' Returns a list of imKeys from the given filter. '''
         try:
             f = p._filters[filter_name]
-            return self.execute(self.filter_sql(filter_name))
+            # New filters can be based on object parameters. We need to remove duplicates.
+            # Using dict instead of set preserves key order without additional time cost.
+            imKeys = self.execute(self.filter_sql(filter_name))
+            return list(dict.fromkeys(imKeys))
         except Exception as e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)
@@ -849,7 +852,6 @@ class DBConnect(metaclass=Singleton):
 
     def GetGatedImages(self, gate_name):
         ''' Returns a list of imKeys from the given filter. '''
-        # Todo: Reject attempts to call from gates mixing image and object measures. It makes SQL cry.
         try:
             g = p.gates[gate_name]
             from . import sqltools
@@ -863,9 +865,8 @@ class DBConnect(metaclass=Singleton):
                         logging.warn("Mixing multiple object tables in a filter is experimental, use with caution")
                 else:
                     select_name = UniqueImageClause()
-                return self.execute('SELECT %s FROM %s WHERE %s' % (select_name,
-                                                       ','.join(unique_tables),
-                                                       str(g)))
+                imKeys = self.execute(f"SELECT {select_name} FROM {','.join(unique_tables)} WHERE {str(g)}")
+                return list(dict.fromkeys(imKeys))
             else:
                 raise Exception('Invalid gate type in p.gate')
 

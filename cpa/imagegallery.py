@@ -624,16 +624,15 @@ class ImageGallery(wx.Frame):
 
         # Fetching images with range
         elif fltr_sel == 'experiment':
-                self.galleryBin.SelectAll()
-                self.galleryBin.RemoveSelectedTiles()
-                # Need to run this after removing all tiles!
-                def cb():
-                    imKeys = db.GetAllImageKeys()
-                    imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
-                    self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
-                wx.CallAfter(cb)
-
-                statusMsg += ' from whole experiment'
+            self.galleryBin.SelectAll()
+            self.galleryBin.RemoveSelectedTiles()
+            # Need to run this after removing all tiles!
+            def cb():
+                imKeys = db.GetAllImageKeys()
+                imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
+                self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
+            wx.CallAfter(cb)
+            statusMsg += ' from whole experiment'
         elif fltr_sel in p._filters_ordered:
             self.galleryBin.SelectAll()
             self.galleryBin.RemoveSelectedTiles()

@@ -987,14 +987,14 @@ class Classifier(wx.Frame):
                 obKeys = dm.GetRandomObjects(nObjects, [imKey], with_replacement=self.with_replacement)
                 statusMsg += ' from image %s' % (imKey,)
             elif fltr_sel in p.gates_ordered:
-                filteredImKeys = list(set(db.GetGatedImages(fltr_sel)))
+                filteredImKeys = db.GetGatedImages(fltr_sel)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
                     return
                 obKeys = dm.GetRandomObjects(nObjects, filteredImKeys, with_replacement=self.with_replacement)
                 statusMsg += ' from gate "%s"' % (fltr_sel)
             elif fltr_sel in p._filters_ordered:
-                filteredImKeys = list(set(db.GetFilteredImages(fltr_sel)))
+                filteredImKeys = db.GetFilteredImages(fltr_sel)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
@@ -1074,12 +1074,12 @@ class Classifier(wx.Frame):
                     imKey = self.GetGroupKeyFromGroupSizer()
                     filteredImKeys = [imKey]
                 elif fltr_sel in p.gates_ordered:
-                    filteredImKeys = list(set(db.GetGatedImages(fltr_sel)))
+                    filteredImKeys = db.GetGatedImages(fltr_sel)
                     if filteredImKeys == []:
                         self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
                         return
                 elif fltr_sel in p._filters_ordered:
-                    filteredImKeys = list(set(db.GetFilteredImages(fltr_sel)))
+                    filteredImKeys = db.GetFilteredImages(fltr_sel)
                     if filteredImKeys == []:
                         self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                         return

@@ -178,9 +178,9 @@ class DataModel(metaclass=Singleton):
         keys that fall within the filter will be returned.'''
         self._if_empty_populate()
         if filter_name is not None:
-            return list(set(db.GetFilteredImages(filter_name)))
+            return db.GetFilteredImages(filter_name)
         elif gate_name is not None:
-            return list(set(db.GetGatedImages(gate_name)))
+            return db.GetGatedImages(gate_name)
         else:
             return list(self.data.keys())
 
