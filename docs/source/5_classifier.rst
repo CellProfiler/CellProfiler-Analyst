@@ -15,7 +15,7 @@ by fetching the objects predicted by Classifier to belong to a certain class and
 rounds of refinement are necessary to train Classifier to recognize the
 classes of interest.
 
-Once classification reaches a desirable accuracy, Classifier can “score” your experiment. This
+Once classification reaches a desirable accuracy, Classifier can "score" your experiment. This
 entails classifying all objects, counting how many objects of each class are in each image or
 group (if you have defined groups in your properties file; see section II.G), and computing the
 enrichment/depletion of each class per image or per group.
@@ -123,6 +123,9 @@ removed by selecting it and pushing the Delete key. Keep in mind, however, that 
 ultimately score ALL objects found in your table unless you define filters to ignore certain
 images (see section II.F).
 
+You can also sort objects into bins by using the arrow keys to select objects and the number keys 1-9 to assign
+objects into classes. Class bins are numbered left-to-right starting from 1.
+
 **Important:** A small dot is displayed in the center of each tile as your mouse hovers over it. The
 object that falls under this dot is the object that must be sorted. In the example below, the tile
 under the mouse should be sorted based on the blue cell underneath the dot, NOT the cells
@@ -154,6 +157,10 @@ Some helpful tools are available when you right-click on a tile:
 - **Invert selection** (``ctrl+I``) to invert your selection (that is, select all non-selected tiles in the current bin and deselect all selected tiles).
 
 - **Remove selected** (``Delete``) removes the selected tiles from the current bin.
+
+- **Remove duplicates** Right click on a bin to find this option. This will clear any duplicate tiles from the selected bin.
+
+- **Selecting multiple tiles** You can click on the bin background and drag the mouse to select multiple objects with a box.
 
 V.B.4 Saving and loading training sets
 ----------------------------------------
@@ -281,21 +288,21 @@ recognize. To view this information graphically, return to the main Classifier s
 
   
 V.B.7 Data preparation
--------------
+----------------------
 
 Typically one wouldn't use the raw features as input for the machine learning, but the data is cleaned in some ways (e.g., by removing zero variance features) and normalized. Data preparation takes place before the machine learning is done, i.e., before training a classifier.  We here describe how you can perform data preparation steps in CPA. 
 
 *Normalization Tool*
-*************
+********************
 
 Typically the features are normalized before training a classifier. For example, the features are centered to have mean 0 and scaled to have standard deviation 1. This can be done in CPA with the Normalization Tool. From the main menu, navigate to Tools > Normalization Tool. You can choose which features to normalize.
 
 *Removing zero variance features*
-*************
+*********************************
 
 A zero variance feature is a feature that has the same entry for all objects, for example a feature that is equal to a constant value of 1 for all cells, which doesn't provide information to classify the cells. Usually these features therefore are removed before training a classifier. You can analyze all zero variance features using Classifier->Advanced->Check features. Then either drop those features manually in the properties file or use the normalization tool to delete them.
 
 *Removing NANs*
-*************
+***************
 
 A standard procedure is finding features with NAN (not a number) entries in the data and removing those cells. CPA automatically ignores cells with NANs, so this step is already been taken take of.

@@ -9,7 +9,7 @@ Each setting in the properties file is stored on a separate line in the form fie
 
 Note: When editing the properties file, it is important to use an editor that is capable of saving plain text. CPA cannot read files of type .doc, .rtf, etc. We suggest using Notepad on Windows, TextEdit on Mac OS, and Emacs on Linux.
 
-Note: CPA 2.0 is not compatible with properties files from CellProfiler Analyst version 1.0, but the two formats may be easily converted by hand. Contact us on the CellProfiler forums if you need help with this.
+Note: CPA 2.0+ is not compatible with properties files from CellProfiler Analyst version 1.0, but the two formats may be easily converted by hand. Contact us on the CellProfiler forums if you need help with this.
 
 Note: All fields described in the sections below (after the properties file example) are required unless explicitly described as “optional.” In your own properties file, you would replace values surrounded with <> with the relevant information.
 
@@ -18,7 +18,7 @@ III.A Properties file example
 
 .. code-block:: text
 
-    ==== CPA 2.0 properties file for example dataset ====
+    ==== CPA 3.0 properties file for example dataset ====
     # ==== Database Info ====
     db_type     = sqlite
     db_sql_file = example_SETUP.SQL
@@ -312,10 +312,29 @@ The previous example, but for a database including a table_id column TableNumber
 
 Image Classification
 --------------------
-CellProfiler Analyst 2.2 also supports classification directly from image features. To allow this, the biologist has to set the classification type flag to image and set the image_width and image_height fields to be a set number of pixels (e.g., 512 pixels).
+CellProfiler Analyst supports classification directly from image features. To allow this, the biologist has to set the classification type flag to image and set the image_width and image_height fields to be a set number of pixels (e.g., 512 pixels).
 
 .. code-block:: text
 
     classification_type = image
     image_width = 512
     image_height = 512
+
+
+Use Bioformats to load images
+-----------------------------
+CellProfiler Analyst 3 introduced a new image loader based on the imageio package. This will be used to load compatible images, otherwise bioformats will be used.
+If you need to use bioformats exclusively, you can use this setting
+
+.. code-block:: text
+
+    force_bioformats = yes or no
+
+Use the CPA 2.x object sampling method
+--------------------------------------
+CellProfiler Analyst 3 uses a new SQL query setup to fetch objects from the database. This is faster in the vast majority of cases, but some extremely complex custom filters may be slower.
+Use this setting to revert to using the older sampling system if you encounter problems.
+
+.. code-block:: text
+
+    use_legacy_fetcher = yes or no

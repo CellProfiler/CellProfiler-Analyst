@@ -1,12 +1,11 @@
 # =============================================================================
 #
-#             Properties file README for CellProfiler Analyst 2.2
+#             Properties file README for CellProfiler Analyst 3.0
 #
-# NOTE: CPA 2.0 will not read old CPA properties files, nor will CPA read this
-#       properties file format.  The two formats can, however be easily 
-#       converted by hand.
+# NOTE: CPA 3.0 will read CPA properties files from 2.x versions, but older
+#       files from 1.x versions are incompatible.
 #
-# This file is an example properties file to help users of CPA 2.0 to set up
+# This file is an example properties file to help users of CPA 3.0 to set up
 # your own properties file.  The syntax is simple.  Lines that begin with the
 # "#" sign are comments which are ignored by CPA.  All other lines must be in
 # one of one of the following 2 forms:

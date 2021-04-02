@@ -5,7 +5,7 @@
 
 |  **`Version`**  |  **`Documentation`** | **`Forum`** |
 |---------------|----------------|-----------------|
-| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)](http://cellprofiler.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-2.2.1-brightgreen.svg)](http://cellprofiler.org/CPA/) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](http://forum.cellprofiler.org/) |
+| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)](http://cellprofiler.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-2.2.1-brightgreen.svg)](http://cellprofiler.org/CPA/) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](https://forum.image.sc/tag/cellprofiler-analyst) |
 
 **CellProfiler Analyst** allows interactive exploration and analysis of data,
 particularly from high-throughput, image-based experiments. Included is a
@@ -20,7 +20,7 @@ and subtle phenotypes, for automatic scoring of millions of cells.
 
 Download [CellProfiler Analyst](https://cellprofileranalyst.org/releases)
 
-CellProfiler Analyst requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE).
+When running from source, CellProfiler Analyst requires [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to be installed (not just JRE).
 Check the Java path.
 
 Please note that this is the development branch of CPA and it will be updated on regular basis. 
@@ -37,7 +37,7 @@ for more detailed installation instructions.
 * Pandas
 * Seaborn
 * Scikit-learn
-* Javabridge
+* Python-Javabridge
 * Verlib
 * Python-bioformats
 
@@ -85,5 +85,5 @@ David Dao, Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Sing
 
 David Logan, Allen Goodman, Alison Kozol, Mohammad Hossein Rohban
 
-*Copyright 2016, The Broad Institute of MIT and Harvard.
+*Copyright 2021, The Broad Institute of MIT and Harvard.
 Distributed under the BSD license.*
