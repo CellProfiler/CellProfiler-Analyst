@@ -126,7 +126,7 @@ class DataModel(metaclass=Singleton):
         elif imKeys == []:
             return []
         else:
-            if p.use_legacy_fetcher or with_replacement:
+            if p.use_legacy_fetcher:
                 sums = np.cumsum([self.data[imKey] for imKey in imKeys])
                 if sums[-1] < 1:
                     return []
@@ -148,6 +148,8 @@ class DataModel(metaclass=Singleton):
                     obs.append(obKey)
             else:
                 obs = db.GetRandomObjectsSQL(imKeys, N)
+                if with_replacement and 0 < len(obs) < N:
+                    obs = random.choices(obs, k=N)
             return obs
 
     def GetAllObjects(self, filter_name=None, gate_name=None, imkeys=[], N=None):
