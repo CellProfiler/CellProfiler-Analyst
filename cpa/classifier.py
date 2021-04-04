@@ -93,7 +93,8 @@ class Classifier(wx.Frame):
         self.brightness = 1.0
         self.required_fields = []
         self.with_replacement = False
-        
+        self.reject_duplicates = False
+
         # if not p.classification_type == 'image':
         self.image_tile_size = p.image_tile_size
         self.scale = 1.0
@@ -638,6 +639,9 @@ class Classifier(wx.Frame):
         sampleReplacementItem = advancedMenu.AppendCheckItem(-1, item='Sample with replacement',
                                            help='Allow duplicates when fetching objects')
         sampleReplacementItem.Check(False)
+        rejectDuplicatesItem = advancedMenu.AppendCheckItem(-1, item='Prevent duplicate objects',
+                                                             help="Don't fetch objects which are already classified")
+        rejectDuplicatesItem.Check(False)
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -656,6 +660,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
         self.Bind(wx.EVT_MENU, self.OnToggleScaling, self.scalerMenuItem)
         self.Bind(wx.EVT_MENU, self.OnToggleReplacement, sampleReplacementItem)
+        self.Bind(wx.EVT_MENU, self.OnToggleRejectDuplicates, rejectDuplicatesItem)
 
         # Bind events for algorithms
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, rfMenuItem)
@@ -966,6 +971,12 @@ class Classifier(wx.Frame):
         else:
             self.with_replacement = False
 
+    def OnToggleRejectDuplicates(self, evt):
+        if evt.IsChecked():
+            self.reject_duplicates = True
+        else:
+            self.reject_duplicates = False
+
     def OnFetch(self, evt):
         # Parse out the GUI input values
         nObjects = int(self.nObjectsTxt.Value)
@@ -1159,6 +1170,15 @@ class Classifier(wx.Frame):
                     time_start = time()
 
             statusMsg += loopMsg
+
+        if self.reject_duplicates:
+            used_keys = set(self.unclassifiedBin.GetObjectKeys())
+            for bin in self.classBins:
+                used_keys.update(bin.GetObjectKeys())
+            obKeys = list(set(obKeys) - used_keys)
+            if len(obKeys) == 0:
+                self.PostMessage("All fetched objects had already been used.")
+                return
 
         self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last',
                                         display_whole_image=p.classification_type == 'image')
