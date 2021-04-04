@@ -30,33 +30,41 @@ class ImageControlPanel(wx.Panel):
         self.scale_slider      = wx.Slider(parent, -1, scale*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.brightness_slider = wx.Slider(parent, -1, brightness*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.reset_btn         = wx.Button(parent, wx.NewId(), 'Reset')
-        
+        self.fit_to_window_btn = wx.Button(parent, wx.NewId(), 'Fit to Window')
         self.scale_percent      = wx.StaticText(parent, wx.NewId(), str(self.scale_slider.GetValue())+'%')
         self.brightness_percent = wx.StaticText(parent, wx.NewId(), str(self.brightness_slider.GetValue())+'%')
         
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer2 = wx.BoxSizer(wx.VERTICAL)
+
         brightness_sizer = wx.BoxSizer(wx.HORIZONTAL)
-#        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Brightness:'))
         brightness_sizer.Add(wx.StaticBitmap(self.Parent, -1, get_icon('brightness').ConvertToBitmap()), proportion=0)
         brightness_sizer.AddSpacer(5)
         brightness_sizer.Add(self.brightness_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         brightness_sizer.AddSpacer(5)
         brightness_sizer.Add(self.brightness_percent)
+
         scale_sizer = wx.BoxSizer(wx.HORIZONTAL)
-#        sizer2.Add(wx.StaticText(parent, wx.NewId(), 'Scale:'))
         scale_sizer.Add(wx.StaticBitmap(self.Parent, -1, get_icon('zoom').ConvertToBitmap()), proportion=0)
         scale_sizer.AddSpacer(5)
         scale_sizer.Add(self.scale_slider, proportion=1, flag=wx.ALL|wx.EXPAND)
         scale_sizer.AddSpacer(5)
         scale_sizer.Add(self.scale_percent)
+
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        button_sizer.Add(self.reset_btn)
+        # Avoids circular import at the start of the module.
+        from cpa.imageviewer import ImageViewerPanel
+        if isinstance(self.listeners[0], ImageViewerPanel):
+            button_sizer.AddSpacer(5)
+            button_sizer.Add(self.fit_to_window_btn)
+
         sizer2.Add(brightness_sizer)
         sizer2.Add(scale_sizer)
         text = wx.StaticText(parent, wx.NewId(), 'Find selected objects: Ctrl+F/Cmd+F')
         sizer2.Add(text)
-        sizer2.Add(self.reset_btn)
+        sizer2.Add(button_sizer)
         sizer2.Add(0, 10, 0) # Space on the bottom
-
         self.sizer3 = wx.BoxSizer(wx.VERTICAL)
         self.AddContrastControls(contrast)
         self.sizer4 = wx.BoxSizer(wx.VERTICAL)
@@ -74,7 +82,7 @@ class ImageControlPanel(wx.Panel):
         self.scale_slider.Bind(wx.EVT_SLIDER, self.OnScaleSlider)
         self.brightness_slider.Bind(wx.EVT_SLIDER, self.OnBrightnessSlider)
         self.reset_btn.Bind(wx.EVT_BUTTON, self.OnReset)
-
+        self.fit_to_window_btn.Bind(wx.EVT_BUTTON, self.OnFitToWindow)
         # When a slider is moved wx produces update events extremely quickly.
         # This will freeze up CPA if there are more than a few tiles displayed.
         # To solve this, we put the tile updates on a timer. If the slider
@@ -182,7 +190,21 @@ class ImageControlPanel(wx.Panel):
         self.brightness_percent.SetLabel('100%')
         self.scale_percent.SetLabel('100%')
         self.Layout()
-            
+
+    def OnFitToWindow(self, evt):
+        scale = 1
+        from cpa.imageviewer import ImageViewerPanel
+        for listener in self.listeners:
+            if isinstance(listener, ImageViewerPanel):
+                client_h, client_w = listener.GetParent().GetSize()
+                img_w, img_h = listener.images[0].shape
+                scale = min(client_w / img_w, client_h / img_h)
+                listener.SetScale(scale)
+                break
+        self.scale_slider.SetValue(scale * 100)
+        self.scale_percent.SetLabel(str(self.scale_slider.GetValue())+'%')
+        self.Layout()
+
     def ConnectTolistener(self, listener):
         self.listeners += [listener]
     
