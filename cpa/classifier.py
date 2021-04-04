@@ -27,6 +27,7 @@ import numpy as np
 import os
 import wx
 import re
+import random
 import cpa.helpmenu
 from .dimensredux import PlotMain
 
@@ -998,11 +999,12 @@ class Classifier(wx.Frame):
                 obKeys = dm.GetRandomObjects(nObjects, [imKey], with_replacement=self.with_replacement)
                 statusMsg += ' from image %s' % (imKey,)
             elif fltr_sel in p.gates_ordered:
-                filteredImKeys = db.GetGatedImages(fltr_sel)
-                if filteredImKeys == []:
-                    self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
+                obKeys = db.GetGatedObjects(fltr_sel, nObjects, random=True)
+                if obKeys == []:
+                    self.PostMessage('No objects were found in gate "%s"' % (fltr_sel))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys, with_replacement=self.with_replacement)
+                if self.with_replacement and len(obKeys) < nObjects:
+                    obs = random.choices(obKeys, k=nObjects)
                 statusMsg += ' from gate "%s"' % (fltr_sel)
             elif fltr_sel in p._filters_ordered:
                 filteredImKeys = db.GetFilteredImages(fltr_sel)
@@ -1043,15 +1045,15 @@ class Classifier(wx.Frame):
                 statusMsg += ' from image %s' % (imKey,)
 
             elif fltr_sel in p.gates_ordered:
-                obKeys = dm.GetAllObjects(gate_name=fltr_sel, N=nObjects)
+                obKeys = db.GetGatedObjects(fltr_sel, nObjects, random=False)
                 if obKeys == []:
-                    self.PostMessage('No images were found in gate "%s"' % (fltr_sel))
+                    self.PostMessage('No objects were found in gate "%s"' % (fltr_sel))
                     return
                 statusMsg += ' from gate "%s"' % (fltr_sel)
             elif fltr_sel in p._filters_ordered:
                 obKeys = dm.GetAllObjects(filter_name=fltr_sel, N=nObjects)
                 if obKeys == []:
-                    self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
+                    self.PostMessage('No objects were found in filter "%s"' % (fltr_sel))
                     return
                 statusMsg += ' from filter "%s"' % (fltr_sel)
             elif fltr_sel in p._groups_ordered:

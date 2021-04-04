@@ -875,6 +875,20 @@ class DBConnect(metaclass=Singleton):
             logging.error(e)
             raise Exception('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(gate_name))
 
+    def GetGatedObjects(self, gate_name, N=None, random=True):
+        from . import sqltools
+        q = sqltools.QueryBuilder()
+        q.select(sqltools.object_cols())
+        q.where([p.gates[gate_name]])
+        q.group_by(sqltools.object_cols())
+        if random:
+            query = f"{str(q)} ORDER BY RANDOM()"
+        else:
+            query = f"{str(q)} ORDER BY {p.object_table}.{p.image_id}"
+        if N is not None:
+            query += f" LIMIT {N}"
+        keys = self.execute(query)
+        return keys
 
     def GetTableNames(self):
         '''
