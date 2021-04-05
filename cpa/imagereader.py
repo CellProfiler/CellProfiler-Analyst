@@ -25,7 +25,8 @@ class ImageReader(object):
         channels = []
         for i, filename_or_url in enumerate(fds):
             image = self._read_image(filename_or_url, log_io=log_io)
-
+            if image is None:
+                return
             channels += self._extract_channels(filename_or_url, image,
                                                p.image_names[i],
                                                int(p.channels_per_image[i]))
@@ -64,6 +65,9 @@ class ImageReader(object):
                 logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
             try:
                 return imageio.imread(filename_or_url)
+            except FileNotFoundError:
+                logging.error(f"File not found: {filename_or_url}")
+                return
             except:
                 logging.info('Loading with ImageIO failed, falling back to BioFormats')
         if javabridge.get_env() is None:
@@ -72,7 +76,12 @@ class ImageReader(object):
             javabridge.attach()
         if log_io:
             logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
-        return bioformats.load_image(filename_or_url, rescale=False)
+        try:
+            return bioformats.load_image(filename_or_url, rescale=False)
+        except FileNotFoundError:
+            logging.error(f"File not found: {filename_or_url}")
+        except:
+            logging.error('Loading with BioFormats failed, file may be corrupted or unavailable')
 
     def _extract_channels(self, filename_or_url, image, image_name, channels_per_image):
         if image.ndim == 2 and channels_per_image != 1:

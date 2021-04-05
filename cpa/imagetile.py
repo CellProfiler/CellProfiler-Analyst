@@ -177,7 +177,7 @@ class ImageTile(ImagePanel):
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1)
-        if self.bin.label != 'image gallery':
+        if imViewer and self.bin.label != 'image gallery':
             imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
     def Select(self):

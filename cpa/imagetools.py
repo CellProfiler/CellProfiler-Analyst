@@ -28,6 +28,9 @@ def FetchTile(obKey, display_whole_image=False):
     imKey = obKey[:-1]
     # Could transform object coords here
     imgs = FetchImage(imKey)
+    if imgs is None:
+        # Loading failed, return gracefully.
+        return
     
     size = (int(p.image_size),int(p.image_size))
     if display_whole_image:
@@ -64,6 +67,9 @@ def FetchImage(imKey):
         except:
             log_io = True
         imgs = ir.ReadImages(filenames, log_io)
+        if imgs is None:
+            # Loading failed
+            return
         cache[imKey] = imgs
         cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
@@ -73,6 +79,8 @@ def FetchImage(imKey):
 def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
     from .imageviewer import ImageViewer
     imgs = FetchImage(imKey)
+    if imgs is None:
+        return
     frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
                         parent=parent, title=str(imKey),
                         brightness=brightness, scale=scale,
