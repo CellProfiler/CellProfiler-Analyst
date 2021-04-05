@@ -23,7 +23,7 @@ import os.path
 _cached_description = None
 
 __version__ = '3.0.0' # Version used by update checker, must be in format "N.N.N"
-_sub_version = 'rc3' # Use this to tag release candidates, betas, etc.
+_sub_version = 'rc4' # Use this to tag release candidates, betas, etc.
 
 display_version = __version__ + _sub_version
 
