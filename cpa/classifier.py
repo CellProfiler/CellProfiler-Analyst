@@ -1863,6 +1863,10 @@ class Classifier(wx.Frame):
 
         # CONSTRUCT ARRAY OF TABLE DATA
         tableData = []
+        training_table = pd.DataFrame(self.trainingSet.get_object_keys(), columns=["ImageNumber", "ObjectNumber"])
+        training_table["Class"] = self.trainingSet.get_class_per_object()
+        labels = self.trainingSet.labels
+
         for i, row in enumerate(groupedKeysAndCounts):
             # Start this row with the group key:
             imageNumber = list(row[:nKeyCols])
@@ -1905,7 +1909,10 @@ class Classifier(wx.Frame):
                 else:
                     tableRow += ['NaN'] * 2 * len(countsRow)
             #training set counts
-            trainingCountsRow = [np.sum([(self.trainingSet.get_class_per_object()[i] == v)*(self.trainingSet.get_object_keys()[i][0] == imageNumber[0]) for i in range(len(self.trainingSet.get_class_per_object()))]) for v in self.trainingSet.labels]
+            trainingCountsRow = np.zeros(len(labels), dtype=int).tolist()
+            subset = training_table[training_table["ImageNumber"] == tableRow[0]]
+            for idx, lab in enumerate(labels):
+                trainingCountsRow[idx] += len(subset[subset["Class"] == lab])
             tableRow += [sum(trainingCountsRow)]
             tableRow += trainingCountsRow
             tableData.append(tableRow)
