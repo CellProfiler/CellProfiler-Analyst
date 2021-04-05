@@ -1535,6 +1535,7 @@ class Classifier(wx.Frame):
 
     def UpdateTrainingSet(self):
         # pause tile loading
+        self.PostMessage('Waiting for image loader to finish current job.')
         with tilecollection.load_lock():
             try:
                 def cb(frac):
@@ -1542,7 +1543,7 @@ class Classifier(wx.Frame):
                     if not cont:  # cancel was pressed
                         dlg.Destroy()
                         raise StopCalculating()
-
+                self.PostMessage('Saving training set.')
                 dlg = wx.ProgressDialog('Fetching cell data for training set...', '0% Complete', 100, self,
                                         wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME |
                                         wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
