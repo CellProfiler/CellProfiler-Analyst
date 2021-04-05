@@ -496,6 +496,7 @@ class ImageViewer(wx.Frame):
             return
         # Score the Image
         classifier.ClassifyImage(self.img_key)
+        self.Close()
 
     def OnPaneChanged(self, evt=None):
         self.Layout()

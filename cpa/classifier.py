@@ -1683,8 +1683,16 @@ class Classifier(wx.Frame):
         trainingCoords = {}
         training_obKeys = self.trainingSet.get_object_keys()
         for className, obKeys in classHits.items():
-            trainingCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
-            classCoords[className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
+            training_keys = [key for key in obKeys if key in training_obKeys]
+            if training_keys:
+                trainingCoords['training ' + className] = db.GetObjectsCoords(training_keys)
+            else:
+                trainingCoords['training ' + className] = []
+            object_keys = [key for key in obKeys if key not in training_obKeys]
+            if object_keys:
+                classCoords[className] = db.GetObjectsCoords(object_keys)
+            else:
+                classCoords[className] = []
         classCoords.update(trainingCoords)
         # Show the image
         imViewer = imagetools.ShowImage(imKey, list(self.chMap), self,
