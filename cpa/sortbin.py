@@ -58,6 +58,25 @@ class CellMontageFrame(wx.Frame):
     def SetContrastMode(self, mode):
         [t.SetContrastMode(mode) for t in self.sb.tiles]
 
+    def Destroy(self):
+        ''' Kill off all threads before combusting. '''
+        super(CellMontageFrame, self).Destroy()
+        import threading
+        t = tilecollection.TileCollection()
+        if self.sb in t.loader.notify_window:
+            t.loader.notify_window.remove(self.sb)
+        # If no other windows are attached to the loader we shut it down and delete the tilecollection.
+        if len(t.loader.notify_window) == 0:
+            for thread in threading.enumerate():
+                if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
+                    logging.debug('Aborting thread %s' % thread.getName())
+                    try:
+                        thread.abort()
+                    except:
+                        pass
+            tilecollection.TileCollection.forget()
+        return True
+
 class SortBinDropTarget(wx.DropTarget):
     def __init__(self, bin):
         wx.DropTarget.__init__(self)
