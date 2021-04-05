@@ -236,7 +236,8 @@ class ImageTile(ImagePanel):
             evt.ResumePropagation(1)
             evt.Skip()
             return
-
+        if self.bin.label == "image gallery":
+            return
         if not evt.LeftIsDown() or not self.leftPressed or self.x is None:
             return
         # Only start a drag operation if the item is moved more than a few pixels.

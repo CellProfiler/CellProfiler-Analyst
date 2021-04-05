@@ -101,7 +101,8 @@ class SortBin(wx.ScrolledWindow):
     '''
     def __init__(self, parent, chMap=None, label='', classifier=None, parentSizer=None):
         wx.ScrolledWindow.__init__(self, parent)
-        self.SetDropTarget(SortBinDropTarget(self))
+        if label != "image gallery":
+            self.SetDropTarget(SortBinDropTarget(self))
 
         self.label           = label
         self.parentSizer     = parentSizer
@@ -313,7 +314,7 @@ class SortBin(wx.ScrolledWindow):
             return closure
 
         closure = hack(obKeys)
-        if srcID == self.GetId():
+        if srcID == self.GetId() or self.label == "image gallery":
             # wx.CallAfter(closure)
             return wx.DragNone
         self.DeselectAll()

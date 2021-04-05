@@ -206,7 +206,6 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
                 colnames = self.env.trainingSet.colnames
                 importances = self.classifier.feature_importances_
                 indices = np.argsort(importances)[::-1]
-                print((self.classifier))
                 return "\n".join([str(colnames[indices[f]]) for f in range(self.env.nRules)])
             except:
                 return ''
