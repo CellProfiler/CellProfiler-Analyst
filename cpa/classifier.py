@@ -1711,7 +1711,12 @@ class Classifier(wx.Frame):
         labels = list(dbconnect.image_key_columns())
         key_col_indices = [i for i in range(len(labels))]
         labels = self.getLabels(labels, nClasses)
-        trainingCountsRow = [np.sum([(self.trainingSet.get_class_per_object()[i] == v)*(self.trainingSet.get_object_keys()[i][0] == imKey[0]) for i in range(len(self.trainingSet.get_class_per_object()))]) for v in self.trainingSet.labels]
+        trainingCountsRow = np.zeros(len(self.trainingSet.labels), dtype=int).tolist()
+        training_table = pd.DataFrame(self.trainingSet.get_object_keys(), columns=["ImageNumber", "ObjectNumber"])
+        training_table["Class"] = self.trainingSet.get_class_per_object()
+        subset = training_table[training_table["ImageNumber"] == imKey[0]]
+        for idx, lab in enumerate(self.trainingSet.labels):
+            trainingCountsRow[idx] += len(subset[subset["Class"] == lab])
         tableRow = [sum(trainingCountsRow)]
         tableRow.extend(trainingCountsRow)
         tableData.extend(tableRow)
