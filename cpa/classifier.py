@@ -1645,7 +1645,7 @@ class Classifier(wx.Frame):
         self.UpdateClassChoices()#
 
     def OnScoreImage(self, evt):
-        self.UpdateTrainingSet()
+        # self.UpdateTrainingSet()
         # Get the image key
         # Start with the table_id if there is one
         tblNum = None
@@ -1747,7 +1747,7 @@ class Classifier(wx.Frame):
         Calculates object counts for each class and enrichment values,
         then builds a table and displays it in a DataGrid.
         '''
-        self.UpdateTrainingSet()
+        # self.UpdateTrainingSet()
         groupChoices = ['Image'] + p._groups_ordered
         filterChoices = [None] + p._filters_ordered
         nClasses = len(self.classBins)
