@@ -617,12 +617,13 @@ class DBConnect(metaclass=Singleton):
         imKeys: a list of image keys to sample objects from.
         N: number of keys to sample
         '''
+        rand = "RANDOM()" if p.db_type == 'sqlite' else "RAND()"
         if not imKeys:
-            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} ORDER BY RANDOM() LIMIT {N}"
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} ORDER BY {rand} LIMIT {N}"
 
         else:
             where_clause = GetWhereClauseForImages(imKeys)
-            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} WHERE  {where_clause} ORDER BY RANDOM() LIMIT {N}"
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} WHERE  {where_clause} ORDER BY {rand} LIMIT {N}"
         object_numbers = self.execute(statement)
         return object_numbers
 
@@ -882,7 +883,10 @@ class DBConnect(metaclass=Singleton):
         q.where([p.gates[gate_name]])
         q.group_by(sqltools.object_cols())
         if random:
-            query = f"{str(q)} ORDER BY RANDOM()"
+            if p.db_type == 'sqlite':
+                query = f"{str(q)} ORDER BY RANDOM()"
+            else:
+                query = f"{str(q)} ORDER BY RAND()"
         else:
             query = f"{str(q)} ORDER BY {p.object_table}.{p.image_id}"
         if N is not None:
