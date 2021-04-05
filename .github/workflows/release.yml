@@ -1,7 +1,7 @@
 name: create-release
 on:
   push:
-    branches: [ Python3_Port ]
+    branches: [ master ]
 #    tags:
 #      - "v*"
 
@@ -79,7 +79,6 @@ jobs:
     strategy:
       matrix:
         os: [macos-10.15, windows-2019]
-#        os: [windows-2019]
         python-version: [ "3.8" ]
 #  upload:
 #    name: upload
