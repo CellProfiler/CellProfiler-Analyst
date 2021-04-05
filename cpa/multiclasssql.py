@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import numpy as np
 import sys
@@ -8,14 +8,15 @@ sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/cpa');
 sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/')
 
 import cpa.sqltools
-from dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_key_columns, GetWhereClauseForImages, GetWhereClauseForObjects, object_key_defs
-from properties import Properties
-from datamodel import DataModel
+from .dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_key_columns, GetWhereClauseForImages, GetWhereClauseForObjects, object_key_defs
+from .properties import Properties
+from .datamodel import DataModel
 from sklearn.ensemble import AdaBoostClassifier
+from pandas import to_numeric
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
-dm = DataModel.getInstance()
+db = DBConnect()
+p = Properties()
+dm = DataModel()
 
 temp_stump_table = "_stump"
 temp_score_table = "_scores"
@@ -134,31 +135,42 @@ def FilterObjectsFromClassN(classNum, classifier, filterKeys, uncertain):
     else:
         predicted_classes = classifier.Predict(cell_data)
         res = object_keys[predicted_classes == classNum * np.ones(predicted_classes.shape)].tolist() #convert to list
-    return map(tuple,res) # ... and then to tuples
+    return list(map(tuple,res)) # ... and then to tuples
 
 def processData(data):
     #takes data from query and returns arrays for feature values and object keys
     col_names = db.GetColnamesForClassifier()
     number_of_features = len(col_names)
-    cell_data = []
-    object_keys = []
-    for row in data:
-        cell_data.append(row[-number_of_features:])#last number_of_features columns in row
-        object_keys.append(row[:-number_of_features])#all elements in row before last (number_of_features) elements
-    cell_data = np.array(cell_data)
-    object_keys = np.array(object_keys)
-    cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
 
-    data_shape = cell_data.shape
+    # Old method of generating data arrays
+    # cell_data = []
+    # object_keys = []
+    # for row in data:
+    #     cell_data.append(row[-number_of_features:])#last number_of_features columns in row
+    #     object_keys.append(row[:-number_of_features])#all elements in row before last (number_of_features) elements
+    # cell_data = np.array(cell_data)
+    # object_keys = np.array(object_keys)
+    # New method, Mar 2021
+    object_keys, cell_data = np.split(np.array(data), [-number_of_features], axis=1)
+    object_keys = np.array(list(map(tuple, object_keys))).astype(int)
+
     # if numpy array is already floats, pass; if numpy array contains strings, convert
-    try:
-        cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
-        print('data type 1 ', cell_data.dtype)
-        cell_data = np.nan_to_num(cell_data)
-    except:
-        print('data type 2 ', cell_data.dtype)
-        cell_data = np.nan_to_num(cell_data)
-    logging.info('Any values that cannot be converted to float are set to 0')
+    if not np.issubdtype(cell_data.dtype, float):
+        cell_data = np.where(cell_data == np.array(None), '0', cell_data).astype(str)
+
+        data_shape = cell_data.shape
+        try:
+            cell_data = np.apply_along_axis(to_numeric, 1, cell_data, errors="coerce")
+            # print(('data type 1 ', cell_data.dtype))
+        except Exception as e:
+            logging.info("Data conversion failed, trying slower method - ", e)
+            try:
+                cell_data = np.reshape(np.genfromtxt(cell_data.ravel(), delimiter=','), data_shape)
+            except Exception as e:
+                logging.info("Fallback data conversion failed, will try proceeding anyway - ", e)
+            # print(('data type 2 ', cell_data.dtype))
+    cell_data = np.nan_to_num(cell_data)
+    logging.info('Any values that cannot be converted to float were set to 0')
     return cell_data, object_keys
 
 def _objectify(p, field):
@@ -167,7 +179,7 @@ def _objectify(p, field):
 def _where_clauses(p, dm, filter_name):
     imkeys = dm.GetAllImageKeys(filter_name)
     imkeys.sort()
-    stepsize = max(len(imkeys) / 100, 50)
+    stepsize = max(len(imkeys) // 100, 50)
     key_thresholds = imkeys[-1:1:-stepsize]
     key_thresholds.reverse()
     if len(key_thresholds) == 0:
@@ -261,7 +273,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                     try:
                         float(cell_data[i,j])
                     except:
-                        print(i,j, cell_data[i,j], type(cell_data[i,j]))
+                        print((i,j, cell_data[i,j], type(cell_data[i,j])))
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i][0], predicted_classes[i]))
@@ -274,9 +286,9 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                     counts[row_cls] = oneCount
 
             if cb:
-                cb(min(1, idx/float(num_clauses))) #progress
+                cb(min(1, (idx + 1)/num_clauses)) #progress
         return counts
-    print('area scoring column ', p.area_scoring_column)
+    print(('area scoring column ', p.area_scoring_column))
     counts = do_by_steps(p.object_table, filter_name, p.area_scoring_column)
     def get_count(im_key, classnum):
         return counts.get(im_key + (classnum, ), np.array([0]))[0]
@@ -295,14 +307,14 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
 
 
 if __name__ == "__main__":
-    from trainingset import TrainingSet
-    from StringIO import StringIO
-    import generalclassifier
-    from datatable import DataGrid
+    from .trainingset import TrainingSet
+    from io import StringIO
+    from . import generalclassifier
+    from .datatable import DataGrid
     import wx
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
 
     props = '/vagrant/az-dnaonly.properties'
     ts = '/vagrant/Anne_DNA_66.txt'
@@ -315,15 +327,15 @@ if __name__ == "__main__":
     p.LoadFile(props)
     trainingSet = TrainingSet(p)
     trainingSet.Load(ts)
-    print(trainingSet.label_matrix.shape)
-    print(trainingSet.labels)
-    print(len(trainingSet.colnames))
-    print(trainingSet.values.shape)
+    print((trainingSet.label_matrix.shape))
+    print((trainingSet.labels))
+    print((len(trainingSet.colnames)))
+    print((trainingSet.values.shape))
     output = StringIO()
-    print('Training classifier with '+str(nRules)+' rules...')
+    print(('Training classifier with '+str(nRules)+' rules...'))
 
     labels = np.nonzero(trainingSet.label_matrix+1)[1] + 1 #base 1 classes
-    print(len(labels))
+    print((len(labels)))
     GC.Train(labels,trainingSet.values)
     num_classes = trainingSet.label_matrix.shape[1]
 
@@ -339,5 +351,5 @@ if __name__ == "__main__":
     #    print row
     #object_scores()
     p.class_table = 'testmulticlassql'
-    create_perobject_class_table(GC, range(num_classes))
+    create_perobject_class_table(GC, list(range(num_classes)))
     #_objectify()

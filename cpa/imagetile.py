@@ -1,23 +1,23 @@
 '''
 A special image panel meant to be dragged and dropped.
 '''
-from dbconnect import DBConnect
-from imagepanel import ImagePanel
-from properties import Properties
-import imagetools
-import cPickle
+from .dbconnect import DBConnect
+from .imagepanel import ImagePanel
+from .properties import Properties
+from . import imagetools
+import pickle
 import wx
 
-from trainingset import CellCache
+from .trainingset import CellCache
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 
 class ImageTileDropTarget(wx.DropTarget):
     ''' ImageTiles pass drop events to their parent bin. '''
     def __init__(self, tile):
-        self.data = wx.CustomDataObject("ObjectKey")
+        self.data = wx.CustomDataObject("application.cpa.ObjectKey")
         wx.DropTarget.__init__(self, self.data)
         self.tile = tile
     
@@ -25,7 +25,7 @@ class ImageTileDropTarget(wx.DropTarget):
         if not self.GetData():
             return wx.DragNone
         draginfo = self.data.GetData()
-        srcID, obKeys = cPickle.loads(draginfo)
+        srcID, obKeys = pickle.loads(draginfo)
         if not obKeys:
             return wx.DragNone
         return self.tile.bin.ReceiveDrop(srcID, obKeys) 
@@ -49,11 +49,15 @@ class ImageTile(ImagePanel):
         self.leftPressed = False
         self.showCenter  = False
         self.popupMenu   = None
+        self.x = None
+        self.y = None
 
-        self.cache = CellCache.getInstance()
+        self.cache = CellCache()
 
-        self.MapChannels(chMap)
-        
+        # We just made bitmaps, shouldn't need to regenerate them already.
+        # self.MapChannels(chMap)
+        self.chMap = chMap
+
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)     # Show images on double click
@@ -67,12 +71,10 @@ class ImageTile(ImagePanel):
     def OnPaint(self, evt):
         dc = ImagePanel.OnPaint(self, evt)
         if self.showCenter:
-            dc.BeginDrawing()
             dc.SetLogicalFunction(wx.XOR)
             dc.SetPen(wx.Pen("WHITE",1))
             dc.SetBrush(wx.Brush("WHITE", style=wx.TRANSPARENT))
             dc.DrawRectangle(self.bitmap.Width/2.-1, self.bitmap.Height/2.-1, 3, 3)
-            dc.EndDrawing()
         return dc
 
     def CreatePopupMenu(self):
@@ -163,7 +165,7 @@ class ImageTile(ImagePanel):
                     y_score = clf.PredictProba(values)        
 
                     y_score = y_score[0] # Flatten array
-                    self.classifier.PlotProbs(y_score)
+                    self.classifier.PlotProbs(y_score, key=k)
             else:
                 dlg = wx.MessageDialog(self,'Please train your classifier first', 'No probability scores available', style=wx.OK)
                 dlg.ShowModal()
@@ -175,7 +177,7 @@ class ImageTile(ImagePanel):
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1)
-        if self.bin.label != 'image gallery':
+        if imViewer and self.bin.label != 'image gallery':
             imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
         
     def Select(self):
@@ -197,6 +199,9 @@ class ImageTile(ImagePanel):
     def OnLeftDown(self, evt):
         self.bin.SetFocusIgnoringChildren()
         self.leftPressed = True
+        pointer = wx.GetMouseState()
+        self.x = pointer.GetX()
+        self.y = pointer.GetY()
         if not evt.ShiftDown() and not self.selected:
             self.bin.DeselectAll()
             self.Select()
@@ -205,6 +210,12 @@ class ImageTile(ImagePanel):
 
     def OnLeftUp(self, evt):
         inMotion = False
+        self.x = None
+        self.y = None
+        if self.bin.selectbox:
+            # Handle resetting selection in the sortbin
+            self.bin.selectbox = None
+            self.bin.Refresh()
             
     def OnMouseOver(self, evt):
         self.showCenter = True
@@ -216,29 +227,42 @@ class ImageTile(ImagePanel):
         self.Refresh()
             
     def OnMotion(self, evt):
-        if not evt.LeftIsDown() or not self.leftPressed:
+        if self.bin.dragging:
+            # A tile has captured a motion event we want to use with sortbin drag selection.
+            # Let's fix the event position to refer to the parent sizer, then pass the event up.
+            x, y = evt.GetPosition()
+            w, h = self.GetPosition()
+            evt.SetPosition((x + w, y + h))
+            evt.ResumePropagation(1)
+            evt.Skip()
             return
+        if self.bin.label == "image gallery":
+            return
+        if not evt.LeftIsDown() or not self.leftPressed or self.x is None:
+            return
+        # Only start a drag operation if the item is moved more than a few pixels.
+        pointer = wx.GetMouseState()
+        if abs(pointer.GetX() - self.x) + abs(pointer.GetY() - self.y) < 10:
+            return
+
         self.bin.SetFocusIgnoringChildren()
-        # Removed for Linux compatibility
-        #cursorImg = self.bitmap.ConvertToImage()
-        #cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, int(self.bitmap.Size[0])/2)
-        #cursorImg.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, int(self.bitmap.Size[1])/2)
-        #cursor = wx.CursorFromImage(cursorImg)
-        
+
         # wx crashes unless the data object is assigned to a variable.
-        data_object = wx.CustomDataObject("ObjectKey")
-        data_object.SetData(cPickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
+        data_object = wx.CustomDataObject("application.cpa.ObjectKey")
+        data_object.SetData(pickle.dumps( (self.bin.GetId(), self.bin.SelectedKeys()) ))
         source = wx.DropSource(self)#, copy=cursor, move=cursor)
         source.SetData(data_object)
+        start_bin = self.bin.GetId()
         result = source.DoDragDrop(wx.Drag_DefaultMove)
         # def cb():
         #     self.bin.RemoveKeys(self.bin.SelectedKeys()) # Hack to fix drag move
         # wx.CallAfter(cb)
-        #if result is wx.DragMove:
-        self.bin.RemoveSelectedTiles() # Removes images which stays during drag and drop
-        self.bin.UpdateSizer()
-        self.bin.UpdateQuantity()
-    
+        if result == wx.DragMove and self.bin.GetId() == start_bin:
+            # Tiles were copied, not moved. Clear the duplicates.
+            self.bin.RemoveSelectedTiles() # Removes images which stays during drag and drop
+            self.bin.UpdateSizer()
+            self.bin.UpdateQuantity()
+
     def OnSize(self, evt):
         self.SetClientSize(evt.GetSize())
         evt.Skip()

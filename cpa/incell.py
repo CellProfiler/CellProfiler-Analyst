@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import sys
 import math
@@ -42,7 +42,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
         cursor.execute('SELECT MAX(ImageNumber) from Images')
         start_image_number = next_image_number = cursor.fetchone()[0] + 1
     except Exception as e:
-        print("no image number info", e)
+        print(("no image number info", e))
         start_image_number = next_image_number = 1
 
     # create the object table
@@ -71,7 +71,7 @@ def parse_incell(sqlite_filename, incell_filename, properties):
                     next_image_number += 1
                 
                 if element.get('cell') == 'Summary':
-                    print(well, field)
+                    print((well, field))
                 else:
                     # extract features and values
                     objectnumber = int(element.get('cell'))
@@ -85,8 +85,8 @@ def parse_incell(sqlite_filename, incell_filename, properties):
                                    [imagenumber, objectnumber] + list(values))
                     element.clear()
             except Exception as e:
-                print("Failed to load well object data", imagenumber, objectnumber, element, element.attrib, e)
-                print(colnames, values)
+                print(("Failed to load well object data", imagenumber, objectnumber, element, element.attrib, e))
+                print((colnames, values))
                 raise
                 pass
 
@@ -251,7 +251,7 @@ def export_image_table(dbconn, tree, properties, well_field_to_imagenumber, next
             well = '%s%02d'%(chr(ord('A') + row - 1), col)
             field = int(welldata.get('field'))
             assert field > 0
-            names, values = zip(*sorted([(rewrite_feature_name(measure), float(measure.get('value'))) for measure in val.findall('Measure')]))
+            names, values = list(zip(*sorted([(rewrite_feature_name(measure), float(measure.get('value'))) for measure in val.findall('Measure')])))
             missing_features = set(names) - image_data_columns
             for mf in sorted(list(missing_features)):
                 cursor.execute('ALTER TABLE Images ADD COLUMN %s REAL'%(mf))

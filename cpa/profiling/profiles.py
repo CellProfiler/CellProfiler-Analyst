@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import sys
 import itertools
 import logging
@@ -8,7 +8,7 @@ from .parallel import ParallelProcessor
 
 # compress is new in Python 2.7
 if not hasattr(itertools, 'compress'):
-    itertools.compress = lambda data, selectors: (d for d, s in itertools.izip(data, selectors) if s)
+    itertools.compress = lambda data, selectors: (d for d, s in zip(data, selectors) if s)
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class Profiles(object):
                 if len(values) != len(variables):
                     raise InputError(filename, 'Expected %d feature values, found %d' % (len(variables), len(values)), i + 1)
                 keys.append(key)
-                data.append(map(float, values))
+                data.append(list(map(float, values)))
         return cls(keys, np.array(data), variables, key_size, group_name=group_name)
 
     @classmethod
@@ -94,7 +94,7 @@ class Profiles(object):
                 if len(values) != len(variables):
                     raise InputError(filename, 'Expected %d feature values, found %d' % (len(variables), len(values)), i + 1)
                 keys.append(key)
-                data.append(map(float, values))
+                data.append(list(map(float, values)))
         return cls(keys, np.array(data), variables, key_size, group_name=group_name)
 
     def header(self):
@@ -142,7 +142,7 @@ class Profiles(object):
             f.close()
 
     def items(self):
-        return itertools.izip(self._keys, self.data)
+        return zip(self._keys, self.data)
 
     def keys(self):
         return self._keys
@@ -151,7 +151,7 @@ class Profiles(object):
         return np.any(np.isnan(vector))
 
     def assert_not_isnan(self):
-        for key, vector in self.items():
+        for key, vector in list(self.items()):
             assert not np.any(np.isnan(vector)), 'Error: Profile %r has a NaN value.' % key
 
     @classmethod
@@ -207,7 +207,7 @@ class Profiles(object):
         input_group_r, input_colnames = cpa.db.group_map(self.group_name, 
                                                          reverse=True)
         input_group_r = dict((tuple(map(str, k)), v) 
-                             for k, v in input_group_r.items())
+                             for k, v in list(input_group_r.items()))
 
         if group_name is None:
             return input_group_r
@@ -216,7 +216,7 @@ class Profiles(object):
             #group = dict((v, tuple(map(str, k))) 
             #             for v, k in group.items())
             d = {}
-            for key in self.keys():
+            for key in list(self.keys()):
                 images = input_group_r[key]
                 groups = [group[image] for image in images if image in group]
                 if len(groups) == 0:

@@ -1,30 +1,30 @@
-import dbconnect
-from datatable import DataGrid
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import sortbin
-from tilecollection import EVT_TILE_UPDATED
-from trainingset import TrainingSet
-from cStringIO import StringIO
-import fastgentleboostingmulticlass
-import imagetools
-import multiclasssql
-import polyafit
+import cpa.dbconnect
+from cpa.datatable import DataGrid
+from cpa.datamodel import DataModel
+from cpa.imagecontrolpanel import ImageControlPanel
+from cpa.properties import Properties
+from cpa.scoredialog import ScoreDialog
+import cpa.sortbin
+from cpa.tilecollection import EVT_TILE_UPDATED
+from cpa.trainingset import TrainingSet
+from io import StringIO
+import cpa.fastgentleboostingmulticlass
+import cpa.imagetools
+import cpa.multiclasssql
+import cpa.polyafit
 import numpy
 import os
 import wx
-from classifier import *
+from cpa.classifier import *
 
 
 import time
 if __name__ == "__main__":
     app = wx.PySimpleApp()
 
-    p = Properties.getInstance()
-    db = dbconnect.DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = dbconnect.DBConnect()
+    dm = DataModel()
 
 #    props = '/Volumes/imaging_analysis/2007_10_19_Gilliland_LeukemiaScreens/Screen3_1Apr09_run3/2007_10_19_Gilliland_LeukemiaScreens_Validation_v2_AllBatches_DuplicatesFiltered_FullBarcode_testSinglePlate.properties'
 #    ts = '/Volumes/imaging_analysis/2007_10_19_Gilliland_LeukemiaScreens/Screen3_1Apr09_run3/trainingvalidation3b.txt'
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     classifier.Show(True)
     classifier.LoadTrainingSet(ts)
     time.sleep(3)
-    classifier.FindRules()
+    classifier.TrainClassifier()
     classifier.ScoreAll()
     
     app.MainLoop()

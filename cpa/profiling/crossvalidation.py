@@ -4,7 +4,7 @@
 Cross validation.
 
 '''
-from __future__ import print_function
+
 
 import sys
 import csv
@@ -21,7 +21,7 @@ def _k_fold_cross_validation_iterator(data, K=None):
       K = data.shape[0]
 
    np.random.shuffle(data)
-   for k in xrange(K):
+   for k in range(K):
       training = np.array([x for i, x in enumerate(data) if i % K != k])
       validation = np.array([x for i, x in enumerate(data) if i % K == k])
       yield training, validation

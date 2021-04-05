@@ -1,27 +1,41 @@
-from __future__ import with_statement
-from dbconnect import DBConnect
-from properties import Properties
-from singleton import Singleton
+
+from .dbconnect import DBConnect
+from .properties import Properties
+from .singleton import Singleton
 from heapq import heappush, heappop
 from weakref import WeakValueDictionary
-import imagetools
+from . import imagetools
 import logging
 import numpy
 import threading
 import wx
-import os
 import javabridge
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
+db = DBConnect()
+p = Properties()
+
+houricon = numpy.array([
+[0, 0, 0.4, 0.9, 1, 1, 1, 1, 0.9, 0.4, 0, 0],
+[0, 0, 0.6, 1, 0.3, 0.4, 0.4, 0.3, 1, 0.6, 0, 0],
+[0, 0, 0.6, 0.8, 0, 0, 0, 0, 0.8, 0.6, 0, 0],
+[0, 0, 0.5, 1, 0.2, 0, 0, 0.2, 1, 0.5, 0, 0],
+[0, 0, 0, 0.8, 0.9, 0, 0, 0.9, 0.8, 0, 0, 0],
+[0, 0, 0, 0, 0.7, 0.9, 0.9, 0.7, 0, 0, 0, 0],
+[0, 0, 0, 0, 0.7, 0.9, 0.9, 0.7, 0, 0, 0, 0],
+[0, 0, 0, 0.8, 0.9, 0, 0, 0.9, 0.8, 0, 0, 0],
+[0, 0, 0.5, 1, 0.2, 0, 0, 0.2, 1, 0.5, 0, 0],
+[0, 0, 0.6, 0.8, 0, 0, 0, 0, 0.8, 0.6, 0, 0],
+[0, 0, 0.6, 1, 0.3, 0.4, 0.4, 0.3, 1, 0.6, 0, 0],
+[0, 0, 0.4, 0.9, 1, 1, 1, 1, 0.9, 0.4, 0, 0],
+], dtype=float)
 
 def load_lock():
-    return TileCollection.getInstance().load_lock
+    return TileCollection().load_lock
 
 class List(list):
     pass
 
-class TileCollection(Singleton):
+class TileCollection(metaclass=Singleton):
     '''
     Main access point for loading tiles through the TileLoader.
     '''
@@ -31,10 +45,21 @@ class TileCollection(Singleton):
         self.cv        = threading.Condition()
         self.load_lock = threading.Lock()
         self.group_priority = 0
+        self.load_icon_template = None
         # Gray placeholder for unloaded images
-        self.imagePlaceholder = List([numpy.zeros((int(p.image_tile_size),
-                                                   int(p.image_tile_size)))+0.1
-                                      for i in range(sum(map(int,p.channels_per_image)))])
+        tile_size = int(p.image_tile_size)
+        if tile_size > 13:
+            # Draw a loading icon on the blank tile.
+            tgt = (tile_size // 2) - 6
+            self.load_icon_template = numpy.zeros((tile_size, tile_size))
+            self.load_icon_template[tgt:tgt+12, tgt:tgt+12] = houricon
+            self.load_icon_template[self.load_icon_template == 0] = 0.1
+            self.load_icon_template[0, 0] = 0
+            self.imagePlaceholder = [self.load_icon_template] * sum(map(int,p.channels_per_image))
+        else:
+            self.imagePlaceholder = List([numpy.zeros((tile_size,
+                                                       tile_size))+0.1
+                                          for i in range(sum(map(int,p.channels_per_image)))])
         self.loader = TileLoader(self, None)
 
     def GetTileData(self, obKey, notify_window, priority=1):
@@ -50,22 +75,31 @@ class TileCollection(Singleton):
         Returns: a list of lists of tile data (in numpy arrays) in the order
             of the obKeys that were passed in.
         '''
-        self.loader.notify_window = notify_window
+        if notify_window not in self.loader.notify_window:
+            self.loader.notify_window.append(notify_window)
         self.group_priority -= 1
         tiles = []
         temp = {} # for weakrefs
+        seen = {} # Record priorities associated with specific images.
         with self.cv:
             for order, obKey in enumerate(obKeys):
                 if not obKey in self.tileData:
-                    heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
-                    self.group_priority += 1
-                    if display_whole_image == True:
-                        imagePlaceholder = [numpy.zeros((int(p.image_size),
-                                                   int(p.image_size)))+0.1
-                                      for i in range(sum(map(int,p.channels_per_image)))]
-                        temp[order] = List(imagePlaceholder)
+                    if obKey[0] in seen:
+                        # An item in the queue had the same source image, process them together.
+                        # Heapqueue and the inbuilt cache will allow us to only load the source image once.
+                        heappush(self.loadq, ((priority, seen[obKey[0]], order), obKey, display_whole_image))
                     else:
-                        temp[order] = List(self.imagePlaceholder)
+                        heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
+                        seen[obKey[0]] = self.group_priority
+                        self.group_priority += 1
+                    # We used to generate a full size temporary tile the size of the image,
+                    # but we might as well use a small one since it'll be replaced quickly.
+                    # if display_whole_image == True:
+                    #     imagePlaceholder = [numpy.zeros((int(p.image_size),
+                    #                                int(p.image_size)))+0.1
+                    #                   for i in range(sum(map(int,p.channels_per_image)))]
+                    #     temp[order] = List(imagePlaceholder)
+                    temp[order] = List(self.imagePlaceholder)
                     self.tileData[obKey] = temp[order]
             tiles = [self.tileData[obKey] for obKey in obKeys]
             self.cv.notify()
@@ -107,13 +141,19 @@ class TileLoader(threading.Thread):
     def __init__(self, tc, notify_window):
         threading.Thread.__init__(self)
         self.setName('TileLoader_%s'%(self.getName()))
-        self.notify_window = notify_window
+        self.notify_window = []
+        if notify_window is not None:
+            self.notify_window.append(notify_window)
         self.tile_collection = tc
         self._want_abort = False
         self.start()
 
     def run(self):
-        javabridge.attach()
+        if p.force_bioformats:
+            logging.debug("Starting javabridge")
+            import bioformats
+            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+            javabridge.attach()
         try:
             while 1:
                 self.tile_collection.cv.acquire()
@@ -151,9 +191,11 @@ class TileLoader(threading.Thread):
                         # copy each channel
                         for i in range(len(tile_data)):
                             tile_data[i] = new_data[i]
-                        wx.PostEvent(self.notify_window, TileUpdatedEvent(obKey))
+                        for window in self.notify_window:
+                            wx.PostEvent(window, TileUpdatedEvent(obKey))
         finally:
-            javabridge.detach()
+            if javabridge.get_env() is not None:
+                javabridge.detach()
 
     def abort(self):
         self._want_abort = True
@@ -169,17 +211,17 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
 
 
-    from datamodel import DataModel
-    p = Properties.getInstance()
+    from .datamodel import DataModel
+    p = Properties()
     p.LoadFile('../properties/nirht_test.properties')
-    db = DBConnect.getInstance()
+    db = DBConnect()
     db.connect()
-    dm = DataModel.getInstance()
+    dm = DataModel()
 
-    test = TileCollection.getInstance()
+    test = TileCollection()
 
     f =  wx.Frame(None)
-    for i in xrange(10):
+    for i in range(10):
         obKey = dm.GetRandomObject()
         test.GetTileData((0,1,1), f)
 

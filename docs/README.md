@@ -1,6 +1,6 @@
 # CPA-docs
 
-Manual for CellProfiler Analyst 2.2
+Manual for CellProfiler Analyst 3.0
 
 ## How to build
 

@@ -7,18 +7,18 @@ $ python -m cpa.profiling.cache CDP2.properties /imaging/analysis/2008_12_04_Ima
 
 Example usage as module:
 
->>> import cpa
->>> from cpa.profiling.cache import Cache
->>> from cpa.profiling.normalization import RobustLinearNormalization
->>> cpa.properties.LoadFile('CDP2.properties')
->>> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
->>> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
->>> imKeys = cc_mapping.values()[0]
->>> unnormalized, unnormalized_colnames = cache.load(imKeys)
->>> normalized, normalized_colnames = cache.load(imKeys, normalization=RobustLinearNormalization)
+> import cpa
+> from cpa.profiling.cache import Cache
+> from cpa.profiling.normalization import RobustLinearNormalization
+> cpa.properties.LoadFile('CDP2.properties')
+> cache = Cache('/imaging/analysis/2008_12_04_Imaging_CDRP_for_MLPCN/CDP2/cache')
+> cc_mapping, cc_colnames = cpa.db.group_map('CompoundConcentration', reverse=True)
+> imKeys = cc_mapping.values()[0]
+> unnormalized, unnormalized_colnames = cache.load(imKeys)
+> normalized, normalized_colnames = cache.load(imKeys, normalization=RobustLinearNormalization)
 
 '''
-from __future__ import print_function
+
 
 import sys
 import os
@@ -50,7 +50,7 @@ def make_progress_bar(text=None):
 
 def invert_dict(d):
     inverted = {}
-    for k, v in d.items():
+    for k, v in list(d.items()):
         inverted.setdefault(v, []).append(k)
     return inverted
 
@@ -68,13 +68,13 @@ class Cache(object):
         self._counts_filename = os.path.join(self.cache_dir, 'counts.npy')
 
     def _image_filename(self, plate, imKey):
-        return os.path.join(self.cache_dir, unicode(plate),
-                            u'-'.join(map(unicode, imKey)) + '.npz')
+        return os.path.join(self.cache_dir, str(plate),
+                            '-'.join(map(str, imKey)) + '.npz')
 
     def _image_filename_backward_compatible(self, plate, imKey):
         # feature files were previously stored as npy files
-        return os.path.join(self.cache_dir, unicode(plate),
-                            u'-'.join(map(unicode, imKey)) + '.npy')
+        return os.path.join(self.cache_dir, str(plate),
+                            '-'.join(map(str, imKey)) + '.npy')
     @property
     def _plate_map(self):
         if self._cached_plate_map is None:
@@ -86,7 +86,7 @@ class Cache(object):
         for object_key in object_keys:
             objects_by_image.setdefault(object_key[:-1], []).append(object_key[-1])
         results = {}
-        for image_key, cell_ids in objects_by_image.items():
+        for image_key, cell_ids in list(objects_by_image.items()):
             stackedfeatures, colnames, stackedcellids = self.load([image_key], normalization, removeRowsWithNaN)
             stackedcellids = list(stackedcellids)
             for cell_id in cell_ids:
@@ -105,7 +105,7 @@ class Cache(object):
             images_per_plate.setdefault(self._plate_map[imKey], []).append(imKey)
 
         # check if cellids have been stored
-        plate, imKeys = images_per_plate.items()[0]
+        plate, imKeys = list(images_per_plate.items())[0]
         imf_old = self._image_filename_backward_compatible(plate, imKey)
         imf_new = self._image_filename(plate, imKey)
         if os.path.exists(imf_old) and os.path.exists(imf_new):
@@ -121,7 +121,7 @@ class Cache(object):
         features = []
         cellids = []
 
-        for plate, imKeys in images_per_plate.items():
+        for plate, imKeys in list(images_per_plate.items()):
             for imKey in imKeys:
                 # Work around bug in numpy that causes file
                 # handles to be left open.
@@ -221,7 +221,7 @@ class Cache(object):
 
     def _create_cache_features(self, resume):
         nimages = len(self._plate_map)
-        for plate, image_keys in make_progress_bar('Features')(invert_dict(self._plate_map).items()):
+        for plate, image_keys in make_progress_bar('Features')(list(invert_dict(self._plate_map).items())):
             plate_dir = os.path.dirname(self._image_filename(plate, image_keys[0]))
             if not os.path.exists(plate_dir):
                 os.mkdir(plate_dir)
@@ -280,7 +280,7 @@ if __name__ == '__main__':
 
     cache._create_cache(options.resume)
     if predicate != '':
-        for Normalization in normalizations.values():
+        for Normalization in list(normalizations.values()):
             Normalization(cache)._create_cache(predicate, options.resume)
     else:
         print('Not performing normalization because not predicate was specified.')

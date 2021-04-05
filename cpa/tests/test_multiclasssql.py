@@ -1,5 +1,4 @@
 import mock
-from nose.tools import eq_
 from unittest import TestCase
 import cpa.multiclasssql
 
@@ -16,10 +15,11 @@ class WhereClausesTestCase(TestCase):
 
     def test_2(self):
         result = self._where_clauses([(2,), (1,)])
-        eq_(result, [])
+        print(result)
+        assert result == ['(1 = 1)']
 
     def test_5(self):
         result = self._where_clauses([(5,), (4,), (3,), (2,), (1,)])
-        eq_(result, ['(Per_Object.ImageNumber <= 5)'])
+        assert result == ['(Per_Object.ImageNumber <= 5)']
 
 

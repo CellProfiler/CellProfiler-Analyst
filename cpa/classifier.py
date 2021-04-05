@@ -1,6 +1,4 @@
 # Encoding: utf-8
-from __future__ import with_statement
-from __future__ import print_function
 
 import matplotlib
 matplotlib.use('WXAgg')
@@ -9,33 +7,34 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-import tableviewer
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import tilecollection
-from trainingset import TrainingSet
-from cStringIO import StringIO
+from . import tableviewer
+from .datamodel import DataModel
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from .scoredialog import ScoreDialog
+from . import tilecollection
+from .trainingset import TrainingSet
+from io import StringIO
 from time import time
-import icons
-import dbconnect
-import dirichletintegrate
-import imagetools
-import polyafit
-import sortbin
+from . import icons
+from . import dbconnect
+from . import dirichletintegrate
+from . import imagetools
+from . import polyafit
+from . import sortbin
 import logging
 import numpy as np
 import os
 import wx
 import re
+import random
 import cpa.helpmenu
-from dimensredux import PlotMain
+from .dimensredux import PlotMain
 
-import fastgentleboostingmulticlass
-from fastgentleboosting import FastGentleBoosting
+from . import fastgentleboostingmulticlass
+from .fastgentleboosting import FastGentleBoosting
 
-from generalclassifier import GeneralClassifier
+from .generalclassifier import GeneralClassifier
 
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
@@ -62,12 +61,13 @@ class Classifier(wx.Frame):
             global p
             p = properties
             global db
-            db = dbconnect.DBConnect.getInstance()
+            db = dbconnect.DBConnect()
 
         wx.Frame.__init__(self, parent, id=id, title='CPA/Classifier - %s' % \
                                                      (os.path.basename(p._filename)), size=(900, 600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
-            self.tbicon = wx.TaskBarIcon()
+            from wx.adv import TaskBarIcon
+            self.tbicon = TaskBarIcon()
             self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/Classifier')
         else:
             self.SetIcon(icons.get_cpa_icon())
@@ -76,7 +76,7 @@ class Classifier(wx.Frame):
         db.register_gui_parent(self)
 
         global dm
-        dm = DataModel.getInstance()
+        dm = DataModel()
 
         if not p.is_initialized():
             logging.critical('Classifier requires a properties file. Exiting.')
@@ -87,24 +87,27 @@ class Classifier(wx.Frame):
         self.trainingSet = None
         self.classBins = []
         self.binsCreated = 0
+        self.kFolds = 5
         self.chMap = p.image_channel_colors[:]
         self.toggleChMap = p.image_channel_colors[
                            :]  # used to store previous color mappings when toggling colors on/off with ctrl+1,2,3...
         self.brightness = 1.0
         self.required_fields = []
-        
-        if not p.classification_type == 'image':
-            self.image_tile_size = p.image_tile_size
-            self.scale = 1.0
-        else:
-            if p.field_defined('image_width') and p.field_defined('image_height'):
-                self.image_tile_size = min([p.image_width, p.image_height])        
-            else:
-                cols = [x for x in db.GetColumnNames(p.image_table)]
-                list_of_cols = [str(x) for x in cols]
-                image_width, image_height = db.GetImageWidthHeight(list_of_cols) 
-                self.image_tile_size = min([image_width, image_height]) 
-            self.scale = 100.0/float(self.image_tile_size)
+        self.with_replacement = False
+        self.reject_duplicates = False
+
+        # if not p.classification_type == 'image':
+        self.image_tile_size = p.image_tile_size
+        self.scale = 1.0
+        # else:
+        #     if p.field_defined('image_width') and p.field_defined('image_height'):
+        #         self.image_tile_size = min([p.image_width, p.image_height])
+        #     else:
+        #         cols = [x for x in db.GetColumnNames(p.image_table)]
+        #         list_of_cols = [str(x) for x in cols]
+        #         image_width, image_height = db.GetImageWidthHeight(list_of_cols)
+        #         self.image_tile_size = min([image_width, image_height])
+        #     self.scale = 100.0/float(self.image_tile_size)
 
         self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']        
         
@@ -131,9 +134,9 @@ class Classifier(wx.Frame):
 
         #### Create GUI elements
         # Top level - three split windows
-        self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH)
+        self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
         self.fetch_and_rules_panel = wx.Panel(self.splitter)
-        self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH)
+        self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
 
         # fetch & rules
         self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
@@ -156,16 +159,16 @@ class Classifier(wx.Frame):
 
         # fetch objects interface
         self.nObjectsTxt = wx.TextCtrl(self.fetch_panel, id=-1, value='20', size=(30, -1), style=wx.TE_PROCESS_ENTER)
-        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random'])
+        self.obClassChoice = wx.Choice(self.fetch_panel, id=-1, choices=['random', 'sequential'])
         self.filterChoice = wx.Choice(self.fetch_panel, id=-1,
-                                      choices=['experiment', 'image'] + p._filters_ordered + p._groups_ordered + [
-                                          CREATE_NEW_FILTER])
+                                      choices=['experiment', 'image'] + p._filters_ordered + p.gates_ordered +
+                                              p._groups_ordered + [CREATE_NEW_FILTER])
         self.fetchFromGroupSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fetchBtn = wx.Button(self.fetch_panel, -1, 'Fetch!')
 
-
-        # find rules interface
+        # find rules interface/set neurons interface
         self.nRulesTxt = wx.TextCtrl(self.find_rules_panel, -1, value='5', size=(30, -1))
+        self.nNeuronsTxt = wx.TextCtrl(self.find_rules_panel, -1, value='12,12', size=(50, -1))
         algorithmChoices = ['RandomForest Classifier',
                             'AdaBoost Classifier',
                             'SVC',
@@ -173,7 +176,8 @@ class Classifier(wx.Frame):
                             'LogisticRegression',
                             'LDA',
                             'KNeighbors Classifier',
-                            'Fast Gentle Boosting']
+                            'Fast Gentle Boosting',
+                            'Neural Network']
 
         self.classifierChoice = wx.Choice(self.find_rules_panel, id=-1, choices=algorithmChoices) # Classifier Choice
         self.classifierChoice.SetSelection(0) # Windows GUI otherwise doesn't select
@@ -198,19 +202,19 @@ class Classifier(wx.Frame):
         # fetch panel
         self.fetchSizer.AddStretchSpacer()
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch'), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.nObjectsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, p.object_name[1]), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((10, 20))
+        self.fetchSizer.AddSpacer(10)
         self.fetchSizer.Add(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.AddSpacer(5)
         self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddStretchSpacer()
         self.fetch_panel.SetSizerAndFit(self.fetchSizer)
@@ -222,27 +226,29 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.Add((5, 20))
         self.find_rules_sizer.Add(self.classifierChoice, flag=wx.ALIGN_CENTER_VERTICAL) #Classifier Choice
         self.find_rules_sizer.Add((5, 20))
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.panelTxt = wx.StaticText(self.find_rules_panel, -1, 'display')
         self.find_rules_sizer.Add(self.panelTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.panelTxt2 = wx.StaticText(self.find_rules_panel, -1, '')
         self.find_rules_sizer.Add(self.nRulesTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.Add(self.nNeuronsTxt, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.nNeuronsTxt.Hide()
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.panelTxt2, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         # Cross Validation Button
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.trainClassifierBtn, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.evaluationBtn = wx.Button(self.find_rules_panel, -1, 'Evaluate')
         self.evaluationBtn.Disable()
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.evaluationBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         # Plot nice graphics Button
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.scoreAllBtn, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.find_rules_sizer.AddSpacer((5, 20))
+        self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.scoreImageBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddStretchSpacer()
         # JEN - Start Add
@@ -275,6 +281,7 @@ class Classifier(wx.Frame):
         self.splitter.SetMinimumPaneSize(max(50, self.fetch_and_rules_panel.GetMinHeight()))
         self.bins_splitter.SetMinimumPaneSize(50)
         self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * 50 + self.fetch_and_rules_panel.GetMinHeight()))
+        self.bins_splitter.UpdateSize()
 
         # Set initial state
         self.obClassChoice.SetSelection(0)
@@ -294,13 +301,14 @@ class Classifier(wx.Frame):
         # Define Classifiers
         RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier(n_estimators=100)", self)
         AdaBoostClassifier = GeneralClassifier("ensemble.AdaBoostClassifier()", self)
-        SVC = GeneralClassifier("svm.SVC(probability=True)", self) # Need to turn on probs
+        SVC = GeneralClassifier("svm.SVC(probability=True)", self, scaler=True)
         
         GradientBoostingClassifier = GeneralClassifier("ensemble.GradientBoostingClassifier()", self)
         LogisticRegression = GeneralClassifier("linear_model.LogisticRegression()", self)
         LDA = GeneralClassifier("discriminant_analysis.LinearDiscriminantAnalysis()", self)
-        KNeighborsClassifier = GeneralClassifier("neighbors.KNeighborsClassifier()", self)
+        KNeighborsClassifier = GeneralClassifier("neighbors.KNeighborsClassifier()", self, scaler=True)
         FastGentleBoostingClassifier = FastGentleBoosting(self)
+        NeuralNetworkClassifier = GeneralClassifier("neural_network.MLPClassifier(hidden_layer_sizes=(12,12), solver='lbfgs', max_iter=500)", self, scaler=True)
 
         # JK - Start Add
         # Define the Random Forest classification algorithm to be default and set the default
@@ -316,7 +324,8 @@ class Classifier(wx.Frame):
             'LogisticRegression': LogisticRegression,
             'LDA': LDA,
             'KNeighborsClassifier': KNeighborsClassifier,
-            'FastGentleBoosting' : FastGentleBoostingClassifier
+            'FastGentleBoosting' : FastGentleBoostingClassifier,
+            'NeuralNetwork' : NeuralNetworkClassifier
         }
 
         #####################
@@ -355,6 +364,7 @@ class Classifier(wx.Frame):
         # JEN - End Add
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfRules)
+        self.nNeuronsTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfNeurons)
         self.nObjectsTxt.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
 
         self.GetStatusBar().Bind(wx.EVT_SIZE, self.status_bar_onsize)
@@ -404,11 +414,11 @@ class Classifier(wx.Frame):
     def OnClassifierChoice(self, event):
         itemId = self.classifierChoice.GetSelection()
         self.classifierMenu.Check(itemId + 1, True)
-        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(itemId + 1).GetText())
+        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(itemId + 1).GetItemLabel())
         self.SelectAlgorithm(selectedItem)
 
     def OnSelectAlgorithm(self, event):
-        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(event.GetId()).GetText())
+        selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(event.GetId()).GetItemLabel())
         self.SelectAlgorithm(selectedItem)
 
     # JK - Start Add
@@ -428,6 +438,13 @@ class Classifier(wx.Frame):
             logging.error('Could not load specified algorithm, falling back to RandomForestClassifier.')
             self.algorithm = self.algorithms['RandomForestClassifier']
 
+        if self.algorithm == self.algorithms['NeuralNetwork']:
+            self.nRulesTxt.Hide()
+            self.nNeuronsTxt.Show()
+        else:
+            self.nRulesTxt.Show()
+            self.nNeuronsTxt.Hide()
+        self.scalerMenuItem.Check(self.algorithm.scaler is not None)
         # Update the GUI complexity text and classifier description
         # self.panelTxt2.SetLabel(self.algorithm.get_params())
         self.panelTxt2.Parent.Layout()
@@ -475,25 +492,65 @@ class Classifier(wx.Frame):
     def OnKey(self, evt):
         ''' Keyboard shortcuts '''
         keycode = evt.GetKeyCode()
-        chIdx = keycode - 49
+        if keycode == wx.WXK_LEFT:
+            if not self.unclassifiedBin.tiles:
+                return
+            for idx, tile in enumerate(self.unclassifiedBin.tiles):
+                if tile.selected:
+                    if idx == 0:
+                        return
+                    if not evt.ShiftDown():
+                        self.unclassifiedBin.DeselectAll()
+                    self.unclassifiedBin.tiles[idx - 1].Select()
+                    return
+            self.unclassifiedBin.tiles[-1].Select()
+            return
+        elif keycode == wx.WXK_RIGHT:
+            if not self.unclassifiedBin.tiles:
+                return
+            for idx, tile in enumerate(self.unclassifiedBin.tiles[::-1]):
+                if tile.selected:
+                    if idx == 0:
+                        return
+                    if not evt.ShiftDown():
+                        self.unclassifiedBin.DeselectAll()
+                    self.unclassifiedBin.tiles[-idx].Select()
+                    return
+            self.unclassifiedBin.tiles[0].Select()
+            return
+        # convert from keycode to a channel index to match number keypress to channel
+        # some keyboards match the number 1 to 325; others match 1 to 49
+        # this conditional accounts for those differences
+        # alternatively wx.GetUnicodeKey() will match 1 to 49 consistently, but may not respect numlock
+        if keycode >= 325:
+            chIdx = keycode - 325
+        else:
+            chIdx = keycode - 49
         if evt.ControlDown() or evt.CmdDown():
             # ctrl+N toggles channel #N on/off
             if len(self.chMap) > chIdx >= 0:
                 self.ToggleChannel(chIdx)
             else:
                 evt.Skip()
+        elif 0 <= chIdx <= 9:
+            bin = chIdx
+            if bin < len(self.classBins):
+                self.classBins[bin].AddObjects(self.unclassifiedBin.SelectedKeys(), srcID=self.unclassifiedBin.GetId())
+                if self.unclassifiedBin.tiles:
+                    self.unclassifiedBin.tiles[0].Select()
+            return
         else:
             evt.Skip()
 
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
                     item.Check()
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == 'none':
                     item.Check()
             self.chMap[chIdx] = 'None'
@@ -502,23 +559,23 @@ class Classifier(wx.Frame):
     def CreateMenus(self):
         ''' Create file menu and menu items '''
         self.fileMenu = wx.Menu()
-        self.loadTSMenuItem = self.fileMenu.Append(-1, text='Load Training Set\tCtrl+O',
-                                                   help='Loads objects and classes specified in a training set file.')
-        self.saveTSMenuItem = self.fileMenu.Append(-1, text='Save Training Set\tCtrl+S',
-                                                   help='Save your training set to file so you can reload these classified cells again.')
+        self.loadTSMenuItem = self.fileMenu.Append(-1, item='Load Training Set\tCtrl+O',
+                                                   helpString='Loads objects and classes specified in a training set file.')
+        self.saveTSMenuItem = self.fileMenu.Append(-1, item='Save Training Set\tCtrl+S',
+                                                   helpString='Save your training set to file so you can reload these classified cells again.')
         self.fileMenu.AppendSeparator()
         # JEN - Start Add
-        self.loadModelMenuItem = self.fileMenu.Append(-1, text='Load Classifier Model', help='Loads a classifier model specified in a text file')
-        self.saveModelMenuItem = self.fileMenu.Append(-1, text='Save Classifier Model', help='Save your classifier model to file so you can use it again on this or other experiments.')
+        self.loadModelMenuItem = self.fileMenu.Append(-1, item='Load Classifier Model', helpString='Loads a classifier model specified in a text file')
+        self.saveModelMenuItem = self.fileMenu.Append(-1, item='Save Classifier Model', helpString='Save your classifier model to file so you can use it again on this or other experiments.')
         self.fileMenu.AppendSeparator()
         # JEN - End Add
-        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit classifier')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Exit classifier')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
         # View Menu
         viewMenu = wx.Menu()
-        imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I',
-                                                help='Launches a control panel for adjusting image brightness, size, etc.')
+        imageControlsMenuItem = viewMenu.Append(-1, item='Image Controls\tCtrl+Shift+I',
+                                                helpString='Launches a control panel for adjusting image brightness, size, etc.')
         self.GetMenuBar().Append(viewMenu, 'View')
 
         # Rules menu
@@ -541,17 +598,19 @@ class Classifier(wx.Frame):
             'LogisticRegression': 5,
             'LDA': 6,
             'KNeighborsClassifier': 7,
-            'FastGentleBoosting' : 8
+            'FastGentleBoosting' : 8,
+            'NeuralNetwork' : 9
         }
 
-        rfMenuItem = self.classifierMenu.AppendRadioItem(1, text='RandomForest Classifier', help='Uses RandomForest to classify')
-        adaMenuItem = self.classifierMenu.AppendRadioItem(2, text='AdaBoost Classifier', help='Uses AdaBoost to classify.')
-        svcMenuItem = self.classifierMenu.AppendRadioItem(3, text='SVC', help='Uses Support Vector Machines to classify.')
-        gbMenuItem = self.classifierMenu.AppendRadioItem(4, text='GradientBoosting Classifier', help='Uses GradientBoosting to classify')
-        lgMenuItem = self.classifierMenu.AppendRadioItem(5, text='LogisticRegression', help='Uses LogisticRegression to classify.')
-        ldaMenuItem = self.classifierMenu.AppendRadioItem(6, text='LDA', help='Uses LDA to classify.')
-        knnMenuItem = self.classifierMenu.AppendRadioItem(7, text='KNeighbors Classifier', help='Uses the kNN algorithm to classify.')
-        fgbMenuItem = self.classifierMenu.AppendRadioItem(8, text='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
+        rfMenuItem = self.classifierMenu.AppendRadioItem(1, item='RandomForest Classifier', help='Uses RandomForest to classify')
+        adaMenuItem = self.classifierMenu.AppendRadioItem(2, item='AdaBoost Classifier', help='Uses AdaBoost to classify.')
+        svcMenuItem = self.classifierMenu.AppendRadioItem(3, item='SVC', help='Uses Support Vector Machines to classify.')
+        gbMenuItem = self.classifierMenu.AppendRadioItem(4, item='GradientBoosting Classifier', help='Uses GradientBoosting to classify')
+        lgMenuItem = self.classifierMenu.AppendRadioItem(5, item='LogisticRegression', help='Uses LogisticRegression to classify.')
+        ldaMenuItem = self.classifierMenu.AppendRadioItem(6, item='LDA', help='Uses LDA to classify.')
+        knnMenuItem = self.classifierMenu.AppendRadioItem(7, item='KNeighbors Classifier', help='Uses the kNN algorithm to classify.')
+        fgbMenuItem = self.classifierMenu.AppendRadioItem(8, item='Fast Gentle Boosting', help='Uses the Fast Gentle Boosting algorithm to find classifier rules.')
+        mlpMenuItem = self.classifierMenu.AppendRadioItem(9, item='Neural Network', help='Uses the multi-layer perceptron neural network to classify.')
 
         self.GetMenuBar().Append(self.classifierMenu, 'Classifier')
 
@@ -559,21 +618,31 @@ class Classifier(wx.Frame):
         self.evalMenu = wx.Menu()
 
         # Plotting options
-        confusionMenuItem = self.evalMenu.AppendRadioItem(-1, text=u'Confusion Matrix', help='Visualizes the Normalized Confusion Matrix')
-        reportMenuItem = self.evalMenu.AppendRadioItem(-1, text=u'Classification Report', help='Visualization of Accuracy, Recall and F1 Scores')
+        confusionMenuItem = self.evalMenu.AppendRadioItem(-1, item='Confusion Matrix', help='Visualizes the Normalized Confusion Matrix')
+        reportMenuItem = self.evalMenu.AppendRadioItem(-1, item='Classification Report', help='Visualization of Accuracy, Recall and F1 Scores')
         #paramsEditMenuItem = self.evalMenu.AppendRadioItem(2, text=u'ROC Curve', help='Plots a One vs all ROC Curve and calculates the area under the curve')
         #featureSelectMenuItem = self.evalMenu.AppendRadioItem(3, text=u'Precision Recall Curve', help='Plots a One vs all Precision Recall Curve')
         #learningMenuItem = self.evalMenu.AppendRadioItem(4, text=u'Learning Curve', help='Plots a One vs all Learning Curve')
+        kfoldMenuItem = self.evalMenu.Append(-1, item='Set cross validation folds', helpString='Adjust how many cross validation folds are used in evaluation')
 
         self.GetMenuBar().Append(self.evalMenu, 'Evaluation')
 
 
         # Advanced menu
         advancedMenu = wx.Menu()
-        rulesEditMenuItem = advancedMenu.Append(-1, text=u'Edit Rules...', help='Lets you edit the rules')
-        paramsEditMenuItem = advancedMenu.Append(-1, text=u'Edit Parameters...', help='Lets you edit the hyperparameters')
-        featureSelectMenuItem = advancedMenu.Append(-1, text=u'Check Features', help='Check the variance of your Training Data')
-        saveMenuItem = advancedMenu.Append(-1, text=u'Save Thumbnails as PNG', help='Save TrainingSet thumbnails as PNG')
+        rulesEditMenuItem = advancedMenu.Append(-1, item='Edit Rules...', helpString='Lets you edit the rules')
+        paramsEditMenuItem = advancedMenu.Append(-1, item='Edit Parameters...', helpString='Lets you edit the hyperparameters')
+        featureSelectMenuItem = advancedMenu.Append(-1, item='Check Features', helpString='Check the variance of your Training Data')
+        saveMenuItem = advancedMenu.Append(-1, item='Save Thumbnails as PNG', helpString='Save TrainingSet thumbnails as PNG')
+        self.scalerMenuItem = advancedMenu.AppendCheckItem(-1, item='Use Scaler',
+                                                             help='Perform scaling normalization on training data')
+        self.scalerMenuItem.Check(False)
+        sampleReplacementItem = advancedMenu.AppendCheckItem(-1, item='Sample with replacement',
+                                           help='Allow duplicates when fetching objects')
+        sampleReplacementItem.Check(False)
+        rejectDuplicatesItem = advancedMenu.AppendCheckItem(-1, item='Prevent duplicate objects',
+                                                             help="Don't fetch objects which are already classified")
+        rejectDuplicatesItem.Check(False)
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -585,11 +654,14 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnLoadModel, self.loadModelMenuItem) # JEN - Added
         self.Bind(wx.EVT_MENU, self.SaveModel, self.saveModelMenuItem) # JEN - Added
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
-        self.Bind(wx.EVT_MENU, self.OnParamsEdit, paramsEditMenuItem) 
+        self.Bind(wx.EVT_MENU, self.OnChangeEvaluationFolds, kfoldMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnParamsEdit, paramsEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnRulesEdit, rulesEditMenuItem)
         self.Bind(wx.EVT_MENU, self.OnFeatureSelect, featureSelectMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSaveThumbnails ,saveMenuItem)
-
+        self.Bind(wx.EVT_MENU, self.OnToggleScaling, self.scalerMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnToggleReplacement, sampleReplacementItem)
+        self.Bind(wx.EVT_MENU, self.OnToggleRejectDuplicates, rejectDuplicatesItem)
 
         # Bind events for algorithms
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, rfMenuItem)
@@ -600,6 +672,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, ldaMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, knnMenuItem)
         self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, fgbMenuItem)
+        self.Bind(wx.EVT_MENU, self.OnSelectAlgorithm, mlpMenuItem)
 
 
     def CreateChannelMenus(self):
@@ -607,7 +680,7 @@ class Classifier(wx.Frame):
 
         # Clean up existing channel menus
         try:
-            menus = set([items[2].Menu for items in self.chMapById.values()])
+            menus = set([items[2].Menu for items in list(self.chMapById.values())])
             for menu in menus:
                 for i, mbmenu in enumerate(self.MenuBar.Menus):
                     if mbmenu[0] == menu:
@@ -644,7 +717,7 @@ class Classifier(wx.Frame):
                 channel_names += ['%s [%s]' % (name, x + 1) for x in range(chans)]
 
         # Zip channel names with channel map
-        zippedChNamesChMap = zip(channel_names, self.chMap)
+        zippedChNamesChMap = list(zip(channel_names, self.chMap))
 
         # Loop over all the image names in the properties file
         for i, chans in enumerate(p.image_names):
@@ -700,11 +773,11 @@ class Classifier(wx.Frame):
     def OnFetchImage(self, evt=None):
 
         # Set every channel to black and set all the toggle options to 'none'
-        for ids in self.chMapById.keys():
+        for ids in list(self.chMapById.keys()):
             (chIndex, color, item, channel_menu) = self.chMapById[ids]
             if (color.lower() == 'none'):
                 item.Check()
-        for ids in self.imMapById.keys():
+        for ids in list(self.imMapById.keys()):
             (cpi, itm, si, channelIds) = self.imMapById[ids]
             if cpi == 3:
                 self.chMap[si] = 'none'
@@ -718,7 +791,7 @@ class Classifier(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in self.imMapById.keys():
+        if evt.GetId() in list(self.imMapById.keys()):
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -817,7 +890,7 @@ class Classifier(wx.Frame):
             dlg.Destroy()
             updatedList = self.obClassChoice.GetItems()
             sel = self.obClassChoice.GetSelection()
-            for i in xrange(len(updatedList)):
+            for i in range(len(updatedList)):
                 if updatedList[i] == label:
                     updatedList[i] = newLabel
             self.obClassChoice.SetItems(updatedList)
@@ -830,14 +903,14 @@ class Classifier(wx.Frame):
 
     def UpdateClassChoices(self):
         if not self.IsTrained():
-            self.obClassChoice.SetItems(['random'])
+            self.obClassChoice.SetItems(['random', 'sequential'])
             self.obClassChoice.SetSelection(0)
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
             # self.openDimensReduxBtn.Disable()
             return
         sel = self.obClassChoice.GetSelection()
-        selectableClasses = ['random'] 
+        selectableClasses = ['random', 'sequential']
 
         selectableClasses += [bin.label for bin in self.classBins if bin.trained]
 
@@ -889,6 +962,21 @@ class Classifier(wx.Frame):
                 for tile in bin.tiles:
                     imagetools.SaveBitmap(tile.bitmap, directory + '/training_set/' + str(label) + '/' + str(tile.obKey) + '.png')
 
+    def OnToggleScaling(self, evt):
+        self.algorithm.toggle_scaler(evt.IsChecked())
+        self.UpdateClassChoices()
+
+    def OnToggleReplacement(self, evt):
+        if evt.IsChecked():
+            self.with_replacement = True
+        else:
+            self.with_replacement = False
+
+    def OnToggleRejectDuplicates(self, evt):
+        if evt.IsChecked():
+            self.reject_duplicates = True
+        else:
+            self.reject_duplicates = False
 
     def OnFetch(self, evt):
         # Parse out the GUI input values
@@ -897,25 +985,33 @@ class Classifier(wx.Frame):
         obClassName = self.obClassChoice.GetStringSelection()
         fltr_sel = self.filterChoice.GetStringSelection()
 
-        statusMsg = 'Fetched %d %s %s' % (nObjects, obClassName, p.object_name[1])
+        statusMsg = 'Fetching %d %s %s' % (nObjects, obClassName, p.object_name[1])
 
         # Get object keys
         obKeys = []
-        # unclassified:
+        # unclassified random:
         if obClass == 0:
             if fltr_sel == 'experiment':
-                obKeys = dm.GetRandomObjects(nObjects)
+                obKeys = dm.GetRandomObjects(nObjects, with_replacement=self.with_replacement)
                 statusMsg += ' from whole experiment'
             elif fltr_sel == 'image':
                 imKey = self.GetGroupKeyFromGroupSizer()
-                obKeys = dm.GetRandomObjects(nObjects, [imKey])
+                obKeys = dm.GetRandomObjects(nObjects, [imKey], with_replacement=self.with_replacement)
                 statusMsg += ' from image %s' % (imKey,)
+            elif fltr_sel in p.gates_ordered:
+                obKeys = db.GetGatedObjects(fltr_sel, nObjects, random=True)
+                if obKeys == []:
+                    self.PostMessage('No objects were found in gate "%s"' % (fltr_sel))
+                    return
+                if self.with_replacement and len(obKeys) < nObjects:
+                    obs = random.choices(obKeys, k=nObjects)
+                statusMsg += ' from gate "%s"' % (fltr_sel)
             elif fltr_sel in p._filters_ordered:
                 filteredImKeys = db.GetFilteredImages(fltr_sel)
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys, with_replacement=self.with_replacement)
                 statusMsg += ' from filter "%s"' % (fltr_sel)
             elif fltr_sel in p._groups_ordered:
                 # if the filter name is a group then it's actually a group
@@ -928,7 +1024,7 @@ class Classifier(wx.Frame):
                                                                                ', '.join(['%s=%s' % (n, v) for n, v in
                                                                                           zip(colNames, groupKey)])))
                     return
-                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys)
+                obKeys = dm.GetRandomObjects(nObjects, filteredImKeys, with_replacement=self.with_replacement)
                 if not obKeys:
                     self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
                                                                                           ', '.join(
@@ -938,6 +1034,50 @@ class Classifier(wx.Frame):
                     return
                 statusMsg += ' from group %s: %s' % (groupName,
                                                      ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+        # unclassified sequential
+        elif obClass == 1:
+            if fltr_sel == 'experiment':
+                obKeys = dm.GetAllObjects(N=nObjects)
+                statusMsg += ' from whole experiment'
+            elif fltr_sel == 'image':
+                imKey = self.GetGroupKeyFromGroupSizer()
+                obKeys = dm.GetAllObjects(imkeys=[imKey], N=nObjects)
+                statusMsg += ' from image %s' % (imKey,)
+
+            elif fltr_sel in p.gates_ordered:
+                obKeys = db.GetGatedObjects(fltr_sel, nObjects, random=False)
+                if obKeys == []:
+                    self.PostMessage('No objects were found in gate "%s"' % (fltr_sel))
+                    return
+                statusMsg += ' from gate "%s"' % (fltr_sel)
+            elif fltr_sel in p._filters_ordered:
+                obKeys = dm.GetAllObjects(filter_name=fltr_sel, N=nObjects)
+                if obKeys == []:
+                    self.PostMessage('No objects were found in filter "%s"' % (fltr_sel))
+                    return
+                statusMsg += ' from filter "%s"' % (fltr_sel)
+            elif fltr_sel in p._groups_ordered:
+                # if the filter name is a group then it's actually a group
+                groupName = fltr_sel
+                groupKey = self.GetGroupKeyFromGroupSizer(groupName)
+                filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
+                colNames = dm.GetGroupColumnNames(groupName)
+                if filteredImKeys == []:
+                    self.PostMessage('No images were found in group %s: %s' % (groupName,
+                                                                               ', '.join(['%s=%s' % (n, v) for n, v in
+                                                                                          zip(colNames, groupKey)])))
+                    return
+                obKeys = dm.GetAllObjects(imkeys=filteredImKeys, N=nObjects)
+                if not obKeys:
+                    self.PostMessage('No cells were found in this group. Group %s: %s' % (groupName,
+                                                                                          ', '.join(
+                                                                                              ['%s=%s' % (n, v) for n, v
+                                                                                               in zip(colNames,
+                                                                                                      groupKey)])))
+                    return
+                statusMsg += ' from group %s: %s' % (groupName,
+                                                     ', '.join(['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
+
         # classified
         else:
             hits = 0
@@ -946,6 +1086,9 @@ class Classifier(wx.Frame):
                 if fltr_sel == 'image':
                     imKey = self.GetGroupKeyFromGroupSizer()
                     filteredImKeys = [imKey]
+                elif fltr_sel in p.gates_ordered:
+                    # We gate on objects, no need to filter imKeys
+                    pass
                 elif fltr_sel in p._filters_ordered:
                     filteredImKeys = db.GetFilteredImages(fltr_sel)
                     if filteredImKeys == []:
@@ -964,6 +1107,7 @@ class Classifier(wx.Frame):
                         return
 
             total_attempts = attempts = 0
+            time_start = time()
             # Now check which objects fall within the classification
             while len(obKeys) < nObjects:
                 self.PostMessage('Gathering random %s.' % (p.object_name[1]))
@@ -975,7 +1119,7 @@ class Classifier(wx.Frame):
                         #       100 randomly distributed obkeys to try.
                         obKeysToTry = 'ABS(RANDOM()) %% %s < 100' % (dm.get_total_object_count())
                     else:
-                        obKeysToTry = dm.GetRandomObjects(100)
+                        obKeysToTry = dm.GetRandomObjects(100, with_replacement=self.with_replacement)
                     loopMsg = ' from whole experiment'
                 elif fltr_sel == 'image':
                     # All objects are tried in first pass
@@ -984,8 +1128,14 @@ class Classifier(wx.Frame):
                     imKey = self.GetGroupKeyFromGroupSizer()
                     obKeysToTry = [imKey]
                     loopMsg = ' from image %s' % (imKey,)
+                elif fltr_sel in p.gates_ordered:
+                    obKeysToTry = db.GetGatedObjects(fltr_sel, 100, random=True)
+                    if obKeysToTry == []:
+                        self.PostMessage('No objects were found in gate "%s"' % (fltr_sel))
+                        return
+                    loopMsg = ' from gate %s' % (fltr_sel)
                 else:
-                    obKeysToTry = dm.GetRandomObjects(100, filteredImKeys)
+                    obKeysToTry = dm.GetRandomObjects(100, filteredImKeys, with_replacement=self.with_replacement)
                     obKeysToTry.sort()
                     if fltr_sel in p._filters_ordered:
                         loopMsg = ' from filter %s' % (fltr_sel)
@@ -994,12 +1144,12 @@ class Classifier(wx.Frame):
                                                           ', '.join(
                                                               ['%s=%s' % (n, v) for n, v in zip(colNames, groupKey)]))
 
-                self.PostMessage('Classifying %s.' % (p.object_name[1]))
+                self.PostMessage(f'Classifying {len(obKeysToTry)} {p.object_name[1]}.')
 
                 if obClassName == 'uncertain':
-                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass, obKeysToTry, uncertain=True)
+                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass - 1, obKeysToTry, uncertain=True)
                 else:
-                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass, obKeysToTry)
+                    obKeys += self.algorithm.FilterObjectsFromClassN(obClass - 1, obKeysToTry)
 
 
                 attempts += len(obKeysToTry)
@@ -1013,9 +1163,29 @@ class Classifier(wx.Frame):
                     if response == wx.ID_NO:
                         break
                     attempts = 0
+                elif time() - time_start > 30:
+                    dlg = wx.MessageDialog(self, 'Found %d %s after %d seconds. Continue searching?'
+                                           % (len(obKeys), p.object_name[1], time() - time_start),
+                                           'Continue searching?', wx.YES_NO | wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    dlg.Destroy()
+                    if response == wx.ID_NO:
+                        break
+                    time_start = time()
+
             statusMsg += loopMsg
 
-        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last',display_whole_image=p.classification_type == 'image')
+        if self.reject_duplicates:
+            used_keys = set(self.unclassifiedBin.GetObjectKeys())
+            for bin in self.classBins:
+                used_keys.update(bin.GetObjectKeys())
+            obKeys = list(set(obKeys) - used_keys)
+            if len(obKeys) == 0:
+                self.PostMessage("All fetched objects had already been used.")
+                return
+
+        self.unclassifiedBin.AddObjects(obKeys[:nObjects], self.chMap, pos='last',
+                                        display_whole_image=p.classification_type == 'image')
         self.PostMessage(statusMsg)
 
     def OnTileUpdated(self, evt):
@@ -1032,14 +1202,14 @@ class Classifier(wx.Frame):
         Present user with file select dialog, then load selected classifier model.
         '''
         dlg = wx.FileDialog(self, "Select the file containing your classifier model.",
-                            defaultDir=os.getcwd(), style=wx.OPEN | wx.FD_CHANGE_DIR)
+                            defaultDir=os.getcwd(), style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             self.LoadModel(filename)
 
     # Get the name of the loaded model file
     def GetModelData(self, filename):
-        from sklearn.externals import joblib
+        import joblib
         try: 
             return joblib.load(filename)
         except:
@@ -1059,6 +1229,16 @@ class Classifier(wx.Frame):
             # Get the name of the loaded file
             model, bin_labels, load_name, features = self.GetModelData(filename)
 
+            for bin in self.classBins:
+                if len(bin.GetObjectKeys()) > 0:
+                    dlg = wx.MessageDialog(self, 'Loading a model will clear existing training objects. Continue?',
+                                           'Load model?', wx.YES_NO | wx.ICON_QUESTION)
+                    response = dlg.ShowModal()
+                    dlg.Destroy()
+                    if response == wx.ID_NO:
+                        return
+                break
+
             if self.algorithm.name != load_name:
                 logging.info("Detected different setted classifier: " + self.algorithm.name + ", switching to " + load_name)
             if load_name in self.algorithms:
@@ -1068,13 +1248,17 @@ class Classifier(wx.Frame):
                 self.classifierMenu.Check(itemId, True)
                 self.classifierChoice.SetSelection(itemId - 1) # Set the rules panel selection
                 self.algorithm.LoadModel(filename)
-
+                self.scalerMenuItem.Check(self.algorithm.scaler is not None)
+                self.RemoveAllSortClasses()
+                for label in bin_labels:
+                    self.AddSortClass(label)
                 # for label in self.algorithm.bin_labels:
                 for bin in self.classBins:
                     bin.trained = True
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
-                self.PostMessage('Classifier model succesfully loaded')
+                self.algorithm.trained = True
+                self.PostMessage('Classifier model successfully loaded')
 
                 # Some User Information about the loaded Algorithm
                 self.PostMessage('Loaded trained classifier: ' + self.algorithm.name + ' on classes:')
@@ -1082,7 +1266,7 @@ class Classifier(wx.Frame):
                     self.PostMessage(label)
                 self.PostMessage('CAUTION: Classifier needs to be trained on the current data set!')
             else:
-                logging.error("Algorithm: %s doesn't exists", load_name)
+                logging.error("Algorithm: %s doesn't exist", load_name)
 
         except:
             self.scoreAllBtn.Disable()
@@ -1124,8 +1308,8 @@ class Classifier(wx.Frame):
         '''
         dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(),
-                            wildcard='Text files (*.txt)|*.txt|CSV files (*.csv)|*.csv',
-                            style=wx.OPEN | wx.FD_CHANGE_DIR)
+                            wildcard='CSV files (*.csv)|*.csv|Text files (*.txt)|*.txt',
+                            style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             name, file_extension = os.path.splitext(filename)
@@ -1170,8 +1354,9 @@ class Classifier(wx.Frame):
 
             num_objs = 0
             for bin in self.classBins:
-                if bin.label in keysPerBin.keys():
-                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,display_whole_image=p.classification_type == 'image')
+                if bin.label in list(keysPerBin.keys()):
+                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,
+                                   display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])
 
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
@@ -1196,13 +1381,14 @@ class Classifier(wx.Frame):
             keysPerBin = {}
             for (label, key) in self.trainingSet.entries:
                 keysPerBin[label] = keysPerBin.get(label, []) + [key]
-
+            self.Refresh()
             num_objs = 0
             for bin in self.classBins:
-                if bin.label in keysPerBin.keys():
-                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2)
+                if bin.label in list(keysPerBin.keys()):
+                    bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,
+                                   display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])
-
+                    bin.Refresh()
             self.PostMessage('Training set loaded (%d %s).'%(num_objs,p.object_name[1]))
             self.GetNumberOfClasses() # Logs number of classes
 
@@ -1279,7 +1465,7 @@ class Classifier(wx.Frame):
         selectedText = ""
         for item in items:
             if item.IsChecked():
-                selectedText = item.GetText()
+                selectedText = item.GetItemLabel()
 
         # if selectedText == "ROC Curve":
         #     self.PlotROC()
@@ -1288,15 +1474,8 @@ class Classifier(wx.Frame):
         # elif selectedText == "Precision Recall Curve":
         #     self.PlotPrecisionRecall()
         if selectedText == "Confusion Matrix":
-            dlg = wx.TextEntryDialog(self, 'Number of cross validation folds:', 'Enter folds')
-            dlg.SetValue('5')
-            if dlg.ShowModal() == wx.ID_OK:
-                folds = int(dlg.GetValue())
-                dlg.Destroy()
-            else:
-                dlg.Destroy()
-                return
-
+            folds = min(self.kFolds, min([len(bin.GetObjectKeys()) for bin in self.classBins]))
+            logging.info(f"Evaluating with {folds} cross-validation folds")
             self.algorithm.ConfusionMatrix(folds)
         else:
             self.algorithm.CheckProgress()
@@ -1321,7 +1500,7 @@ class Classifier(wx.Frame):
     #     plot_title = 'Learning Curves ({})'.format(model.name)
     #     self.PlotLearningCurve(clf, plot_title, X_train, y_train, cv=5)
 
-    from utils import delay
+    from .utils import delay
     # Add AutoSave by DD
     @delay(360.0) # every 5 min
     def AutoSave(self):
@@ -1339,8 +1518,7 @@ class Classifier(wx.Frame):
         with tilecollection.load_lock():
             try:
                 def cb(frac):
-                    self.PostMessage('%i % saved',frac * 100.)
-                    logging.info("frac %i", frac)
+                    self.PostMessage(f'{int(frac*100)}% saved')
 
                 self.trainingSet = TrainingSet(p)
                 try:
@@ -1357,6 +1535,7 @@ class Classifier(wx.Frame):
 
     def UpdateTrainingSet(self):
         # pause tile loading
+        self.PostMessage('Waiting for image loader to finish current job.')
         with tilecollection.load_lock():
             try:
                 def cb(frac):
@@ -1364,9 +1543,10 @@ class Classifier(wx.Frame):
                     if not cont:  # cancel was pressed
                         dlg.Destroy()
                         raise StopCalculating()
-
+                self.PostMessage('Saving training set.')
                 dlg = wx.ProgressDialog('Fetching cell data for training set...', '0% Complete', 100, self,
-                                        wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                                        wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME |
+                                        wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
                 self.trainingSet = TrainingSet(p)
                 try:
                     self.trainingSet.Create(labels=[bin.label for bin in self.classBins],
@@ -1396,6 +1576,18 @@ class Classifier(wx.Frame):
         except:
             logging.error('Unable to parse number of rules')
             return
+        if self.algorithm == self.algorithms['NeuralNetwork']:
+            nNeurons = self.nNeuronsTxt.GetValue()
+            splitneurons = nNeurons.split(',')
+            if nNeurons == "":
+                # No layers is fine
+                pass
+            elif all([level.isdigit() for level in splitneurons]) and all([int(level) > 0 for level in splitneurons]):
+                # All layers must have at least 1 neuron
+                pass
+            else:
+                logging.error("Unable to parse neuron parameters")
+                return
 
         self.keysAndCounts = None  # Must erase current keysAndCounts so they will be recalculated from new rules
 
@@ -1413,18 +1605,22 @@ class Classifier(wx.Frame):
 
                 t1 = time()
                 output = StringIO()
-                dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self,
-                                        wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
 
                 # JK - Start Modification
                 # Train the desired algorithm
                 # Legacy Code
                 if self.algorithm.name == "FastGentleBoosting":
+                    dlg = wx.ProgressDialog('Training classifier...', '0% Complete', 100, self,
+                                            wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME |
+                                            wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
                     self.algorithm.Train(
                         self.trainingSet.colnames, nRules, self.trainingSet.label_matrix,
-                        self.trainingSet.values, output, cb
+                        self.trainingSet.values, output, callback=cb
                     )
                 else:
+                    dlg = wx.ProgressDialog('Training classifier...', 'Training in progress', 100, self,
+                                            wx.PD_ELAPSED_TIME | wx.PD_CAN_ABORT | wx.PD_AUTO_HIDE)
+                    dlg.Pulse()
                     # Convert labels
                     self.algorithm.Train(self.trainingSet.label_array, self.trainingSet.values, output)
                     self.nRules = nRules # Hack 
@@ -1450,7 +1646,7 @@ class Classifier(wx.Frame):
         self.UpdateClassChoices()#
 
     def OnScoreImage(self, evt):
-        self.UpdateTrainingSet()
+        # self.UpdateTrainingSet()
         # Get the image key
         # Start with the table_id if there is one
         tblNum = None
@@ -1485,10 +1681,20 @@ class Classifier(wx.Frame):
         classHits = self.ScoreImage(imKey)
         # Get object coordinates in image and display
         classCoords = {}
+        trainingCoords = {}
         training_obKeys = self.trainingSet.get_object_keys()
         for className, obKeys in classHits.items():
-            classCoords['training ' + className] = [db.GetObjectCoords(key) for key in obKeys if key in training_obKeys]
-            classCoords[className] = [db.GetObjectCoords(key) for key in obKeys if key not in training_obKeys]
+            training_keys = [key for key in obKeys if key in training_obKeys]
+            if training_keys:
+                trainingCoords['training ' + className] = db.GetObjectsCoords(training_keys)
+            else:
+                trainingCoords['training ' + className] = []
+            object_keys = [key for key in obKeys if key not in training_obKeys]
+            if object_keys:
+                classCoords[className] = db.GetObjectsCoords(object_keys)
+            else:
+                classCoords[className] = []
+        classCoords.update(trainingCoords)
         # Show the image
         imViewer = imagetools.ShowImage(imKey, list(self.chMap), self,
                                         brightness=self.brightness, scale=self.scale,
@@ -1505,7 +1711,7 @@ class Classifier(wx.Frame):
         # CONSTRUCT ARRAY OF TABLE DATA
         classCounts = []
         tableData = []
-        for className, obKeys in classHits.items():
+        for className, obKeys in list(classHits.items()):
             classCounts.append(len(classCoords[className]))
         tableData += imKey
         tableData += [sum(classCounts)]
@@ -1514,7 +1720,12 @@ class Classifier(wx.Frame):
         labels = list(dbconnect.image_key_columns())
         key_col_indices = [i for i in range(len(labels))]
         labels = self.getLabels(labels, nClasses)
-        trainingCountsRow = [np.sum([(self.trainingSet.get_class_per_object()[i] == v)*(self.trainingSet.get_object_keys()[i][0] == imKey[0]) for i in range(len(self.trainingSet.get_class_per_object()))]) for v in self.trainingSet.labels]
+        trainingCountsRow = np.zeros(len(self.trainingSet.labels), dtype=int).tolist()
+        training_table = pd.DataFrame(self.trainingSet.get_object_keys(), columns=["ImageNumber", "ObjectNumber"])
+        training_table["Class"] = self.trainingSet.get_class_per_object()
+        subset = training_table[training_table["ImageNumber"] == imKey[0]]
+        for idx, lab in enumerate(self.trainingSet.labels):
+            trainingCountsRow[idx] += len(subset[subset["Class"] == lab])
         tableRow = [sum(trainingCountsRow)]
         tableRow.extend(trainingCountsRow)
         tableData.extend(tableRow)
@@ -1545,7 +1756,7 @@ class Classifier(wx.Frame):
         Calculates object counts for each class and enrichment values,
         then builds a table and displays it in a DataGrid.
         '''
-        self.UpdateTrainingSet()
+        # self.UpdateTrainingSet()
         groupChoices = ['Image'] + p._groups_ordered
         filterChoices = [None] + p._filters_ordered
         nClasses = len(self.classBins)
@@ -1593,7 +1804,8 @@ class Classifier(wx.Frame):
 
             dlg = wx.ProgressDialog('Calculating %s counts for each class...' % (p.object_name[0]), '0% Complete', 100,
                                     self,
-                                    wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
+                                    wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT
+                                    | wx.PD_AUTO_HIDE)
 
             def update(frac):
                 cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete' % (frac * 100.))
@@ -1639,7 +1851,7 @@ class Classifier(wx.Frame):
                 key = tuple(row[:nKeyCols])
                 imData[key] = np.array([float(v) for v in row[nKeyCols:]])
             groupedKeysAndCounts = np.array([list(k) + vals.tolist() for k, vals
-                                             in dm.SumToGroup(imData, group).items()], dtype=object)
+                                             in list(dm.SumToGroup(imData, group).items())], dtype=object)
             nKeyCols = len(dm.GetGroupColumnNames(group))
         else:
             groupedKeysAndCounts = np.array(self.keysAndCounts, dtype=object)
@@ -1665,6 +1877,10 @@ class Classifier(wx.Frame):
 
         # CONSTRUCT ARRAY OF TABLE DATA
         tableData = []
+        training_table = pd.DataFrame(self.trainingSet.get_object_keys(), columns=["ImageNumber", "ObjectNumber"])
+        training_table["Class"] = self.trainingSet.get_class_per_object()
+        labels = self.trainingSet.labels
+
         for i, row in enumerate(groupedKeysAndCounts):
             # Start this row with the group key:
             imageNumber = list(row[:nKeyCols])
@@ -1707,7 +1923,10 @@ class Classifier(wx.Frame):
                 else:
                     tableRow += ['NaN'] * 2 * len(countsRow)
             #training set counts
-            trainingCountsRow = [np.sum([(self.trainingSet.get_class_per_object()[i] == v)*(self.trainingSet.get_object_keys()[i][0] == imageNumber[0]) for i in range(len(self.trainingSet.get_class_per_object()))]) for v in self.trainingSet.labels]
+            trainingCountsRow = np.zeros(len(labels), dtype=int).tolist()
+            subset = training_table[training_table["ImageNumber"] == tableRow[0]]
+            for idx, lab in enumerate(labels):
+                trainingCountsRow[idx] += len(subset[subset["Class"] == lab])
             tableRow += [sum(trainingCountsRow)]
             tableRow += trainingCountsRow
             tableData.append(tableRow)
@@ -1749,23 +1968,23 @@ class Classifier(wx.Frame):
         # record the column indices for the keys
 
         labels += ['Total\n %s Count' % (p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
+        for i in range(nClasses):
             labels += ['%s\n %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         if p.area_scoring_column is not None:
             labels += ['Total\n %s Area' % (p.object_name[0].capitalize())]
-            for i in xrange(nClasses):
+            for i in range(nClasses):
                 labels += ['%s\n %s Area' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         if wants_enrichments:
-            for i in xrange(nClasses):
+            for i in range(nClasses):
                 labels += ['p(Enriched)\n' + self.classBins[i].label]
             if nClasses==2:
                 labels += ['Enriched Score\n' + self.classBins[0].label]
             else:
-                for i in xrange(nClasses):
+                for i in range(nClasses):
                     labels += ['Enriched Score\n' + self.classBins[i].label]
         #Training cell count
         labels += ['Training Total\n %s Count' % (p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
+        for i in range(nClasses):
             labels += ['Training %s\n %s Count' % (self.classBins[i].label.capitalize(), p.object_name[0].capitalize())]
         return labels
 
@@ -1781,7 +2000,8 @@ class Classifier(wx.Frame):
         grid.table_from_array(confusionMatrix, axes)
 
         # We don't want clicks on the header to sort the table, so we remove the event listener
-        grid.grid.Unbind(wx.grid.EVT_GRID_CMD_LABEL_LEFT_CLICK)
+        from wx.grid import EVT_GRID_CMD_LABEL_LEFT_CLICK
+        grid.grid.Unbind(EVT_GRID_CMD_LABEL_LEFT_CLICK)
 
         # We also want to have the classes on the row labels
         grid.grid.Table.row_labels = axes
@@ -1796,17 +2016,17 @@ class Classifier(wx.Frame):
         ''' Handler for fetch filter selection. '''
         filter = self.filterChoice.GetStringSelection()
         # Select from a specific image
-        if filter == 'experiment' or filter in p._filters_ordered:
+        if filter == 'experiment' or filter in p._filters_ordered or filter in p.gates_ordered:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
         elif filter == 'image' or filter in p._groups_ordered:
             self.SetupFetchFromGroupSizer(filter)
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             tables = []
             for t in [p.image_table, p.object_table, p.class_table]:
-                if isinstance(t, basestring):
+                if isinstance(t, str):
                     tables.append(t)
             cff = ColumnFilterDialog(self, tables=tables, size=(600,150))
             if cff.ShowModal() == wx.OK:
@@ -1846,7 +2066,7 @@ class Classifier(wx.Frame):
             validVals = list(set([col[i] for col in validKeys]))
             validVals.sort()
             validVals = [str(col) for col in validVals]
-            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == long:
+            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == int:
                 fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80, -1))
                 fieldInp.SetSelection(-1,-1) # Fix #203, textCtrl has different API since wx3
             else:
@@ -1868,7 +2088,7 @@ class Classifier(wx.Frame):
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)
-            self.fetchFromGroupSizer.AddSpacer((10, 20))
+            self.fetchFromGroupSizer.Add(10, 20, 0)
 
     def ValidateIntegerField(self, evt):
         ''' Validates an integer-only TextCtrl '''
@@ -1902,6 +2122,26 @@ class Classifier(wx.Frame):
             self.nRulesTxt.SetForegroundColour('#FF0000')
             return False
 
+    def ValidateNumberOfNeurons(self, evt=None):
+        if self.algorithm == self.algorithms['NeuralNetwork']:
+            nNeurons = self.nNeuronsTxt.GetValue()
+            if nNeurons == "":
+                self.algorithms['NeuralNetwork']  = GeneralClassifier(f"neural_network.MLPClassifier(hidden_layer_sizes=(), solver='lbfgs', max_iter=500)", self, scaler=self.algorithm.scaler is not None)
+                self.algorithm = self.algorithms['NeuralNetwork']
+                return True
+            splitneurons = nNeurons.split(',')
+            if all([level.isdigit() for level in splitneurons]) and all([int(level) > 0 for level in splitneurons]):
+                self.nNeuronsTxt.SetForegroundColour('#000001')
+                # Refresh the classifier
+                self.algorithms['NeuralNetwork']  = GeneralClassifier(f"neural_network.MLPClassifier(hidden_layer_sizes=({nNeurons}), solver='lbfgs', max_iter=500)", self, scaler=self.algorithm.scaler is not None)
+                self.algorithm = self.algorithms['NeuralNetwork']
+                return True
+            else:
+                self.nNeuronsTxt.SetForegroundColour('#0000FF')
+                return False
+        else:
+            return True
+
     def GetGroupKeyFromGroupSizer(self, group=None):
         ''' Returns the text in the group text inputs as a group key. '''
         if group is not None:
@@ -1925,6 +2165,24 @@ class Classifier(wx.Frame):
         ImageControlPanel(self.imageControlFrame, self, brightness=self.brightness, scale=self.scale,
                           contrast=self.contrast)
         self.imageControlFrame.Show(True)
+
+    def OnChangeEvaluationFolds(self, evt):
+        ''' Shows the evaluation k-fold adjustment control. '''
+        dlg = wx.NumberEntryDialog(
+            self,
+            'Number of cross validation folds:',
+            'Enter folds',
+            "Evaluate Classifier",
+            self.kFolds,
+            1,
+            1000
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            self.kFolds = int(dlg.GetValue())
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+            return
 
     def OnRulesEdit(self, evt):
         '''Lets the user edit the rules.'''
@@ -2076,23 +2334,25 @@ class Classifier(wx.Frame):
         self.Destroy()
 
     def IsTrained(self):
-        return self.algorithm.IsTrained() is not None
+        return self.algorithm.IsTrained()
 
     def Destroy(self):
         ''' Kill off all threads before combusting. '''
         super(Classifier, self).Destroy()
         import threading
-        for thread in threading.enumerate():
-            if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
-                logging.debug('Aborting thread %s' % thread.getName())
-                try:
-                    thread.abort()
-                except:
-                    pass
-        # XXX: Hack -- can't figure out what is holding onto TileCollection, but
-        #      it needs to be trashed if Classifier is to be reopened since it
-        #      will otherwise grab the existing instance with a dead tileLoader
-        tilecollection.TileCollection._forgetClassInstanceReferenceForTesting()
+        t = tilecollection.TileCollection()
+        if self in t.loader.notify_window:
+            t.loader.notify_window.remove(self)
+        # If no other windows are attached to the loader we shut it down and delete the tilecollection.
+        if len(t.loader.notify_window) == 0:
+            for thread in threading.enumerate():
+                if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
+                    logging.debug('Aborting thread %s' % thread.getName())
+                    try:
+                        thread.abort()
+                    except:
+                        pass
+            tilecollection.TileCollection.forget()
 
     # Get number of labels/classes we have in our training set
     def GetNumberOfClasses(self):
@@ -2219,9 +2479,10 @@ class Classifier(wx.Frame):
         plt.legend(loc="lower right")
         plt.show()
 
-    def PlotProbs(self,values):
+    def PlotProbs(self,values, key="object"):
         labels = self.trainingSet.labels
         fig = plt.figure()
+        fig.canvas.set_window_title(f"{fig.canvas.get_window_title()} - {key}")
         ax = fig.add_subplot(111)
 
         tmp_df = pd.DataFrame(labels,columns=["Class"])
@@ -2269,8 +2530,8 @@ class Classifier(wx.Frame):
         n_jobs : integer, optional
             Number of jobs to run in parallel (default 1).
         """    
-        from sklearn.learning_curve import learning_curve
-        
+        from sklearn.model_selection import learning_curve
+
         plt.figure()
         plt.title(plot_title)
         if ylim is not None:
@@ -2310,7 +2571,7 @@ class StopCalculating(Exception):
 if __name__ == "__main__":
     import sys
     import logging
-    from errors import show_exception_as_dialog
+    from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )
 
@@ -2330,9 +2591,9 @@ if __name__ == "__main__":
     if sys.excepthook == sys.__excepthook__:
         sys.excepthook = show_exception_as_dialog
 
-    p = Properties.getInstance()
-    db = dbconnect.DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = dbconnect.DBConnect()
+    dm = DataModel()
 
     # Load a properties file if passed as the first argument
     if len(sys.argv) > 1:

@@ -35,9 +35,7 @@ def _check_directory(dir, resume):
         os.makedirs(dir)
 
 import abc
-class BaseNormalization(object):
-    __metaclass__ = abc.ABCMeta
-    
+class BaseNormalization(object, metaclass=abc.ABCMeta):
     _cached_colmask = None
 
     def __init__(self, cache, param_dir):
@@ -47,7 +45,7 @@ class BaseNormalization(object):
 
     def _params_filename(self, plate):
         return os.path.join(self.dir, 'params', 
-                            unicode(plate) + '.npy')
+                            str(plate) + '.npy')
 
     @property
     def _colmask(self):
@@ -95,7 +93,7 @@ class BaseNormalization(object):
 
     def _create_cache_colmask(self, predicate):
         colmask = None
-        for plate, imKeys in self._get_controls(predicate).items():
+        for plate, imKeys in list(self._get_controls(predicate).items()):
             params = np_load(self._params_filename(plate))
             if len(params) == 0:
                 continue # No DMSO wells, so no params
@@ -139,7 +137,7 @@ class BaseNormalization(object):
 
     def _create_cache_params(self, predicate, resume=False):
         controls = self._get_controls(predicate)
-        for i, (plate, imKeys) in enumerate(make_progress_bar('Params')(controls.items())):
+        for i, (plate, imKeys) in enumerate(make_progress_bar('Params')(list(controls.items()))):
             filename = self._params_filename(plate)
             if i == 0:
                 _check_directory(os.path.dirname(filename), resume)
@@ -186,7 +184,7 @@ class StdNormalization(BaseNormalization):
     def _compute_params(self, features):
         m = features.shape[1]
         params = np.ones((2, m)) * np.nan
-        for j in xrange(m):
+        for j in range(m):
             params[0, j] = np.mean(features[:, j])
             params[1, j] = np.std(features[:, j])
         return params                   
@@ -205,7 +203,7 @@ class RobustStdNormalization(StdNormalization):
         m = features.shape[1]
         params = np.ones((2, m)) * np.nan
         c = Gaussian.ppf(3/4.)
-        for j in xrange(m):
+        for j in range(m):
             d = np.median(features[:, j])
             params[0, j] = d
             params[1, j] = np.median(np.fabs(features[:, j] - d) / c)
@@ -229,7 +227,7 @@ class RobustLinearNormalization(BaseNormalization):
     def _compute_params(self, features):
         m = features.shape[1]
         percentiles = np.ones((2, m)) * np.nan
-        for j in xrange(m):
+        for j in range(m):
             percentiles[0, j] = scoreatpercentile(features[:, j], self.lower_q)
             percentiles[1, j] = scoreatpercentile(features[:, j], self.upper_q)
         return percentiles

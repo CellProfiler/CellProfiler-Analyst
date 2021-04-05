@@ -3,20 +3,23 @@ A collection of tools to modify images used in CPA.
 '''
 
 import PIL.Image as Image
-import pilfix
-from properties import Properties
-import dbconnect
-from imagereader import ImageReader
+from . import pilfix
+from .properties import Properties
+from . import dbconnect
+from .imagereader import ImageReader
 import logging
-import matplotlib.image
+import scipy.ndimage
 import numpy as np
 import wx
 
-p = Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = Properties()
+db = dbconnect.DBConnect()
 
 cache = {}
 cachedkeys = []
+
+cachedparams = None
+cachedresult = None
 
 def FetchTile(obKey, display_whole_image=False):
     '''returns a list of image channel arrays cropped around the object
@@ -25,9 +28,11 @@ def FetchTile(obKey, display_whole_image=False):
     imKey = obKey[:-1]
     # Could transform object coords here
     imgs = FetchImage(imKey)
+    if imgs is None:
+        # Loading failed, return gracefully.
+        return
     
     size = (int(p.image_size),int(p.image_size))
-
     if display_whole_image:
         return imgs
 
@@ -52,12 +57,19 @@ def FetchTile(obKey, display_whole_image=False):
 
 def FetchImage(imKey):
     global cachedkeys
-    if imKey in cache.keys():
+    if imKey in cache:
         return cache[imKey]
     else:
         ir = ImageReader()
         filenames = db.GetFullChannelPathsForImage(imKey)
-        imgs = ir.ReadImages(filenames)                       
+        try:
+            log_io = wx.GetApp().frame.log_io
+        except:
+            log_io = True
+        imgs = ir.ReadImages(filenames, log_io)
+        if imgs is None:
+            # Loading failed
+            return
         cache[imKey] = imgs
         cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
@@ -65,8 +77,10 @@ def FetchImage(imKey):
         return cache[imKey]
 
 def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
-    from imageviewer import ImageViewer
+    from .imageviewer import ImageViewer
     imgs = FetchImage(imKey)
+    if imgs is None:
+        return
     frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
                         parent=parent, title=str(imKey),
                         brightness=brightness, scale=scale,
@@ -74,11 +88,13 @@ def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=Non
     frame.Show(True)
     return frame
 
-def Crop(imgdata, (w,h), (x,y)):
+def Crop(imgdata, xxx_todo_changeme, xxx_todo_changeme1):
     '''
     Crops an image to the width (w,h) around the point (x,y).
     Area outside of the image is filled with the color specified.
     '''
+    (w,h) = xxx_todo_changeme
+    (x,y) = xxx_todo_changeme1
     im_width = imgdata.shape[1]
     im_height = imgdata.shape[0]
 
@@ -86,14 +102,14 @@ def Crop(imgdata, (w,h), (x,y)):
     y = int(y + 0.5)
 
     # find valid cropping region in imgdata
-    lox = max(x - w/2, 0)
-    loy = max(y - h/2, 0)
-    hix = min(x - w/2 + w, im_width)
-    hiy = min(y - h/2 + h, im_height)
+    lox = max(x - w//2, 0)
+    loy = max(y - h//2, 0)
+    hix = min(x - w//2 + w, im_width)
+    hiy = min(y - h//2 + h, im_height)
     
     # find destination
-    dest_lox = lox - (x - w/2)
-    dest_loy = loy - (y - h/2)
+    dest_lox = lox - (x - w//2)
+    dest_loy = loy - (y - h//2)
     dest_hix = dest_lox + hix - lox
     dest_hiy = dest_loy + hiy - loy
 
@@ -119,13 +135,53 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     blending - list, how to blend this channel with others 'add' or 'subtract'
                eg: ['add','add','add','subtract']
     '''
+    # The imageio tile loader is fast enough that it can replace temporary tile data before bitmap merging completes.
+    # So let's make a copy of the original image data stack while we work.
+    imgs = imgs.copy()
+
+    '''
+    This is a bit hacky, but right now the tileloader needs to see and merge several channels when making temporary tiles.
+    The merging process is pretty slow and makes loading data sets painful. We can't easily avoid tile generation, but we can
+    try to figure out if we're using a temporary tile. Temp tiles will always be identical, so we can cache and send back the
+    completed temporary tile.
+    '''
+    global cachedparams
+    global cachedresult
+    # Laziest "hash" ever, but it'll do.
+    imghash = [im.sum() for im in imgs]
+    # In temporary tiles, [0,0] is always set to 0 to aid contrasting.
+    if cachedparams is not None and imgs[0][0][0] == 0:
+        if cachedparams == [imghash, chMap, brightness, scale, masks, contrast, display_whole_image]:
+            return cachedresult
+    cachedparams = [imghash, chMap, brightness, scale, masks, contrast, display_whole_image]
+
+    # Before any resizing, record the genuine full intensity range of each image.
+    limits = [(im.min(), im.max()) for im in imgs]
+    if not display_whole_image:
+        # Rescaling 2k x 2k images to make a 25 x 25 tile is slow and silly.
+        # Here we check whether the input image is more than 10x the final tile size.
+        # If it is, we'll do a quick and dirty rescale to give a more managable starting point.
+        tgt_h = int(p.image_size) * 5
+        tgt_w = int(p.image_size) * 5
+        h, w = imgs[0].shape
+        if tgt_h < h and tgt_w < w:
+            rescale_factor = max(tgt_h / h, tgt_w / w)
+            imgs = [scipy.ndimage.zoom(im, (rescale_factor, rescale_factor), order=2, prefilter=False,
+                                       mode="grid-constant", grid_mode=True) for im in imgs]
     if contrast=='Log':
-        logims = [log_transform(im) for im in imgs]
+        logims = [log_transform(im, interval=limits[idx]) for idx, im in enumerate(imgs)]
         imData = MergeChannels(logims, chMap, masks=masks)
     elif contrast=='Linear':
-        newims = [auto_contrast(im) for im in imgs]
+        newims = [auto_contrast(im, interval=limits[idx]) for idx, im in enumerate(imgs)]
         imData = MergeChannels(newims, chMap, masks=masks)
     else:
+        # Ensure we're in float 0-1 range, scale based on bit depth.
+        for i in range(len(imgs)):
+            maxval = imgs[i].max()
+            if maxval > 255:
+                imgs[i] = imgs[i] * (1 / 65535)
+            elif maxval > 1:
+                imgs[i] = imgs[i] * (1 / 255)
         imData = MergeChannels(imgs, chMap, masks=masks)
         
     h,w = imgs[0].shape
@@ -136,13 +192,14 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     imData[imData>255] = 255
 
     # Write wx.Image
-    img = wx.EmptyImage(w,h)
+    img = wx.Image(w,h)
     img.SetData(imData.astype('uint8').flatten())
 
     tmp_h = int(p.image_size)
     tmp_w = int(p.image_size)
 
-    if display_whole_image and h != tmp_h and h!= tmp_w:
+    # Here we do a more careful rescale to the target tile size.
+    if not display_whole_image and h != tmp_h and h!= tmp_w:
         h = tmp_h
         w = tmp_w
         img.Rescale(h,w)
@@ -156,8 +213,8 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         else:
             img.Rescale(10,10)
 
-
-    return img.ConvertToBitmap()
+    cachedresult = img.ConvertToBitmap()
+    return cachedresult
 
 def MergeChannels(imgs, chMap, masks=[]):
     '''
@@ -217,29 +274,29 @@ def check_image_shape_compatibility(imgs):
     to choose a shape to resize them to.
     '''
     if not p.image_rescale:
-        if np.any([imgs[i].shape != imgs[0].shape for i in xrange(len(imgs))]):
+        if np.any([imgs[i].shape != imgs[0].shape for i in range(len(imgs))]):
             dims = [im.shape for im in imgs]
-            aspect_ratios = [float(dims[i][0])/dims[i][1] for i in xrange(len(dims))]
+            aspect_ratios = [float(dims[i][0])/dims[i][1] for i in range(len(dims))]
             def almost_equal(expected, actual, rel_err=1e-7, abs_err=1e-20):
                 absolute_error = abs(actual - expected)
                 return absolute_error <= max(abs_err, rel_err * abs(expected))
-            for i in xrange(len(aspect_ratios)):
+            for i in range(len(aspect_ratios)):
                 if not almost_equal(aspect_ratios[0], aspect_ratios[i], abs_err=0.01):
                     raise Exception('Can\'t merge image channels. Aspect ratios do not match.')
-            areas = map(np.product, dims)
+            areas = list(map(np.product, dims))
             max_idx = areas.index(max(areas))
             min_idx = areas.index(min(areas))
             
             s = [imgs[max_idx].shape, imgs[min_idx].shape]
             
             if p.use_larger_image_scale:
-                p.image_rescale = map(float, imgs[max_idx].shape)
+                p.image_rescale = list(map(float, imgs[max_idx].shape))
                 if p.rescale_object_coords:
-                    p.image_rescale_from = map(float, imgs[min_idx].shape)
+                    p.image_rescale_from = list(map(float, imgs[min_idx].shape))
             else:
-                p.image_rescale = map(float, imgs[min_idx].shape)
+                p.image_rescale = list(map(float, imgs[min_idx].shape))
                 if p.rescale_object_coords:
-                    p.image_rescale_from = map(float, imgs[max_idx].shape)
+                    p.image_rescale_from = list(map(float, imgs[max_idx].shape))
             
 #            dlg = wx.SingleChoiceDialog(None, 
 #                     'Some of your images were found to have different\n'
@@ -263,8 +320,8 @@ def check_image_shape_compatibility(imgs):
 #                    p.image_rescale_from = set(s).difference([dims]).pop()
 
 def rescale(im, scale):
-    from scipy.misc import imresize
-    return imresize(im, (scale[1], scale[0])) / 255.
+    import scipy.ndimage
+    return scipy.ndimage.zoom(im, (scale[1], scale[0])) / 255.
 
 def log_transform(im, interval=None):
     '''Takes a single image in the form of a np array and returns it
@@ -284,13 +341,13 @@ def log_transform(im, interval=None):
 def auto_contrast(im, interval=None):
     '''Takes a single image in the form of a np array and returns it
     scaled to the interval [0,1] '''
-    im = im.copy()
     (min, max) = interval or (im.min(), im.max())
-    # Check that the image isn't binary 
+    # Check that the image isn't binary
     if np.any((im>min)&(im<max)):
-        im -= im.min()
-        if im.max() > 0:
-            im /= im.max()
+        im -= min
+        im[im < 0] = 0
+        if max > 0:
+            im = im / max
     return im
 
 def tile_images(images):
@@ -318,11 +375,12 @@ def tile_images(images):
     return composite
 
 def SaveBitmap(bitmap, filename, format='PNG'):
-    im = BitmapToPIL(bitmap)
     if format.lower() in ['jpg', 'jpeg']:
-        im.save(filename, format, quality=95)
+        bitmap.SaveFile(filename, type=wx.BITMAP_TYPE_JPEG)
+    elif format == "PNG":
+        bitmap.SaveFile(filename, type=wx.BITMAP_TYPE_PNG)
     else:
-        im.save(filename, format)
+        raise ValueError(f"Unable to save. Invalid image format '{format}' for {filename}")
 
 def ImageToPIL(image):
     '''Convert wx.Image to PIL Image.'''

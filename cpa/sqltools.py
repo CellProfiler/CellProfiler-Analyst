@@ -1,8 +1,8 @@
 import cpa
-from dbconnect import *
-from properties import Properties
-from utils import Observable
-p = Properties.getInstance()
+from .dbconnect import *
+from .properties import Properties
+from .utils import Observable
+p = Properties()
 
 def image_cols():
     '''returns the image key columns as a list of Columns'''
@@ -125,7 +125,7 @@ class QueryBuilder(object):
         '''
         tables = self.get_queried_tables()
         # add the tables required to link the above tables together
-        db = DBConnect.getInstance()
+        db = DBConnect()
         exps = db.get_linking_expressions(tables)
         for exp in exps:
             tables += exp.get_tables()
@@ -138,7 +138,7 @@ class QueryBuilder(object):
         '''Build the where clause from conditions given by the user and 
         conditions that link all the tables together.
         '''
-        db = DBConnect.getInstance()
+        db = DBConnect()
         conditions = []
         conditions += ['(%s)'%(str(f)) for f in self.filters]
         queried_tables = self.get_queried_tables()
@@ -201,7 +201,7 @@ class Column(object):
         return [self.table]
 
             
-class Gate1D(object, Observable):
+class Gate1D(Observable):
     '''
     A 1D gate associates a particular column with a value range.
     '''
@@ -281,7 +281,7 @@ class Gate1D(object, Observable):
         return (self.column.table, self.column.col), (self.min, self.max)
 
 
-class Gate(object, Observable):
+class Gate(Observable):
     '''
     A list of 1D gates to be ANDed together
     '''
@@ -319,7 +319,7 @@ class Gate(object, Observable):
     
     def as_filter(self):
         if len(self._gate_list) == 0:
-            import sqltools
+            from . import sqltools
             return sqltools.Filter()
         fltr = self._gate_list[0].as_filter()
         for g in self._gate_list[1:]:

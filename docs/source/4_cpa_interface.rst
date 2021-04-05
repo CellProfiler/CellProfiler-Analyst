@@ -20,6 +20,8 @@ Below the toolbar is a logging console that all the tools will use to provide fe
 - Info: Reports general status information as well as any warnings and errors.
 - Debug: Reports technical information such as SQL queries in addition to all other messages listed above.
 
+You can also optionally disable logging of image loading events by using the "Log image loading" toggle in the logging menu.
+
 You can save the log to a file by selecting File > Save Log, or copied by selecting the text and using Ctrl+C (or your operating system default copy command).
 
 You will also find menu items to save and load workspaces under the File menu. See Section XIII for more on workspaces in CPA and how they can help you analyze new data more quickly.

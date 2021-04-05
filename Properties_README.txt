@@ -1,12 +1,11 @@
 # =============================================================================
 #
-#             Properties file README for CellProfiler Analyst 2.2
+#             Properties file README for CellProfiler Analyst 3.0
 #
-# NOTE: CPA 2.0 will not read old CPA properties files, nor will CPA read this
-#       properties file format.  The two formats can, however be easily 
-#       converted by hand.
+# NOTE: CPA 3.0 will read CPA properties files from 2.x versions, but older
+#       files from 1.x versions are incompatible.
 #
-# This file is an example properties file to help users of CPA 2.0 to set up
+# This file is an example properties file to help users of CPA 3.0 to set up
 # your own properties file.  The syntax is simple.  Lines that begin with the
 # "#" sign are comments which are ignored by CPA.  All other lines must be in
 # one of one of the following 2 forms:
@@ -317,4 +316,24 @@ class_table  =
 check_tables = yes
 
 
+# ======== Force BioFormats ========
+# OPTIONAL
+# [yes/no]  By default, CPA will try to use the imageio library to load images
+# which are in supported formats, then fall back to using the older BioFormats
+# loader if something goes wrong. ImageIO is faster but some unusual file
+# compression formats can cause errors when loading. This option forces CPA to
+# always use the BioFormats reader. Try this if images aren't displayed correctly.
+
+force_bioformats = no
+
+
+# ======== Use Legacy Fetcher ========
+# OPTIONAL
+# [yes/no]  In CPA 3.0 the object fetching system has been revised to be more
+# efficient. In the vast majority of cases it should be faster than the previous
+# versions. However, some complex object filters can still cause problems. If you
+# encounter slowdowns this setting allows you to switch back to the old method of
+# fetching and randomisation.
+
+use_legacy_fetcher = no
 

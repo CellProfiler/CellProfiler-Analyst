@@ -1,43 +1,26 @@
 # Encoding: utf-8
-from __future__ import with_statement
-from __future__ import print_function
+
+
 
 import matplotlib
 matplotlib.use('WXAgg')
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-
-import tableviewer
-from datamodel import DataModel
-from imagecontrolpanel import ImageControlPanel
-from properties import Properties
-from scoredialog import ScoreDialog
-import tilecollection
-from trainingset import TrainingSet
-from cStringIO import StringIO
-from time import time
-import icons
-import dbconnect
-import dirichletintegrate
-import imagetools
-import polyafit
-import sortbin
+import sys
 import logging
-import numpy as np
+from .datamodel import DataModel
+from .imagecontrolpanel import ImageControlPanel
+from .properties import Properties
+from . import tilecollection
+from . import icons
+from . import dbconnect
+from . import imagetools
+from . import sortbin
 import os
 import wx
-import re
 import cpa.helpmenu
-from imageviewer import ImageViewer
 
-import fastgentleboostingmulticlass
-from fastgentleboosting import FastGentleBoosting
 
 from cpa.profiling.classifier import Classifier
-#from supportvectormachines import SupportVectorMachines
-from generalclassifier import GeneralClassifier
 
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
@@ -56,12 +39,13 @@ class ImageGallery(wx.Frame):
             global p
             p = properties
             global db
-            db = dbconnect.DBConnect.getInstance()
+            db = dbconnect.DBConnect()
 
         wx.Frame.__init__(self, parent, id=id, title='CPA/ImageGallery - %s' % \
                                                      (os.path.basename(p._filename)), size=(800, 600), **kwargs)
         if parent is None and not sys.platform.startswith('win'):
-            self.tbicon = wx.TaskBarIcon()
+            from wx.adv import TaskBarIcon
+            self.tbicon = TaskBarIcon()
             self.tbicon.SetIcon(icons.get_cpa_icon(), 'CPA/ImageGallery')
         else:
             self.SetIcon(icons.get_cpa_icon())
@@ -70,7 +54,7 @@ class ImageGallery(wx.Frame):
         db.register_gui_parent(self)
 
         global dm
-        dm = DataModel.getInstance()
+        dm = DataModel()
 
         if not p.is_initialized():
             logging.critical('ImageGallery requires a properties file. Exiting.')
@@ -101,12 +85,10 @@ class ImageGallery(wx.Frame):
         #### Create GUI elements
         # Top level - three split windows
         self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH)
-        self.fetch_and_rules_panel = wx.Panel(self.splitter)
         self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH)
 
         # fetch & rules
-        self.fetch_panel = wx.Panel(self.fetch_and_rules_panel)
-        self.find_rules_panel = wx.Panel(self.fetch_and_rules_panel)
+        self.fetch_panel = wx.Panel(self.splitter)
 
         # sorting bins
         self.gallery_panel = wx.Panel(self.bins_splitter)
@@ -134,62 +116,54 @@ class ImageGallery(wx.Frame):
 
         #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.find_rules_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.fetch_and_rules_sizer = wx.BoxSizer(wx.VERTICAL)
         self.classified_bins_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         #### Add elements to sizers and splitters
         # fetch panel
         self.fetchSizer.AddStretchSpacer()
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'Fetch '), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.fetchChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchTxt = wx.StaticText(self.fetch_panel, -1, label='of image IDs:')
         self.fetchSizer.Add(self.fetchTxt, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.startId, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchTxt2 = wx.StaticText(self.fetch_panel, -1, label='to')
         self.fetchSizer.Add(self.fetchTxt2, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.endId, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         #self.fetchSizer.Add(self.obClassChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        #self.fetchSizer.AddSpacer((5, 20))
+        #self.fetchSizer.Add(5, 20, 0)
         self.fetchTxt3 = wx.StaticText(self.fetch_panel, -1, label='images')
         self.fetchSizer.Add(self.fetchTxt3, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(wx.StaticText(self.fetch_panel, -1, 'from'), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.filterChoice, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((10, 20))
+        self.fetchSizer.Add(10, 20, 0)
         self.fetchSizer.Add(self.fetchFromGroupSizer, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.fetchSizer.AddSpacer((5, 20))
+        self.fetchSizer.Add(5, 20, 0)
         self.fetchSizer.Add(self.fetchBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.fetchSizer.AddStretchSpacer()
         self.fetch_panel.SetSizerAndFit(self.fetchSizer)
-
-        # fetch and rules panel
-        self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_sizer.Add(self.fetch_panel, flag=wx.EXPAND)
-        self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
         # classified bins panel
         self.objects_bin_panel.SetSizer(self.classified_bins_sizer)
 
         # splitter windows
-        self.splitter.SplitHorizontally(self.fetch_and_rules_panel, self.bins_splitter,
-                                        self.fetch_and_rules_panel.GetMinSize()[1])
+        self.splitter.SplitHorizontally(self.fetch_panel, self.bins_splitter,
+                                        self.fetch_panel.GetMinSize()[1])
         self.bins_splitter.SplitHorizontally(self.gallery_panel, self.objects_bin_panel)
 
         self.splitter.SetSashGravity(0.0)
         self.bins_splitter.SetSashGravity(0.5)
 
-        self.splitter.SetMinimumPaneSize(max(50, self.fetch_and_rules_panel.GetMinHeight()))
+        self.splitter.SetMinimumPaneSize(max(50, self.fetch_panel.GetMinHeight()))
         self.bins_splitter.SetMinimumPaneSize(50)
-        self.SetMinSize((self.fetch_and_rules_panel.GetMinWidth(), 4 * 50 + self.fetch_and_rules_panel.GetMinHeight()))
+        self.SetMinSize((self.fetch_panel.GetMinWidth(), 4 * 50 + self.fetch_panel.GetMinHeight()))
 
         # Set initial state
         self.filterChoice.SetSelection(0)
@@ -261,13 +235,13 @@ class ImageGallery(wx.Frame):
 
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
                     item.Check()
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == 'none':
                     item.Check()
             self.chMap[chIdx] = 'None'
@@ -280,14 +254,14 @@ class ImageGallery(wx.Frame):
         viewMenu = wx.Menu()
 
         self.fileMenu = wx.Menu()
-        loadMenuItem = self.fileMenu.Append(-1, text='Load Image Set\tCtrl+O',
-                                                   help='Loads images specfied in a csv file.')
+        loadMenuItem = self.fileMenu.Append(-1, item='Load Image Set\tCtrl+O',
+                                                   helpString='Loads images specfied in a csv file.')
         # JEN - End Add
-        exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Exit Image Gallery')
+        exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Exit Image Gallery')
         self.GetMenuBar().Append(self.fileMenu, 'File')
 
-        imageControlsMenuItem = viewMenu.Append(-1, text='Image Controls\tCtrl+Shift+I',
-                                                help='Launches a control panel for adjusting image brightness, size, etc.')
+        imageControlsMenuItem = viewMenu.Append(-1, item='Image Controls\tCtrl+Shift+I',
+                                                helpString='Launches a control panel for adjusting image brightness, size, etc.')
         self.GetMenuBar().Append(viewMenu, 'View')
 
         # Rules menu
@@ -300,10 +274,10 @@ class ImageGallery(wx.Frame):
 
         # Advanced menu
         advancedMenu = wx.Menu()
-        fetchObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects from displayed images', help='Fetch all objects from displayed images')
-        fetchAllObjMenuItem = advancedMenu.Append(-1, text=u'Fetch all objects', help='Fetch all objects')
-        saveImgMenuItem = advancedMenu.Append(-1, text=u'Save image thumbnails as PNG', help='Save image thumbnails as PNG')
-        saveObjMenuItem = advancedMenu.Append(-1, text=u'Save object thumbnails as PNG', help='Save object thumbnails as PNG')
+        fetchObjMenuItem = advancedMenu.Append(-1, item='Fetch all objects from displayed images', helpString='Fetch all objects from displayed images')
+        fetchAllObjMenuItem = advancedMenu.Append(-1, item='Fetch all objects', helpString='Fetch all objects')
+        saveImgMenuItem = advancedMenu.Append(-1, item='Save image thumbnails as PNG', helpString='Save image thumbnails as PNG')
+        saveObjMenuItem = advancedMenu.Append(-1, item='Save object thumbnails as PNG', helpString='Save object thumbnails as PNG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -325,7 +299,7 @@ class ImageGallery(wx.Frame):
 
         # Clean up existing channel menus
         try:
-            menus = set([items[2].Menu for items in self.chMapById.values()])
+            menus = set([items[2].Menu for items in list(self.chMapById.values())])
             for menu in menus:
                 for i, mbmenu in enumerate(self.MenuBar.Menus):
                     if mbmenu[0] == menu:
@@ -362,7 +336,7 @@ class ImageGallery(wx.Frame):
                 channel_names += ['%s [%s]' % (name, x + 1) for x in range(chans)]
 
         # Zip channel names with channel map
-        zippedChNamesChMap = zip(channel_names, self.chMap)
+        zippedChNamesChMap = list(zip(channel_names, self.chMap))
 
         # Loop over all the image names in the properties file
         for i, chans in enumerate(p.image_names):
@@ -418,11 +392,11 @@ class ImageGallery(wx.Frame):
     def OnFetchImage(self, evt=None):
 
         # Set every channel to black and set all the toggle options to 'none'
-        for ids in self.chMapById.keys():
+        for ids in list(self.chMapById.keys()):
             (chIndex, color, item, channel_menu) = self.chMapById[ids]
             if (color.lower() == 'none'):
                 item.Check()
-        for ids in self.imMapById.keys():
+        for ids in list(self.imMapById.keys()):
             (cpi, itm, si, channelIds) = self.imMapById[ids]
             if cpi == 3:
                 self.chMap[si] = 'none'
@@ -436,7 +410,7 @@ class ImageGallery(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in self.imMapById.keys():
+        if evt.GetId() in list(self.imMapById.keys()):
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -470,7 +444,7 @@ class ImageGallery(wx.Frame):
         dlg = wx.FileDialog(self, "Select the file containing your classifier training set.",
                             defaultDir=os.getcwd(),
                             wildcard='CSV files (*.csv)|*.csv',
-                            style=wx.OPEN | wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             name, file_extension = os.path.splitext(filename)
@@ -555,7 +529,7 @@ class ImageGallery(wx.Frame):
                         # Need to run this after removing all tiles!
                         def cb():
                             filteredImKeys = db.GetFilteredImages(fltr_sel)
-                            imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                            imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                             self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                         wx.CallAfter(cb)
                         statusMsg += ' from filter "%s"' % (fltr_sel)
@@ -567,7 +541,7 @@ class ImageGallery(wx.Frame):
                     # Need to run this after removing all tiles!
                     def cb():
                         filteredImKeys = db.GetFilteredImages(fltr_sel)
-                        imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                        imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
 
                         self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     wx.CallAfter(cb)
@@ -604,7 +578,7 @@ class ImageGallery(wx.Frame):
                         filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
                         colNames = dm.GetGroupColumnNames(groupName)
                         def cb():
-                            imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                            imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                             self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                         
                         statusMsg += ' from group %s: %s' % (groupName,
@@ -620,7 +594,7 @@ class ImageGallery(wx.Frame):
                     filteredImKeys = dm.GetImagesInGroupWithWildcards(groupName, groupKey)
                     colNames = dm.GetGroupColumnNames(groupName)
                     def cb():
-                        imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                        imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                         self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     
                     statusMsg += ' from group %s: %s' % (groupName,
@@ -640,16 +614,15 @@ class ImageGallery(wx.Frame):
 
         # Fetching images with range
         elif fltr_sel == 'experiment':
-                self.galleryBin.SelectAll()
-                self.galleryBin.RemoveSelectedTiles()
-                # Need to run this after removing all tiles!
-                def cb():
-                    imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
-                    self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
-                wx.CallAfter(cb)
-
-                statusMsg += ' from whole experiment'
+            self.galleryBin.SelectAll()
+            self.galleryBin.RemoveSelectedTiles()
+            # Need to run this after removing all tiles!
+            def cb():
+                imKeys = db.GetAllImageKeys()
+                imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
+                self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
+            wx.CallAfter(cb)
+            statusMsg += ' from whole experiment'
         elif fltr_sel in p._filters_ordered:
             self.galleryBin.SelectAll()
             self.galleryBin.RemoveSelectedTiles()
@@ -659,7 +632,7 @@ class ImageGallery(wx.Frame):
                 if filteredImKeys == []:
                     self.PostMessage('No images were found in filter "%s"' % (fltr_sel))
                     return
-                imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
             wx.CallAfter(cb)
             statusMsg += ' from filter "%s"' % (fltr_sel)
@@ -678,7 +651,7 @@ class ImageGallery(wx.Frame):
                                                                                           zip(colNames, groupKey)])))
                     return
                 
-                imKeys = map(lambda x: tuple(list(flatten(x,-1))), filteredImKeys)
+                imKeys = [tuple(list(flatten(x,-1))) for x in filteredImKeys]
                 self.galleryBin.AddObjects(imKeys[(start - 1):end], self.chMap, pos='last', display_whole_image=True)
             
             statusMsg += ' from group %s: %s' % (groupName,
@@ -715,7 +688,7 @@ class ImageGallery(wx.Frame):
                 # Need to run this after removing all tiles!
                 def cb():
                     imKeys = db.GetAllImageKeys()
-                    imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+                    imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
                     self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                     self.PostMessage("Loaded all images")
                 wx.CallAfter(cb)
@@ -725,7 +698,7 @@ class ImageGallery(wx.Frame):
             # Need to run this after removing all tiles!
             def cb():
                 imKeys = db.GetAllImageKeys()
-                imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+                imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
                 self.galleryBin.AddObjects(imKeys, self.chMap, pos='last', display_whole_image=True)
                 self.PostMessage("Loaded all images")
             wx.CallAfter(cb)
@@ -753,57 +726,7 @@ class ImageGallery(wx.Frame):
         box.Lower()
  
     def RemoveSortClass(self, label, clearModel=True):
-        for bin in self.classBins:
-            if bin.label == label:
-                self.classBins.remove(bin)
-                # Remove the label from the class dropdown menu
-                #self.obClassChoice.SetItems([item for item in self.obClassChoice.GetItems() if item != bin.label])
-                #self.obClassChoice.Select(0)
-                # Remove the bin
-                self.classified_bins_sizer.Remove(bin.parentSizer)
-                wx.CallAfter(bin.Destroy)
-                self.objects_bin_panel.Layout()
-                break
-        for bin in self.classBins:
-            bin.trained = False
-        self.UpdateClassChoices()
-        self.QuantityChanged()
-
-    def RemoveAllSortClasses(self, clearModel=True):
-        # Note: can't use "for bin in self.classBins:"
-        for label in [bin.label for bin in self.classBins]:
-            self.RemoveSortClass(label, clearModel)
-
-    def RenameClass(self, label):
-        dlg = wx.TextEntryDialog(self, 'New class name:', 'Rename class')
-        dlg.SetValue(label)
-        if dlg.ShowModal() == wx.ID_OK:
-            newLabel = dlg.GetValue()
-            if newLabel != label and newLabel in [bin.label for bin in self.classBins]:
-                errdlg = wx.MessageDialog(self, 'There is already a class with that name.', "Can't Name Class",
-                                          wx.OK | wx.ICON_EXCLAMATION)
-                if errdlg.ShowModal() == wx.ID_OK:
-                    return self.RenameClass(label)
-            if ' ' in newLabel:
-                errdlg = wx.MessageDialog(self, 'Labels can not contain spaces', "Can't Name Class",
-                                          wx.OK | wx.ICON_EXCLAMATION)
-                if errdlg.ShowModal() == wx.ID_OK:
-                    return self.RenameClass(label)
-            for bin in self.classBins:
-                if bin.label == label:
-                    bin.label = newLabel
-                    bin.UpdateQuantity()
-                    break
-            dlg.Destroy()
-            #updatedList = self.obClassChoice.GetItems()
-            #sel = self.obClassChoice.GetSelection()
-            for i in xrange(len(updatedList)):
-                if updatedList[i] == label:
-                    updatedList[i] = newLabel
-            #self.obClassChoice.SetItems(updatedList)
-            #self.obClassChoice.SetSelection(sel)
-            return wx.ID_OK
-        return wx.ID_CANCEL
+        pass
 
     def all_sort_bins(self):
         return [self.galleryBin] + self.classBins
@@ -818,12 +741,6 @@ class ImageGallery(wx.Frame):
         self.galleryBin.UpdateTile(evt.data)
         for bin in self.classBins:
             bin.UpdateTile(evt.data)
-
-    def OnAddSortClass(self, evt):
-        label = 'class_' + str(self.binsCreated)
-        self.AddSortClass(label)
-        if self.RenameClass(label) == wx.ID_CANCEL:
-            self.RemoveSortClass(label)
 
     def OnMapChannels(self, evt):
         ''' Responds to selection from the color mapping menus. '''
@@ -842,6 +759,7 @@ class ImageGallery(wx.Frame):
             bin.MapChannels(chMap)
 
     def ValidateImageKey(self, evt):
+        # Unused? Mar 2021
         ''' Checks that the image field specifies an existing image. '''
         txtCtrl = evt.GetEventObject()
         try:
@@ -872,8 +790,7 @@ class ImageGallery(wx.Frame):
             self.startId.Show()
             self.endId.Show()
             self.filterChoice.Enable()
-            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
-            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
+            self.fetch_panel.Layout()
 
         elif fetchChoice == 'all':
             self.fetchTxt.SetLabel('')
@@ -882,11 +799,8 @@ class ImageGallery(wx.Frame):
             self.fetchTxt3.Show()
             self.startId.Hide()
             self.endId.Hide()
-            #self.startId.Disable()
-            #self.endId.Disable()
             self.filterChoice.Enable()
-            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
-            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
+            self.fetch_panel.Layout()
 
         elif fetchChoice == 'individual':
 
@@ -899,9 +813,8 @@ class ImageGallery(wx.Frame):
             self.fetchTxt2.Hide()
             self.fetchTxt3.Hide()
             self.filterChoice.Disable()
-            self.fetch_panel.SetSizerAndFit(self.fetchSizer)
-            self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
-            
+            self.fetch_panel.Layout()
+
 
     def OnSelectFilter(self, evt):
         ''' Handler for fetch filter selection. '''
@@ -914,7 +827,7 @@ class ImageGallery(wx.Frame):
             self.fetchSizer.Show(self.fetchFromGroupSizer, True)
         elif filter == CREATE_NEW_FILTER:
             self.fetchSizer.Hide(self.fetchFromGroupSizer, True)
-            from columnfilter import ColumnFilterDialog
+            from .columnfilter import ColumnFilterDialog
             cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600, 300))
             if cff.ShowModal() == wx.OK:
                 fltr = cff.get_filter()
@@ -953,7 +866,7 @@ class ImageGallery(wx.Frame):
             validVals = list(set([col[i] for col in validKeys]))
             validVals.sort()
             validVals = [str(col) for col in validVals]
-            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == long:
+            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == int:
                 fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80, -1))
             else:
                 fieldInp = wx.Choice(self.fetch_panel, -1, size=(80, -1),
@@ -973,7 +886,7 @@ class ImageGallery(wx.Frame):
             self.groupInputs += [fieldInp]
             self.fetchFromGroupSizer.Add(label)
             self.fetchFromGroupSizer.Add(fieldInp)
-            self.fetchFromGroupSizer.AddSpacer((10, 20))
+            self.fetchFromGroupSizer.Add(10, 20, 0)
 
     def ValidateIntegerField(self, evt):
         ''' Validates an integer-only TextCtrl '''
@@ -1056,7 +969,7 @@ class ImageGallery(wx.Frame):
 
         def cb():
             imKeys = db.GetAllImageKeys()
-            imKeys = map(lambda x: tuple(list(flatten(x,-1))), imKeys)
+            imKeys = [tuple(list(flatten(x,-1))) for x in imKeys]
 
             for imKey in imKeys:
                 pseudo_obKeys = imKey
@@ -1111,17 +1024,19 @@ class ImageGallery(wx.Frame):
         ''' Kill off all threads before combusting. '''
         super(ImageGallery, self).Destroy()
         import threading
-        for thread in threading.enumerate():
-            if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
-                logging.debug('Aborting thread %s' % thread.getName())
-                try:
-                    thread.abort()
-                except:
-                    pass
-        # XXX: Hack -- can't figure out what is holding onto TileCollection, but
-        #      it needs to be trashed if Classifier is to be reopened since it
-        #      will otherwise grab the existing instance with a dead tileLoader
-        tilecollection.TileCollection._forgetClassInstanceReferenceForTesting()
+        t = tilecollection.TileCollection()
+        if self in t.loader.notify_window:
+            t.loader.notify_window.remove(self)
+        # If no other windows are attached to the loader we shut it down and delete the tilecollection.
+        if len(t.loader.notify_window) == 0:
+            for thread in threading.enumerate():
+                if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
+                    logging.debug('Aborting thread %s' % thread.getName())
+                    try:
+                        thread.abort()
+                    except:
+                        pass
+            tilecollection.TileCollection.forget()
 
     
 class StopCalculating(Exception):
@@ -1131,9 +1046,7 @@ class StopCalculating(Exception):
 # ----------------- Run -------------------
 
 if __name__ == "__main__":
-    import sys
-    import logging
-    from errors import show_exception_as_dialog
+    from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )
 
@@ -1153,9 +1066,9 @@ if __name__ == "__main__":
     if sys.excepthook == sys.__excepthook__:
         sys.excepthook = show_exception_as_dialog
 
-    p = Properties.getInstance()
-    db = dbconnect.DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = dbconnect.DBConnect()
+    dm = DataModel()
 
     # Load a properties file if passed as the first argument
     if len(sys.argv) > 1:

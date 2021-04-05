@@ -5,7 +5,7 @@ import cpa.datamodel
 class PopulatePlateMapsTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.dm = cpa.datamodel.DataModel.getInstance()
+        self.dm = cpa.datamodel.DataModel()
         self.p = cpa.datamodel.p
 
     @patch('cpa.datamodel.db')
@@ -38,7 +38,7 @@ class PopulatePlateMapsTestCase(unittest.TestCase):
 
 class GetWellPositionFromName(unittest.TestCase):
     def setUp(self):
-        self.dm = cpa.datamodel.DataModel.getInstance()
+        self.dm = cpa.datamodel.DataModel()
         self.set_plate_map()
 
     def set_plate_map(self):

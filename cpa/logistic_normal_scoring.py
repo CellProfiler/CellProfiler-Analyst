@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from numpy import *
 from scipy.special import erf
 
@@ -27,7 +27,7 @@ def posterior_modes(mu, var, n, fracs, muhats, tol=1e-10, maxiter=10, noisy=Fals
         vhats = 1 / (1 / var + n * hes)
         newmuhats = vhats * (mu / var + n * (hes * muhats + fracs - p))
         if noisy:
-            print(i, newmuhats, vhats)
+            print((i, newmuhats, vhats))
         if abs(newmuhats - muhats).max() < tol:
             break
         muhats = newmuhats
@@ -75,7 +75,7 @@ def posterior_modes_subdiv(mu, var, n, fracs, muhats, tol=1e-10, maxiter=50, noi
 
 
     if noisy:
-        print("	L,H", lo, hi)
+        print(("	L,H", lo, hi))
         L = lo[0]
         H = hi[0]
         M = (L + H) / 2
@@ -101,11 +101,11 @@ def posterior_modes_subdiv(mu, var, n, fracs, muhats, tol=1e-10, maxiter=50, noi
         lo[~ hmask] = m[~ hmask]
         if all((hi - lo) < 1):
             if noisy:
-                print("FIRST", i, lo, hi)
+                print(("FIRST", i, lo, hi))
             break
 
     if noisy:
-        print("	L,H", lo, hi)
+        print(("	L,H", lo, hi))
         L = lo[0]
         H = hi[0]
         M = (L + H) / 2
@@ -130,7 +130,7 @@ def posterior_modes_subdiv(mu, var, n, fracs, muhats, tol=1e-10, maxiter=50, noi
         m -= change
         if max(abs(change)) < tol:
             if noisy:
-                print("SECOND", i, change)
+                print(("SECOND", i, change))
             break
         gm = g(m)
         hm = h(m)

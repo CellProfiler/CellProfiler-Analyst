@@ -1,14 +1,14 @@
-from datamodel import *
-import dbconnect
-from properties import Properties
-import imagetools
+from .datamodel import *
+from . import dbconnect
+from .properties import Properties
+from . import imagetools
 import wx
 import numpy as np
 import matplotlib.cm
 import PIL.Image as Image
 from base64 import b64decode
-from guiutils import BitmapPopup
-from StringIO import StringIO
+from .guiutils import BitmapPopup
+from io import StringIO
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -65,11 +65,11 @@ class PlateMapPanel(wx.Panel):
         self.SetData(data, shape, data_range=data_range)
         
         self.well_keys = np.ones(np.prod(self.data.shape), dtype=np.object)
-        for i in xrange(len(self.well_keys)):
+        for i in range(len(self.well_keys)):
             self.well_keys[i] = ('Unknown Plate','Unknown Well')
         self.well_keys = self.well_keys.reshape(self.data.shape)
         for key in well_keys:
-            self.well_keys[DataModel.getInstance().get_well_position_from_name(key[-1])] = key
+            self.well_keys[DataModel().get_well_position_from_name(key[-1])] = key
 ##        for i, key in enumerate(well_keys):
 ##            if i % self.data.shape[1] == 0:
 ##                self.well_keys += [[]]	
@@ -242,7 +242,6 @@ class PlateMapPanel(wx.Panel):
     def OnPaint(self, evt=None):
         dc = wx.PaintDC(self)
         dc.Clear()
-        dc.BeginDrawing()
 
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
         cols_data, rows_data = (self.data.shape[1], self.data.shape[0])
@@ -270,7 +269,7 @@ class PlateMapPanel(wx.Panel):
         wtext, htext = font.GetPixelSize()[0]*2, font.GetPixelSize()[1]
         dc.SetFont(font)
 
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         bmp = {}
         imgs = {}
         if self.well_disp == IMAGE:
@@ -353,7 +352,7 @@ class PlateMapPanel(wx.Panel):
                     elif self.well_disp == THUMBNAIL:
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
-                        if imgs.has_key(well):
+                        if well in imgs:
                             size = imgs[well][0].shape
                             scale = r*2./max(size)
                             bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
@@ -362,8 +361,13 @@ class PlateMapPanel(wx.Panel):
                         p.image_buffer_size = p.plate_shape[0] * p.plate_shape[1]
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
-                        if imgs.has_key(well):
+                        if well in imgs:
                             ims = imagetools.FetchImage(imgs[well])
+                            # Hacky rescale for now
+                            # Todo: Write proper rescale function
+                            for i in range(len(ims)):
+                                if ims[i].max() > 1:
+                                    ims[i] = ims[i] * (1 / np.iinfo(ims[i].dtype).max)
                             size = ims[0].shape
                             scale = r*2./max(size)
                             bmp[well] = imagetools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
@@ -383,7 +387,6 @@ class PlateMapPanel(wx.Panel):
                         dc.DrawLine(px+3, py+r*2-2, px+r*2-2, py+3)
                 px += 2*r+1
             py += 2*r+1
-        dc.EndDrawing()
         return dc
 
     def OnSize(self, evt):
@@ -490,7 +493,7 @@ class PlateMapPanel(wx.Panel):
         
         n_channels = len(imsets[0])
         composite = []
-        for i in xrange(n_channels):
+        for i in range(n_channels):
             # composite each channel separately
             composite += [imagetools.tile_images([imset[i] for imset in imsets])]
         bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)

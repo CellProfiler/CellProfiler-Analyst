@@ -1,18 +1,18 @@
-from __future__ import print_function
+
 from sys import stderr
 import logging
 import numpy
-import cPickle
+import pickle
 import base64
 import zlib
 import wx
 import collections
 
 import pandas as pd
-from dbconnect import *
-from singleton import Singleton
+from .dbconnect import *
+from .singleton import Singleton
 
-db = DBConnect.getInstance()
+db = DBConnect()
 
 class TrainingSet:
     "A class representing a set of manually labeled cells."
@@ -22,7 +22,7 @@ class TrainingSet:
         self.colnames = db.GetColnamesForClassifier()
         self.key_labels = object_key_columns()
         self.filename = filename
-        self.cache = CellCache.getInstance()
+        self.cache = CellCache()
         if filename != '':
             if csv:
                 self.LoadCSV(filename, labels_only=labels_only)
@@ -67,31 +67,39 @@ class TrainingSet:
         assert len(labels)==len(keyLists), 'Class labels and keyLists must be of equal size.'
         self.Clear()
         self.labels = numpy.array(labels)
-        self.classifier_labels = 2 * numpy.eye(len(labels), dtype=numpy.int) - 1
+        self.classifier_labels = 2 * numpy.eye(len(labels), dtype=int) - 1
         
         num_to_fetch = sum([len(k) for k in keyLists])
         num_fetched = [0] # use a list to get static scoping
 
         # Populate the label_matrix, entries, and values
         # NB: values that are nonnumeric or Null/None are made to be 0
+        idx = 0
         for label, cl_label, keyList in zip(labels, self.classifier_labels, keyLists):
             self.label_matrix += ([cl_label] * len(keyList))
 
-            self.entries += zip([label] * len(keyList), keyList)
+            self.entries += list(zip([label] * len(keyList), keyList))
 
             if labels_only:
                 self.values += []
                 self.coordinates += [db.GetObjectCoords(k) for k in keyList]
             else:
-                def get_data(k):
-                    d = self.cache.get_object_data(k)
-                    if callback is not None:
-                        callback(num_fetched[0] / float(num_to_fetch))
-                    num_fetched[0] = num_fetched[0] + 1
-                    return d
-                self.values += [get_data(k) for k in keyList]
-                self.coordinates += [db.GetObjectCoords(k) for k in keyList]
-
+                # Old method - fetched keys one by one
+                # def get_data(k):
+                #     d = self.cache.get_object_data(k)
+                #     if callback is not None:
+                #         callback(num_fetched[0] / float(num_to_fetch))
+                #     num_fetched[0] = num_fetched[0] + 1
+                #     return d
+                # self.values += [get_data(k) for k in keyList]
+                # self.coordinates += [db.GetObjectCoords(k) for k in keyList]
+                # New method - fetch all keys with one db query.
+                if len(keyList) > 0:
+                    self.values += self.cache.get_objects_data(keyList)
+                    self.coordinates += db.GetObjectsCoords(keyList)
+            idx += 1
+            if callback:
+                callback(idx / len(labels))
         self.label_matrix = numpy.array(self.label_matrix)
         self.values = numpy.array(self.values, np.float64)
         if len(self.label_matrix) > 0:
@@ -118,7 +126,7 @@ class TrainingSet:
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
                     for labelname in l.strip().split(' ')[1:]:
-                        if labelname not in labelDict.keys():
+                        if labelname not in list(labelDict.keys()):
                             labelDict[labelname] = []
                     continue
                 
@@ -132,7 +140,7 @@ class TrainingSet:
             
         # validate positions and renumber if necessary
         self.Renumber(labelDict)
-        self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
+        self.Create(list(labelDict.keys()), list(labelDict.values()), labels_only=labels_only)
         
         f.close()
         
@@ -146,24 +154,24 @@ class TrainingSet:
         for label in labels:
             keys = df[key_names][df['Class'] == label].values # Get the keys
             if len(key_names) == 2:
-                keys = map(lambda x: tuple((x[0],x[1])), keys) # convert them into tuples
+                keys = [tuple((x[0],x[1])) for x in keys] # convert them into tuples
                 labelDict[label] = keys
             else:
                 assert(len(key_names) == 3)
-                keys = map(lambda x: tuple((x[0],x[1],x[2])), keys)
+                keys = [tuple((x[0],x[1],x[2])) for x in keys]
                 labelDict[label] = keys
             
         # validate positions and renumber if necessary
         self.Renumber(labelDict)
-        self.Create(labelDict.keys(), labelDict.values(), labels_only=labels_only)
+        self.Create(list(labelDict.keys()), list(labelDict.values()), labels_only=labels_only)
         
     def Renumber(self, label_dict):
-        from properties import Properties
-        obkey_length = 3 if Properties.getInstance().table_id else 2
+        from .properties import Properties
+        obkey_length = 3 if Properties().table_id else 2
         
         have_asked = False
         progress = None
-        for label in label_dict.keys():
+        for label in list(label_dict.keys()):
             for idx, key in enumerate(label_dict[label]):
                 if len(key) > obkey_length:
                     obkey = key[:obkey_length]
@@ -181,7 +189,7 @@ class TrainingSet:
                                 label_dict.clear()
                                 return
                         if progress is None:
-                            total = sum([len(v) for v in label_dict.values()])
+                            total = sum([len(v) for v in list(label_dict.values())])
                             done = 0
                             progress = wx.ProgressDialog("Remapping", "0%", maximum=total, style=wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
                         label_dict[label][idx] = db.GetObjectNear(obkey[:-1], x, y, silent=True)
@@ -192,7 +200,7 @@ class TrainingSet:
                             return
                         
         have_asked = False
-        for label in label_dict.keys():
+        for label in list(label_dict.keys()):
             if None in label_dict[label]:
                 if not have_asked:
                     dlg = wx.MessageDialog(None, 'Some cells from the training set could not be remapped to cells in the database, indicating that the corresponding images are empty.  Continue anyway?',
@@ -215,8 +223,8 @@ class TrainingSet:
 
         f = open(filename, 'w')
         try:
-            from properties import Properties
-            p = Properties.getInstance()
+            from .properties import Properties
+            p = Properties()
             f.write('# Training set created while using properties: %s\n'%(p._filename))
             f.write('label '+' '.join(self.labels)+'\n')
             i = 0
@@ -246,7 +254,7 @@ class TrainingSet:
             df = pd.DataFrame([]) # empty
 
         try:
-            from properties import Properties
+            from .properties import Properties
             # getting feature values
 
             # getting object key
@@ -254,11 +262,11 @@ class TrainingSet:
             key_labels = self.key_labels
             # Differentiate between ids
             if len(key_labels) == 2:
-                keyList = map(lambda x : [x[0],x[1]], tuples)
+                keyList = [[x[0],x[1]] for x in tuples]
                 df_keys = pd.DataFrame(keyList, columns=key_labels)
             else:
                 #assert(len(tuples) == 3) # It has to be 3!
-                keyList = map(lambda x : [x[0],x[1],x[2]], tuples)
+                keyList = [[x[0],x[1],x[2]] for x in tuples]
                 df_keys = pd.DataFrame(keyList, columns=key_labels)
 
 
@@ -283,7 +291,7 @@ class TrainingSet:
     def get_object_keys(self):
         return [e[1] for e in self.entries]
 
-class CellCache(Singleton):
+class CellCache(metaclass=Singleton):
     ''' caching front end for holding cell data '''
     def __init__(self):
         self.data        = {}
@@ -297,14 +305,14 @@ class CellCache(Singleton):
     def load_from_string(self, str):
         'load data from a string, verifying that the table has not changed since it was created (encoded in string)'
         try:
-            date, colnames, oldcache = cPickle.loads(zlib.decompress(base64.b64decode(str)))
+            date, colnames, oldcache = pickle.loads(zlib.decompress(base64.b64decode(str)))
         except:
             # silent failure
             return
         # Strings started sneaking into some caches when we started classifying entire images.
         # Detect this case and force an update to flush them.
         if len(oldcache) > 0:
-            if oldcache.values()[0].dtype.kind == 'S':
+            if list(oldcache.values())[0].dtype.kind == 'S':
                 return
         # verify the database hasn't been changed
         if db.verify_objects_modify_date_earlier(date):
@@ -318,12 +326,34 @@ class CellCache(Singleton):
             if k in self.data:
                 temp[k] = self.data[k]
         output = (db.get_objects_modify_date(), self.colnames, temp)
-        return base64.b64encode(zlib.compress(cPickle.dumps(output)))
+        return base64.b64encode(zlib.compress(pickle.dumps(output)))
 
     def get_object_data(self, key):
         if key not in self.data:
             self.data[key] = db.GetCellData(key)
         return self.data[key][self.col_indices]
+
+    def get_objects_data(self, keys):
+        # Get data for a list of object keys
+        databuffer = db.GetCellsData(keys)
+        out = []
+        seen = set()
+        for key, line in databuffer:
+            if key not in keys:
+                raise ValueError(f"Retrieved key {key} did not match a desired object")
+            if key in self.data and key in seen:
+                logging.debug("Duplicate found", self.data[key], line)
+            elif key in self.data:
+                numpy.testing.assert_equal(self.data[key], line)
+                seen.add(key)
+            self.data[key] = line
+        # SQL call didn't care about duplicates, so we'll have to iterate through to ensure they're added
+        for key in keys:
+            if key not in self.data:
+                logging.error(f"Unable to retrieve key {key}, may be missing from database")
+            else:
+                out.append(self.data[key][self.col_indices])
+        return out
 
     def clear_if_objects_modified(self):
         if not db.verify_objects_modify_date_earlier(self.last_update):
@@ -333,8 +363,8 @@ class CellCache(Singleton):
 
 if __name__ == "__main__":
     from sys import argv
-    from properties import Properties
-    p = Properties.getInstance()
+    from .properties import Properties
+    p = Properties()
     p.LoadFile(argv[1])
     tr = TrainingSet(p)
     tr.Load(argv[2])

@@ -1,26 +1,26 @@
-from __future__ import print_function
+
 import unittest
-from dbconnect import *
-from datamodel import DataModel
-from properties import Properties
-import numpy as np
+
+from cpa.dbconnect import *
+from cpa.properties import Properties
+
 
 class TestDBConnect(unittest.TestCase):
     def setup_mysql(self):
-        self.p  = Properties.getInstance()
-        self.db = DBConnect.getInstance( )
+        self.p  = Properties()
+        self.db = DBConnect()
         self.db.Disconnect()
         self.p.LoadFile('../../CPAnalyst_test_data/nirht_test.properties')
 
     def setup_sqlite(self):
-        self.p  = Properties.getInstance()
-        self.db = DBConnect.getInstance()
+        self.p  = Properties()
+        self.db = DBConnect()
         self.db.Disconnect()
         self.p.LoadFile('../../CPAnalyst_test_data/nirht_local.properties')
         
     def setup_sqlite2(self):
-        self.p  = Properties.getInstance()
-        self.db = DBConnect.getInstance()
+        self.p  = Properties()
+        self.db = DBConnect()
         self.db.Disconnect()
         self.p.LoadFile('../../CPAnalyst_test_data/export_to_db_test.properties')
         
@@ -124,7 +124,7 @@ class TestDBConnect(unittest.TestCase):
         self.db.Disconnect()
         self.db.connect()
         res = self.db.execute('SELECT id FROM temp_test WHERE id=1')
-        assert res == [(1L,)]
+        assert res == [(1,)]
         self.db.execute('DROP TABLE temp_test')
     
     def test_execute(self):
@@ -185,8 +185,8 @@ class TestDBConnect(unittest.TestCase):
         self.setup_mysql()
         groupMaps, colNames = self.db.GetGroupMaps()
         assert groupMaps['Gene'][(1,)] == ('Gabra3',)
-        assert groupMaps['Well'][(1,)] == (1L,)
-        assert groupMaps['Well+Gene'][(1,)] == (1L, 'Gabra3')
+        assert groupMaps['Well'][(1,)] == (1,)
+        assert groupMaps['Well+Gene'][(1,)] == (1, 'Gabra3')
         assert colNames == {'Gene': ['gene'], 'Well': ['well'], 'Well+Gene': ['well', 'gene']}
         
         self.setup_sqlite()
@@ -198,7 +198,7 @@ class TestDBConnect(unittest.TestCase):
         self.setup_mysql()
         test = set(self.db.GetFilteredImages('MAPs'))
         print(test)
-        vals = set([(239L,), (21L,), (32L,), (197L,), (86L,), (23L,), (61L,), (72L,), (213L,), (222L,), (63L,), (229L,), (221L,), (38L,), (224L,), (231L,), (13L,), (24L,), (78L,), (214L,), (15L,), (223L,), (53L,), (64L,), (246L,), (55L,), (93L,), (232L,), (30L,), (206L,), (95L,), (215L,), (5L,), (16L,), (70L,), (7L,), (45L,), (56L,), (238L,), (198L,), (47L,), (207L,), (85L,), (96L,), (22L,), (87L,), (253L,), (8L,), (62L,), (254L,), (255L,), (199L,), (37L,), (48L,), (205L,), (230L,), (208L,), (39L,), (77L,), (88L,), (14L,), (79L,), (245L,), (256L,), (54L,), (247L,), (29L,), (40L,), (94L,), (31L,), (240L,), (69L,), (80L,), (6L,), (216L,), (71L,), (237L,), (248L,), (200L,), (46L,)])
+        vals = set([(239,), (21,), (32,), (197,), (86,), (23,), (61,), (72,), (213,), (222,), (63,), (229,), (221,), (38,), (224,), (231,), (13,), (24,), (78,), (214,), (15,), (223,), (53,), (64,), (246,), (55,), (93,), (232,), (30,), (206,), (95,), (215,), (5,), (16,), (70,), (7,), (45,), (56,), (238,), (198,), (47,), (207,), (85,), (96,), (22,), (87,), (253,), (8,), (62,), (254,), (255,), (199,), (37,), (48,), (205,), (230,), (208,), (39,), (77,), (88,), (14,), (79,), (245,), (256,), (54,), (247,), (29,), (40,), (94,), (31,), (240,), (69,), (80,), (6,), (216,), (71,), (237,), (248,), (200,), (46,)])
         assert test == vals
         assert self.db.GetFilteredImages('IMPOSSIBLE') == []
         
@@ -220,10 +220,10 @@ class TestDBConnect(unittest.TestCase):
     def test_GetColumnTypes(self):
         self.setup_mysql()
         cols = self.db.GetColumnTypes(self.p.object_table)
-        assert cols[:19] == [long, long, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float]
+        assert cols[:19] == [int, int, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float]
         assert cols[-20:] == [float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float]
         cols = self.db.GetColumnTypes(self.p.image_table)
-        assert cols[:20] == [long, long, long, str, long, str, str, str, str, str, str, float, float, float, float, float, float, float, float, float]
+        assert cols[:20] == [int, int, int, str, int, str, str, str, str, str, str, float, float, float, float, float, float, float, float, float]
         
         
     def test_GetColnamesForClassifier(self):
@@ -241,7 +241,7 @@ class TestDBConnect(unittest.TestCase):
         '''Test reading data from Export to Database.'''
         self.setup_sqlite2()
         vals = [(1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,), (10,), (11,), (12,), (13,), (14,), (15,), (16,), (17,), (18,), (19,), (20,)]
-        groups = {'Plate+Well': {(u'Week1_22123', u'B05'): [(13,), (14,), (15,), (16,)], (u'Week1_22123', u'B02'): [(1,), (2,), (3,), (4,)], (u'Week1_22123', u'B04'): [(9,), (10,), (11,), (12,)], (u'Week1_22123', u'B06'): [(17,), (18,), (19,), (20,)], (u'Week1_22123', u'B03'): [(5,), (6,), (7,), (8,)]}}, {'Plate+Well': ['Image_Metadata_Plate_DAPI', 'Image_Metadata_Well_DAPI']}
+        groups = {'Plate+Well': {('Week1_22123', 'B05'): [(13,), (14,), (15,), (16,)], ('Week1_22123', 'B02'): [(1,), (2,), (3,), (4,)], ('Week1_22123', 'B04'): [(9,), (10,), (11,), (12,)], ('Week1_22123', 'B06'): [(17,), (18,), (19,), (20,)], ('Week1_22123', 'B03'): [(5,), (6,), (7,), (8,)]}}, {'Plate+Well': ['Image_Metadata_Plate_DAPI', 'Image_Metadata_Well_DAPI']}
         assert len(self.db.GetAllImageKeys())==20
         assert self.db.GetAllImageKeys() == vals
         assert self.db.GetGroupMaps(True) == groups

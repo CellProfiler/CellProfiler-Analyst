@@ -1,15 +1,15 @@
-from __future__ import print_function
-from cpatool import CPATool
-from colorbarpanel import ColorBarPanel
-from dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
-import dbconnect
-import sqltools as sql
-import platemappanel as pmp
-from datamodel import DataModel
-from guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
-import properties
+
+from .cpatool import CPATool
+from .colorbarpanel import ColorBarPanel
+from .dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
+from . import dbconnect
+from . import sqltools as sql
+from . import platemappanel as pmp
+from .datamodel import DataModel
+from .guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import imagetools
+from . import properties
 import logging
 import matplotlib.cm
 import numpy as np
@@ -21,10 +21,10 @@ import wx
 import cpa.helpmenu
 import csv
 
-p = properties.Properties.getInstance()
+p = properties.Properties()
 # Hack the properties module so it doesn't require the object table.
 properties.optional_vars += ['object_table']
-db = DBConnect.getInstance()
+db = DBConnect()
 
 required_fields = ['plate_shape', 'well_id']
 
@@ -52,26 +52,26 @@ class PlateViewer(wx.Frame, CPATool):
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
-        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Close Plate Viewer')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
         self.menuBar.Append(cpa.helpmenu.make_help_menu(self), 'Help')
         save_csv_menu_item = self.fileMenu.Append(-1, 'Save table to CSV\tCtrl+S')
         self.Bind(wx.EVT_MENU, self.on_save_csv, save_csv_menu_item)
         
-        wx.EVT_MENU(self, wx.ID_EXIT, lambda _:self.Close())
+        self.Bind(wx.EVT_MENU, lambda _:self.Close(), id=wx.ID_EXIT)
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
         self.sourceChoice = TableComboBox(self, -1, size=fixed_width)
         dataSourceSizer.Add(self.sourceChoice)
-        dataSourceSizer.AddSpacer((-1,3))
+        dataSourceSizer.Add(-1, 3, 0)
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = get_non_blob_types_from_table(p.image_table)
-        self.measurementsChoice = ComboBox(self, choices=measurements, size=fixed_width)
+        self.measurementsChoice = ComboBox(self, choices=measurements, size=fixed_width, style=wx.CB_READONLY)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         dataSourceSizer.Add(wx.StaticText(self, label='Filter:'))
-        self.filterChoice = FilterComboBox(self, size=fixed_width)
+        self.filterChoice = FilterComboBox(self, size=fixed_width, style=wx.CB_READONLY)
         dataSourceSizer.Add(self.filterChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
@@ -83,13 +83,13 @@ class PlateViewer(wx.Frame, CPATool):
 
         viewSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='View options:'), wx.VERTICAL)
         viewSizer.Add(wx.StaticText(self, label='Color map:'))
-        maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
+        maps = [m for m in list(matplotlib.cm.datad.keys()) if not m.endswith("_r")]
         maps.sort()
         self.colorMapsChoice = ComboBox(self, choices=maps, size=fixed_width)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
 
-        viewSizer.AddSpacer((-1,3))
+        viewSizer.Add(-1, 3, 0)
         viewSizer.Add(wx.StaticText(self, label='Well display:'))
         if p.image_thumbnail_cols:
             choices = pmp.all_well_shapes
@@ -100,7 +100,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.wellDisplayChoice.Select(0)
         viewSizer.Add(self.wellDisplayChoice)
 
-        viewSizer.AddSpacer((-1,3))
+        viewSizer.Add(-1, 3, 0)
         viewSizer.Add(wx.StaticText(self, label='Number of plates:'))
         self.numberOfPlatesTE = wx.TextCtrl(self, -1, '1', style=wx.TE_PROCESS_ENTER)
         viewSizer.Add(self.numberOfPlatesTE)
@@ -112,25 +112,25 @@ class PlateViewer(wx.Frame, CPATool):
         annotationColSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.annotation_cols = dict([(col, db.GetColumnType(p.image_table, col)) 
                                      for col in db.GetUserColumnNames(p.image_table)])
-        self.annotationCol = ComboBox(self, choices=self.annotation_cols.keys(), size=(120,-1))
+        self.annotationCol = ComboBox(self, choices=list(self.annotation_cols.keys()), size=(120,-1))
         if len(self.annotation_cols) > 0:
             self.annotationCol.SetSelection(0)
         annotationColSizer.Add(self.annotationCol, flag=wx.ALIGN_CENTER_VERTICAL)
-        annotationColSizer.AddSpacer((3,-1))
+        annotationColSizer.AddSpacer(3)
         self.addAnnotationColBtn = wx.Button(self, -1, 'Add', size=(44,-1))
         annotationColSizer.Add(self.addAnnotationColBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         annotationSizer.Add(annotationColSizer)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         annotationSizer.Add(wx.StaticText(self, label='Label:'))
         self.annotationLabel = wx.TextCtrl(self, -1, 'Select wells')#, style=wx.TE_PROCESS_ENTER)
         self.annotationLabel.Disable()
         self.annotationLabel.SetForegroundColour(wx.Colour(80,80,80))
         self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
         annotationSizer.Add(self.annotationLabel)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         self.outlineMarked = wx.CheckBox(self, -1, label='Outline annotated wells')
         annotationSizer.Add(self.outlineMarked)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         self.annotationShowVals = wx.CheckBox(self, -1, label='Show values on plate')
         annotationSizer.Add(self.annotationShowVals)
         if len(db.GetUserColumnNames(p.image_table)) == 0:
@@ -139,11 +139,11 @@ class PlateViewer(wx.Frame, CPATool):
             
         controlSizer = wx.BoxSizer(wx.VERTICAL)
         controlSizer.Add(dataSourceSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(groupingSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(viewSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(annotationSizer, 0 , wx.EXPAND)
 
         self.plateMapSizer = wx.GridSizer(1,1,5,5)
@@ -153,7 +153,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.rightSizer = wx.BoxSizer(wx.VERTICAL)
         self.rightSizer.Add(self.plateMapSizer, 1, wx.EXPAND|wx.BOTTOM, 10)
         self.colorBar = ColorBarPanel(self, 'jet', size=(-1,25))
-        self.rightSizer.Add(self.colorBar, 0, wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL)
+        self.rightSizer.Add(self.colorBar, 0, wx.EXPAND)
 
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
         mainSizer.Add(controlSizer, 0, wx.LEFT|wx.TOP|wx.BOTTOM, 10)
@@ -212,9 +212,9 @@ class PlateViewer(wx.Frame, CPATool):
         singlePlateMapSizer = wx.BoxSizer(wx.VERTICAL)
         if p.plate_id:
             singlePlateMapSizer.Add(plateMapChoiceSizer, 0, wx.ALIGN_CENTER)
-        singlePlateMapSizer.Add(platemap, 1, wx.EXPAND|wx.ALIGN_CENTER)
+        singlePlateMapSizer.Add(platemap, 1, wx.EXPAND)
 
-        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
+        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND)
 
     def UpdatePlateMaps(self):
         self.measurement = self.measurementsChoice.Value
@@ -365,7 +365,7 @@ class PlateViewer(wx.Frame, CPATool):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal() == wx.ID_OK:
             filename = saveDialog.GetPath()
@@ -508,7 +508,7 @@ class PlateViewer(wx.Frame, CPATool):
                     'Number' : ('FLOAT', float)}
         dlg = wx.SingleChoiceDialog(self, 
                 'What type of annotation column would you like to add?\nThis can not be changed.',
-                'Add Annotation Column', coltypes.keys(), wx.CHOICEDLG_STYLE)
+                'Add Annotation Column', list(coltypes.keys()), wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() != wx.ID_OK:
             return
         usertype = dlg.GetStringSelection()
@@ -516,7 +516,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.annotation_cols[new_column] = coltypes[usertype][1]
         self.annotationCol.Items += [new_column]
         self.annotationCol.SetSelection(len(self.annotation_cols) - 1)
-        current_selection = self.measurementsChoice.Selection
+        current_selection = self.measurementsChoice.GetSelection()
         self.measurementsChoice.SetItems(self.measurementsChoice.Strings + [new_column])
         if self.annotationShowVals.IsChecked():
             column = self.annotationCol.Value
@@ -524,7 +524,7 @@ class PlateViewer(wx.Frame, CPATool):
             self.measurementsChoice.SetStringSelection(column)
             self.UpdatePlateMaps()
         else:
-            self.measurementsChoice.SetSelection(current_selection[0])
+            self.measurementsChoice.SetSelection(current_selection)
         self.annotationShowVals.Enable()
         self.outlineMarked.Enable()
         self.OnSelectWell()
@@ -671,7 +671,7 @@ class PlateViewer(wx.Frame, CPATool):
         if 'number of plates' in settings:
             self.numberOfPlatesTE.SetValue(settings['number of plates'])
             self.OnEnterNumberOfPlates()
-        for s, v in settings.items():
+        for s, v in list(settings.items()):
             if s.startswith('plate '):
                 self.plateMapChoices[int(s.strip('plate ')) - 1].SetValue(v)
         # set well display last since each step currently causes a redraw and
@@ -732,7 +732,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
                          dtype=object).reshape(shape + [nkeycols])
     sort_indices = np.ones(data.shape)*np.nan
     
-    dm = DataModel.getInstance()
+    dm = DataModel()
     ind = keys_and_vals.argsort(axis=0)
     for i, (k, well_grp) in enumerate(groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
                                               lambda row: tuple(row[:len(dummy_key)]))):
@@ -743,7 +743,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
             sort_indices[row,col] = ind[:,len(dummy_key)-1][i]
         else:
             data[row, col] = well_data
-            sort_indices[row,col] = ind[:,len(dummy_key)-1][i*nsites + np.array(range(nsites))] 
+            sort_indices[row,col] = ind[:,len(dummy_key)-1][i*nsites + np.array(list(range(nsites)))] 
         well_keys[row, col] = k
         
     return data, well_keys, sort_indices
@@ -765,7 +765,7 @@ def get_numeric_columns_from_table(table):
     ''' Fetches names of numeric columns for the given table. '''
     measurements = db.GetColumnNames(table)
     types = db.GetColumnTypes(table)
-    return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+    return [m for m,t in zip(measurements, types) if t in (float, int)]
 
 def get_non_blob_types_from_table(table):
     measurements = db.GetColumnNames(table)

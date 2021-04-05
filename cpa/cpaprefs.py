@@ -1,5 +1,6 @@
 import wx
 
+CHECK_FOR_UPDATES = 'CheckForUpdates'
 CHECKFORNEWVERSIONS = 'CheckForNewVersions'
 SKIPVERSION = 'SkipVersion'
 
@@ -35,3 +36,26 @@ def get_skip_version():
 
 def set_skip_version(ver):
     get_config().WriteInt(SKIPVERSION, ver)
+
+def get_check_update():
+    if not get_config().Exists(CHECK_FOR_UPDATES):
+        return "Never"
+    return get_config().Read(CHECK_FOR_UPDATES)
+
+
+def get_check_update_bool():
+    if not get_config().Exists(CHECK_FOR_UPDATES):
+        return True
+    update_str = get_config().Read(CHECK_FOR_UPDATES)
+    if update_str == "Disabled":
+        return False
+    else:
+        return True
+
+
+def set_check_update(val):
+    if str(val) == "False":
+        val = "Disabled"
+    elif str(val) == "True":
+        val = "Never"
+    get_config().Write(CHECK_FOR_UPDATES, val)

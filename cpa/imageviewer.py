@@ -10,19 +10,19 @@
 #########################
 
 import cpa.helpmenu
-from dbconnect import *
-from datamodel import DataModel
-from imagecontrolpanel import *
-from imagepanel import ImagePanel
-from properties import Properties
-import imagetools
-import cPickle
+from .dbconnect import *
+from .datamodel import DataModel
+from .imagecontrolpanel import *
+from .imagepanel import ImagePanel
+from .properties import Properties
+from . import imagetools
+import pickle
 import logging
 import numpy as np
 import wx
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 REQUIRED_PROPERTIES = ['channels_per_image','image_channel_colors', 'object_name', 'image_names', 'image_id']
 
@@ -32,7 +32,7 @@ ID_SELECT_ALL = wx.NewId()
 ID_DESELECT_ALL = wx.NewId()
 
 def get_classifier_window():
-    from classifier import ID_CLASSIFIER
+    from .classifier import ID_CLASSIFIER
     win = wx.FindWindowById(ID_CLASSIFIER)
     if win:
         return win
@@ -64,7 +64,7 @@ class ImageViewerPanel(ImagePanel):
     ImagePanel with selection and object class labels. 
     '''
     def __init__(self, imgs, chMap, img_key, parent, scale=1.0, brightness=1.0, contrast=None):
-        super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast)
+        super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast, display_whole_image=True)
         self.selectedPoints = []
         self.classes        = {}  # {'Positive':[(x,y),..], 'Negative': [(x2,y2),..],..}
         self.classVisible   = {}
@@ -82,18 +82,15 @@ class ImageViewerPanel(ImagePanel):
         # Draw object numbers
         if self.show_object_numbers and p.object_table:
             dc.SetLogicalFunction(wx.XOR)
-            dc.BeginDrawing()
             for i, (x,y) in enumerate(self.ob_coords):
                 x = x * self.scale - 6*(len('%s'%i)-1)
                 y = y * self.scale - 6
                 dc.DrawText('%s'%(i + 1), x, y)
-            dc.EndDrawing()
 
         # Draw class numbers over each object
         if self.classes:
-            for (name, cl), clnum, color in zip(self.classes.items(), self.class_nums, self.colors):
+            for (name, cl), clnum, color in zip(list(self.classes.items()), self.class_nums, self.colors):
                 if self.classVisible[name]:
-                    dc.BeginDrawing()
                     for (x,y) in cl:
                         if self.class_rep==CL_NUMBERED:
                             dc.SetLogicalFunction(wx.XOR)
@@ -109,7 +106,6 @@ class ImageViewerPanel(ImagePanel):
                             dc.SetBrush(wx.Brush(color, style=wx.TRANSPARENT))
                             dc.DrawRectangle(x,y,w,h)
                             dc.DrawRectangle(x-1,y-1,6,6)
-                    dc.EndDrawing()
 
         # Draw small white (XOR) boxes at each selected point
         dc.SetLogicalFunction(wx.XOR)
@@ -120,9 +116,7 @@ class ImageViewerPanel(ImagePanel):
             x = x * self.scale - w/2
             y = y * self.scale - h/2
 
-            dc.BeginDrawing()
             dc.DrawRectangle(x,y,w,h)
-            dc.EndDrawing()
         return dc
 
     def SetSelectedPoints(self, posns):
@@ -248,8 +242,8 @@ class ImageViewer(wx.Frame):
         self.popupMenu = wx.Menu()
         self.sel_all = wx.MenuItem(self.popupMenu, ID_SELECT_ALL, 'Select all\tCtrl+A')
         self.deselect = wx.MenuItem(self.popupMenu, ID_DESELECT_ALL, 'Deselect all\tCtrl+D')
-        self.popupMenu.AppendItem(self.sel_all)
-        self.popupMenu.AppendItem(self.deselect)
+        self.popupMenu.Append(self.sel_all)
+        self.popupMenu.Append(self.deselect)
         accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CMD,ord('A'),ID_SELECT_ALL),
                                                  (wx.ACCEL_CMD,ord('D'),ID_DESELECT_ALL),])
         self.SetAcceleratorTable(accelerator_table)
@@ -271,20 +265,20 @@ class ImageViewer(wx.Frame):
         self.SetMenuBar(wx.MenuBar())
         # File Menu
         self.fileMenu = wx.Menu()
-        self.openImageMenuItem = self.fileMenu.Append(-1, text='Open Image\tCtrl+O')
-        self.saveImageMenuItem = self.fileMenu.Append(-1, text='Save Image\tCtrl+S')
+        self.openImageMenuItem = self.fileMenu.Append(-1, item='Open Image\tCtrl+O')
+        self.saveImageMenuItem = self.fileMenu.Append(-1, item='Save Image\tCtrl+S')
         self.fileMenu.AppendSeparator()
-        self.exitMenuItem      = self.fileMenu.Append(-1, text='Exit\tCtrl+Q')
+        self.exitMenuItem      = self.fileMenu.Append(-1, item='Exit\tCtrl+Q')
         self.GetMenuBar().Append(self.fileMenu, 'File')
         # Classify menu (requires classifier window
         self.classifyMenu = wx.Menu()
-        self.classifyMenuItem = self.classifyMenu.Append(-1, text='Classify Image')
+        self.classifyMenuItem = self.classifyMenu.Append(-1, item='Classify Image')
         self.GetMenuBar().Append(self.classifyMenu, 'Classify')
         # View Menu
         self.viewMenu = wx.Menu()
-        self.objectNumberMenuItem = self.viewMenu.Append(-1, text='Show %s numbers\tCtrl+`'%p.object_name[0])
+        self.objectNumberMenuItem = self.viewMenu.Append(-1, item='Show %s numbers\tCtrl+`'%p.object_name[0])
         self.objectNumberMenuItem.Enable(p.object_table is not None)
-        self.classViewMenuItem = self.viewMenu.Append(-1, text='View %s classes as numbers'%p.object_name[0])
+        self.classViewMenuItem = self.viewMenu.Append(-1, item='View %s classes as numbers'%p.object_name[0])
         self.classViewMenuItem.Enable(p.object_table is not None)
         self.GetMenuBar().Append(self.viewMenu, 'View')
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
@@ -298,7 +292,7 @@ class ImageViewer(wx.Frame):
 
         # Clean up existing channel menus
         try:
-            menus = set([items[2].Menu for items in self.chMapById.values()])
+            menus = set([items[2].Menu for items in list(self.chMapById.values())])
             for menu in menus:
                 for i, mbmenu in enumerate(self.MenuBar.Menus):
                     if mbmenu[0] == menu:
@@ -334,7 +328,7 @@ class ImageViewer(wx.Frame):
             else:
                 channel_names += ['%s [%s]'%(name,x+1) for x in range(chans)]
         # Zip channel names with channel map
-        zippedChNamesChMap = zip(channel_names, self.chMap)
+        zippedChNamesChMap = list(zip(channel_names, self.chMap))
 
         # Loop over all the image names in the properties file
         for i, chans in enumerate(p.image_names):
@@ -396,11 +390,11 @@ class ImageViewer(wx.Frame):
     def OnFetchImage(self, evt=None):
 
         # Set every channel to black and set all the toggle options to 'none'
-        for ids in self.chMapById.keys():
+        for ids in list(self.chMapById.keys()):
             (chIndex, color, item, channel_menu) = self.chMapById[ids] 
             if (color.lower() == 'none'):
                 item.Check()		
-        for ids in self.imMapById.keys():
+        for ids in list(self.imMapById.keys()):
             (cpi, itm, si, channelIds) = self.imMapById[ids]
             if cpi == 3:
                 self.chMap[si] = 'none'
@@ -414,7 +408,7 @@ class ImageViewer(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in self.imMapById.keys():
+        if evt.GetId() in list(self.imMapById.keys()):
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -502,6 +496,7 @@ class ImageViewer(wx.Frame):
             return
         # Score the Image
         classifier.ClassifyImage(self.img_key)
+        self.Close()
 
     def OnPaneChanged(self, evt=None):
         self.Layout()
@@ -511,7 +506,7 @@ class ImageViewer(wx.Frame):
             self.cp.SetLabel('Show controls')
 
     def OnMapChannels(self, evt):
-        if evt.GetId() in self.chMapById.keys():
+        if evt.GetId() in list(self.chMapById.keys()):
             (chIdx,color,_,_) = self.chMapById[evt.GetId()]
             self.chMap[chIdx] = color
             if color.lower() != 'none':
@@ -574,13 +569,13 @@ class ImageViewer(wx.Frame):
 
     def ToggleChannel(self, chIdx):
         if self.chMap[chIdx] == 'None':
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
                     item.Check()   
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
-            for (idx, color, item, menu) in self.chMapById.values():
+            for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == 'none':
                     item.Check()
             self.chMap[chIdx] = 'None'
@@ -642,11 +637,11 @@ class ImageViewer(wx.Frame):
                 # start drag
                 source = wx.DropSource(self)
                 # wxPython crashes unless the data object is assigned to a variable.
-                data_object = wx.CustomDataObject("ObjectKey")
-                data_object.SetData(cPickle.dumps( (self.GetId(), self.selection) ))
+                data_object = wx.CustomDataObject("application.cpa.ObjectKey")
+                data_object.SetData(pickle.dumps( (self.GetId(), self.selection) ))
                 source.SetData(data_object)
                 result = source.DoDragDrop(flags=wx.Drag_DefaultMove)
-                if result is 0:
+                if result == 0:
                     pass
 
     def OnRightDown(self, evt):
@@ -692,7 +687,7 @@ class ImageViewer(wx.Frame):
         else:
             imkey = (imgNum,)
 
-        dm = DataModel.getInstance()
+        dm = DataModel()
         if imkey not in dm.GetAllImageKeys():
             errdlg = wx.MessageDialog(self, 'There is no image with that key.', "Couldn't find image", wx.OK|wx.ICON_EXCLAMATION)
             errdlg.ShowModal()
@@ -708,7 +703,7 @@ class ImageViewer(wx.Frame):
         saveDialog = wx.FileDialog(self, message="Save as:",
                                    defaultDir=self.defaultPath, defaultFile=self.defaultFile,
                                    wildcard='PNG file (*.png)|*.png|JPG file (*.jpg, *.jpeg)|*.jpg', 
-                                   style=wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+                                   style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         if saveDialog.ShowModal()==wx.ID_OK:
             filename = str(saveDialog.GetPath())
             self.defaultPath, self.defaultFile = os.path.split(filename)
@@ -725,17 +720,17 @@ class ImageViewer(wx.Frame):
 
 
     def OnChangeClassRepresentation(self, evt):
-        if self.classViewMenuItem.Text.endswith('numbers'):
-            self.classViewMenuItem.Text = 'View %s classes as colors'%p.object_name[0]
+        if self.classViewMenuItem.ItemLabel.endswith('numbers'):
+            self.classViewMenuItem.ItemLabel = 'View %s classes as colors'%p.object_name[0]
         else:
-            self.classViewMenuItem.Text = 'View %s classes as numbers'%p.object_name[0]
+            self.classViewMenuItem.ItemLabel = 'View %s classes as numbers'%p.object_name[0]
         self.imagePanel.ToggleClassRepresentation()
 
     def OnShowObjectNumbers(self, evt):
-        if self.objectNumberMenuItem.Text.startswith('Hide'):
-            self.objectNumberMenuItem.Text = 'Show %s numbers\tCtrl+`'%(p.object_name[0])
+        if self.objectNumberMenuItem.ItemLabel.startswith('Hide'):
+            self.objectNumberMenuItem.ItemLabel = 'Show %s numbers\tCtrl+`'%(p.object_name[0])
         else:
-            self.objectNumberMenuItem.Text = 'Hide %s numbers\tCtrl+`'%(p.object_name[0])
+            self.objectNumberMenuItem.ItemLabel = 'Hide %s numbers\tCtrl+`'%(p.object_name[0])
         self.imagePanel.ToggleObjectNumbers()
 
     def OnOpenFileMenu(self, evt=None):
@@ -766,11 +761,9 @@ if __name__ == "__main__":
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
     app = wx.PySimpleApp()
-    from datamodel import DataModel
-    import imagetools
-    from imagereader import ImageReader
+    from .imagereader import ImageReader
 
-    p = Properties.getInstance()
+    p = Properties()
     p.image_channel_colors = ['red','green','blue']
     p.object_name = ['cell', 'cells']
     p.image_names = ['a', 'b', 'c']
@@ -799,8 +792,8 @@ if __name__ == "__main__":
 ##        wx.GetApp().Exit()
 ##        raise Exception('ImageViewer requires a properties file.  Exiting.')
 ##    
-##    db = DBConnect.getInstance()
-##    dm = DataModel.getInstance()
+##    db = DBConnect()
+##    dm = DataModel()
 ##    ir = ImageReader()
 ##    
 ##    obKey = dm.GetRandomObject()

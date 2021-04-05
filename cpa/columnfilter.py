@@ -1,13 +1,13 @@
-from __future__ import print_function
+import sys
 import wx
 import re
-import sqltools as sql
-from properties import Properties
-from dbconnect import DBConnect
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from . import sqltools as sql
+from .properties import Properties
+from .dbconnect import DBConnect
+from wx.adv import OwnerDrawnComboBox as ComboBox
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 class ColumnFilterPanel(wx.Panel):
     '''
@@ -25,7 +25,7 @@ class ColumnFilterPanel(wx.Panel):
         self.tableChoice.Select(0)
         self.colChoice = ComboBox(self, choices=db.GetColumnNames(p.image_table), size=(150,-1), style=wx.CB_READONLY)
         self.colChoice.Select(0)
-        self.comparatorChoice = ComboBox(self, size=(80,-1))
+        self.comparatorChoice = ComboBox(self, size=(80,-1), style=wx.CB_READONLY)
         self.update_comparator_choice()
         self.valueField = wx.ComboBox(self, -1, value='')
         if allow_delete:
@@ -36,14 +36,14 @@ class ColumnFilterPanel(wx.Panel):
 
         colSizer = wx.BoxSizer(wx.HORIZONTAL)
         colSizer.Add(self.tableChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
         colSizer.Add(self.colChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
         colSizer.Add(self.comparatorChoice, 0.5, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
         colSizer.Add(self.valueField, 1, wx.EXPAND)
         if allow_delete:
-            colSizer.AddSpacer((5,-1))
+            colSizer.AddSpacer(5)
             colSizer.Add(self.x_btn, 0, wx.EXPAND)
 
         self.SetSizer(colSizer)
@@ -78,9 +78,9 @@ class ColumnFilterPanel(wx.Panel):
     def update_comparator_choice(self):
         coltype = self._get_col_type()
         comparators = []
-        if coltype in [str, unicode]:
+        if coltype == str:
             comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT']
-        if coltype in [int, float, long]:
+        if coltype in (int, float):
             comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT']
         self.comparatorChoice.SetItems(comparators)
         self.comparatorChoice.Select(0)
@@ -101,7 +101,7 @@ class ColumnFilterPanel(wx.Panel):
         column = self.colChoice.Value
         comparator = self.comparatorChoice.GetValue()
         value = self.valueField.GetValue()
-        if self._get_col_type() in [int, float, long]:
+        if self._get_col_type() in (int, float):
             # Don't quote numbers
             return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
         if comparator.upper() in ['IS', 'IS NOT'] and value.upper() == 'NULL':
@@ -145,10 +145,10 @@ class ColumnFilterDialog(wx.Dialog):
         sz.Add(wx.StaticText(self, -1, 'Name your filter: '), 0, wx.CENTER)
         sz.Add(self.filter_name, 1, wx.EXPAND)
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.ALL, 5)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
 
         self.Sizer.Add(wx.StaticText(self, -1, 'Choose constraints for your filter: '), 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
 
         self.sw = wx.ScrolledWindow(self)
         self.panels = [ColumnFilterPanel(self.sw, tables, False)]
@@ -159,17 +159,17 @@ class ColumnFilterDialog(wx.Dialog):
         self.Sizer.Add(self.sw, 1, wx.EXPAND)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.addbtn, 0)
         sz.AddStretchSpacer()
         sz.Add(self.ok, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.cancel, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
 
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(0,10)
         self.Sizer.Add(sz, 0, wx.EXPAND)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1,10)
 
         self.validate_filter_name()
 
@@ -178,7 +178,10 @@ class ColumnFilterDialog(wx.Dialog):
         self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
         self.filter_name.Bind(wx.EVT_TEXT, self.validate_filter_name)
 ##        self.filter_name.Bind(wx.EVT_COMBOBOX, self.on_select_existing_filter)
-
+        if sys.platform == 'win32':
+            self.size_mod = 30
+        else:
+            self.size_mod = 7
         self.resize_to_fit()
 
     def reset(self):
@@ -215,9 +218,7 @@ class ColumnFilterDialog(wx.Dialog):
     def remove(self, panel):
         i = self.panels.index(panel)
         if 0 < i <= len(self.conjunctions):
-            self.sw.Sizer.Remove(self.conjunctions[i-1])
             self.conjunctions.pop(i-1).Destroy()
-        self.Sizer.Remove(panel)
         self.panels.remove(panel)
         panel.Destroy()
         self.sw.FitInside()
@@ -241,8 +242,7 @@ class ColumnFilterDialog(wx.Dialog):
                 wx.GetDisplaySize()[0] - self.Position[0])
         h = min(self.sw.Sizer.MinSize[1] + self.Sizer.MinSize[1],
                 wx.GetDisplaySize()[1] - self.Position[1])
-        self.SetSize((w,h+7))
-        
+        self.SetSize((w, h + self.size_mod))
 ##    def on_select_existing_filter(self, evt):
 ##        self.load_existing_filter(self.filter_name.GetStringSelection())
         
@@ -262,7 +262,6 @@ class ColumnFilterDialog(wx.Dialog):
 
 
 if __name__ == "__main__":
-    import sys
     import logging
     logging.basicConfig(level=logging.DEBUG)
     app = wx.PySimpleApp()
@@ -283,7 +282,7 @@ if __name__ == "__main__":
 
     cff = ColumnFilterDialog(None, tables=[p.image_table])
     if cff.ShowModal()==wx.OK:
-        print(cff.get_filter())
+        print((cff.get_filter()))
 
     cff.Destroy()
     app.MainLoop()

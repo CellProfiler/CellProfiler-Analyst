@@ -1,31 +1,31 @@
-from __future__ import print_function
+
 import re
 import wx
 import wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
-import normalize as norm
+from . import normalize as norm
 # Grouping options
-from normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
+from .normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 # Aggregation options
-from normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
+from .normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
 # Window options
-from normalize import W_SQUARE, W_MEANDER
+from .normalize import W_SQUARE, W_MEANDER
 import numpy as np
-import dbconnect
+from . import dbconnect
 import logging
-import properties
+from . import properties
 from itertools import groupby
-from plateviewer import FormatPlateMapData
-import sqltools as sql
-import guiutils as ui
-from cpatool import CPATool
+from .plateviewer import FormatPlateMapData
+from . import sqltools as sql
+from . import guiutils as ui
+from .cpatool import CPATool
 
 GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT]
 AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL]
 WINDOW_CHOICES = [W_MEANDER, W_SQUARE]
 
-p = properties.Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = properties.Properties()
+db = dbconnect.DBConnect()
 
 class NormalizationStepPanel(wx.Panel):
     def __init__(self, parent, id=-1, allow_delete=True, **kwargs):
@@ -39,7 +39,7 @@ class NormalizationStepPanel(wx.Panel):
             GROUP_CHOICES.remove(G_QUADRANT)
             GROUP_CHOICES.remove(G_WELL_NEIGHBORS)
 
-        if not p.negative_control:
+        if not p.negative_control and M_NEGCTRL in AGG_CHOICES:
             AGG_CHOICES.remove(M_NEGCTRL)
             
         self.window_group = wx.Choice(self, -1, choices=GROUP_CHOICES)
@@ -74,9 +74,9 @@ class NormalizationStepPanel(wx.Panel):
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, 'Divide values by:'))
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(self.window_group)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(self.agg_type)
         sz.Add(self.constant_float)
         if allow_delete:
@@ -164,7 +164,7 @@ class NormalizationUI(wx.Frame, CPATool):
         kwargs['size'] = kwargs.get('size', (500,500))
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
         CPATool.__init__(self)
-        wx.HelpProvider_Set(wx.SimpleHelpProvider())
+        wx.HelpProvider.Set(wx.SimpleHelpProvider())
 
         self.n_steps = 1
 
@@ -217,7 +217,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
         self.col_choices_desc = wx.StaticText(self, -1, 'Select measurements to normalize:')
         self.Sizer.Add(self.col_choices_desc, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.col_choices, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
         
         #
@@ -280,7 +280,7 @@ class NormalizationUI(wx.Frame, CPATool):
     def update_measurement_choices(self):
         measurements = db.GetColumnNames(self.table_choice.GetStringSelection())
         types = db.GetColumnTypes(self.table_choice.GetStringSelection())
-        numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        numeric_columns = [m for m,t in zip(measurements, types) if t in (float, int)]
         self.col_choices.SetItems(numeric_columns)
         self.validate()
         
@@ -305,7 +305,7 @@ class NormalizationUI(wx.Frame, CPATool):
     def validate(self):
         is_valid = True
 
-        if not self.col_choices.GetChecked():
+        if not self.col_choices.GetCheckedItems():
             is_valid = False
             self.col_choices_desc.SetForegroundColour((255,0,0))
         else:
@@ -337,7 +337,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.norm_steps += [NormalizationStepPanel(self.sw)]
         self.boxes += [sz]
         sz.Add(self.norm_steps[-1], 0, wx.EXPAND)
-        self.sw.Sizer.InsertSizer(len(self.norm_steps)-1, sz, 0, wx.EXPAND|wx.TOP, 15)
+        self.sw.Sizer.Insert(len(self.norm_steps)-1, sz, 0, wx.EXPAND|wx.TOP, 15)
         self.sw.FitInside()
         self.Layout()
         self.update_steps()
@@ -498,7 +498,7 @@ class NormalizationUI(wx.Frame, CPATool):
                 if d[norm.P_GROUPING] in (norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
                     # Reshape data if normalization step is plate sensitive.
                     assert p.plate_id and p.well_id
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2) ] 
+                    well_keys = input_data[:, list(range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2)) ] 
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
                     for plate, plate_grp in groupby(wellkeys_and_vals, lambda row: row[0]):
@@ -516,7 +516,7 @@ class NormalizationUI(wx.Frame, CPATool):
                         print(mean_plate_col)
                         print(std_plate_col)            
 
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2)]
+                    well_keys = input_data[:, list(range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2))]
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
                     # print wellkeys_and_vals
@@ -547,8 +547,7 @@ class NormalizationUI(wx.Frame, CPATool):
             output_factors[:,colnum] = col.astype(float) / np.array(norm_data,dtype=float)
 
         dlg.Destroy()
-        return # Abort here for coding
-                
+
         norm_table_cols = []
         # Write new table
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
@@ -630,7 +629,7 @@ class NormalizationUI(wx.Frame, CPATool):
         #
         # Show the resultant table        
         #
-        import tableviewer
+        from . import tableviewer
         tv = tableviewer.TableViewer(ui.get_main_frame_or_none())
         tv.Show()
         tv.load_db_table(output_table)
@@ -653,7 +652,7 @@ class NormalizationUI(wx.Frame, CPATool):
             self.table_choice.SetStringSelection(settings['table'])
             self.update_measurement_choices()
         if 'columns' in settings:
-            cols = map(str.strip, settings['columns'].split(','))
+            cols = list(map(str.strip, settings['columns'].split(',')))
             self.col_choices.SetCheckedStrings(cols)
         if 'steps' in settings:
             steps = eval(settings['steps'])

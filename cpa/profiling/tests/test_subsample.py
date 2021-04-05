@@ -19,7 +19,7 @@ def test_compute_group_subsample():
 
 def test_break_indices():
     indices = np.array([0, 99, 40, 64, 65, 39], dtype='i4')
-    image_keys = [(0L, 42L), (1L, 23L), (2L, 92L)]
+    image_keys = [(0, 42), (1, 23), (2, 92)]
     counts = {image_keys[0]: 40, image_keys[1]: 25, image_keys[2]: 35}
     per_image_indices = list(subsample._break_indices(indices, image_keys, 
                                                       counts))

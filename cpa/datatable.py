@@ -1,13 +1,12 @@
 # -*- Encoding: utf-8 -*-
-from __future__ import print_function
+
 from cpa import dbconnect
 from cpa.dbconnect import DBConnect
-from datamodel import DataModel
-from properties import Properties
+from .datamodel import DataModel
+from .properties import Properties
 from tempfile import gettempdir
-from time import ctime, time
-#from wx.lib.embeddedimage import PyEmbeddedImage
-import imagetools
+from time import ctime
+from . import imagetools
 import csv
 import logging
 import numpy as np
@@ -16,9 +15,9 @@ import weakref
 import wx
 import wx.grid
 
-dm = DataModel.getInstance()
-db = DBConnect.getInstance()
-p = Properties.getInstance()
+dm = DataModel()
+db = DBConnect()
+p = Properties()
 
 ID_LOAD_CSV = wx.NewId()
 ID_SAVE_CSV = wx.NewId()
@@ -207,11 +206,11 @@ class HugeTableGrid(wx.grid.Grid):
         # it's Destroy method later.
         self.SetTable(table, True)
         # Avoid self.AutoSize() because it hangs on large tables.
-        self.SetSelectionMode(self.wxGridSelectColumns)
+        self.SetSelectionMode(self.GridSelectColumns)
         self.SetColumnLabels(self.GetTable().col_labels)
         # Help prevent spurious horizontal scrollbar
-        self.SetMargins(0-wx.SystemSettings_GetMetric(wx.SYS_VSCROLL_X),
-                        0-wx.SystemSettings_GetMetric(wx.SYS_HSCROLL_Y))
+        self.SetMargins(0-wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X),
+                        0-wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y))
         self.SetRowLabelSize(ROW_LABEL_SIZE)
         
         wx.grid.EVT_GRID_SELECT_CELL(self, self.OnSelectCell)
@@ -244,7 +243,7 @@ class HugeTableGrid(wx.grid.Grid):
             block = np.empty((n, m))
             for k, j in enumerate(self.selectedColumns):
                 block[:,k] = self.GetTable().GetColValues(j)
-            self.GetParent().SetStatusText(u"Sum: %f — Mean: %f — Std: %f" %
+            self.GetParent().SetStatusText("Sum: %f — Mean: %f — Std: %f" %
                                            (block.sum(), block.mean(), block.std()))
         except:
             self.GetParent().SetStatusText("Cannot summarize columns.")
@@ -352,19 +351,19 @@ class DataGrid(wx.Frame):
         self.loadCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_LOAD_CSV,
                         text='Load data from CSV\tCtrl+O',
-                        help='Load data from CSV.')
+                        helpString='Load data from CSV.')
         self.saveCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_SAVE_CSV,
                         text='Save data to CSV\tCtrl+S',
-                        help='Saves data as comma separated values.')
+                        helpString='Saves data as comma separated values.')
         self.savePerImageCountsToCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=-1,
                         text='Save per-image counts to CSV',
-                        help='Saves per-image phenotype counts as comma separated values.')
+                        helpString='Saves per-image phenotype counts as comma separated values.')
         self.exitMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_EXIT,
                         text='Exit\tCtrl+Q',
-                        help='Close the Data Table')
+                        helpString='Close the Data Table')
         self.filemenu.AppendItem(self.loadCSVMenuItem)
         self.filemenu.AppendItem(self.saveCSVMenuItem)
         self.filemenu.AppendItem(self.savePerImageCountsToCSVMenuItem)
@@ -377,7 +376,7 @@ class DataGrid(wx.Frame):
         self.writeToTempTableMenuItem = \
             wx.MenuItem(parentMenu=self.dbmenu, id=-1,
                         text='Write temporary table for Plate Viewer',
-                        help='Writes this table to a temporary table in your database so Plate Viewer can access it.')
+                        helpString='Writes this table to a temporary table in your database so Plate Viewer can access it.')
         self.dbmenu.AppendItem(self.writeToTempTableMenuItem)
         self.GetMenuBar().Append(self.dbmenu, 'Database')
         if self.grid:
@@ -450,7 +449,7 @@ class DataGrid(wx.Frame):
     def OnLoadCSV(self, evt):
         dlg = wx.FileDialog(self, message='Choose a CSV file to load',
                             defaultDir=os.getcwd(),
-                            style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() != wx.ID_OK:
             return
         filename = dlg.GetPath()
@@ -475,7 +474,7 @@ class DataGrid(wx.Frame):
             self.colmenu.Destroy()
         except: pass
         r = csv.reader(open(csvfile))
-        labels = r.next()
+        labels = next(r)
         dtable = dbconnect.get_data_table_from_csv_reader(r)
         coltypes = db.InferColTypesFromData(dtable, len(labels))
         for i in range(len(coltypes)):
@@ -483,7 +482,7 @@ class DataGrid(wx.Frame):
             elif coltypes[i] == 'FLOAT': coltypes[i] = float
             else: coltypes[i] = str
         r = csv.reader(open(csvfile))
-        r.next() # skip col-headers
+        next(r) # skip col-headers
         data = []
         for row in r:
             data += [[coltypes[i](v) for i,v in enumerate(row)]]
@@ -492,9 +491,9 @@ class DataGrid(wx.Frame):
         if group == DO_NOT_LINK_TO_IMAGES:
             keycols = []
         elif group == 'Image':
-            keycols = range(len(dbconnect.image_key_columns()))
+            keycols = list(range(len(dbconnect.image_key_columns())))
         else:
-            keycols = range(len(dm.GetGroupColumnNames(group)))
+            keycols = list(range(len(dm.GetGroupColumnNames(group))))
         
         self.grid = HugeTableGrid(self, data, labels, key_col_indices=keycols, grouping=group, chMap=p.image_channel_colors)
         self.Title = '%s (%s)'%(csvfile, group)
@@ -511,7 +510,7 @@ class DataGrid(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         res = saveDialog.ShowModal()
         if res==wx.ID_OK:
@@ -525,7 +524,7 @@ class DataGrid(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
             colHeaders = list(dbconnect.image_key_columns())
@@ -570,8 +569,7 @@ class DataGrid(wx.Frame):
         self.file = filename
         
     def OnWriteTempTableToDB(self, evt):
-        from classifier import Classifier
-        db.CreateTempTableFromData(self.grid.GetTable().data, 
+        db.CreateTempTableFromData(self.grid.GetTable().data,
                            dbconnect.clean_up_colnames(self.grid.GetTable().col_labels), 
                            '__Classifier_output')
         try:
@@ -633,7 +631,7 @@ if __name__ == "__main__":
 #        grid = DataGrid()
         grid = DataGrid(data, labels, key_col_indices=[0,1], title='TEST', autosave=False)
         grid.Show()
-        print(grid.GetData())
+        print((grid.GetData()))
         app.MainLoop()
         # -------------------
       
@@ -643,21 +641,21 @@ if __name__ == "__main__":
     csvfile = sys.argv[1]
     propsfile = sys.argv[2]
     
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
 
     p.LoadFile(propsfile)
     r = csv.reader(open(csvfile))
-    labels = r.next()
-    dtable = DBConnect.get_data_table_from_csv_reader(r)
+    labels = next(r)
+    dtable = dbconnect.get_data_table_from_csv_reader(r)
     coltypes = db.InferColTypesFromData(dtable, len(labels))
     for i in range(len(coltypes)):
         if coltypes[i] == 'INT': coltypes[i] = int
         elif coltypes[i] == 'FLOAT': coltypes[i] = float
         else: coltypes[i] = str
     r = csv.reader(open(csvfile))
-    r.next() # skip col-headers
+    next(r) # skip col-headers
     data = []
     for row in r:
         data += [[coltypes[i](v) for i,v in enumerate(row)]]
@@ -668,9 +666,9 @@ if __name__ == "__main__":
         group = sys.argv[3]
     
     if group == 'Image':
-        keycols = range(len(dbconnect.image_key_columns()))
+        keycols = list(range(len(dbconnect.image_key_columns())))
     else:
-        keycols = range(len(dm.GetGroupColumnNames(group)))
+        keycols = list(range(len(dm.GetGroupColumnNames(group))))
     
     grid = DataGrid(data, labels, grouping=group, 
                     key_col_indices=keycols,

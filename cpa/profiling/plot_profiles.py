@@ -4,7 +4,7 @@
 Plot profiles.
 
 """
-from __future__ import print_function
+
 
 from optparse import OptionParser
 import numpy as np
@@ -21,7 +21,7 @@ def plot_profiles(profiles, output_group_name=None):
         input_group_r, input_colnames = cpa.db.group_map(profiles.group_name, 
                                                          reverse=True)
         input_group_r = dict((tuple(map(str, k)), v) 
-                             for k, v in input_group_r.items())
+                             for k, v in list(input_group_r.items()))
         output_group, output_colnames = cpa.db.group_map(output_group_name)
         d = {}
         labels = []
@@ -35,8 +35,8 @@ def plot_profiles(profiles, output_group_name=None):
         ordering = [i for k in sorted(d.keys()) for i in d[k]]
         labels = list(np.array(labels)[ordering])
     else:
-        ordering = np.arange(len(profiles.keys()))
-        labels = list(np.array(profiles.keys())[ordering])
+        ordering = np.arange(len(list(profiles.keys())))
+        labels = list(np.array(list(profiles.keys()))[ordering])
     labels = [' '.join(map(str, k)) for k in labels]
     data = profiles.data[ordering]
 

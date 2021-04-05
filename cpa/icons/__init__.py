@@ -1,31 +1,28 @@
 import wx
 import os.path
-import glob
 import sys
 
+# Old code used to scan the icons directory and report everything into global variables on startup.
+# As of wx4 this is no longer valid, since the app has to launch first.
+# So now we'll call icons when needed and cache them in a dictionary.
+# We could convert to wx.Bitmap before storage, but there must be some reason the original
+# stored everything as wx.Image, right?
 
-# This bit of code provides simple importing of images, as instances
-# of wx.Image.  An image in a file named ABC.png copied into the icons
-# directory can be imported as icons.ABC.
+icon_cache = {}
 
-if 'library.zip' in __path__[0]:
-    # py2exe puts this module into its library.zip, and I'm not sure
-    # how to stop it from doing so.  However, I can force it to
-    # include the icons in a directory at the top level.
-    search_path = __path__[0].split('library.zip')[0] + 'icons'
-else:
-    search_path = __path__[0]
-
-for f in glob.glob(os.path.join(search_path, "*.png")):
-    globals()[os.path.basename(f)[:-4]] = wx.Image(f)
-
+def get_icon(name):
+    if name in icon_cache:
+        return icon_cache[name]
+    else:
+        dir = __path__[0]
+        icon_cache[name] = wx.Image(os.path.join(dir, name + ".png"))
+        return icon_cache[name]
 
 def get_cpa_icon(size=None):
     '''The CellProfiler Analyst icon as a wx.Icon'''
-    global cpa_32, cpa_128  # hopefully these two variables were created above
-    icon = wx.EmptyIcon()
+    icon = wx.Icon()
     if size == None and sys.platform.startswith('win'):
-        icon.CopyFromBitmap(wx.BitmapFromImage(cpa_32))
+        icon.CopyFromBitmap(wx.Bitmap(get_icon("cpa_32")))
     else:
-        icon.CopyFromBitmap(wx.BitmapFromImage(cpa_128))
+        icon.CopyFromBitmap(wx.Bitmap(get_icon("cpa_128")))
     return icon

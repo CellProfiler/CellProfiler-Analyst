@@ -1,26 +1,22 @@
-from __future__ import print_function
-from cpatool import CPATool
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
-import sqltools as sql
-from multiclasssql import filter_table_prefix
-from properties import Properties
-import guiutils as ui 
-from gating import GatingHelper
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
+
+from .cpatool import CPATool
+from .dbconnect import DBConnect
+from . import sqltools as sql
+from .properties import Properties
+from . import guiutils as ui 
+from .gating import GatingHelper
+from wx.adv import OwnerDrawnComboBox as ComboBox
 import logging
 import numpy as np
-import os
 import sys
-import re
 import wx
 import matplotlib.cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
@@ -44,7 +40,7 @@ class DataSourcePanel(wx.Panel):
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.gridsize_input = wx.TextCtrl(self, -1, '50')
-        maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
+        maps = [m for m in list(matplotlib.cm.datad.keys()) if not m.endswith("_r")]
         maps.sort()
         self.colormap_choice = ComboBox(self, -1, choices=maps, style=wx.CB_READONLY)
         self.colormap_choice.SetSelection(maps.index('jet'))
@@ -64,64 +60,64 @@ class DataSourcePanel(wx.Panel):
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_table_choice, 1, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_choice, 2, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))
+        sizer.Add(-1, 2, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_table_choice, 1, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_choice, 2, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))
+        sizer.Add(-1, 2, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)        
         sz.Add(wx.StaticText(self, -1, "grid size:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.gridsize_input, 1, wx.TOP, 3)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, label='color map:'), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.colormap_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, label='color scale:'), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.color_scale_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.Add(-1, 5, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.filter_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.gate_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.Add(-1, 5, 0)
         
         sizer.Add(self.update_chart_btn)    
-        
-        wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
-        wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
+
+        self.x_table_choice.Bind(wx.EVT_COMBOBOX, self.on_x_table_selected)
+        self.y_table_choice.Bind(wx.EVT_COMBOBOX, self.on_y_table_selected)
         self.gate_choice.addobserver(self.on_gate_selected)
-        wx.EVT_COMBOBOX(self.colormap_choice, -1, self.on_cmap_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
-        
+        self.colormap_choice.Bind(wx.EVT_COMBOBOX, self.on_cmap_selected)
+        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
+
         self.SetSizer(sizer)
         self.Show(1)
 
@@ -202,7 +198,7 @@ class DataSourcePanel(wx.Panel):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        return [m for m,t in zip(measurements, types) if t in (float, int)]
         
     def _plotting_per_object_data(self):
         return (p.object_table and
@@ -415,8 +411,7 @@ class DensityPanel(FigureCanvasWxAgg):
     def reset_toolbar(self):
         # Cheat since there is no way reset
         if self.navtoolbar:
-            self.navtoolbar._views.clear()
-            self.navtoolbar._positions.clear()
+            self.navtoolbar._nav_stack.clear()
             self.navtoolbar.push_current()
     
     def set_configpanel(self,configpanel):
@@ -427,7 +422,8 @@ class DensityPanel(FigureCanvasWxAgg):
         if evt.button == 3: # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
-    def show_popup_menu(self, (x,y), data):
+    def show_popup_menu(self, xxx_todo_changeme, data):
+        (x,y) = xxx_todo_changeme
         self.popup_menu_filters = {}
         popup = wx.Menu()
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
@@ -436,7 +432,7 @@ class DensityPanel(FigureCanvasWxAgg):
         if selected_gate:
             selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
-                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  lambda e:ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
@@ -478,7 +474,7 @@ class Density(wx.Frame, CPATool):
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
-        
+        self.fig = figpanel
         #
         # Forward save and load settings functionality to the configpanel
         #
@@ -498,27 +494,60 @@ class Density(wx.Frame, CPATool):
         _NTB2_ZOOM = wx.NewId()
         _NTB2_SAVE = wx.NewId()
         _NTB2_SUBPLOT = wx.NewId()
-        tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original view')
-        tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
-        tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
+        tb.AddTool(_NTB2_HOME, "", _load_bitmap('home.png'), 'Home')
+        tb.AddTool(_NTB2_BACK, "", _load_bitmap('back.png'), 'Back')
+        tb.AddTool(_NTB2_FORWARD, "", _load_bitmap('forward.png'), 'Forward')
 
-        tb.AddCheckTool(_NTB2_PAN, _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
-        tb.AddCheckTool(_NTB2_ZOOM, _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+        tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
 
         tb.AddSeparator()
-        tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
-        tb.AddSimpleTool(_NTB2_SAVE, _load_bitmap('filesave.png'), 'Save', 'Save plot contents to file')
+        tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
+        tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
+
+        def on_toggle_pan(evt):
+            tb.ToggleTool(_NTB2_ZOOM, False)
+            evt.Skip()
+
+        def on_toggle_zoom(evt):
+            tb.ToggleTool(_NTB2_PAN, False)
+            evt.Skip()
 
         self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
         self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
         self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
         self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
         self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
-        self.Bind(wx.EVT_TOOL, toolbar.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, self.configure_subplots, id=_NTB2_SUBPLOT)
         self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+        self.Bind(wx.EVT_TOOL, on_toggle_zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, on_toggle_pan, id=_NTB2_PAN)
 
         tb.Realize()  
         # Hack end
+
+    def configure_subplots(self, *args):
+        # Fixed MPL subplot window generator
+        from matplotlib.backends.backend_wx import _set_frame_icon, FigureManagerWx
+        from matplotlib.widgets import SubplotTool
+
+        frame = wx.Frame(None, -1, "Configure subplots")
+        _set_frame_icon(frame)
+
+        toolfig = Figure((6, 3))
+        canvas = FigureCanvasWxAgg(frame, -1, toolfig)
+
+        # Create a figure manager to manage things
+        FigureManagerWx(canvas, 1, frame)
+
+        # Now put all into a sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # This way of adding to sizer allows resizing
+        sizer.Add(canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
+        frame.SetSizer(sizer)
+        frame.Fit()
+        SubplotTool(self.fig.canvas.figure, toolfig)
+        frame.Show()
 
 
 if __name__ == "__main__":

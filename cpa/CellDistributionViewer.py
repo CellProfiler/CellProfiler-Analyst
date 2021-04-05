@@ -1,20 +1,17 @@
-from __future__ import print_function
-from colorbarpanel import ColorBarPanel
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from platemappanel import *
-import imagetools
-from properties import Properties
+# Unused module? Mar 2021
+from .platemappanel import *
+from .properties import Properties
 import numpy as np
 import os
-import re
 import wx
-from PlotPanelTS import *
+# This module doesn't exist any more
+# from PlotPanelTS import *
 
 
-p = Properties.getInstance()
+p = Properties()
 # Hack the properties module so it doesn't require the object table.
 #properties.optional_vars += ['object_table']
-db = DBConnect.getInstance()
+db = DBConnect()
 
 
 ID_IMPORT = 1001
@@ -99,7 +96,7 @@ class DataSourcePanel(wx.Panel):
 
 
     def loadproperties(self, event):
-        dlg = wx.FileDialog(None, "Select the file containing your properties.", style=wx.OPEN)
+        dlg = wx.FileDialog(None, "Select the file containing your properties.", style=wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             os.chdir(os.path.split(filename)[0])      # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly

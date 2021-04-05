@@ -1,17 +1,11 @@
-from __future__ import print_function
+
 import decimal
-import types
 import random
-from properties import Properties
-from singleton import Singleton
-from sys import stderr
-import exceptions
+from .properties import Properties
+from .singleton import Singleton
 import numpy as np
-import logging
-import string
 import sys
 import threading
-import traceback
 import re
 import os.path
 import logging
@@ -20,7 +14,7 @@ import copy
 
 verbose = True
 
-p = Properties.getInstance()
+p = Properties()
 
 class DBException(Exception):
     def __str__(self):
@@ -93,13 +87,13 @@ def get_data_table_from_csv_reader(reader):
     '''reads a csv table into a 2d list'''
     dtable = []
     try:
-        row = reader.next()
+        row = next(reader)
     except:
         return []
     while row:
         dtable += [row]
         try:
-            row = reader.next()
+            row = next(reader)
         except StopIteration: break
     return dtable
 
@@ -109,7 +103,7 @@ def clean_up_colnames(colnames):
     don't have to be quoted in sql syntax'''
     colnames = [col.replace(' ','_') for col in colnames]
     colnames = [col.replace('\n','_') for col in colnames]
-    colnames = [filter(lambda c: re.match('[A-Za-z0-9_]',c), col) for col in colnames]
+    colnames = [[c for c in col if re.match('[A-Za-z0-9_]',c)] for col in colnames]
     return colnames        
 
 
@@ -281,7 +275,7 @@ def _check_colname_user(properties, table, colname):
         raise ValueError('User-defined columns in the image and object tables must have names beginning with "User_".')
 
     
-class DBConnect(Singleton):
+class DBConnect(metaclass=Singleton):
     '''
     DBConnect abstracts calls to MySQLdb/SQLite. It's a singleton that maintains
     unique connections for each thread that uses it.  These connections are 
@@ -298,8 +292,8 @@ class DBConnect(Singleton):
         self.gui_parent = None
 
     def __str__(self):
-        return string.join([ (key + " = " + str(val) + "\n")
-                            for (key, val) in self.__dict__.items()])
+        return ''.join([ (key + " = " + str(val) + "\n")
+                            for (key, val) in list(self.__dict__.items())])
             
     def connect(self, empty_sqlite_db=False):
         '''
@@ -313,7 +307,7 @@ class DBConnect(Singleton):
         
         logging.info('[%s] Connecting to the database...'%(connID))
         # If this connection ID already exists print a warning
-        if connID in self.connections.keys():
+        if connID in self.connections:
             if self.connectionInfo[connID] == (p.db_host, p.db_user, 
                                                (p.db_passwd or None), p.db_name):
                 logging.warn('A connection already exists for this thread. %s as %s@%s (connID = "%s").'%(p.db_name, p.db_user, p.db_host, connID))
@@ -345,7 +339,7 @@ class DBConnect(Singleton):
             
             if not p.db_sqlite_file:
                 # Compute a UNIQUE database name for these files
-                import md5
+                import hashlib
                 dbpath = os.getenv('USERPROFILE') or os.getenv('HOMEPATH') or \
                     os.path.expanduser('~')
                 dbpath = os.path.join(dbpath,'CPA')
@@ -357,16 +351,17 @@ class DBConnect(Singleton):
                     csv_dir = os.path.split(p.db_sql_file)[0] or '.'
                     imcsvs, obcsvs = get_csv_filenames_from_sql_file()
                     files = imcsvs + obcsvs + [os.path.split(p.db_sql_file)[1]]
-                    hash = md5.new()
+                    hash = hashlib.new('md5')
                     for fname in files:
                         t = os.stat(csv_dir + os.path.sep + fname).st_mtime
-                        hash.update('%s%s'%(fname,t))
+                        hash_me = f"{fname}{t}".encode()
+                        hash.update(hash_me)
                     dbname = 'CPA_DB_%s.db'%(hash.hexdigest())
                 else:
                     imtime = os.stat(p.image_csv_file).st_mtime
                     obtime = os.stat(p.object_csv_file).st_mtime
                     l = '%s%s%s%s'%(p.image_csv_file,p.object_csv_file,imtime,obtime)
-                    dbname = 'CPA_DB_%s.db'%(md5.md5(l).hexdigest())
+                    dbname = 'CPA_DB_%s.db'%(hashlib.md5(l.encode()).hexdigest())
                     
                 p.db_sqlite_file = os.path.join(dbpath, dbname)
             logging.info('[%s] SQLite file: %s'%(connID, p.db_sqlite_file))
@@ -447,10 +442,11 @@ class DBConnect(Singleton):
                         logging.info('[%s] Creating SQLite database at: %s.'%(connID, p.db_sqlite_file))
                         self.CreateSQLiteDB()
                     else:
-                        raise DBException('Database at %s appears to be empty.'%(p.db_sqlite_file))
-            if p.classification_type == 'image':
+                        raise DBException('Database at %s appears to be missing specified tables.'%(p.db_sqlite_file))
+            # If we're not on the main thread these tables should already have been made.
+            if p.classification_type == 'image' and connID == "MainThread":
                 self.CreateObjectImageTable()
-            if p.check_tables == 'yes':
+            if p.check_tables == 'yes' and connID == "MainThread":
                 self.CreateObjectCheckedTable()
             logging.debug('[%s] Connected to database: %s'%(connID, p.db_sqlite_file))
 
@@ -462,7 +458,7 @@ class DBConnect(Singleton):
         self.sqlite_classifier.setup_classifier(thresh, a, b)
 
     def Disconnect(self):
-        for connID in self.connections.keys():
+        for connID in list(self.connections.keys()):
             self.CloseConnection(connID)
         self.connections = {}
         self.cursors = {}
@@ -472,7 +468,7 @@ class DBConnect(Singleton):
     def CloseConnection(self, connID=None):
         if not connID:
             connID = threading.currentThread().getName()
-        if connID in self.connections.keys():
+        if connID in list(self.connections.keys()):
             try:
                 self.connections[connID].commit()
             except: pass
@@ -496,7 +492,7 @@ class DBConnect(Singleton):
 
         # Grab a new connection if this is a new thread
         connID = threading.currentThread().getName()
-        if not connID in self.connections.keys():
+        if not connID in self.connections:
             self.connect()
 
         try:
@@ -542,7 +538,7 @@ class DBConnect(Singleton):
     def GetNextResult(self):
         connID = threading.currentThread().getName()
         try:
-            return self.cursors[connID].next()
+            return next(self.cursors[connID])
         except DBError() as e:
             raise DBException('Error retrieving next result from database: %s'%(e,))
             return None
@@ -579,11 +575,11 @@ class DBConnect(Singleton):
                         break
             else:
                 fun2 = conversion
-            if fun2 in [decimal.Decimal, types.FloatType]:
+            if fun2 in [decimal.Decimal, float]:
                 dtype = 'f8'
-            elif fun2 in [types.IntType, types.LongType]:
+            elif fun2 == int:
                 dtype = 'i4'
-            elif fun2 in [types.StringType]:
+            elif fun2 == bytes:
                 dtype = '|S%d'%(internal_size,)
             descr.append((name, dtype))
         return descr
@@ -595,7 +591,6 @@ class DBConnect(Singleton):
         records = []
         while True:
             r = self.cursors[connID].fetchmany(n)
-            print(len(r))
             if len(r) == 0:
                 break
             records.extend(list(r))
@@ -614,7 +609,42 @@ class DBConnect(Singleton):
                                      %(p.object_id, p.object_table, where_clause, index - 1))
         object_number = object_number[0][0]
         return tuple(list(imKey)+[int(object_number)])
-    
+
+    def GetRandomObjectsSQL(self, imKeys, N):
+        '''
+        Returns a random sampling of object keys from the database.
+        Sampling occurs without replacement.
+        imKeys: a list of image keys to sample objects from.
+        N: number of keys to sample
+        '''
+        rand = "RANDOM()" if p.db_type == 'sqlite' else "RAND()"
+        if not imKeys:
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} ORDER BY {rand} LIMIT {N}"
+
+        else:
+            where_clause = GetWhereClauseForImages(imKeys)
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} WHERE  {where_clause} ORDER BY {rand} LIMIT {N}"
+        object_numbers = self.execute(statement)
+        return object_numbers
+
+    def GetAllObjectsSQL(self, imKeys, N=None):
+        '''
+        Returns objects from a list of keys in order.
+        imkeys: a list of image keys
+        N: integer representing the number of objects to fetch.
+        '''
+        if N is None:
+            limit_clause = ""
+        else:
+            limit_clause = f" LIMIT {N}"
+        if not imKeys:
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} ORDER BY {p.image_id}{limit_clause}"
+        else:
+            where_clause = GetWhereClauseForImages(imKeys)
+            statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} WHERE {where_clause} ORDER BY {p.image_id}{limit_clause}"
+        object_numbers = self.execute(statement)
+        return object_numbers
+
     def GetPerImageObjectCounts(self):
         '''
         Returns a list of (imKey, obCount) tuples. 
@@ -658,6 +688,30 @@ class DBConnect(Singleton):
             raise Exception(message)
         else:
             return res[0]
+
+    def GetObjectsCoords(self, obKeys, none_ok=False, silent=False):
+        '''Returns the specified objects' x, y coordinates in an image.
+        '''
+        res = self.execute('SELECT %s, %s, %s, %s FROM %s WHERE %s'%(
+                        p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc, p.object_table,
+                        GetWhereClauseForObjects(obKeys)), silent=silent)
+        if len(res) == 0 or res[0][0] is None or res[0][1] is None:
+            message = ('Failed to load coordinates for object key %s. This may '
+                       'indicate a problem with your per-object table.\n'
+                       'You can check your per-object table "%s" in TableViewer'
+                       %(', '.join(['%s:%s'%(col, val) for col, val in
+                                    zip(object_key_columns(), obKeys)]),
+                       p.object_table))
+            raise Exception(message)
+        else:
+            # Now we need to match the returned lines to the requested keys
+            res_dict = {}
+            buffer = []
+            for tup in res:
+                res_dict[(tup[0], tup[1])] = (tup[2], tup[3])
+            for key in obKeys:
+                buffer.append(res_dict[key])
+            return buffer
     
     def GetAllObjectCoordsFromImage(self, imKey):
         ''' Returns a list of lists x, y coordinates for all objects in the given image. '''
@@ -685,14 +739,14 @@ class DBConnect(Singleton):
         
         nChannels = len(p.image_path_cols)
         select = 'SELECT '
-        for i in xrange(nChannels):
+        for i in range(nChannels):
             select += p.image_path_cols[i]+', '+p.image_file_cols[i]+', '
         select = select[:-2] # chop off the last ', '
         select += ' FROM '+p.image_table+' WHERE '+GetWhereClauseForImages([imKey])
         imPaths = self.execute(select)[0]
         # parse filenames out of results
         filenames = []
-        for i in xrange(0,len(p.image_path_cols*2),2):
+        for i in range(0,len(p.image_path_cols*2),2):
             if p.image_url_prepend:
                 filenames.append( imPaths[i]+'/'+imPaths[i+1] )
             else:
@@ -765,10 +819,18 @@ class DBConnect(Singleton):
     
     def filter_sql(self, filter_name):
         f = p._filters[filter_name]
-        import sqltools
+        from . import sqltools
         if isinstance(f, sqltools.Filter):
-            unique_tables = np.unique(f.get_tables()) 
-            return 'SELECT %s FROM %s WHERE %s' % (UniqueImageClause(), 
+            unique_tables = np.unique(f.get_tables())
+            if len(unique_tables) > 1:
+                if p.image_table in unique_tables:
+                    select_name = UniqueImageClause(p.image_table)
+                else:
+                    select_name = UniqueImageClause(unique_tables[0])
+                    logging.warn("Mixing multiple object tables in a filter is experimental, use with caution")
+            else:
+                select_name = UniqueImageClause()
+            return 'SELECT %s FROM %s WHERE %s' % (select_name,
                                                    ','.join(unique_tables), 
                                                    str(f))
         elif isinstance(f, sqltools.OldFilter):
@@ -780,12 +842,58 @@ class DBConnect(Singleton):
         ''' Returns a list of imKeys from the given filter. '''
         try:
             f = p._filters[filter_name]
-            return self.execute(self.filter_sql(filter_name))
+            # New filters can be based on object parameters. We need to remove duplicates.
+            # Using dict instead of set preserves key order without additional time cost.
+            imKeys = self.execute(self.filter_sql(filter_name))
+            return list(dict.fromkeys(imKeys))
         except Exception as e:
             logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
             logging.error(e)
             raise Exception('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
-    
+
+    def GetGatedImages(self, gate_name):
+        ''' Returns a list of imKeys from the given filter. '''
+        try:
+            g = p.gates[gate_name]
+            from . import sqltools
+            if isinstance(g, sqltools.Gate):
+                unique_tables = np.unique(g.get_tables())
+                if len(unique_tables) > 1:
+                    if p.image_table in unique_tables:
+                        select_name = UniqueImageClause(p.image_table)
+                    else:
+                        select_name = UniqueImageClause(unique_tables[0])
+                        logging.warn("Mixing multiple object tables in a filter is experimental, use with caution")
+                else:
+                    select_name = UniqueImageClause()
+                imKeys = self.execute(f"SELECT {select_name} FROM {','.join(unique_tables)} WHERE {str(g)}")
+                return list(dict.fromkeys(imKeys))
+            else:
+                raise Exception('Invalid gate type in p.gate')
+
+        except Exception as e:
+            logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(gate_name))
+            logging.error(e)
+            raise Exception('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(gate_name))
+
+    def GetGatedObjects(self, gate_name, N=None, random=True):
+        from . import sqltools
+        q = sqltools.QueryBuilder()
+        q.select(sqltools.object_cols())
+        q.where([p.gates[gate_name]])
+        q.group_by(sqltools.object_cols())
+        if random:
+            if p.db_type == 'sqlite':
+                query = f"{str(q)} ORDER BY RANDOM()"
+            else:
+                query = f"{str(q)} ORDER BY RAND()"
+        else:
+            query = f"{str(q)} ORDER BY {p.object_table}.{p.image_id}"
+        if N is not None:
+            query += f" LIMIT {N}"
+        keys = self.execute(query)
+        return keys
+
     def GetTableNames(self):
         '''
         returns all table names in the database
@@ -936,12 +1044,12 @@ class DBConnect(Singleton):
         DBConnect.get_linking_tables first to check that all tables are linked.
                  
         usage: 
-        >>> get_linking_expressions(['per_well', 'per_image', 'per_object'])
+        get_linking_expressions(['per_well', 'per_image', 'per_object'])
         [Expression(('per_well', 'Plate'), '=', ('per_image', 'Plate')),
          Expression(('per_well', 'Well'),  '=', ('per_image', 'Well')),
          Expression(('per_image', 'ImageNumber'),  '=', ('per_object', 'ImageNumber'))]
         '''
-        import sqltools as sql
+        from . import sqltools as sql
         for t in tables[1:]:
             if self.get_linking_table_pairs(tables[0], t) is None:
                 raise Exception('Tables "%s" and "%s" are not linked.'%(tables[0], t))
@@ -963,7 +1071,7 @@ class DBConnect(Singleton):
         then None is returned.
         
         usage:
-        >>> get_linking_tables(per_well, per_object)
+        get_linking_tables(per_well, per_object)
         [per_image, per_object]
         '''
         if p.link_tables_table not in self.GetTableNames():
@@ -980,7 +1088,7 @@ class DBConnect(Singleton):
         then None is returned.
         
         usage:
-        >>> get_linking_table_pairs(per_well, per_object)
+        get_linking_table_pairs(per_well, per_object)
         [(per_well, per_image), (per_image, per_object)]        
         '''
         ltables = self.get_linking_tables(table_from, table_to)
@@ -1132,7 +1240,7 @@ class DBConnect(Singleton):
             logging.error('No data for obKey: %s'%str(obKey))
             return None
         # This should be the case
-        assert all([type(x) in [int, long, float] for x in data[0]])
+        assert all([type(x) in (int, float) for x in data[0]])
         return np.array(data[0])
 
     def GetCellData(self, obKey):
@@ -1145,8 +1253,23 @@ class DBConnect(Singleton):
             logging.error('No data for obKey: %s'%str(obKey))
             return None
         # fetch out only numeric data
-        values = [x if type(x) in [int, long, float] else 0.0 for x in data[0]]
+        values = [x if type(x) in (int, float) else 0.0 for x in data[0]]
         return np.array(values)
+
+    def GetCellsData(self, obKeys):
+        '''
+        Returns a list of measurements for multiple objects.
+        '''
+        query = f'SELECT {p.image_id}, {p.object_id}, * FROM {p.object_table} WHERE {GetWhereClauseForObjects(obKeys)}'
+        data = self.execute(query, silent=True)
+        if len(data) == 0:
+            logging.error('No data for obKeys: %s'%str(obKeys))
+            return None
+        # fetch out only numeric data
+        buffer = []
+        for line in data:
+            buffer.append(((line[0], line[1]), np.array([x if type(x) in (int, float) else 0.0 for x in line[2:]])))
+        return buffer
 
     def GetPlateNames(self):
         '''
@@ -1177,9 +1300,9 @@ class DBConnect(Singleton):
         tabledata: 2d iterable of strings
         nCols: # of columns  
         '''
-        colTypes = ['' for i in xrange(nCols)]
+        colTypes = ['' for i in range(nCols)]
         # Maximum string length for each column (if VARCHAR)
-        maxLen   = [0 for i in xrange(nCols)] 
+        maxLen   = [0 for i in range(nCols)] 
         try:
             tabledata[0][0]
         except: 
@@ -1224,7 +1347,7 @@ class DBConnect(Singleton):
         # TODO: handle other tables
         assert table == p.image_table
         _check_colname_user(p, table, colname)
-        if type(value) in (str, unicode):
+        if type(value) == str:
             if re.search(r'["\'`]', value):
                 raise ValueError('No quotes are allowed in values written to the database.')
             value = '"'+value+'"'
@@ -1246,7 +1369,7 @@ class DBConnect(Singleton):
         # so we can form a proper CREATE TABLE statement.
         f = open(p.image_csv_file, 'U')
         r = csv.reader(f)
-        columnLabels = r.next()
+        columnLabels = next(r)
         columnLabels = [lbl.strip() for lbl in columnLabels]
 
         dtable = get_data_table_from_csv_reader(r)
@@ -1269,7 +1392,7 @@ class DBConnect(Singleton):
             # except for the primary keys
             f = open(p.object_csv_file, 'U')
             r = csv.reader(f)
-            columnLabels = r.next()
+            columnLabels = next(r)
             columnLabels = [lbl.strip() for lbl in columnLabels]
             dtable = get_data_table_from_csv_reader(r)
             colTypes = self.InferColTypesFromData(dtable, len(columnLabels))
@@ -1286,13 +1409,13 @@ class DBConnect(Singleton):
         # POPULATE THE IMAGE TABLE
         f = open(p.image_csv_file, 'U')
         r = csv.reader(f)
-        row = r.next() # skip the headers
-        row = r.next()
+        row = next(r) # skip the headers
+        row = next(r)
         while row:
             self.execute('INSERT INTO '+p.image_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                          silent=True)
             try:
-                row = r.next()
+                row = next(r)
             except StopIteration:
                 break
         f.close()
@@ -1301,13 +1424,13 @@ class DBConnect(Singleton):
         if not p.classification_type == 'image':
             f = open(p.object_csv_file, 'U')
             r = csv.reader(f)
-            row = r.next() # skip the headers
-            row = r.next()
+            row = next(r) # skip the headers
+            row = next(r)
             while row:
                 self.execute('INSERT INTO '+p.object_table+' VALUES ('+','.join(["'%s'"%(i) for i in row])+')',
                              silent=True)
                 try:
-                    row = r.next()
+                    row = next(r)
                 except StopIteration: break
             f.close()
         
@@ -1375,7 +1498,7 @@ class DBConnect(Singleton):
             logging.info('Populating image table with data from %s'%file)
             f = open(os.path.join(csv_dir, file), 'U')
             r = csv.reader(f)
-            row1 = r.next()
+            row1 = next(r)
             command = 'INSERT INTO '+p.image_table+' VALUES ('+','.join(['?' for i in row1])+')'
             self.cursors[connID].execute(command, row1)
             self.cursors[connID].executemany(command, [l for l in r if len(l)>0])
@@ -1407,7 +1530,7 @@ class DBConnect(Singleton):
                 logging.info('Populating object table with data from %s'%file)
                 f = open(csv_dir+os.path.sep+file, 'U')
                 r = csv.reader(f)
-                row1 = r.next()
+                row1 = next(r)
                 if p.check_tables:
                     object_table = p.object_table
                     object_table = object_table.split('_checked')[0]
@@ -1415,19 +1538,21 @@ class DBConnect(Singleton):
                 else:
                     command = 'INSERT INTO '+p.object_table+' VALUES ('+','.join(['?' for i in row1])+')'
                 # guess at a good number of lines, about 250 megabytes, assuming floats)
-                nlines = (250*1024*1024) / (len(row1) * 64)
+                nlines = (250*1024*1024) // (len(row1) * 64)
                 self.cursors[connID].execute(command, row1)
+                lnum = 1
                 while True:
+                    lnum += 1
                     # fetch a certain number of lines efficiently
-                    args = [l for idx, l in zip(range(nlines), r) if len(l) > 0]
+                    args = [l for idx, l in zip(list(range(nlines)), r) if len(l) > 0]
                     if args == []:
                         break
                     self.cursors[connID].executemany(command, args)
                     line_count += len(args)
-
-                    pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
+                    prog = line_count
+                    # pct = min(int(100 * (f.tell() + base_bytes) / total_bytes), 100)
                     if dlg:
-                        c, s = dlg.Update(pct, '%d%% Complete'%(pct))
+                        c, s = dlg.Update(prog, '%d lines loaded'%(prog))
                         if not c:
                             try:
                                 os.remove(p.db_sqlite_file)
@@ -1438,7 +1563,7 @@ class DBConnect(Singleton):
                                               'the next time use use the current '
                                               'database settings.', 'Error')
                             raise Exception('cancelled load')
-                    logging.info("... loaded %d%% of CSV data"%(pct))
+                    logging.info("... loaded %d lines of CSV data"%(prog))
                 f.close()
                 logging.info("Finished loading CSV data")
                 base_bytes += os.path.getsize(os.path.join(csv_dir, file))
@@ -1475,21 +1600,34 @@ class DBConnect(Singleton):
         object_table = p.object_table
         object_table = object_table.split('_checked')[0]
 
-        if p.classification_type == 'image':
-            object_table = object_table.split('_objecttable')[0]
-        print(object_table)
-
         all_cols = [str(x) for x in self.GetColumnNames(object_table)]
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
-            query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            if len(AreaShape_Area) > 0:
+                query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            else:
+                query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s" % (
+                p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols))
         elif DB_TYPE == 'sqlite':
             query = "PRAGMA table_info(%s)"%object_table
             self.execute(query)
             query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
             self.execute(query)
-            query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            if len(AreaShape_Area) > 0:
+                query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+            else:
+                query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols))
         self.execute(query)
+
+        # Check whether we nuked the table.
+        try:
+            query = f"SELECT COUNT(*) FROM {p.object_table}"
+            res = self.execute(query)
+            if res[0][0] == 0:
+                logging.error("Table checking removed all rows, you may have an empty column in your database. "
+                              "Disable check_tables in your properties file if this is expected.")
+        except:
+            logging.error("Unable to validate checked object table")
 
     def CreateObjectImageTable(self):
         # Create object table for image classification
@@ -1507,7 +1645,6 @@ class DBConnect(Singleton):
             self.execute(query)
 
         elif DB_TYPE == 'sqlite':
-            pass
             # Copy image table and add more columns
             query = "PRAGMA table_info(%s)"%p.image_table
             self.execute(query)
@@ -1520,21 +1657,25 @@ class DBConnect(Singleton):
             all_colTypes.remove(list_of_colTypes[pid_index])
             all_cols = [p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc] + all_cols
             list_of_colTypes = [list_of_colTypes[pid_index], list_of_colTypes[pid_index], 'float', 'float'] + all_colTypes
-            query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
+            object_table = p.object_table
+            if object_table.endswith('_checked'):
+                object_table = object_table[:-8]
+            query = 'DROP TABLE IF EXISTS %s'%(object_table)
             self.execute(query)
-            query = 'CREATE TABLE %s (%s)'%(p.object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
+            query = 'CREATE TABLE %s (%s)'%(object_table, ",".join([all_cols[i]+' '+list_of_colTypes[i] for i in range(len(all_cols))]))
             self.execute(query)
-            query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(p.object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
+            query = 'INSERT INTO %s (%s) SELECT %s FROM %s'%(object_table, ",".join(list_of_cols), ",".join(list_of_cols), p.image_table)
             self.execute(query)
 
             #Get info on image width and height (assuming they are fields in the image table) to get image center
             width, height = self.GetImageWidthHeight(list_of_cols)
 
-            query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(p.object_table, p.object_id,
+            query = "UPDATE %s SET %s=1, %s=%s, %s=%s"%(object_table, p.object_id,
                                                               p.cell_x_loc, width/2,
                                                               p.cell_y_loc, height/2)
             self.execute(query)
-        logging.info('%s table added to database'%p.object_table)
+            self.Commit()
+        logging.info('%s table added to database'%object_table)
 
 
     def table_exists(self, name):
@@ -1556,10 +1697,10 @@ class DBConnect(Singleton):
         f = open(filename, 'U')
         r = csv.reader(f)
         self.execute('DROP TABLE IF EXISTS %s'%(tablename))
-        colnames = r.next()
+        colnames = next(r)
         dtable = np.array(get_data_table_from_csv_reader(r))
         typed_table = []
-        for i in xrange(dtable.shape[1]):
+        for i in range(dtable.shape[1]):
             try:
                 col = np.array(dtable[:,i], dtype=str)
                 col = np.array(dtable[:,i], dtype=float)
@@ -1801,7 +1942,7 @@ class Entity(object):
             n = min(n, len(self))
             return random.sample(list, n)
 
-        def next(self):
+        def __next__(self):
             try:
                 r = self.db.GetNextResult()
                 if r:
@@ -1810,6 +1951,7 @@ class Entity(object):
                     raise StopIteration
             except GeneratorExit:
                 print("GeneratorExit")
+                connID = threading.currentThread().getName()
                 self.db.cursors[connID].fetchall()
 
     def __init__(self):
@@ -1865,13 +2007,13 @@ class Entity(object):
     group_by_clause = property(_get_group_by_clause)
     
     def count(self):
-        c = DBConnect.getInstance().execute(self.all_query(columns=["COUNT(*)"]))[0][0]
+        c = DBConnect().execute(self.all_query(columns=["COUNT(*)"]))[0][0]
         c = max(0, c - (self._offset or 0))
         c = max(c, self._limit or 0)
         return c
 
     def all(self):
-        return self.dbiter(self, DBConnect.getInstance())
+        return self.dbiter(self, DBConnect())
 
     def all_query(self, columns=None):
         return "SELECT %s FROM %s %s %s %s %s" % (
@@ -1919,7 +2061,7 @@ class Images(Entity):
     Easy access to images and their objects.
 
     # Get all objects treated with 10 uM nocodazole
-    >>> cpa.dbconnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
+    > cpa.dbconnect.Images().filter(compound_name).where("cast(Image_LoadedText_Platemap as decimal) = 10").objects()
     '''
 
     def __init__(self):
@@ -1927,11 +2069,11 @@ class Images(Entity):
 
     def _get_from_clause(self):
         t = set([col[:col.index('.')] for col in self.columns() if '.' in col])
-        t = t - set(Properties.getInstance().image_table)
-        from_clause = [Properties.getInstance().image_table] + list(t)
+        t = t - set(Properties().image_table)
+        from_clause = [Properties().image_table] + list(t)
         for filter in self.filters:
             from_clause.append("JOIN (%s) AS %s USING (%s)" %
-                               (Properties.getInstance()._filters[filter],
+                               (Properties()._filters[filter],
                                 'filter_SQL_' + filter,
                                 ", ".join(image_key_columns())))
         return " ".join(from_clause)
@@ -1944,15 +2086,15 @@ class Images(Entity):
         return Objects(images=self)
 
     def columns(self):
-        return self._columns or DBConnect.getInstance().GetColumnNames(Properties.getInstance().image_table)
+        return self._columns or DBConnect().GetColumnNames(Properties().image_table)
 
     
 class Objects(Entity):
     '''
     Easy access to objects.
 
-    >>> feature = "Cells_NumberNeighbors_SecondClosestDistance"
-    >>> y = [row[0] for row in Objects().ordering([feature]).project([feature]).all()]
+    > feature = "Cells_NumberNeighbors_SecondClosestDistance"
+    > y = [row[0] for row in Objects().ordering([feature]).project([feature]).all()]
     '''
 
     def __init__(self, images=None):
@@ -1965,14 +2107,14 @@ class Objects(Entity):
             self.filters = images.filters
 
     def _get_from_clause(self):
-        from_clause = [Properties.getInstance().object_table]
+        from_clause = [Properties().object_table]
         if self._images is not None:
             from_clause.append("JOIN %s USING (%s)"%
-                               (Properties.getInstance().image_table,
+                               (Properties().image_table,
                                 ", ".join(image_key_columns())))
         for filter in self.filters:
             from_clause.append("JOIN (%s) AS %s USING (%s)" %
-                               (Properties.getInstance()._filters[filter],
+                               (Properties()._filters[filter],
                                 'filter_SQL_' + filter,
                                 ", ".join(image_key_columns())))
         return " ".join(from_clause)
@@ -1980,12 +2122,12 @@ class Objects(Entity):
 
     def columns(self):
         return self._columns or list(object_key_columns()) + \
-            DBConnect.getInstance().GetColnamesForClassifier()
+            DBConnect().GetColnamesForClassifier()
 
     def standard_deviations(self):
         """Returns a list of the standard deviations of the non-key columns.
         Offsets and limits are ignored here, not sure if they should be."""
-        db = DBConnect.getInstance()
+        db = DBConnect()
         return db.execute("SELECT %s FROM %s %s"%(
                 ",".join(["STD(%s)" % c 
                           for c in db.GetColnamesForClassifier()]),

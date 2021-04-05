@@ -1,8 +1,8 @@
-from __future__ import print_function
+
 import re
-import dbconnect
+from . import dbconnect
 import logging
-import multiclasssql_legacy as multiclasssql # Legacy code for scoring cells
+from . import multiclasssql_legacy as multiclasssql # Legacy code for scoring cells
 import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
@@ -16,6 +16,7 @@ class FastGentleBoosting(object):
         self.model = None
         self.classBins = []
         self.classifier = classifier
+        self.scaler = None
         self.features = []
 
     # Set features
@@ -40,7 +41,7 @@ class FastGentleBoosting(object):
             return
 
         
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
 
         t1 = time()
@@ -88,9 +89,9 @@ class FastGentleBoosting(object):
             dlg.Destroy()
             figure = plt.figure()
             plt.clf()
-            plt.hold(True)
-            plt.plot(range(1, nRules + 1), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
-            plt.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
+            plt.plot()
+            plt.plot(list(range(1, nRules + 1)), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
+            plt.plot(list(range(1, nRules + 1)), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
             chance_level = 1.0 / len(self.classifier.trainingSet.labels)
             plt.plot([1, nRules + 1], [chance_level, chance_level], 'k--', label='accuracy of random classifier')
             plt.legend(loc='lower right')
@@ -124,10 +125,12 @@ class FastGentleBoosting(object):
     def IsTrained(self):
         return self.model is not None
 
+    def toggle_scaler(self, status):
+        logging.info("Scaling is not supported by FastGentleBoosting, will have no effect")
+
     def LoadModel(self, model_filename):
         
-        # For loading scikit learn library
-        from sklearn.externals import joblib
+        import joblib
         try:
             self.model, self.bin_labels, self.name = joblib.load(model_filename)
         except:
@@ -148,8 +151,8 @@ class FastGentleBoosting(object):
                 raise ValueError
             colname, thresh, a, b = m.groups()
             thresh = float(thresh)
-            a = map(float, a.split(','))
-            b = map(float, b.split(','))
+            a = list(map(float, a.split(',')))
+            b = list(map(float, b.split(',')))
             if len(a) != len(b):
                 raise ValueError('Alpha and beta must have the same cardinality in "IF (column > threshold, alpha, beta)"')
             self.model.append((colname, thresh, a, b, None))
@@ -165,7 +168,7 @@ class FastGentleBoosting(object):
     def SaveModel(self, model_filename, bin_labels):
 
         # For loading scikit learn library
-        from sklearn.externals import joblib
+        import joblib
         joblib.dump((self.model, bin_labels, self.name), model_filename, compress=1)
 
     def ShowModel(self):
@@ -337,10 +340,10 @@ class FastGentleBoosting(object):
         self.classBins = classBins
 
     def Usage(self, name):
-        print("usage %s:" % (name))
-        print("%s num_learners              - read from stdin, write to stdout" % (name))
-        print("%s num_learners file         - read from file, write to stdout" % (name))
-        print("%s num_learners file1 file2  - read from file1, write to file2" % (name))
+        print(("usage %s:" % (name)))
+        print(("%s num_learners              - read from stdin, write to stdout" % (name)))
+        print(("%s num_learners file         - read from file, write to stdout" % (name)))
+        print(("%s num_learners file1 file2  - read from file1, write to file2" % (name)))
         print("")
         print("Input files should be tab delimited.")
         print("Example:")
@@ -356,7 +359,7 @@ class FastGentleBoosting(object):
     def XValidate(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback, confusion=False):
         # if everything's in the same group, ignore the labels
         if all([g == group_labels[0] for g in group_labels]):
-            group_labels = range(len(group_labels))
+            group_labels = list(range(len(group_labels)))
 
         # randomize the order of labels
         unique_labels = list(set(group_labels))
@@ -409,7 +412,7 @@ class FastGentleBoosting(object):
     def XValidatePredict(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback):
         # if everything's in the same group, ignore the labels
         if all([g == group_labels[0] for g in group_labels]):
-            group_labels = range(len(group_labels))
+            group_labels = list(range(len(group_labels)))
 
         # randomize the order of labels
         unique_labels = list(set(group_labels))
@@ -466,6 +469,7 @@ class FastGentleBoosting(object):
             norm_conf.append(tmp_arr)
 
         fig = plt.figure()
+        fig.canvas.set_window_title(f"{fig.canvas.get_window_title()} - {self.name}")
         plt.clf()
         ax = fig.add_subplot(111)
         ax.set_aspect(1)
@@ -475,8 +479,8 @@ class FastGentleBoosting(object):
         width = len(conf_arr)
         height = len(conf_arr[0])
 
-        for x in xrange(width):
-            for y in xrange(height):
+        for x in range(width):
+            for y in range(height):
                 if conf_arr[x][y] != 0:
                     ax.annotate("%.2f" % conf_arr[x][y], xy=(y, x), 
                                 horizontalalignment='center',
@@ -506,7 +510,7 @@ class FastGentleBoosting(object):
             return
 
         
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
 
         #t1 = time()
@@ -560,7 +564,7 @@ if __name__ == '__main__':
 
     import csv
     reader = csv.reader(fin, delimiter='	')
-    header = reader.next()
+    header = next(reader)
     label_to_labelidx = {}
     curlabel = 1
 
@@ -568,7 +572,7 @@ if __name__ == '__main__':
         if strlabel in label_to_labelidx:
             return label_to_labelidx[strlabel]
         global curlabel
-        print("LABEL: ", curlabel, strlabel)
+        print(("LABEL: ", curlabel, strlabel))
         label_to_labelidx[strlabel] = curlabel
         curlabel += 1
         return label_to_labelidx[strlabel]
@@ -587,14 +591,14 @@ if __name__ == '__main__':
     # convert labels to a matrix with +1/-1 values only (+1 in the column matching the label, 1-indexed)
     num_classes = max(labels)
     label_matrix = -np.ones((len(labels), num_classes), np.int32)
-    for i, j in zip(range(len(labels)), np.array(labels)-1):
+    for i, j in zip(list(range(len(labels))), np.array(labels)-1):
         label_matrix[i, j] = 1
 
     wl = fgb.Train(colnames, num_learners, label_matrix, values, fout)
     for w in wl:
         print(w)
-    print(label_matrix.shape, "groups")
-    print(fgb.xvalidate(colnames, num_learners, label_matrix, values, 20, range(1, label_matrix.shape[0]+1), None))
+    print((label_matrix.shape, "groups"))
+    print((fgb.xvalidate(colnames, num_learners, label_matrix, values, 20, list(range(1, label_matrix.shape[0]+1)), None)))
 
 #def train_classifier(labels, values, iterations):
 #    # make sure these are arrays (not matrices)

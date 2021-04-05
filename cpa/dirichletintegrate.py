@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 # CellProfiler is distributed under the GNU General Public License,
 # but this file is licensed under the more permissive BSD license.
 # See the accompanying file LICENSE for details.
@@ -7,7 +7,7 @@ from numpy import *
 from scipy.integrate import quadrature, romberg, fixed_quad
 from scipy.special import gammaln, betaln, digamma, polygamma, betainc, gamma
 import pdb
-from hypergeom import hyper3F2regularizedZ1, hyper3F2Z1, hyper3F2aZ1
+from .hypergeom import hyper3F2regularizedZ1, hyper3F2Z1, hyper3F2aZ1
 
 
 def dirichlet_integrate(alpha):
@@ -20,7 +20,7 @@ def dirichlet_integrate(alpha):
             vals[1] = x
             vals[0] = 1.0 - sum(vals[1:])
             # compute Dirichlet value
-            print(vals.T, prod(vals ** (alpha - 1)) , normalizer, alpha)
+            print((vals.T, prod(vals ** (alpha - 1)) , normalizer, alpha))
             return prod(vals.T ** (alpha - 1)) / normalizer
         else:
             vals[idx] = x
@@ -32,7 +32,7 @@ def dirichlet_integrate(alpha):
                 return romberg(f_recur, 0, upper - x, args=(idx - 1, upper - x, vals), vec_func=False)
 
     split = alpha[-1] / sum(alpha)
-    print(alpha / sum(alpha))
+    print((alpha / sum(alpha)))
     return romberg(f_recur, 0, split, args=(len(alpha) - 1, 1.0, zeros((len(alpha), 1), float64)), vec_func=False) + \
         romberg(f_recur, split, 1, args=(len(alpha) - 1, 1.0, zeros((len(alpha), 1), float64)), vec_func=False) 
 
@@ -156,9 +156,9 @@ def logit(p):
      return log2(p) - log2(1-p)
 
 if __name__ == '__main__':
-    from polyafit import fit_to_data_infile
+    from .polyafit import fit_to_data_infile
     alpha, converged, wellnums, wellcounts = fit_to_data_infile('PBcounts.txt')
-    print("Fit alpha:", alpha, "\tconverged:", converged)
+    print(("Fit alpha:", alpha, "\tconverged:", converged))
     for idx, wellnum in enumerate(wellnums):
-        print(wellnum, "\t", "\t".join([str(logit(v)) for v in score(alpha, wellcounts[idx])]), "\t", "\t".join([str(v) for v in wellcounts[idx]]))
+        print((wellnum, "\t", "\t".join([str(logit(v)) for v in score(alpha, wellcounts[idx])]), "\t", "\t".join([str(v) for v in wellcounts[idx]])))
 

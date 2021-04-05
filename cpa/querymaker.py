@@ -1,10 +1,10 @@
-from __future__ import print_function
+
 import logging
 import wx
 import sys
-from properties import Properties
-import tableviewer
-import dbconnect
+from .properties import Properties
+from . import tableviewer
+from . import dbconnect
 import numpy as np
 
 # TODO: Wrap queries in "SELECT * FROM (<query>) LIMIT 1000, offset"
@@ -40,11 +40,11 @@ class QueryMaker(wx.Frame):
         
     def on_execute(self, evt=None):
         '''Run the query and show the results in a TableViewer'''
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         q = self.query_textctrl.Value
         try:
             res = db.execute(q)
-            if res is None:
+            if res is None or len(res) == 0:
                 logging.info('Query successful. No Data to return.')
                 return
             res = np.array(db.execute(q))
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-    p = Properties.getInstance()
+    p = Properties()
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
         propsFile = sys.argv[1]

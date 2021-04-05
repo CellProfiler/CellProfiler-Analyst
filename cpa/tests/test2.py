@@ -25,7 +25,7 @@ def get_where_clause_for_images(keys, is_sorted=False):
             keys.sort()
         groups = []
         in_run = False
-        for i in xrange(len(keys)):
+        for i in range(len(keys)):
             if i == len(keys)-1:
                 if in_run:
                     groups[-1] += [keys[i]]

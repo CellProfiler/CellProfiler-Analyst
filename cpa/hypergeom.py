@@ -62,7 +62,7 @@ def hyper3F2Z1(a1, a2, a3, b1, b2, tol=1e-15):
     
     terms = []
     while True:
-        termprod = a1b1terms.next() * a3b2terms.next() * a2kterms.next()
+        termprod = next(a1b1terms) * next(a3b2terms) * next(a2kterms)
         terms.append(termprod)
         if abs(termprod[-1]) < tol:
             break

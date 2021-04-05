@@ -12,7 +12,8 @@ from .profiles import Profiles
 from .parallel import ParallelProcessor, Uniprocessing
 import string
 
-def _transform_cell_feats((cache_dir, images, normalization_name, output_filename, key, header)):
+def _transform_cell_feats(xxx_todo_changeme):
+    (cache_dir, images, normalization_name, output_filename, key, header) = xxx_todo_changeme
     try:
         import numpy as np
         from .cache import Cache
@@ -62,7 +63,7 @@ def cell_feats(cache_dir, group_name, filter=None, parallel=Uniprocessing(),
     variables = normalization(cache).colnames
 
     header = tuple(colnames_group) + tuple(["cell_id"]) + tuple(variables)
-    keys = group.keys()
+    keys = list(group.keys())
 
     # #HACK!
     # import random

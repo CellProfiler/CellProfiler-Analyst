@@ -1,34 +1,54 @@
-import wx
-import numpy as np
-import urllib2
-import urllib
-import urlparse
+import urllib.request, urllib.error, urllib.parse
+import urllib.request, urllib.parse, urllib.error
+import urllib.parse
+import imageio
 import os.path
 import logging
 import bioformats
-from properties import Properties
-from errors import ClearException
+import javabridge
+from .properties import Properties
+from .errors import ClearException
 
-p = Properties.getInstance()
+p = Properties()
+IMAGEIO_FORMATS = (".tif", ".tiff", ".bmp", ".png", ".jpeg")
 
-class ThrowingURLopener(urllib.URLopener):
+class ThrowingURLopener(urllib.request.URLopener):
     def http_error_default(*args, **kwargs):
-        return urllib.URLopener.http_error_default(*args, **kwargs)
+        return urllib.request.URLopener.http_error_default(*args, **kwargs)
 
 class ImageReader(object):
 
-    def ReadImages(self, fds):
+    def ReadImages(self, fds, log_io=True):
         '''fds -- list of file descriptors (filenames or urls)
         returns a list of channels as numpy float32 arrays
         '''
-        return self.read_images_via_bioformats(fds)
+        channels = []
+        for i, filename_or_url in enumerate(fds):
+            image = self._read_image(filename_or_url, log_io=log_io)
+            if image is None:
+                return
+            channels += self._extract_channels(filename_or_url, image,
+                                               p.image_names[i],
+                                               int(p.channels_per_image[i]))
 
-    def _read_image_via_bioformats(self, filename_or_url):
+        # Check if any images need to be rescaled, and if they are the same
+        # aspect ratio. If so, do the scaling.
+        from .imagetools import check_image_shape_compatibility
+        check_image_shape_compatibility(channels)
+        if p.image_rescale:
+            from .imagetools import rescale
+            for i in range(len(channels)):
+                if channels[i].shape != p.image_rescale:
+                    channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
+
+        return channels
+
+    def _read_image(self, filename_or_url, log_io=True):
         # The opener's destructor deletes the temprary files, so the
         # opener must not be GC'ed until the image has been loaded.
         opener = ThrowingURLopener()
         if p.image_url_prepend:
-            parsed = urlparse.urlparse(p.image_url_prepend + filename_or_url)
+            parsed = urllib.parse.urlparse(p.image_url_prepend + filename_or_url)
             if parsed.scheme:
                 try:
                     filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
@@ -40,8 +60,28 @@ class ImageReader(object):
                             '%d %s' % (status_code, message))
                     else:
                         raise
-        logging.info('Loading image from "%s"' % filename_or_url)
-        return bioformats.load_image(filename_or_url)
+        if not p.force_bioformats and os.path.splitext(filename_or_url)[-1].lower() in IMAGEIO_FORMATS:
+            if log_io:
+                logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
+            try:
+                return imageio.imread(filename_or_url)
+            except FileNotFoundError:
+                logging.error(f"File not found: {filename_or_url}")
+                return
+            except:
+                logging.info('Loading with ImageIO failed, falling back to BioFormats')
+        if javabridge.get_env() is None:
+            logging.debug("Starting javabridge")
+            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+            javabridge.attach()
+        if log_io:
+            logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
+        try:
+            return bioformats.load_image(filename_or_url, rescale=False)
+        except FileNotFoundError:
+            logging.error(f"File not found: {filename_or_url}")
+        except:
+            logging.error('Loading with BioFormats failed, file may be corrupted or unavailable')
 
     def _extract_channels(self, filename_or_url, image, image_name, channels_per_image):
         if image.ndim == 2 and channels_per_image != 1:
@@ -87,47 +127,20 @@ class ImageReader(object):
                 return [image[:, :, j]
                         for j in range(image.shape[2])]
 
-    def read_images_via_bioformats(self, filenames_or_urls):
-        '''Uses Bioformats to load images.
-
-        filenames_or_urls -- list
-        returns a list of channels as numpy float32 arrays
-
-        '''
-        channels = []
-        for i, filename_or_url in enumerate(filenames_or_urls):
-            image = self._read_image_via_bioformats(filename_or_url)
-
-            channels += self._extract_channels(filename_or_url, image,
-                                               p.image_names[i],
-                                               int(p.channels_per_image[i]))
-
-        # Check if any images need to be rescaled, and if they are the same
-        # aspect ratio. If so, do the scaling.
-        from imagetools import check_image_shape_compatibility
-        check_image_shape_compatibility(channels)
-        if p.image_rescale:
-            from imagetools import rescale
-            for i in range(len(channels)):
-                if channels[i].shape != p.image_rescale:
-                    channels[i] = rescale(channels[i], (p.image_rescale[1], p.image_rescale[0]))
-
-        return channels
-
 
 ####################### FOR TESTING #########################
 if __name__ == "__main__":
     import wx
-    from datamodel import DataModel
-    from dbconnect import DBConnect
-    from imageviewer import ImageViewer
+    from .datamodel import DataModel
+    from .dbconnect import DBConnect
+    from .imageviewer import ImageViewer
     import sys
 
     app = wx.PySimpleApp()
 
-    p = Properties.getInstance()
-    dm = DataModel.getInstance()
-    db = DBConnect.getInstance()
+    p = Properties()
+    dm = DataModel()
+    db = DBConnect()
     ir = ImageReader()
 
     # Load a properties file if passed in args

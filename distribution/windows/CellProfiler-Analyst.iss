@@ -2,9 +2,8 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "CellProfiler-Analyst"
-#define MyAppVersion "2.2"
-#define MyAppPublisher "Imaging Platform Broad Institute"
-#define MyAppURL "http:\\www.cellprofiler.org"
+#define MyAppPublisher "Broad Institute"
+#define MyAppURL "http:\\cellprofileranalyst.org"
 #define MyAppExeName "CellProfiler-Analyst.exe"
 
 [Setup]
@@ -19,10 +18,10 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={pf}\{#MyAppName}
+DefaultDirName={pf64}\{#MyAppName}
 DefaultGroupName={#MyAppName}
-LicenseFile=.\LICENSE
-OutputBaseFilename=setup
+LicenseFile=..\..\LICENSE
+OutputBaseFilename=CellProfiler-Analyst-Windows-{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 
@@ -31,17 +30,16 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 0,6.1
 
 [Files]
-Source: ".\dist\CellProfiler-Analyst.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: ".\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\CellProfiler-Analyst\CellProfiler-Analyst.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\CellProfiler-Analyst\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\hostedtoolcache\windows\jdk\14.0.1\x64\*"; DestDir: "{app}\java"; Flags: recursesubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{commonprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: quicklaunchicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

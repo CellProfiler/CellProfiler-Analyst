@@ -1,35 +1,30 @@
-from __future__ import print_function
+
 # TODO: add hooks to change point size, alpha, numsides etc.
-from cpatool import CPATool
-import tableviewer
-from dbconnect import DBConnect, UniqueImageClause, UniqueObjectClause, GetWhereClauseForImages, GetWhereClauseForObjects, image_key_columns, object_key_columns
-import sqltools as sql
-import multiclasssql
-from properties import Properties
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import guiutils as ui
-from gating import GatingHelper
-import imagetools
-import icons
+from .cpatool import CPATool
+from . import tableviewer
+from .dbconnect import DBConnect, image_key_columns, object_key_columns
+from . import sqltools as sql
+from .properties import Properties
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import guiutils as ui
+from .gating import GatingHelper
+from . import imagetools
+from cpa.icons import get_icon
 import logging
 import numpy as np
 from bisect import bisect
-import os
 import sys
-import re
 from time import time
 import wx
-import wx.combo
 from matplotlib.widgets import Lasso
-from matplotlib import __version__ as mpl_version     
 from matplotlib.colors import colorConverter
 from matplotlib.pyplot import cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
@@ -39,7 +34,8 @@ SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
 class Datum:
-    def __init__(self, (x, y), color):
+    def __init__(self, xxx_todo_changeme, color):
+        (x, y) = xxx_todo_changeme
         self.x = x
         self.y = y
         self.color = color
@@ -119,47 +115,47 @@ class ScatterControlPanel(wx.Panel):
                 
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_table_choice, 1, wx.EXPAND) 
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_choice, 2, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))
+        sizer.Add(-1, 2, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_table_choice, 1, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_choice, 2, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))
+        sizer.Add(-1, 2, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.filter_choice, 1, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.gate_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))
+        sizer.Add(-1, 2, 0)
         
         sizer.Add(self.update_chart_btn)
-        
-        wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
-        wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
+
+        self.x_table_choice.Bind(wx.EVT_COMBOBOX, self.on_x_table_selected)
+        self.y_table_choice.Bind(wx.EVT_COMBOBOX, self.on_y_table_selected)
         self.gate_choice.addobserver(self.on_gate_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
+        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
 
         self.SetSizer(sizer)
         self.Show(1)
@@ -256,18 +252,18 @@ class ScatterControlPanel(wx.Panel):
         kps = np.array(keys_and_points, dtype='object')
         # Strip out keys
         if self._plotting_per_object_data():
-            key_indices = list(xrange(len(object_key_columns())))
+            key_indices = list(range(len(object_key_columns())))
         else:
-            key_indices = list(xrange(len(image_key_columns())))
+            key_indices = list(range(len(image_key_columns())))
 
         keys = kps[:,key_indices].astype(int) 
         # Strip out x coords
-        if col_types[0] in [float, int, long]:
+        if col_types[0] in (float, int):
             xpoints = kps[:,-2].astype('float32')
         else:
             xpoints = kps[:,-2]
         # Strip out y coords
-        if col_types[1] in [float, int, long]:
+        if col_types[1] in (float, int):
             ypoints = kps[:,-1].astype('float32')
         else:
             ypoints = kps[:,-1]
@@ -432,7 +428,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         return not self.is_per_object_data()
         
     def selection_is_empty(self):
-        return self.selection == {} or all([len(s)==0 for s in self.selection.values()])
+        return self.selection == {} or all([len(s)==0 for s in list(self.selection.values())])
         
     def lasso_callback(self, verts):
         # Note: If the mouse is released outside of the canvas, (None,None) is
@@ -443,12 +439,8 @@ class ScatterPanel(FigureCanvasWxAgg):
         for c, collection in enumerate(self.subplot.collections):
             # Build the selection
             if len(self.xys[c]) > 0:
-                if mpl_version.split('.')[1] >= '2':
-                    from matplotlib.path import Path
-                    new_sel = np.nonzero(Path(verts).contains_points(self.xys[c]))[0]
-                else:
-                    from matplotlib.nxutils import points_inside_poly                
-                    new_sel = np.nonzero(points_inside_poly(self.xys[c], verts))[0]
+                from matplotlib.path import Path
+                new_sel = np.nonzero(Path(verts).contains_points(self.xys[c]))[0]
             else:
                 new_sel = []
             if self.selection_key == None:
@@ -465,7 +457,7 @@ class ScatterPanel(FigureCanvasWxAgg):
                     edgecolors[i] = SELECTED_OUTLINE_COLOR
                 else:
                     edgecolors[i] = UNSELECTED_OUTLINE_COLOR
-        logging.info('Selected %s points.'%(np.sum([len(sel) for sel in self.selection.values()])))
+        logging.info('Selected %s points.'%(np.sum([len(sel) for sel in list(self.selection.values())])))
         self.canvas.draw_idle()
         
     def on_press(self, evt):
@@ -494,12 +486,12 @@ class ScatterPanel(FigureCanvasWxAgg):
     def show_objects_from_selection(self, evt=None):
         '''Callback for "Show objects in selection" popup item.'''
         show_keys = []
-        for i, sel in self.selection.items():
+        for i, sel in list(self.selection.items()):
             keys = self.key_lists[i][sel]
             show_keys += list(set([tuple(k) for k in keys]))
         if len(show_keys[0]) == len(image_key_columns()):
-            import datamodel
-            dm = datamodel.DataModel.getInstance()
+            from . import datamodel
+            dm = datamodel.DataModel()
             obkeys = []
             for key in show_keys:
                 obkeys += dm.GetObjectsFromImage(key)
@@ -518,7 +510,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             except ValueError:
                 wx.MessageDialog('You have entered an invalid number', 'Error').ShowModal()
                 return
-        import sortbin
+        from . import sortbin
         f = sortbin.CellMontageFrame(None)
         f.Show()
         f.add_objects(show_keys)
@@ -538,7 +530,7 @@ class ScatterPanel(FigureCanvasWxAgg):
     def show_images_from_selection(self, evt=None):
         '''Callback for "Show images in selection" popup item.'''
         show_keys = set()
-        for i, sel in self.selection.items():
+        for i, sel in list(self.selection.items()):
             keys = self.key_lists[i][sel]
             show_keys.update([tuple(k) for k in keys])
         if len(show_keys)>10:
@@ -559,7 +551,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             
     def show_selection_in_table(self, evt=None):
         '''Callback for "Show selection in a table" popup item.'''
-        for i, sel in self.selection.items():
+        for i, sel in list(self.selection.items()):
             keys = self.key_lists[i][sel].T.astype('object')
             if len(keys) > 0:
                 xpoints = self.x_points[i][sel]
@@ -572,7 +564,7 @@ class ScatterPanel(FigureCanvasWxAgg):
                 elif self.is_per_object_data():
                     column_labels = list(object_key_columns())
                     group = 'Object'
-                key_col_indices = list(xrange(len(column_labels)))
+                key_col_indices = list(range(len(column_labels)))
                 column_labels += [self.get_current_x_measurement_name(), 
                                   self.get_current_y_measurement_name()]
                 grid = tableviewer.TableViewer(self, title='Selection from collection %d in scatter'%(i))
@@ -644,7 +636,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         sel_xs = []
         sel_ys = []
         for c, col in enumerate(self.subplot.collections):
-            indices = xrange(len(col.get_offsets()))
+            indices = list(range(len(col.get_offsets())))
             sel_indices = self.selection[c]
             unsel_indices = list(set(indices).difference(sel_indices))
             if len(sel_indices) > 0:
@@ -672,7 +664,8 @@ class ScatterPanel(FigureCanvasWxAgg):
         self.redraw()
         self.figure.canvas.draw_idle()
     
-    def show_popup_menu(self, (x,y), data):
+    def show_popup_menu(self, xxx_todo_changeme1, data):
+        (x,y) = xxx_todo_changeme1
         self.popup_menu_filters = {}
         popup = wx.Menu()
 
@@ -682,7 +675,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         if selected_gate:
             selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
-                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  lambda e:ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
@@ -722,21 +715,17 @@ class ScatterPanel(FigureCanvasWxAgg):
             item = submenu.Append(id, f)
             self.popup_menu_filters[id] = f
             self.Bind(wx.EVT_MENU, self.on_new_collection_from_filter, item)
-        popup.AppendMenu(-1, 'Create collection from filter', submenu)
+        popup.Append(-1, 'Create collection from filter', submenu)
         
         self.PopupMenu(popup, (x,y))
             
     def get_key_lists(self):
         return self.key_lists
-                                
-    def set_colors(self, colors):
-        assert len(self.point_lists)==len(colors), 'points and colors must be of equal length'
-        self.colors = colors
 
     def get_colors(self):
         if self.colors:
             colors = self.colors
-        elif max(map(len, self.x_points))==0:
+        elif max(list(map(len, self.x_points)))==0:
             colors = []
         else:
             # Choose colors from jet colormap starting with light blue (0.28)
@@ -846,11 +835,11 @@ class ScatterPanel(FigureCanvasWxAgg):
         
         # Set ticks and ticklabels if data is categorical
         if xvalmap:
-            self.subplot.set_xticks(range(len(x_categories)))
+            self.subplot.set_xticks(list(range(len(x_categories))))
             self.subplot.set_xticklabels(sorted(x_categories))
             self.figure.autofmt_xdate() # rotates and shifts xtick-labels so they look nice
         if yvalmap:
-            self.subplot.set_yticks(range(len(y_categories)))
+            self.subplot.set_yticks(list(range(len(y_categories))))
             self.subplot.set_yticklabels(sorted(y_categories))
         
         if len(self.x_points) > 1:
@@ -864,9 +853,9 @@ class ScatterPanel(FigureCanvasWxAgg):
             
         # Set axis scales
         if self.x_scale == LOG_SCALE:
-            self.subplot.set_xscale('log', basex=2.1)
+            self.subplot.set_xscale('log', base=2.1)
         if self.y_scale == LOG_SCALE:
-            self.subplot.set_yscale('log', basey=2.1)
+            self.subplot.set_yscale('log', base=2.1)
             
         # Set axis bounds. Clip non-positive values if in log space
         # Must be done after scatter.
@@ -909,7 +898,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         # Set log axes and print warning if any values will be masked out
         ignored = 0
         if self.x_scale == LOG_SCALE:
-            self.subplot.set_xscale('log', basex=2.1, nonposx='mask')
+            self.subplot.set_xscale('log', base=2.1, nonpositive='mask')
             ignored = sum([len(self.x_points[i][xs <= 0]) 
                            for i, xs in enumerate(self.x_points) if len(xs) > 0])
         if ignored > 0:
@@ -920,7 +909,7 @@ class ScatterPanel(FigureCanvasWxAgg):
         # Set log axes and print warning if any values will be masked out
         ignored = 0
         if self.y_scale == LOG_SCALE:
-            self.subplot.set_yscale('log', basey=2.1, nonposy='mask')
+            self.subplot.set_yscale('log', base=2.1, nonpositive='mask')
             ignored += sum([len(self.y_points[i][ys <= 0]) 
                             for i, ys in enumerate(self.y_points) if len(ys) > 0])
         if ignored > 0:
@@ -958,6 +947,7 @@ class Scatter(wx.Frame, CPATool):
         
         self.SetToolBar(figpanel.get_toolbar())            
         self.SetSizer(sizer)
+        self.fig = figpanel
         #
         # Forward save and load settings functionality to the configpanel
         #
@@ -969,6 +959,7 @@ class Scatter(wx.Frame, CPATool):
         from matplotlib.backends.backend_wx import _load_bitmap
         toolbar.Hide()
         tb = self.CreateToolBar((wx.TB_HORIZONTAL|wx.TB_TEXT))
+        toolbar.tb = tb
 
         _NTB2_HOME = wx.NewId()
         _NTB2_BACK = wx.NewId()
@@ -977,27 +968,60 @@ class Scatter(wx.Frame, CPATool):
         _NTB2_ZOOM = wx.NewId()
         _NTB2_SAVE = wx.NewId()
         _NTB2_SUBPLOT = wx.NewId()
-        tb.AddSimpleTool(_NTB2_HOME, _load_bitmap('home.png'), 'Home', 'Reset original view')
-        tb.AddSimpleTool(_NTB2_BACK, _load_bitmap('back.png'), 'Back', 'Back navigation view')
-        tb.AddSimpleTool(_NTB2_FORWARD, _load_bitmap('forward.png'), 'Forward', 'Forward navigation view')
+        tb.AddTool(_NTB2_HOME, "", _load_bitmap('home.png'), 'Home')
+        tb.AddTool(_NTB2_BACK, "", _load_bitmap('back.png'), 'Back')
+        tb.AddTool(_NTB2_FORWARD, "", _load_bitmap('forward.png'), 'Forward')
 
-        tb.AddCheckTool(_NTB2_PAN, _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
-        tb.AddCheckTool(_NTB2_ZOOM, _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+        tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
 
         tb.AddSeparator()
-        tb.AddSimpleTool(_NTB2_SUBPLOT, _load_bitmap('subplots.png'), 'Configure subplots', 'Configure subplot parameters')
-        tb.AddSimpleTool(_NTB2_SAVE, _load_bitmap('filesave.png'), 'Save', 'Save plot contents to file')
+        tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
+        tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
+
+        def on_toggle_pan(evt):
+            tb.ToggleTool(_NTB2_ZOOM, False)
+            evt.Skip()
+
+        def on_toggle_zoom(evt):
+            tb.ToggleTool(_NTB2_PAN, False)
+            evt.Skip()
 
         self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
         self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
         self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
         self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
         self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
-        self.Bind(wx.EVT_TOOL, toolbar.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, self.configure_subplots, id=_NTB2_SUBPLOT)
         self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+        self.Bind(wx.EVT_TOOL, on_toggle_zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, on_toggle_pan, id=_NTB2_PAN)
 
-        tb.Realize()  
+        tb.Realize()
         # Hack end
+
+    def configure_subplots(self, *args):
+        # Fixed MPL subplot window generator
+        from matplotlib.backends.backend_wx import _set_frame_icon, FigureManagerWx
+        from matplotlib.widgets import SubplotTool
+
+        frame = wx.Frame(None, -1, "Configure subplots")
+        _set_frame_icon(frame)
+
+        toolfig = Figure((6, 3))
+        canvas = FigureCanvasWxAgg(frame, -1, toolfig)
+
+        # Create a figure manager to manage things
+        FigureManagerWx(canvas, 1, frame)
+
+        # Now put all into a sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # This way of adding to sizer allows resizing
+        sizer.Add(canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
+        frame.SetSizer(sizer)
+        frame.Fit()
+        SubplotTool(self.fig.canvas.figure, toolfig)
+        frame.Show()
 
 
 class CustomNavToolbar(NavigationToolbar2WxAgg):
@@ -1007,7 +1031,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
     (2) disable the pan/zoom tool modes in the associated subplot(s).
     '''
     def __init__(self, canvas):
-        super(NavigationToolbar2WxAgg, self).__init__(canvas)
+        super(CustomNavToolbar, self).__init__(canvas)
         self.PAN = self.wx_ids['Pan']
         self.ZOOM =  self.wx_ids['Zoom']
         self.pan_tool  = self.FindById(self.PAN)
@@ -1018,8 +1042,8 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         self.user_tools = {}   # user_tools['tool_mode'] : wx.ToolBarToolBase
 
         self.InsertSeparator(5)
-        self.add_user_tool('lasso', 6, icons.lasso_tool.ConvertToBitmap(), True, 'Lasso')
-        #self.add_user_tool('gate', 7, icons.gate_tool.ConvertToBitmap(), True, 'Gate')
+        self.add_user_tool('lasso', 6, get_icon("lasso_tool").ConvertToBitmap(), True, 'Lasso')
+        #self.add_user_tool('gate', 7, get_icon("gate_tool").ConvertToBitmap(), True, 'Gate')
         
     def add_user_tool(self, mode, pos, bmp, istoggle=True, shortHelp=''):
         '''Adds a new user-defined tool to the toolbar.
@@ -1032,14 +1056,13 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         shortHelp -- the tooltip shown to the user for the new tool
         '''
         tool_id = wx.NewId()
-        self.user_tools[mode] = self.InsertSimpleTool(pos, tool_id, bmp,
-                            isToggle=istoggle, shortHelpString=shortHelp)
+        self.user_tools[mode] = self.InsertTool(pos, tool_id, "", bmp, kind=wx.ITEM_CHECK if istoggle else wx.ITEM_NORMAL, shortHelp=shortHelp)
         self.Bind(wx.EVT_TOOL, self.on_toggle_user_tool, self.user_tools[mode])
 
     def get_mode(self):
         '''Use this rather than navtoolbar.mode
         '''
-        for mode, tool in self.user_tools.items():
+        for mode, tool in list(self.user_tools.items()):
             if tool.IsToggled():
                 return mode
         return self.mode
@@ -1077,7 +1100,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         if evt.Checked():
             self.untoggle_mpl_tools()
             #untoggle other user tools
-            for tool in self.user_tools.values():
+            for tool in list(self.user_tools.values()):
                 if tool.Id != evt.Id:
                     self.ToggleTool(tool.Id, False)
             
@@ -1086,18 +1109,16 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         We need to manually untoggle user-defined tools.
         '''
         if evt.Checked():
-            for tool in self.user_tools.values():
+            for tool in list(self.user_tools.values()):
                 self.ToggleTool(tool.Id, False)
         # Make sure the regular pan/zoom handlers get the event
         evt.Skip()
         
     def reset_history(self):
-        '''More hacky junk to clear/reset the toolbar history.
+        '''Clear/reset the toolbar history.
         '''
-        self._views.clear()
-        self._positions.clear()
+        self._nav_stack.clear()
         self.push_current()
-    
     
 if __name__ == "__main__":
     app = wx.PySimpleApp()

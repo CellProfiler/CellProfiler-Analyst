@@ -2,32 +2,26 @@
 Checks the per-image counts calculated by multiclasssql.
 '''
 
-import wx
-import multiclasssql
 import numpy
-from dbconnect import *
-from properties import Properties
-from datamodel import DataModel
-from StringIO import StringIO
-from scoreall import score
+from cpa.dbconnect import *
+from cpa.properties import Properties
+from cpa.datamodel import DataModel
+from cpa.scoreall import score
 import base64
 import zlib
 import os
 
 if __name__ == "__main__":
-    from trainingset import TrainingSet
-    from StringIO import StringIO
-    import fastgentleboostingmulticlass
-    from datatable import DataGrid
+    from cpa.trainingset import TrainingSet
     import wx
 
     app = wx.PySimpleApp()
     
     os.chdir('/Users/afraser/')
     
-    p = Properties.getInstance()
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
     
     testdata = [
                 # Test 2 classes filtered by MAPs

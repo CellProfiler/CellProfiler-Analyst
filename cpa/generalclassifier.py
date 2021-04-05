@@ -1,24 +1,64 @@
-from __future__ import print_function
-import re
-import dbconnect
+
+from . import dbconnect
 import logging
-import multiclasssql
+from . import multiclasssql
 import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
 from time import time
-from sklearn import ensemble, naive_bayes, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors
+from sklearn import ensemble, naive_bayes, svm, discriminant_analysis, tree, multiclass, linear_model, neighbors, neural_network
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn import metrics
-import cPickle, json
-from sklearn.externals import joblib
+import pickle, json
+import joblib
 import seaborn as sns
 from sklearn.model_selection import LeaveOneOut, KFold, cross_val_predict, cross_val_score
+from sklearn.preprocessing import StandardScaler
+import sys
+
+##########
+# MatPlotLib currently has a bug on Windows which crashes wx if you close an interactive plot window.
+# This should be fixed in MPL 3.4, but for now we'll monkey patch in the fix.
+# See MPL PR #19596 for more details. - dstirling Mar 2021
+if sys.platform == 'win32':
+    import wx
+    import matplotlib.backends.backend_wx
+    from matplotlib._pylab_helpers import Gcf
+
+    def mp_onClose(self, event):
+        self.canvas.close_event()
+        self.canvas.stop_event_loop()
+        self.figmgr.frame = None
+        Gcf.destroy(self.figmgr)
+        event.Skip()
+
+    def mp_Destroy(self, *args, **kwargs):
+        try:
+            self.canvas.mpl_disconnect(self.toolbar._id_drag)
+        except AttributeError:
+            pass
+        if self and not self.IsBeingDeleted():
+            wx.Frame.Destroy(self, *args, **kwargs)
+        return True
+
+    def mp_mandestroy(self, *args):
+        frame = self.frame
+        if frame:
+            wx.CallAfter(frame.Close)
+
+    matplotlib.backends.backend_wx.FigureFrameWx._onClose = mp_onClose
+    matplotlib.backends.backend_wx.FigureFrameWx.Destroy = mp_Destroy
+    matplotlib.backends.backend_wx.FigureManagerWx.destroy = mp_mandestroy
+##########
 
 class GeneralClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None):
+    def __init__(self, classifier = "discriminant_analysis.LinearDiscriminantAnalysis()", env=None, scaler=False):
         self.classBins = []
         self.classifier = eval(classifier)
+        if scaler:
+            self.scaler = StandardScaler()
+        else:
+            self.scaler = None
         self.trained = False
         self.env = env # Env is Classifier in Legacy Code -- maybe renaming ?
         self.name = self.name()
@@ -39,7 +79,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         ''' Called when the Cross Validation Button is pressed. '''
         # get wells if available, otherwise use imagenumbers
 
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         groups = [db.get_platewell_for_object(key) for key in self.env.trainingSet.get_object_keys()]
 
         if not self.env.UpdateTrainingSet():
@@ -55,6 +95,14 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         logging.info(classificationReport)
         self.plot_classification_report(classificationReport)
 
+    def toggle_scaler(self, enabled):
+        if enabled:
+            if self.scaler is None:
+                # ClearModel will create a scaler for us, no need to do this twice
+                self.scaler = True
+        else:
+            self.scaler = None
+        self.ClearModel()
 
     def ClassificationReport(self, true_labels, predicted_labels, confusion_matrix=False):
 
@@ -62,13 +110,19 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     def ClearModel(self):
         self.classBins = []
+        if self.scaler is not None:
+            self.scaler = StandardScaler()
         self.trained = False
 
     # Adjust text for the classifier rules panel
     def panelTxt(self):
+        if self.scaler is not None:
+            return "with"
         return 'display'
         
     def panelTxt2(self):
+        if self.scaler is not None:
+            return "neurons per layer"
         return 'top features'
 
     def CreatePerObjectClassTable(self, classNames):
@@ -84,8 +138,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
         try:
             self.classifier, self.bin_labels, self.name, self.features = joblib.load(model_filename)
+            self.scaler = self.classifier.scaler
+            print("Loaded", self.classifier, self.scaler, "models")
         except:
             self.classifier = None
+            self.scaler = None
             self.bin_labels = None
             logging.error('Model not correctly loaded')
             raise TypeError
@@ -118,6 +175,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     def Predict(self, test_values, fout=None):
         '''RETURNS: np array of predicted classes of input data test_values '''
+        if self.scaler is not None:
+            test_values = self.scaler.transform(test_values)
         predictions = self.classifier.predict(test_values)
         if fout:
             print(predictions)
@@ -127,11 +186,15 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
     def PredictProba(self, test_values):
         try:
             if "predict_proba" in dir(self.classifier):
+                if self.scaler is not None:
+                    test_values = self.scaler.transform(test_values)
                 return self.classifier.predict_proba(test_values)
         except:
             logging.info("Selected algorithm doesn't provide probabilities")
            
     def SaveModel(self, model_filename, bin_labels):
+        # Attach any scaler to the model object
+        self.classifier.scaler = self.scaler
         joblib.dump((self.classifier, bin_labels, self.name, self.features), model_filename, compress=1)
 
     def ShowModel(self):#SKLEARN TODO
@@ -143,7 +206,6 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
                 colnames = self.env.trainingSet.colnames
                 importances = self.classifier.feature_importances_
                 indices = np.argsort(importances)[::-1]
-                print(self.classifier)
                 return "\n".join([str(colnames[indices[f]]) for f in range(self.env.nRules)])
             except:
                 return ''
@@ -152,12 +214,15 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
     def Train(self, labels, values, fout=None):
         '''Trains classifier using values and label_array '''
-
+        if self.scaler is not None:
+            # Reset the scaler for training
+            self.scaler = StandardScaler()
+            values = self.scaler.fit_transform(values)
         self.classifier.fit(values, labels)
         self.trained = True
 
         if fout:
-            print(self.classifier)
+            print((self.classifier))
 
     def UpdateBins(self, classBins):
         self.classBins = classBins
@@ -211,11 +276,11 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
         #make new data set
         #randomly choose min_labels samples from each class (the rest are thrown away)
-        chosenIndices = [np.random.choice(range(cumSumLabelIndices[i],cumSumLabelIndices[i+1]), min_labels, replace=False) for i in range(n_classes)]
+        chosenIndices = [np.random.choice(list(range(cumSumLabelIndices[i],cumSumLabelIndices[i+1])), min_labels, replace=False) for i in range(n_classes)]
 
         labels_s = np.zeros(min_labels*n_classes)
         values_s = np.zeros((min_labels*n_classes, values.shape[1]))
-        for c in reversed(range(n_classes)):
+        for c in reversed(list(range(n_classes))):
             labels_s[min_labels*c:min_labels*(c+1)] = labels[chosenIndices[c]]
             values_s[min_labels*c:min_labels*(c+1)] = values[chosenIndices[c]]
 
@@ -235,7 +300,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             CV = folds
         else:
             CV = KFold(num_samples, folds)
-
+        if self.scaler is not None:
+            values = self.scaler.transform(values)
         predictions = cross_val_predict(self.classifier, X=values, y=labels, cv=CV, n_jobs=1)
         return np.array(predictions)
 
@@ -247,10 +313,10 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         Source: http://stackoverflow.com/a/25074150/395857 
         By HYRY
         '''
-        from itertools import izip
+        
         pc.update_scalarmappable()
-        ax = pc.get_axes()
-        for p, color, value in izip(pc.get_paths(), pc.get_facecolors(), pc.get_array()):
+        ax = pc.axes
+        for p, color, value in zip(pc.get_paths(), pc.get_facecolors(), pc.get_array()):
             x, y = p.vertices[:-2, :].mean(0)
             if np.all(color[:3] > 0.5):
                 color = (0.0, 0.0, 0.0)
@@ -322,9 +388,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
 
         # resize 
         fig = plt.gcf()
-        #fig.set_size_inches(self.cm2inch(40, 20))
-        #fig.set_size_inches(self.cm2inch(40*4, 20*4))
-        fig.set_size_inches(self.cm2inch(figure_width, figure_height))
+        # Disabling this - not sure why we make the figure so huge, it sizes itself just fine. Mar 2021
+        # fig.set_size_inches(self.cm2inch(figure_width, figure_height))
         plt.show()
 
     def plot_classification_report(self, classification_report, title='Classification report ', cmap='RdBu'):
@@ -338,18 +403,18 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         plotMat = []
         support = []
         class_names = []
-        for line in lines[2 : (len(lines) - 2)]:
+        for line in lines[2:-4]:
             t = line.strip().split()
             if len(t) < 2: continue
             classes.append(t[0])
-            v = [float(x) for x in t[1: len(t) - 1]]
+            v = [float(x) for x in t[1:-1]]
             support.append(int(t[-1]))
             class_names.append(t[0])
             print(v)
             plotMat.append(v)
 
-        print('plotMat: {0}'.format(plotMat))
-        print('support: {0}'.format(support))
+        print(('plotMat: {0}'.format(plotMat)))
+        print(('support: {0}'.format(support)))
 
         xlabel = 'Metrics'
         ylabel = 'Classes'
@@ -377,6 +442,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             norm_conf.append(tmp_arr)
 
         fig = plt.figure()
+        fig.canvas.set_window_title(f"{fig.canvas.get_window_title()} - {self.name}")
         plt.clf()
         ax = fig.add_subplot(111)
         ax.set_aspect(1)
@@ -386,8 +452,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         width = len(conf_arr)
         height = len(conf_arr[0])
 
-        for x in xrange(width):
-            for y in xrange(height):
+        for x in range(width):
+            for y in range(height):
                 if conf_arr[x][y] != 0:
                     ax.annotate("%.2f" % conf_arr[x][y], xy=(y, x), 
                                 horizontalalignment='center',
@@ -456,7 +522,7 @@ if __name__ == '__main__':
 
     import csv
     reader = csv.reader(fin, delimiter='    ')
-    header = reader.next()
+    header = next(reader)
     label_to_labelidx = {}
     curlabel = 1
  
@@ -464,7 +530,7 @@ if __name__ == '__main__':
         if strlabel in label_to_labelidx:
             return label_to_labelidx[strlabel]
         global curlabel
-        print("LABEL: ", curlabel, strlabel)
+        print(("LABEL: ", curlabel, strlabel))
         label_to_labelidx[strlabel] = curlabel
         curlabel += 1
         return label_to_labelidx[strlabel]

@@ -17,7 +17,7 @@ from the CPA menu bar.
 .. figure:: static/08_01.jpg
   :align: center
 
-	Sample Plate Viewer for a single 96-well plate, viewing the mean positive enrichment score output by Classifier. We can see that well D07 is very highly enriched for our “positive” cell phenotype.
+Sample Plate Viewer for a single 96-well plate, viewing the mean positive enrichment score output by Classifier. We can see that well D07 is very highly enriched for our "positive" cell phenotype.
 
 .. note::
 		An **X** in one of the wells means there was no data in the database corresponding to that particular well. However, it may still contain images that can be viewed, as described below.
@@ -40,7 +40,7 @@ The left-hand column contains many options for generating different views into y
 - **Color Map**: Each value computed by the Aggregation Method is mapped to a color via a color map. The currently selected color map is represented in a bar beneath the plate maps. More than 50 color maps are available.
 - **Well Shape**: Mostly for presentation purposes, you can select from different well shapes. Options are **square**, **rounded**, **circle**, and **image**.
 
-    Important: The “*image*” feature is still under development. This will display a
+    Important: The "*image*" feature is still under development. This will display a
     rescaled image from each well in the place of the well itself. This can take a very
     long time to refresh since full sized images must be loaded for every well in view. For
     it to be useful, viewing 1 plate at a time and maximizing the window is advised. Note:

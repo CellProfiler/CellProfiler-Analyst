@@ -1,18 +1,18 @@
-from __future__ import print_function
+# Unused module? Mar 2021
 
 # -*- Encoding: utf-8 -*-
 import os
 import re
 import wx
-import wx.wizard as wiz
+import wx.adv as wiz
 from wx.lib.dialogs import ScrolledMessageDialog
-from dbconnect import DBConnect
-from properties import Properties
+from .dbconnect import DBConnect
+from .properties import Properties
 import logging
 logging.basicConfig()
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
+db = DBConnect()
+p = Properties()
 
 def makePageTitle(wizPg, title):
     def __init__(self, parent):
@@ -36,7 +36,7 @@ class Page1(wiz.WizardPageSimple):
         self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         directions = wx.StaticText(self, -1, "Load a Properties file that contains the database info below.", style=wx.ALIGN_CENTRE)
-        browseBtn = wx.Button(self, wx.NewId(), u'Choose file…')
+        browseBtn = wx.Button(self, wx.NewId(), 'Choose file…')
         self.Bind(wx.EVT_BUTTON, self.OnBrowse, browseBtn)
         label_2 = wx.StaticText(self, -1, "DB Host: ")
         self.lblDBHost = wx.StaticText(self, -1, "")
@@ -73,7 +73,7 @@ class Page1(wiz.WizardPageSimple):
     def OnBrowse(self, evt):
         dlg = wx.FileDialog(self, "Select a properties file", defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
-            p = Properties.getInstance()
+            p = Properties()
             p.LoadFile(dlg.GetPath())
             self.lblDBHost.SetLabel(p.db_host)
             self.lblDBName.SetLabel(p.db_name)
@@ -196,17 +196,17 @@ def find_master_tables():
         res = db.execute('SHOW INDEX FROM %s'%(t))
         if t.lower().endswith('per_image'):
             if 'TableNumber' in [r[4] for r in res]:
-                if not masters.has_key(t[:-10]):
+                if t[:-10] not in masters:
                     masters[t[:-10]] = t
                 else:
                     masters[t[:-10]] = t + ',' + masters[t[:-10]] 
         if t.lower().endswith('per_object'):
             if 'TableNumber' in [r[4] for r in res]:
-                if not masters.has_key(t[:-11]):
+                if t[:-11] not in masters:
                     masters[t[:-11]] = t
                 else:
                     masters[t[:-11]] += ',' + t
-    return masters.values()
+    return list(masters.values())
 
         
 class Page3(wiz.WizardPageSimple):
@@ -384,7 +384,7 @@ class Page4(wiz.WizardPageSimple):
             
             # Insert values from each table into the master
             dlg.Update(0, ___ing+' "'+self.Parent.outPerImage+'": 0%')
-            for i in xrange(nTables):
+            for i in range(nTables):
                 db.execute('INSERT INTO '+self.Parent.outPerImage+' SELECT '+im_cols+','+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perImageTables[i])
                 percent = 100*i/nTables
                 dlg.Update(percent, ___ing+' "'+self.Parent.outPerImage+'": '+str(percent)+'%')
@@ -407,7 +407,7 @@ class Page4(wiz.WizardPageSimple):
             
             # Insert values from each table into the master
             dlg.Update(0, ___ing+' "'+self.Parent.outPerObject+'": 0%')
-            for i in xrange(nTables):
+            for i in range(nTables):
                 db.execute('INSERT INTO '+self.Parent.outPerObject+' SELECT '+ob_cols+','+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perObjectTables[i])
                 percent = 100*i/nTables
                 dlg.Update(percent, ___ing+' "'+self.Parent.outPerObject+'": '+str(percent)+'%')
@@ -419,7 +419,7 @@ class Page4(wiz.WizardPageSimple):
             #
             
             db.execute('CREATE TABLE IF NOT EXISTS '+prefix+'_table_index (TableNumber INT, PerImageTable varchar(60), PerObjectTable varchar(60), PRIMARY KEY (TableNumber))')
-            for i in xrange(nTables):
+            for i in range(nTables):
                 db.execute('INSERT INTO '+prefix+'_table_index (TableNumber, PerImageTable, PerObjectTable) VALUES('+str(t0+i)+', "'+self.Parent.perImageTables[i]+'", "'+self.Parent.perObjectTables[i]+'")')
             
             # Log the newly created table names in CPA_Merged_Tables.merged

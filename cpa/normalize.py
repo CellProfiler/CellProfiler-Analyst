@@ -127,12 +127,13 @@ def do_normalization(data, aggregate_type_or_const):
         h = scipy.ndimage.histogram(data.flatten(), robust_min, robust_max, nbins)
         index = np.argmax(h)
         normalization_value = np.min(data) + float(index)/float(nbins-1)*(np.max(data) - np.min(data))
-    elif type(aggregate_type_or_const) in (float, int, long):
+    elif type(aggregate_type_or_const) in (float, int):
         normalization_value = aggregate_type_or_const
 
     try:
         res = data / normalization_value
     except:
         logging.error("Division by zero, replace value with 0!")
+        res = 0
 
     return res

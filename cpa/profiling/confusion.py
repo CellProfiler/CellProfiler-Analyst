@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import numpy as np
 
 def load_confusion(filename):
@@ -10,12 +10,12 @@ def load_confusion(filename):
 
 def confusion_matrix(confusion, dtype=int):
    labels = set()
-   for a, b in confusion.keys():
+   for a, b in list(confusion.keys()):
       labels.add(a)
       labels.add(b)
    labels = sorted(labels)
    cm = np.zeros((len(labels), len(labels)), dtype=dtype)
-   for (a, b), count in confusion.items():
+   for (a, b), count in list(confusion.items()):
       cm[labels.index(a), labels.index(b)] = count
    return cm
 
@@ -27,5 +27,5 @@ def confusion_reduce(operation, confusions):
    return d
 
 def write_confusion(confusion, stream):
-    for (a, b), v in confusion.items():
+    for (a, b), v in list(confusion.items()):
         print('\t'.join([' '.join(a), ' '.join(b), str(v)]), file=stream)
