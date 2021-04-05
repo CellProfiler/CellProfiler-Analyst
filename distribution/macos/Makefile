@@ -13,7 +13,7 @@ SHELL := bash
 CellProfiler-Analyst:
 	git clone https://github.com/CellProfiler/CellProfiler-Analyst.git
 
-	cd $@ && git checkout Python3_Port
+	cd $@
 
 .PHONY: dependencies
 dependencies: CellProfiler-Analyst
