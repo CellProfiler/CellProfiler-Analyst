@@ -222,7 +222,7 @@ class SortBin(wx.ScrolledWindow):
             chMap = p.image_channel_colors
         if self.tile_collection == None:
             self.tile_collection = tilecollection.TileCollection()
-        if srcID is not None and wx.FindWindowById(srcID) is not None:
+        if srcID is not None and isinstance(wx.FindWindowById(srcID), SortBin):
             source = wx.FindWindowById(srcID)
             for tile in source.tiles[::-1]:
                 if tile.obKey in obKeys and tile.selected:
