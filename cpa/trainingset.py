@@ -80,23 +80,12 @@ class TrainingSet:
 
             self.entries += list(zip([label] * len(keyList), keyList))
 
-            if labels_only:
+            if labels_only and len(keyList) > 0:
                 self.values += []
-                self.coordinates += [db.GetObjectCoords(k) for k in keyList]
-            else:
-                # Old method - fetched keys one by one
-                # def get_data(k):
-                #     d = self.cache.get_object_data(k)
-                #     if callback is not None:
-                #         callback(num_fetched[0] / float(num_to_fetch))
-                #     num_fetched[0] = num_fetched[0] + 1
-                #     return d
-                # self.values += [get_data(k) for k in keyList]
-                # self.coordinates += [db.GetObjectCoords(k) for k in keyList]
-                # New method - fetch all keys with one db query.
-                if len(keyList) > 0:
-                    self.values += self.cache.get_objects_data(keyList)
-                    self.coordinates += db.GetObjectsCoords(keyList)
+                self.coordinates += db.GetObjectsCoords(keyList)
+            elif len(keyList) > 0:
+                self.values += self.cache.get_objects_data(keyList)
+                self.coordinates += db.GetObjectsCoords(keyList)
             idx += 1
             if callback:
                 callback(idx / len(labels))
