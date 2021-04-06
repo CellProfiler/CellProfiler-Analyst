@@ -394,7 +394,8 @@ class Classifier(wx.Frame):
                     logging.error("Couldn't load the file! Make sure it is .txt or .csv")
                 #self.LoadTrainingSet(p.training_set)
 
-        self.AutoSave() # Autosave try out
+        # Apr 2021 - It's not clear why refreshing the training set on a timer is necessary. Disabling it.
+        # self.AutoSave() # Autosave try out
 
     # JEN - Start Add
     def OpenDimensRedux(self, event):
