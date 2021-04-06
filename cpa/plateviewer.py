@@ -374,7 +374,7 @@ class PlateViewer(wx.Frame, CPATool):
         saveDialog.Destroy()
 
     def save_to_csv(self, filename):
-        with open(filename, 'wb') as f:
+        with open(filename, 'w', newline="") as f:
             w = csv.writer(f)
             w.writerow(['Plate', 'Well', self.measurement + ' ' + self.aggMethod])
             w.writerows(self.keys_and_vals)

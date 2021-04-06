@@ -923,7 +923,7 @@ class TableViewer(wx.Frame):
         saveDialog.Destroy()
 
     def save_to_csv(self, filename):
-        f = open(filename, 'w')
+        f = open(filename, 'w', newline="")
         w = csv.writer(f)
         w.writerow([self.grid.Table.GetColLabelValueWithoutDecoration(col) 
                     for col in range(self.grid.Table.GetNumberCols())])
