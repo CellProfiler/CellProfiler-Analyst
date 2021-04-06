@@ -24,6 +24,7 @@ LicenseFile=..\..\LICENSE
 OutputBaseFilename=CellProfiler-Analyst-Windows-{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
+DisableDirPage=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
