@@ -166,7 +166,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         h, w = imgs[0].shape
         if tgt_h < h and tgt_w < w:
             rescale_factor = max(tgt_h / h, tgt_w / w)
-            imgs = [scipy.ndimage.zoom(im, (rescale_factor, rescale_factor), order=2, prefilter=False,
+            imgs = [scipy.ndimage.zoom(im, (rescale_factor, rescale_factor), order=1, prefilter=False,
                                        mode="grid-constant", grid_mode=True) for im in imgs]
     if contrast=='Log':
         logims = [log_transform(im, interval=limits[idx]) for idx, im in enumerate(imgs)]
