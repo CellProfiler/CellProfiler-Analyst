@@ -82,6 +82,7 @@ setuptools.setup(
         "scikit-learn>=0.24.1",
         "scipy>=1.6.1",
         "seaborn>=0.11.1",
+        "tifffile>=2021.3.31",
         "verlib==0.1",
         "wxPython==4.1.1",
     ],
