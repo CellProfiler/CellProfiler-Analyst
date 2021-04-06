@@ -7,12 +7,13 @@ import logging
 sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/cpa');
 sys.path.insert(1, '/home/vagrant/cpa-multiclass/CellProfiler-Analyst/')
 
+import threading
 import cpa.sqltools
-from .dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_key_columns, GetWhereClauseForImages, GetWhereClauseForObjects, object_key_defs
+from .dbconnect import DBConnect, UniqueObjectClause, UniqueImageClause, image_key_columns, object_key_columns, GetWhereClauseForImages, GetWhereClauseForObjects, object_key_defs
 from .properties import Properties
 from .datamodel import DataModel
 from sklearn.ensemble import AdaBoostClassifier
-from pandas import to_numeric
+import pandas as pd
 
 db = DBConnect()
 p = Properties()
@@ -52,30 +53,51 @@ def create_perobject_class_table(classifier, classNames):
     data = db.execute('SELECT %s, %s FROM %s %s'
                           %(UniqueObjectClause(p.object_table),
                             ",".join(db.GetColnamesForClassifier()), p.object_table,''))
-    #data.extend(result)
     print('Getting predictions...')
     cell_data, object_keys = processData(data)#, p.check_tables=='yes')
     predicted_classes = classifier.Predict(cell_data)
-    print('Writing to database...')
-    if len(object_keys.shape) > 2:
-        expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
-            object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2], predicted_classes[ii] )
-            for ii in range(0, len(predicted_classes))])+ " END"
-        expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
-            object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2],
-            classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
-    elif len(object_keys.shape) == 2:
-        expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
-            object_keys[ii][0], p.object_id, object_keys[ii][1], predicted_classes[ii] )
-            for ii in range(0, len(predicted_classes))])+ " END"
-        expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
-            object_keys[ii][0], p.object_id, object_keys[ii][1], classNames[predicted_classes[ii] - 1])
-            for ii in range(0, len(predicted_classes))])+ " END"
-    else:
-        raise Exception('object keys have length ' + len(object_keys.shape) + ' but should have length >= 2')
-    db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
-        silent=True)
 
+    try:
+        print('Preparing data table...')
+        # We need to pass a connection object to Pandas so it can do all the work for us.
+        connID = threading.currentThread().getName()
+        if not connID in db.connections:
+            db.connect()
+        conn = db.connections[connID]
+        class_data = pd.DataFrame(data=object_keys, columns=object_key_columns())
+        class_data["class"] = [classNames[i - 1] for i in predicted_classes]
+        class_data["class_number"] = predicted_classes
+        print('Writing to database...')
+        class_data.to_sql(p.class_table, conn, if_exists="append", index=False)
+    except:
+        # This is the old writing method, may still be necessary if a weird db connection type is used.
+        print("Faster database writing method failed, retrying with slow method...")
+        print('Drop table...')
+        db.execute('DROP TABLE IF EXISTS %s'%(p.class_table))
+        print('Create table...')
+        db.execute('CREATE TABLE %s (%s)'%(p.class_table, class_col_defs))
+        print('Create index...')
+        db.execute('CREATE INDEX idx_%s ON %s (%s)'%(p.class_table, p.class_table, index_cols))
+
+        if len(object_keys.shape) > 2:
+            expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
+                object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2], predicted_classes[ii] )
+                for ii in range(0, len(predicted_classes))])+ " END"
+            expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
+                object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2],
+                classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
+        elif len(object_keys.shape) == 2:
+            expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
+                object_keys[ii][0], p.object_id, object_keys[ii][1], predicted_classes[ii] )
+                for ii in range(0, len(predicted_classes))])+ " END"
+            expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
+                object_keys[ii][0], p.object_id, object_keys[ii][1], classNames[predicted_classes[ii] - 1])
+                for ii in range(0, len(predicted_classes))])+ " END"
+        else:
+            raise Exception('object keys have length ' + len(object_keys.shape) + ' but should have length >= 2')
+        print('Writing to database...')
+        db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
+            silent=True)
     db.Commit()
 
 
@@ -160,7 +182,7 @@ def processData(data):
 
         data_shape = cell_data.shape
         try:
-            cell_data = np.apply_along_axis(to_numeric, 1, cell_data, errors="coerce")
+            cell_data = np.apply_along_axis(pd.to_numeric, 1, cell_data, errors="coerce")
             # print(('data type 1 ', cell_data.dtype))
         except Exception as e:
             logging.info("Data conversion failed, trying slower method - ", e)
