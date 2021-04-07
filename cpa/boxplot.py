@@ -137,7 +137,7 @@ class DataSourcePanel(wx.Panel):
             points_dict = {}
             for col in self.x_columns:
                 pts = self.loadpoints(table, col, fltr, NO_GROUP)
-                for k in list(pts.keys()): assert k not in list(points_dict.keys())
+                for k in list(pts.keys()): assert k not in points_dict
                 points_dict.update(pts)
         else:
             col = self.x_choice.Value

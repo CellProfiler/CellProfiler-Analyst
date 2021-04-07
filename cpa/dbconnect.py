@@ -468,7 +468,7 @@ class DBConnect(metaclass=Singleton):
     def CloseConnection(self, connID=None):
         if not connID:
             connID = threading.currentThread().getName()
-        if connID in list(self.connections.keys()):
+        if connID in self.connections:
             try:
                 self.connections[connID].commit()
             except: pass

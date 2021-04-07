@@ -792,7 +792,7 @@ class Classifier(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in list(self.imMapById.keys()):
+        if evt.GetId() in self.imMapById:
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -1355,7 +1355,7 @@ class Classifier(wx.Frame):
 
             num_objs = 0
             for bin in self.classBins:
-                if bin.label in list(keysPerBin.keys()):
+                if bin.label in keysPerBin:
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,
                                    display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])
@@ -1385,7 +1385,7 @@ class Classifier(wx.Frame):
             self.Refresh()
             num_objs = 0
             for bin in self.classBins:
-                if bin.label in list(keysPerBin.keys()):
+                if bin.label in keysPerBin:
                     bin.AddObjects(keysPerBin[bin.label], self.chMap, priority=2,
                                    display_whole_image=p.classification_type == 'image')
                     num_objs += len(keysPerBin[bin.label])

@@ -410,7 +410,7 @@ class ImageGallery(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in list(self.imMapById.keys()):
+        if evt.GetId() in self.imMapById:
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 

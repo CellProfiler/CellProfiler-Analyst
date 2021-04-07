@@ -247,9 +247,9 @@ class Properties(metaclass=Singleton):
                         raise Exception('[Properties] ERROR (%s): "group_SQL_" should be followed by a group name.\n'
                                         'Example: "group_SQL_MyGroup = <QUERY>" would define a group named "MyGroup" defined by\n'
                                         'a MySQL query "<QUERY>". See the README.'%(name))
-                    if group_name in list(self._groups.keys()):
+                    if group_name in self._groups:
                         raise Exception('Group "%s" is defined twice in properties file.'%(group_name))
-                    if group_name in list(self._filters.keys()):
+                    if group_name in self._filters:
                         raise Exception('Name "%s" is already taken for a filter.'%(group_name))
                     if not val:
                         logging.warn('[Properties] WARNING (%s): Undefined group'%(name))
@@ -263,9 +263,9 @@ class Properties(metaclass=Singleton):
                         raise Exception('[Properties] ERROR (%s): "filter_SQL_" should be followed by a filter name.\n'
                                         'Example: "filter_SQL_MyFilter = <QUERY>" would define a filter named "MyFilter" defined by\n'
                                         'a MySQL query "<QUERY>". See the README.'%(name))
-                    if filter_name in list(self._filters.keys()):
+                    if filter_name in self._filters:
                         raise Exception('Filter "%s" is defined twice in properties file.'%(filter_name))
-                    if filter_name in list(self._groups.keys()):
+                    if filter_name in self._groups:
                         raise Exception('Name "%s" is already taken for a group.'%(filter_name))
                     if re.search('\W', filter_name):
                         raise Exception('[Properties] ERROR (%s): Filter names may only contain alphanumeric characters and "_".'%(filter_name))
@@ -655,7 +655,7 @@ class Properties(metaclass=Singleton):
         else:
             if self.field_defined('plate_shape'):
                 assert self.plate_shape == supported_plate_types[self.__dict__['plate_type']], "Your properties file has incompatible values for plate_type and plate_shape."
-            if self.__dict__['plate_type'] not in list(supported_plate_types.keys()):
+            if self.__dict__['plate_type'] not in supported_plate_types:
                 raise Exception('[Properties] ERROR: invalid value (%s) for plate_type. Supported plate type are: %s.'
                                 %(self.__dict__['plate_type'], ', '.join(supported_plate_types)))
             self.plate_shape = supported_plate_types[self.__dict__['plate_type']]

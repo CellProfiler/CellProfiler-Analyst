@@ -115,7 +115,7 @@ class TrainingSet:
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
                     for labelname in l.strip().split(' ')[1:]:
-                        if labelname not in list(labelDict.keys()):
+                        if labelname not in labelDict:
                             labelDict[labelname] = []
                     continue
                 

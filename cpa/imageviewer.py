@@ -408,7 +408,7 @@ class ImageViewer(wx.Frame):
                 self.toggleChMap[si] = 'none'
 
         # Determine what image was selected based on the event.  Set channel to appropriate color(s)
-        if evt.GetId() in list(self.imMapById.keys()):
+        if evt.GetId() in self.imMapById:
 
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
@@ -506,7 +506,7 @@ class ImageViewer(wx.Frame):
             self.cp.SetLabel('Show controls')
 
     def OnMapChannels(self, evt):
-        if evt.GetId() in list(self.chMapById.keys()):
+        if evt.GetId() in self.chMapById:
             (chIdx,color,_,_) = self.chMapById[evt.GetId()]
             self.chMap[chIdx] = color
             if color.lower() != 'none':
