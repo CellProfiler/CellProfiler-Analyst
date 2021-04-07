@@ -148,7 +148,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
     global cachedparams
     global cachedresult
     # Laziest "hash" ever, but it'll do.
-    imghash = [im.sum() for im in imgs]
+    imghash = [id(im) for im in imgs]
     # In temporary tiles, [0,0] is always set to 0 to aid contrasting.
     if cachedparams is not None and imgs[0][0][0] == 0:
         if cachedparams == [imghash, chMap, brightness, scale, masks, contrast, display_whole_image]:
@@ -161,13 +161,15 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
         # Rescaling 2k x 2k images to make a 25 x 25 tile is slow and silly.
         # Here we check whether the input image is more than 10x the final tile size.
         # If it is, we'll do a quick and dirty rescale to give a more managable starting point.
-        tgt_h = int(p.image_size) * 5
-        tgt_w = int(p.image_size) * 5
+        tgt_h = int(p.image_size) * 4
+        tgt_w = int(p.image_size) * 4
         h, w = imgs[0].shape
         if tgt_h < h and tgt_w < w:
             rescale_factor = max(tgt_h / h, tgt_w / w)
-            imgs = [scipy.ndimage.zoom(im, (rescale_factor, rescale_factor), order=1, prefilter=False,
-                                       mode="grid-constant", grid_mode=True) for im in imgs]
+            # imgs = [scipy.ndimage.zoom(im, (rescale_factor, rescale_factor), order=1, prefilter=False,
+            #                            mode="grid-constant", grid_mode=True) for im in imgs]
+            tgtsize = (int(w * rescale_factor), int(h * rescale_factor))
+            imgs = [np.array(Image.fromarray(im).resize(tgtsize, resample=Image.NEAREST)) for im in imgs]
     if contrast=='Log':
         logims = [log_transform(im, interval=limits[idx]) for idx, im in enumerate(imgs)]
         imData = MergeChannels(logims, chMap, masks=masks)
