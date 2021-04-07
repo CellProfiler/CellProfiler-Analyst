@@ -451,7 +451,7 @@ class PlateViewer(wx.Frame, CPATool):
         currentPlates = [plateChoice.GetSelection() for plateChoice in self.plateMapChoices]
         currentPlates = (currentPlates+[(currentPlates[-1]+1+p) % len(db.GetPlateNames()) for p in range(nPlates)])[:nPlates]
         # Remove all plateMaps
-        self.plateMapSizer.Clear(deleteWindows=True)
+        self.plateMapSizer.Clear(delete_windows=True)
         self.plateMaps = []
         self.plateMapChoices = []
         # Restructure the plateMapSizer appropriately
