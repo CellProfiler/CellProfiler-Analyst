@@ -263,6 +263,7 @@ class SqliteClassifier():
         self.b = b.T
 
     def classify(self, *features):
+        features = [0 if f is None else f for f in features]
         class_num = 1 + np.where((features > self.thresholds), self.a, self.b).sum(axis=1).argmax()
         # CRUCIAL: must make sure class_num is an int or it won't compare
         #          properly with the class being looked for and nothing will
