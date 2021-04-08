@@ -67,8 +67,8 @@ class ImageControlPanel(wx.Panel):
         sizer2.Add(0, 10, 0) # Space on the bottom
         self.sizer3 = wx.BoxSizer(wx.VERTICAL)
         self.AddContrastControls(contrast)
-        self.sizer4 = wx.BoxSizer(wx.VERTICAL)
-        self.sizer3.Add(self.sizer4) # place holder for class check boxes
+        self.sizer_checkboxes = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer3.Add(self.sizer_checkboxes) # place holder for class check boxes
         self.sizer3.Add(0, 10, 0) # Space on the bottom
 
         if classCoords is not None:
@@ -107,7 +107,12 @@ class ImageControlPanel(wx.Panel):
         # self.UpdateContrastMode()
 
     def SetClassPoints(self, classCoords):
-        self.sizer4.Clear()
+        self.sizer_checkboxes.Clear()
+        sizer_classes = wx.BoxSizer(wx.VERTICAL)
+        sizer_training = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_checkboxes.Add(sizer_classes)
+        self.sizer_checkboxes.AddSpacer(5)
+        self.sizer_checkboxes.Add(sizer_training)
         vals = np.arange(float(len(classCoords))) / len(classCoords)
         label_lookup = {}
         if len(vals) > 0:
@@ -118,11 +123,13 @@ class ImageControlPanel(wx.Panel):
             for name in classCoords:
                 colors_dict[name] = colors[i]
                 i+=1
-            self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Classes:'))
+            sizer_classes.Add(wx.StaticText(self.Parent, -1, 'Classes:'))
             i=1
+            sizer_add_to = sizer_classes
             for name in classCoords:
                 if i == len(classCoords)/2 + 1:
-                    self.sizer4.Add(wx.StaticText(self.Parent, -1, 'Training:'))
+                    sizer_training.Add(wx.StaticText(self.Parent, -1, 'Training:'))
+                    sizer_add_to = sizer_training
                 label = f"{i} - {name} ({len(classCoords[name])})"
                 checkBox = wx.CheckBox(self.Parent, wx.NewId(), label)
                 label_lookup[label] = name
@@ -130,7 +137,7 @@ class ImageControlPanel(wx.Panel):
                 #checkBox.SetForegroundColour(color)   # Doesn't work on Mac. Works on Windows.
                 checkBox.SetBackgroundColour(colors_dict[name])
                 checkBox.SetValue(True)
-                self.sizer4.Add(checkBox, flag=wx.EXPAND)
+                sizer_add_to.Add(checkBox, flag=wx.EXPAND)
 
                 def OnTogglePhenotype(evt):
                     className = evt.EventObject.Label
