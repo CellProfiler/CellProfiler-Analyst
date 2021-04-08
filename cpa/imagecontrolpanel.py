@@ -117,7 +117,7 @@ class ImageControlPanel(wx.Panel):
         label_lookup = {}
         if len(vals) > 0:
             vals += (1.0 - vals[-1]) / 2
-            colors = [np.array(cm.jet(val)) * 255 for val in vals]
+            colors = [np.array(cm.rainbow(val)) * 255 for val in vals]
             colors_dict = {}
             i=0
             for name in classCoords:
