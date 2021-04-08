@@ -349,6 +349,10 @@ class Classifier(wx.Frame):
         self.MapChannels(p.image_channel_colors[:])
         self.BindMouseOverHelpText()
 
+        # Watch the filter and gates list for updates
+        p._filters.addobserver(self.UpdateFilterChoices)
+        p.gates.addobserver(self.UpdateFilterChoices)
+
         # do event binding
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_CHOICE, self.OnClassifierChoice, self.classifierChoice)
@@ -2034,14 +2038,22 @@ class Classifier(wx.Frame):
                 fltr = cff.get_filter()
                 fname = cff.get_filter_name()
                 p._filters[fname] = fltr
-                items = self.filterChoice.GetItems()
-                self.filterChoice.SetItems(items[:-1] + [fname] + items[-1:])
-                self.filterChoice.Select(len(items) - 1)
+                self.filterChoice.SetStringSelection(fname)
             else:
                 self.filterChoice.Select(0)
             cff.Destroy()
         self.fetch_panel.Layout()
         self.fetch_panel.Refresh() 
+
+    def UpdateFilterChoices(self, evt):
+        selected_string = self.filterChoice.GetStringSelection()
+        self.filterChoice.SetItems(['experiment', 'image'] + p._filters_ordered + p.gates_ordered +
+                                              p._groups_ordered + [CREATE_NEW_FILTER])
+        if selected_string in self.filterChoice.Items:
+            self.filterChoice.SetStringSelection(selected_string)
+        else:
+            self.filterChoice.Select(0)
+        self.filterChoice.Layout()
 
     def SetupFetchFromGroupSizer(self, group):
         '''
