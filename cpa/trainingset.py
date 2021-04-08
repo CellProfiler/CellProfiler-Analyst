@@ -85,7 +85,14 @@ class TrainingSet:
                 self.coordinates += db.GetObjectsCoords(keyList)
             elif len(keyList) > 0:
                 self.values += self.cache.get_objects_data(keyList)
-                self.coordinates += db.GetObjectsCoords(keyList)
+                colnames = db.GetColnamesForClassifier()
+                # If we just got the coordinates as part of the data table, we don't need to fetch again.
+                if set([p.cell_x_loc, p.cell_y_loc]).issubset(colnames):
+                    idx_x = colnames.index(p.cell_x_loc)
+                    idx_y = colnames.index(p.cell_y_loc)
+                    self.coordinates += [(item[idx_x], item[idx_y]) for item in self.values]
+                else:
+                    self.coordinates += db.GetObjectsCoords(keyList)
             idx += 1
             if callback:
                 callback(idx / len(labels))
