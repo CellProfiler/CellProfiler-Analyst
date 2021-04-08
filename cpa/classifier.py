@@ -85,6 +85,7 @@ class Classifier(wx.Frame):
         self.pmb = None
         self.worker = None
         self.trainingSet = None
+        self.training_set_ready = False
         self.classBins = []
         self.binsCreated = 0
         self.kFolds = 5
@@ -826,6 +827,7 @@ class Classifier(wx.Frame):
     def AddSortClass(self, label):
         ''' Create a new SortBin in a new StaticBoxSizer with the given label.
         This sizer is then added to the classified_bins_sizer. '''
+        self.training_set_ready = False
         bin = sortbin.SortBin(parent=self.classified_bins_panel, label=label,
                               classifier=self)
 
@@ -846,6 +848,7 @@ class Classifier(wx.Frame):
         box.Lower()
 
     def RemoveSortClass(self, label, clearModel=True):
+        self.training_set_ready = False
         for bin in self.classBins:
             if bin.label == label:
                 self.classBins.remove(bin)
@@ -872,6 +875,7 @@ class Classifier(wx.Frame):
             self.RemoveSortClass(label, clearModel)
 
     def RenameClass(self, label):
+        self.training_set_ready = False
         dlg = wx.TextEntryDialog(self, 'New class name:', 'Rename class')
         dlg.SetValue(label)
         if dlg.ShowModal() == wx.ID_OK:
@@ -934,6 +938,7 @@ class Classifier(wx.Frame):
         Disable the buttons for training and checking accuracy if any bin is
         empty
         '''
+        self.training_set_ready = False
         self.trainClassifierBtn.Enable()
         if hasattr(self, 'evaluationBtn'):
             self.evaluationBtn.Enable()
@@ -1224,6 +1229,7 @@ class Classifier(wx.Frame):
         '''
         Loads the selected file and parses the classifier model.
         '''
+        self.training_set_ready = False
         self.PostMessage('Loading classifier model from: %s' % filename)
         # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         #os.chdir(os.path.split(filename)[0])
@@ -1284,8 +1290,6 @@ class Classifier(wx.Frame):
             self.UpdateClassChoices()
             self.keysAndCounts = None
 
-
-
     def SaveModel(self, evt=None):
         if not self.defaultModelFileName:
             self.defaultModelFileName = 'my_model.model'
@@ -1304,8 +1308,6 @@ class Classifier(wx.Frame):
             self.algorithm._set_features(self.trainingSet.colnames)
             self.algorithm.SaveModel(filename, bin_labels)
             self.PostMessage('Classifier model succesfully saved.')
-
-    # JEN - End Add
 
     def OnLoadTrainingSet(self, evt):
         '''
@@ -1419,6 +1421,7 @@ class Classifier(wx.Frame):
         try:
             self.trainingSet = TrainingSet(p)
             self.trainingSet.Create([bin.label for bin in self.classBins], [bin.GetObjectKeys() for bin in self.classBins])
+            self.training_set_ready = True
         except:
             logging.info("Couldn't update TrainingSet. Using last AutoSave.")
             self.trainingSet = trainingSet # Use backup
@@ -1539,6 +1542,8 @@ class Classifier(wx.Frame):
                 return False
 
     def UpdateTrainingSet(self):
+        if self.training_set_ready:
+            return True
         # pause tile loading
         self.PostMessage('Waiting for image loader to finish current job.')
         with tilecollection.load_lock():
@@ -1558,6 +1563,7 @@ class Classifier(wx.Frame):
                                         keyLists=[bin.GetObjectKeys() for bin in self.classBins],
                                         callback=cb)
                     self.PostMessage('Training set saved.')
+                    self.training_set_ready = True
                 except:
                     self.PostMessage('Error: Training set could not be saved.')
                 dlg.Destroy()
