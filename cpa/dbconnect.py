@@ -618,7 +618,7 @@ class DBConnect(metaclass=Singleton):
         imKeys: a list of image keys to sample objects from.
         N: number of keys to sample
         '''
-        rand = "RANDOM()" if p.db_type == 'sqlite' else "RAND()"
+        rand = "RANDOM()" if p.db_type.lower() == 'sqlite' else "RAND()"
         if not imKeys:
             statement = f"SELECT {p.image_id}, {p.object_id} FROM {p.object_table} ORDER BY {rand} LIMIT {N}"
 
@@ -848,9 +848,9 @@ class DBConnect(metaclass=Singleton):
             imKeys = self.execute(self.filter_sql(filter_name))
             return list(dict.fromkeys(imKeys))
         except Exception as e:
-            logging.error('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
+            logging.error('Filter query failed for filter "%s". Check the SQL syntax in your properties file.'%(filter_name))
             logging.error(e)
-            raise Exception('Filter query failed for filter "%s". Check the MySQL syntax in your properties file.'%(filter_name))
+            raise Exception('Filter query failed for filter "%s". Check the SQL syntax in your properties file.'%(filter_name))
 
     def GetGatedImages(self, gate_name):
         ''' Returns a list of imKeys from the given filter. '''
@@ -884,7 +884,7 @@ class DBConnect(metaclass=Singleton):
         q.where([p.gates[gate_name]])
         q.group_by(sqltools.object_cols())
         if random:
-            if p.db_type == 'sqlite':
+            if p.db_type.lower() == 'sqlite':
                 query = f"{str(q)} ORDER BY RANDOM()"
             else:
                 query = f"{str(q)} ORDER BY RAND()"
@@ -1155,7 +1155,7 @@ class DBConnect(metaclass=Singleton):
         if p.db_type.lower() == 'sqlite':
             res = self.execute('PRAGMA table_info(%s)'%(table))
             return [r[2] for r in res]
-        elif p.db_type == 'mysql':
+        elif p.db_type.lower() == 'mysql':
             res = self.execute('SHOW COLUMNS FROM %s'%(table))
             return [r[1] for r in res]
         

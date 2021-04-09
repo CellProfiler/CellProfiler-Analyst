@@ -6,8 +6,8 @@ def show_exception_as_dialog(type, value, tb, raisefurther=True):
     import traceback
     import wx
 
-    if tb:
-        print((traceback.format_tb(tb)))
+    # if tb:
+    #     print((traceback.format_tb(tb)))
 
     if isinstance(value, ClearException):
         wx.MessageBox(value, value.heading, wx.OK | wx.ICON_ERROR)
