@@ -70,6 +70,7 @@ def _on_about(self):
     info.AddDeveloper('Jane Hung')
     info.AddDeveloper('Thouis (Ray) Jones')
     info.AddDeveloper('Vebjorn Ljosa')
+    info.AddDeveloper('David Stirling')
     info.SetWebSite('cellprofileranalyst.org')
     AboutBox(info)
 
