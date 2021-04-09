@@ -82,7 +82,7 @@ def get_cpatool_subclasses():
 class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
     '''
-    def __init__(self, properties, parent, id=-1, log_data="", **kwargs):
+    def __init__(self, properties, parent, id=-1, **kwargs):
 
         from cpa.icons import get_icon, get_cpa_icon
 
@@ -119,6 +119,7 @@ class MainGUI(wx.Frame):
         #
         self.SetMenuBar(wx.MenuBar())
         fileMenu = wx.Menu()
+        loadPropertiesMenuItem = fileMenu.Append(-1, 'Load properties file', helpString='Load a properties file.')
         savePropertiesMenuItem = fileMenu.Append(-1, 'Save properties\tCtrl+S', helpString='Save the properties.')
 ##        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load properties\tCtrl+O', helpString='Open another properties file.')
         fileMenu.AppendSeparator()
@@ -172,8 +173,8 @@ class MainGUI(wx.Frame):
 
         log_level = logging.INFO # INFO is the default log level
         self.logr = logging.getLogger()
-        self.set_log_level(log_level) 
-        self.log_text = log_data
+        self.set_log_level(log_level)
+        self.log_text = ""
         def update(x):
             self.log_text += x+'\n'
         hdlr = FuncLog(update)
@@ -189,6 +190,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.ERROR), errorMenuItem)
         self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.CRITICAL), criticalMenuItem)
         self.Bind(wx.EVT_MENU, self.on_toggle_iologging, logioItem)
+        self.Bind(wx.EVT_MENU, self.on_load_properties, loadPropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_properties, savePropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
         self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)
@@ -210,50 +212,70 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
 
+    def confirm_properties(self):
+        if self.properties.is_initialized():
+            return True
+        else:
+            dlg = wx.MessageDialog(self, 'A valid properties file must be loaded to use this functionality',
+                                   'Properties file needed', wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
+            return False
+
     def launch_classifier(self, evt=None):
-        classifier = Classifier(parent=self, properties=self.properties)
-        classifier.Show(True)
+        if self.confirm_properties():
+            classifier = Classifier(parent=self, properties=self.properties)
+            classifier.Show(True)
 
     def launch_plate_map_browser(self, evt=None):
-        self.pv = PlateViewer(parent=self)
-        self.pv.Show(True)
+        if self.confirm_properties():
+            self.pv = PlateViewer(parent=self)
+            self.pv.Show(True)
 
     def launch_table_viewer(self, evt=None):
-        table = TableViewer(parent=self)
-        table.new_blank_table(100,10)
-        table.Show(True)
+        if self.confirm_properties():
+            table = TableViewer(parent=self)
+            table.new_blank_table(100,10)
+            table.Show(True)
 
     def launch_scatter_plot(self, evt=None):
-        scatter = Scatter(parent=self)
-        scatter.Show(True)
+        if self.confirm_properties():
+            scatter = Scatter(parent=self)
+            scatter.Show(True)
 
     def launch_histogram_plot(self, evt=None):
-        hist = Histogram(parent=self)
-        hist.Show(True)
+        if self.confirm_properties():
+            hist = Histogram(parent=self)
+            hist.Show(True)
 
     def launch_density_plot(self, evt=None):
-        density = Density(parent=self)
-        density.Show(True)
+        if self.confirm_properties():
+            density = Density(parent=self)
+            density.Show(True)
 
     def launch_image_viewer(self, evt=None):
-        imviewer = ImageViewer(parent=self)
-        imviewer.Show(True)
+        if self.confirm_properties():
+            imviewer = ImageViewer(parent=self)
+            imviewer.Show(True)
 
     def launch_image_gallery(self, evt=None):
-        colViewer = ImageGallery(parent=self, properties=self.properties)
-        colViewer.Show(True)
+        if self.confirm_properties():
+            colViewer = ImageGallery(parent=self, properties=self.properties)
+            colViewer.Show(True)
 
     def launch_box_plot(self, evt=None):
-        boxplot = BoxPlot(parent=self)
-        boxplot.Show(True)
+        if self.confirm_properties():
+            boxplot = BoxPlot(parent=self)
+            boxplot.Show(True)
 
     def launch_query_maker(self, evt=None):
-        querymaker = QueryMaker(parent=self)
-        querymaker.Show(True)
+        if self.confirm_properties():
+            querymaker = QueryMaker(parent=self)
+            querymaker.Show(True)
 
     def launch_normalization_tool(self, evt=None):
-        normtool = NormalizationUI(parent=self)
-        normtool.Show(True)
+        if self.confirm_properties():
+            normtool = NormalizationUI(parent=self)
+            normtool.Show(True)
 
     def on_toggle_iologging(self, evt):
         if evt.IsChecked():
@@ -261,7 +283,42 @@ class MainGUI(wx.Frame):
         else:
             self.log_io = False
 
+    def on_load_properties(self, evt):
+        # Show confirmation dialog.
+        if self.properties.is_initialized():
+            dlg = wx.MessageDialog(None, "Loading a new file will close all windows and clear unsaved data. Proceed?", 'Load properties file', wx.OK|wx.CANCEL)
+            response = dlg.ShowModal()
+            if response != wx.ID_OK:
+                return
+
+        # Close all subwindows
+        for window in self.GetChildren():
+            if isinstance(window, wx.Frame):
+                print(window)
+                window.Destroy()
+
+        # Shut down existing connections and wipe properties.
+        db = DBConnect()
+        db.Disconnect()
+        p = Properties()
+        p.clear()
+        self.console.Clear()
+
+        if not p.is_initialized():
+            from cpa.guiutils import show_load_dialog
+            if not show_load_dialog():
+                example_link_address = 'cellprofiler.org'
+                dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
+                                           example_link_address), 'Properties file required', wx.OK)
+                response = dlg.ShowModal()
+                logging.error('CellProfiler Analyst requires a properties file.')
+            else:
+                db.connect()
+                db.register_gui_parent(self)
+
     def on_save_properties(self, evt):
+        if not self.confirm_properties():
+            return
         p = Properties()
         dirname, filename = os.path.split(p._filename)
         ext = os.path.splitext(p._filename)[-1]
@@ -272,6 +329,8 @@ class MainGUI(wx.Frame):
             p.save_file(dlg.GetPath())
 
     def on_save_workspace(self, evt):
+        if not self.confirm_properties():
+            return
         p = Properties()
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
                             defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
@@ -280,6 +339,8 @@ class MainGUI(wx.Frame):
             wx.GetApp().save_workspace(dlg.GetPath())
 
     def on_load_workspace(self, evt):
+        if not self.confirm_properties():
+            return
         dlg = wx.FileDialog(self, "Select the file containing your CPAnalyst workspace...", wildcard="Workspace file (*.workspace)|*.workspace",
                             defaultDir=os.getcwd(), style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
@@ -301,6 +362,8 @@ class MainGUI(wx.Frame):
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
 
     def clear_link_tables(self, evt=None):
+        if not self.confirm_properties():
+            return
         p = Properties()
         dlg = wx.MessageDialog(self, 'This will delete the tables '
                     '"%s" and "%s" from your database. '
@@ -366,55 +429,31 @@ class CPAnalyst(wx.App):
             os.environ["CP_JAVA_HOME"] = os.path.abspath(os.path.join(sys.prefix, "..",  "Resources/Home"))
         '''List of tables created by the user during this session'''
         self.user_tables = []
-        # splashscreen
-        from cpa.icons import get_icon
-        splashimage = get_icon("cpa_splash").ConvertToBitmap()
-        # If the splash image has alpha, it shows up transparently on
-        # windows, so we blend it into a white background.
-        splashbitmap = wx.Bitmap.FromRGBA(splashimage.GetWidth(), splashimage.GetHeight(), 255, 255, 255, 255)
-        dc = wx.MemoryDC()
-        dc.SelectObject(splashbitmap)
-        dc.DrawBitmap(splashimage, 0, 0)
-        dc.Destroy() # necessary to avoid a crash in splashscreen
-        from wx.adv import SplashScreen, SPLASH_CENTRE_ON_SCREEN, SPLASH_TIMEOUT
-
-        splash = SplashScreen(splashbitmap, SPLASH_CENTRE_ON_SCREEN |
-                                SPLASH_TIMEOUT, 1500, None, -1, style=wx.BORDER_SIMPLE|wx.FRAME_NO_TASKBAR)
-        self.splash = splash
-
-        # Properties are loaded before the main app starts, so we'll capture any resulting log messages and pass them in
-        temp_log_stream = StringIO()
-        log_handler = logging.StreamHandler(temp_log_stream)
-        log_handler.setLevel(logging.INFO)
-        main_logger = logging.getLogger()
-        main_logger.addHandler(log_handler)
 
         p = Properties()
+        self.frame = MainGUI(p, None, size=(1000,-1))
+        self.frame.Show() # Show frame
         if not p.is_initialized():
             from cpa.guiutils import show_load_dialog
-            if not show_load_dialog():
-                splash.Destroy()
-                example_link_address = 'cellprofiler.org'
-                dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
-                                           example_link_address), 'Properties file required', wx.OK)
-                response = dlg.ShowModal()
-                logging.error('CellProfiler Analyst requires a properties file. Exiting.')
-                return False
-                self.splash.Show()
-        main_logger.removeHandler(log_handler)
-        log_data = temp_log_stream.getvalue()
-        self.frame = MainGUI(p, None, size=(1000,-1), log_data=log_data)
+            try:
+                if not show_load_dialog():
+                    example_link_address = 'cellprofiler.org'
+                    dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
+                                               example_link_address), 'Properties file required', wx.OK)
+                    response = dlg.ShowModal()
+                    logging.error('CellProfiler Analyst requires a properties file.')
+                    return False
+                else:
+                    db = DBConnect()
+                    db.connect()
+                    db.register_gui_parent(self.frame)
+            except Exception as e:
+                p._initialized = False
+                # Fully raising the exception during this startup sequence will crash CPA.
+                # So we'll display it manually.
+                show_exception_as_dialog(type(e), e, e.__traceback__, raisefurther=False)
+                logging.critical(e)
 
-        db = DBConnect()
-        # Black magic: Bus errors occur on Mac OS X if we wait until
-        # the JVM or the wx event look has started to connect. But it
-        # has to be done after we have read the properties file. So we
-        # do it here.
-        db.connect()
-        db.register_gui_parent(self.frame)
-
-        self.splash.Destroy()
-        self.frame.Show() # Show frame
         try:
             from cpa.updatechecker import check_update
             check_update(self.frame, event=False)
@@ -471,14 +510,6 @@ class CPAnalyst(wx.App):
                 f.write('\t%s : %s\n'%(setting, str(value)))
             f.write('\n')
         f.close()
-
-    def make_unique_plot_name(self, prefix):
-        '''This function must be called to generate a unique name for each plot.
-        eg: plot.SetName(wx.GetApp().make_unique_plot_name('Histogram'))
-        '''
-        plot_num = max([int(plot.Name[len(prefix):])
-                        for plot in self.plots if plot.Name.startswith(prefix)])
-        return '%s %d'%(prefix, plot_num)
 
 
 if __name__ == "__main__":    

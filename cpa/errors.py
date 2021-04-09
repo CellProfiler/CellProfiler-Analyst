@@ -1,7 +1,7 @@
 
 
 
-def show_exception_as_dialog(type, value, tb):
+def show_exception_as_dialog(type, value, tb, raisefurther=True):
     """Exception handler that show a dialog."""
     import traceback
     import wx
@@ -20,7 +20,8 @@ def show_exception_as_dialog(type, value, tb):
             lines += traceback.format_tb(tb)
         dlg = ScrolledMessageDialog(None, "".join(lines), 'Error', style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
         dlg.ShowModal()
-    raise value
+    if raisefurther:
+        raise value
 
 
 class ClearException(Exception):

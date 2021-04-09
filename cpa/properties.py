@@ -456,7 +456,7 @@ class Properties(metaclass=Singleton):
             del self.__dict__[k]
         self._groups      = {}
         self._filters     = ObservableDict()
-        self._initialized = True
+        self._initialized = False
         
     def is_initialized(self):
         return self._initialized

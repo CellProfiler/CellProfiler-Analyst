@@ -823,7 +823,9 @@ def show_load_dialog():
     
     if response == wx.ID_OK:
         filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        path, fname = os.path.split(filename)
+        os.chdir(path)  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        logging.info(f"[Properties]: Loading {fname}")
         if filename.endswith('ColumbusIDX.xml'):
             from .parseperkinelmer import load_columbus
             load_columbus(filename)
