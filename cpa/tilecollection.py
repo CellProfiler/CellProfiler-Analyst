@@ -163,6 +163,8 @@ class TileLoader(threading.Thread):
 
                 if self._want_abort:
                     self.tile_collection.cv.release()
+                    db = DBConnect()
+                    db.CloseConnection()
                     logging.info('%s aborted'%self.getName())
                     return
 
