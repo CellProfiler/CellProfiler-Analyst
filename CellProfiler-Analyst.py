@@ -294,7 +294,6 @@ class MainGUI(wx.Frame):
         # Close all subwindows
         for window in self.GetChildren():
             if isinstance(window, wx.Frame):
-                print(window)
                 window.Destroy()
 
         # Shut down existing connections and wipe properties.
