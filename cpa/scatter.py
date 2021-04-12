@@ -1121,7 +1121,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         self.push_current()
     
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
         
     # Load a properties file if passed in args

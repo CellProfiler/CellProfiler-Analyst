@@ -411,7 +411,7 @@ class BoxPlot(wx.Frame, CPATool):
 
                     
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
 
     if len(sys.argv) > 1:
