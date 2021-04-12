@@ -651,7 +651,7 @@ class Classifier(wx.Frame):
         rejectDuplicatesItem.Check(False)
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
-        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, manual_url="https://cellprofiler.org/v-classifier"), 'Help')
 
 
         # Bind events to different menu items

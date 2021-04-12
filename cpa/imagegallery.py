@@ -280,7 +280,7 @@ class ImageGallery(wx.Frame):
         saveObjMenuItem = advancedMenu.Append(-1, item='Save object thumbnails as PNG', helpString='Save object thumbnails as PNG')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
 
-        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, manual_url="https://cellprofiler.org/xiv-image-gallery"), 'Help')
 
         self.Bind(wx.EVT_MENU, self.OnShowImageControls, imageControlsMenuItem)
         self.Bind(wx.EVT_MENU, self.OnFetchObjThumbnails ,fetchObjMenuItem)

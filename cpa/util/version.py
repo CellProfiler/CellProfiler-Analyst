@@ -12,7 +12,7 @@ All rights reserved.
 
 Please see the AUTHORS file for credits.
 
-Website: http://www.cellprofiler.org
+Website: http://www.cellprofileranalyst.org
 '''
 
 

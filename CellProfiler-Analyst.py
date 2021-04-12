@@ -161,7 +161,7 @@ class MainGUI(wx.Frame):
         clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', helpString='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
         import cpa.helpmenu
-        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, main=True), 'Help')
 
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH2)
@@ -307,7 +307,7 @@ class MainGUI(wx.Frame):
         if not p.is_initialized():
             from cpa.guiutils import show_load_dialog
             if not show_load_dialog():
-                example_link_address = 'cellprofiler.org'
+                example_link_address = 'cellprofileranalyst.org'
                 dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
                                            example_link_address), 'Properties file required', wx.OK)
                 response = dlg.ShowModal()
@@ -437,7 +437,7 @@ class CPAnalyst(wx.App):
             from cpa.guiutils import show_load_dialog
             try:
                 if not show_load_dialog():
-                    example_link_address = 'cellprofiler.org'
+                    example_link_address = 'cellprofileranalyst.org'
                     dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
                                                example_link_address), 'Properties file required', wx.OK)
                     response = dlg.ShowModal()

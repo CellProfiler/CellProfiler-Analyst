@@ -5,10 +5,6 @@ from cpa.updatechecker import check_update
 from cpa.util.version import display_version
 
 
-def _on_manual(self):
-    import webbrowser
-    webbrowser.open("http://cellprofiler.org/CPA")
-
 def _on_check_update(self):
     check_update(self, force=True)
 
@@ -74,12 +70,17 @@ def _on_about(self):
     info.SetWebSite('cellprofileranalyst.org')
     AboutBox(info)
 
-def make_help_menu(frame):
+def make_help_menu(frame, main=False, manual_url="http://cellprofiler.org/CPA"):
     helpMenu = wx.Menu()
-    frame.Bind(wx.EVT_MENU, _on_manual, 
+    def on_manual(self):
+        import webbrowser
+        webbrowser.open(manual_url)
+
+    frame.Bind(wx.EVT_MENU, on_manual,
                helpMenu.Append(-1, item='Online manual'))
-    frame.Bind(wx.EVT_MENU, _on_check_update,
-               helpMenu.Append(-1, item='Check for updates', helpString='Check for new versions'))
+    if main:
+        frame.Bind(wx.EVT_MENU, _on_check_update,
+                   helpMenu.Append(-1, item='Check for updates', helpString='Check for new versions'))
     frame.Bind(wx.EVT_MENU, _on_about,
                helpMenu.Append(-1, item='About', helpString='About CellProfiler Analyst'))
     return helpMenu

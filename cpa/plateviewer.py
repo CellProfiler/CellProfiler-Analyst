@@ -54,7 +54,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.fileMenu = wx.Menu()
         self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
-        self.menuBar.Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        self.menuBar.Append(cpa.helpmenu.make_help_menu(self, manual_url="https://cellprofiler.org/viii-plate-viewer"), 'Help')
         save_csv_menu_item = self.fileMenu.Append(-1, 'Save table to CSV\tCtrl+S')
         self.Bind(wx.EVT_MENU, self.on_save_csv, save_csv_menu_item)
         

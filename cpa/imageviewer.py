@@ -281,7 +281,7 @@ class ImageViewer(wx.Frame):
         self.classViewMenuItem = self.viewMenu.Append(-1, item='View %s classes as numbers'%p.object_name[0])
         self.classViewMenuItem.Enable(p.object_table is not None)
         self.GetMenuBar().Append(self.viewMenu, 'View')
-        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, manual_url="https://cellprofiler.org/vii-image-viewer"), 'Help')
 
 
     #######################################
