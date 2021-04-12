@@ -20,7 +20,7 @@ from cpa.classifier import *
 
 import time
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 
     p = Properties()
     db = dbconnect.DBConnect()

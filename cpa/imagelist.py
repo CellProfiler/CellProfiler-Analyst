@@ -4,7 +4,6 @@ import wx
 import numpy as np
 from .properties import Properties
 from .dbconnect import *
-from UserDict import DictMixin
 from . import imagetools
 
 p = Properties()
@@ -52,7 +51,7 @@ class ImageListCtrl(wx.ListCtrl):
         f.Raise()
 
     def OnGetItemText(self, row, col):
-        return self.data[row][col]
+        return str(self.data[row][col])
 
 
 class ImageListFrame(wx.Frame):
@@ -69,7 +68,7 @@ class ImageListFrame(wx.Frame):
         
         
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
     
     if not p.show_load_dialog():

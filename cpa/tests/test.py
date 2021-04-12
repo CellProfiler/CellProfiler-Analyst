@@ -4,7 +4,7 @@ from matplotlib.backends.backend_wx import _load_bitmap
 import matplotlib as mpl
 
 
-app = wx.PySimpleApp()
+app = wx.App()
 f = wx.Frame(None)
 fig = mpl.figure.Figure()
 p = FigureCanvasWxAgg(f, -1, fig)

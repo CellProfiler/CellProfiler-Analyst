@@ -10,7 +10,6 @@ from . import sqltools
 import numpy as np
 from .utils import Observable
 from wx.adv import OwnerDrawnComboBox as ComboBox
-from wx.lib.combotreebox import ComboTreeBox
 
 p = properties.Properties()
 db = dbconnect.DBConnect()
@@ -840,45 +839,3 @@ def show_load_dialog():
     else:
         wx.CallAfter(dlg.Destroy)
         return False
-            
-        
-if __name__ == "__main__":
-    app = wx.PySimpleApp()
-    import logging, sys
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    p.load_file('/Users/afraser/cpa_example/example.properties')
-
-    f = wx.Frame(None)
-    f.Sizer = wx.BoxSizer(wx.VERTICAL)
-    #f.Sizer.Add(CheckListComboBox(f, 'asdf'))
-    
-    
-    treebox = ComboTreeBox(f, style=wx.CB_READONLY)
-    def build_tree(colnames, parent=None):
-        #i = 1
-        #while 1:
-            #prefixes, b = zip(*[col.split('_', i) for col in colnames])
-            #prefixes = set(prefixes)
-            #if len(prefixes) > 1 or :
-                #break
-            #i += 1
-        for prefix in prefixes:
-            subcols = [col.split('_', 1)[1] for col in colnames if col.startswith(prefix+'_')]
-            if len(subcols) == 1:
-                treebox.Append(prefix+'_'+subcols[0], parent)
-            elif subcols:
-                child = treebox.Append(prefix, parent)
-                build_tree(subcols, child)
-            else:
-                treebox.Append(prefix, parent)
-    cols = ['test_t_t_t_1', 'test_t_t_t_2']
-    build_tree(cols)
-    for table in sorted(db.get_linkable_tables()):
-        child = treebox.Append(table)
-        cols = db.GetColumnNames(table)
-        build_tree(cols, child)
-
-    f.Sizer.Add(treebox, 0, wx.EXPAND)
-    f.Show()
-
-    app.MainLoop()

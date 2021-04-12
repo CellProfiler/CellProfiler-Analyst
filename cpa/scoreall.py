@@ -214,7 +214,7 @@ if __name__ == "__main__":
     props_file = sys.argv[1]
     ts_file    = sys.argv[2]
     
-    app = wx.PySimpleApp()
+    app = wx.App()
     
     nRules = int(eval(input('# of rules: ')))
     

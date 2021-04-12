@@ -476,12 +476,3 @@ def parse_old_group_query(group_query):
         else:
             import wx
             wx.MessageBox('Unable to parse properties group query:\n\t"%s".'%(gq), 'Error')
-            
-
-
-if __name__ == "__main__":
-    import wx
-    app = wx.PySimpleApp()
-    p.LoadFile('/Users/afraser/cpa_example/example.properties')
-
-    app.MainLoop()

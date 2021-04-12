@@ -503,7 +503,7 @@ class PlateMapPanel(wx.Panel):
 
         
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 
     data = np.arange(5600.)
     a = np.zeros((40,140))

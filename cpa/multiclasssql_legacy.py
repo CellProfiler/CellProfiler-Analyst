@@ -290,7 +290,7 @@ if __name__ == "__main__":
     print(labels)
     for row in table:
         print(row)
-#    app = wx.PySimpleApp()
+#    app = wx.App()
 #    grid = DataGrid(numpy.array(table), labels, key_col_indices=[0,1])
 #    grid.Show()
 #    app.MainLoop()

@@ -1224,25 +1224,22 @@ class DBConnect(metaclass=Singleton):
         connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
 
-    def GetCellDataForClassifier(self, obKey):
+    def GetCellDataForClassifier(self):
         '''
         Returns a list of measurements for the specified object excluding
         those specified in Properties.classifier_ignore_columns
         '''
         if (self.classifierColNames == None):
             self.GetColnamesForClassifier()
-        if isinstance(obKey, str):
-            whereclause = obKey
-        else:
-            whereclause = GetWhereClauseForObjects([obKey])
-        query = 'SELECT `%s` FROM %s WHERE %s' %('`, `'.join(self.classifierColNames), p.object_table, whereclause)
+        query = 'SELECT %s FROM %s' %(', '.join(self.classifierColNames), p.object_table)
+
         data = self.execute(query, silent=False)
         if len(data) == 0:
-            logging.error('No data for obKey: %s'%str(obKey))
+            logging.error('No data in table')
             return None
         # This should be the case
         assert all([type(x) in (int, float) for x in data[0]])
-        return np.array(data[0])
+        return np.array(data)
 
     def GetCellData(self, obKey):
         '''

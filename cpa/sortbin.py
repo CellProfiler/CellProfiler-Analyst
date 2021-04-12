@@ -452,7 +452,7 @@ class SortBin(wx.ScrolledWindow):
 
 
 if __name__ == '__main__':
-    app = wx.PySimpleApp()
+    app = wx.App()
  
     p.show_load_dialog()    
     from . import datamodel
@@ -461,7 +461,6 @@ if __name__ == '__main__':
     f = wx.Frame(None)
     sb = SortBin(f)
     f.Show()
-    
-    sb.AddObjects([dm.GetRandomObject() for i in range(50)])
+    sb.AddObjects(dm.GetRandomObject(50))
 
     app.MainLoop()

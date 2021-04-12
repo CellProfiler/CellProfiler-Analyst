@@ -773,7 +773,7 @@ def get_non_blob_types_from_table(table):
     return [m for m,t in zip(measurements, types) if not 'blob' in t.lower()]
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -800,7 +800,7 @@ if __name__ == "__main__":
     # Kill the Java VM
     #
     try:
-        import javavbridge
+        import javabridge
         javabridge.kill_vm()  # noqa: F821
     except:
         import traceback

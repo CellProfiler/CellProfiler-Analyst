@@ -554,7 +554,7 @@ def get_resultgroup_param_ids_from_plate_results(plate_results_file):
 #
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 ##    load_columbus('/Users/afraser/Desktop/PKI Example Data/Columbus/P010-R ETAR[56]_SinglePlaneTIF/MeasurementIndex.ColumbusIDX.xml')
 ##    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P010-R ETAR__2009-02-12T17_11_35-Measurement1/Evaluation1/PlateResults.xml')
     load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P018-Colony Formation__2010-09-17T11_57_24-Measurement1/Evaluation1/PlateResults.xml')

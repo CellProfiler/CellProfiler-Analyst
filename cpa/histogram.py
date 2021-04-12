@@ -447,7 +447,7 @@ class Histogram(wx.Frame, CPATool):
 
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
 
     # Load a properties file if passed in args

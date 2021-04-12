@@ -59,7 +59,7 @@ class QueryMaker(wx.Frame):
 
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
     p = Properties()

@@ -15,7 +15,7 @@ if __name__ == "__main__":
     from cpa.trainingset import TrainingSet
     import wx
 
-    app = wx.PySimpleApp()
+    app = wx.App()
     
     os.chdir('/Users/afraser/')
     

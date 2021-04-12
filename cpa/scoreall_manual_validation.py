@@ -44,7 +44,7 @@ def per_cell_scores(learners, test, colnames):
         try:
             col = colnames.index(colname)
         except ValueError:
-            warnings.warn('Skipping %s'%colname)
+            logging.warn('Skipping %s'%colname)
             continue
         above_threshold = np.array(test)[:,col] > thresh
         scores[above_threshold] += a[0]
@@ -73,11 +73,6 @@ def score_objects(properties, ts, gt, nRules, filter_name=None, group='Image',
 
     #if group == None:
         #group = 'Image'
-        
-    if results_table:
-        if db.table_exists(results_table) and not overwrite:
-            print(('Table "%s" already exists. Delete this table before running scoreall.'%(results_table)))
-            return None
 
     print('')
     print(('properties:    ', properties))
@@ -201,7 +196,7 @@ if __name__ == "__main__":
     ts_file    = sys.argv[2]
     gt_file    = sys.argv[3] # Ground Truth    
     
-    app = wx.PySimpleApp()
+    app = wx.App()
     
     ## Set to 50, only for testing! 
     #nRules = int(raw_input('# of rules: '))

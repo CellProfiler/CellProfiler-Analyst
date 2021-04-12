@@ -210,12 +210,12 @@ class TileLoader(threading.Thread):
 
 ################# FOR TESTING ##########################
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 
 
     from .datamodel import DataModel
     p = Properties()
-    p.LoadFile('../properties/nirht_test.properties')
+    p.show_load_dialog()
     db = DBConnect()
     db.connect()
     dm = DataModel()
@@ -224,7 +224,7 @@ if __name__ == "__main__":
 
     f =  wx.Frame(None)
     for i in range(10):
-        obKey = dm.GetRandomObject()
+        obKey = dm.GetRandomObject(1)
         test.GetTileData((0,1,1), f)
 
     for t in threading.enumerate():

@@ -234,7 +234,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.sw.Sizer.Add(sbs, 0, wx.EXPAND)
         (w,h) = self.sw.Sizer.GetSize()
-        self.sw.SetScrollbars(20,20,w/20,h/20,0,0)
+        self.sw.SetScrollbars(20,20,w//20,h//20,0,0)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
@@ -671,7 +671,7 @@ class NormalizationUI(wx.Frame, CPATool):
 
             
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG)
     
     if p.show_load_dialog():

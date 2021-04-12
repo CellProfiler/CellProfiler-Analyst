@@ -58,7 +58,7 @@ class ScoreDialog(wx.Dialog):
 
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     d = ScoreDialog(None, [str(a) for a in range(15)],
                     [(None, 'None'), 'Untreated', 'HRG'])
     if d.ShowModal() == wx.ID_OK:

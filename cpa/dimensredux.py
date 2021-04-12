@@ -174,7 +174,7 @@ class PlotPanel(wx.Panel):
         # Only obtain class data from the database if no data is available yet
         if self.class_masks is None or self.class_names is None:
             self.class_masks, self.class_names = self.create_class_masks()
-        self.data = np.nan_to_num(self.data) # Eliminate NaNs
+        self.data = np.nan_to_num(self.data.astype(float)) # Eliminate NaNs
 
         # Calculate PCA-SVD and mask data with class information
         centered = self.mean_center(self.data)
@@ -204,7 +204,7 @@ class PlotPanel(wx.Panel):
                 cell_count = np.shape(np.nonzero(self.maskedPCA1[:, i]))
                 for j in range(nOpacity):
                     showObjects = np.where(self.object_opacity == opacities[j])
-                    subHandle = self.subplot.scatter(self.maskedPCA1[showObjects[0], i], self.maskedPCA2[showObjects[0], i], 8, c=self.color_set[i, :], linewidth="0.25", alpha=0.25+0.75*opacities[j])
+                    subHandle = self.subplot.scatter(self.maskedPCA1[showObjects[0], i], self.maskedPCA2[showObjects[0], i], 8, c=self.color_set[i, :], linewidth=0.25, alpha=0.25+0.75*opacities[j])
 
                     # The highest opacity objects are added to the legend
                     if opacities[j] == np.max(opacities):
@@ -508,7 +508,6 @@ class PlotMain(wx.Frame):
     def __init__(self, parent, properties = None, show_controls = True, size=(600, 600), loadData = True, **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Dimensionality Reduction Plot', **kwargs)
         self.SetName('Plot main')
-
         if properties is not None:
             global p
             p = properties
@@ -521,7 +520,6 @@ class PlotMain(wx.Frame):
 
         global classifier
         classifier = parent
-
         if loadData:
             # Define a progress dialog
             dlg = wx.ProgressDialog('Fetching cell data...', '0% Complete', 100, classifier,
@@ -542,7 +540,6 @@ class PlotMain(wx.Frame):
             dlg.Destroy()
         else:
             self.data, self.data_dic = None, None
-            
         self.features_dic = self.load_feature_names()
         self.class_masks = None
         self.class_names = None
@@ -567,26 +564,16 @@ class PlotMain(wx.Frame):
         its dot representation in the plot.
         '''
         self.filter_col_names(p.object_table)
-         
-        all_keys = list(map(db.GetObjectsFromImage, db.GetAllImageKeys()))
-
+        all_keys = db.GetAllObjectsSQL(db.GetAllImageKeys())
         obj_counts = db.GetPerImageObjectCounts()
         total_obj_count = sum(k[1] for k in obj_counts) 
-
-        for key in all_keys:
-            if key:
-                measurements = len(db.GetCellDataForClassifier(key[0]))
-                break
-
-        data = np.zeros((total_obj_count, measurements))
         data_dic = {}
-        key_list = [key for image_keys in all_keys for key in image_keys]
-        nKeys = float(len(key_list))
-        for index, key in enumerate(key_list):
-            cb(index / nKeys)
-            data[index, :] = db.GetCellDataForClassifier(key)
-            data_dic[index] = key
+        nKeys = float(len(all_keys))
+        data = db.GetCellDataForClassifier()
 
+        for index, key in enumerate(all_keys):
+            cb(index / nKeys)
+            data_dic[index] = key
         return data, data_dic
 
     def load_feature_names(self):
@@ -635,7 +622,7 @@ class PlotMain(wx.Frame):
         self.figure_loadings.set_plot_type("Loadings")
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.INFO,)
 
     global p
@@ -650,7 +637,6 @@ if __name__ == "__main__":
         if not p.show_load_dialog():
             raise Exception("DimensRedux.py needs a CPAnalyst properties file passed as args. Exiting...")     
             sys.exit()
-
     pca_main = PlotMain(None)
     pca_main.Show()
     app.MainLoop()

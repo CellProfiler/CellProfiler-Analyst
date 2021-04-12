@@ -86,10 +86,11 @@ def make_help_menu(frame, main=False, manual_url="http://cellprofiler.org/CPA"):
     return helpMenu
 
 if __name__ == '__main__':
-    app = wx.PySimpleApp()
+    app = wx.App()
     frame = wx.Frame(None, title='Test help menu')
     menu_bar = wx.MenuBar()
     menu_bar.Append(make_help_menu(frame), 'Help')
     frame.SetMenuBar(menu_bar)
+    frame.Show()
     app.MainLoop()
 
