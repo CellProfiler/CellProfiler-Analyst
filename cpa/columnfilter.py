@@ -39,7 +39,7 @@ class ColumnFilterPanel(wx.Panel):
         colSizer.AddSpacer(5)
         colSizer.Add(self.colChoice, 1, wx.EXPAND)
         colSizer.AddSpacer(5)
-        colSizer.Add(self.comparatorChoice, 0.5, wx.EXPAND)
+        colSizer.Add(self.comparatorChoice, 1, wx.EXPAND)
         colSizer.AddSpacer(5)
         colSizer.Add(self.valueField, 1, wx.EXPAND)
         if allow_delete:
@@ -154,7 +154,7 @@ class ColumnFilterDialog(wx.Dialog):
         self.panels = [ColumnFilterPanel(self.sw, tables, False)]
         self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
         (w,h) = self.sw.Sizer.GetSize()
-        self.sw.SetScrollbars(20,20,w/20,h/20,0,0)
+        self.sw.SetScrollbars(20,20,w//20,h//20,0,0)
         self.sw.Sizer.Add(self.panels[0], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         self.Sizer.Add(self.sw, 1, wx.EXPAND)
 
@@ -264,25 +264,20 @@ class ColumnFilterDialog(wx.Dialog):
 if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.DEBUG)
-    app = wx.PySimpleApp()
+    app = wx.App()
     
     # Load a properties file if passed in args
-    if len(sys.argv) > 1:
-        propsFile = sys.argv[1]
-        p.LoadFile(propsFile)
-    else:
-        p.LoadFile('/Users/afraser/cpa_example/example.properties')
-
-    p._filters['test'] = sql.Filter(('per_image', 'gene'), 'REGEXP', 'MAP*',
+    if p.show_load_dialog():
+        p._filters['test'] = sql.Filter(('per_image', 'gene'), 'REGEXP', 'MAP*',
                                     'OR', sql.Column('per_image', 'gene'), 'IS', 'NULL')
-    p._filters_ordered += ['test']
+        p._filters_ordered += ['test']
 
-    p._filters['test2'] = sql.Filter(('per_image', 'well'), '!=', 'A01')
-    p._filters_ordered += ['test2']
+        p._filters['test2'] = sql.Filter(('per_image', 'well'), '!=', 'A01')
+        p._filters_ordered += ['test2']
 
-    cff = ColumnFilterDialog(None, tables=[p.image_table])
-    if cff.ShowModal()==wx.OK:
-        print((cff.get_filter()))
+        cff = ColumnFilterDialog(None, tables=[p.image_table])
+        if cff.ShowModal()==wx.OK:
+            print((cff.get_filter()))
 
-    cff.Destroy()
-    app.MainLoop()
+        cff.Destroy()
+        app.MainLoop()

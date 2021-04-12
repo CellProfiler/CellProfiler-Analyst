@@ -19,13 +19,10 @@ import os
 import wx
 import cpa.helpmenu
 
-
-from cpa.profiling.classifier import Classifier
-
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
 
-ID_IMAGE_GALLERY = wx.NewId()
+ID_IMAGE_GALLERY = wx.NewIdRef()
 CREATE_NEW_FILTER = '*create new filter*'
 
 class ImageGallery(wx.Frame):
@@ -758,25 +755,6 @@ class ImageGallery(wx.Frame):
         for bin in self.all_sort_bins():
             bin.MapChannels(chMap)
 
-    def ValidateImageKey(self, evt):
-        # Unused? Mar 2021
-        ''' Checks that the image field specifies an existing image. '''
-        txtCtrl = evt.GetEventObject()
-        try:
-            if p.table_id:
-                imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
-            else:
-                imKey = (int(self.imageTxt.Value),)
-            if dm.GetObjectCountFromImage(imKey) > 0:
-                txtCtrl.SetForegroundColour('#000001')
-                self.SetStatusText('Image contains %s %s.' % (dm.GetObjectCountFromImage(imKey), p.object_name[1]))
-            else:
-                txtCtrl.SetForegroundColour('#888888')  # Set field to GRAY if image contains no objects
-                self.SetStatusText('Image contains zero %s.' % (p.object_name[1]))
-        except(Exception):
-            txtCtrl.SetForegroundColour('#FF0000')  # Set field to red if image doesn't exist
-            self.SetStatusText('No such image.')
-
     def OnSelectFetchChoice(self, evt):
         ''' Handler for fetch filter selection. '''
         fetchChoice = self.fetchChoice.GetStringSelection()
@@ -1079,13 +1057,8 @@ if __name__ == "__main__":
             logging.error('Classifier requires a properties file.  Exiting.')
             wx.GetApp().Exit()
 
-    classifier = Classifier()
-    classifier.Show(True)
-
-    # Load a training set if passed as the second argument
-    if len(sys.argv) > 2:
-        training_set_filename = sys.argv[2]
-        classifier.LoadTrainingSet(training_set_filename)
+    gallery = ImageGallery(p)
+    gallery.Show(True)
 
     app.MainLoop()
 

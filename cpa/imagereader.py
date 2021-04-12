@@ -1,5 +1,4 @@
 import urllib.request, urllib.error, urllib.parse
-import urllib.request, urllib.parse, urllib.error
 import urllib.parse
 import imageio
 import os.path
@@ -44,14 +43,11 @@ class ImageReader(object):
         return channels
 
     def _read_image(self, filename_or_url, log_io=True):
-        # The opener's destructor deletes the temprary files, so the
-        # opener must not be GC'ed until the image has been loaded.
-        opener = ThrowingURLopener()
         if p.image_url_prepend:
             parsed = urllib.parse.urlparse(p.image_url_prepend + filename_or_url)
             if parsed.scheme:
                 try:
-                    filename_or_url, ignored_headers = opener.retrieve(parsed.geturl())
+                    filename_or_url, ignored_headers = urllib.request.urlretrieve(parsed.geturl())
                 except IOError as e:
                     if e.args[0] == 'http error':
                         status_code, message = e.args[1:3]
@@ -136,7 +132,7 @@ if __name__ == "__main__":
     from .imageviewer import ImageViewer
     import sys
 
-    app = wx.PySimpleApp()
+    app = wx.App()
 
     p = Properties()
     dm = DataModel()
@@ -151,7 +147,7 @@ if __name__ == "__main__":
         if not p.show_load_dialog():
             wx.GetApp().Exit()
 
-    obkey = dm.GetRandomObject()
+    obkey = dm.GetRandomObject(1)[0]
     fds = db.GetFullChannelPathsForImage(obkey[:-1])
     images = ir.ReadImages(fds)
     ImageViewer(images, img_key=obkey[:-1]).Show()

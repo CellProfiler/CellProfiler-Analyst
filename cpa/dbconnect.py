@@ -2141,8 +2141,8 @@ class Objects(Entity):
 if __name__ == "__main__":
     ''' For debugging only... '''
     import wx
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    p.LoadFile('/Users/afraser/cpa_example/example.properties')
-    
+    p.show_load_dialog()
+
     app.MainLoop()

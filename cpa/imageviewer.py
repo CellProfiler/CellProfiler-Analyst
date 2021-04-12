@@ -760,7 +760,7 @@ if __name__ == "__main__":
 #    p.LoadFile('/Users/afraser/Desktop/cpa_example/example.properties')
 #    p.LoadFile('../properties/nirht_test.properties')
 #    p.LoadFile('../properties/2008_07_29_Giemsa.properties')
-    app = wx.PySimpleApp()
+    app = wx.App()
     from .imagereader import ImageReader
 
     p = Properties()

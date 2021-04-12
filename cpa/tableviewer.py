@@ -11,8 +11,6 @@ import csv
 import os
 import re
 import logging
-# from UserDict import DictMixin
-from collections import MutableMapping
 
 import numpy as np
 
@@ -1055,7 +1053,7 @@ def show_loaddata_table(gate_names, as_columns=True):
 
 
 if __name__ == '__main__':
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
     if p.show_load_dialog():
         frame = TableViewer(None)

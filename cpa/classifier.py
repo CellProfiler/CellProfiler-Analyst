@@ -25,6 +25,7 @@ from . import sortbin
 import logging
 import numpy as np
 import os
+import sys
 import wx
 import re
 import random
@@ -47,7 +48,7 @@ from sklearn.metrics import roc_curve, auc
 # number of cells to classify before prompting the user for whether to continue
 MAX_ATTEMPTS = 10000
 
-ID_CLASSIFIER = wx.NewId()
+ID_CLASSIFIER = wx.NewIdRef()
 CREATE_NEW_FILTER = '*create new filter*'
 
 class Classifier(wx.Frame):
@@ -1449,24 +1450,6 @@ class Classifier(wx.Frame):
         for bin in self.all_sort_bins():
             bin.MapChannels(chMap)
 
-    def ValidateImageKey(self, evt):
-        ''' Checks that the image field specifies an existing image. '''
-        txtCtrl = evt.GetEventObject()
-        try:
-            if p.table_id:
-                imKey = (int(self.tableTxt.Value), int(self.imageTxt.Value))
-            else:
-                imKey = (int(self.imageTxt.Value),)
-            if dm.GetObjectCountFromImage(imKey) > 0:
-                txtCtrl.SetForegroundColour('#000001')
-                self.SetStatusText('Image contains %s %s.' % (dm.GetObjectCountFromImage(imKey), p.object_name[1]))
-            else:
-                txtCtrl.SetForegroundColour('#888888')  # Set field to GRAY if image contains no objects
-                self.SetStatusText('Image contains zero %s.' % (p.object_name[1]))
-        except(Exception):
-            txtCtrl.SetForegroundColour('#FF0000')  # Set field to red if image doesn't exist
-            self.SetStatusText('No such image.')
-
     # Nice plotting which depends on which plot one choses
     def OnEvaluation(self, evt):
         items = self.evalMenu.GetMenuItems()
@@ -2588,8 +2571,6 @@ class StopCalculating(Exception):
 # ----------------- Run -------------------
 
 if __name__ == "__main__":
-    import sys
-    import logging
     from .errors import show_exception_as_dialog
 
     logging.basicConfig(level=logging.DEBUG, )
