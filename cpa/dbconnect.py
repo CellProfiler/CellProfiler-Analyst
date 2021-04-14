@@ -1224,14 +1224,14 @@ class DBConnect(metaclass=Singleton):
         connID = threading.currentThread().getName()
         return [x[0] for x in self.cursors[connID].description]
 
-    def GetCellDataForClassifier(self):
+    def GetCellDataForRedux(self):
         '''
         Returns a list of measurements for the specified object excluding
         those specified in Properties.classifier_ignore_columns
         '''
         if (self.classifierColNames == None):
             self.GetColnamesForClassifier()
-        query = 'SELECT %s FROM %s' %(', '.join(self.classifierColNames), p.object_table)
+        query = 'SELECT %s FROM %s' %(', '.join([p.image_id, p.object_id] + self.classifierColNames), p.object_table)
 
         data = self.execute(query, silent=False)
         if len(data) == 0:

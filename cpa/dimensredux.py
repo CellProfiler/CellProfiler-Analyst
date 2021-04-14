@@ -24,6 +24,8 @@ from operator import itemgetter
 import numpy as np
 import wx
 import wx.aui
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import StandardScaler
 from wx.adv import OwnerDrawnComboBox as ComboBox
 from matplotlib import cm
 from matplotlib.figure import Figure
@@ -35,6 +37,7 @@ from .properties import Properties
 
 SVD = 'SVD: Singular Value Decomposition'
 TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
+NEW_SVD = 'SVD'
 COLORS = ['g', 'r', 'g', 'g', 'g', 'b', 'b', 'b', 'darkorange', 'greenyellow', 'darkorchid', 'aqua', 'deeppink', 'sienna', 'bisque', 'cornflowerblue', 'goldenrod', 'indigo', 'gray', 'olive', 'steelblue']
 
 class PlotPanel(wx.Panel):
@@ -54,7 +57,6 @@ class PlotPanel(wx.Panel):
         self.class_names = None
         self.Loadings = None
         self.object_opacity = None
-        self.object_accuracies = None
         self.leg = None
         self.maskedPCA1 = None
         self.maskedPCA2 = None
@@ -64,7 +66,7 @@ class PlotPanel(wx.Panel):
         try:
             self.classifier = classifier
             self.classifier_rules = classifier.algorithm.weak_learners
-        except: 
+        except:
             self.classifier_rules = [('None', 0, np.array([0, 0]))]
 
         self.chMap = p.image_channel_colors
@@ -86,14 +88,14 @@ class PlotPanel(wx.Panel):
         tools_sizer = wx.BoxSizer(wx.HORIZONTAL)
         tools_sizer.Add(self.toolbar, 0, wx.RIGHT | wx.EXPAND)
         tools_sizer.AddSpacer(5)
-        tools_sizer.Add(self.hide_legend_btn, 0, wx.LEFT | wx.EXPAND)    
+        # tools_sizer.Add(self.hide_legend_btn, 0, wx.LEFT | wx.EXPAND)
         tools_sizer.AddSpacer(5)
-        tools_sizer.Add(self.statusBar, 0, wx.LEFT | wx.EXPAND)    
+        tools_sizer.Add(self.statusBar, 0, wx.LEFT | wx.EXPAND)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.EXPAND)
         sizer.Add(tools_sizer, 0, wx.EXPAND)
-        self.SetSizer(sizer)    
+        self.SetSizer(sizer)
 
     def set_plot_type(self, plot_scores):
         '''
@@ -152,11 +154,7 @@ class PlotPanel(wx.Panel):
                 dist = np.hypot((x - self.Scores[:, 0]), (y - self.Scores[:, 1]))
                 object_dict_key = np.where(dist == np.amin(dist))
                 xy_key = int(object_dict_key[0][0])
-                if self.object_accuracies:
-                    errorData = ', CA = %0.1f%%' % ((1-self.object_opacity[xy_key])*100.0)
-                else:
-                    errorData = ''
-                self.statusBar.SetStatusText(("Object key = " + str(self.data_dic[xy_key]) + errorData), 0)
+                self.statusBar.SetStatusText(("Object key = " + str(self.data_dic[xy_key])), 0)
                 self.actual_key = self.data_dic[xy_key]
             elif self.plot_scores == "Loadings":
                 dist = np.hypot((x - self.Loadings[0]), (y - self.Loadings[1]))
@@ -191,11 +189,7 @@ class PlotPanel(wx.Panel):
             labels = []
 
             # Determine the different opacities for the objects. This is set to 1 if no opacities have been specified.
-            if self.object_opacity is None:
-                self.object_opacity = np.ones([self.maskedPCA1.shape[0], 1])
-                self.object_accuracies = False
-            elif self.object_accuracies is None:
-                self.object_accuracies = True
+            self.object_opacity = np.ones([self.maskedPCA1.shape[0], 1])
             opacities = np.unique(self.object_opacity)
             nOpacity = len(opacities)
             
@@ -238,7 +232,7 @@ class PlotPanel(wx.Panel):
                 size_mask.append((int(scatter_mask[i]) ** 2) * 5)
 
             self.subplot.scatter(self.Loadings[0], self.Loadings[1], c=colors_mask,
-                                 s=size_mask, linewidth="0.5", marker='o')
+                                 s=size_mask, linewidth=0.5, marker='o')
             self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
             self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
             self.figure.canvas.draw()
@@ -250,14 +244,28 @@ class PlotPanel(wx.Panel):
         Plot the t-Distributed Stochastic Neighbor Embedding (t-SNE) distribution of the data
         '''
         self.subplot.clear()
-        self.data = np.nan_to_num(self.data) # Eliminate NaNs
-        centered = self.mean_center(self.data)
-        standardized = self.standardization(centered)
+        self.data = np.nan_to_num(self.data.astype(float)) # Eliminate NaNs
+        from sklearn.preprocessing import StandardScaler
+
+        sc = StandardScaler()
+        standardized = sc.fit_transform(self.data[:, np.var(self.data, axis=0) != 0])
 
         # Calculate t-SNE of the data and mask it (python t-SNE version if Intel IPP is not installed)
         try:
-            from calc_tsne import calc_tsne
-            U = calc_tsne(standardized, 2, 50, 20.0)
+            from sklearn.manifold import TSNE
+            import time
+            print("Here", standardized.shape)
+            start = time.time()
+            ts = TSNE(n_components=2, perplexity=20.0, verbose=0)
+            U = ts.fit_transform(standardized)
+            print("Done without workers in ", time.time() - start)
+            start = time.time()
+            ts = TSNE(n_components=2, perplexity=20.0, n_jobs=6, verbose=0)
+            U = ts.fit_transform(standardized)
+            print("Done with workers in ", time.time() - start)
+
+            # from calc_tsne import calc_tsne
+            # U = calc_tsne(standardized, 2, 50, 20.0)
         except:
             logging.warning('''Could not use fast t-SNE. You may need to install the Intel Integrated Performance Libraries. Will use normal t-SNE instead.''')
             try:
@@ -278,11 +286,7 @@ class PlotPanel(wx.Panel):
         labels = []
 
         # Determine the different opacities for the objects. This is set to 1 if no opacities have been specified.
-        if self.object_opacity is None:
-            self.object_opacity = np.ones([self.masked_X.shape[0], 1])
-            self.object_accuracies = False
-        elif self.object_accuracies is None:
-            self.object_accuracies = True
+        self.object_opacity = np.ones([self.masked_X.shape[0], 1])
         opacities = np.unique(self.object_opacity)
         nOpacity = len(opacities)
             
@@ -291,7 +295,7 @@ class PlotPanel(wx.Panel):
             cell_count = np.shape(np.nonzero(self.masked_X[:, i]))
             for j in range(nOpacity):
                 showObjects = np.where(self.object_opacity == opacities[j])
-                subHandle = self.subplot.scatter(self.masked_X[showObjects, i], self.masked_Y[showObjects, i], 8, c=self.color_set[i, :], linewidth="0.25", alpha=0.25+0.75*opacities[j])
+                subHandle = self.subplot.scatter(self.masked_X[showObjects, i], self.masked_Y[showObjects, i], 8, c=self.color_set[i, :], linewidth=0.25, alpha=0.25+0.75*opacities[j])
                 # The highest opacity objects are added to the legend
                 if opacities[j] == np.max(opacities):
                     handles.append(subHandle)
@@ -301,6 +305,91 @@ class PlotPanel(wx.Panel):
         self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
         self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
         self.figure.canvas.draw()
+        self.motion_event_active = True
+
+    def plot_svd(self):
+        '''
+        Plot the Truncated SVD distribution of the data
+        '''
+        self.subplot.clear()
+        self.data = np.nan_to_num(self.data.astype(float))  # Eliminate NaNs
+        sc = StandardScaler()
+        standardized = sc.fit_transform(self.data[:, np.var(self.data, axis=0) != 0])
+
+        ts = TruncatedSVD(n_components=2)
+        U = ts.fit_transform(standardized)
+        self.Loadings = ts.components_
+        self.Scores = U[:, 0:2]
+        if self.class_masks is None or self.class_names is None:
+            self.class_masks, self.class_names = self.create_class_masks()
+        self.masked_X, self.masked_Y = self.mask_data(len(self.class_names), self.class_masks, self.Scores)
+
+
+        # Plot the masked t-SNE results in the Scores canvas
+        self.color_set = self.set_colormap(self.class_names)
+        handles = []
+        labels = []
+
+        # Determine the different opacities for the objects. This is set to 1 if no opacities have been specified.
+        self.object_opacity = np.ones([self.masked_X.shape[0], 1])
+        opacities = np.unique(self.object_opacity)
+        nOpacity = len(opacities)
+
+        if self.plot_scores == "Scores":
+            handles = []
+            labels = []
+
+            # Determine the different opacities for the objects. This is set to 1 if no opacities have been specified.
+            self.object_opacity = np.ones([self.masked_X.shape[0], 1])
+            opacities = np.unique(self.object_opacity)
+            nOpacity = len(opacities)
+
+            # For each class and opacity combination plot the corresponding objects
+            for i in range(len(self.class_names)):
+                cell_count = np.shape(np.nonzero(self.masked_X[:, i]))
+                for j in range(nOpacity):
+                    showObjects = np.where(self.object_opacity == opacities[j])
+                    subHandle = self.subplot.scatter(self.masked_X[showObjects[0], i],
+                                                     self.masked_Y[showObjects[0], i], 8, c=self.color_set[i, :],
+                                                     linewidth=0.25, alpha=0.25 + 0.75 * opacities[j])
+
+                    # The highest opacity objects are added to the legend
+                    if opacities[j] == np.max(opacities):
+                        handles.append(subHandle)
+                        labels.append(self.class_names[i] + ': ' + str(cell_count[1]))
+
+            # Construct the legend and make up the rest of the plot
+            self.leg = self.subplot.legend(handles, labels, loc=4, fancybox=True, handlelength=1)
+            self.leg.get_frame().set_alpha(0.25)
+            self.axes = ts.explained_variance_ratio_[0:2]
+            x_var = round(((1 - self.axes[0]) * 100), 2)
+            y_var = round(((self.axes[0] - self.axes[1]) * 100), 2)
+            x_axe_var = 'Explained variance: ' + str(x_var) + '%'
+            y_axe_var = 'Explained variance: ' + str(y_var) + '%'
+            self.subplot.set_xlabel(x_axe_var, fontsize=12)
+            self.subplot.set_ylabel(y_axe_var, fontsize=12)
+            self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
+            self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
+            self.figure.canvas.draw()
+        elif self.plot_scores == "Loadings":
+            # Plot the first two PCAs' Loadings in the Loading canvas
+            weaklearners_mask = np.zeros((np.shape(self.Loadings[0])))
+            for key in list(self.features_dic.keys()):
+                for value in self.classifier_rules:
+                    if value[0] == self.features_dic[key]:
+                        weaklearners_mask[key] += 1
+            scatter_mask = weaklearners_mask + 1
+            colors_mask = []
+            size_mask = []
+            for i in range(len(scatter_mask)):
+                colors_mask.append(COLORS[int(scatter_mask[i])])
+                size_mask.append((int(scatter_mask[i]) ** 2) * 5)
+
+            self.subplot.scatter(self.Loadings[0], self.Loadings[1], c=colors_mask,
+                                 s=size_mask, linewidth=0.5, marker='o')
+            self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
+            self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
+            self.figure.canvas.draw()
         self.motion_event_active = True
 
     def clean_canvas(self):
@@ -427,7 +516,7 @@ class PlotControl(wx.Panel):
         self.fig_load = fig_load
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.method_choice = ComboBox(self, -1, choices=[SVD, TSNE], style=wx.CB_READONLY)
+        self.method_choice = ComboBox(self, -1, choices=[SVD, TSNE, NEW_SVD], style=wx.CB_READONLY)
         self.method_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Show plot")
         self.help_btn = wx.Button(self, -1, "About")
@@ -474,13 +563,19 @@ class PlotControl(wx.Panel):
         Show the selected dimensionality reduction plot on the canvas      
         '''
         selected_method = self.method_choice.GetStringSelection()
-
+        import time
+        start = time.time()
         if selected_method == SVD:
             self.fig_sco.plot_pca()
             self.fig_load.plot_pca()
         elif selected_method == TSNE:
             self.fig_sco.plot_tsne()
             self.fig_load.clean_canvas()
+        elif selected_method == NEW_SVD:
+            self.fig_sco.plot_svd()
+            self.fig_load.plot_svd()
+
+        print(f"Finished {selected_method} in {time.time() - start}")
 
 class PlotNotebook(wx.Panel):
     '''
@@ -551,7 +646,7 @@ class PlotMain(wx.Frame):
         self.update_figures()
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
-                
+
         configpanel = PlotControl(self, self.figure_scores, self.figure_loadings)
         sizer.Add(configpanel, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(sizer)
@@ -569,7 +664,7 @@ class PlotMain(wx.Frame):
         total_obj_count = sum(k[1] for k in obj_counts) 
         data_dic = {}
         nKeys = float(len(all_keys))
-        data = db.GetCellDataForClassifier()
+        data = db.GetCellDataForRedux()
 
         for index, key in enumerate(all_keys):
             cb(index / nKeys)
