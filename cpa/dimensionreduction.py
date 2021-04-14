@@ -1,5 +1,6 @@
 # The dimensredux module, but put together as a standard CPA tool and modernised with sklearn.
 # Todo: All the things
+# Todo: Make gating possible on unclassified plots
 
 import threading
 from operator import itemgetter
@@ -244,6 +245,7 @@ class ReduxControlPanel(wx.Panel):
             if self.figpanel.calculated != PCA:
                 self.figpanel.calculate(selected_method)
             self.figpanel.plot_pca(selected_plot)
+        self.figpanel.displayed = selected_plot
 
         print(f"Finished {selected_method} in {time.time() - start}")
 
@@ -372,6 +374,8 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.class_masks = None
         self.class_table = None
         self.calculated = None
+        self.displayed = None
+        self.motion_event_active = False
 
         self.x_column = None
         self.y_column = None
@@ -390,25 +394,51 @@ class ReduxPanel(FigureCanvasWxAgg):
 
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
+        self.canvas.mpl_connect('motion_notify_event', self.update_status_bar)
+
+    def update_status_bar(self, event):
+        '''
+        Show the key for the nearest object (measured as the Euclidean distance) to the mouse pointer in the
+        plot (scores pdimensredux.PlotPanel.__init__dimensredux.PlotPanel.__init__lot) or the nearest feature
+        (loadings plot)
+        '''
+        if event.inaxes and self.motion_event_active:
+            lab = self.parent.hoverlabel
+            x, y = event.xdata, event.ydata
+            if self.displayed == "Scores":
+                dist = np.hypot((x - self.Scores["PC1"]), (y - self.Scores["PC2"]))
+                object_idx = np.where(dist == np.amin(dist))[0]
+                xy_key = tuple(self.keys.iloc[object_idx].values[0])
+                lab.SetLabel("Object: " + str(xy_key))
+            elif self.displayed == "Loadings":
+                dist = np.hypot((x - self.Loadings["PC1"]), (y - self.Loadings["PC2"]))
+                feature_idx = np.where(dist == np.amin(dist))[0][0]
+                lab.SetLabel("Feature: " + self.Loadings["Feature_Name"].tolist()[feature_idx])
 
     def calculate(self, mode):
         keys, values = np.split(self.parent.data, [2], axis=1)
-        self.keys = keys
-        self.data = np.nan_to_num(values.astype(float))  # Eliminate NaNs
+        self.keys = keys.astype(int)
+        # Remove zero variance features
+        self.data = values.loc[:, (values != values.iloc[0]).any()]
+        # Scale data
         sc = StandardScaler()
-        standardized = sc.fit_transform(self.data[:, np.var(self.data, axis=0) != 0])
-
-
-        if mode == SVD:
-            ts = TruncatedSVD(n_components=2)
-            U = ts.fit_transform(standardized)
-            scores = pd.DataFrame(keys, columns=[p.image_id, p.object_id])
-            scores["PC1"] = U[:, 0]
-            scores["PC2"] = U[:, 1]
-            self.Loadings = ts.components_
-            self.axes = ts.explained_variance_ratio_[0:2]
+        standardized = sc.fit_transform(self.data)
+        if mode == PCA:
+            from sklearn.decomposition import PCA as skPCA
+            model = skPCA(n_components=10)
+        elif mode == SVD:
+            model = TruncatedSVD()
         else:
             raise NotImplementedError("Mode", mode, "is not ready yet")
+        pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
+        results = model.fit_transform(standardized)
+        scores = pd.DataFrame(keys, columns=[p.image_id, p.object_id])
+        scores[pc_cols] = results
+        loadings  = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
+        loadings[pc_cols] = model.components_.transpose()
+        self.Loadings = loadings
+        self.axes = model.explained_variance_ratio_
+
 
         if p.class_table is not None and self.class_table is None:
             self.class_table = self.get_class_table()
@@ -453,19 +483,6 @@ class ReduxPanel(FigureCanvasWxAgg):
                     handle = self.subplot.scatter(subset["PC1"], subset["PC2"], s=8, c=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
                     handles.append(handle)
                     labels.append(f"{classname}: {len(subset)}")
-                    # For each class and opacity combination plot the corresponding objects
-                # for i in range(len(pd.unique(scores[""]))):
-                #     cell_count = np.shape(np.nonzero(self.masked_X[:, i]))
-                #     for j in range(nOpacity):
-                #         showObjects = np.where(self.object_opacity == opacities[j])
-                #         subHandle = self.subplot.scatter(self.masked_X[showObjects[0], i],
-                #                                          self.masked_Y[showObjects[0], i], 8, c=self.color_set[i, :],
-                #                                          linewidth=0.25, alpha=0.25 + 0.75 * opacities[j])
-                #
-                #         The highest opacity objects are added to the legend
-                        # if opacities[j] == np.max(opacities):
-                        #     handles.append(subHandle)
-                        #     labels.append(self.class_names[i] + ': ' + str(cell_count[1]))
 
             # Construct the legend and make up the rest of the plot
             self.leg = self.subplot.legend(handles, labels, loc=4, fancybox=True, handlelength=1)
@@ -477,29 +494,13 @@ class ReduxPanel(FigureCanvasWxAgg):
             y_axe_var = 'Explained variance: ' + str(y_var) + '%'
             self.subplot.set_xlabel(x_axe_var, fontsize=12)
             self.subplot.set_ylabel(y_axe_var, fontsize=12)
-            self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
-            self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
-            self.figure.canvas.draw()
         elif type == "Loadings":
-            pass
-            # # Plot the first two PCAs' Loadings in the Loading canvas
-            # weaklearners_mask = np.zeros((np.shape(self.Loadings[0])))
-            # for key in list(self.features_dic.keys()):
-            #     for value in self.classifier_rules:
-            #         if value[0] == self.features_dic[key]:
-            #             weaklearners_mask[key] += 1
-            # scatter_mask = weaklearners_mask + 1
-            # colors_mask = []
-            # size_mask = []
-            # for i in range(len(scatter_mask)):
-            #     colors_mask.append(COLORS[int(scatter_mask[i])])
-            #     size_mask.append((int(scatter_mask[i]) ** 2) * 5)
-            #
-            # self.subplot.scatter(self.Loadings[0], self.Loadings[1], c=colors_mask,
-            #                      s=size_mask, linewidth=0.5, marker='o')
-            # self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
-            # self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
-            # self.figure.canvas.draw()
+            self.subplot.scatter(self.Loadings["PC1"], self.Loadings["PC2"], s=8, c="red",
+                                 linewidth=0.25, alpha=0.5)
+        # Todo: switchable PCs on axis
+        self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
+        self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
+        self.figure.canvas.draw()
         self.motion_event_active = True
 
     def mask_data(self, num_classes, class_masks, Scores):
@@ -1034,6 +1035,7 @@ class DimensionReduction(wx.Frame, CPATool):
         CPATool.__init__(self)
         self.SetName(self.tool_name)
         self.SetBackgroundColour("white")
+        self.hoverlabel = None
 
 
         if not p.is_initialized():
@@ -1091,9 +1093,11 @@ class DimensionReduction(wx.Frame, CPATool):
         '''
         self.filter_col_names(p.object_table)
         data = db.GetCellDataForRedux()
+        data = np.nan_to_num(data.astype(float))
+        cols = [p.image_id, p.object_id] + db.GetColnamesForClassifier()
         # keys, data = np.split(data, [2], axis=1)
         data_dic = {key: tuple(value) for key, value in enumerate(data[:,:2])}
-        return data, data_dic
+        return pd.DataFrame(data, columns=cols), data_dic
 
     def load_feature_names(self):
         '''
@@ -1143,6 +1147,16 @@ class DimensionReduction(wx.Frame, CPATool):
         tb.AddSeparator()
         tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
         tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
+
+        tb.AddSeparator()
+
+        # self.navtoolbar.AddStretchableSpace()
+        pos = tb.GetToolsCount()
+        tb.AddSeparator()
+        self.hoverlabel = wx.StaticText(tb, label="")
+        tb.InsertControl(pos, self.hoverlabel, "")
+        tb.AddStretchableSpace()
+
 
         def on_toggle_pan(evt):
             tb.ToggleTool(_NTB2_ZOOM, False)
