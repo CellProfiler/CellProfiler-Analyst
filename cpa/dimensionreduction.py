@@ -36,8 +36,6 @@ from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
 p = Properties()
 db = DBConnect()
 
-ID_EXIT = wx.NewId()
-
 SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
@@ -486,7 +484,7 @@ class ReduxPanel(FigureCanvasWxAgg):
             labels = []
 
             if self.class_table is None:
-                self.subplot.scatter(self.Scores[x], self.Scores[y], s=8, c="blue",
+                self.subplot.scatter(self.Scores[x], self.Scores[y], s=8, color="blue",
                                      linewidth=0.25, alpha=0.5)
             else:
                 cmap = matplotlib.cm.get_cmap("brg")
@@ -496,7 +494,7 @@ class ReduxPanel(FigureCanvasWxAgg):
                     num = subset["class_number"].values[0]
                     coln = num / len(classnames)
                     colmap = [coln] * len(subset)
-                    handle = self.subplot.scatter(subset[x], subset[y], s=8, c=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
+                    handle = self.subplot.scatter(subset[x], subset[y], s=8, color=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
                     handles.append(handle)
                     labels.append(f"{classname}: {len(subset)}")
 
@@ -1146,25 +1144,18 @@ class DimensionReduction(wx.Frame, CPATool):
         tb = self.CreateToolBar((wx.TB_HORIZONTAL | wx.TB_TEXT))
         toolbar.tb = tb
 
-        _NTB2_HOME = wx.NewId()
-        _NTB2_BACK = wx.NewId()
-        _NTB2_FORWARD = wx.NewId()
-        _NTB2_PAN = wx.NewId()
-        _NTB2_ZOOM = wx.NewId()
-        _NTB2_SAVE = wx.NewId()
-        _NTB2_SUBPLOT = wx.NewId()
-        tb.AddTool(_NTB2_HOME, "", _load_bitmap('home.png'), 'Home')
-        tb.AddTool(_NTB2_BACK, "", _load_bitmap('back.png'), 'Back')
-        tb.AddTool(_NTB2_FORWARD, "", _load_bitmap('forward.png'), 'Forward')
+        _NTB2_HOME = tb.AddTool(wx.ID_ANY, "", _load_bitmap('home.png'), 'Home')
+        _NTB2_BACK = tb.AddTool(wx.ID_ANY, "", _load_bitmap('back.png'), 'Back')
+        _NTB2_FORWARD = tb.AddTool(wx.ID_ANY, "", _load_bitmap('forward.png'), 'Forward')
 
-        tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan',
+        _NTB2_PAN = tb.AddCheckTool(wx.ID_ANY, "", _load_bitmap('move.png'), shortHelp='Pan',
                         longHelp='Pan with left, zoom with right')
-        tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom',
+        _NTB2_ZOOM = tb.AddCheckTool(wx.ID_ANY, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom',
                         longHelp='Zoom to rectangle')
 
         tb.AddSeparator()
-        tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
-        tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
+        _NTB2_SUBPLOT = tb.AddTool(wx.ID_ANY, "", _load_bitmap('subplots.png'), 'Configure subplots')
+        _NTB2_SAVE = tb.AddTool(wx.ID_ANY, "", _load_bitmap('filesave.png'), 'Save plot')
 
         tb.AddSeparator()
 
@@ -1177,22 +1168,24 @@ class DimensionReduction(wx.Frame, CPATool):
 
 
         def on_toggle_pan(evt):
-            tb.ToggleTool(_NTB2_ZOOM, False)
+            _NTB2_ZOOM.Toggle(False)
+            tb.Realize()
             evt.Skip()
 
         def on_toggle_zoom(evt):
-            tb.ToggleTool(_NTB2_PAN, False)
+            _NTB2_PAN.Toggle(False)
+            tb.Realize()
             evt.Skip()
 
-        self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
-        self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
-        self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
-        self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
-        self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
-        self.Bind(wx.EVT_TOOL, self.configure_subplots, id=_NTB2_SUBPLOT)
-        self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
-        self.Bind(wx.EVT_TOOL, on_toggle_zoom, id=_NTB2_ZOOM)
-        self.Bind(wx.EVT_TOOL, on_toggle_pan, id=_NTB2_PAN)
+        self.Bind(wx.EVT_TOOL, toolbar.home, source=_NTB2_HOME)
+        self.Bind(wx.EVT_TOOL, toolbar.forward, source=_NTB2_FORWARD)
+        self.Bind(wx.EVT_TOOL, toolbar.back, source=_NTB2_BACK)
+        self.Bind(wx.EVT_TOOL, toolbar.zoom, source=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, toolbar.pan, source=_NTB2_PAN)
+        self.Bind(wx.EVT_TOOL, self.configure_subplots, source=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, toolbar.save_figure, source=_NTB2_SAVE)
+        self.Bind(wx.EVT_TOOL, on_toggle_zoom, source=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, on_toggle_pan, source=_NTB2_PAN)
 
         tb.Realize()
         # Hack end
@@ -1240,7 +1233,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         self.user_tools = {}  # user_tools['tool_mode'] : wx.ToolBarToolBase
 
         self.InsertSeparator(5)
-        self.add_user_tool('lasso', 6, get_icon("lasso_tool").ConvertToBitmap(), True, 'Lasso')
+        # self.add_user_tool('lasso', 6, get_icon("lasso_tool").ConvertToBitmap(), True, 'Lasso')
         # self.add_user_tool('gate', 7, get_icon("gate_tool").ConvertToBitmap(), True, 'Gate')
 
     def add_user_tool(self, mode, pos, bmp, istoggle=True, shortHelp=''):
@@ -1333,7 +1326,6 @@ if __name__ == "__main__":
         if not p.show_load_dialog():
             print('Scatterplot requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
-            wx.GetApp().Exit()
             sys.exit()
     scatter = DimensionReduction(None)
     scatter.Show()
