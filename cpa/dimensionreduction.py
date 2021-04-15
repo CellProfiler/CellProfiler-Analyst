@@ -222,66 +222,82 @@ class ReduxControlPanel(wx.Panel):
                 or (self.y_column.table != p.image_table and db.adjacent(p.object_table, self.y_column.table))
                 )
 
+    def load_obj_measurements(self):
+        '''
+        Load all cell measurements from the DB into a Numpy array and a dictionary
+        The dictionary links each object to its key to show it when the mouse is on
+        its dot representation in the plot.
+        '''
+        self.filter_col_names(p.object_table)
+        data = db.GetCellDataForRedux()
+        data = np.nan_to_num(data.astype(float))
+        cols = [p.image_id, p.object_id] + db.GetColnamesForClassifier()
+        # keys, data = np.split(data, [2], axis=1)
+        # data_dic = {key: tuple(value) for key, value in enumerate(data[:,:2])}
+        return pd.DataFrame(data, columns=cols)
+
+    def filter_col_names(self, table):
+        '''
+        Add DB non-measurement column names to the 'ignore colums' list.
+        This is performed to avoid using its data for the calculations
+        '''
+        col_names = db.GetColumnNames(table)
+        filter_cols = [p.cell_x_loc, p.cell_y_loc, p.plate_id, p.well_id, p.image_id]
+        if not p.classifier_ignore_columns:
+            p.classifier_ignore_columns = []
+        [p.classifier_ignore_columns.append(column) for column in filter_cols if column in col_names]
+
+
     def update_figpanel(self, evt=None):
 
         '''
         Show the selected dimensionality reduction plot on the canvas
         '''
-        # Fetch data here?
 
-        selected_method = self.method_choice.GetStringSelection()
-        selected_plot = self.plot_choice.GetStringSelection()
+        # Define a progress dialog
+        dlg = wx.ProgressDialog('Generating figure...', 'Generating ...', 100, parent=self,
+                                style=wx.PD_APP_MODAL)
+
+        if self.figpanel.data is None:
+            dlg.Pulse('Fetching object data from database')
+            try:
+                # Fetch all data from database
+                data = self.load_obj_measurements()
+                keys, values = np.split(data, [2], axis=1)
+                self.figpanel.keys = keys.astype(int)
+                # Remove zero variance features
+                self.figpanel.data = values.loc[:, (values != values.iloc[0]).any()]
+            except Exception as e:
+                self.figpanel.data = None
+                self.figpanel.keys = None
+                logging.error(f"Unable to load data: {e}")
+                dlg.Destroy()
+                return
+
         import time
         start = time.time()
+
+
+        dlg.Pulse('Generating model and plot')
+        selected_method = self.method_choice.GetStringSelection()
+        selected_plot = self.plot_choice.GetStringSelection()
+
+        if self.figpanel.calculated != selected_method:
+            self.figpanel.calculate(selected_method, dlg=dlg)
+            self.update_col_choices()
+
+        dlg.Pulse("Plotting results")
         if selected_method in (SVD, PCA):
-            if self.figpanel.calculated != selected_method:
-                self.figpanel.calculate(selected_method)
-                self.update_col_choices()
             self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
         elif selected_method == TSNE:
-            if self.figpanel.calculated != TSNE:
-                self.figpanel.calculate(selected_method)
-                self.update_col_choices()
             self.figpanel.plot_tsne(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
+        else:
+            raise NotImplementedError(f"Model {selected_method} not implemented")
         self.figpanel.displayed = selected_plot
+        dlg.Destroy()
 
         print(f"Finished {selected_method} in {time.time() - start}")
-
-
-        # keys_and_points = self._load_points()
-        # col_types = self.get_selected_column_types()
-
-        # Convert keys and points into a np array
-        # NOTE: We must set dtype "object" on creation or values like 0.34567e-9
-        #       may be truncated to 0.34567e (error) or 0.345 (no error) when
-        #       the array contains strings.
-        # kps = np.array(keys_and_points, dtype='object')
-        # Strip out keys
-        # if self._plotting_per_object_data():
-        #     key_indices = list(range(len(object_key_columns())))
-        # else:
-        #     key_indices = list(range(len(image_key_columns())))
-        #
-        # keys = kps[:, key_indices].astype(int)
-        # Strip out x coords
-        # if col_types[0] in (float, int):
-        #     xpoints = kps[:, -2].astype('float32')
-        # else:
-        #     xpoints = kps[:, -2]
-        # Strip out y coords
-        # if col_types[1] in (float, int):
-        #     ypoints = kps[:, -1].astype('float32')
-        # else:
-        #     ypoints = kps[:, -1]
-        #
-        # plot the points
-        # self.figpanel.set_points(xpoints, ypoints)
-        # self.figpanel.set_keys(keys)
-        self.figpanel.set_x_label(self.x_column.col)
-        self.figpanel.set_y_label(self.y_column.col)
         self.update_gate_helper()
-        # self.figpanel.redraw()
-        # self.figpanel.draw()
 
     def _load_points(self):
         q = sql.QueryBuilder()
@@ -303,15 +319,11 @@ class ReduxControlPanel(wx.Panel):
         q.add_where(sql.Expression(self.y_column, 'IS NOT NULL'))
         return db.execute(str(q))
 
-    def get_selected_column_types(self):
-        ''' Returns a tuple containing the x and y column types. '''
-        return (db.GetColumnType(p.image_table, self.x_choice.Value),
-                db.GetColumnType(p.image_table, self.y_choice.Value))
-
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
         returns a dictionary mapping setting names to values encoded as strings
         '''
+        # Todo: Rework
         d = {'x-axis': self.x_choice.Value,
              'y-axis': self.y_choice.Value,
              'filter': self.filter_choice.Value,
@@ -377,6 +389,8 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.pc_cols = []
         self.x_var = None
         self.y_var = None
+        self.data = None
+        self.keys = None
 
         self.x_column = None
         self.y_column = None
@@ -427,14 +441,18 @@ class ReduxPanel(FigureCanvasWxAgg):
                 feature_idx = np.where(dist == min_dist)[0][0]
                 lab.SetLabel("Feature: " + self.Loadings["Feature_Name"].tolist()[feature_idx])
 
-    def calculate(self, mode):
-        keys, values = np.split(self.parent.data, [2], axis=1)
-        self.keys = keys.astype(int)
-        # Remove zero variance features
-        self.data = values.loc[:, (values != values.iloc[0]).any()]
+    def calculate(self, mode, dlg):
+        '''
+        Generates models and stores transformed data.
+        mode - text string representing the desired model
+        dlg - wx.ProgressDialog instance for displaying progress
+        '''
         # Scale data
+        dlg.Pulse("Scaling data")
         sc = StandardScaler()
         standardized = sc.fit_transform(self.data)
+        dlg.Pulse("Fitting model")
+
         if mode == PCA:
             from sklearn.decomposition import PCA as skPCA
             model = skPCA(n_components=10)
@@ -444,7 +462,10 @@ class ReduxPanel(FigureCanvasWxAgg):
             raise NotImplementedError("Mode", mode, "is not ready yet")
         self.pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
         results = model.fit_transform(standardized)
-        scores = pd.DataFrame(keys, columns=[p.image_id, p.object_id])
+
+        dlg.Pulse("Processing model results")
+
+        scores = pd.DataFrame(self.keys, columns=[p.image_id, p.object_id])
         scores[self.pc_cols] = results
         loadings  = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
         loadings[self.pc_cols] = model.components_.transpose()
@@ -463,13 +484,13 @@ class ReduxPanel(FigureCanvasWxAgg):
         if not connID in db.connections:
             db.connect()
         conn = db.connections[connID]
-        print('Writing to database...')
+        dlg.Pulse("Writing to database")
         scores.to_sql(PCA_TABLE, conn, if_exists="replace", index=False)
         if not db.get_linking_tables(p.image_table, PCA_TABLE):
             db.do_link_tables(p.image_table, PCA_TABLE, image_key_columns(), image_key_columns())
         if not db.get_linking_tables(p.object_table, PCA_TABLE):
             db.do_link_tables(p.object_table, PCA_TABLE, object_key_columns(), object_key_columns())
-        print("Writing Done")
+        dlg.Pulse("Writing complete")
         self.calculated = mode
 
     def plot_redux(self, type="Scores", x="PC1", y="PC2", legend=False):
@@ -1043,7 +1064,7 @@ class StopCalculating(Exception):
 
 class DimensionReduction(wx.Frame, CPATool):
     '''
-    A very basic scatter plot with controls for setting it's data source.
+    A dimension reduction plot with controls for choosing methods and components.
     '''
 
     def __init__(self, parent, size=(600, 600), loadData=True, **kwargs):
@@ -1060,27 +1081,6 @@ class DimensionReduction(wx.Frame, CPATool):
 
         global classifier
         classifier = parent
-        if loadData:
-            # Define a progress dialog
-            dlg = wx.ProgressDialog('Fetching cell data...', '0% Complete', 100, classifier,
-                                    wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME |
-                                    wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)
-            def cb(frac):
-                cont, skip = dlg.Update(int(frac * 100.), '%d%% Complete'%(frac * 100.))
-                if not cont: # cancel was pressed
-                    dlg.Destroy()
-                    raise StopCalculating()
-
-            # Load the data for each object
-            try:
-                self.data, self.data_dic = self.load_obj_measurements(cb)
-            except StopCalculating:
-                self.PostMessage('User canceled updating training set.')
-                return
-            dlg.Destroy()
-        else:
-            self.data, self.data_dic = None, None
-        self.features_dic = self.load_feature_names()
 
 
 
@@ -1101,41 +1101,6 @@ class DimensionReduction(wx.Frame, CPATool):
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
 
-    def load_obj_measurements(self, cb = None):
-        '''
-        Load all cell measurements from the DB into a Numpy array and a dictionary
-        The dictionary links each object to its key to show it when the mouse is on
-        its dot representation in the plot.
-        '''
-        self.filter_col_names(p.object_table)
-        data = db.GetCellDataForRedux()
-        data = np.nan_to_num(data.astype(float))
-        cols = [p.image_id, p.object_id] + db.GetColnamesForClassifier()
-        # keys, data = np.split(data, [2], axis=1)
-        data_dic = {key: tuple(value) for key, value in enumerate(data[:,:2])}
-        return pd.DataFrame(data, columns=cols), data_dic
-
-    def load_feature_names(self):
-        '''
-        Load feature names for loadings plot.
-        '''
-        feature_names = db.GetColnamesForClassifier()
-        features_dictionary = {}
-        for i, feat in enumerate(feature_names):
-            features_dictionary[i] = feat
-
-        return features_dictionary
-
-    def filter_col_names(self, table):
-        '''
-        Add DB non-measurement column names to the 'ignore colums' list.
-        This is performed to avoid using its data for the calculations
-        '''
-        col_names = db.GetColumnNames(table)
-        filter_cols = [p.cell_x_loc, p.cell_y_loc, p.plate_id, p.well_id, p.image_id]
-        if not p.classifier_ignore_columns:
-            p.classifier_ignore_columns = []
-        [p.classifier_ignore_columns.append(column) for column in filter_cols if column in col_names]
 
     # Hack: See http://stackoverflow.com/questions/6124419/matplotlib-navtoolbar-doesnt-realize-in-wx-2-9-mac-os-x
     def SetToolBar(self, toolbar):
