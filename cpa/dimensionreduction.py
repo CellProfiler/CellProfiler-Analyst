@@ -1,9 +1,9 @@
 # The dimensredux module, but put together as a standard CPA tool and modernised with sklearn.
 # Todo: All the things
 # Todo: Make gating possible on unclassified plots
+# Todo: support filters
 
 import threading
-from operator import itemgetter
 
 import matplotlib.cm
 import pandas as pd
@@ -45,6 +45,7 @@ SVD = 'SVD: Singular Value Decomposition'
 TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
 PCA = 'PCA: Principal Component Analysis'
 
+PCA_TABLE = "pca_table"
 
 class Datum:
     def __init__(self, xxx_todo_changeme, color):
@@ -113,18 +114,19 @@ class ReduxControlPanel(wx.Panel):
         self.method_choice.Select(0)
         self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
         self.plot_choice.Select(0)
-        # self.x_choice = ComboBox(self, -1, choices=[''], size=(200, -1), style=wx.CB_READONLY)
-        # self.x_choice.Select(0)
-        # self.y_choice = ComboBox(self, -1, choices=[''], size=(200, -1), style=wx.CB_READONLY)
-        # self.y_choice.Select(0)
+        self.x_choice = ComboBox(self, -1, choices=[''], size=(200, -1), style=wx.CB_READONLY)
+        self.x_choice.Select(0)
+        self.y_choice = ComboBox(self, -1, choices=[''], size=(200, -1), style=wx.CB_READONLY)
+        self.y_choice.Select(0)
+        self.display_legend = wx.CheckBox(self, -1, label="Show Legend", size=(200, -1))
+        self.display_legend.SetValue(True)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
         self.filter_choice.Select(0)
         self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         # self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
 
-        # self.update_x_choices()
-        # self.update_y_choices()
+        self.update_col_choices(clear=True)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "Method:"), 0, wx.TOP, 4)
@@ -138,19 +140,18 @@ class ReduxControlPanel(wx.Panel):
         sizer.Add(-1, 2, 0)
 
 
-        # sz = wx.BoxSizer(wx.HORIZONTAL)
-        # sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
-        # sz.AddSpacer(3)
-        # sz.Add(self.x_choice, 2, wx.EXPAND)
-        # sizer.Add(sz, 1, wx.EXPAND)
-        # sizer.Add(-1, 2, 0)
-        #
-        # sz = wx.BoxSizer(wx.HORIZONTAL)
-        # sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
-        # sz.AddSpacer(3)
-        # sz.Add(self.y_choice, 2, wx.EXPAND)
-        # sizer.Add(sz, 1, wx.EXPAND)
-        # sizer.Add(-1, 2, 0)
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.x_choice, 2, wx.EXPAND)
+        sz.AddSpacer(6)
+        sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.y_choice, 2, wx.EXPAND)
+        sz.AddSpacer(10)
+        sz.Add(self.display_legend, 2, wx.EXPAND)
+        sizer.Add(sz, 1, wx.EXPAND)
+        sizer.Add(-1, 2, 0)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
@@ -176,14 +177,14 @@ class ReduxControlPanel(wx.Panel):
     @property
     def x_column(self):
         # x_choice_id = self.x_choice.GetSelection()
-        return sql.Column(p.class_table + "_reduced",
-                          "PC1")
+        return sql.Column(PCA_TABLE,
+                          self.x_choice.Value)
 
     @property
     def y_column(self):
         # y_choice_id = self.y_choice.GetSelection()
-        return sql.Column(p.class_table + "_reduced",
-                          "PC2")
+        return sql.Column(PCA_TABLE,
+                          self.y_choice.Value)
 
     @property
     def filter(self):
@@ -201,19 +202,20 @@ class ReduxControlPanel(wx.Panel):
         else:
             self.figpanel.gate_helper.disable()
 
-    def update_x_choices(self):
-        tablename = p.image_table
-        fieldnames = db.GetColumnNames(tablename)
+    def update_col_choices(self, clear=False):
+        fieldnames = self.figpanel.pc_cols
         self.x_choice.Clear()
-        self.x_choice.AppendItems(fieldnames)
-        self.x_choice.SetSelection(0)
-
-    def update_y_choices(self):
-        tablename = p.image_table
-        fieldnames = db.GetColumnNames(tablename)
         self.y_choice.Clear()
+        if len(fieldnames) == 0:
+            self.x_choice.Enable(False)
+            self.y_choice.Enable(False)
+            return
+        self.x_choice.Enable(True)
+        self.y_choice.Enable(True)
+        self.x_choice.AppendItems(fieldnames)
         self.y_choice.AppendItems(fieldnames)
-        self.y_choice.SetSelection(0)
+        self.x_choice.SetSelection(0)
+        self.y_choice.SetSelection(1)
 
     def _plotting_per_object_data(self):
         return (p.object_table is not None and
@@ -233,18 +235,16 @@ class ReduxControlPanel(wx.Panel):
         selected_plot = self.plot_choice.GetStringSelection()
         import time
         start = time.time()
-        if selected_method == SVD:
-            if self.figpanel.calculated != SVD:
+        if selected_method in (SVD, PCA):
+            if self.figpanel.calculated != selected_method:
                 self.figpanel.calculate(selected_method)
-            self.figpanel.plot_svd(selected_plot)
+                self.update_col_choices()
+            self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
         elif selected_method == TSNE:
             if self.figpanel.calculated != TSNE:
                 self.figpanel.calculate(selected_method)
-            self.figpanel.plot_tsne(selected_plot)
-        elif selected_method == PCA:
-            if self.figpanel.calculated != PCA:
-                self.figpanel.calculate(selected_method)
-            self.figpanel.plot_pca(selected_plot)
+                self.update_col_choices()
+            self.figpanel.plot_tsne(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
         self.figpanel.displayed = selected_plot
 
         print(f"Finished {selected_method} in {time.time() - start}")
@@ -376,6 +376,9 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.calculated = None
         self.displayed = None
         self.motion_event_active = False
+        self.pc_cols = []
+        self.x_var = None
+        self.y_var = None
 
         self.x_column = None
         self.y_column = None
@@ -404,15 +407,26 @@ class ReduxPanel(FigureCanvasWxAgg):
         '''
         if event.inaxes and self.motion_event_active:
             lab = self.parent.hoverlabel
-            x, y = event.xdata, event.ydata
+            evt_x, evt_y = event.xdata, event.ydata
+
             if self.displayed == "Scores":
-                dist = np.hypot((x - self.Scores["PC1"]), (y - self.Scores["PC2"]))
-                object_idx = np.where(dist == np.amin(dist))[0]
+                dist = np.hypot((evt_x - self.Scores[self.x_var]), (evt_y - self.Scores[self.y_var]))
+                min_dist = np.amin(dist)
+                scaled_dist = min_dist / np.amax(dist)
+                if scaled_dist > 0.015:
+                    lab.SetLabel("")
+                    return
+                object_idx = np.where(dist == min_dist)[0]
                 xy_key = tuple(self.keys.iloc[object_idx].values[0])
                 lab.SetLabel("Object: " + str(xy_key))
             elif self.displayed == "Loadings":
-                dist = np.hypot((x - self.Loadings["PC1"]), (y - self.Loadings["PC2"]))
-                feature_idx = np.where(dist == np.amin(dist))[0][0]
+                dist = np.hypot((evt_x - self.Loadings[self.x_var]), (evt_y - self.Loadings[self.y_var]))
+                min_dist = np.amin(dist)
+                scaled_dist = min_dist / np.amax(dist)
+                if scaled_dist > 0.015:
+                    lab.SetLabel("")
+                    return
+                feature_idx = np.where(dist == min_dist)[0][0]
                 lab.SetLabel("Feature: " + self.Loadings["Feature_Name"].tolist()[feature_idx])
 
     def calculate(self, mode):
@@ -430,18 +444,19 @@ class ReduxPanel(FigureCanvasWxAgg):
             model = TruncatedSVD()
         else:
             raise NotImplementedError("Mode", mode, "is not ready yet")
-        pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
+        self.pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
         results = model.fit_transform(standardized)
         scores = pd.DataFrame(keys, columns=[p.image_id, p.object_id])
-        scores[pc_cols] = results
+        scores[self.pc_cols] = results
         loadings  = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
-        loadings[pc_cols] = model.components_.transpose()
+        loadings[self.pc_cols] = model.components_.transpose()
         self.Loadings = loadings
-        self.axes = model.explained_variance_ratio_
+        self.axes = dict(zip(self.pc_cols, model.explained_variance_ratio_))
 
 
-        if p.class_table is not None and self.class_table is None:
-            self.class_table = self.get_class_table()
+        if p.class_table is not None:
+            if self.class_table is None:
+                self.class_table = self.get_class_table()
             scores = scores.merge(self.class_table, on=[p.image_id, p.object_id])
         self.Scores = scores
 
@@ -451,26 +466,27 @@ class ReduxPanel(FigureCanvasWxAgg):
             db.connect()
         conn = db.connections[connID]
         print('Writing to database...')
-        scores.to_sql(p.class_table + "_reduced", conn, if_exists="replace", index=False)
-        if not db.get_linking_tables(p.image_table, p.class_table + "_reduced"):
-            db.do_link_tables(p.image_table, p.class_table + "_reduced", image_key_columns(), image_key_columns())
-        if not db.get_linking_tables(p.object_table, p.class_table + "_reduced",):
-            db.do_link_tables(p.object_table, p.class_table + "_reduced", object_key_columns(), object_key_columns())
+        scores.to_sql(PCA_TABLE, conn, if_exists="replace", index=False)
+        if not db.get_linking_tables(p.image_table, PCA_TABLE):
+            db.do_link_tables(p.image_table, PCA_TABLE, image_key_columns(), image_key_columns())
+        if not db.get_linking_tables(p.object_table, PCA_TABLE):
+            db.do_link_tables(p.object_table, PCA_TABLE, object_key_columns(), object_key_columns())
         print("Writing Done")
         self.calculated = mode
 
-    def plot_svd(self, type="Scores"):
+    def plot_redux(self, type="Scores", x="PC1", y="PC2", legend=False):
         '''
         Plot the Truncated SVD distribution of the data
         '''
         self.subplot.clear()
-
+        self.x_var = x
+        self.y_var = y
         if type == "Scores":
             handles = []
             labels = []
 
             if self.class_table is None:
-                self.subplot.scatter(self.Scores["PC1"], self.Scores["PC2"], s=8, c="blue",
+                self.subplot.scatter(self.Scores[x], self.Scores[y], s=8, c="blue",
                                      linewidth=0.25, alpha=0.5)
             else:
                 cmap = matplotlib.cm.get_cmap("brg")
@@ -480,22 +496,24 @@ class ReduxPanel(FigureCanvasWxAgg):
                     num = subset["class_number"].values[0]
                     coln = num / len(classnames)
                     colmap = [coln] * len(subset)
-                    handle = self.subplot.scatter(subset["PC1"], subset["PC2"], s=8, c=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
+                    handle = self.subplot.scatter(subset[x], subset[y], s=8, c=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
                     handles.append(handle)
                     labels.append(f"{classname}: {len(subset)}")
 
             # Construct the legend and make up the rest of the plot
-            self.leg = self.subplot.legend(handles, labels, loc=4, fancybox=True, handlelength=1)
-            self.leg.get_frame().set_alpha(0.25)
+            if legend:
+                self.leg = self.subplot.legend(handles, labels, loc=4, fancybox=True, handlelength=1)
+                self.leg.get_frame().set_alpha(0.25)
 
-            x_var = round(((1 - self.axes[0]) * 100), 2)
-            y_var = round(((self.axes[0] - self.axes[1]) * 100), 2)
-            x_axe_var = 'Explained variance: ' + str(x_var) + '%'
-            y_axe_var = 'Explained variance: ' + str(y_var) + '%'
+            x_var = round((self.axes[x] * 100), 2)
+            y_var = round((self.axes[y] * 100), 2)
+
+            x_axe_var = f'{x} - Explained variance: {x_var}%'
+            y_axe_var = f'{y} - Explained variance: {y_var}%'
             self.subplot.set_xlabel(x_axe_var, fontsize=12)
             self.subplot.set_ylabel(y_axe_var, fontsize=12)
         elif type == "Loadings":
-            self.subplot.scatter(self.Loadings["PC1"], self.Loadings["PC2"], s=8, c="red",
+            self.subplot.scatter(self.Loadings[x], self.Loadings[y], s=8, c="red",
                                  linewidth=0.25, alpha=0.5)
         # Todo: switchable PCs on axis
         self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
