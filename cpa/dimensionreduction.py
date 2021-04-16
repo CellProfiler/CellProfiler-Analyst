@@ -36,6 +36,8 @@ from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
 p = Properties()
 db = DBConnect()
 
+object_filter_cache = {}
+
 SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
@@ -499,7 +501,9 @@ class ReduxPanel(FigureCanvasWxAgg):
             def_colour = "blue"
             filter = self.configpanel.filter_choice.get_filter_or_none()
             if filter:
-                obs = db.GetFilteredObjects(self.configpanel.filter_choice.GetStringSelection(), random=False)
+                if filter not in object_filter_cache:
+                    object_filter_cache[filter] = db.GetFilteredObjects(filter, random=False)
+                obs = object_filter_cache[filter]
                 data = data.assign(key_col=list(zip(data[p.image_id].values, data[p.object_id].values)))
                 data = data[data.key_col.isin(obs)]
         else:

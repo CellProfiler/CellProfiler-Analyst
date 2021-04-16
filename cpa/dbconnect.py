@@ -852,11 +852,12 @@ class DBConnect(metaclass=Singleton):
             logging.error(e)
             raise Exception('Filter query failed for filter "%s". Check the SQL syntax in your properties file.'%(filter_name))
 
-    def GetFilteredObjects(self, gate_name, N=None, random=True):
+    def GetFilteredObjects(self, filter_obj, N=None, random=True):
+        # Get filtered object keys using a passed in filter sql object
         from . import sqltools
         q = sqltools.QueryBuilder()
         q.select(sqltools.object_cols())
-        q.where([p._filters[gate_name]])
+        q.where([filter_obj])
         q.group_by(sqltools.object_cols())
         if random:
             if p.db_type.lower() == 'sqlite':
