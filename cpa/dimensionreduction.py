@@ -112,9 +112,9 @@ class ReduxControlPanel(wx.Panel):
         self.method_choice.Select(0)
         self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
         self.plot_choice.Select(0)
-        self.x_choice = ComboBox(self, -1, choices=[''], size=(200, -1), style=wx.CB_READONLY)
+        self.x_choice = ComboBox(self, -1, choices=[''], size=(100, -1), style=wx.CB_READONLY)
         self.x_choice.Select(0)
-        self.y_choice = ComboBox(self, -1, choices=[''], size=(200, -1), style=wx.CB_READONLY)
+        self.y_choice = ComboBox(self, -1, choices=[''], size=(100, -1), style=wx.CB_READONLY)
         self.y_choice.Select(0)
         self.display_legend = wx.CheckBox(self, -1, label="Show Legend", size=(200, -1))
         self.display_legend.SetValue(True)
@@ -139,6 +139,7 @@ class ReduxControlPanel(wx.Panel):
 
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.AddSpacer(11)
         sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
         sz.AddSpacer(3)
         sz.Add(self.x_choice, 2, wx.EXPAND)
@@ -152,6 +153,8 @@ class ReduxControlPanel(wx.Panel):
         sizer.Add(-1, 2, 0)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.AddSpacer(18)
+
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
         sz.AddSpacer(3)
         sz.Add(self.filter_choice, 1, wx.EXPAND)
@@ -195,7 +198,7 @@ class ReduxControlPanel(wx.Panel):
         gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
             # Deactivate the lasso tool
-            self.figpanel.get_toolbar().toggle_user_tool('lasso', False)
+            # self.figpanel.get_toolbar().toggle_user_tool('lasso', False)
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
         else:
             self.figpanel.gate_helper.disable()
@@ -232,8 +235,6 @@ class ReduxControlPanel(wx.Panel):
         data = db.GetCellDataForRedux()
         data = np.nan_to_num(data.astype(float))
         cols = [p.image_id, p.object_id] + db.GetColnamesForClassifier()
-        # keys, data = np.split(data, [2], axis=1)
-        # data_dic = {key: tuple(value) for key, value in enumerate(data[:,:2])}
         return pd.DataFrame(data, columns=cols)
 
     def filter_col_names(self, table):
@@ -391,6 +392,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.y_var = None
         self.data = None
         self.keys = None
+        self.current_data = None
 
         self.x_column = None
         self.y_column = None
@@ -405,7 +407,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.mouse_mode = 'gate'
         self.legend = None
         self.lasso = None
-        self.redraw()
 
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
@@ -420,24 +421,18 @@ class ReduxPanel(FigureCanvasWxAgg):
         if event.inaxes and self.motion_event_active:
             lab = self.parent.hoverlabel
             evt_x, evt_y = event.xdata, event.ydata
+            dist = np.hypot((evt_x - self.current_data[self.x_var]), (evt_y - self.current_data[self.y_var]))
+            min_dist = np.amin(dist)
+            scaled_dist = min_dist / np.amax(dist)
+            if scaled_dist > 0.015:
+                lab.SetLabel("")
+                return
 
             if self.displayed == "Scores":
-                dist = np.hypot((evt_x - self.Scores[self.x_var]), (evt_y - self.Scores[self.y_var]))
-                min_dist = np.amin(dist)
-                scaled_dist = min_dist / np.amax(dist)
-                if scaled_dist > 0.015:
-                    lab.SetLabel("")
-                    return
                 object_idx = np.where(dist == min_dist)[0]
-                xy_key = tuple(self.keys.iloc[object_idx].values[0])
+                xy_key = tuple(self.current_data.iloc[object_idx][[p.image_id, p.object_id]].values[0])
                 lab.SetLabel("Object: " + str(xy_key))
             elif self.displayed == "Loadings":
-                dist = np.hypot((evt_x - self.Loadings[self.x_var]), (evt_y - self.Loadings[self.y_var]))
-                min_dist = np.amin(dist)
-                scaled_dist = min_dist / np.amax(dist)
-                if scaled_dist > 0.015:
-                    lab.SetLabel("")
-                    return
                 feature_idx = np.where(dist == min_dist)[0][0]
                 lab.SetLabel("Feature: " + self.Loadings["Feature_Name"].tolist()[feature_idx])
 
@@ -474,9 +469,11 @@ class ReduxPanel(FigureCanvasWxAgg):
 
 
         if p.class_table is not None:
-            if self.class_table is None:
+            if self.class_table is None and db.table_exists(p.class_table):
+                # Get the class table and store it
                 self.class_table = self.get_class_table()
-            scores = scores.merge(self.class_table, on=[p.image_id, p.object_id])
+            if self.class_table is not None:
+                scores = scores.merge(self.class_table, on=[p.image_id, p.object_id])
         self.Scores = scores
 
         # Add class PCA table to database
@@ -497,44 +494,49 @@ class ReduxPanel(FigureCanvasWxAgg):
         '''
         Plot the Truncated SVD distribution of the data
         '''
+        if type == "Scores":
+            data = self.Scores
+            def_colour = "blue"
+            filter = self.configpanel.filter_choice.get_filter_or_none()
+            if filter:
+                obs = db.GetFilteredObjects(self.configpanel.filter_choice.GetStringSelection(), random=False)
+                data = data.assign(key_col=list(zip(data[p.image_id].values, data[p.object_id].values)))
+                data = data[data.key_col.isin(obs)]
+        else:
+            data = self.Loadings
+            def_colour = "red"
+        self.current_data = data
         self.subplot.clear()
         self.x_var = x
         self.y_var = y
-        if type == "Scores":
+
+        if type == "Loadings" or self.class_table is None:
+            self.subplot.scatter(data[x], data[y], s=8, color=def_colour,
+                                 linewidth=0.25, alpha=0.5)
+        else:
             handles = []
             labels = []
-
-            if self.class_table is None:
-                self.subplot.scatter(self.Scores[x], self.Scores[y], s=8, color="blue",
-                                     linewidth=0.25, alpha=0.5)
-            else:
-                cmap = matplotlib.cm.get_cmap("brg")
-                classnames = pd.unique(self.Scores["class"])
-                for classname in classnames:
-                    subset = self.Scores[self.Scores["class"] == classname]
-                    num = subset["class_number"].values[0]
-                    coln = num / len(classnames)
-                    colmap = [coln] * len(subset)
-                    handle = self.subplot.scatter(subset[x], subset[y], s=8, color=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
-                    handles.append(handle)
-                    labels.append(f"{classname}: {len(subset)}")
-
-            # Construct the legend and make up the rest of the plot
+            cmap = matplotlib.cm.get_cmap("brg")
+            classnames = pd.unique(data["class"])
+            for classname in classnames:
+                subset = data[data["class"] == classname]
+                num = subset["class_number"].values[0]
+                coln = num / len(classnames)
+                colmap = [coln] * len(subset)
+                handle = self.subplot.scatter(subset[x], subset[y], s=8, color=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
+                handles.append(handle)
+                labels.append(f"{classname}: {len(subset)}")
             if legend:
                 self.leg = self.subplot.legend(handles, labels, loc=4, fancybox=True, handlelength=1)
                 self.leg.get_frame().set_alpha(0.25)
 
-            x_var = round((self.axes[x] * 100), 2)
-            y_var = round((self.axes[y] * 100), 2)
-
-            x_axe_var = f'{x} - Explained variance: {x_var}%'
-            y_axe_var = f'{y} - Explained variance: {y_var}%'
-            self.subplot.set_xlabel(x_axe_var, fontsize=12)
-            self.subplot.set_ylabel(y_axe_var, fontsize=12)
-        elif type == "Loadings":
-            self.subplot.scatter(self.Loadings[x], self.Loadings[y], s=8, c="red",
-                                 linewidth=0.25, alpha=0.5)
-        # Todo: switchable PCs on axis
+        # Construct the legend and make up the rest of the plot
+        x_var = round((self.axes[x] * 100), 2)
+        y_var = round((self.axes[y] * 100), 2)
+        x_axe_var = f'{x} - Explained variance: {x_var}%'
+        y_axe_var = f'{y} - Explained variance: {y_var}%'
+        self.subplot.set_xlabel(x_axe_var, fontsize=12)
+        self.subplot.set_ylabel(y_axe_var, fontsize=12)
         self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
         self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
         self.figure.canvas.draw()

@@ -852,6 +852,25 @@ class DBConnect(metaclass=Singleton):
             logging.error(e)
             raise Exception('Filter query failed for filter "%s". Check the SQL syntax in your properties file.'%(filter_name))
 
+    def GetFilteredObjects(self, gate_name, N=None, random=True):
+        from . import sqltools
+        q = sqltools.QueryBuilder()
+        q.select(sqltools.object_cols())
+        q.where([p._filters[gate_name]])
+        q.group_by(sqltools.object_cols())
+        if random:
+            if p.db_type.lower() == 'sqlite':
+                query = f"{str(q)} ORDER BY RANDOM()"
+            else:
+                query = f"{str(q)} ORDER BY RAND()"
+        else:
+            query = f"{str(q)} ORDER BY {p.object_table}.{p.image_id}"
+        if N is not None:
+            query += f" LIMIT {N}"
+        keys = self.execute(query)
+        return keys
+
+
     def GetGatedImages(self, gate_name):
         ''' Returns a list of imKeys from the given filter. '''
         try:
