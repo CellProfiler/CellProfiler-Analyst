@@ -1,7 +1,8 @@
 # The dimensredux module, but put together as a standard CPA tool and modernised with sklearn.
-# Todo: All the things
-# Todo: Make gating possible on unclassified plots
-# Todo: support filters
+# Todo: TSNE
+# Todo: Other methods
+# Todo: Cleanup fig drawing
+# Todo: Context menu options
 
 import threading
 
@@ -26,12 +27,13 @@ from bisect import bisect
 import sys
 from time import time
 import wx
-from matplotlib.widgets import Lasso
+from matplotlib.widgets import LassoSelector
 from matplotlib.colors import colorConverter
 from matplotlib.pyplot import cm
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
-from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg, NavigationToolbar2WxAgg
+from matplotlib.backend_bases import MouseButton, NavigationToolbar2
+from matplotlib.path import Path
 
 p = Properties()
 db = DBConnect()
@@ -110,7 +112,7 @@ class ReduxControlPanel(wx.Panel):
         self.SetBackgroundColour('white')  # color for the background of panel
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        self.method_choice = ComboBox(self, -1, choices=[SVD, PCA, TSNE], size=(200, -1), style=wx.CB_READONLY)
+        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD, TSNE], size=(200, -1), style=wx.CB_READONLY)
         self.method_choice.Select(0)
         self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
         self.plot_choice.Select(0)
@@ -288,6 +290,7 @@ class ReduxControlPanel(wx.Panel):
         if self.figpanel.calculated != selected_method:
             self.figpanel.calculate(selected_method, dlg=dlg)
             self.update_col_choices()
+        self.figpanel.navtoolbar.update()
 
         dlg.Pulse("Plotting results")
         if selected_method in (SVD, PCA):
@@ -395,6 +398,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.data = None
         self.keys = None
         self.current_data = None
+        self.selection_key = None
 
         self.x_column = None
         self.y_column = None
@@ -405,12 +409,12 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.colors = []
         self.x_label = ''
         self.y_label = ''
-        self.selection = {}
+        self.selection = set()
         self.mouse_mode = 'gate'
         self.legend = None
         self.lasso = None
 
-        self.canvas.mpl_connect('button_press_event', self.on_press)
+        # self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('motion_notify_event', self.update_status_bar)
 
@@ -421,7 +425,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         (loadings plot)
         '''
         if event.inaxes and self.motion_event_active:
-            lab = self.parent.hoverlabel
+            lab = self.navtoolbar.hoverlabel
             evt_x, evt_y = event.xdata, event.ydata
             dist = np.hypot((evt_x - self.current_data[self.x_var]), (evt_y - self.current_data[self.y_var]))
             min_dist = np.amin(dist)
@@ -617,37 +621,54 @@ class ReduxPanel(FigureCanvasWxAgg):
         return not self.is_per_object_data()
 
     def selection_is_empty(self):
-        return self.selection == {} or all([len(s) == 0 for s in list(self.selection.values())])
+        return len(self.selection) == 0
 
     def lasso_callback(self, verts):
         # Note: If the mouse is released outside of the canvas, (None,None) is
         #   returned as the last coordinate pair.
         # Cancel selection if user releases outside the canvas.
-        if None in verts[-1]: return
-
+        if verts is None or None in verts[-1]: return
         for c, collection in enumerate(self.subplot.collections):
             # Build the selection
-            if len(self.xys[c]) > 0:
-                from matplotlib.path import Path
-                new_sel = np.nonzero(Path(verts).contains_points(self.xys[c]))[0]
+            if self.current_data is not None:
+                points = self.current_data[[self.x_var, self.y_var]].values
+                selected = self.current_data.loc[Path(verts).contains_points(points), [p.image_id, p.object_id]].values
+                new_sel = set([tuple(key) for key in selected])
             else:
-                new_sel = []
+                new_sel = set()
             if self.selection_key == None:
-                self.selection[c] = new_sel
+                self.selection = new_sel
             elif self.selection_key == 'shift':
-                self.selection[c] = list(set(self.selection.get(c, [])).union(new_sel))
+                self.selection = self.selection.union(new_sel)
             elif self.selection_key == 'alt':
-                self.selection[c] = list(set(self.selection.get(c, [])).difference(new_sel))
+                self.selection = self.selection.difference(new_sel)
 
             # outline the points
-            edgecolors = collection.get_edgecolors()
-            for i in range(len(self.xys[c])):
-                if i in self.selection[c]:
-                    edgecolors[i] = SELECTED_OUTLINE_COLOR
-                else:
-                    edgecolors[i] = UNSELECTED_OUTLINE_COLOR
-        logging.info('Selected %s points.' % (np.sum([len(sel) for sel in list(self.selection.values())])))
+            # edgecolors = collection.get_edgecolors()
+            # for i in range(len(self.xys[c])):
+            #     if i in self.selection[c]:
+            #         edgecolors[i] = SELECTED_OUTLINE_COLOR
+            #     else:
+            #         edgecolors[i] = UNSELECTED_OUTLINE_COLOR
+        # self.canvas.widgetlock.release(self.lasso)
+
+        print('Selected %s points.' % len(self.selection))
+        logging.info('Selected %s points.' % len(self.selection))
         self.canvas.draw_idle()
+
+    def on_lasso_activate(self, evt=None, force_disable=False):
+        if self.lasso or force_disable:
+            print("Disabling lasso")
+
+            if self.lasso:
+                self.canvas.widgetlock.release(self.lasso)
+            self.lasso = None
+            self.selection = set()
+        else:
+            self.navtoolbar.untoggle_mpl_tools()
+            self.lasso = LassoSelector(self.subplot, self.lasso_callback, button=MouseButton(1))
+            self.canvas.widgetlock(self.lasso)
+
 
     def on_press(self, evt):
         if self.legend and self.legend.hit_test(evt):
@@ -656,10 +677,6 @@ class ReduxPanel(FigureCanvasWxAgg):
             self.selection_key = evt.key
             if self.canvas.widgetlock.locked(): return
             if evt.inaxes is None: return
-            if self.navtoolbar.get_mode() == 'lasso':
-                self.lasso = Lasso(evt.inaxes, (evt.xdata, evt.ydata), self.lasso_callback)
-                # acquire a lock on the widget drawing
-                self.canvas.widgetlock(self.lasso)
 
     def on_release(self, evt):
         # Note: lasso_callback is not called on click without drag so we release
@@ -667,33 +684,28 @@ class ReduxPanel(FigureCanvasWxAgg):
         if evt.button == 1:
             if self.lasso:
                 self.canvas.draw_idle()
-                self.canvas.widgetlock.release(self.lasso)
-                self.lasso = None
+                # self.canvas.widgetlock.release(self.lasso)
+                # self.lasso_callback(self.lasso.verts)
+                # self.lasso = None
+
         elif evt.button == 3:  # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1] - evt.y), None)
 
     def show_objects_from_selection(self, evt=None):
         '''Callback for "Show objects in selection" popup item.'''
-        show_keys = []
-        for i, sel in list(self.selection.items()):
-            keys = self.key_lists[i][sel]
-            show_keys += list(set([tuple(k) for k in keys]))
-        if len(show_keys[0]) == len(image_key_columns()):
-            from . import datamodel
-            dm = datamodel.DataModel()
-            obkeys = []
-            for key in show_keys:
-                obkeys += dm.GetObjectsFromImage(key)
-            show_keys = obkeys
+        show_keys = self.selection
 
         if len(show_keys) > 100:
-            te = wx.TextEntryDialog(self, 'You have selected %s %s. How many '
-                                          'would you like to show at random?' % (len(show_keys),
-                                                                                 p.object_name[1]), 'Choose # of %s' %
-                                    (p.object_name[1]), defaultValue='100')
+            te = wx.TextEntryDialog(self,
+                                    message=f'You have selected {len(show_keys)} {p.object_name[1]}. '
+                                            f'How many would you like to show at random?',
+                                    caption=f'Choose # of {p.object_name[1]}',
+                                    value='100'
+                                    )
             te.ShowModal()
             try:
                 res = int(te.Value)
+                show_keys = list(show_keys)
                 np.random.shuffle(show_keys)
                 show_keys = show_keys[:res]
             except ValueError:
@@ -1057,6 +1069,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         if not self.navtoolbar:
             self.navtoolbar = CustomNavToolbar(self.canvas)
             self.navtoolbar.Realize()
+            self.navtoolbar.Bind(wx.EVT_TOOL, self.on_lasso_activate, source=self.navtoolbar.lasso_tool)
         return self.navtoolbar
 
     def set_x_label(self, label):
@@ -1064,9 +1077,6 @@ class ReduxPanel(FigureCanvasWxAgg):
 
     def set_y_label(self, label):
         self.y_label = label
-
-class StopCalculating(Exception):
-    pass
 
 class DimensionReduction(wx.Frame, CPATool):
     '''
@@ -1080,17 +1090,15 @@ class DimensionReduction(wx.Frame, CPATool):
         self.SetBackgroundColour("white")
         self.hoverlabel = None
 
-
         if not p.is_initialized():
-            logging.critical('Classifier requires a properties file. Exiting.')
-            raise Exception('Classifier requires a properties file. Exiting.')
+            logging.critical('This tool requires a properties file. Exiting.')
+            raise Exception('This tool requires a properties file. Exiting.')
 
         global classifier
         classifier = parent
 
-
-
         figpanel = ReduxPanel(self)
+        self.fig = figpanel
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
 
@@ -1100,66 +1108,11 @@ class DimensionReduction(wx.Frame, CPATool):
 
         self.SetToolBar(figpanel.get_toolbar())
         self.SetSizer(sizer)
-        self.fig = figpanel
         #
         # Forward save and load settings functionality to the configpanel
         #
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
-
-
-    # Hack: See http://stackoverflow.com/questions/6124419/matplotlib-navtoolbar-doesnt-realize-in-wx-2-9-mac-os-x
-    def SetToolBar(self, toolbar):
-        from matplotlib.backends.backend_wx import _load_bitmap
-        toolbar.Hide()
-        tb = self.CreateToolBar((wx.TB_HORIZONTAL | wx.TB_TEXT))
-        toolbar.tb = tb
-
-        _NTB2_HOME = tb.AddTool(wx.ID_ANY, "", _load_bitmap('home.png'), 'Home')
-        _NTB2_BACK = tb.AddTool(wx.ID_ANY, "", _load_bitmap('back.png'), 'Back')
-        _NTB2_FORWARD = tb.AddTool(wx.ID_ANY, "", _load_bitmap('forward.png'), 'Forward')
-
-        _NTB2_PAN = tb.AddCheckTool(wx.ID_ANY, "", _load_bitmap('move.png'), shortHelp='Pan',
-                        longHelp='Pan with left, zoom with right')
-        _NTB2_ZOOM = tb.AddCheckTool(wx.ID_ANY, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom',
-                        longHelp='Zoom to rectangle')
-
-        tb.AddSeparator()
-        _NTB2_SUBPLOT = tb.AddTool(wx.ID_ANY, "", _load_bitmap('subplots.png'), 'Configure subplots')
-        _NTB2_SAVE = tb.AddTool(wx.ID_ANY, "", _load_bitmap('filesave.png'), 'Save plot')
-
-        tb.AddSeparator()
-
-        # self.navtoolbar.AddStretchableSpace()
-        pos = tb.GetToolsCount()
-        tb.AddSeparator()
-        self.hoverlabel = wx.StaticText(tb, label="")
-        tb.InsertControl(pos, self.hoverlabel, "")
-        tb.AddStretchableSpace()
-
-
-        def on_toggle_pan(evt):
-            _NTB2_ZOOM.Toggle(False)
-            tb.Realize()
-            evt.Skip()
-
-        def on_toggle_zoom(evt):
-            _NTB2_PAN.Toggle(False)
-            tb.Realize()
-            evt.Skip()
-
-        self.Bind(wx.EVT_TOOL, toolbar.home, source=_NTB2_HOME)
-        self.Bind(wx.EVT_TOOL, toolbar.forward, source=_NTB2_FORWARD)
-        self.Bind(wx.EVT_TOOL, toolbar.back, source=_NTB2_BACK)
-        self.Bind(wx.EVT_TOOL, toolbar.zoom, source=_NTB2_ZOOM)
-        self.Bind(wx.EVT_TOOL, toolbar.pan, source=_NTB2_PAN)
-        self.Bind(wx.EVT_TOOL, self.configure_subplots, source=_NTB2_SUBPLOT)
-        self.Bind(wx.EVT_TOOL, toolbar.save_figure, source=_NTB2_SAVE)
-        self.Bind(wx.EVT_TOOL, on_toggle_zoom, source=_NTB2_ZOOM)
-        self.Bind(wx.EVT_TOOL, on_toggle_pan, source=_NTB2_PAN)
-
-        tb.Realize()
-        # Hack end
 
     def configure_subplots(self, *args):
         # Fixed MPL subplot window generator
@@ -1186,102 +1139,77 @@ class DimensionReduction(wx.Frame, CPATool):
 
 
 class CustomNavToolbar(NavigationToolbar2WxAgg):
-    '''wx/mpl NavToolbar hack with an additional tools user interaction.
+    '''wx/mpl NavToolbar with an additional tools user interaction.
     This class is necessary because simply adding a new togglable tool to the
     toolbar won't (1) radio-toggle between the new tool and the pan/zoom tools.
     (2) disable the pan/zoom tool modes in the associated subplot(s).
     '''
 
     def __init__(self, canvas):
-        super(CustomNavToolbar, self).__init__(canvas)
+        super(CustomNavToolbar, self).__init__(canvas, coordinates=False)
         self.PAN = self.wx_ids['Pan']
         self.ZOOM = self.wx_ids['Zoom']
+        self.CONFIG_SUBPLOTS = self.wx_ids["Subplots"]
         self.pan_tool = self.FindById(self.PAN)
         self.zoom_tool = self.FindById(self.ZOOM)
+        self.subplots_tool = self.FindById(self.CONFIG_SUBPLOTS)
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.zoom_tool)
         self.Bind(wx.EVT_TOOL, self.on_toggle_pan_zoom, self.pan_tool)
 
-        self.user_tools = {}  # user_tools['tool_mode'] : wx.ToolBarToolBase
-
-        self.InsertSeparator(5)
         # self.add_user_tool('lasso', 6, get_icon("lasso_tool").ConvertToBitmap(), True, 'Lasso')
         # self.add_user_tool('gate', 7, get_icon("gate_tool").ConvertToBitmap(), True, 'Gate')
 
-    def add_user_tool(self, mode, pos, bmp, istoggle=True, shortHelp=''):
-        '''Adds a new user-defined tool to the toolbar.
-        mode -- the value that CustomNavToolbar.get_mode() will return if this
-                tool is toggled on
-        pos -- the position in the toolbar to add the icon
-        bmp -- a wx.Bitmap of the icon to use in the toolbar
-        isToggle -- whether or not the new tool toggles on/off with the other
-                    togglable tools
-        shortHelp -- the tooltip shown to the user for the new tool
-        '''
-        tool_id = wx.NewId()
-        self.user_tools[mode] = self.InsertTool(pos, tool_id, "", bmp,
-                                                kind=wx.ITEM_CHECK if istoggle else wx.ITEM_NORMAL, shortHelp=shortHelp)
-        self.Bind(wx.EVT_TOOL, self.on_toggle_user_tool, self.user_tools[mode])
+        self.lasso_tool = self.AddCheckTool(wx.ID_ANY, "", get_icon("lasso_tool").ConvertToBitmap(), shortHelp='Lasso',
+                                     longHelp='Lasso select')
+        self.Bind(wx.EVT_TOOL, self.toggle_lasso, source=self.lasso_tool)
+        self.Bind(wx.EVT_TOOL, self.Parent.configure_subplots, id=self.CONFIG_SUBPLOTS)
 
-    def get_mode(self):
-        '''Use this rather than navtoolbar.mode
-        '''
-        for mode, tool in list(self.user_tools.items()):
-            if tool.IsToggled():
-                return mode
-        return self.mode
+
+        self.AddSeparator()
+        pos = self.GetToolsCount()
+        self.hoverlabel = wx.StaticText(self, label="")
+        self.InsertControl(pos, self.hoverlabel, "")
+        self.AddStretchableSpace()
+        self.Realize()
+
+    def toggle_lasso(self, evt, force=False):
+        if not self.lasso_tool.IsToggled():
+            self.ToggleTool(self.lasso_tool.GetId(), False)
+            self.canvas.widgetlock.release(self.lasso_tool)
+        else:
+            self.ToggleTool(self.wx_ids['Pan'], False)
+            self.ToggleTool(self.wx_ids['Zoom'], False)
+            self.ToggleTool(self.lasso_tool.GetId(), True)
+            from matplotlib.backend_bases import _Mode
+            self.mode = _Mode.NONE
+        evt.Skip()
 
     def untoggle_mpl_tools(self):
-        '''Hack city: Since I can't figure out how to change the way the
-        associated subplot(s) handles mouse events: I generate events to turn
-        off whichever tool mode is enabled (if any).
+        '''Less hacky than it once was: We need to turn off any MPL tools
+        when activating a custom tool
         This function needs to be called whenever any user-defined tool
         (eg: lasso) is clicked.
         '''
         if self.pan_tool.IsToggled():
-            wx.PostEvent(
-                self.GetEventHandler(),
-                wx.CommandEvent(wx.EVT_TOOL.typeId, self.PAN)
-            )
             self.ToggleTool(self.PAN, False)
+            NavigationToolbar2.pan(self)
         elif self.zoom_tool.IsToggled():
-            wx.PostEvent(
-                self.GetEventHandler(),
-                wx.CommandEvent(wx.EVT_TOOL.typeId, self.ZOOM)
-            )
             self.ToggleTool(self.ZOOM, False)
-
-    def toggle_user_tool(self, mode_name, state):
-        '''mode_name -- the mode name given to the tool when added with
-        add_user_tool
-        state -- True or False
-        '''
-        self.ToggleTool(self.user_tools[mode_name].Id, state)
-
-    def on_toggle_user_tool(self, evt):
-        '''User tool click handler.
-        '''
-        if evt.Checked():
-            self.untoggle_mpl_tools()
-            # untoggle other user tools
-            for tool in list(self.user_tools.values()):
-                if tool.Id != evt.Id:
-                    self.ToggleTool(tool.Id, False)
+            NavigationToolbar2.zoom(self)
 
     def on_toggle_pan_zoom(self, evt):
         '''Called when pan or zoom is toggled.
         We need to manually untoggle user-defined tools.
         '''
-        if evt.Checked():
-            for tool in list(self.user_tools.values()):
-                self.ToggleTool(tool.Id, False)
-        # Make sure the regular pan/zoom handlers get the event
+        if self.lasso_tool.IsToggled():
+            self.Parent.fig.on_lasso_activate(force_disable=True)
+            self.ToggleTool(self.lasso_tool.GetId(), False)
         evt.Skip()
 
     def reset_history(self):
         '''Clear/reset the toolbar history.
         '''
         self._nav_stack.clear()
-        self.push_current()
 
 
 if __name__ == "__main__":

@@ -30,7 +30,6 @@ class ImageControlPanel(wx.Panel):
         self.scale_slider      = wx.Slider(parent, -1, scale*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.brightness_slider = wx.Slider(parent, -1, brightness*100, 1, 300, (10, 10), (100, 40), wx.SL_HORIZONTAL|wx.SL_AUTOTICKS)#|wx.SL_LABELS)
         self.reset_btn         = wx.Button(parent, wx.NewId(), 'Reset')
-        self.fit_to_window_btn = wx.Button(parent, wx.NewId(), 'Fit to Window')
         self.scale_percent      = wx.StaticText(parent, wx.NewId(), str(self.scale_slider.GetValue())+'%')
         self.brightness_percent = wx.StaticText(parent, wx.NewId(), str(self.brightness_slider.GetValue())+'%')
         
@@ -56,8 +55,10 @@ class ImageControlPanel(wx.Panel):
         # Avoids circular import at the start of the module.
         from cpa.imageviewer import ImageViewerPanel
         if isinstance(self.listeners[0], ImageViewerPanel):
+            self.fit_to_window_btn = wx.Button(parent, wx.NewId(), 'Fit to Window')
             button_sizer.AddSpacer(5)
             button_sizer.Add(self.fit_to_window_btn)
+            self.fit_to_window_btn.Bind(wx.EVT_BUTTON, self.OnFitToWindow)
 
         sizer2.Add(brightness_sizer)
         sizer2.Add(scale_sizer)
@@ -82,7 +83,6 @@ class ImageControlPanel(wx.Panel):
         self.scale_slider.Bind(wx.EVT_SLIDER, self.OnScaleSlider)
         self.brightness_slider.Bind(wx.EVT_SLIDER, self.OnBrightnessSlider)
         self.reset_btn.Bind(wx.EVT_BUTTON, self.OnReset)
-        self.fit_to_window_btn.Bind(wx.EVT_BUTTON, self.OnFitToWindow)
         # When a slider is moved wx produces update events extremely quickly.
         # This will freeze up CPA if there are more than a few tiles displayed.
         # To solve this, we put the tile updates on a timer. If the slider
