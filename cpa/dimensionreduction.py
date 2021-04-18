@@ -202,7 +202,9 @@ class ReduxControlPanel(wx.Panel):
         gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
             # Deactivate the lasso tool
-            # self.figpanel.get_toolbar().toggle_user_tool('lasso', False)
+            # self.figpanel.toggle_lasso(force=True)
+            self.figpanel.navtoolbar.ToggleTool(self.figpanel.navtoolbar.lasso_tool.GetId(), False)
+            self.figpanel.on_lasso_activate(force_disable=True)
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
         else:
             self.figpanel.gate_helper.disable()
@@ -385,38 +387,54 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.figure.set_facecolor((1, 1, 1))
         self.figure.set_edgecolor((1, 1, 1))
         self.canvas.SetBackgroundColour('white')
+        self.navtoolbar = None
         self.subplot = self.figure.add_subplot(111)
         self.gate_helper = GatingHelper(self.subplot, self)
-        self.class_masks = None
-        self.class_table = None
+
+        # Track whether we have any results displayed or plots made
         self.calculated = None
         self.displayed = None
+        # Whether to try to update the status bar on plot hover
         self.motion_event_active = False
+        # List of data columns we want available for plotting. Usually just PCA components.
         self.pc_cols = []
+        # Current displayed columns
         self.x_var = None
         self.y_var = None
+
+        # Full data table and ket table from object set
         self.data = None
         self.keys = None
-        self.current_data = None
-        self.selection_key = None
 
-        self.x_column = None
-        self.y_column = None
-        self.navtoolbar = None
+        # PCA results tables from the current analysis
+        self.Scores = None
+        self.Loadings = None
+
+        # Results data table currently shown on the plots, post-filtering
+        self.current_data = None
+
+        # Per-object class data from the classifier module, if found in database
+        self.class_table = None
+
+        self.legend = None
+
+        # Lasso drawing vars
+        self.selection = set()
+        self.lasso = None
+        self.patch = None
+
+        # Variables from the old plotting engine which we're working to remove safely
         self.x_points = []
         self.y_points = []
         self.key_lists = None
         self.colors = []
         self.x_label = ''
         self.y_label = ''
-        self.selection = set()
-        self.mouse_mode = 'gate'
-        self.legend = None
-        self.lasso = None
 
         # self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('motion_notify_event', self.update_status_bar)
+        self.canvas.mpl_connect('draw_event', self.on_draw)
 
     def update_status_bar(self, event):
         '''
@@ -524,7 +542,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         else:
             handles = []
             labels = []
-            cmap = matplotlib.cm.get_cmap("brg")
+            cmap = cm.get_cmap("brg")
             classnames = pd.unique(data["class"])
             for classname in classnames:
                 subset = data[data["class"] == classname]
@@ -549,38 +567,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
         self.figure.canvas.draw()
         self.motion_event_active = True
-
-    def mask_data(self, num_classes, class_masks, Scores):
-        '''
-        Mask the Score matrixes using the masks from create_class_mask
-        '''
-        row = np.size(Scores[:, 0])
-        col = num_classes
-        masked_data_X = np.zeros((row, col))
-        masked_data_Y = np.zeros((row, col))
-        for i in range(num_classes):
-            masked_data_X[:, i] = Scores[:, 0] * class_masks[:, i]
-            masked_data_Y[:, i] = Scores[:, 1] * class_masks[:, i]
-
-        return masked_data_X, masked_data_Y
-
-    def set_colormap(self, class_array):
-
-        '''
-
-        Set the colormap based on the number of different classes to plot
-
-        '''
-
-        self.colormap = cm.get_cmap('hsv')
-
-        num_colors = len(class_array)
-
-        class_value = np.array(list(range(1, (num_colors + 2))), dtype='float') / num_colors
-
-        color_set = np.array(self.colormap(class_value))
-
-        return color_set
 
     def get_class_table(self):
         '''
@@ -628,20 +614,21 @@ class ReduxPanel(FigureCanvasWxAgg):
         #   returned as the last coordinate pair.
         # Cancel selection if user releases outside the canvas.
         if verts is None or None in verts[-1]: return
-        for c, collection in enumerate(self.subplot.collections):
-            # Build the selection
-            if self.current_data is not None:
-                points = self.current_data[[self.x_var, self.y_var]].values
-                selected = self.current_data.loc[Path(verts).contains_points(points), [p.image_id, p.object_id]].values
-                new_sel = set([tuple(key) for key in selected])
-            else:
-                new_sel = set()
-            if self.selection_key == None:
-                self.selection = new_sel
-            elif self.selection_key == 'shift':
-                self.selection = self.selection.union(new_sel)
-            elif self.selection_key == 'alt':
-                self.selection = self.selection.difference(new_sel)
+        # Clear previous lasso
+        self.patch = None
+        # Build the selection
+        if self.current_data is not None:
+            points = self.current_data[[self.x_var, self.y_var]].values
+            selected = self.current_data.loc[Path(verts).contains_points(points), [p.image_id, p.object_id]].values
+            new_sel = set([tuple(key) for key in selected])
+        else:
+            new_sel = set()
+        if wx.GetKeyState(wx.WXK_SHIFT):
+            self.selection = self.selection.union(new_sel)
+        elif wx.GetKeyState(wx.WXK_ALT):
+            self.selection = self.selection.difference(new_sel)
+        else:
+            self.selection = new_sel
 
             # outline the points
             # edgecolors = collection.get_edgecolors()
@@ -654,12 +641,10 @@ class ReduxPanel(FigureCanvasWxAgg):
 
         print('Selected %s points.' % len(self.selection))
         logging.info('Selected %s points.' % len(self.selection))
-        self.canvas.draw_idle()
+        self.get_lasso_patch(verts)
 
     def on_lasso_activate(self, evt=None, force_disable=False):
         if self.lasso or force_disable:
-            print("Disabling lasso")
-
             if self.lasso:
                 self.canvas.widgetlock.release(self.lasso)
             self.lasso = None
@@ -669,12 +654,30 @@ class ReduxPanel(FigureCanvasWxAgg):
             self.lasso = LassoSelector(self.subplot, self.lasso_callback, button=MouseButton(1))
             self.canvas.widgetlock(self.lasso)
 
+    def get_lasso_patch(self, verts):
+        '''Returns a matplotlib patch to be drawn on the canvas whose dimensions
+        have been computed from the current gate.
+        '''
+        x_min, x_max = self.subplot.get_xlim()
+        x_range = x_max - x_min
+        y_min, y_max = self.subplot.get_ylim()
+        y_range = y_max - y_min
+
+        from matplotlib.patches import Polygon
+        poly = Polygon(verts, animated=True)
+        poly.set_fill(False)
+        poly.set_linestyle('dashed')
+        poly.set_edgecolor('dimgrey')
+        self.patch = self.subplot.add_patch(poly)
+
+    def on_draw(self, evt):
+        if self.patch:
+            self.subplot.draw_artist(self.patch)
 
     def on_press(self, evt):
         if self.legend and self.legend.hit_test(evt):
             return
         if evt.button == 1:
-            self.selection_key = evt.key
             if self.canvas.widgetlock.locked(): return
             if evt.inaxes is None: return
 
@@ -730,10 +733,7 @@ class ReduxPanel(FigureCanvasWxAgg):
 
     def show_images_from_selection(self, evt=None):
         '''Callback for "Show images in selection" popup item.'''
-        show_keys = set()
-        for i, sel in list(self.selection.items()):
-            keys = self.key_lists[i][sel]
-            show_keys.update([tuple(k) for k in keys])
+        show_keys = set([(i, ) for i, _ in self.selection])
         if len(show_keys) > 10:
             dlg = wx.MessageDialog(self, 'You are about to open %s images. '
                                          'This may take some time depending on your '
@@ -752,112 +752,16 @@ class ReduxPanel(FigureCanvasWxAgg):
 
     def show_selection_in_table(self, evt=None):
         '''Callback for "Show selection in a table" popup item.'''
-        for i, sel in list(self.selection.items()):
-            keys = self.key_lists[i][sel].T.astype('object')
-            if len(keys) > 0:
-                xpoints = self.x_points[i][sel]
-                ypoints = self.y_points[i][sel]
-                table_data = np.vstack((keys, xpoints, ypoints)).T
-                column_labels = []
-                if self.is_per_image_data():
-                    column_labels = list(image_key_columns())
-                    group = 'Image'
-                elif self.is_per_object_data():
-                    column_labels = list(object_key_columns())
-                    group = 'Object'
-                key_col_indices = list(range(len(column_labels)))
-                column_labels += [self.get_current_x_measurement_name(),
-                                  self.get_current_y_measurement_name()]
-                grid = tableviewer.TableViewer(self, title='Selection from collection %d in scatter' % (i))
-                grid.table_from_array(table_data, column_labels, group, key_col_indices)
-                grid.set_fitted_col_widths()
-                grid.Show()
-            else:
-                logging.info('No points were selected in collection %d' % (i))
+        if len(self.selection) == 0:
+            logging.info('No points were selected by the lasso tool')
+            return
+        indexer = list(map(lambda x: x in self.selection, zip(self.keys[p.image_id], self.keys[p.object_id])))
+        table = pd.concat((self.keys[indexer], self.data[indexer]), axis=1).sort_values([p.image_id, p.object_id])
+        grid = tableviewer.TableViewer(self, title='Objects from lasso selection')
+        grid.table_from_array(table.to_numpy(dtype=str), table.columns.tolist()) #, group, key_col_indices)
+        grid.set_auto_col_widths()
+        grid.Show()
 
-    def on_new_collection_from_filter(self, evt):
-        '''Callback for "Collection from filter" popup menu options.'''
-        assert self.key_lists, 'Can not create a collection from a filter since image keys have not been set for this plot.'
-        filter = self.popup_menu_filters[evt.Id]
-        keys = sorted(db.GetFilteredImages(filter))
-        key_lists = []
-        xpoints = []
-        ypoints = []
-        sel_keys = []
-        sel_xs = []
-        sel_ys = []
-        for c, col in enumerate(self.subplot.collections):
-            sel_indices = []
-            unsel_indices = []
-            # Find indices of keys that fall in the filter.
-            # Improved performance: |N|log(|F|) N = data points, F = filterd points
-            # Assumes that the filtered image keys are in order
-            if self.is_per_object_data():
-                collection_keys = [tuple(k[:-1]) for k in self.key_lists[c]]
-            else:
-                collection_keys = [tuple(k) for k in self.key_lists[c]]
-            for i, key in enumerate(collection_keys):
-                idx = bisect(keys, key) - 1
-                if keys[idx] == key:
-                    sel_indices += [i]
-                else:
-                    unsel_indices += [i]
-
-            # Build the new collections
-            if len(sel_indices) > 0:
-                if self.key_lists:
-                    sel_keys += list(self.key_lists[c][sel_indices])
-                    sel_xs += list(self.x_points[c][sel_indices])
-                    sel_ys += list(self.y_points[c][sel_indices])
-            if len(unsel_indices) > 0:
-                if self.key_lists:
-                    key_lists += [self.key_lists[c][unsel_indices]]
-                xpoints += [np.array(self.x_points[c][unsel_indices])]
-                ypoints += [np.array(self.y_points[c][unsel_indices])]
-        xpoints += [np.array(sel_xs)]
-        ypoints += [np.array(sel_ys)]
-        if self.key_lists:
-            key_lists += [np.array(sel_keys)]
-
-        self.set_points(xpoints, ypoints)
-        if self.key_lists:
-            self.set_keys(key_lists)
-        self.redraw()
-        self.figure.canvas.draw_idle()
-
-    def on_collection_from_selection(self, evt):
-        '''Callback for "Collection from selection" popup menu option.'''
-        key_lists = []
-        xpoints = []
-        ypoints = []
-        sel_keys = []
-        sel_xs = []
-        sel_ys = []
-        for c, col in enumerate(self.subplot.collections):
-            indices = list(range(len(col.get_offsets())))
-            sel_indices = self.selection[c]
-            unsel_indices = list(set(indices).difference(sel_indices))
-            if len(sel_indices) > 0:
-                if self.key_lists:
-                    sel_keys += list(self.key_lists[c][sel_indices])
-                    sel_xs += list(self.x_points[c][sel_indices])
-                    sel_ys += list(self.y_points[c][sel_indices])
-            if len(unsel_indices) > 0:
-                if self.key_lists:
-                    key_lists += [self.key_lists[c][unsel_indices]]
-                xpoints += [np.array(self.x_points[c][unsel_indices])]
-                ypoints += [np.array(self.y_points[c][unsel_indices])]
-
-        xpoints += [np.array(sel_xs)]
-        ypoints += [np.array(sel_ys)]
-        if self.key_lists:
-            key_lists += [np.array(sel_keys)]
-
-        self.set_points(xpoints, ypoints)
-        if self.key_lists:
-            self.set_keys(key_lists)
-        self.redraw()
-        self.figure.canvas.draw_idle()
 
     def show_popup_menu(self, xxx_todo_changeme1, data):
         (x, y) = xxx_todo_changeme1
@@ -897,20 +801,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         if self.selection_is_empty():
             show_imagelist_item.Enable(False)
         self.Bind(wx.EVT_MENU, self.show_selection_in_table, show_imagelist_item)
-
-        collection_from_selection_item = popup.Append(-1, 'Create collection from selection')
-        if self.selection_is_empty():
-            collection_from_selection_item.Enable(False)
-        self.Bind(wx.EVT_MENU, self.on_collection_from_selection, collection_from_selection_item)
-
-        # Color points by filter submenu
-        submenu = wx.Menu()
-        for f in p._filters_ordered:
-            id = wx.NewId()
-            item = submenu.Append(id, f)
-            self.popup_menu_filters[id] = f
-            self.Bind(wx.EVT_MENU, self.on_new_collection_from_filter, item)
-        popup.Append(-1, 'Create collection from filter', submenu)
 
         self.PopupMenu(popup, (x, y))
 
@@ -960,123 +850,12 @@ class ReduxPanel(FigureCanvasWxAgg):
             self.x_points = xpoints
             self.y_points = ypoints
 
-    def get_x_points(self):
-        return self.x_points
-
-    def get_y_points(self):
-        return self.y_points
-
-    def redraw(self):
-        t0 = time()
-        # XXX: maybe attempt to maintain selection based on keys
-        self.selection = {}
-        self.subplot.clear()
-
-        # XXX: move to setters?
-        self.subplot.set_xlabel(self.x_label)
-        self.subplot.set_ylabel(self.y_label)
-
-        xpoints = self.get_x_points()
-        ypoints = self.get_y_points()
-
-        # Stop if there is no data in any of the point lists
-        if len(xpoints) == 0:
-            logging.warning('No data to plot.')
-            if self.navtoolbar:
-                self.navtoolbar.reset_history()
-            return
-
-        # Gather all categorical data to be plotted so we can populate
-        # the axis the same regardless of which collections the categories
-        # fall in.
-        xvalmap = {}
-        yvalmap = {}
-        if not issubclass(self.x_points[0].dtype.type, np.number):
-            x_categories = sorted(set(np.hstack(self.x_points)))
-            # Map all categorical values to integer values from 0..N
-            for i, category in enumerate(x_categories):
-                xvalmap[category] = i
-        if not issubclass(self.y_points[0].dtype.type, np.number):
-            y_categories = sorted(set(np.hstack(self.y_points)))
-            # Map all categorical values to integer values from 0..N
-            for i, category in enumerate(y_categories):
-                yvalmap[category] = i
-
-                # Each point list is converted to a separate point collection by
-        # subplot.scatter
-        self.xys = []
-        xx = []
-        yy = []
-        for c, (xs, ys, color) in enumerate(zip(self.x_points, self.y_points, self.get_colors())):
-            if len(xs) > 0:
-                xx = xs
-                yy = ys
-                # Map categorical values to integers 0..N
-                if xvalmap:
-                    xx = [xvalmap[l] for l in xx]
-                # Map categorical values to integers 0..N
-                if yvalmap:
-                    yy = [yvalmap[l] for l in yy]
-
-                data = [Datum(xy, color) for xy in zip(xx, yy)]
-                facecolors = [d.color for d in data]
-                self.xys.append(np.array([(d.x, d.y) for d in data]))
-
-                self.subplot.scatter(xx, yy,
-                                     s=30,
-                                     facecolors=facecolors,
-                                     edgecolors=['none' for f in facecolors],
-                                     alpha=0.75)
-
-        # Set ticks and ticklabels if data is categorical
-        if xvalmap:
-            self.subplot.set_xticks(list(range(len(x_categories))))
-            self.subplot.set_xticklabels(sorted(x_categories))
-            self.figure.autofmt_xdate()  # rotates and shifts xtick-labels so they look nice
-        if yvalmap:
-            self.subplot.set_yticks(list(range(len(y_categories))))
-            self.subplot.set_yticklabels(sorted(y_categories))
-
-        if len(self.x_points) > 1:
-            if self.legend:
-                self.legend.disconnect_bindings()
-            self.legend = self.subplot.legend(fancybox=True)
-            try:
-                self.legend.draggable(True)
-            except:
-                self.legend = DraggableLegend(self.legend)
-
-
-        # Set axis bounds. Clip non-positive values if in log space
-        # Must be done after scatter.
-        xmin = min([np.nanmin(pts[:, 0]) for pts in self.xys if len(pts) > 0])
-        xmax = max([np.nanmax(pts[:, 0]) for pts in self.xys if len(pts) > 0])
-        ymin = min([np.nanmin(pts[:, 1]) for pts in self.xys if len(pts) > 0])
-        ymax = max([np.nanmax(pts[:, 1]) for pts in self.xys if len(pts) > 0])
-        xmin = xmin - (xmax - xmin) / 20.
-        xmax = xmax + (xmax - xmin) / 20.
-        ymin = ymin - (ymax - ymin) / 20.
-        ymax = ymax + (ymax - ymin) / 20.
-        self.subplot.axis([xmin, xmax, ymin, ymax])
-
-        logging.debug('Scatter: Plotted %s points in %.3f seconds.'
-                      % (sum(map(len, self.x_points)), time() - t0))
-
-        if self.navtoolbar:
-            self.navtoolbar.reset_history()
-
     def get_toolbar(self):
         if not self.navtoolbar:
             self.navtoolbar = CustomNavToolbar(self.canvas)
             self.navtoolbar.Realize()
             self.navtoolbar.Bind(wx.EVT_TOOL, self.on_lasso_activate, source=self.navtoolbar.lasso_tool)
         return self.navtoolbar
-
-    def set_x_label(self, label):
-        self.x_label = label
-
-    def set_y_label(self, label):
-        self.y_label = label
 
 class DimensionReduction(wx.Frame, CPATool):
     '''
@@ -1161,7 +940,7 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
 
         self.lasso_tool = self.AddCheckTool(wx.ID_ANY, "", get_icon("lasso_tool").ConvertToBitmap(), shortHelp='Lasso',
                                      longHelp='Lasso select')
-        self.Bind(wx.EVT_TOOL, self.toggle_lasso, source=self.lasso_tool)
+        # self.Bind(wx.EVT_TOOL, self.toggle_lasso, source=self.lasso_tool)
         self.Bind(wx.EVT_TOOL, self.Parent.configure_subplots, id=self.CONFIG_SUBPLOTS)
 
 
@@ -1172,17 +951,17 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         self.AddStretchableSpace()
         self.Realize()
 
-    def toggle_lasso(self, evt, force=False):
-        if not self.lasso_tool.IsToggled():
-            self.ToggleTool(self.lasso_tool.GetId(), False)
-            self.canvas.widgetlock.release(self.lasso_tool)
-        else:
-            self.ToggleTool(self.wx_ids['Pan'], False)
-            self.ToggleTool(self.wx_ids['Zoom'], False)
-            self.ToggleTool(self.lasso_tool.GetId(), True)
-            from matplotlib.backend_bases import _Mode
-            self.mode = _Mode.NONE
-        evt.Skip()
+    # def toggle_lasso(self, evt, force=False):
+    #     if not self.lasso_tool.IsToggled():
+    #         self.ToggleTool(self.lasso_tool.GetId(), False)
+    #         self.canvas.widgetlock.release(self.lasso_tool)
+    #     elif not force:
+    #         self.ToggleTool(self.wx_ids['Pan'], False)
+    #         self.ToggleTool(self.wx_ids['Zoom'], False)
+    #         self.ToggleTool(self.lasso_tool.GetId(), True)
+    #         from matplotlib.backend_bases import _Mode
+    #         self.mode = _Mode.NONE
+    #     evt.Skip()
 
     def untoggle_mpl_tools(self):
         '''Less hacky than it once was: We need to turn off any MPL tools
