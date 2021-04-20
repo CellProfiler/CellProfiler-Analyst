@@ -113,7 +113,7 @@ class MainGUI(wx.Frame):
         tb.AddTool(ID_HISTOGRAM.GetId(), 'Histogram', get_icon("histogram").ConvertToBitmap(), shortHelp='Histogram')
         tb.AddTool(ID_DENSITY.GetId(), 'Density Plot', get_icon("density").ConvertToBitmap(), shortHelp='Density Plot')
         tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', get_icon("boxplot").ConvertToBitmap(), shortHelp='Box Plot')
-        tb.AddTool(ID_DIMENSREDUX.GetId(), 'Reduction', get_icon("normalize").ConvertToBitmap(), shortHelp='Dimensionality Reduction')
+        tb.AddTool(ID_DIMENSREDUX.GetId(), 'Reduction', get_icon("dimensionality").ConvertToBitmap(), shortHelp='Dimensionality Reduction')
         tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', get_icon("data_grid").ConvertToBitmap(), shortHelp='Table Viewer')
         # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', get_icon("normalize").ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
