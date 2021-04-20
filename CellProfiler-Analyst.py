@@ -11,6 +11,8 @@ from io import StringIO
 import os
 import os.path
 import logging
+
+from cpa.dimensionreduction import DimensionReduction
 from cpa.util.version import display_version
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
@@ -70,6 +72,7 @@ ID_SCATTER = wx.NewIdRef()
 ID_HISTOGRAM = wx.NewIdRef()
 ID_DENSITY = wx.NewIdRef()
 ID_BOXPLOT = wx.NewIdRef()
+ID_DIMENSREDUX = wx.NewIdRef()
 ID_NORMALIZE = wx.NewIdRef()
 
 def get_cpatool_subclasses():
@@ -110,6 +113,7 @@ class MainGUI(wx.Frame):
         tb.AddTool(ID_HISTOGRAM.GetId(), 'Histogram', get_icon("histogram").ConvertToBitmap(), shortHelp='Histogram')
         tb.AddTool(ID_DENSITY.GetId(), 'Density Plot', get_icon("density").ConvertToBitmap(), shortHelp='Density Plot')
         tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', get_icon("boxplot").ConvertToBitmap(), shortHelp='Box Plot')
+        tb.AddTool(ID_DIMENSREDUX.GetId(), 'Reduction', get_icon("normalize").ConvertToBitmap(), shortHelp='Dimensionality Reduction')
         tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', get_icon("data_grid").ConvertToBitmap(), shortHelp='Table Viewer')
         # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', get_icon("normalize").ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
@@ -140,6 +144,7 @@ class MainGUI(wx.Frame):
         histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', helpString='Launches the Histogram Plot tool.')
         densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', helpString='Launches the Density Plot tool.')
         boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', helpString='Launches the Box Plot tool.')
+        dimensionMenuItem   = toolsMenu.Append(ID_DIMENSREDUX, 'Dimensionality Reduction', helpString='Launches the Dimensionality Reduction tool.')
         dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', helpString='Launches the Table Viewer tool.')
         normalizeMenuItem   = toolsMenu.Append(ID_NORMALIZE, 'Normalization Tool\tCtrl+Shift+T', helpString='Launches a tool for generating normalized values for measurement columns in your tables.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
@@ -207,6 +212,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
         self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
+        self.Bind(wx.EVT_TOOL, self.launch_dimens_redux, id=ID_DIMENSREDUX)
         self.Bind(wx.EVT_TOOL, self.launch_normalization_tool, id=ID_NORMALIZE)
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -266,6 +272,11 @@ class MainGUI(wx.Frame):
         if self.confirm_properties():
             boxplot = BoxPlot(parent=self)
             boxplot.Show(True)
+
+    def launch_dimens_redux(self, evt=None):
+        if self.confirm_properties():
+            dimens = DimensionReduction(parent=self)
+            dimens.Show(True)
 
     def launch_query_maker(self, evt=None):
         if self.confirm_properties():

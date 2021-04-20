@@ -11,6 +11,7 @@ import pandas as pd
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
 
+from cpa.classifier import Classifier
 from .cpatool import CPATool
 from . import tableviewer
 from .dbconnect import DBConnect, image_key_columns, object_key_columns
@@ -23,7 +24,6 @@ from . import imagetools
 from cpa.icons import get_icon
 import logging
 import numpy as np
-from bisect import bisect
 import sys
 from time import time
 import wx
@@ -112,7 +112,7 @@ class ReduxControlPanel(wx.Panel):
         self.SetBackgroundColour('white')  # color for the background of panel
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD, TSNE], size=(200, -1), style=wx.CB_READONLY)
+        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD], size=(200, -1), style=wx.CB_READONLY)
         self.method_choice.Select(0)
         self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
         self.plot_choice.Select(0)
@@ -264,6 +264,9 @@ class ReduxControlPanel(wx.Panel):
         # Define a progress dialog
         dlg = wx.ProgressDialog('Generating figure...', 'Generating ...', 100, parent=self,
                                 style=wx.PD_APP_MODAL)
+        # Reset selections
+        self.figpanel.patches = []
+        self.figpanel.selection = set()
 
         if self.figpanel.data is None:
             dlg.Pulse('Fetching object data from database')
@@ -281,8 +284,7 @@ class ReduxControlPanel(wx.Panel):
                 dlg.Destroy()
                 return
 
-        import time
-        start = time.time()
+        start = time()
 
 
         dlg.Pulse('Generating model and plot')
@@ -304,7 +306,7 @@ class ReduxControlPanel(wx.Panel):
         self.figpanel.displayed = selected_plot
         dlg.Destroy()
 
-        print(f"Finished {selected_method} in {time.time() - start}")
+        print(f"Finished {selected_method} in {time() - start}")
         self.update_gate_helper()
 
     def _load_points(self):
@@ -629,7 +631,6 @@ class ReduxPanel(FigureCanvasWxAgg):
             # Clear previous lasso
             self.patches.clear()
             self.selection = new_sel
-        print('Selected %s points.' % len(self.selection))
         logging.info('Selected %s points.' % len(self.selection))
         self.patches.append(self.get_lasso_patch(verts))
 
@@ -702,12 +703,37 @@ class ReduxPanel(FigureCanvasWxAgg):
                 np.random.shuffle(show_keys)
                 show_keys = show_keys[:res]
             except ValueError:
-                wx.MessageDialog('You have entered an invalid number', 'Error').ShowModal()
+                wx.MessageDialog(self, 'You have entered an invalid number', 'Error').ShowModal()
                 return
         from . import sortbin
         f = sortbin.CellMontageFrame(None)
         f.Show()
         f.add_objects(show_keys)
+
+    def send_selected_objects_to_classifier(self, evt=None):
+        '''Callback for "Show objects in selection" popup item.'''
+        keys = self.selection
+        classifier = next(win for win in wx.GetTopLevelWindows() if isinstance(win, Classifier))
+        if not classifier:
+            return
+        if len(keys) > 100:
+            te = wx.TextEntryDialog(self,
+                                    message=f'You have selected {len(keys)} {p.object_name[1]}.'
+                                            f'How many would you like to send at random?',
+                                    caption=f'Choose # of {p.object_name[1]}',
+                                    value='100'
+                                    )
+            te.ShowModal()
+            try:
+                res = int(te.Value)
+                keys = list(keys)
+                np.random.shuffle(keys)
+                keys = keys[:res]
+            except ValueError:
+                wx.MessageDialog(self, 'You have entered an invalid number', 'Error').ShowModal()
+                return
+        classifier.unclassifiedBin.AddObjects(keys, classifier.chMap, pos='last',
+                                        display_whole_image=p.classification_type == 'image')
 
     def show_objects_from_gate(self, evt=None):
         '''Callback for "Show objects in gate" popup item.'''
@@ -786,6 +812,12 @@ class ReduxPanel(FigureCanvasWxAgg):
             if self.selection_is_empty():
                 show_objects_item.Enable(False)
             self.Bind(wx.EVT_MENU, self.show_objects_from_selection, show_objects_item)
+
+        if any(isinstance(x, Classifier) for x in wx.GetTopLevelWindows()):
+            send_objects_item = popup.Append(-1, 'Send %s to classifier' % (p.object_name[1]))
+            if self.selection_is_empty():
+                send_objects_item.Enable(False)
+            self.Bind(wx.EVT_MENU, self.send_selected_objects_to_classifier, send_objects_item)
 
         show_imagelist_item = popup.Append(-1, 'Show selection in table')
         if self.selection_is_empty():
