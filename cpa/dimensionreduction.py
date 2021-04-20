@@ -960,8 +960,8 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         # self.add_user_tool('lasso', 6, get_icon("lasso_tool").ConvertToBitmap(), True, 'Lasso')
         # self.add_user_tool('gate', 7, get_icon("gate_tool").ConvertToBitmap(), True, 'Gate')
 
-        self.lasso_tool = self.AddCheckTool(wx.ID_ANY, "", get_icon("lasso_tool").ConvertToBitmap(), shortHelp='Lasso',
-                                     longHelp='Lasso select')
+        self.lasso_tool = self.AddCheckTool(wx.ID_ANY, "", get_icon("lasso").ConvertToBitmap(),
+                                            shortHelp='Lasso Select', longHelp='Lasso select')
         # self.Bind(wx.EVT_TOOL, self.toggle_lasso, source=self.lasso_tool)
         self.Bind(wx.EVT_TOOL, self.Parent.configure_subplots, id=self.CONFIG_SUBPLOTS)
 
@@ -972,18 +972,6 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         self.InsertControl(pos, self.hoverlabel, "")
         self.AddStretchableSpace()
         self.Realize()
-
-    # def toggle_lasso(self, evt, force=False):
-    #     if not self.lasso_tool.IsToggled():
-    #         self.ToggleTool(self.lasso_tool.GetId(), False)
-    #         self.canvas.widgetlock.release(self.lasso_tool)
-    #     elif not force:
-    #         self.ToggleTool(self.wx_ids['Pan'], False)
-    #         self.ToggleTool(self.wx_ids['Zoom'], False)
-    #         self.ToggleTool(self.lasso_tool.GetId(), True)
-    #         from matplotlib.backend_bases import _Mode
-    #         self.mode = _Mode.NONE
-    #     evt.Skip()
 
     def untoggle_mpl_tools(self):
         '''Less hacky than it once was: We need to turn off any MPL tools
