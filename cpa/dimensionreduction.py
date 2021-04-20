@@ -421,7 +421,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         # Lasso drawing vars
         self.selection = set()
         self.lasso = None
-        self.patch = None
+        self.patches = []
 
         # Variables from the old plotting engine which we're working to remove safely
         self.x_points = []
@@ -565,6 +565,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.subplot.set_ylabel(y_axe_var, fontsize=12)
         self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
         self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
+        self.figure.tight_layout()
         self.figure.canvas.draw()
         self.motion_event_active = True
 
@@ -613,9 +614,8 @@ class ReduxPanel(FigureCanvasWxAgg):
         # Note: If the mouse is released outside of the canvas, (None,None) is
         #   returned as the last coordinate pair.
         # Cancel selection if user releases outside the canvas.
+        if self.displayed != "Scores": return
         if verts is None or None in verts[-1]: return
-        # Clear previous lasso
-        self.patch = None
         # Build the selection
         if self.current_data is not None:
             points = self.current_data[[self.x_var, self.y_var]].values
@@ -625,23 +625,13 @@ class ReduxPanel(FigureCanvasWxAgg):
             new_sel = set()
         if wx.GetKeyState(wx.WXK_SHIFT):
             self.selection = self.selection.union(new_sel)
-        elif wx.GetKeyState(wx.WXK_ALT):
-            self.selection = self.selection.difference(new_sel)
         else:
+            # Clear previous lasso
+            self.patches.clear()
             self.selection = new_sel
-
-            # outline the points
-            # edgecolors = collection.get_edgecolors()
-            # for i in range(len(self.xys[c])):
-            #     if i in self.selection[c]:
-            #         edgecolors[i] = SELECTED_OUTLINE_COLOR
-            #     else:
-            #         edgecolors[i] = UNSELECTED_OUTLINE_COLOR
-        # self.canvas.widgetlock.release(self.lasso)
-
         print('Selected %s points.' % len(self.selection))
         logging.info('Selected %s points.' % len(self.selection))
-        self.get_lasso_patch(verts)
+        self.patches.append(self.get_lasso_patch(verts))
 
     def on_lasso_activate(self, evt=None, force_disable=False):
         if self.lasso or force_disable:
@@ -651,8 +641,11 @@ class ReduxPanel(FigureCanvasWxAgg):
             self.selection = set()
         else:
             self.navtoolbar.untoggle_mpl_tools()
-            self.lasso = LassoSelector(self.subplot, self.lasso_callback, button=MouseButton(1))
-            self.canvas.widgetlock(self.lasso)
+            if self.displayed == "Scores":
+                self.lasso = LassoSelector(self.subplot, self.lasso_callback, button=MouseButton(1))
+                self.canvas.widgetlock(self.lasso)
+            else:
+                self.navtoolbar.ToggleTool(self.navtoolbar.lasso_tool.GetId(), False)
 
     def get_lasso_patch(self, verts):
         '''Returns a matplotlib patch to be drawn on the canvas whose dimensions
@@ -668,11 +661,11 @@ class ReduxPanel(FigureCanvasWxAgg):
         poly.set_fill(False)
         poly.set_linestyle('dashed')
         poly.set_edgecolor('dimgrey')
-        self.patch = self.subplot.add_patch(poly)
+        return self.subplot.add_patch(poly)
 
     def on_draw(self, evt):
-        if self.patch:
-            self.subplot.draw_artist(self.patch)
+        for patch in self.patches:
+            self.subplot.draw_artist(patch)
 
     def on_press(self, evt):
         if self.legend and self.legend.hit_test(evt):
@@ -687,9 +680,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         if evt.button == 1:
             if self.lasso:
                 self.canvas.draw_idle()
-                # self.canvas.widgetlock.release(self.lasso)
-                # self.lasso_callback(self.lasso.verts)
-                # self.lasso = None
 
         elif evt.button == 3:  # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1] - evt.y), None)
