@@ -2,7 +2,6 @@
 # Todo: TSNE
 # Todo: Other methods
 # Todo: Cleanup fig drawing
-# Todo: Context menu options
 
 import threading
 
@@ -10,6 +9,8 @@ import matplotlib.cm
 import pandas as pd
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA as skPCA
+from sklearn.manifold import TSNE as skTSNE
 
 from cpa.classifier import Classifier
 from .cpatool import CPATool
@@ -112,7 +113,7 @@ class ReduxControlPanel(wx.Panel):
         self.SetBackgroundColour('white')  # color for the background of panel
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD], size=(200, -1), style=wx.CB_READONLY)
+        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD, TSNE], size=(200, -1), style=wx.CB_READONLY)
         self.method_choice.Select(0)
         self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
         self.plot_choice.Select(0)
@@ -261,6 +262,15 @@ class ReduxControlPanel(wx.Panel):
         Show the selected dimensionality reduction plot on the canvas
         '''
 
+        if self.method_choice.Value == TSNE and self.figpanel.calculated != TSNE:
+            dlg = wx.MessageDialog(self, 't-SNE is an intensive method. \n\n Calculations '
+                                         'may take several minutes, or even longer when '
+                                         'running large datasets. Continue?',
+                                   'Warning', wx.YES_NO | wx.ICON_QUESTION)
+            response = dlg.ShowModal()
+            if response != wx.ID_YES:
+                return
+
         # Define a progress dialog
         dlg = wx.ProgressDialog('Generating figure...', 'Generating ...', 100, parent=self,
                                 style=wx.PD_APP_MODAL)
@@ -297,12 +307,7 @@ class ReduxControlPanel(wx.Panel):
         self.figpanel.navtoolbar.update()
 
         dlg.Pulse("Plotting results")
-        if selected_method in (SVD, PCA):
-            self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
-        elif selected_method == TSNE:
-            self.figpanel.plot_tsne(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
-        else:
-            raise NotImplementedError(f"Model {selected_method} not implemented")
+        self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
         self.figpanel.displayed = selected_plot
         dlg.Destroy()
 
@@ -475,23 +480,34 @@ class ReduxPanel(FigureCanvasWxAgg):
         dlg.Pulse("Fitting model")
 
         if mode == PCA:
-            from sklearn.decomposition import PCA as skPCA
             model = skPCA(n_components=10)
         elif mode == SVD:
             model = TruncatedSVD()
+        elif mode == TSNE:
+            model = skTSNE(perplexity=25.0, verbose=2)
         else:
             raise NotImplementedError("Mode", mode, "is not ready yet")
-        self.pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
-        results = model.fit_transform(standardized)
+        if mode == TSNE:
+            self.pc_cols = [f"t-SNE {x + 1}" for x in range(model.n_components)]
+            # TODO: Thread me and capture printed logs
+            results = model.fit_transform(standardized)
+
+        else:
+            self.pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
+            results = model.fit_transform(standardized)
 
         dlg.Pulse("Processing model results")
 
         scores = pd.DataFrame(self.keys, columns=[p.image_id, p.object_id])
         scores[self.pc_cols] = results
-        loadings  = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
-        loadings[self.pc_cols] = model.components_.transpose()
+        if hasattr(model, "components_"):
+            loadings  = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
+            loadings[self.pc_cols] = model.components_.transpose()
+            self.axes = dict(zip(self.pc_cols, model.explained_variance_ratio_))
+        else:
+            loadings = None
+            self.axes = None
         self.Loadings = loadings
-        self.axes = dict(zip(self.pc_cols, model.explained_variance_ratio_))
 
 
         if p.class_table is not None:
@@ -559,12 +575,13 @@ class ReduxPanel(FigureCanvasWxAgg):
                 self.leg.get_frame().set_alpha(0.25)
 
         # Construct the legend and make up the rest of the plot
-        x_var = round((self.axes[x] * 100), 2)
-        y_var = round((self.axes[y] * 100), 2)
-        x_axe_var = f'{x} - Explained variance: {x_var}%'
-        y_axe_var = f'{y} - Explained variance: {y_var}%'
-        self.subplot.set_xlabel(x_axe_var, fontsize=12)
-        self.subplot.set_ylabel(y_axe_var, fontsize=12)
+        if self.axes is not None:
+            x_var = round((self.axes[x] * 100), 2)
+            y_var = round((self.axes[y] * 100), 2)
+            x = f'{x} - Explained variance: {x_var}%'
+            y = f'{y} - Explained variance: {y_var}%'
+        self.subplot.set_xlabel(x, fontsize=12)
+        self.subplot.set_ylabel(y, fontsize=12)
         self.subplot.axhline(0, -100000, 100000, c='k', lw=0.1)
         self.subplot.axvline(0, -100000, 100000, c='k', lw=0.1)
         self.figure.tight_layout()
