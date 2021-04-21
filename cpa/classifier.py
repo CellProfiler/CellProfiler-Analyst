@@ -2339,6 +2339,8 @@ class Classifier(wx.Frame):
         return self.algorithm.IsTrained()
 
     def Destroy(self):
+        p._filters.removeobserver(self.UpdateFilterChoices)
+        p.gates.removeobserver(self.UpdateFilterChoices)
         ''' Kill off all threads before combusting. '''
         super(Classifier, self).Destroy()
         import threading
