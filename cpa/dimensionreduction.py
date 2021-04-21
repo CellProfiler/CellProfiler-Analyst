@@ -3,6 +3,7 @@
 # Todo: Other methods
 # Todo: Cleanup fig drawing
 
+import ctypes
 import threading
 from io import StringIO
 from contextlib import redirect_stdout
@@ -45,9 +46,11 @@ object_filter_cache = {}
 SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
 UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
-SVD = 'SVD: Singular Value Decomposition'
-TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
 PCA = 'PCA: Principal Component Analysis'
+SVD = 'SVD: Singular Value Decomposition'
+GRP = 'GRP: Gaussian Random Projection'
+SRP = 'SRP: Sparse Random Projection'
+TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
 
 PCA_TABLE = "pca_table"
 
@@ -274,7 +277,7 @@ class ReduxControlPanel(wx.Panel):
 
         # Define a progress dialog
         dlg = wx.ProgressDialog('Generating figure...', 'Generating ...', 100, parent=self,
-                                style=wx.PD_APP_MODAL)
+                                style=wx.PD_APP_MODAL|wx.PD_CAN_ABORT)
         # Reset selections
         self.figpanel.patches = []
         self.figpanel.selection = set()
@@ -304,6 +307,10 @@ class ReduxControlPanel(wx.Panel):
 
         if self.figpanel.calculated != selected_method:
             self.figpanel.calculate(selected_method, dlg=dlg)
+            if self.figpanel.calculated != selected_method:
+                # Calculation failed for whatever reason
+                dlg.Destroy()
+                return
             self.update_col_choices()
         self.figpanel.navtoolbar.update()
 
@@ -494,7 +501,7 @@ class ReduxPanel(FigureCanvasWxAgg):
             result_container = []
             th = threading.Thread(target=self.calculate_tsne, args=(model, standardized, result_container),)
 
-            # Capture and display the progress statements from sklearn, since sklearn can't take a collback function.
+            # Capture and display the progress statements from sklearn, since sklearn can't take a callback function.
             temp_stdout = StringIO()
             with redirect_stdout(temp_stdout):
                 th.daemon = True
@@ -508,13 +515,16 @@ class ReduxPanel(FigureCanvasWxAgg):
                         logging.info(data)
                         last = temp_stdout.tell()
                     wx.Yield()
-                # Todo: Find a way to stop the thread, enable cancel button?
+                if dlg.WasCancelled():
+                    # Manually trigger an exception on the worker thread
+                    ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                        ctypes.c_long(th.ident),
+                        ctypes.py_object(CancelledException))
                 th.join()
             if result_container:
                 results = result_container[0]
             else:
                 logging.error("t-SNE Failed to complete.")
-                dlg.Destroy()
                 return
 
         else:
@@ -558,7 +568,12 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.calculated = mode
 
     def calculate_tsne(self, model, data, container):
-        container.append(model.fit_transform(data))
+        try:
+            container.append(model.fit_transform(data))
+        except CancelledException:
+            logging.warn("User canceled t-SNE")
+        except Exception as e:
+            logging.error(f"t-SNE Failed: {e}")
         return container
 
     def plot_redux(self, type="Scores", x="PC1", y="PC2", legend=False):
@@ -1046,6 +1061,8 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         '''
         self._nav_stack.clear()
 
+class CancelledException(BaseException):
+    pass
 
 if __name__ == "__main__":
     app = wx.App()
