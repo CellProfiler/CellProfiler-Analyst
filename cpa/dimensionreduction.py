@@ -4,8 +4,9 @@
 # Todo: Cleanup fig drawing
 
 import threading
+from io import StringIO
+from contextlib import redirect_stdout
 
-import matplotlib.cm
 import pandas as pd
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
@@ -484,13 +485,37 @@ class ReduxPanel(FigureCanvasWxAgg):
         elif mode == SVD:
             model = TruncatedSVD()
         elif mode == TSNE:
-            model = skTSNE(perplexity=25.0, verbose=2)
+            model = skTSNE(perplexity=25.0, verbose=9)
         else:
             raise NotImplementedError("Mode", mode, "is not ready yet")
         if mode == TSNE:
-            self.pc_cols = [f"t-SNE {x + 1}" for x in range(model.n_components)]
-            # TODO: Thread me and capture printed logs
-            results = model.fit_transform(standardized)
+            # t-SNE takes a long time, we want to be able to update the dialog.
+            self.pc_cols = [f"t-SNE_{x + 1}" for x in range(model.n_components)]
+            result_container = []
+            th = threading.Thread(target=self.calculate_tsne, args=(model, standardized, result_container),)
+
+            # Capture and display the progress statements from sklearn, since sklearn can't take a collback function.
+            temp_stdout = StringIO()
+            with redirect_stdout(temp_stdout):
+                th.daemon = True
+                th.start()
+                last = 0
+                while th.is_alive() and not dlg.WasCancelled():
+                    if last != temp_stdout.tell():
+                        temp_stdout.seek(last)
+                        data = temp_stdout.read().replace('\n', '')
+                        dlg.Pulse(data)
+                        logging.info(data)
+                        last = temp_stdout.tell()
+                    wx.Yield()
+                # Todo: Find a way to stop the thread, enable cancel button?
+                th.join()
+            if result_container:
+                results = result_container[0]
+            else:
+                logging.error("t-SNE Failed to complete.")
+                dlg.Destroy()
+                return
 
         else:
             self.pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
@@ -531,6 +556,10 @@ class ReduxPanel(FigureCanvasWxAgg):
             db.do_link_tables(p.object_table, PCA_TABLE, object_key_columns(), object_key_columns())
         dlg.Pulse("Writing complete")
         self.calculated = mode
+
+    def calculate_tsne(self, model, data, container):
+        container.append(model.fit_transform(data))
+        return container
 
     def plot_redux(self, type="Scores", x="PC1", y="PC2", legend=False):
         '''
