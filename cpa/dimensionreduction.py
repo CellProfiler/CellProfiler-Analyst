@@ -50,7 +50,19 @@ PCA = 'PCA: Principal Component Analysis'
 SVD = 'SVD: Singular Value Decomposition'
 GRP = 'GRP: Gaussian Random Projection'
 SRP = 'SRP: Sparse Random Projection'
+FA = "FA: Factor Analysis"
+FAGG  = 'FAgg: Feature Agglomeration'
 TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
+
+STAT_NAMES = {
+    PCA: "PC",
+    SVD: "PC",
+    GRP: "GRP",
+    SRP: "SRP",
+    FA: "Factor_",
+    FAGG: "Cluster_",
+    TSNE: "t-SNE_",
+}
 
 PCA_TABLE = "pca_table"
 
@@ -117,7 +129,7 @@ class ReduxControlPanel(wx.Panel):
         self.SetBackgroundColour('white')  # color for the background of panel
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD, TSNE], size=(200, -1), style=wx.CB_READONLY)
+        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD, GRP, SRP, FA, FAGG, TSNE], size=(200, -1), style=wx.CB_READONLY)
         self.method_choice.Select(0)
         self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
         self.plot_choice.Select(0)
@@ -177,6 +189,7 @@ class ReduxControlPanel(wx.Panel):
         sizer.Add(self.update_chart_btn)
 
         self.gate_choice.addobserver(self.on_gate_selected)
+        self.method_choice.Bind(wx.EVT_COMBOBOX, self.update_plot_choices)
         self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
 
         self.SetSizer(sizer)
@@ -321,6 +334,14 @@ class ReduxControlPanel(wx.Panel):
 
         print(f"Finished {selected_method} in {time() - start}")
         self.update_gate_helper()
+
+    def update_plot_choices(self, evt):
+        if self.method_choice.Value in (PCA, SVD, GRP):
+            self.plot_choice.SetItems(["Scores", "Loadings"])
+        else:
+            self.plot_choice.SetItems(["Scores"])
+        self.plot_choice.SetSelection(0)
+        evt.Skip()
 
     def _load_points(self):
         q = sql.QueryBuilder()
@@ -486,18 +507,28 @@ class ReduxPanel(FigureCanvasWxAgg):
         sc = StandardScaler()
         standardized = sc.fit_transform(self.data)
         dlg.Pulse("Fitting model")
-
         if mode == PCA:
             model = skPCA(n_components=10)
         elif mode == SVD:
             model = TruncatedSVD()
+        elif mode == GRP:
+            from sklearn.random_projection import GaussianRandomProjection
+            model = GaussianRandomProjection(n_components=10)
+        elif mode == SRP:
+            from sklearn.random_projection import SparseRandomProjection
+            model = SparseRandomProjection(n_components=10)
+        elif mode == FA:
+            from sklearn.decomposition import FactorAnalysis
+            model = FactorAnalysis(n_components=10)
+        elif mode == FAGG:
+            from sklearn.cluster import FeatureAgglomeration
+            model = FeatureAgglomeration(n_clusters=10)
         elif mode == TSNE:
             model = skTSNE(perplexity=25.0, verbose=9)
         else:
-            raise NotImplementedError("Mode", mode, "is not ready yet")
+            raise NotImplementedError("Mode", mode, "is not implemented yet")
         if mode == TSNE:
             # t-SNE takes a long time, we want to be able to update the dialog.
-            self.pc_cols = [f"t-SNE_{x + 1}" for x in range(model.n_components)]
             result_container = []
             th = threading.Thread(target=self.calculate_tsne, args=(model, standardized, result_container),)
 
@@ -526,21 +557,25 @@ class ReduxPanel(FigureCanvasWxAgg):
             else:
                 logging.error("t-SNE Failed to complete.")
                 return
-
         else:
-            self.pc_cols = [f"PC{x + 1}" for x in range(model.n_components)]
             results = model.fit_transform(standardized)
+        if mode == FAGG:
+            self.pc_cols = [f"{STAT_NAMES[mode]}{x + 1}" for x in range(model.n_clusters_)]
+        else:
+            self.pc_cols = [f"{STAT_NAMES[mode]}{x + 1}" for x in range(model.n_components)]
 
         dlg.Pulse("Processing model results")
 
         scores = pd.DataFrame(self.keys, columns=[p.image_id, p.object_id])
         scores[self.pc_cols] = results
-        if hasattr(model, "components_"):
+        if mode in (PCA, SVD, GRP):
             loadings  = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
             loadings[self.pc_cols] = model.components_.transpose()
-            self.axes = dict(zip(self.pc_cols, model.explained_variance_ratio_))
         else:
             loadings = None
+        if hasattr(model, "explained_variance_ratio_"):
+            self.axes = dict(zip(self.pc_cols, model.explained_variance_ratio_))
+        else:
             self.axes = None
         self.Loadings = loadings
 
