@@ -1,7 +1,4 @@
 # The dimensredux module, but put together as a standard CPA tool and modernised with sklearn.
-# Todo: TSNE
-# Todo: Other methods
-# Todo: Cleanup fig drawing
 
 import ctypes
 import threading
@@ -31,7 +28,6 @@ import sys
 from time import time
 import wx
 from matplotlib.widgets import LassoSelector
-from matplotlib.colors import colorConverter
 from matplotlib.pyplot import cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg, NavigationToolbar2WxAgg
@@ -42,9 +38,6 @@ p = Properties()
 db = DBConnect()
 
 object_filter_cache = {}
-
-SELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black')
-UNSELECTED_OUTLINE_COLOR = colorConverter.to_rgba('black', alpha=0.)
 
 PCA = 'PCA: Principal Component Analysis'
 SVD = 'SVD: Singular Value Decomposition'
@@ -65,55 +58,6 @@ STAT_NAMES = {
 }
 
 PCA_TABLE = "pca_table"
-
-class Datum:
-    def __init__(self, xxx_todo_changeme, color):
-        (x, y) = xxx_todo_changeme
-        self.x = x
-        self.y = y
-        self.color = color
-
-
-class DraggableLegend:
-    '''
-    Attaches interaction to a subplot legend to allow dragging.
-    usage: DraggableLegend(subplot.legend())
-    '''
-
-    def __init__(self, legend):
-        self.legend = legend
-        self.dragging = False
-        self.cids = [legend.figure.canvas.mpl_connect('motion_notify_event', self.on_motion),
-                     legend.figure.canvas.mpl_connect('button_press_event', self.on_press),
-                     legend.figure.canvas.mpl_connect('button_release_event', self.on_release)]
-
-    def on_motion(self, evt):
-        if self.dragging:
-            dx = evt.x - self.mouse_x
-            dy = evt.y - self.mouse_y
-            loc_in_canvas = self.legend_x + dx, self.legend_y + dy
-            loc_in_norm_axes = self.legend.parent.transAxes.inverted().transform_point(loc_in_canvas)
-            self.legend._loc = tuple(loc_in_norm_axes)
-            self.legend.figure.canvas.draw()
-
-    def on_press(self, evt):
-        if evt.button == 1 and self.hit_test(evt):
-            bbox = self.legend.get_window_extent()
-            self.mouse_x = evt.x
-            self.mouse_y = evt.y
-            self.legend_x = bbox.xmin
-            self.legend_y = bbox.ymin
-            self.dragging = True
-
-    def hit_test(self, evt):
-        return self.legend.get_window_extent().contains(evt.x, evt.y)
-
-    def on_release(self, evt):
-        self.dragging = False
-
-    def disconnect_bindings(self):
-        for cid in self.cids:
-            self.legend.figure.canvas.mpl_disconnect(cid)
 
 
 class ReduxControlPanel(wx.Panel):
@@ -343,36 +287,19 @@ class ReduxControlPanel(wx.Panel):
         self.plot_choice.SetSelection(0)
         evt.Skip()
 
-    def _load_points(self):
-        q = sql.QueryBuilder()
-        select = []
-        #
-        # If there's an object table fetch object keys. Else fetch image keys.
-        #
-        # TODO: linking per-well data doesn't work if we fetch keys this way
-        #
-        if self._plotting_per_object_data():
-            select += [sql.Column(p.object_table, col) for col in object_key_columns()]
-        else:
-            select += [sql.Column(p.image_table, col) for col in image_key_columns()]
-        select += [self.x_column, self.y_column]
-        q.set_select_clause(select)
-        if self.filter != None:
-            q.add_filter(self.filter)
-        q.add_where(sql.Expression(self.x_column, 'IS NOT NULL'))
-        q.add_where(sql.Expression(self.y_column, 'IS NOT NULL'))
-        return db.execute(str(q))
-
     def save_settings(self):
         '''save_settings is called when saving a workspace to file.
         returns a dictionary mapping setting names to values encoded as strings
         '''
         # Todo: Rework
-        d = {'x-axis': self.x_choice.Value,
+        d = {'method': self.method_choice.Value,
+             'plot': self.plot_choice.Value,
+             'x-axis': self.x_choice.Value,
              'y-axis': self.y_choice.Value,
              'filter': self.filter_choice.Value,
              'x-lim': self.figpanel.subplot.get_xlim(),
              'y-lim': self.figpanel.subplot.get_ylim(),
+             'legend': self.display_legend.Value,
              'version': '1',
              }
         if self.gate_choice.get_gatename_or_none():
@@ -390,23 +317,24 @@ class ReduxControlPanel(wx.Panel):
                 settings['x-table'] = settings['table']
                 settings['y-table'] = settings['table']
             settings['version'] = '1'
+        if 'method' in settings:
+            self.method_choice.SetStringSelection(settings['method'])
+        if 'plot' in settings:
+            self.plot_choice.SetStringSelection(settings['plot'])
         if 'x-axis' in settings:
             self.x_choice.SetStringSelection(settings['x-axis'])
         if 'y-axis' in settings:
             self.y_choice.SetStringSelection(settings['y-axis'])
         if 'filter' in settings:
             self.filter_choice.SetStringSelection(settings['filter'])
+        if 'legend' in settings:
+            self.display_legend.SetValue(settings['legend'])
         self.update_figpanel()
         if 'x-lim' in settings:
             self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
         if 'y-lim' in settings:
             self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
-        if 'gate' in settings:
-            self.gate_choice.SetStringSelection(settings['gate'])
-            self.figpanel.gate_helper.set_displayed_gate(
-                p.gates[settings['gate']], self.x_column, self.y_column)
         self.figpanel.draw()
-
 
 class ReduxPanel(FigureCanvasWxAgg):
     '''
@@ -459,15 +387,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.lasso = None
         self.patches = []
 
-        # Variables from the old plotting engine which we're working to remove safely
-        self.x_points = []
-        self.y_points = []
-        self.key_lists = None
-        self.colors = []
-        self.x_label = ''
-        self.y_label = ''
-
-        # self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('motion_notify_event', self.update_status_bar)
         self.canvas.mpl_connect('draw_event', self.on_draw)
@@ -680,31 +599,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         '''Allow access of the control panel from the plotting panel'''
         self.configpanel = configpanel
 
-    def get_current_x_measurement_name(self):
-        '''Return the x measurement column currently selected in the UI panel'''
-        return str(self.configpanel.x_choice.Value)
-
-    def get_current_y_measurement_name(self):
-        '''Return the x measurement column currently selected in the UI panel'''
-        return str(self.configpanel.y_choice.Value)
-
-    def is_per_object_data(self):
-        '''return whether points in the current plot represent objects'''
-        if p.object_table is None:
-            return False
-        for kl in self.key_lists:
-            try:
-                if len(kl[0]) == len(object_key_columns()):
-                    return True
-            except KeyError:
-                pass
-        return False
-
-    def is_per_image_data(self):
-        '''return whether points in the current plot represent images'''
-        # FIXME: still don't support per-well data
-        return not self.is_per_object_data()
-
     def selection_is_empty(self):
         return len(self.selection) == 0
 
@@ -763,13 +657,6 @@ class ReduxPanel(FigureCanvasWxAgg):
     def on_draw(self, evt):
         for patch in self.patches:
             self.subplot.draw_artist(patch)
-
-    def on_press(self, evt):
-        if self.legend and self.legend.hit_test(evt):
-            return
-        if evt.button == 1:
-            if self.canvas.widgetlock.locked(): return
-            if evt.inaxes is None: return
 
     def on_release(self, evt):
         # Note: lasso_callback is not called on click without drag so we release
@@ -874,10 +761,8 @@ class ReduxPanel(FigureCanvasWxAgg):
         grid.set_auto_col_widths()
         grid.Show()
 
-
-    def show_popup_menu(self, xxx_todo_changeme1, data):
-        (x, y) = xxx_todo_changeme1
-        self.popup_menu_filters = {}
+    def show_popup_menu(self, points, data):
+        (x, y) = points
         popup = wx.Menu()
 
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
@@ -921,52 +806,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.Bind(wx.EVT_MENU, self.show_selection_in_table, show_imagelist_item)
 
         self.PopupMenu(popup, (x, y))
-
-    def get_key_lists(self):
-        return self.key_lists
-
-    def get_colors(self):
-        if self.colors:
-            colors = self.colors
-        elif max(list(map(len, self.x_points))) == 0:
-            colors = []
-        else:
-            # Choose colors from jet colormap starting with light blue (0.28)
-            vals = np.arange(0.28, 1.28, 1. / len(self.x_points)) % 1.
-            colors = [colorConverter.to_rgba(cm.jet(val), alpha=0.75)
-                      for val in vals]
-        return colors
-
-    def set_keys(self, keys):
-        if len(keys) == 0:
-            self.key_lists = None
-        if type(keys) != list:
-            assert len(keys) == len(self.x_points[0])
-            assert len(self.x_points) == 1
-            self.key_lists = [keys]
-        else:
-            assert len(keys) == len(self.x_points)
-            for ks, xs in zip(keys, self.x_points):
-                assert len(ks) == len(xs)
-            self.key_lists = keys
-
-    def set_points(self, xpoints, ypoints):
-        '''
-        xpoints - an array or a list of arrays containing points
-        ypoints - an array or a list of arrays containing points
-        xpoints and ypoints must be of equal size and shape
-        each array will be interpreted as a separate collection
-        '''
-        assert len(xpoints) == len(ypoints)
-        if len(xpoints) == 0:
-            self.x_points = []
-            self.y_points = []
-        elif type(xpoints[0]) != np.ndarray:
-            self.x_points = [xpoints]
-            self.y_points = [ypoints]
-        else:
-            self.x_points = xpoints
-            self.y_points = ypoints
 
     def get_toolbar(self):
         if not self.navtoolbar:
@@ -1033,7 +872,6 @@ class DimensionReduction(wx.Frame, CPATool):
         frame.Fit()
         SubplotTool(self.fig.canvas.figure, toolfig)
         frame.Show()
-
 
 class CustomNavToolbar(NavigationToolbar2WxAgg):
     '''wx/mpl NavToolbar with an additional tools user interaction.
