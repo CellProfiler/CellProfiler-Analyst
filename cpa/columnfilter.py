@@ -1,6 +1,8 @@
+import logging
 import sys
 import wx
 import re
+from time import time
 from . import sqltools as sql
 from .properties import Properties
 from .dbconnect import DBConnect
@@ -136,6 +138,8 @@ class ColumnFilterDialog(wx.Dialog):
 ##        self.filter_name = ComboBox(self, choices=p._filters_ordered)
 ##        self.filter_name.SetStringSelection('My_Filter')
         self.addbtn = wx.Button(self, -1, 'Add Column')
+        self.testbtn = wx.Button(self, -1, 'Test Filter')
+        self.testlabel = wx.StaticText(self, label='')
         self.ok = wx.Button(self, -1, 'OK')
         self.cancel = wx.Button(self, -1, 'Cancel')
 
@@ -161,6 +165,11 @@ class ColumnFilterDialog(wx.Dialog):
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.AddSpacer(10)
         sz.Add(self.addbtn, 0)
+        sz.AddSpacer(3)
+        sz.Add(self.testbtn, 0)
+        sz.AddSpacer(3)
+        sz.Add(self.testlabel, 0, wx.ALIGN_CENTER_VERTICAL)
+
         sz.AddStretchSpacer()
         sz.Add(self.ok, 0)
         sz.AddSpacer(10)
@@ -174,6 +183,7 @@ class ColumnFilterDialog(wx.Dialog):
         self.validate_filter_name()
 
         self.addbtn.Bind(wx.EVT_BUTTON, self.on_add_column)
+        self.testbtn.Bind(wx.EVT_BUTTON, self.on_test)
         self.ok.Bind(wx.EVT_BUTTON, self.on_ok)
         self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
         self.filter_name.Bind(wx.EVT_TEXT, self.validate_filter_name)
@@ -226,6 +236,7 @@ class ColumnFilterDialog(wx.Dialog):
 
     def on_add_column(self, evt):
         self.add_column()
+
     def add_column(self, conjunction='AND', expression=None):
         '''expression -- sqltools.Expression instance
         '''
@@ -236,6 +247,22 @@ class ColumnFilterDialog(wx.Dialog):
         self.sw.Sizer.Add(self.panels[-1], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         self.sw.FitInside()
         self.resize_to_fit()
+
+    def on_test(self, evt):
+        fltr = self.get_filter()
+        logging.info(f"Testing filter: {fltr}")
+        self.testlabel.SetLabelText(f"Testing filter...")
+        try:
+            t0 = time()
+            data = db.GetFilteredObjects(fltr, random=False)
+            t1 = time()
+            num_ims = len(set([x for x, _ in data]))
+            logging.info(f"Filter found {len(data)} {p.object_name[1]} from {num_ims} images in {(t1 - t0):.2f}s")
+            self.testlabel.SetLabelText(f"[OK] Found {len(data)} {p.object_name[1]} from {num_ims} images in {(t1 - t0):.2f}s")
+        except Exception as exc:
+            logging.error(f"Filter Failed: {exc}")
+            last_err = list(filter(None, str(exc).split('\n')))[-1]
+            self.testlabel.SetLabelText(f"[ERROR] {last_err}")
 
     def resize_to_fit(self):
         w = min(self.sw.Sizer.MinSize[0] + self.Sizer.MinSize[0], 
@@ -262,7 +289,6 @@ class ColumnFilterDialog(wx.Dialog):
 
 
 if __name__ == "__main__":
-    import logging
     logging.basicConfig(level=logging.DEBUG)
     app = wx.App()
     
