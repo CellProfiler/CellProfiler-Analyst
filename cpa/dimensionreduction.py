@@ -139,8 +139,6 @@ class ReduxControlPanel(wx.Panel):
         self.SetSizer(sizer)
         self.Show(1)
 
-
-
     @property
     def x_column(self):
         # x_choice_id = self.x_choice.GetSelection()
@@ -291,7 +289,6 @@ class ReduxControlPanel(wx.Panel):
         '''save_settings is called when saving a workspace to file.
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        # Todo: Rework
         d = {'method': self.method_choice.Value,
              'plot': self.plot_choice.Value,
              'x-axis': self.x_choice.Value,
@@ -328,7 +325,7 @@ class ReduxControlPanel(wx.Panel):
         if 'filter' in settings:
             self.filter_choice.SetStringSelection(settings['filter'])
         if 'legend' in settings:
-            self.display_legend.SetValue(settings['legend'])
+            self.display_legend.SetValue(settings['legend'] == "True")
         self.update_figpanel()
         if 'x-lim' in settings:
             self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
@@ -504,7 +501,12 @@ class ReduxPanel(FigureCanvasWxAgg):
                 # Get the class table and store it
                 self.class_table = self.get_class_table()
             if self.class_table is not None:
-                scores = scores.merge(self.class_table, on=[p.image_id, p.object_id])
+                try:
+                    scores = scores.merge(self.class_table, on=[p.image_id, p.object_id])
+                except:
+                    # Class table wasn't valid for some reason (user changed classifier mode?).
+                    logging.error("Class table could not be applied")
+                    self.class_table = None
         self.Scores = scores
 
         # Add class PCA table to database
@@ -784,7 +786,7 @@ class ReduxPanel(FigureCanvasWxAgg):
 
         popup.AppendSeparator()
 
-        show_images_item = popup.Append(-1, 'Show images in selection')
+        show_images_item = popup.Append(-1, 'View images from selection')
         show_images_item.Enable(not self.selection_is_empty())
         self.Bind(wx.EVT_MENU, self.show_images_from_selection, show_images_item)
 

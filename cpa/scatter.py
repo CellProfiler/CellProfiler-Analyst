@@ -688,7 +688,7 @@ class ScatterPanel(FigureCanvasWxAgg):
 
         popup.AppendSeparator()
         
-        show_images_item = popup.Append(-1, 'Show images in selection')
+        show_images_item = popup.Append(-1, 'View images from selection')
         show_images_item.Enable(not self.selection_is_empty())
         self.Bind(wx.EVT_MENU, self.show_images_from_selection, show_images_item)
         
