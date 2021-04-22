@@ -292,10 +292,15 @@ V.B.7 Data preparation
 
 Typically one wouldn't use the raw features as input for the machine learning, but the data is cleaned in some ways (e.g., by removing zero variance features) and normalized. Data preparation takes place before the machine learning is done, i.e., before training a classifier.  We here describe how you can perform data preparation steps in CPA. 
 
+*Scaling*
+*********
+
+Features can be normalised and centered before training/classification by activating the Scaler option in *Advanced > Use Scaler*. The features are centered to have mean 0 and scaled to have standard deviation 1
+
 *Normalization Tool*
 ********************
 
-Typically the features are normalized before training a classifier. For example, the features are centered to have mean 0 and scaled to have standard deviation 1. This can be done in CPA with the Normalization Tool. From the main menu, navigate to Tools > Normalization Tool. You can choose which features to normalize.
+Outside the classifier scaling can be done with the Normalization Tool. From the main menu, navigate to Tools > Normalization Tool. You can choose which features to normalize and save the resulting table for later use.
 
 *Removing zero variance features*
 *********************************
@@ -306,3 +311,27 @@ A zero variance feature is a feature that has the same entry for all objects, fo
 ***************
 
 A standard procedure is finding features with NAN (not a number) entries in the data and removing those cells. CPA automatically ignores cells with NANs, so this step is already been taken take of.
+
+
+V.B.8 Classifier types
+----------------------
+
+CPA supports several different classifier types:
+
+- **RandomForest**: Produces a series of decision tree classifiers and uses averaging across all trees to generate predictions.
+
+- **AdaBoost**: Fits a series of weak learners (simple classification rules which don't perform well alone). The input data is adjusted after each cycle to add weight to samples which the previous learner classified incorrectly. As learners are added, examples that are difficult to predict receive increasing influence. A final prediction is generated from a weighted majority vote from all learners.
+
+- **SVC**: Support Vector Classification. This technique considers all features and attempts to generate multi-dimensional dividing lines (termed "hyperplanes") which will distinguish between classes.
+
+- **GradientBoosting**: This takes a similar approach to AdaBoost, but uses gradients instead of weights to make adjustments to the importance of individual samples.
+
+- **LogisticRegression**: Classifies objects via logistic regression. Classifications are made based on a series of curves corresponding to decision boundaries.
+
+- **LDA**: Linear Discriminant Analysis. This method projects the input data to a linear subspace consisting of the directions which maximize the separation between classes, then establishes a boundary which discriminates the classes.
+
+- **KNeighbors**: Classifies based on the majority class of the nearest *k* known samples. Classification is inferred from the training points nearest to the test sample.
+
+- **FastGentleBoosting**: A modification of the AdaBoost classification strategy, with optimisations for working with limited training data.
+
+- **Neural Network**: Generates a multi-layer perceptron neural network. Layers of neurons link each input feature to output features. Each neuron generates a signal based on it's input and weighting from each source. The user can customise the number of intermediate 'hidden' layers between the input (measurement) and output (class) neurons. Additional hidden layers can help to generate more complex classifications. Neuron count per layer should generally be set to between the number of classes and number of input features.
