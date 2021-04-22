@@ -1693,6 +1693,9 @@ class DBConnect(metaclass=Singleton):
                                                               p.cell_y_loc, height/2)
             self.execute(query)
             self.Commit()
+        if self.get_linking_tables(object_table, p.image_table) is None:
+            # Link the temporary table if needed
+            self.do_link_tables(object_table, p.image_table, image_key_columns(), image_key_columns())
         logging.info('%s table added to database'%object_table)
 
 
