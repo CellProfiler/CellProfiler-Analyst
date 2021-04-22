@@ -3,7 +3,7 @@ IX. Scatter Plot
 ================
 
 Launch **Scatter Plot** from the main CPA interface by clicking the button in the toolbar. This tool
-will allow you create scatter plots from the numeric columns in your tables.
+will allow you to create scatter plots from the numeric columns in your tables.
 
 .. figure:: static/09_01.jpg
 	:align: center

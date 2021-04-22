@@ -210,13 +210,13 @@ class ReduxPanel(FigureCanvasWxAgg):
         '''
         # Scale data
         dlg.Pulse("Scaling data")
-        sc = StandardScaler()
+        sc = StandardScaler(with_mean=mode!=SVD)
         standardized = sc.fit_transform(self.data)
         dlg.Pulse("Fitting model")
         if mode == PCA:
             model = skPCA(n_components=10)
         elif mode == SVD:
-            model = TruncatedSVD()
+            model = TruncatedSVD(n_components=10)
         elif mode == GRP:
             from sklearn.random_projection import GaussianRandomProjection
             model = GaussianRandomProjection(n_components=10)
