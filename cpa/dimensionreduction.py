@@ -1,4 +1,7 @@
-# The dimensredux module, but put together as a standard CPA tool and modernised with sklearn.
+# A dimensionality reduction tool put together as a standard CPA module and modernised with sklearn.
+# Based on an earlier prototype developed at the Intelligent Systems Dept.,
+# Radboud Universiteit Nijmegen as part of the CellProfiler project
+
 
 import ctypes
 import threading
@@ -685,13 +688,11 @@ class ReduxControlPanel(wx.Panel):
 
     @property
     def x_column(self):
-        # x_choice_id = self.x_choice.GetSelection()
         return sql.Column(PCA_TABLE,
                           self.x_choice.Value)
 
     @property
     def y_column(self):
-        # y_choice_id = self.y_choice.GetSelection()
         return sql.Column(PCA_TABLE,
                           self.y_choice.Value)
 
@@ -706,7 +707,6 @@ class ReduxControlPanel(wx.Panel):
         gate_name = self.gate_choice.get_gatename_or_none()
         if gate_name:
             # Deactivate the lasso tool
-            # self.figpanel.toggle_lasso(force=True)
             self.figpanel.navtoolbar.ToggleTool(self.figpanel.navtoolbar.lasso_tool.GetId(), False)
             self.figpanel.on_lasso_activate(force_disable=True)
             self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
@@ -900,7 +900,6 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
 
         self.lasso_tool = self.AddCheckTool(wx.ID_ANY, "", get_icon("lasso").ConvertToBitmap(),
                                             shortHelp='Lasso Select', longHelp='Lasso select')
-        # self.Bind(wx.EVT_TOOL, self.toggle_lasso, source=self.lasso_tool)
         self.Bind(wx.EVT_TOOL, self.Parent.configure_subplots, id=self.CONFIG_SUBPLOTS)
 
         self.AddSeparator()
@@ -951,7 +950,6 @@ if __name__ == "__main__":
         propsFile = sys.argv[1]
         p.LoadFile(propsFile)
     else:
-        ##        p.load_file('/Users/afraser/cpa_example/example2.properties')
         if not p.show_load_dialog():
             print('Dimensionality Reduction requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up

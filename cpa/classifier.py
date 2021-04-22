@@ -30,7 +30,6 @@ import wx
 import re
 import random
 import cpa.helpmenu
-from .dimensredux import PlotMain
 
 from . import fastgentleboostingmulticlass
 from .fastgentleboosting import FastGentleBoosting
@@ -187,10 +186,6 @@ class Classifier(wx.Frame):
         self.scoreAllBtn = wx.Button(self.find_rules_panel, -1, 'Score All')
         self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
 
-        # JEN - Start Add
-        # self.openDimensReduxBtn = wx.Button(self.find_rules_panel, -1, 'Dimension Reduction')
-        # JEN - End Add
-
         # add sorting class
         self.addSortClassBtn = wx.Button(self.GetStatusBar(), -1, "Add new class", style=wx.BU_EXACTFIT)
 
@@ -253,10 +248,6 @@ class Classifier(wx.Frame):
         self.find_rules_sizer.AddSpacer(5)
         self.find_rules_sizer.Add(self.scoreImageBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         self.find_rules_sizer.AddStretchSpacer()
-        # JEN - Start Add
-        #self.find_rules_sizer.Add(self.openDimensReduxBtn)
-        #self.find_rules_sizer.Add((5, 20))
-        # JEN - End Add
         self.find_rules_panel.SetSizerAndFit(self.find_rules_sizer)
 
         # fetch and rules panel
@@ -291,9 +282,6 @@ class Classifier(wx.Frame):
         self.trainClassifierBtn.Disable()
         self.scoreAllBtn.Disable()
         self.scoreImageBtn.Disable()
-        # JEN - Start Add
-        # self.openDimensReduxBtn.Disable()
-        # JEN - End Add
         self.fetchSizer.Hide(self.fetchFromGroupSizer)
 
         #######################
@@ -365,9 +353,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.ScoreAll, self.scoreAllBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
         #self.Bind(wx.EVT_BUTTON, self.OnInspect, self.inspectBtn)
-        # JEN - Start Add
-        # self.Bind(wx.EVT_BUTTON, self.OpenDimensRedux, self.openDimensReduxBtn)
-        # JEN - End Add
+
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfRules)
         self.nNeuronsTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfNeurons)
@@ -402,13 +388,6 @@ class Classifier(wx.Frame):
 
         # Apr 2021 - It's not clear why refreshing the training set on a timer is necessary. Disabling it.
         # self.AutoSave() # Autosave try out
-
-    # JEN - Start Add
-    def OpenDimensRedux(self, event):
-        self.pca_main = PlotMain(self, properties=p)
-        self.pca_main.Show(True)
-
-    # JEN - End Add
 
     def status_bar_onsize(self, event):
         # draw the "add sort class..." button in the status bar
@@ -469,7 +448,6 @@ class Classifier(wx.Frame):
         # Disable scoring buttons
         self.scoreAllBtn.Disable()
         self.scoreImageBtn.Disable()
-        # self.openDimensReduxBtn.Disable()
 
     # JK - End Add
 
@@ -917,7 +895,6 @@ class Classifier(wx.Frame):
             self.obClassChoice.SetSelection(0)
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
-            # self.openDimensReduxBtn.Disable()
             return
         sel = self.obClassChoice.GetSelection()
         selectableClasses = ['random', 'sequential']
@@ -1283,7 +1260,6 @@ class Classifier(wx.Frame):
         except:
             self.scoreAllBtn.Disable()
             self.scoreImageBtn.Disable()
-            # self.openDimensReduxBtn.Disable()
 
             logging.error('Error loading classifier model')
             self.PostMessage('Error loading classifier model')
@@ -1952,8 +1928,6 @@ class Classifier(wx.Frame):
             grid.Show()
         except(Exception):
             wx.MessageDialog(self, 'Unable to calculate enrichment scores.', 'Error', style=wx.OK).ShowModal()
-
-        # self.openDimensReduxBtn.Enable()  # JEN - Added
 
         self.SetStatusText('')
 
