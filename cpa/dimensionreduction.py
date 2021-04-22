@@ -44,7 +44,7 @@ SVD = 'SVD: Singular Value Decomposition'
 GRP = 'GRP: Gaussian Random Projection'
 SRP = 'SRP: Sparse Random Projection'
 FA = "FA: Factor Analysis"
-FAGG  = 'FAgg: Feature Agglomeration'
+FAGG = 'FAgg: Feature Agglomeration'
 TSNE = 't-SNE: t-Distributed Stochastic Neighbor Embedding'
 
 STAT_NAMES = {
@@ -60,278 +60,65 @@ STAT_NAMES = {
 PCA_TABLE = "pca_table"
 
 
-class ReduxControlPanel(wx.Panel):
+class DimensionReduction(wx.Frame, CPATool):
     '''
-    A panel with controls for selecting the source data for a scatterplot
+    A dimension reduction plot with controls for choosing methods and components.
     '''
 
-    def __init__(self, parent, figpanel, **kwargs):
-        wx.Panel.__init__(self, parent, **kwargs)
+    def __init__(self, parent, size=(600, 600), loadData=True, **kwargs):
+        wx.Frame.__init__(self, parent, -1, size=size, title='Dimensionality Reduction Plot', **kwargs)
+        CPATool.__init__(self)
+        self.SetName(self.tool_name)
+        self.SetBackgroundColour("white")
+        self.hoverlabel = None
 
-        # the panel to draw charts on
-        self.figpanel = figpanel
-        self.SetBackgroundColour('white')  # color for the background of panel
+        if not p.is_initialized():
+            logging.critical('This tool requires a properties file. Exiting.')
+            raise Exception('This tool requires a properties file. Exiting.')
 
+        global classifier
+        classifier = parent
+
+        figpanel = ReduxPanel(self)
+        self.fig = figpanel
         sizer = wx.BoxSizer(wx.VERTICAL)
-        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD, GRP, SRP, FA, FAGG, TSNE], size=(200, -1), style=wx.CB_READONLY)
-        self.method_choice.Select(0)
-        self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
-        self.plot_choice.Select(0)
-        self.x_choice = ComboBox(self, -1, choices=[''], size=(100, -1), style=wx.CB_READONLY)
-        self.x_choice.Select(0)
-        self.y_choice = ComboBox(self, -1, choices=[''], size=(100, -1), style=wx.CB_READONLY)
-        self.y_choice.Select(0)
-        self.display_legend = wx.CheckBox(self, -1, label="Show Legend", size=(200, -1))
-        self.display_legend.SetValue(True)
-        self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
-        self.filter_choice.Select(0)
-        self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
-        # self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
-        self.update_chart_btn = wx.Button(self, -1, "Update Chart")
+        sizer.Add(figpanel, 1, wx.EXPAND)
 
-        self.update_col_choices(clear=True)
+        configpanel = ReduxControlPanel(self, figpanel)
+        figpanel.set_configpanel(configpanel)
+        sizer.Add(configpanel, 0, wx.EXPAND | wx.ALL, 5)
 
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.Add(wx.StaticText(self, -1, "Method:"), 0, wx.TOP, 4)
-        sz.AddSpacer(3)
-        sz.Add(self.method_choice, 2, wx.EXPAND)
-        sz.AddSpacer(3)
-        sz.Add(wx.StaticText(self, -1, "Display:"), 0, wx.TOP, 4)
-        sz.AddSpacer(3)
-        sz.Add(self.plot_choice)
-        sizer.Add(sz, 1, wx.EXPAND)
-        sizer.Add(-1, 2, 0)
-
-
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.AddSpacer(11)
-        sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer(3)
-        sz.Add(self.x_choice, 2, wx.EXPAND)
-        sz.AddSpacer(6)
-        sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer(3)
-        sz.Add(self.y_choice, 2, wx.EXPAND)
-        sz.AddSpacer(10)
-        sz.Add(self.display_legend, 2, wx.EXPAND)
-        sizer.Add(sz, 1, wx.EXPAND)
-        sizer.Add(-1, 2, 0)
-
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.AddSpacer(18)
-
-        sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
-        sz.AddSpacer(3)
-        sz.Add(self.filter_choice, 1, wx.EXPAND)
-        sz.AddSpacer(3)
-        sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
-        sz.AddSpacer(3)
-        sz.Add(self.gate_choice, 1, wx.EXPAND)
-        sizer.Add(sz, 1, wx.EXPAND)
-        sizer.Add(-1, 2, 0)
-
-        sizer.Add(self.update_chart_btn)
-
-        self.gate_choice.addobserver(self.on_gate_selected)
-        self.method_choice.Bind(wx.EVT_COMBOBOX, self.update_plot_choices)
-        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
-
+        self.SetToolBar(figpanel.get_toolbar())
         self.SetSizer(sizer)
-        self.Show(1)
+        #
+        # Forward save and load settings functionality to the configpanel
+        #
+        self.save_settings = configpanel.save_settings
+        self.load_settings = configpanel.load_settings
 
-    @property
-    def x_column(self):
-        # x_choice_id = self.x_choice.GetSelection()
-        return sql.Column(PCA_TABLE,
-                          self.x_choice.Value)
+    def configure_subplots(self, *args):
+        # Fixed MPL subplot window generator
+        from matplotlib.backends.backend_wx import _set_frame_icon, FigureManagerWx
+        from matplotlib.widgets import SubplotTool
 
-    @property
-    def y_column(self):
-        # y_choice_id = self.y_choice.GetSelection()
-        return sql.Column(PCA_TABLE,
-                          self.y_choice.Value)
+        frame = wx.Frame(None, -1, "Configure subplots")
+        _set_frame_icon(frame)
 
-    @property
-    def filter(self):
-        return self.filter_choice.get_filter_or_none()
+        toolfig = Figure((6, 3))
+        canvas = FigureCanvasWxAgg(frame, -1, toolfig)
 
-    def on_gate_selected(self, gate_name):
-        self.update_gate_helper()
+        # Create a figure manager to manage things
+        FigureManagerWx(canvas, 1, frame)
 
-    def update_gate_helper(self):
-        gate_name = self.gate_choice.get_gatename_or_none()
-        if gate_name:
-            # Deactivate the lasso tool
-            # self.figpanel.toggle_lasso(force=True)
-            self.figpanel.navtoolbar.ToggleTool(self.figpanel.navtoolbar.lasso_tool.GetId(), False)
-            self.figpanel.on_lasso_activate(force_disable=True)
-            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
-        else:
-            self.figpanel.gate_helper.disable()
+        # Now put all into a sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # This way of adding to sizer allows resizing
+        sizer.Add(canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
+        frame.SetSizer(sizer)
+        frame.Fit()
+        SubplotTool(self.fig.canvas.figure, toolfig)
+        frame.Show()
 
-    def update_col_choices(self, clear=False):
-        fieldnames = self.figpanel.pc_cols
-        self.x_choice.Clear()
-        self.y_choice.Clear()
-        if len(fieldnames) == 0:
-            self.x_choice.Enable(False)
-            self.y_choice.Enable(False)
-            return
-        self.x_choice.Enable(True)
-        self.y_choice.Enable(True)
-        self.x_choice.AppendItems(fieldnames)
-        self.y_choice.AppendItems(fieldnames)
-        self.x_choice.SetSelection(0)
-        self.y_choice.SetSelection(1)
-
-    def _plotting_per_object_data(self):
-        return (p.object_table is not None and
-                p.object_table in [self.x_column.table, self.y_column.table]
-                or (self.x_column.table != p.image_table and db.adjacent(p.object_table, self.x_column.table))
-                or (self.y_column.table != p.image_table and db.adjacent(p.object_table, self.y_column.table))
-                )
-
-    def load_obj_measurements(self):
-        '''
-        Load all cell measurements from the DB into a Numpy array and a dictionary
-        The dictionary links each object to its key to show it when the mouse is on
-        its dot representation in the plot.
-        '''
-        self.filter_col_names(p.object_table)
-        data = db.GetCellDataForRedux()
-        data = np.nan_to_num(data.astype(float))
-        cols = [p.image_id, p.object_id] + db.GetColnamesForClassifier()
-        return pd.DataFrame(data, columns=cols)
-
-    def filter_col_names(self, table):
-        '''
-        Add DB non-measurement column names to the 'ignore colums' list.
-        This is performed to avoid using its data for the calculations
-        '''
-        col_names = db.GetColumnNames(table)
-        filter_cols = [p.cell_x_loc, p.cell_y_loc, p.plate_id, p.well_id, p.image_id]
-        if not p.classifier_ignore_columns:
-            p.classifier_ignore_columns = []
-        [p.classifier_ignore_columns.append(column) for column in filter_cols if column in col_names]
-
-
-    def update_figpanel(self, evt=None):
-
-        '''
-        Show the selected dimensionality reduction plot on the canvas
-        '''
-
-        if self.method_choice.Value == TSNE and self.figpanel.calculated != TSNE:
-            dlg = wx.MessageDialog(self, 't-SNE is an intensive method. \n\n Calculations '
-                                         'may take several minutes, or even longer when '
-                                         'running large datasets. Continue?',
-                                   'Warning', wx.YES_NO | wx.ICON_QUESTION)
-            response = dlg.ShowModal()
-            if response != wx.ID_YES:
-                return
-
-        # Define a progress dialog
-        dlg = wx.ProgressDialog('Generating figure...', 'Generating ...', 100, parent=self,
-                                style=wx.PD_APP_MODAL|wx.PD_CAN_ABORT)
-        # Reset selections
-        self.figpanel.patches = []
-        self.figpanel.selection = set()
-
-        if self.figpanel.data is None:
-            dlg.Pulse('Fetching object data from database')
-            try:
-                # Fetch all data from database
-                data = self.load_obj_measurements()
-                keys, values = np.split(data, [2], axis=1)
-                self.figpanel.keys = keys.astype(int)
-                # Remove zero variance features
-                self.figpanel.data = values.loc[:, (values != values.iloc[0]).any()]
-            except Exception as e:
-                self.figpanel.data = None
-                self.figpanel.keys = None
-                logging.error(f"Unable to load data: {e}")
-                dlg.Destroy()
-                return
-
-        start = time()
-
-
-        dlg.Pulse('Generating model and plot')
-        selected_method = self.method_choice.GetStringSelection()
-        selected_plot = self.plot_choice.GetStringSelection()
-
-        if self.figpanel.calculated != selected_method:
-            self.figpanel.calculate(selected_method, dlg=dlg)
-            if self.figpanel.calculated != selected_method:
-                # Calculation failed for whatever reason
-                dlg.Destroy()
-                return
-            self.update_col_choices()
-        self.figpanel.navtoolbar.update()
-
-        dlg.Pulse("Plotting results")
-        self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value, legend=self.display_legend.Value)
-        self.figpanel.displayed = selected_plot
-        dlg.Destroy()
-
-        print(f"Finished {selected_method} in {time() - start}")
-        self.update_gate_helper()
-
-    def update_plot_choices(self, evt):
-        if self.method_choice.Value in (PCA, SVD, GRP):
-            self.plot_choice.SetItems(["Scores", "Loadings"])
-        else:
-            self.plot_choice.SetItems(["Scores"])
-        self.plot_choice.SetSelection(0)
-        evt.Skip()
-
-    def save_settings(self):
-        '''save_settings is called when saving a workspace to file.
-        returns a dictionary mapping setting names to values encoded as strings
-        '''
-        d = {'method': self.method_choice.Value,
-             'plot': self.plot_choice.Value,
-             'x-axis': self.x_choice.Value,
-             'y-axis': self.y_choice.Value,
-             'filter': self.filter_choice.Value,
-             'x-lim': self.figpanel.subplot.get_xlim(),
-             'y-lim': self.figpanel.subplot.get_ylim(),
-             'legend': self.display_legend.Value,
-             'version': '1',
-             }
-        if self.gate_choice.get_gatename_or_none():
-            gate_choice_id = self.gate_choice.GetSelection()
-            d['gate'] = self.gate_choice.GetString(gate_choice_id)
-        return d
-
-    def load_settings(self, settings):
-        '''load_settings is called when loading a workspace from file.
-        settings - a dictionary mapping setting names to values encoded as
-                   strings.
-        '''
-        if 'version' not in settings:
-            if 'table' in settings:
-                settings['x-table'] = settings['table']
-                settings['y-table'] = settings['table']
-            settings['version'] = '1'
-        if 'method' in settings:
-            self.method_choice.SetStringSelection(settings['method'])
-        if 'plot' in settings:
-            self.plot_choice.SetStringSelection(settings['plot'])
-        if 'x-axis' in settings:
-            self.x_choice.SetStringSelection(settings['x-axis'])
-        if 'y-axis' in settings:
-            self.y_choice.SetStringSelection(settings['y-axis'])
-        if 'filter' in settings:
-            self.filter_choice.SetStringSelection(settings['filter'])
-        if 'legend' in settings:
-            self.display_legend.SetValue(settings['legend'] == "True")
-        self.update_figpanel()
-        if 'x-lim' in settings:
-            self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
-        if 'y-lim' in settings:
-            self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
-        self.figpanel.draw()
 
 class ReduxPanel(FigureCanvasWxAgg):
     '''
@@ -446,7 +233,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         if mode == TSNE:
             # t-SNE takes a long time, we want to be able to update the dialog.
             result_container = []
-            th = threading.Thread(target=self.calculate_tsne, args=(model, standardized, result_container),)
+            th = threading.Thread(target=self.calculate_tsne, args=(model, standardized, result_container))
 
             # Capture and display the progress statements from sklearn, since sklearn can't take a callback function.
             temp_stdout = StringIO()
@@ -485,7 +272,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         scores = pd.DataFrame(self.keys, columns=[p.image_id, p.object_id])
         scores[self.pc_cols] = results
         if mode in (PCA, SVD, GRP):
-            loadings  = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
+            loadings = pd.DataFrame(self.data.columns.tolist(), columns=["Feature_Name"])
             loadings[self.pc_cols] = model.components_.transpose()
         else:
             loadings = None
@@ -494,7 +281,6 @@ class ReduxPanel(FigureCanvasWxAgg):
         else:
             self.axes = None
         self.Loadings = loadings
-
 
         if p.class_table is not None:
             if self.class_table is None and db.table_exists(p.class_table):
@@ -567,7 +353,8 @@ class ReduxPanel(FigureCanvasWxAgg):
                 num = subset["class_number"].values[0]
                 coln = num / len(classnames)
                 colmap = [coln] * len(subset)
-                handle = self.subplot.scatter(subset[x], subset[y], s=8, color=cmap(num/len(classnames)),linewidth=0.25, alpha=0.5)
+                handle = self.subplot.scatter(subset[x], subset[y], s=8, color=cmap(num / len(classnames)),
+                                              linewidth=0.25, alpha=0.5)
                 handles.append(handle)
                 labels.append(f"{classname}: {len(subset)}")
             if legend:
@@ -718,7 +505,7 @@ class ReduxPanel(FigureCanvasWxAgg):
                 wx.MessageDialog(self, 'You have entered an invalid number', 'Error').ShowModal()
                 return
         classifier.unclassifiedBin.AddObjects(keys, classifier.chMap, pos='last',
-                                        display_whole_image=p.classification_type == 'image')
+                                              display_whole_image=p.classification_type == 'image')
 
     def show_objects_from_gate(self, evt=None):
         '''Callback for "Show objects in gate" popup item.'''
@@ -734,7 +521,7 @@ class ReduxPanel(FigureCanvasWxAgg):
 
     def show_images_from_selection(self, evt=None):
         '''Callback for "Show images in selection" popup item.'''
-        show_keys = set([(i, ) for i, _ in self.selection])
+        show_keys = set([(i,) for i, _ in self.selection])
         if len(show_keys) > 10:
             dlg = wx.MessageDialog(self, 'You are about to open %s images. '
                                          'This may take some time depending on your '
@@ -759,7 +546,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         indexer = list(map(lambda x: x in self.selection, zip(self.keys[p.image_id], self.keys[p.object_id])))
         table = pd.concat((self.keys[indexer], self.data[indexer]), axis=1).sort_values([p.image_id, p.object_id])
         grid = tableviewer.TableViewer(self, title='Objects from lasso selection')
-        grid.table_from_array(table.to_numpy(dtype=str), table.columns.tolist()) #, group, key_col_indices)
+        grid.table_from_array(table.to_numpy(dtype=str), table.columns.tolist())
         grid.set_auto_col_widths()
         grid.Show()
 
@@ -816,64 +603,279 @@ class ReduxPanel(FigureCanvasWxAgg):
             self.navtoolbar.Bind(wx.EVT_TOOL, self.on_lasso_activate, source=self.navtoolbar.lasso_tool)
         return self.navtoolbar
 
-class DimensionReduction(wx.Frame, CPATool):
+
+class ReduxControlPanel(wx.Panel):
     '''
-    A dimension reduction plot with controls for choosing methods and components.
+    A panel with controls for selecting the source data
     '''
 
-    def __init__(self, parent, size=(600, 600), loadData=True, **kwargs):
-        wx.Frame.__init__(self, parent, -1, size=size, title='Dimensionality Reduction Plot', **kwargs)
-        CPATool.__init__(self)
-        self.SetName(self.tool_name)
-        self.SetBackgroundColour("white")
-        self.hoverlabel = None
+    def __init__(self, parent, figpanel, **kwargs):
+        wx.Panel.__init__(self, parent, **kwargs)
 
-        if not p.is_initialized():
-            logging.critical('This tool requires a properties file. Exiting.')
-            raise Exception('This tool requires a properties file. Exiting.')
+        # the panel to draw charts on
+        self.figpanel = figpanel
+        self.SetBackgroundColour('white')  # color for the background of panel
 
-        global classifier
-        classifier = parent
-
-        figpanel = ReduxPanel(self)
-        self.fig = figpanel
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(figpanel, 1, wx.EXPAND)
+        self.method_choice = ComboBox(self, -1, choices=[PCA, SVD, GRP, SRP, FA, FAGG, TSNE], size=(200, -1),
+                                      style=wx.CB_READONLY)
+        self.method_choice.Select(0)
+        self.plot_choice = ComboBox(self, -1, choices=["Scores", "Loadings"], size=(80, -1), style=wx.CB_READONLY)
+        self.plot_choice.Select(0)
+        self.x_choice = ComboBox(self, -1, choices=[''], size=(100, -1), style=wx.CB_READONLY)
+        self.x_choice.Select(0)
+        self.y_choice = ComboBox(self, -1, choices=[''], size=(100, -1), style=wx.CB_READONLY)
+        self.y_choice.Select(0)
+        self.display_legend = wx.CheckBox(self, -1, label="Show Legend", size=(200, -1))
+        self.display_legend.SetValue(True)
+        self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
+        self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
+        # self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
+        self.update_chart_btn = wx.Button(self, -1, "Update Chart")
 
-        configpanel = ReduxControlPanel(self, figpanel)
-        figpanel.set_configpanel(configpanel)
-        sizer.Add(configpanel, 0, wx.EXPAND | wx.ALL, 5)
+        self.update_col_choices(clear=True)
 
-        self.SetToolBar(figpanel.get_toolbar())
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.Add(wx.StaticText(self, -1, "Method:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.method_choice, 2, wx.EXPAND)
+        sz.AddSpacer(3)
+        sz.Add(wx.StaticText(self, -1, "Display:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.plot_choice)
+        sizer.Add(sz, 1, wx.EXPAND)
+        sizer.Add(-1, 2, 0)
+
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.AddSpacer(11)
+        sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.x_choice, 2, wx.EXPAND)
+        sz.AddSpacer(6)
+        sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.y_choice, 2, wx.EXPAND)
+        sz.AddSpacer(10)
+        sz.Add(self.display_legend, 2, wx.EXPAND)
+        sizer.Add(sz, 1, wx.EXPAND)
+        sizer.Add(-1, 2, 0)
+
+        sz = wx.BoxSizer(wx.HORIZONTAL)
+        sz.AddSpacer(18)
+
+        sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.filter_choice, 1, wx.EXPAND)
+        sz.AddSpacer(3)
+        sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
+        sz.AddSpacer(3)
+        sz.Add(self.gate_choice, 1, wx.EXPAND)
+        sizer.Add(sz, 1, wx.EXPAND)
+        sizer.Add(-1, 2, 0)
+
+        sizer.Add(self.update_chart_btn)
+
+        self.gate_choice.addobserver(self.on_gate_selected)
+        self.method_choice.Bind(wx.EVT_COMBOBOX, self.update_plot_choices)
+        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
+
         self.SetSizer(sizer)
-        #
-        # Forward save and load settings functionality to the configpanel
-        #
-        self.save_settings = configpanel.save_settings
-        self.load_settings = configpanel.load_settings
+        self.Show(1)
 
-    def configure_subplots(self, *args):
-        # Fixed MPL subplot window generator
-        from matplotlib.backends.backend_wx import _set_frame_icon, FigureManagerWx
-        from matplotlib.widgets import SubplotTool
+    @property
+    def x_column(self):
+        # x_choice_id = self.x_choice.GetSelection()
+        return sql.Column(PCA_TABLE,
+                          self.x_choice.Value)
 
-        frame = wx.Frame(None, -1, "Configure subplots")
-        _set_frame_icon(frame)
+    @property
+    def y_column(self):
+        # y_choice_id = self.y_choice.GetSelection()
+        return sql.Column(PCA_TABLE,
+                          self.y_choice.Value)
 
-        toolfig = Figure((6, 3))
-        canvas = FigureCanvasWxAgg(frame, -1, toolfig)
+    @property
+    def filter(self):
+        return self.filter_choice.get_filter_or_none()
 
-        # Create a figure manager to manage things
-        FigureManagerWx(canvas, 1, frame)
+    def on_gate_selected(self, gate_name):
+        self.update_gate_helper()
 
-        # Now put all into a sizer
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        # This way of adding to sizer allows resizing
-        sizer.Add(canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
-        frame.SetSizer(sizer)
-        frame.Fit()
-        SubplotTool(self.fig.canvas.figure, toolfig)
-        frame.Show()
+    def update_gate_helper(self):
+        gate_name = self.gate_choice.get_gatename_or_none()
+        if gate_name:
+            # Deactivate the lasso tool
+            # self.figpanel.toggle_lasso(force=True)
+            self.figpanel.navtoolbar.ToggleTool(self.figpanel.navtoolbar.lasso_tool.GetId(), False)
+            self.figpanel.on_lasso_activate(force_disable=True)
+            self.figpanel.gate_helper.set_displayed_gate(p.gates[gate_name], self.x_column, self.y_column)
+        else:
+            self.figpanel.gate_helper.disable()
+
+    def update_col_choices(self, clear=False):
+        fieldnames = self.figpanel.pc_cols
+        self.x_choice.Clear()
+        self.y_choice.Clear()
+        if len(fieldnames) == 0:
+            self.x_choice.Enable(False)
+            self.y_choice.Enable(False)
+            return
+        self.x_choice.Enable(True)
+        self.y_choice.Enable(True)
+        self.x_choice.AppendItems(fieldnames)
+        self.y_choice.AppendItems(fieldnames)
+        self.x_choice.SetSelection(0)
+        self.y_choice.SetSelection(1)
+
+    def _plotting_per_object_data(self):
+        return (p.object_table is not None and
+                p.object_table in [self.x_column.table, self.y_column.table]
+                or (self.x_column.table != p.image_table and db.adjacent(p.object_table, self.x_column.table))
+                or (self.y_column.table != p.image_table and db.adjacent(p.object_table, self.y_column.table))
+                )
+
+    def load_obj_measurements(self):
+        '''
+        Load all cell measurements from the DB into a Numpy array and a dictionary
+        The dictionary links each object to its key to show it when the mouse is on
+        its dot representation in the plot.
+        '''
+        self.filter_col_names(p.object_table)
+        data = db.GetCellDataForRedux()
+        data = np.nan_to_num(data.astype(float))
+        cols = [p.image_id, p.object_id] + db.GetColnamesForClassifier()
+        return pd.DataFrame(data, columns=cols)
+
+    def filter_col_names(self, table):
+        '''
+        Add DB non-measurement column names to the 'ignore colums' list.
+        This is performed to avoid using its data for the calculations
+        '''
+        col_names = db.GetColumnNames(table)
+        filter_cols = [p.cell_x_loc, p.cell_y_loc, p.plate_id, p.well_id, p.image_id]
+        if not p.classifier_ignore_columns:
+            p.classifier_ignore_columns = []
+        [p.classifier_ignore_columns.append(column) for column in filter_cols if column in col_names]
+
+    def update_figpanel(self, evt=None):
+
+        '''
+        Show the selected dimensionality reduction plot on the canvas
+        '''
+
+        if self.method_choice.Value == TSNE and self.figpanel.calculated != TSNE:
+            dlg = wx.MessageDialog(self, 't-SNE is an intensive method. \n\n Calculations '
+                                         'may take several minutes, or even longer when '
+                                         'running large datasets. Continue?',
+                                   'Warning', wx.YES_NO | wx.ICON_QUESTION)
+            response = dlg.ShowModal()
+            if response != wx.ID_YES:
+                return
+
+        # Define a progress dialog
+        dlg = wx.ProgressDialog('Generating figure...', 'Generating ...', 100, parent=self,
+                                style=wx.PD_APP_MODAL | wx.PD_CAN_ABORT)
+        # Reset selections
+        self.figpanel.patches = []
+        self.figpanel.selection = set()
+
+        if self.figpanel.data is None:
+            dlg.Pulse('Fetching object data from database')
+            try:
+                # Fetch all data from database
+                data = self.load_obj_measurements()
+                keys, values = np.split(data, [2], axis=1)
+                self.figpanel.keys = keys.astype(int)
+                # Remove zero variance features
+                self.figpanel.data = values.loc[:, (values != values.iloc[0]).any()]
+            except Exception as e:
+                self.figpanel.data = None
+                self.figpanel.keys = None
+                logging.error(f"Unable to load data: {e}")
+                dlg.Destroy()
+                return
+
+        start = time()
+
+        dlg.Pulse('Generating model and plot')
+        selected_method = self.method_choice.GetStringSelection()
+        selected_plot = self.plot_choice.GetStringSelection()
+
+        if self.figpanel.calculated != selected_method:
+            self.figpanel.calculate(selected_method, dlg=dlg)
+            if self.figpanel.calculated != selected_method:
+                # Calculation failed for whatever reason
+                dlg.Destroy()
+                return
+            self.update_col_choices()
+        self.figpanel.navtoolbar.update()
+
+        dlg.Pulse("Plotting results")
+        self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value,
+                                 legend=self.display_legend.Value)
+        self.figpanel.displayed = selected_plot
+        dlg.Destroy()
+
+        print(f"Finished {selected_method} in {time() - start}")
+        self.update_gate_helper()
+
+    def update_plot_choices(self, evt):
+        if self.method_choice.Value in (PCA, SVD, GRP):
+            self.plot_choice.SetItems(["Scores", "Loadings"])
+        else:
+            self.plot_choice.SetItems(["Scores"])
+        self.plot_choice.SetSelection(0)
+        evt.Skip()
+
+    def save_settings(self):
+        '''save_settings is called when saving a workspace to file.
+        returns a dictionary mapping setting names to values encoded as strings
+        '''
+        d = {'method': self.method_choice.Value,
+             'plot': self.plot_choice.Value,
+             'x-axis': self.x_choice.Value,
+             'y-axis': self.y_choice.Value,
+             'filter': self.filter_choice.Value,
+             'x-lim': self.figpanel.subplot.get_xlim(),
+             'y-lim': self.figpanel.subplot.get_ylim(),
+             'legend': self.display_legend.Value,
+             'version': '1',
+             }
+        if self.gate_choice.get_gatename_or_none():
+            gate_choice_id = self.gate_choice.GetSelection()
+            d['gate'] = self.gate_choice.GetString(gate_choice_id)
+        return d
+
+    def load_settings(self, settings):
+        '''load_settings is called when loading a workspace from file.
+        settings - a dictionary mapping setting names to values encoded as
+                   strings.
+        '''
+        if 'version' not in settings:
+            if 'table' in settings:
+                settings['x-table'] = settings['table']
+                settings['y-table'] = settings['table']
+            settings['version'] = '1'
+        if 'method' in settings:
+            self.method_choice.SetStringSelection(settings['method'])
+        if 'plot' in settings:
+            self.plot_choice.SetStringSelection(settings['plot'])
+        if 'x-axis' in settings:
+            self.x_choice.SetStringSelection(settings['x-axis'])
+        if 'y-axis' in settings:
+            self.y_choice.SetStringSelection(settings['y-axis'])
+        if 'filter' in settings:
+            self.filter_choice.SetStringSelection(settings['filter'])
+        if 'legend' in settings:
+            self.display_legend.SetValue(settings['legend'] == "True")
+        self.update_figpanel()
+        if 'x-lim' in settings:
+            self.figpanel.subplot.set_xlim(eval(settings['x-lim']))
+        if 'y-lim' in settings:
+            self.figpanel.subplot.set_ylim(eval(settings['y-lim']))
+        self.figpanel.draw()
+
 
 class CustomNavToolbar(NavigationToolbar2WxAgg):
     '''wx/mpl NavToolbar with an additional tools user interaction.
@@ -900,7 +902,6 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
                                             shortHelp='Lasso Select', longHelp='Lasso select')
         # self.Bind(wx.EVT_TOOL, self.toggle_lasso, source=self.lasso_tool)
         self.Bind(wx.EVT_TOOL, self.Parent.configure_subplots, id=self.CONFIG_SUBPLOTS)
-
 
         self.AddSeparator()
         pos = self.GetToolsCount()
@@ -936,8 +937,10 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
         '''
         self._nav_stack.clear()
 
+
 class CancelledException(BaseException):
     pass
+
 
 if __name__ == "__main__":
     app = wx.App()
@@ -950,11 +953,11 @@ if __name__ == "__main__":
     else:
         ##        p.load_file('/Users/afraser/cpa_example/example2.properties')
         if not p.show_load_dialog():
-            print('Scatterplot requires a properties file.  Exiting.')
+            print('Dimensionality Reduction requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
             sys.exit()
-    scatter = DimensionReduction(None)
-    scatter.Show()
+    redux = DimensionReduction(None)
+    redux.Show()
 
     app.MainLoop()
 
