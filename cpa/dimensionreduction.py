@@ -85,13 +85,21 @@ class DimensionReduction(wx.Frame, CPATool):
         figpanel = ReduxPanel(self)
         self.fig = figpanel
         sizer = wx.BoxSizer(wx.VERTICAL)
+        # MacOS won't render an MPL navbar set as a frame toolbar for some reason. Let's add it to the panel instead.
+        if sys.platform == 'darwin':
+            tb = figpanel.get_toolbar()
+            tb.hoverlabel.Hide()
+            tb.hoverlabel.Show()
+            sizer.Add(tb, 0, wx.EXPAND)
+        else:
+            self.SetToolBar(figpanel.get_toolbar())
+        sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
 
         configpanel = ReduxControlPanel(self, figpanel)
         figpanel.set_configpanel(configpanel)
         sizer.Add(configpanel, 0, wx.EXPAND | wx.ALL, 5)
 
-        self.SetToolBar(figpanel.get_toolbar())
         self.SetSizer(sizer)
         #
         # Forward save and load settings functionality to the configpanel
@@ -902,7 +910,6 @@ class CustomNavToolbar(NavigationToolbar2WxAgg):
                                             shortHelp='Lasso Select', longHelp='Lasso select')
         self.Bind(wx.EVT_TOOL, self.Parent.configure_subplots, id=self.CONFIG_SUBPLOTS)
 
-        self.AddSeparator()
         pos = self.GetToolsCount()
         self.hoverlabel = wx.StaticText(self, label="")
         self.InsertControl(pos, self.hoverlabel, "")
