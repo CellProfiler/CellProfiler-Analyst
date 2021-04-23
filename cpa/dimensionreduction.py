@@ -93,7 +93,6 @@ class DimensionReduction(wx.Frame, CPATool):
             sizer.Add(tb, 0, wx.EXPAND)
         else:
             self.SetToolBar(figpanel.get_toolbar())
-        sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(figpanel, 1, wx.EXPAND)
 
         configpanel = ReduxControlPanel(self, figpanel)
