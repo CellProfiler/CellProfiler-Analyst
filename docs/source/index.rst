@@ -7,7 +7,7 @@
 Manual 3.0.0
 ============
 
-.. image:: http://i.imgur.com/lNJcJPC.png
+.. image:: https://i.imgur.com/uaEp2md.png
 
 Table of Contents:
 

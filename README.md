@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="http://i.imgur.com/TmujaUa.png"><br><br>
+  <img src="https://i.imgur.com/uaEp2md.png"><br><br>
 </div>
 -----------------
 
 |  **`Version`**  |  **`Documentation`** | **`Forum`** |
 |---------------|----------------|-----------------|
-| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)](http://cellprofiler.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-2.2.1-brightgreen.svg)](http://cellprofiler.org/CPA/) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](https://forum.image.sc/tag/cellprofiler-analyst) |
+| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)](https://cellprofileranalyst.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-3.0.0-brightgreen.svg)](https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-3.0.0/index.html) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](https://forum.image.sc/tag/cellprofiler-analyst) |
 
 **CellProfiler Analyst** allows interactive exploration and analysis of data,
 particularly from high-throughput, image-based experiments. Included is a

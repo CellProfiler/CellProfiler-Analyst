@@ -2,7 +2,7 @@ import wx
 import cpa
 import cpa.icons
 from cpa.updatechecker import check_update
-from cpa.util.version import display_version
+from cpa.util.version import display_version, __version__
 
 
 def _on_check_update(self):
@@ -70,7 +70,8 @@ def _on_about(self):
     info.SetWebSite('cellprofileranalyst.org')
     AboutBox(info)
 
-def make_help_menu(frame, main=False, manual_url="http://cellprofiler.org/CPA"):
+def make_help_menu(frame, main=False, manual_url="index.html"):
+    manual_url = f"https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-{__version__}/{manual_url}"
     helpMenu = wx.Menu()
     def on_manual(self):
         import webbrowser

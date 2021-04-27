@@ -562,7 +562,7 @@ class TableViewer(wx.Frame):
         fit_cols_menu_item = column_width_menu.Append(-1, 'Fit to table', kind=wx.ITEM_RADIO)
         auto_cols_menu_item = column_width_menu.Append(-1, 'Auto width', kind=wx.ITEM_RADIO)
 
-        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, manual_url="https://cellprofiler.org/xii-table-viewer"), 'Help')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, manual_url="6_table_viewer.html"), 'Help')
         
         self.CreateStatusBar()
         
