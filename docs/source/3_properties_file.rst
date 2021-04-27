@@ -14,7 +14,7 @@ Note: CPA 2.0+ is not compatible with properties files from CellProfiler Analyst
 Note: All fields described in the sections below (after the properties file example) are required unless explicitly described as “optional.” In your own properties file, you would replace values surrounded with <> with the relevant information.
 
 III.A Properties file example
-============================
+=============================
 
 .. code-block:: text
 

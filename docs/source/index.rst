@@ -30,4 +30,5 @@ Table of Contents:
     13_workspaces
     14_image_gallery
     15_normalization_tool
-
+    16_dimensionality_reduction
+    17_FAQ
