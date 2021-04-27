@@ -5,7 +5,7 @@
 
 |  **`Version`**  |  **`Documentation`** | **`Forum`** |
 |---------------|----------------|-----------------|
-| [![Build Status](https://img.shields.io/badge/version-2.2.1-green.svg)](https://cellprofileranalyst.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-3.0.0-brightgreen.svg)](https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-3.0.0/index.html) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](https://forum.image.sc/tag/cellprofiler-analyst) |
+| [![Build Status](https://img.shields.io/badge/version-3.0.0-green.svg)](https://cellprofileranalyst.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-3.0.0-brightgreen.svg)](https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-3.0.0/index.html) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](https://forum.image.sc/tag/cellprofiler-analyst) |
 
 **CellProfiler Analyst** allows interactive exploration and analysis of data,
 particularly from high-throughput, image-based experiments. Included is a
@@ -79,7 +79,7 @@ BMC Bioinformatics (2008) doi:10.1186/1471-2105-9-482
 
 ## Contributors
 
-David Dao, Adam Fraser, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Mark Bray, Lee Kamentsky, Anne Carpenter
+David Dao, Adam Fraser, David Stirling, Pearl Ryder, Beth Cimini, Vebjorn Ljosa, Thouis R. Jones, Jane Hung, Shantanu Singh, Mark Bray, Lee Kamentsky, Anne Carpenter
 
 ## Kudos
 

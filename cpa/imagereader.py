@@ -9,7 +9,7 @@ from .properties import Properties
 from .errors import ClearException
 
 p = Properties()
-IMAGEIO_FORMATS = (".tif", ".tiff", ".bmp", ".png", ".jpeg")
+IMAGEIO_FORMATS = (".tif", ".tiff", ".bmp", ".gif", ".png", ".jpeg")
 
 class ThrowingURLopener(urllib.request.URLopener):
     def http_error_default(*args, **kwargs):

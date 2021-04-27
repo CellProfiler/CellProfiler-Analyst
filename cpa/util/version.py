@@ -1,12 +1,11 @@
 '''version.py - Version fetching and comparison.
 
-CellProfiler is distributed under the GNU General Public License,
+CellProfiler Analyst is distributed under the GNU General Public License,
 but this file is licensed under the more permissive BSD license.
 See the accompanying file LICENSE for details.
 
 Copyright (c) 2003-2009 Massachusetts Institute of Technology
-Copyright (c) 2009-2011 Broad Institute
-Copyright (c) 2015 Broad Institute
+Copyright (c) 2009-2021 Broad Institute
 
 All rights reserved.
 
@@ -23,7 +22,7 @@ import os.path
 _cached_description = None
 
 __version__ = '3.0.0' # Version used by update checker, must be in format "N.N.N"
-_sub_version = 'rc6' # Use this to tag release candidates, betas, etc.
+_sub_version = '' # Use this to tag release candidates, betas, etc.
 
 display_version = __version__ + _sub_version
 
