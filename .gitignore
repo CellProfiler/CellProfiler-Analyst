@@ -20,3 +20,4 @@ output
 **/.idea
 .vscode
 .*.swp
+/docs/build/html

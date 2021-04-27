@@ -1,6 +1,6 @@
-=================
-XII. Table Viewer
-=================
+================
+VI. Table Viewer
+================
 Certain tools, such as Classifier, produce a table that will be opened in the Table Viewer. As well, any CSV file or database table can be viewed by using this tool.
 
 .. figure:: static/06_01.jpg

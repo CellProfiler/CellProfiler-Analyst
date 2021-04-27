@@ -10,7 +10,7 @@ will allow you to perform several reduction methods and visualise the results as
 
   Dimensionality Reduction Tool
 
-Dimensionality reduction condenses large numbers of measuremnts into a more managable number of components, this can
+Dimensionality reduction condenses large numbers of measurements into a more managable number of components, this can
 help to visualise results and identify clusters of objects and outliers.
 
 To use the **Dimensionality Reduction Plot**, select a reduction method from the available choices and click
