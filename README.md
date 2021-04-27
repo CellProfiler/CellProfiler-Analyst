@@ -16,6 +16,10 @@ and subtle phenotypes, for automatic scoring of millions of cells.
   <img src="http://i.imgur.com/j12EQH5.png"><br><br>
 </div>
 
+## Learn more about CellProfiler Analyst
+This is the developer site for CellProfiler Analyst. 
+The regular home page for CellProfiler Analyst is here: https://cellprofileranalyst.org/
+
 ## Installation
 
 Download [CellProfiler Analyst](https://cellprofileranalyst.org/releases)
