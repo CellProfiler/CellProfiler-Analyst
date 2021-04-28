@@ -418,7 +418,7 @@ class ScatterPanel(FigureCanvasWxAgg):
             try:
                 if len(kl[0]) == len(object_key_columns()):
                     return True
-            except KeyError:
+            except:
                 pass
         return False
     

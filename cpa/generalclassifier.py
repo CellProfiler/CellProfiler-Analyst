@@ -121,7 +121,7 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
         return 'display'
         
     def panelTxt2(self):
-        if self.scaler is not None:
+        if self.name == "MLPClassifier":
             return "neurons per layer"
         return 'top features'
 
