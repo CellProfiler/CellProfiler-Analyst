@@ -437,8 +437,17 @@ class CPAnalyst(wx.App):
             # Some versions of Macos like to put CPA in a sandbox. If we're frozen Java should be packed in,
             # so let's just figure out the directory on run time.
             os.environ["CP_JAVA_HOME"] = os.path.abspath(os.path.join(sys.prefix, "..",  "Resources/Home"))
-        '''List of tables created by the user during this session'''
-        self.user_tables = []
+        elif sys.platform == "win32":
+            # Windows gets very upset if system locale and wxpython locale don't match exactly.
+            import locale
+            # Need to startup wx in English, otherwise C++ can't load images.
+            self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
+            # Ensure Python uses the same locale as wx
+            try:
+                locale.setlocale(locale.LC_ALL, self.locale.GetName())
+            except:
+                logging.info(f"Python rejected the system locale detected by WX ('{self.locale.GetName()}').\n"
+                      "This shouldn't cause problems, but please let us know if you encounter errors.")
 
         p = Properties()
         self.frame = MainGUI(p, None, size=(1000,-1))
