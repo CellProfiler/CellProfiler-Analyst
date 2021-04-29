@@ -1647,6 +1647,13 @@ class DBConnect(metaclass=Singleton):
         except:
             logging.error("Unable to validate checked object table")
 
+        try:
+            if not self.get_linking_tables(p.image_table, p.object_table):
+                # Link image table to the checked object table.
+                self.do_link_tables(p.image_table, p.object_table, image_key_columns(), image_key_columns())
+        except:
+            logging.error("Unable to link checked tables upon creation. Some SQL filters may not work correctly.")
+
     def CreateObjectImageTable(self):
         # Create object table for image classification
         DB_NAME = p.db_name
