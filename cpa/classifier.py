@@ -403,6 +403,10 @@ class Classifier(wx.Frame):
         self.SelectAlgorithm(selectedItem)
 
     def OnSelectAlgorithm(self, event):
+        if not isinstance(event.EventObject, wx.Menu):
+            # Fix bug: The first bind we make likes to grab any event without a specific target.
+            event.Skip()
+            return
         selectedItem = re.sub('[\W_]+', '', self.classifierMenu.FindItemById(event.GetId()).GetItemLabel())
         self.SelectAlgorithm(selectedItem)
 
@@ -501,6 +505,9 @@ class Classifier(wx.Frame):
                     self.unclassifiedBin.tiles[-idx].Select()
                     return
             self.unclassifiedBin.tiles[0].Select()
+            return
+        elif keycode == ord('F'):
+            self.OnFetch(evt)
             return
         # convert from keycode to a channel index to match number keypress to channel
         # some keyboards match the number 1 to 325; others match 1 to 49
