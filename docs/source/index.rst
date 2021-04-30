@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 ============
-Manual 3.0.0
+Manual 3.0.1
 ============
 
 .. image:: https://i.imgur.com/uaEp2md.png
