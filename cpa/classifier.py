@@ -352,7 +352,6 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnTrainClassifier, self.trainClassifierBtn)
         self.Bind(wx.EVT_BUTTON, self.ScoreAll, self.scoreAllBtn)
         self.Bind(wx.EVT_BUTTON, self.OnScoreImage, self.scoreImageBtn)
-        #self.Bind(wx.EVT_BUTTON, self.OnInspect, self.inspectBtn)
 
         self.nObjectsTxt.Bind(wx.EVT_TEXT, self.ValidateIntegerField)
         self.nRulesTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfRules)
@@ -520,7 +519,8 @@ class Classifier(wx.Frame):
         elif 0 <= chIdx <= 9:
             bin = chIdx
             if bin < len(self.classBins):
-                self.classBins[bin].AddObjects(self.unclassifiedBin.SelectedKeys(), srcID=self.unclassifiedBin.GetId())
+                self.classBins[bin].AddObjects(self.unclassifiedBin.SelectedKeys(), srcID=self.unclassifiedBin.GetId(),
+                                               deselect=True)
                 if self.unclassifiedBin.tiles:
                     self.unclassifiedBin.tiles[0].Select()
             return
