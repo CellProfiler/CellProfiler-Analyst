@@ -312,6 +312,8 @@ class MainGUI(wx.Frame):
         db.Disconnect()
         p = Properties()
         p.clear()
+        from cpa.datamodel import DataModel
+        DataModel.forget()
         self.console.Clear()
 
         if not p.is_initialized():
