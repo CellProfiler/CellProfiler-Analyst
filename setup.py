@@ -84,7 +84,7 @@ setuptools.setup(
         "seaborn>=0.11.1",
         "tifffile>=2021.3.31",
         "verlib==0.1",
-        "wxPython==4.1.1",
+        "wxPython==4.1.0",
     ],
     license="BSD",
     name="CellProfiler-Analyst",
