@@ -745,9 +745,7 @@ class BitmapPopup(wx.MiniFrame):
 
     def _on_paint(self, evt):
         dc = wx.BufferedPaintDC(self)
-        dc.BeginDrawing()
         dc.DrawBitmap(self.bmp, 0, 0)
-        dc.EndDrawing()
 
         
         

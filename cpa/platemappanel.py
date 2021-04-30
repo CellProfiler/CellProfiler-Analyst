@@ -5,10 +5,9 @@ from . import imagetools
 import wx
 import numpy as np
 import matplotlib.cm
-import PIL.Image as Image
 from base64 import b64decode
 from .guiutils import BitmapPopup
-from io import StringIO
+import imageio
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -295,11 +294,9 @@ class PlateMapPanel(wx.Panel):
 
             for wims in wells_and_images:
                 try:
-                    ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
-                except IOError as e:
-                    ims = [Image.open(StringIO(b64decode(im)), 'r') for im in wims[1:]]
-                ims = [np.fromstring(im.tobytes(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
-                       for im in ims]
+                    ims = [imageio.imread(b64decode(im)).astype('float32') / 255 for im in wims[1:]]
+                except Exception as e:
+                    ims = [imageio.imread(im.encode()).astype('float32') / 255 for im in wims[1:]]
                 imgs[wims[0]] =  ims
 
         py = self.yo
@@ -355,7 +352,8 @@ class PlateMapPanel(wx.Panel):
                         if well in imgs:
                             size = imgs[well][0].shape
                             scale = r*2./max(size)
-                            bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
+                            bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale,
+                                                                 display_whole_image=True)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     elif self.well_disp == IMAGE:
                         p.image_buffer_size = p.plate_shape[0] * p.plate_shape[1]
@@ -370,7 +368,8 @@ class PlateMapPanel(wx.Panel):
                                     ims[i] = ims[i] * (1 / np.iinfo(ims[i].dtype).max)
                             size = ims[0].shape
                             scale = r*2./max(size)
-                            bmp[well] = imagetools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
+                            bmp[well] = imagetools.MergeToBitmap(ims, p.image_channel_colors, scale=scale,
+                                                                 display_whole_image=True)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     # Draw text data
                     if self.text_data is not None:
@@ -484,19 +483,16 @@ class PlateMapPanel(wx.Panel):
         imsets = []
         for channels in images:
             try:
-                pngs = [Image.open(StringIO(im), 'r') for im in channels]
-            except IOError as e:
-                pngs = [Image.open(StringIO(b64decode(im)), 'r') for im in channels]
+                imsets += [[imageio.imread(b64decode(im)).astype('float32') / 255 for im in channels]]
+            except Exception as e:
+                imsets += [[imageio.imread(im.encode()).astype('float32') / 255 for im in channels]]
 
-            imsets += [[np.fromstring(png.tobytes(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
-                        for png in pngs]]                
-        
         n_channels = len(imsets[0])
         composite = []
         for i in range(n_channels):
             # composite each channel separately
             composite += [imagetools.tile_images([imset[i] for imset in imsets])]
-        bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)
+        bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors, display_whole_image=True)
         
         popup = BitmapPopup(self, bmp, pos=pos)
         popup.Show()
