@@ -2049,7 +2049,7 @@ class Classifier(wx.Frame):
             validVals = list(set([col[i] for col in validKeys]))
             validVals.sort()
             validVals = [str(col) for col in validVals]
-            if group == 'image' or fieldTypes[i] == int or fieldTypes[i] == int:
+            if group == 'image' or fieldTypes[i] == int:
                 fieldInp = wx.TextCtrl(self.fetch_panel, -1, value=validVals[0], size=(80, -1))
                 fieldInp.SetSelection(-1,-1) # Fix #203, textCtrl has different API since wx3
             else:
@@ -2133,9 +2133,10 @@ class Classifier(wx.Frame):
             fieldTypes = [int for input in self.groupInputs]
         groupKey = []
         for input, ftype in zip(self.groupInputs, fieldTypes):
-            # GetValue returns unicode from ComboBox, but we need a string
-            #val = str(input.GetStringSelection())
-            val = str(input.Value) # Fix issue #203
+            if isinstance(input, wx.TextCtrl):
+                val = input.GetValue()
+            else:
+                val = input.GetStringSelection()
             # if the value is blank, don't bother typing it, it is a wildcard
             if val != '__ANY__':
                 val = ftype(val)
