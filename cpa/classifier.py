@@ -1924,7 +1924,7 @@ class Classifier(wx.Frame):
                 labels += [p.plate_id]#labels += ['Plate ID']
                 labels += [p.well_id]
         labels = self.getLabels(labels, nClasses, wants_enrichments=wants_enrichments)
-        key_col_indices = [i for i in range(len(labels))]
+        key_col_indices = list(range(nKeyCols))
         try:
             title = "Hit table (grouped by %s)" % (group,)
             if filter:

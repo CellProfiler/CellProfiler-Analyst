@@ -852,7 +852,7 @@ class TableViewer(wx.Frame):
     def show_popup_menu(self, items, pos):
         self.popupItemById = {}
         menu = wx.Menu()
-        menu.SetTitle('Show Image')
+        menu.SetTitle('Show Image:')
         for item in items:
             id = wx.NewId()
             self.popupItemById[id] = item
