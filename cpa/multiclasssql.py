@@ -290,12 +290,6 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                               silent=(idx > 10))
 
             cell_data, image_keys = processData(data)
-            for i in range(cell_data.shape[0]):
-                for j in range(cell_data.shape[1]):
-                    try:
-                        float(cell_data[i,j])
-                    except:
-                        print((i,j, cell_data[i,j], type(cell_data[i,j])))
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
                 row_cls = tuple(np.append(image_keys[i][0], predicted_classes[i]))
