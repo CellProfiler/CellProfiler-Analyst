@@ -103,7 +103,7 @@ def clean_up_colnames(colnames):
     don't have to be quoted in sql syntax'''
     colnames = [col.replace(' ','_') for col in colnames]
     colnames = [col.replace('\n','_') for col in colnames]
-    colnames = [[c for c in col if re.match('[A-Za-z0-9_]',c)] for col in colnames]
+    colnames = [''.join([c for c in col if re.match('[A-Za-z0-9_]',c)]) for col in colnames]
     return colnames        
 
 

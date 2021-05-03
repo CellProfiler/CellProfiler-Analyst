@@ -965,7 +965,7 @@ class TableViewer(wx.Frame):
         data = [[self.grid.Table.GetValue(row, col) 
                 for col in range(self.grid.Table.GetNumberCols())]
                 for row in range(self.grid.Table.GetNumberRows())]
-        db.CreateTableFromData(data, dbconnect.clean_up_colnames(colnames), 
+        db.CreateTableFromData(data, colnames,
                                tablename, temporary=temporary)
         self.Title = tablename
         try:
