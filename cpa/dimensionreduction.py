@@ -564,14 +564,10 @@ class ReduxPanel(FigureCanvasWxAgg):
         (x, y) = points
         popup = wx.Menu()
 
-        loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
         selected_gate = self.configpanel.gate_choice.get_gatename_or_none()
         selected_gates = []
         if selected_gate:
             selected_gates = [selected_gate]
-        self.Bind(wx.EVT_MENU,
-                  lambda e: ui.prompt_user_to_create_loadimages_table(self, selected_gates),
-                  loadimages_table_item)
 
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
         show_images_in_gate_item.Enable(selected_gate is not None)
