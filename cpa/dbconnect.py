@@ -1618,7 +1618,31 @@ class DBConnect(metaclass=Singleton):
         object_table = p.object_table
         object_table = object_table.split('_checked')[0]
 
+        # Try to get a quick count of how many table rows we started with.
+        try:
+            query = f"SELECT COUNT() FROM {object_table}"
+            initial_count = self.execute(query)[0][0]
+        except:
+            logging.error("Unable to count table rows")
+            initial_count = 0
+
         all_cols = [str(x) for x in self.GetColumnNames(object_table)]
+
+        # We don't want to obliterate the table if there's an entirely empty column. Let's exclude those.
+        # Checking entire columns is expensive, let's restrict our search.
+        # First we sample 1 row and identify columns with missing values.
+        query = f"SELECT * FROM {object_table} LIMIT 1"
+        res = self.execute(query)[0]
+        maybe_empty_cols = [col for col, val in zip(all_cols, res) if val is None]
+        if len(maybe_empty_cols) > 0:
+            # Now let's check whether those missing columns are entirely empty (count will be 0).
+            query = f"SELECT {', '.join([f'count({col})' for col in maybe_empty_cols])} from {object_table}"
+            res = self.execute(query)[0]
+            empty_cols = set([col for col, count in zip(maybe_empty_cols, res) if count == 0])
+            # Now we rebuild our table column list without the empty columns
+            all_cols = [col for col in all_cols if col not in empty_cols]
+            logging.info(f"Table checking dropped {len(empty_cols)} blank columns")
+
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
             if len(AreaShape_Area) > 0:
@@ -1637,13 +1661,15 @@ class DBConnect(metaclass=Singleton):
                 query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols))
         self.execute(query)
 
-        # Check whether we nuked the table.
+        # Inform user of what we did. Also check whether we nuked the table.
         try:
-            query = f"SELECT COUNT(*) FROM {p.object_table}"
-            res = self.execute(query)
-            if res[0][0] == 0:
+            query = f"SELECT COUNT() FROM {p.object_table}"
+            res = self.execute(query)[0][0]
+            if res == 0:
                 logging.error("Table checking removed all rows, you may have an empty column in your database. "
                               "Disable check_tables in your properties file if this is expected.")
+            else:
+                logging.info(f"Table checking removed {initial_count - res} rows with missing values")
         except:
             logging.error("Unable to validate checked object table")
 
