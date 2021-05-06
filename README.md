@@ -5,7 +5,7 @@
 
 |  **`Version`**  |  **`Documentation`** | **`Forum`** |
 |---------------|----------------|-----------------|
-| [![Build Status](https://img.shields.io/badge/version-3.0.1-green.svg)](https://cellprofileranalyst.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-3.0-brightgreen.svg)](https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-3.0.0/index.html) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](https://forum.image.sc/tag/cellprofiler-analyst) |
+| [![Build Status](https://img.shields.io/badge/version-3.0.2-green.svg)](https://cellprofileranalyst.org/releases) | [![Build Status](https://img.shields.io/badge/documentation-3.0-brightgreen.svg)](https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-3.0.0/index.html) | [![Build Status](https://img.shields.io/badge/forum-CPA-blue.svg)](https://forum.image.sc/tag/cellprofiler-analyst) |
 
 **CellProfiler Analyst** allows interactive exploration and analysis of data,
 particularly from high-throughput, image-based experiments. Included is a
