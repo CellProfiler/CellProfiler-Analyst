@@ -314,6 +314,8 @@ class MainGUI(wx.Frame):
         p.clear()
         from cpa.datamodel import DataModel
         DataModel.forget()
+        from cpa.trainingset import CellCache
+        CellCache.forget()
         self.console.Clear()
 
         if not p.is_initialized():
