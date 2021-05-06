@@ -381,7 +381,7 @@ class DataGrid(wx.Frame):
         self.GetMenuBar().Append(self.dbmenu, 'Database')
         if self.grid:
             self.CreateColumnMenu()
-        self.CreateStatusBar()
+        self.status_bar = self.CreateStatusBar()
 
         self.SetSize((800,500))
         if self.grid:

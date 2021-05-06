@@ -77,7 +77,7 @@ class ImageGallery(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.CreateMenus()
 
-        self.CreateStatusBar()
+        self.status_bar = self.CreateStatusBar()
 
         #### Create GUI elements
         # Top level - three split windows

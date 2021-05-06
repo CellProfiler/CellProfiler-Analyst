@@ -95,7 +95,7 @@ class MainGUI(wx.Frame):
         self.tbicon = None
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
-        self.CreateStatusBar()
+        self.status_bar = self.CreateStatusBar()
         self.log_io = True
 
         #
