@@ -3,6 +3,9 @@
 
 
 import matplotlib
+
+from cpa.guiutils import create_status_bar
+
 matplotlib.use('WXAgg')
 
 import sys
@@ -77,7 +80,7 @@ class ImageGallery(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.CreateMenus()
 
-        self.status_bar = self.CreateStatusBar()
+        self.status_bar = create_status_bar(self)
 
         #### Create GUI elements
         # Top level - three split windows

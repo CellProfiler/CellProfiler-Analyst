@@ -17,6 +17,7 @@ import numpy as np
 import wx
 import wx.grid as  gridlib
 import cpa.helpmenu
+from cpa.guiutils import create_status_bar
 from .properties import Properties
 from . import dbconnect
 from .datamodel import DataModel
@@ -564,7 +565,7 @@ class TableViewer(wx.Frame):
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, manual_url="6_table_viewer.html"), 'Help')
         
-        self.status_bar = self.CreateStatusBar()
+        self.status_bar = create_status_bar(self)
         
         self.Bind(wx.EVT_MENU, self.on_new_table, new_table_item)
         self.Bind(wx.EVT_MENU, self.on_load_csv, load_csv_menu_item)

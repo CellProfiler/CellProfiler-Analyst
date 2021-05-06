@@ -1,4 +1,5 @@
 import logging
+import platform
 import wx
 import wx.adv
 import os
@@ -839,9 +840,13 @@ def show_load_dialog():
         return False
 
 def create_status_bar(parent, force=False):
-    import platform
-    if (platform.system() == "Darwin" and platform.mac_ver()[0].startswith('11')):
-        # wx 4.1.0 crashes on Big Sur if you try to make a status bar
+    if platform.system() == "Darwin" and platform.mac_ver()[0].startswith('11'):
+        # wx 4.1.0 crashes on Big Sur if you try to make a status bar.
+        # Redirect messages to the log instead.
+        # Provide a toolbar if we need to place buttons in the status bar.
+        def log_status(text):
+            logging.info(text)
+        parent.SetStatusText = log_status
         if force:
             tb = wx.ToolBar(parent, style=wx.TB_BOTTOM)
             parent.SetToolBar(tb)
