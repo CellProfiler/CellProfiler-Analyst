@@ -1,9 +1,9 @@
 name: create-release
 on:
   push:
-    branches: [ beegsir ]
-#    tags:
-#      - "*"
+#    branches: [ master ]
+    tags:
+      - "*"
 
 jobs:
   build:
@@ -80,42 +80,42 @@ jobs:
       matrix:
         os: [macos-10.15, windows-2019]
         python-version: [ "3.8" ]
-#  upload:
-#    name: upload
-#    needs: build
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v2
-#      - env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        id: create_release
-#        uses: actions/create-release@v1
-#        with:
-#          draft: true
-#          prerelease: true
-#          release_name: ${{ github.ref }}
-#          tag_name: ${{ github.ref }}
-#      - uses: actions/download-artifact@v1
-#        with:
-#          name: CellProfiler-Analyst-macOS-3.0.1.zip
-#          path: ./
-#      - uses: actions/download-artifact@v1
-#        with:
-#          name: CellProfiler-Analyst-Windows-3.0.1.exe
-#          path: ./
-#      - env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        uses: actions/upload-release-asset@v1
-#        with:
-#          asset_content_type: application/zip
-#          asset_name: CellProfiler-Analyst-macOS-3.0.1.zip
-#          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-macOS-3.0.1.zip
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#      - env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        uses: actions/upload-release-asset@v1
-#        with:
-#          asset_content_type: application/exe
-#          asset_name: CellProfiler-Analyst-Windows-3.0.1.exe
-#          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-Windows-3.0.1.exe
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+  upload:
+    name: upload
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          draft: true
+          prerelease: true
+          release_name: ${{ github.ref }}
+          tag_name: ${{ github.ref }}
+      - uses: actions/download-artifact@v1
+        with:
+          name: CellProfiler-Analyst-macOS-3.0.1.zip
+          path: ./
+      - uses: actions/download-artifact@v1
+        with:
+          name: CellProfiler-Analyst-Windows-3.0.1.exe
+          path: ./
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-release-asset@v1
+        with:
+          asset_content_type: application/zip
+          asset_name: CellProfiler-Analyst-macOS-3.0.1.zip
+          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-macOS-3.0.1.zip
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-release-asset@v1
+        with:
+          asset_content_type: application/exe
+          asset_name: CellProfiler-Analyst-Windows-3.0.1.exe
+          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-Windows-3.0.1.exe
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
