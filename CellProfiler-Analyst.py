@@ -7,7 +7,6 @@
 
 
 import sys
-from io import StringIO
 import os
 import os.path
 import logging
@@ -95,9 +94,9 @@ class MainGUI(wx.Frame):
         self.tbicon = None
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
-        # self.status_bar = self.CreateStatusBar()
-        self.status_bar = wx.StatusBar(self)
-        self.SetStatusBar(self.status_bar)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.statusbar = wx.StatusBar(self)
+        # self.status_bar = create_status_bar(self)
         self.log_io = True
 
         #
@@ -176,7 +175,11 @@ class MainGUI(wx.Frame):
         
         # Black background and white font
         self.console.SetDefaultStyle(wx.TextAttr(wx.WHITE,wx.BLACK))
-        self.console.SetBackgroundColour('#000000')  
+        self.console.SetBackgroundColour('#000000')
+
+        sizer.Add(self.console, flag=wx.EXPAND, proportion=1)
+        sizer.Add(self.statusbar, flag=wx.EXPAND)
+        self.SetSizer(sizer)
 
         log_level = logging.INFO # INFO is the default log level
         self.logr = logging.getLogger()
