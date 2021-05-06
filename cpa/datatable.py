@@ -2,6 +2,7 @@
 
 from cpa import dbconnect
 from cpa.dbconnect import DBConnect
+from cpa.guiutils import create_status_bar
 from .datamodel import DataModel
 from .properties import Properties
 from tempfile import gettempdir
@@ -381,7 +382,7 @@ class DataGrid(wx.Frame):
         self.GetMenuBar().Append(self.dbmenu, 'Database')
         if self.grid:
             self.CreateColumnMenu()
-        self.CreateStatusBar()
+        self.status_bar = create_status_bar(self)
 
         self.SetSize((800,500))
         if self.grid:

@@ -1,6 +1,9 @@
 # Encoding: utf-8
 
 import matplotlib
+
+from cpa.guiutils import create_status_bar
+
 matplotlib.use('WXAgg')
 
 import matplotlib.pyplot as plt
@@ -131,11 +134,11 @@ class Classifier(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.CreateMenus()
 
-        self.CreateStatusBar()
-
+        self.status_bar = create_status_bar(self, force=True)
         #### Create GUI elements
         # Top level - three split windows
         self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
+
         self.fetch_and_rules_panel = wx.Panel(self.splitter)
         self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
 
@@ -187,7 +190,7 @@ class Classifier(wx.Frame):
         self.scoreImageBtn = wx.Button(self.find_rules_panel, -1, 'Score Image')
 
         # add sorting class
-        self.addSortClassBtn = wx.Button(self.GetStatusBar(), -1, "Add new class", style=wx.BU_EXACTFIT)
+        self.addSortClassBtn = wx.Button(self.status_bar, -1, "Add new class", style=wx.BU_EXACTFIT)
 
         #### Create Sizers
         self.fetchSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -358,7 +361,7 @@ class Classifier(wx.Frame):
         self.nNeuronsTxt.Bind(wx.EVT_TEXT, self.ValidateNumberOfNeurons)
         self.nObjectsTxt.Bind(wx.EVT_TEXT_ENTER, self.OnFetch)
 
-        self.GetStatusBar().Bind(wx.EVT_SIZE, self.status_bar_onsize)
+        self.status_bar.Bind(wx.EVT_SIZE, self.status_bar_onsize)
         wx.CallAfter(self.status_bar_onsize, None)
 
         self.Bind(wx.EVT_MENU, self.OnClose, self.exitMenuItem)
@@ -391,7 +394,7 @@ class Classifier(wx.Frame):
     def status_bar_onsize(self, event):
         # draw the "add sort class..." button in the status bar
         button = self.addSortClassBtn
-        width, height = self.GetStatusBar().GetClientSize()
+        width, height = self.status_bar.GetClientSize()
         # diagonal lines drawn on mac, so move let by height.
         button.SetPosition((width - button.GetSize()[0] - 1 - height, button.GetPosition()[1]))
 

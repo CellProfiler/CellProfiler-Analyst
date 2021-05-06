@@ -7,12 +7,12 @@
 
 
 import sys
-from io import StringIO
 import os
 import os.path
 import logging
 
 from cpa.dimensionreduction import DimensionReduction
+from cpa.guiutils import create_status_bar
 from cpa.util.version import display_version
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
@@ -95,7 +95,7 @@ class MainGUI(wx.Frame):
         self.tbicon = None
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
-        self.CreateStatusBar()
+        self.status_bar = create_status_bar(self)
         self.log_io = True
 
         #
@@ -174,7 +174,7 @@ class MainGUI(wx.Frame):
         
         # Black background and white font
         self.console.SetDefaultStyle(wx.TextAttr(wx.WHITE,wx.BLACK))
-        self.console.SetBackgroundColour('#000000')  
+        self.console.SetBackgroundColour('#000000')
 
         log_level = logging.INFO # INFO is the default log level
         self.logr = logging.getLogger()
@@ -314,6 +314,8 @@ class MainGUI(wx.Frame):
         p.clear()
         from cpa.datamodel import DataModel
         DataModel.forget()
+        from cpa.trainingset import CellCache
+        CellCache.forget()
         self.console.Clear()
 
         if not p.is_initialized():
