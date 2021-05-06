@@ -1,6 +1,9 @@
 # Encoding: utf-8
 
 import matplotlib
+
+from cpa.guiutils import create_status_bar
+
 matplotlib.use('WXAgg')
 
 import matplotlib.pyplot as plt
@@ -131,11 +134,11 @@ class Classifier(wx.Frame):
         self.SetMenuBar(self.menuBar)
         self.CreateMenus()
 
-        self.status_bar = self.CreateStatusBar()
-
+        self.status_bar = create_status_bar(self, force=True)
         #### Create GUI elements
         # Top level - three split windows
         self.splitter = wx.SplitterWindow(self, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
+
         self.fetch_and_rules_panel = wx.Panel(self.splitter)
         self.bins_splitter = wx.SplitterWindow(self.splitter, style=wx.NO_BORDER | wx.SP_3DSASH | wx.SP_LIVE_UPDATE)
 
@@ -347,7 +350,7 @@ class Classifier(wx.Frame):
         self.Bind(wx.EVT_CHOICE, self.OnSelectFilter, self.filterChoice)
         self.Bind(wx.EVT_CHOICE, self.OnClassifierChoice, self.classifierChoice)
         self.Bind(wx.EVT_BUTTON, self.OnFetch, self.fetchBtn)
-        self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
+        # self.Bind(wx.EVT_BUTTON, self.OnAddSortClass, self.addSortClassBtn)
         self.Bind(wx.EVT_BUTTON, self.OnEvaluation, self.evaluationBtn)
         self.Bind(wx.EVT_BUTTON, self.OnTrainClassifier, self.trainClassifierBtn)
         self.Bind(wx.EVT_BUTTON, self.ScoreAll, self.scoreAllBtn)
@@ -473,7 +476,7 @@ class Classifier(wx.Frame):
             p.object_name[0])))
         self.scoreImageBtn.SetToolTip(
             wx.ToolTip('Highlight %s of a particular phenotype in an image.' % (p.object_name[1])))
-        self.addSortClassBtn.SetToolTip(wx.ToolTip('Add another bin to sort your %s into.' % (p.object_name[1])))
+        # self.addSortClassBtn.SetToolTip(wx.ToolTip('Add another bin to sort your %s into.' % (p.object_name[1])))
         self.unclassifiedBin.SetToolTip(
             wx.ToolTip('%s in this bin should be sorted into the bins below.' % (p.object_name[1].capitalize())))
 

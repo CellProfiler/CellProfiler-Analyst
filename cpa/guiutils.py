@@ -837,3 +837,16 @@ def show_load_dialog():
     else:
         wx.CallAfter(dlg.Destroy)
         return False
+
+def create_status_bar(parent, force=False):
+    import platform
+    if not (platform.system() == "Darwin" and platform.mac_ver()[0].startswith('11')):
+        # wx 4.1.0 crashes on Big Sur if you try to make a status bar
+        if force:
+            tb = wx.ToolBar(parent, style=wx.TB_BOTTOM)
+            parent.SetToolBar(tb)
+            return tb
+        else:
+            return None
+    else:
+        return parent.CreateStatusBar()
