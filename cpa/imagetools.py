@@ -323,7 +323,7 @@ def check_image_shape_compatibility(imgs):
 
 def rescale(im, scale):
     import scipy.ndimage
-    return scipy.ndimage.zoom(im, (scale[1], scale[0])) / 255.
+    return scipy.ndimage.zoom(im, (scale[1] / im.shape[1], scale[0] / im.shape[0])) / 255.
 
 def log_transform(im, interval=None):
     '''Takes a single image in the form of a np array and returns it
