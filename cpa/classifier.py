@@ -1767,6 +1767,16 @@ class Classifier(wx.Frame):
             # into phenotype classes and count phenotype-hits per-image.
             self.lastScoringFilter = filter
 
+            if not p.class_table:
+                dlg = wx.MessageDialog(self,
+                                       'No class table name was specified in the .properties file. Would you like to '
+                                       'save per-object class data? If yes, a table called "object_class" will be made',
+                                       'Do you want to save per-object class data?',
+                                       wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
+                response = dlg.ShowModal()
+                if response == wx.ID_YES:
+                    p.class_table = "object_class"
+
             if p.class_table:
                 overwrite_class_table = True
                 # If p.class_table is already in the db, we need to confirm whether or not to overwrite it.
