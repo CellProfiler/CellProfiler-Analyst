@@ -1816,9 +1816,15 @@ class Classifier(wx.Frame):
                 return
 
             if p.class_table and overwrite_class_table:
+                dlg = wx.ProgressDialog('Calculating per-object scores...', 'Generating..',
+                                        100,
+                                        self,
+                                        )
+
                 self.PostMessage('Saving %s classes to database...' % (p.object_name[0]))
-                self.algorithm.CreatePerObjectClassTable([bin.label for bin in self.classBins])
+                self.algorithm.CreatePerObjectClassTable([bin.label for bin in self.classBins], dlg.Update)
                 self.PostMessage('%s classes saved to table "%s"' % (p.object_name[0].capitalize(), p.class_table))
+                dlg.Destroy()
 
         t2 = time()
         self.PostMessage('time to calculate hits: %.3fs' % (t2 - t1))
@@ -1936,7 +1942,7 @@ class Classifier(wx.Frame):
             grid = tableviewer.TableViewer(self, title=title)
             grid.table_from_array(tableData, labels, group, key_col_indices)
             grid.Show()
-        except(Exception):
+        except Exception as e:
             wx.MessageDialog(self, 'Unable to calculate enrichment scores.', 'Error', style=wx.OK).ShowModal()
 
         self.SetStatusText('')

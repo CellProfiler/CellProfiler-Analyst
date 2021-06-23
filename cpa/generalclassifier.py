@@ -124,8 +124,8 @@ class GeneralClassifier(BaseEstimator, ClassifierMixin):
             return "neurons per layer"
         return 'top features'
 
-    def CreatePerObjectClassTable(self, classNames):
-        multiclasssql.create_perobject_class_table(self, classNames)
+    def CreatePerObjectClassTable(self, classNames, updater):
+        multiclasssql.create_perobject_class_table(self, classNames, updater)
 
     def FilterObjectsFromClassN(self, obClass, obKeysToTry, uncertain=False):
         return multiclasssql.FilterObjectsFromClassN(obClass, self, obKeysToTry, uncertain)
