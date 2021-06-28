@@ -311,7 +311,7 @@ class ReduxPanel(FigureCanvasWxAgg):
             db.connect()
         conn = db.connections[connID]
         dlg.Pulse("Writing to database")
-        if p.db_type.lower() == "SQLite":
+        if p.db_type.lower() == "sqlite":
             scores.to_sql(PCA_TABLE, conn, if_exists="replace", index=False)
         else:
             # MySQLClient not supported by pandas to_sql.
