@@ -1751,7 +1751,10 @@ class DBConnect(metaclass=Singleton):
         Column types are inferred from the data.
         '''
         import csv
-        f = open(filename, 'U')
+        if hasattr(filename, 'read'):
+            f = filename
+        else:
+            f = open(filename, 'U')
         r = csv.reader(f)
         self.execute('DROP TABLE IF EXISTS %s'%(tablename))
         colnames = next(r)

@@ -307,11 +307,18 @@ class ReduxPanel(FigureCanvasWxAgg):
 
         # Add class PCA table to database
         connID = threading.currentThread().getName()
-        if not connID in db.connections:
+        if connID not in db.connections:
             db.connect()
         conn = db.connections[connID]
         dlg.Pulse("Writing to database")
-        scores.to_sql(PCA_TABLE, conn, if_exists="replace", index=False)
+        if p.db_type.lower() == "SQLite":
+            scores.to_sql(PCA_TABLE, conn, if_exists="replace", index=False)
+        else:
+            # MySQLClient not supported by pandas to_sql.
+            csvbuffer = StringIO()
+            scores.to_csv(csvbuffer, index=False)
+            csvbuffer.seek(0)
+            db.CreateTempTableFromCSV(csvbuffer, PCA_TABLE)
         if not db.get_linking_tables(p.image_table, PCA_TABLE):
             db.do_link_tables(p.image_table, PCA_TABLE, image_key_columns(), image_key_columns())
         if not db.get_linking_tables(p.object_table, PCA_TABLE):
