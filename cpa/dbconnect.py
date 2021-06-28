@@ -1278,7 +1278,10 @@ class DBConnect(metaclass=Singleton):
         '''
         Returns a list of measurements for multiple objects.
         '''
-        query = f'SELECT {p.image_id}, {p.object_id}, * FROM {p.object_table} WHERE {GetWhereClauseForObjects(obKeys)}'
+        if p.db_type.lower() == 'mysql':
+            query = f'SELECT {p.image_id}, {p.object_id}, {p.object_table}.* FROM {p.object_table} WHERE {GetWhereClauseForObjects(obKeys)}'
+        else:
+            query = f'SELECT {p.image_id}, {p.object_id}, * FROM {p.object_table} WHERE {GetWhereClauseForObjects(obKeys)}'
         data = self.execute(query, silent=True)
         if len(data) == 0:
             logging.error('No data for obKeys: %s'%str(obKeys))

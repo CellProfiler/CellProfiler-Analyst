@@ -38,7 +38,7 @@ def create_perobject_class_table(classifier, classNames, updater):
 
     index_cols = UniqueObjectClause()
     class_cols = UniqueObjectClause() + ', class_number, class'
-    class_col_defs = object_key_defs() + ', class VARCHAR (%d)'%(3) + ', class_number INT'
+    class_col_defs = f"{object_key_defs()}, class VARCHAR ({max(map(len, classNames))}), class_number INT"
 
     # Drop must be explicitly asked for Classifier.ScoreAll
     print('Drop table...')

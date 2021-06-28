@@ -1533,8 +1533,9 @@ class Classifier(wx.Frame):
                                         callback=cb)
                     self.PostMessage('Training set saved.')
                     self.training_set_ready = True
-                except:
+                except Exception as e:
                     self.PostMessage('Error: Training set could not be saved.')
+                    print("Error generating training set: ", e)
                 dlg.Destroy()
                 return True
             except StopCalculating:
@@ -1917,7 +1918,10 @@ class Classifier(wx.Frame):
                         tableRow += [np.log10(score) - (np.log10(1 - score)) for score in
                                      scores]  # compute logit of each probability
                 else:
-                    tableRow += ['NaN'] * 2 * len(countsRow)
+                    if two_classes:
+                        tableRow += ['NaN'] * 3
+                    else:
+                        tableRow += ['NaN'] * 2 * len(countsRow)
             #training set counts
             trainingCountsRow = np.zeros(len(labels), dtype=int).tolist()
             subset = training_table[training_table["ImageNumber"] == tableRow[0]]
@@ -1954,6 +1958,7 @@ class Classifier(wx.Frame):
             grid.Show()
         except Exception as e:
             wx.MessageDialog(self, 'Unable to calculate enrichment scores.', 'Error', style=wx.OK).ShowModal()
+            print("Enrichment calculation failed: ", e)
 
         self.SetStatusText('')
 
