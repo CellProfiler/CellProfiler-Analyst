@@ -1658,20 +1658,30 @@ class DBConnect(metaclass=Singleton):
             else:
                 query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT * FROM {object_table} WHERE {
                 " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != ''"""
-        elif DB_TYPE == 'sqlite':
-            query = "PRAGMA table_info(%s)"%object_table
             self.execute(query)
-            query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
+        elif DB_TYPE == 'sqlite':
+            # SQL can only handle 1000 comparisons in a query. If we have too many columns we'll need to break it up.
+            col_buffer = [all_cols[i:i + 400] for i in range(0, len(all_cols), 400)]
+            # Do the largest chunk first, it'll reduce work later on.
+            to_test = col_buffer.pop(0)
+
+            query = f"PRAGMA table_info({object_table})"
+            self.execute(query)
+            query = f'DROP TABLE IF EXISTS {p.object_table}'
             self.execute(query)
             if len(AreaShape_Area) > 0:
                 query = f"""CREATE TABLE {p.object_table} AS SELECT * FROM {object_table} WHERE {
-                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != '' AND {
+                " IS NOT NULL AND ".join(to_test)} IS NOT NULL AND {" != '' AND ".join(to_test)}  != '' AND {
                 " > 0 AND ".join(AreaShape_Area)} > 0"""
             else:
                 query = f"""CREATE TABLE {p.object_table} AS SELECT * FROM {object_table} WHERE {
-                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != ''"""
-        self.execute(query)
-
+                " IS NOT NULL AND ".join(to_test)} IS NOT NULL AND {" != '' AND ".join(to_test)}  != ''"""
+            self.execute(query)
+            for chunk in col_buffer:
+                query = f"""DELETE FROM {p.object_table} WHERE {
+                " IS NOT NULL AND ".join(chunk)} IS NOT NULL AND {" != '' AND ".join(chunk)}  != ''"""
+                self.execute(query)
+        self.Commit()
         # Inform user of what we did. Also check whether we nuked the table.
         try:
             query = f"SELECT COUNT() FROM {p.object_table}"
