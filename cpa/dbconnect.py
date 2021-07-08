@@ -1226,7 +1226,7 @@ class DBConnect(metaclass=Singleton):
                 ignore_cols = np.array(col_names)[np.where(res==0)[0]]                
                 for colname in ignore_cols:
                     self.classifierColNames.remove(colname)            
-                    logging.warn('Ignoring column "%s" because it has zero variance'%(colname))
+                    logging.warning('Ignoring column "%s" because it has zero variance'%(colname))
             
             if len(self.classifierColNames) == 0 and p.classifier_ignore_columns:
                 import wx
@@ -1649,19 +1649,24 @@ class DBConnect(metaclass=Singleton):
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
             if len(AreaShape_Area) > 0:
-                query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s AND %s"%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+                query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT * FROM {object_table} WHERE {
+                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != '' AND {
+                " > 0 AND ".join(AreaShape_Area)} > 0"""
             else:
-                query = "CREATE OR REPLACE VIEW %s AS SELECT * FROM %s WHERE %s AND %s" % (
-                p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols))
+                query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT * FROM {object_table} WHERE {
+                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != ''"""
         elif DB_TYPE == 'sqlite':
             query = "PRAGMA table_info(%s)"%object_table
             self.execute(query)
             query = 'DROP TABLE IF EXISTS %s'%(p.object_table)
             self.execute(query)
             if len(AreaShape_Area) > 0:
-                query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols), " > 0 AND ".join(AreaShape_Area))
+                query = f"""CREATE TABLE {p.object_table} AS SELECT * FROM {object_table} WHERE {
+                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != '' AND {
+                " > 0 AND ".join(AreaShape_Area)} > 0"""
             else:
-                query = 'CREATE TABLE %s AS SELECT * FROM %s WHERE (%s) AND (%s)'%(p.object_table, object_table, " IS NOT NULL AND ".join(all_cols), " != '' AND ".join(all_cols))
+                query = f"""CREATE TABLE {p.object_table} AS SELECT * FROM {object_table} WHERE {
+                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != ''"""
         self.execute(query)
 
         # Inform user of what we did. Also check whether we nuked the table.
