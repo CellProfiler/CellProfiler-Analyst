@@ -1258,8 +1258,11 @@ class DBConnect(metaclass=Singleton):
             logging.error('No data in table')
             return None
         # This should be the case
-        assert all([type(x) in (int, float) for x in data[0]])
-        return np.array(data)
+        valid_types = (int, float, type(None))
+        if not all([type(x) in valid_types for x in data[0]]):
+            raise ValueError("Invalid column types were found in the data. "
+                             "Only numerical columns can be present in the object table")
+        return np.array(data, dtype=np.float)
 
     def GetCellData(self, obKey):
         '''
