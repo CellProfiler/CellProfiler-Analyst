@@ -1197,8 +1197,8 @@ class DBConnect(metaclass=Singleton):
             col_names = self.GetColumnNames(p.object_table)
             col_types = self.GetColumnTypes(p.object_table)
             # automatically ignore all string-type columns
-            #print col_names, col_types
-            self.classifierColNames = [col for col, type in zip(col_names, col_types) if type not in [str, None]]
+            # ColumnTypes will return None for unknown formats, rather than a proper type.
+            self.classifierColNames = [col for col, coltype in zip(col_names, col_types) if coltype not in (str, None)]
             # automatically ignore ID columns
             if p.table_id in self.classifierColNames:
                 self.classifierColNames.remove(p.table_id)

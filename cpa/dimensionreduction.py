@@ -784,7 +784,7 @@ class ReduxControlPanel(wx.Panel):
                 return
 
         # Define a progress dialog
-        dlg = wx.ProgressDialog('Generating figure...', 'Generating ...', 100, parent=self,
+        dlg = wx.ProgressDialog('Generating figure...', 'Fetching data ...', 100, parent=self,
                                 style=wx.PD_APP_MODAL | wx.PD_CAN_ABORT)
         # Reset selections
         self.figpanel.patches = []
