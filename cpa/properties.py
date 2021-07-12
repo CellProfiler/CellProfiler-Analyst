@@ -30,6 +30,7 @@ string_vars = ['db_type',
                'db_name', 
                'db_user', 
                'db_passwd',
+               'db_password',
                'image_table', 
                'object_table',
                'image_csv_file', 
@@ -87,6 +88,7 @@ optional_vars = ['db_port',
                  'db_name', 
                  'db_user', 
                  'db_passwd',
+                 'db_password',
                  'table_id', 
                  'image_url_prepend', 
                  'image_csv_file',
@@ -132,10 +134,11 @@ optional_vars = ['db_port',
                  ]
 
 # map deprecated fields to new fields
-field_mappings = {'classifier_ignore_substrings' : 'classifier_ignore_columns',
-                  'image_channel_files' : 'image_file_cols',
-                  'image_channel_paths' : 'image_path_cols',
-                  'image_channel_names' : 'image_names',
+field_mappings = {'classifier_ignore_substrings': 'classifier_ignore_columns',
+                  'image_channel_files': 'image_file_cols',
+                  'image_channel_paths': 'image_path_cols',
+                  'image_channel_names': 'image_names',
+                  'db_password': 'db_passwd',
                   }
 
 required_vars = list(set(list_vars + string_vars) - set(optional_vars) 
