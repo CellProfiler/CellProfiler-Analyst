@@ -1654,11 +1654,10 @@ class DBConnect(metaclass=Singleton):
         if DB_TYPE == 'mysql':
             if len(AreaShape_Area) > 0:
                 query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT {', '.join(all_cols)} FROM {object_table} 
-                WHERE {" IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != '' AND {
-                " > 0 AND ".join(AreaShape_Area)} > 0"""
+                WHERE {" IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" > 0 AND ".join(AreaShape_Area)} > 0"""
             else:
                 query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT {', '.join(all_cols)} FROM {object_table} 
-                WHERE {" IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != ''"""
+                WHERE {" IS NOT NULL AND ".join(all_cols)} IS NOT NULL"""
             self.execute(query)
         elif DB_TYPE == 'sqlite':
             # SQL can only handle 1000 comparisons in a query. If we have too many columns we'll need to break it up.
