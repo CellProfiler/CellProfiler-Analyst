@@ -327,10 +327,11 @@ class DBConnect(metaclass=Singleton):
                 self.connectionInfo[connID] = (p.db_host, p.db_user, 
                                                (p.db_passwd or None), p.db_name)
                 logging.debug('[%s] Connected to database: %s as %s@%s'%(connID, p.db_name, p.db_user, p.db_host))
-                if p.classification_type == 'image':
-                    self.CreateObjectImageTable()
-                if p.check_tables == 'yes':
-                    self.CreateObjectCheckedTable()
+                if connID == 'MainThread':
+                    if p.classification_type == 'image':
+                        self.CreateObjectImageTable()
+                    if p.check_tables == 'yes':
+                        self.CreateObjectCheckedTable()
             except DBError() as e:
                 raise DBException('Failed to connect to database: %s as %s@%s (connID = "%s").\n  %s'%(p.db_name, p.db_user, p.db_host, connID, e))
             
