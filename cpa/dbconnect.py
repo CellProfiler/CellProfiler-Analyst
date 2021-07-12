@@ -1627,7 +1627,7 @@ class DBConnect(metaclass=Singleton):
 
         # Try to get a quick count of how many table rows we started with.
         try:
-            query = f"SELECT COUNT() FROM {object_table}"
+            query = f"SELECT COUNT(*) FROM {object_table}"
             initial_count = self.execute(query)[0][0]
         except:
             logging.error("Unable to count table rows")
@@ -1685,7 +1685,7 @@ class DBConnect(metaclass=Singleton):
         self.Commit()
         # Inform user of what we did. Also check whether we nuked the table.
         try:
-            query = f"SELECT COUNT() FROM {p.object_table}"
+            query = f"SELECT COUNT(*) FROM {p.object_table}"
             res = self.execute(query)[0][0]
             if res == 0:
                 logging.error("Table checking removed all rows, you may have an empty column in your database. "
