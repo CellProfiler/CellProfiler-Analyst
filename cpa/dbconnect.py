@@ -1652,12 +1652,12 @@ class DBConnect(metaclass=Singleton):
         AreaShape_Area = [x for x in all_cols if 'AreaShape_Area' in x]
         if DB_TYPE == 'mysql':
             if len(AreaShape_Area) > 0:
-                query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT * FROM {object_table} WHERE {
-                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != '' AND {
+                query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT {', '.join(all_cols)} FROM {object_table} 
+                WHERE {" IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != '' AND {
                 " > 0 AND ".join(AreaShape_Area)} > 0"""
             else:
-                query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT * FROM {object_table} WHERE {
-                " IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != ''"""
+                query = f"""CREATE OR REPLACE VIEW {p.object_table} AS SELECT {', '.join(all_cols)} FROM {object_table} 
+                WHERE {" IS NOT NULL AND ".join(all_cols)} IS NOT NULL AND {" != '' AND ".join(all_cols)}  != ''"""
             self.execute(query)
         elif DB_TYPE == 'sqlite':
             # SQL can only handle 1000 comparisons in a query. If we have too many columns we'll need to break it up.
@@ -1670,11 +1670,11 @@ class DBConnect(metaclass=Singleton):
             query = f'DROP TABLE IF EXISTS {p.object_table}'
             self.execute(query)
             if len(AreaShape_Area) > 0:
-                query = f"""CREATE TABLE {p.object_table} AS SELECT * FROM {object_table} WHERE {
+                query = f"""CREATE TABLE {p.object_table} AS SELECT {', '.join(all_cols)} FROM {object_table} WHERE {
                 " IS NOT NULL AND ".join(to_test)} IS NOT NULL AND {" != '' AND ".join(to_test)}  != '' AND {
                 " > 0 AND ".join(AreaShape_Area)} > 0"""
             else:
-                query = f"""CREATE TABLE {p.object_table} AS SELECT * FROM {object_table} WHERE {
+                query = f"""CREATE TABLE {p.object_table} AS SELECT {', '.join(all_cols)} FROM {object_table} WHERE {
                 " IS NOT NULL AND ".join(to_test)} IS NOT NULL AND {" != '' AND ".join(to_test)}  != ''"""
             self.execute(query)
             for chunk in col_buffer:
