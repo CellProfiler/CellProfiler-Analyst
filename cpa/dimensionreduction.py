@@ -786,46 +786,48 @@ class ReduxControlPanel(wx.Panel):
         # Define a progress dialog
         dlg = wx.ProgressDialog('Generating figure...', 'Fetching data ...', 100, parent=self,
                                 style=wx.PD_APP_MODAL | wx.PD_CAN_ABORT)
-        # Reset selections
-        self.figpanel.patches = []
-        self.figpanel.selection = set()
+        try:
+            # Reset selections
+            self.figpanel.patches = []
+            self.figpanel.selection = set()
 
-        if self.figpanel.data is None:
-            dlg.Pulse('Fetching object data from database')
-            try:
-                # Fetch all data from database
-                data = self.load_obj_measurements()
-                keys, values = np.split(data, [2], axis=1)
-                self.figpanel.keys = keys.astype(int)
-                # Remove zero variance features
-                self.figpanel.data = values.loc[:, (values != values.iloc[0]).any()]
-            except Exception as e:
-                self.figpanel.data = None
-                self.figpanel.keys = None
-                logging.error(f"Unable to load data: {e}")
-                dlg.Destroy()
-                return
+            if self.figpanel.data is None:
+                dlg.Pulse('Fetching object data from database')
+                try:
+                    # Fetch all data from database
+                    data = self.load_obj_measurements()
+                    keys, values = np.split(data, [2], axis=1)
+                    self.figpanel.keys = keys.astype(int)
+                    # Remove zero variance features
+                    self.figpanel.data = values.loc[:, (values != values.iloc[0]).any()]
+                except Exception as e:
+                    self.figpanel.data = None
+                    self.figpanel.keys = None
+                    logging.error(f"Unable to load data: {e}")
+                    dlg.Destroy()
+                    return
 
-        start = time()
+            start = time()
 
-        dlg.Pulse('Generating model and plot')
-        selected_method = self.method_choice.GetStringSelection()
-        selected_plot = self.plot_choice.GetStringSelection()
+            dlg.Pulse('Generating model and plot')
+            selected_method = self.method_choice.GetStringSelection()
+            selected_plot = self.plot_choice.GetStringSelection()
 
-        if self.figpanel.calculated != selected_method:
-            self.figpanel.calculate(selected_method, dlg=dlg)
             if self.figpanel.calculated != selected_method:
-                # Calculation failed for whatever reason
-                dlg.Destroy()
-                return
-            self.update_col_choices()
-        self.figpanel.navtoolbar.update()
+                self.figpanel.calculate(selected_method, dlg=dlg)
+                if self.figpanel.calculated != selected_method:
+                    # Calculation failed for whatever reason
+                    dlg.Destroy()
+                    return
+                self.update_col_choices()
+            self.figpanel.navtoolbar.update()
 
-        dlg.Pulse("Plotting results")
-        self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value,
-                                 legend=self.display_legend.Value)
-        self.figpanel.displayed = selected_plot
-        dlg.Destroy()
+            dlg.Pulse("Plotting results")
+            self.figpanel.plot_redux(type=selected_plot, x=self.x_choice.Value, y=self.y_choice.Value,
+                                     legend=self.display_legend.Value)
+            self.figpanel.displayed = selected_plot
+        finally:
+            dlg.Destroy()
 
         print(f"Finished {selected_method} in {time() - start}")
         self.update_gate_helper()
