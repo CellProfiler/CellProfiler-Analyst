@@ -1691,6 +1691,19 @@ class DBConnect(metaclass=Singleton):
                               "Disable check_tables in your properties file if this is expected.")
             else:
                 logging.info(f"Table checking removed {initial_count - res} rows with missing values")
+            if res < initial_count // 2:
+                import wx
+                dlg = wx.MessageDialog(None, 'The check_tables option was enabled in your propreties file, but this '
+                                             f'would exclude {initial_count - res} of {initial_count} rows from your '
+                                             'data set (which had values missing). If using a combined object '
+                                             'table you might want to disable table checking. Should the rows be '
+                                             'excluded for this session?',
+                                       'Table checking', wx.YES_NO | wx.ICON_WARNING)
+                result = dlg.ShowModal()
+                if result == wx.ID_NO:
+                    # Use the non-checked table instead
+                    logging.info(f"Discarded table checking results, using original object table")
+                    p.object_table = object_table
         except:
             logging.error("Unable to validate checked object table")
 
