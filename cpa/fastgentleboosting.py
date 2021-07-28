@@ -116,7 +116,7 @@ class FastGentleBoosting(object):
     def panelTxt2(self):
         return 'max rules'
 
-    def CreatePerObjectClassTable(self, labels):
+    def CreatePerObjectClassTable(self, labels, updater=None):
         multiclasssql.create_perobject_class_table(labels, self.model)
 
     def FilterObjectsFromClassN(self, obClass, obKeysToTry):
