@@ -57,7 +57,7 @@ STAT_NAMES = {
     SRP: "SRP",
     FA: "Factor_",
     FAGG: "Cluster_",
-    TSNE: "t-SNE_",
+    TSNE: "tSNE_",
 }
 
 PCA_TABLE = "pca_table"
