@@ -814,6 +814,11 @@ class ReduxControlPanel(wx.Panel):
             selected_plot = self.plot_choice.GetStringSelection()
 
             if self.figpanel.calculated != selected_method:
+                # Clear gates made with previous methods.
+                for gate_name in list(p.gates.keys()):
+                    if PCA_TABLE in p.gates[gate_name].get_tables():
+                        p.gates.pop(gate_name)
+                        logging.warning(f'Reduction method changed, gate "{gate_name}" was removed.')
                 self.figpanel.calculate(selected_method, dlg=dlg)
                 if self.figpanel.calculated != selected_method:
                     # Calculation failed for whatever reason
