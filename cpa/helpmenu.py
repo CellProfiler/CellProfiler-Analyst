@@ -71,7 +71,8 @@ def _on_about(self):
     AboutBox(info)
 
 def make_help_menu(frame, main=False, manual_url="index.html"):
-    manual_url = f"https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-{__version__}/{manual_url}"
+    help_version = __version__.rsplit('.', 1)[0]
+    manual_url = f"https://cellprofiler-manual.s3.amazonaws.com/CellProfiler-Analyst-{help_version}/{manual_url}"
     helpMenu = wx.Menu()
     def on_manual(self):
         import webbrowser
