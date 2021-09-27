@@ -10,8 +10,27 @@ authors:
  - family-names: "Cimini"
   given-names: "Beth"
   orcid: "https://orcid.org/0000-0001-9640-9318"
-title: "CellProfiler Analyst 3.0: accessible data exploration and machine learning for image analysis"
+title: "CellProfiler Analyst"
 version: 3.0.0
-doi: 10.1093/bioinformatics/btab634
-date-released: 2021-09-03
-url: "https://doi.org/10.1093/bioinformatics/btab634"
+date-released: 2021-04-28
+url: "https://github.com/CellProfiler/CellProfiler-Analyst"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Stirling"
+    given-names: "David"
+    orcid: "https://orcid.org/0000-0001-6802-4103"
+  - family-names: "Carpenter"
+    given-names: "Anne"
+    orcid: "https://orcid.org/0000-0003-1555-8261"
+   - family-names: "Cimini"
+    given-names: "Beth"
+    orcid: "https://orcid.org/0000-0001-9640-9318"
+  doi: "10.1093/bioinformatics/btab634"
+  journal: "Bioinformatics"
+  month: 9
+  start: 1 # First page number
+  end: 3 # Last page number
+  title: "CellProfiler Analyst 3.0: accessible data exploration and machine learning for image analysis"
+  year: 2021
+  
