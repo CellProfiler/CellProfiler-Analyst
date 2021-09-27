@@ -255,7 +255,7 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
     # For each image clause, classify the cells using the model
     # then for each image key, count the number in each class (and maybe area)
     def do_by_steps(tables, filter_name, area_score=False):
-        filter_clause = '1 = 1'
+        filter_clause = None
         join_clause = ''
         if filter_name is not None:
             filter = p._filters[filter_name]
@@ -295,7 +295,9 @@ def PerImageCounts(classifier, num_classes, filter_name=None, cb=None):
                                 ",".join(db.GetColnamesForClassifier()), tables,
                                 join_clause, where_clause),
                               silent=(idx > 10))
-
+            if not data:
+                logging.info(f"No objects found for condition {where_clause}")
+                continue
             cell_data, image_keys = processData(data)
             predicted_classes = classifier.Predict(cell_data)
             for i in range(0, len(predicted_classes)):
