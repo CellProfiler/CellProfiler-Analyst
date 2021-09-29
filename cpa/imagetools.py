@@ -21,13 +21,13 @@ cachedkeys = []
 cachedparams = None
 cachedresult = None
 
-def FetchTile(obKey, display_whole_image=False):
+def FetchTile(obKey, display_whole_image=False, z=None):
     '''returns a list of image channel arrays cropped around the object
     coordinates
     '''
     imKey = obKey[:-1]
     # Could transform object coords here
-    imgs = FetchImage(imKey)
+    imgs = FetchImage(imKey, z=z)
     if imgs is None:
         # Loading failed, return gracefully.
         return
@@ -43,8 +43,8 @@ def FetchTile(obKey, display_whole_image=False):
             message = ('Failed to load coordinates for object key %s. This may '
                        'indicate a problem with your per-object table.\n'
                        'You can check your per-object table "%s" in TableViewer'
-                       %(', '.join(['%s:%s'%(col, val) for col, val in 
-                                    zip(dbconnect.object_key_columns(), obKey)]), 
+                       %(', '.join(['%s:%s'%(col, val) for col, val in
+                                    zip(dbconnect.object_key_columns(), obKey)]),
                        p.object_table))
             wx.MessageBox(message, 'Error')
             logging.error(message)
@@ -52,10 +52,10 @@ def FetchTile(obKey, display_whole_image=False):
         if p.rescale_object_coords:
             pos[0] *= p.image_rescale[0] / p.image_rescale_from[0]
             pos[1] *= p.image_rescale[1] / p.image_rescale_from[1]
-    
+
         return [Crop(im, size, pos) for im in imgs]
 
-def FetchImage(imKey):
+def FetchImage(imKey, z=None):
     global cachedkeys
     if imKey in cache:
         return cache[imKey]
@@ -66,7 +66,7 @@ def FetchImage(imKey):
             log_io = wx.GetApp().frame.log_io
         except:
             log_io = True
-        imgs = ir.ReadImages(filenames, log_io)
+        imgs = ir.ReadImages(filenames, log_io, z=z)
         if imgs is None:
             # Loading failed
             return
@@ -81,7 +81,7 @@ def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=Non
     imgs = FetchImage(imKey)
     if imgs is None:
         return
-    frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey, 
+    frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey,
                         parent=parent, title=str(imKey),
                         brightness=brightness, scale=scale,
                         contrast=contrast)
@@ -106,7 +106,7 @@ def Crop(imgdata, xxx_todo_changeme, xxx_todo_changeme1):
     loy = max(y - h//2, 0)
     hix = min(x - w//2 + w, im_width)
     hiy = min(y - h//2 + h, im_height)
-    
+
     # find destination
     dest_lox = lox - (x - w//2)
     dest_loy = loy - (y - h//2)
@@ -125,7 +125,7 @@ def Crop(imgdata, xxx_todo_changeme, xxx_todo_changeme1):
 def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=None, display_whole_image=False):
     '''
     imgs  - list of np arrays containing pixel data for each channel of an image
-    chMap - list of colors to map each corresponding channel onto.  
+    chMap - list of colors to map each corresponding channel onto.
             eg: ['red', 'green', 'blue']
     brightness - value around 1.0 to multiply color values by
     contrast - value around 1.0 to scale contrast by
@@ -185,7 +185,7 @@ def MergeToBitmap(imgs, chMap, brightness=1.0, scale=1.0, masks=[], contrast=Non
             elif maxval > 1:
                 imgs[i] = imgs[i] * (1 / 255)
         imData = MergeChannels(imgs, chMap, masks=masks)
-        
+
     h,w = imgs[0].shape
 
     # Convert from float [0-1] to 8bit
@@ -226,27 +226,27 @@ def MergeChannels(imgs, chMap, masks=[]):
     n_channels = sum(map(int, p.channels_per_image))
     blending = p.image_channel_blend_modes or ['add']*n_channels
     h,w = imgs[0].shape
-    
-    colormap = {'red'      : [1,0,0], 
-                'green'    : [0,1,0], 
-                'blue'     : [0,0,1], 
-                'cyan'     : [0,1,1], 
-                'yellow'   : [1,1,0], 
-                'magenta'  : [1,0,1], 
-                'gray'     : [1,1,1], 
+
+    colormap = {'red'      : [1,0,0],
+                'green'    : [0,1,0],
+                'blue'     : [0,0,1],
+                'cyan'     : [0,1,1],
+                'yellow'   : [1,1,0],
+                'magenta'  : [1,0,1],
+                'gray'     : [1,1,1],
                 'none'     : [0,0,0] }
-    
+
     imData = np.zeros((h,w,3), dtype='float')
-    
+
     for i, im in enumerate(imgs):
         if blending[i].lower() == 'add':
             c = colormap[chMap[i].lower()]
             for chan in range(3):
                 imData[:,:,chan] += im * c[chan]
-    
+
     imData[imData>1.0] = 1.0
     imData[imData<0.0] = 0.0
-    
+
     for i, im in enumerate(imgs):
         if blending[i].lower() == 'subtract':
             c = colormap[chMap[i].lower()]
@@ -255,17 +255,17 @@ def MergeChannels(imgs, chMap, masks=[]):
 
     imData[imData>1.0] = 1.0
     imData[imData<0.0] = 0.0
-    
+
     for i, im in enumerate(imgs):
         if blending[i].lower() == 'solid':
             if chMap[i].lower() != 'none':
                 c = colormap[chMap[i].lower()]
                 for chan in range(3):
                     imData[:,:,chan][im == 1] = c[chan]
-            
+
     imData[imData>1.0] = 1.0
     imData[imData<0.0] = 0.0
-    
+
     for mask, func in masks:
         imData = func(imData, mask)
 
@@ -288,9 +288,9 @@ def check_image_shape_compatibility(imgs):
             areas = list(map(np.product, dims))
             max_idx = areas.index(max(areas))
             min_idx = areas.index(min(areas))
-            
+
             s = [imgs[max_idx].shape, imgs[min_idx].shape]
-            
+
             if p.use_larger_image_scale:
                 p.image_rescale = list(map(float, imgs[max_idx].shape))
                 if p.rescale_object_coords:
@@ -299,8 +299,8 @@ def check_image_shape_compatibility(imgs):
                 p.image_rescale = list(map(float, imgs[min_idx].shape))
                 if p.rescale_object_coords:
                     p.image_rescale_from = list(map(float, imgs[max_idx].shape))
-            
-#            dlg = wx.SingleChoiceDialog(None, 
+
+#            dlg = wx.SingleChoiceDialog(None,
 #                     'Some of your images were found to have different\n'
 #                     'scales. Please choose a size and CPA will\n'
 #                     'automatically rescale image channels to fit a\n'
@@ -328,7 +328,7 @@ def rescale(im, target):
 def log_transform(im, interval=None):
     '''Takes a single image in the form of a np array and returns it
     log-transformed and scaled to the interval [0,1] '''
-    # Check that the image isn't binary 
+    # Check that the image isn't binary
     # (used to check if it was not all 0's, but this covers both cases)
     # if (im!=0).any()
     (min, max) = interval or (im.min(), im.max())
@@ -357,12 +357,12 @@ def tile_images(images):
     images - a list of images (arrays) of the same dimensions
     returns an image that is a composite of the given images tiled in in as
        nearly a square grid as possible
-    '''        
+    '''
     h, w = [int(x) for x in images[0].shape]
     for im in images:
         assert (im.shape == (h,w)), 'Images must be the same size to tile them.'
     cols = int(np.ceil(len(images)**0.5))
-    
+
     composite = np.zeros((h, w * cols))
     i = 0
     for row in range(0, cols * h, h):
@@ -421,7 +421,7 @@ def pil_to_np( pilImage ):
         x_str = im.tostring('raw', im.mode)
         x = np.frombytes(x_str,np.uint8)
         return x
-    
+
     if pilImage.mode[0] == 'P':
         im = pilImage.convert('RGBA')
         x = toarray(im)
