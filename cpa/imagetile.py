@@ -20,7 +20,7 @@ class ImageTileDropTarget(wx.DropTarget):
         self.data = wx.CustomDataObject("application.cpa.ObjectKey")
         wx.DropTarget.__init__(self, self.data)
         self.tile = tile
-    
+
     def OnData(self, x, y, dragres):
         if not self.GetData():
             return wx.DragNone
@@ -28,17 +28,17 @@ class ImageTileDropTarget(wx.DropTarget):
         srcID, obKeys = pickle.loads(draginfo)
         if not obKeys:
             return wx.DragNone
-        return self.tile.bin.ReceiveDrop(srcID, obKeys) 
+        return self.tile.bin.ReceiveDrop(srcID, obKeys)
 
 class ImageTile(ImagePanel):
     '''
     ImageTiles are thumbnail images that can be dragged and dropped
     between SortBins.
     '''
-    def __init__(self, bin, obKey, images, chMap, selected=False, 
+    def __init__(self, bin, obKey, images, chMap, selected=False,
                  scale=1.0, brightness=1.0, contrast=None, display_whole_image=False):
 
-        ImagePanel.__init__(self, images, chMap, bin, scale=scale, 
+        ImagePanel.__init__(self, images, chMap, bin, scale=scale,
                             brightness=brightness, contrast=contrast, display_whole_image=display_whole_image)
         self.SetDropTarget(ImageTileDropTarget(self))
 
@@ -100,12 +100,12 @@ class ImageTile(ImagePanel):
             self.popupItemIndexById[id] = i
             self.popupMenu.Append(id,item)
         self.popupMenu.Bind(wx.EVT_MENU,self.OnSelectFromPopupMenu)
-        
+
     def OnRightDown(self, evt):
         ''' On right click show popup menu. '''
         self.CreatePopupMenu()
         self.PopupMenu(self.popupMenu, evt.GetPosition())
-    
+
     def OnSelectFromPopupMenu(self, evt):
         ''' Handles selections from the popup menu. '''
         choice = self.popupItemIndexById[evt.GetId()]
@@ -116,7 +116,7 @@ class ImageTile(ImagePanel):
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1)
                 if self.bin.label != 'image gallery':
-                    imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey))
+                    imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey)[0:2])
                 #imViewer.imagePanel.SetPosition((-db.GetObjectCoords(obKey)[0]+imViewer.Size[0]/2, -db.GetObjectCoords(obKey)[1]+imViewer.Size[1]/2))
 
         elif choice == 1:
@@ -131,7 +131,7 @@ class ImageTile(ImagePanel):
             if self.classifier is not None and self.bin.label == 'unclassified':
                 self.DisplayProbs()
             elif self.bin.label == 'image gallery':
-                self.DisplayObjects()                
+                self.DisplayObjects()
 
     def DisplayObjects(self):
         if self.bin.SelectedKeys():
@@ -146,7 +146,7 @@ class ImageTile(ImagePanel):
             wx.CallAfter(cb)
         else:
             import logging
-            logging.info("No image selected. Please select an image first.")            
+            logging.info("No image selected. Please select an image first.")
 
     def DisplayProbs(self):
         try:
@@ -162,7 +162,7 @@ class ImageTile(ImagePanel):
 
                     values = [get_data(k)]
                     y_score = []
-                    y_score = clf.PredictProba(values)        
+                    y_score = clf.PredictProba(values)
 
                     y_score = y_score[0] # Flatten array
                     self.classifier.PlotProbs(y_score, key=k)
@@ -172,14 +172,14 @@ class ImageTile(ImagePanel):
         except:
             dlg = wx.MessageDialog(self,'Sorry. The selected classifier does not provide this functionality', 'No probability scores available', style=wx.OK)
             dlg.ShowModal()
-        
+
     def OnDClick(self, evt):
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1)
         if imViewer and self.bin.label != 'image gallery':
-            imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey))
-        
+            imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey)[0:2])
+
     def Select(self):
         if not self.selected:
             self.selected = True
@@ -189,13 +189,13 @@ class ImageTile(ImagePanel):
         if self.selected:
             self.selected = False
             self.Refresh()
-    
+
     def ToggleSelect(self):
         if self.selected:
             self.Deselect()
         else:
             self.Select()
-    
+
     def OnLeftDown(self, evt):
         self.bin.SetFocusIgnoringChildren()
         self.leftPressed = True
@@ -216,16 +216,16 @@ class ImageTile(ImagePanel):
             # Handle resetting selection in the sortbin
             self.bin.selectbox = None
             self.bin.Refresh()
-            
+
     def OnMouseOver(self, evt):
         self.showCenter = True
         self.Refresh()
-        
+
     def OnMouseOut(self, evt):
         self.showCenter = False
         self.leftPressed = False
         self.Refresh()
-            
+
     def OnMotion(self, evt):
         if self.bin.dragging:
             # A tile has captured a motion event we want to use with sortbin drag selection.
@@ -266,4 +266,3 @@ class ImageTile(ImagePanel):
     def OnSize(self, evt):
         self.SetClientSize(evt.GetSize())
         evt.Skip()
-

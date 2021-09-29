@@ -27,18 +27,22 @@ def FetchTile(obKey, display_whole_image=False, z=None):
     '''
     imKey = obKey[:-1]
     # Could transform object coords here
+    pos = list(db.GetObjectCoords(obKey))
+    if(len(pos)==3):
+        z=pos[2]
+    print('z is',z)
     imgs = FetchImage(imKey, z=z)
     if imgs is None:
         # Loading failed, return gracefully.
         return
-    
+
     size = (int(p.image_size),int(p.image_size))
     if display_whole_image:
         return imgs
 
     else:
         size = (int(p.image_tile_size), int(p.image_tile_size))
-        pos = list(db.GetObjectCoords(obKey))
+        #pos = list(db.GetObjectCoords(obKey))
         if None in pos:
             message = ('Failed to load coordinates for object key %s. This may '
                        'indicate a problem with your per-object table.\n'
@@ -94,7 +98,7 @@ def Crop(imgdata, xxx_todo_changeme, xxx_todo_changeme1):
     Area outside of the image is filled with the color specified.
     '''
     (w,h) = xxx_todo_changeme
-    (x,y) = xxx_todo_changeme1
+    (x,y, *other) = xxx_todo_changeme1 #this ignores z if present
     im_width = imgdata.shape[1]
     im_height = imgdata.shape[0]
 
