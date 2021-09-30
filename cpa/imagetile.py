@@ -116,6 +116,8 @@ class ImageTile(ImagePanel):
                 coords = db.GetObjectCoords(obKey)
                 if len(list(coords))==3:
                     z=coords[2]
+                else:
+                    z=None
                 imViewer = imagetools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1, z=z)
@@ -181,6 +183,8 @@ class ImageTile(ImagePanel):
         coords = db.GetObjectCoords(self.obKey)
         if len(list(coords))==3:
             z=coords[2]
+        else:
+            z=None
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
                                         scale=1, z=z)
