@@ -61,6 +61,7 @@ class ImageReader(object):
                 logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
             try:
                 if z:
+                    #print("z inside of _readImage ", z)
                     return imageio.mimread(filename_or_url)[z]
                 else:
                     return imageio.imread(filename_or_url)

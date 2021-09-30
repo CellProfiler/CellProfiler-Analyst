@@ -30,7 +30,7 @@ def FetchTile(obKey, display_whole_image=False, z=None):
     pos = list(db.GetObjectCoords(obKey))
     if(len(pos)==3):
         z=pos[2]
-    print('z is',z)
+    #print('z is',z)
     imgs = FetchImage(imKey, z=z)
     if imgs is None:
         # Loading failed, return gracefully.
@@ -61,7 +61,7 @@ def FetchTile(obKey, display_whole_image=False, z=None):
 
 def FetchImage(imKey, z=None):
     global cachedkeys
-    if imKey in cache:
+    if imKey in cache and z is None:
         return cache[imKey]
     else:
         ir = ImageReader()
@@ -75,7 +75,8 @@ def FetchImage(imKey, z=None):
             # Loading failed
             return
         cache[imKey] = imgs
-        cachedkeys += [imKey]
+        if imKey not in cachedkeys: #only add the key if it's new
+            cachedkeys += [imKey]
         while len(cachedkeys) > int(p.image_buffer_size):
             del cache[cachedkeys.pop(0)]
         return cache[imKey]
