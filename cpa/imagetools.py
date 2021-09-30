@@ -81,9 +81,9 @@ def FetchImage(imKey, z=None):
             del cache[cachedkeys.pop(0)]
         return cache[imKey]
 
-def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None):
+def ShowImage(imKey, chMap, parent=None, brightness=1.0, scale=1.0, contrast=None, z=None):
     from .imageviewer import ImageViewer
-    imgs = FetchImage(imKey)
+    imgs = FetchImage(imKey, z=z)
     if imgs is None:
         return
     frame = ImageViewer(imgs=imgs, chMap=chMap, img_key=imKey,

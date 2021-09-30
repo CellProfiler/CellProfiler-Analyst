@@ -112,11 +112,15 @@ class ImageTile(ImagePanel):
         if choice == 0:
             for obKey in self.bin.SelectedKeys():
                 #View full images of selected
+                #get coordinates of object (inc z if there)
+                coords = db.GetObjectCoords(obKey)
+                if len(list(coords))==3:
+                    z=coords[2]
                 imViewer = imagetools.ShowImage(obKey[:-1], self.chMap[:], parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
-                                        scale=1)
+                                        scale=1, z=z)
                 if self.bin.label != 'image gallery':
-                    imViewer.imagePanel.SelectPoint(db.GetObjectCoords(obKey)[0:2])
+                    imViewer.imagePanel.SelectPoint(coords[0:2])
                 #imViewer.imagePanel.SetPosition((-db.GetObjectCoords(obKey)[0]+imViewer.Size[0]/2, -db.GetObjectCoords(obKey)[1]+imViewer.Size[1]/2))
 
         elif choice == 1:
