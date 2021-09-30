@@ -178,9 +178,12 @@ class ImageTile(ImagePanel):
             dlg.ShowModal()
 
     def OnDClick(self, evt):
+        coords = db.GetObjectCoords(self.obKey)
+        if len(list(coords))==3:
+            z=coords[2]
         imViewer = imagetools.ShowImage(self.obKey[:-1], list(self.chMap), parent=self.classifier,
                                         brightness=self.brightness, contrast=self.contrast,
-                                        scale=1)
+                                        scale=1, z=z)
         if imViewer and self.bin.label != 'image gallery':
             imViewer.imagePanel.SelectPoint(db.GetObjectCoords(self.obKey)[0:2])
 
