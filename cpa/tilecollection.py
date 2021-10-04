@@ -86,12 +86,10 @@ class TileCollection(metaclass=Singleton):
             for order, obKey in enumerate(obKeys):
                 if not obKey in self.tileData:
                     if obKey[0] in seen and not processStack:
-                        print("processing together")
                         # An item in the queue had the same source image, process them together.
                         # Heapqueue and the inbuilt cache will allow us to only load the source image once.
                         heappush(self.loadq, ((priority, seen[obKey[0]], order), obKey, display_whole_image))
                     else:
-                        print("processing separate")
                         heappush(self.loadq, ((priority, self.group_priority, order), obKey, display_whole_image))
                         seen[obKey[0]] = self.group_priority
                         self.group_priority += 1

@@ -60,8 +60,7 @@ class ImageReader(object):
             if log_io:
                 logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
             try:
-                if z:
-                    #print("z inside of _readImage ", z)
+                if p.process_3D and z is not None:
                     return imageio.mimread(filename_or_url)[z]
                 else:
                     return imageio.imread(filename_or_url)
@@ -77,7 +76,7 @@ class ImageReader(object):
         if log_io:
             logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
         try:
-            if z:
+            if p.process_3D and z is not None:
                 return bioformats.load_image(filename_or_url, rescale=False, z=z)
             else:
                 return bioformats.load_image(filename_or_url, rescale=False)

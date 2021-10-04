@@ -67,7 +67,8 @@ string_vars = ['db_type',
                'negative_control', # For DMSO normalization, but optional
                'class_names',
                'force_bioformats',
-               'use_legacy_fetcher'
+               'use_legacy_fetcher',
+               'process_3D'
                ]
 
 list_vars = ['image_path_cols', 'image_channel_paths',
@@ -132,7 +133,8 @@ optional_vars = ['db_port',
                  'negative_control',
                  'class_names',
                  'force_bioformats',
-                 'use_legacy_fetcher'
+                 'use_legacy_fetcher',
+                 'process_3D'
                  ]
 
 # map deprecated fields to new fields
@@ -694,6 +696,16 @@ class Properties(metaclass=Singleton):
             self.use_legacy_fetcher = False
         else:
             self.use_legacy_fetcher = False
+
+        if self.field_defined('process_3D') and self.process_3D.lower() in ['true', 'yes', 'on', 't', 'y']:
+            self.process_3D = True
+        elif self.field_defined('process_3D') and self.process_3D.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.process_3D = False
+        elif self.field_defined('process_3D'):
+            logging.warn(f'[Properties] WARNING (process_3D): Field was invalid ({self.process_3D}), using default of "False".')
+            self.process_3D = False
+        else:
+            self.process_3D = False
 
         if self.use_larger_image_scale in [True, False]:
             pass

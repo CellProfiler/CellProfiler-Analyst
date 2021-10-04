@@ -114,7 +114,7 @@ class ImageTile(ImagePanel):
                 #View full images of selected
                 #get coordinates of object (inc z if there)
                 coords = db.GetObjectCoords(obKey)
-                if len(list(coords))==3:
+                if len(coords)==3:
                     z=coords[2]
                 else:
                     z=None
@@ -181,7 +181,7 @@ class ImageTile(ImagePanel):
 
     def OnDClick(self, evt):
         coords = db.GetObjectCoords(self.obKey)
-        if len(list(coords))==3:
+        if len(coords)==3:
             z=coords[2]
         else:
             z=None

@@ -27,10 +27,17 @@ def FetchTile(obKey, display_whole_image=False, z=None):
     '''
     imKey = obKey[:-1]
     # Could transform object coords here
-    pos = list(db.GetObjectCoords(obKey))
-    if(len(pos)==3):
-        z=pos[2]
-    #print('z is',z)
+    if p.process_3D:
+        pos = list(db.GetObjectCoords(obKey))
+        if len(pos)<3:
+            message = ('Too few coordinates for object key %s. This may '
+                       'indicate a problem with your per-object table or properties file. \n')
+            wx.MessageBox(message, 'Error')
+            logging.error(message)
+            return None
+        else:
+            z=pos[2]
+
     imgs = FetchImage(imKey, z=z)
     if imgs is None:
         # Loading failed, return gracefully.
@@ -42,7 +49,8 @@ def FetchTile(obKey, display_whole_image=False, z=None):
 
     else:
         size = (int(p.image_tile_size), int(p.image_tile_size))
-        #pos = list(db.GetObjectCoords(obKey))
+        if not p.process_3D: 
+            pos = list(db.GetObjectCoords(obKey))
         if None in pos:
             message = ('Failed to load coordinates for object key %s. This may '
                        'indicate a problem with your per-object table.\n'

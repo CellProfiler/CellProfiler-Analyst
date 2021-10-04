@@ -1,5 +1,6 @@
 
 import decimal
+from http.client import NO_CONTENT
 import random
 from .properties import Properties
 from .singleton import Singleton
@@ -677,7 +678,7 @@ class DBConnect(metaclass=Singleton):
     def GetObjectCoords(self, obKey, none_ok=False, silent=False):
         '''Returns the specified object's x, y, z coordinates in an image.
         '''
-        if p.cell_z_loc:
+        if p.process_3D:
             res = self.execute('SELECT %s, %s, %s FROM %s WHERE %s'%(
                             p.cell_x_loc, p.cell_y_loc, p.cell_z_loc, p.object_table,
                             GetWhereClauseForObjects([obKey])), silent=silent)
@@ -691,9 +692,6 @@ class DBConnect(metaclass=Singleton):
                             p.cell_x_loc, p.cell_y_loc, p.object_table,
                             GetWhereClauseForObjects([obKey])), silent=silent)
 
-            #print(len(elm))
-        # for elm in res:
-        #     print("inside get ObjCoords", elm)
         if len(res) == 0 or res[0][0] is None or res[0][1] is None:
             message = ('Failed to load coordinates for object key %s. This may '
                        'indicate a problem with your per-object table.\n'
@@ -706,9 +704,9 @@ class DBConnect(metaclass=Singleton):
             return res[0]
 
     def GetObjectsCoords(self, obKeys, none_ok=False, silent=False):
-        '''Returns the specified objects' x, y, z coordinates in an image.
+        '''Returns the specified objects' x, y, (and sometimes) z coordinates in an image.
         '''
-        if p.cell_z_loc:
+        if p.process_3D:
             res = self.execute('SELECT %s, %s, %s, %s, %s FROM %s WHERE %s'%(
                         p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc, p.cell_z_loc, p.object_table,
                         GetWhereClauseForObjects(obKeys)), silent=silent)
@@ -740,7 +738,7 @@ class DBConnect(metaclass=Singleton):
 
     def GetAllObjectCoordsFromImage(self, imKey, z=None):
         ''' Returns a list of lists x, y, z coordinates for all objects in the given image. '''
-        if z:
+        if p.process_3D and z is not None:
             select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+','+p.cell_z_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imKey])+' ORDER BY '+p.object_id
         else:
             select = 'SELECT '+p.cell_x_loc+', '+p.cell_y_loc+' FROM '+p.object_table+' WHERE '+GetWhereClauseForImages([imKey])+' ORDER BY '+p.object_id
