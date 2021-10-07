@@ -683,10 +683,14 @@ class DBConnect(metaclass=Singleton):
                             p.cell_x_loc, p.cell_y_loc, p.cell_z_loc, p.object_table,
                             GetWhereClauseForObjects([obKey])), silent=silent)
             reslist = [list(coord) for coord in res] #tuples are immutable so first make tuple of tuples a list of lists
-            reslist[0][2]=round(reslist[0][2]) #round to get z slice
-            #reslist[0][2]=4
-            restup = [tuple(coord) for coord in reslist] #then convert back to list of tuples
-            res = tuple(restup) #convert to tuple of tuples
+            try:
+                reslist[0][2]=round(reslist[0][2]) #round to get z slice
+                print(reslist)
+                restup = [tuple(coord) for coord in reslist] #then convert back to list of tuples
+                res = tuple(restup) #convert to tuple of tuples
+            except:
+                print("Correct types for coordinates not found. Check your per-object table and ensure every object has XYZ coordinates.")
+            
         else:
             res = self.execute('SELECT %s, %s FROM %s WHERE %s'%(
                             p.cell_x_loc, p.cell_y_loc, p.object_table,
