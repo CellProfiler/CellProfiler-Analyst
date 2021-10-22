@@ -63,7 +63,7 @@ class TileCollection(metaclass=Singleton):
         self.loader = TileLoader(self, None)
 
     def GetTileData(self, obKey, notify_window, priority=1):
-        return self.GetTiles([obKey], notify_window, priority)[0]
+        return self.GetTiles([obKey], notify_window, priority, processStack=p.process_3D)[0]
 
     def GetTiles(self, obKeys, notify_window, priority=1, display_whole_image=False, processStack=False):
         '''
@@ -75,7 +75,6 @@ class TileCollection(metaclass=Singleton):
         Returns: a list of lists of tile data (in numpy arrays) in the order
             of the obKeys that were passed in.
         '''
-        processStack=True
         if notify_window not in self.loader.notify_window:
             self.loader.notify_window.append(notify_window)
         self.group_priority -= 1
@@ -183,7 +182,6 @@ class TileLoader(threading.Thread):
 
                     # Get the tile
                     new_data = imagetools.FetchTile(obKey, display_whole_image=display_whole_image)
-                    #new_data=None
                     if new_data is None:
                         #if fetching fails, leave the tile blank
                         continue

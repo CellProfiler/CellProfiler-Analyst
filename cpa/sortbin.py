@@ -243,7 +243,7 @@ class SortBin(wx.ScrolledWindow):
             source.UpdateQuantity()
         else:
             imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority,
-                                                   display_whole_image=display_whole_image)
+                                                   display_whole_image=display_whole_image, processStack=p.process_3D)
             for i, obKey, imgs in zip(list(range(len(obKeys))), obKeys, imgSet):
                 if self.classifier:
                     newTile = ImageTile(self, obKey, imgs, chMap, False,
