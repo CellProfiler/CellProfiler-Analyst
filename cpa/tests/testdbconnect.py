@@ -154,7 +154,6 @@ class TestDBConnect(unittest.TestCase):
         self.setup_mysql()
         xy = self.db.GetObjectCoords((1,1))
         assert xy==(11.4818, 305.06400000000002)
-        #does this need to be changed below now that we're dealing with 3D?? unsure of what is being tested
         self.setup_sqlite()
         xy = self.db.GetObjectCoords((0,1,1))
         assert xy==(11.4818, 305.06400000000002)
