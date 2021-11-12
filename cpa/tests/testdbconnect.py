@@ -154,6 +154,7 @@ class TestDBConnect(unittest.TestCase):
         self.setup_mysql()
         xy = self.db.GetObjectCoords((1,1))
         assert xy==(11.4818, 305.06400000000002)
+       
         self.setup_sqlite()
         xy = self.db.GetObjectCoords((0,1,1))
         assert xy==(11.4818, 305.06400000000002)
