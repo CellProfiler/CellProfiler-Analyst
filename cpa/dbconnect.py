@@ -685,7 +685,6 @@ class DBConnect(metaclass=Singleton):
             reslist = [list(coord) for coord in res] #tuples are immutable so first make tuple of tuples a list of lists
             try:
                 reslist[0][2]=round(reslist[0][2]) #round to get z slice
-                print(reslist)
                 restup = [tuple(coord) for coord in reslist] #then convert back to list of tuples
                 res = tuple(restup) #convert to tuple of tuples
             except:

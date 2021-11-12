@@ -27,7 +27,7 @@ def FetchTile(obKey, display_whole_image=False, z=None):
     '''
     imKey = obKey[:-1]
     # Could transform object coords here
-    if p.process_3D:
+    if p.process_3D and not display_whole_image:
         pos = list(db.GetObjectCoords(obKey))
         if len(pos)<3:
             message = ('Too few coordinates for object key %s. This may '
@@ -37,6 +37,8 @@ def FetchTile(obKey, display_whole_image=False, z=None):
             return None
         else:
             z=pos[2]
+    elif p.process_3D and display_whole_image:
+        z="mid"
 
     imgs = FetchImage(imKey, z=z)
     if imgs is None:

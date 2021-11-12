@@ -61,6 +61,9 @@ class ImageReader(object):
                 logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
             try:
                 if p.process_3D and z is not None:
+                    if z == "mid":
+                        image = imageio.mimread(filename_or_url, memtest=False)
+                        z = round(len(image)/2)
                     return imageio.mimread(filename_or_url, memtest=False)[z]
                 else:
                     return imageio.imread(filename_or_url)
