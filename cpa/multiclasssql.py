@@ -37,35 +37,34 @@ def create_perobject_class_table(classifier, classNames, updater):
         raise ValueError('"class_table" in properties file is not set.')
 
     index_cols = UniqueObjectClause()
-    class_cols = UniqueObjectClause() + ', class_number, class'
     class_col_defs = f"{object_key_defs()}, class VARCHAR ({max(map(len, classNames))}), class_number INT"
 
     # Drop must be explicitly asked for Classifier.ScoreAll
-    print('Drop table...')
+    logging.debug('Dropping table...')
     db.execute('DROP TABLE IF EXISTS %s'%(p.class_table))
-    print('Create table...')
+    logging.debug('Creating table...')
     db.execute('CREATE TABLE %s (%s)'%(p.class_table, class_col_defs))
-    print('Create index...')
+    logging.debug('Creating index...')
     db.execute('CREATE INDEX idx_%s ON %s (%s)'%(p.class_table, p.class_table, index_cols))
 
-    print('Getting data...')
+    logging.debug('Getting data...')
     chunk_size = 10000
     cap = dm.get_total_object_count()
     updater(0, "Classifying objects...")
-
+    logging.info('Classifying objects...')
+    logging.info('Any values that cannot be converted to float will be set to 0')
     for start in range(0, cap, chunk_size):
-        updater(int(start / cap * 100))
+        updater(int(start / cap * 100), f"Classifying objects... {start}")
 
-        print(f"Classifying object... {start}")
+        logging.debug(f"Classifying objects... {start}")
         data = db.execute(f'SELECT {UniqueObjectClause(p.object_table)}, {",".join(db.GetColnamesForClassifier())} '
-                          f'FROM {p.object_table} LIMIT {start}, {chunk_size}')
+                          f'FROM {p.object_table} LIMIT {start}, {chunk_size}', silent=True)
 
-        print('Getting predictions...')
+        logging.debug('Getting predictions...')
         cell_data, object_keys = processData(data)
         predicted_classes = classifier.Predict(cell_data)
-
         try:
-            print('Preparing data table...')
+            logging.debug('Preparing data table...')
             # We need to pass a connection object to Pandas so it can do all the work for us.
             connID = threading.currentThread().getName()
             if connID not in db.connections:
@@ -74,37 +73,13 @@ def create_perobject_class_table(classifier, classNames, updater):
             class_data = pd.DataFrame(data=object_keys, columns=object_key_columns())
             class_data["class"] = [classNames[i - 1] for i in predicted_classes]
             class_data["class_number"] = predicted_classes
-            print('Writing to database...')
+            logging.debug('Writing to database...')
             class_data.to_sql(p.class_table, conn, if_exists="append", index=False)
         except:
-            # This is the old writing method, may still be necessary if a weird db connection type is used.
-            print("Faster database writing method failed, retrying with slow method...")
-            print('Drop table...')
-            db.execute('DROP TABLE IF EXISTS %s'%(p.class_table))
-            print('Create table...')
-            db.execute('CREATE TABLE %s (%s)'%(p.class_table, class_col_defs))
-            print('Create index...')
-            db.execute('CREATE INDEX idx_%s ON %s (%s)'%(p.class_table, p.class_table, index_cols))
-
-            if len(object_keys.shape) > 2:
-                expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
-                    object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2], predicted_classes[ii] )
-                    for ii in range(0, len(predicted_classes))])+ " END"
-                expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d AND %s=%d THEN '%s'"%(p.table_id,
-                    object_keys[ii][0], p.image_id, object_keys[ii][1], p.object_id, object_keys[ii][2],
-                    classNames[predicted_classes[ii] - 1]) for ii in range(0, len(predicted_classes))])+ " END"
-            elif len(object_keys.shape) == 2:
-                expr = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
-                    object_keys[ii][0], p.object_id, object_keys[ii][1], predicted_classes[ii] )
-                    for ii in range(0, len(predicted_classes))])+ " END"
-                expr2 = 'CASE '+ ''.join(["WHEN %s=%d AND %s=%d THEN '%s'"%(p.image_id,
-                    object_keys[ii][0], p.object_id, object_keys[ii][1], classNames[predicted_classes[ii] - 1])
-                    for ii in range(0, len(predicted_classes))])+ " END"
-            else:
-                raise Exception(f'object keys have length {len(object_keys.shape)} but should have length >= 2')
-            print('Writing to database...')
-            db.execute('INSERT INTO %s (%s) SELECT %s, %s, %s FROM %s'%(p.class_table, class_cols, index_cols, expr, expr2, p.object_table),
-                silent=True)
+            logging.warning("Pandas database writing method failed, using alternative method...")
+            logging.debug('Writing to database...')
+            data = ', '.join(map(str, zip(object_keys[:, 0], object_keys[:, 1], [classNames[i - 1] for i in predicted_classes],  predicted_classes)))
+            db.execute(f'INSERT INTO {p.class_table} VALUES {data}', silent=True)
     db.Commit()
 
 
@@ -199,7 +174,6 @@ def processData(data):
                 logging.info("Fallback data conversion failed, will try proceeding anyway - ", e)
             # print(('data type 2 ', cell_data.dtype))
     cell_data = np.nan_to_num(cell_data)
-    logging.info('Any values that cannot be converted to float were set to 0')
     return cell_data, object_keys
 
 def _objectify(p, field):
