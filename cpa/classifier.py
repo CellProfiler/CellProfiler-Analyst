@@ -1256,6 +1256,10 @@ class Classifier(wx.Frame):
                     bin.trained = True
                 self.scoreAllBtn.Enable()
                 self.scoreImageBtn.Enable()
+                # Create an empty training set as a placeholder.
+                self.trainingSet = TrainingSet(p)
+                self.trainingSet.Create([bin.label for bin in self.classBins],
+                                        [[] for _ in self.classBins])
                 self.algorithm.trained = True
                 self.PostMessage('Classifier model successfully loaded')
 
