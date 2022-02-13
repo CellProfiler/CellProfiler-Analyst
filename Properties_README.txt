@@ -107,6 +107,7 @@ well_id     =  <your_well_id_column>
 
 cell_x_loc  =  <your_object_x_location_column>
 cell_y_loc  =  <your_object_y_location_column>
+cell_z_loc  =  <your_object_z_location_column>
 
 
 # ======== Image Path and Filename Columns ========
@@ -336,4 +337,13 @@ force_bioformats = no
 # fetching and randomisation.
 
 use_legacy_fetcher = no
+
+# ======== Process as 3D (visualize a different z position per object) ========
+# OPTIONAL
+# [yes/no]  In 3D datasets, this optionally displays in CPA classifier a separate
+# z slice for each object depending on that object's center position in z. Useful
+# for classifying cells from 3D data.
+
+process_3D = no
+
 

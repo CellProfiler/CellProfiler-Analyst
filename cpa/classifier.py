@@ -113,8 +113,8 @@ class Classifier(wx.Frame):
         #         self.image_tile_size = min([image_width, image_height])
         #     self.scale = 100.0/float(self.image_tile_size)
 
-        self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']        
-        
+        self.required_fields = ['object_table', 'object_id', 'cell_x_loc', 'cell_y_loc']
+
         for field in self.required_fields:
             if not p.field_defined(field):
                 errdlg = wx.MessageDialog(self, 'Properties field "%s" is required for Classifier.'% (field),
@@ -123,7 +123,7 @@ class Classifier(wx.Frame):
                 errdlg.Destroy()
                 logging.error('Properties field "%s" is required for Classifier.'% (field))
                 self.Destroy()
-                return 
+                return
 
         self.contrast = 'Linear'
         self.defaultTSFileName = None
@@ -259,7 +259,7 @@ class Classifier(wx.Frame):
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_sizer.Add(self.find_rules_panel, flag=wx.EXPAND)
         self.fetch_and_rules_sizer.Add((5, 5))
-        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)      
+        self.fetch_and_rules_sizer.Add(self.rules_text, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
         self.fetch_and_rules_sizer.Add((5, 5))
         self.fetch_and_rules_panel.SetSizerAndFit(self.fetch_and_rules_sizer)
 
@@ -295,7 +295,7 @@ class Classifier(wx.Frame):
         RandomForestClassifier = GeneralClassifier("ensemble.RandomForestClassifier(n_estimators=100)", self)
         AdaBoostClassifier = GeneralClassifier("ensemble.AdaBoostClassifier()", self)
         SVC = GeneralClassifier("svm.SVC(probability=True)", self, scaler=True)
-        
+
         GradientBoostingClassifier = GeneralClassifier("ensemble.GradientBoostingClassifier()", self)
         LogisticRegression = GeneralClassifier("linear_model.LogisticRegression()", self)
         LDA = GeneralClassifier("discriminant_analysis.LinearDiscriminantAnalysis()", self)
@@ -380,7 +380,7 @@ class Classifier(wx.Frame):
             response = dlg.ShowModal()
             if response == wx.ID_YES:
                 name, file_extension = os.path.splitext(p.training_set)
-                if '.txt' == file_extension: 
+                if '.txt' == file_extension:
                     self.LoadTrainingSet(p.training_set)
                 elif '.csv' == file_extension:
                     self.LoadTrainingSetCSV(p.training_set)
@@ -914,7 +914,7 @@ class Classifier(wx.Frame):
         # DD: Add new option to select uncertain images
         if self.algorithm.IsTrained() and self.algorithm.name != "FastGentleBoosting":
             selectableClasses += ['uncertain']
-        
+
         self.obClassChoice.SetItems(selectableClasses)
         if len(selectableClasses) < sel:
             sel = 0
@@ -943,7 +943,7 @@ class Classifier(wx.Frame):
     # Save object thumbnails of training set
     def OnSaveThumbnails(self, evt):
 
-        saveDialog = wx.DirDialog(self, "Choose input directory", 
+        saveDialog = wx.DirDialog(self, "Choose input directory",
                                    style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
         if saveDialog.ShowModal() == wx.ID_OK:
             directory = saveDialog.GetPath()
@@ -1208,7 +1208,7 @@ class Classifier(wx.Frame):
     # Get the name of the loaded model file
     def GetModelData(self, filename):
         import joblib
-        try: 
+        try:
             return joblib.load(filename)
         except:
             logging.error("Couldn't check model!")
@@ -1307,7 +1307,7 @@ class Classifier(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             name, file_extension = os.path.splitext(filename)
-            if '.txt' == file_extension: 
+            if '.txt' == file_extension:
                 self.LoadTrainingSet(filename)
             elif '.csv' == file_extension:
                 self.LoadTrainingSetCSV(filename)
@@ -1604,7 +1604,7 @@ class Classifier(wx.Frame):
                     dlg.Pulse()
                     # Convert labels
                     self.algorithm.Train(self.trainingSet.label_array, self.trainingSet.values, output)
-                    self.nRules = nRules # Hack 
+                    self.nRules = nRules # Hack
 
                 # JK - End Modification
 
@@ -1667,12 +1667,12 @@ class Classifier(wx.Frame):
         for className, obKeys in classHits.items():
             training_keys = [key for key in obKeys if key in training_obKeys]
             if training_keys:
-                trainingCoords['training ' + className] = db.GetObjectsCoords(training_keys)
+                trainingCoords['training ' + className] = db.GetObjectsCoords(training_keys)[0:2]
             else:
                 trainingCoords['training ' + className] = []
             object_keys = [key for key in obKeys if key not in training_obKeys]
             if object_keys:
-                classCoords[className] = db.GetObjectsCoords(object_keys)
+                classCoords[className] = db.GetObjectsCoords(object_keys)[0:2]
             else:
                 classCoords[className] = []
         classCoords.update(trainingCoords)
@@ -2037,7 +2037,7 @@ class Classifier(wx.Frame):
                 self.filterChoice.Select(0)
             cff.Destroy()
         self.fetch_panel.Layout()
-        self.fetch_panel.Refresh() 
+        self.fetch_panel.Refresh()
 
     def UpdateFilterChoices(self, evt):
         selected_string = self.filterChoice.GetStringSelection()
@@ -2245,7 +2245,7 @@ class Classifier(wx.Frame):
             dlg.SetValue(string)
             if dlg.ShowModal() == wx.ID_OK:
                 try:
-                    s = dlg.GetValue() 
+                    s = dlg.GetValue()
                     s = s.split("\n")[:-1] # Get rid of the last element
                     for el in s:
                         el = el.split(" : ")
@@ -2292,8 +2292,8 @@ class Classifier(wx.Frame):
             result = ""
             for i,var in enumerate(variances):
                 result += colnames[indices[i]] + " , " + str(var) + "\n"
-            
-            
+
+
             dlg = wx.TextEntryDialog(self, 'Lowest Feature Variance:', 'Features ordered by lowest variance',
                                      style=wx.TE_MULTILINE | wx.OK )
             dlg.SetSize((500,500))
@@ -2387,7 +2387,7 @@ class Classifier(wx.Frame):
         clf = OneVsRestClassifier(self.algorithm.classifier)
         clf.fit(X_train, y_train)
         if hasattr(self.algorithm.classifier, "predict_proba"):
-            y_score = clf.predict_proba(X_test)        
+            y_score = clf.predict_proba(X_test)
         else: # use decision function
             y_score = clf.decision_function(X_test)
 
@@ -2453,7 +2453,7 @@ class Classifier(wx.Frame):
         clf = OneVsRestClassifier(self.algorithm.classifier)
         clf.fit(X_train, y_train)
         if hasattr(self.algorithm.classifier, "predict_proba"):
-            y_score = clf.predict_proba(X_test)        
+            y_score = clf.predict_proba(X_test)
         else: # use decision function
             y_score = clf.decision_function(X_test)
 
@@ -2503,8 +2503,8 @@ class Classifier(wx.Frame):
         if(len(df) > 7):
             sns.barplot(x="Probs", y="Class", data=df, palette="RdBu_r",ax=ax)
         else:
-            sns.barplot(y="Probs", x="Class", data=df, palette="RdBu_r",ax=ax)    
-        
+            sns.barplot(y="Probs", x="Class", data=df, palette="RdBu_r",ax=ax)
+
         plt.show()
 
     def PlotLearningCurve(self,estimator, plot_title, X, y, ylim=None, cv=None,
@@ -2539,7 +2539,7 @@ class Classifier(wx.Frame):
 
         n_jobs : integer, optional
             Number of jobs to run in parallel (default 1).
-        """    
+        """
         from sklearn.model_selection import learning_curve
 
         plt.figure()
@@ -2570,7 +2570,7 @@ class Classifier(wx.Frame):
 
         plt.legend(loc="best")
         plt.show()
-        
+
 
 class StopCalculating(Exception):
     pass

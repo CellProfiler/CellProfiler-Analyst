@@ -17,13 +17,13 @@ class ThrowingURLopener(urllib.request.URLopener):
 
 class ImageReader(object):
 
-    def ReadImages(self, fds, log_io=True):
+    def ReadImages(self, fds, log_io=True, z=None):
         '''fds -- list of file descriptors (filenames or urls)
         returns a list of channels as numpy float32 arrays
         '''
         channels = []
         for i, filename_or_url in enumerate(fds):
-            image = self._read_image(filename_or_url, log_io=log_io)
+            image = self._read_image(filename_or_url, log_io=log_io, z=z)
             if image is None:
                 return
             channels += self._extract_channels(filename_or_url, image,
@@ -42,7 +42,7 @@ class ImageReader(object):
 
         return channels
 
-    def _read_image(self, filename_or_url, log_io=True):
+    def _read_image(self, filename_or_url, log_io=True, z=None):
         if p.image_url_prepend:
             parsed = urllib.parse.urlparse(p.image_url_prepend + filename_or_url)
             if parsed.scheme:
@@ -60,7 +60,13 @@ class ImageReader(object):
             if log_io:
                 logging.info('ImageIO: Loading image from "%s"' % filename_or_url)
             try:
-                return imageio.imread(filename_or_url)
+                if p.process_3D and z is not None:
+                    if z == "mid":
+                        image = imageio.mimread(filename_or_url, memtest=False)
+                        z = round(len(image)/2)
+                    return imageio.mimread(filename_or_url, memtest=False)[z]
+                else:
+                    return imageio.imread(filename_or_url)
             except FileNotFoundError:
                 logging.error(f"File not found: {filename_or_url}")
                 return
@@ -73,7 +79,10 @@ class ImageReader(object):
         if log_io:
             logging.info('BioFormats: Loading image from "%s"' % filename_or_url)
         try:
-            return bioformats.load_image(filename_or_url, rescale=False)
+            if p.process_3D and z is not None:
+                return bioformats.load_image(filename_or_url, rescale=False, z=z)
+            else:
+                return bioformats.load_image(filename_or_url, rescale=False)
         except FileNotFoundError:
             logging.error(f"File not found: {filename_or_url}")
         except:

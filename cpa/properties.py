@@ -24,26 +24,27 @@ supported_plate_types = {'6'    : [2, 3],
                          '5600' : [40, 140],
                          }
 
-string_vars = ['db_type', 
-               'db_port', 
-               'db_host', 
-               'db_name', 
-               'db_user', 
+string_vars = ['db_type',
+               'db_port',
+               'db_host',
+               'db_name',
+               'db_user',
                'db_passwd',
                'db_password',
-               'image_table', 
+               'image_table',
                'object_table',
-               'image_csv_file', 
+               'image_csv_file',
                'object_csv_file',
-               'table_id', 
-               'image_id', 
-               'object_id', 
-               'plate_id', 
+               'table_id',
+               'image_id',
+               'object_id',
+               'plate_id',
                'well_id',
-               'cell_x_loc', 
+               'cell_x_loc',
                'cell_y_loc',
+               'cell_z_loc',
                'image_url_prepend',
-               'image_tile_size', 
+               'image_tile_size',
                'image_buffer_size',
                'tile_buffer_size',
                'area_scoring_column',
@@ -53,7 +54,7 @@ string_vars = ['db_type',
                'check_tables',
                'db_sql_file',
                'db_sqlite_file',
-               'use_larger_image_scale', 
+               'use_larger_image_scale',
                'rescale_object_coords',
                'well_format',
                'link_tables_table',
@@ -66,55 +67,57 @@ string_vars = ['db_type',
                'negative_control', # For DMSO normalization, but optional
                'class_names',
                'force_bioformats',
-               'use_legacy_fetcher'
+               'use_legacy_fetcher',
+               'process_3D'
                ]
 
-list_vars = ['image_path_cols', 'image_channel_paths', 
-             'image_file_cols', 'image_channel_files', 
-             'image_names', 'image_channel_names', 
-             'image_channel_colors', 
-             'channels_per_image', 
-             'image_channel_blend_modes', 
+list_vars = ['image_path_cols', 'image_channel_paths',
+             'image_file_cols', 'image_channel_files',
+             'image_names', 'image_channel_names',
+             'image_channel_colors',
+             'channels_per_image',
+             'image_channel_blend_modes',
              'object_name',
-             'classifier_ignore_substrings', 
+             'classifier_ignore_substrings',
              'classifier_ignore_columns',
              'image_thumbnail_cols',
              'plate_shape',]
 
 dict_vars = ['gates']
 
-optional_vars = ['db_port', 
-                 'db_host', 
-                 'db_name', 
-                 'db_user', 
+optional_vars = ['db_port',
+                 'db_host',
+                 'db_name',
+                 'db_user',
                  'db_passwd',
                  'db_password',
-                 'table_id', 
-                 'image_url_prepend', 
+                 'table_id',
+                 'image_url_prepend',
                  'image_csv_file',
-                 'image_channel_names', 'image_names', 
+                 'image_channel_names', 'image_names',
                  'image_channel_colors',
-                 'channels_per_image', 
+                 'channels_per_image',
                  'image_channel_blend_modes',
-                 'object_csv_file', 
-                 'area_scoring_column', 
+                 'object_csv_file',
+                 'area_scoring_column',
                  'training_set',
                  'class_table',
-                 'image_buffer_size', 
+                 'image_buffer_size',
                  'tile_buffer_size',
-                 'plate_id', 
-                 'well_id', 
+                 'plate_id',
+                 'well_id',
                  'plate_type',
                  'classifier_ignore_substrings', 'classifier_ignore_columns',
                  'object_name',
                  'check_tables',
                  'db_sql_file',
                  'db_sqlite_file',
-                 'object_table', 
+                 'object_table',
                  'object_id',
-                 'cell_x_loc', 
+                 'cell_x_loc',
                  'cell_y_loc',
-                 'use_larger_image_scale', 
+                 'cell_z_loc',
+                 'use_larger_image_scale',
                  'rescale_object_coords',
                  'image_thumbnail_cols',
                  'well_format',
@@ -130,7 +133,8 @@ optional_vars = ['db_port',
                  'negative_control',
                  'class_names',
                  'force_bioformats',
-                 'use_legacy_fetcher'
+                 'use_legacy_fetcher',
+                 'process_3D'
                  ]
 
 # map deprecated fields to new fields
@@ -141,7 +145,7 @@ field_mappings = {'classifier_ignore_substrings': 'classifier_ignore_columns',
                   'db_password': 'db_passwd',
                   }
 
-required_vars = list(set(list_vars + string_vars) - set(optional_vars) 
+required_vars = list(set(list_vars + string_vars) - set(optional_vars)
                      - set(field_mappings.keys()))
 
 valid_vars = set(list_vars + string_vars + dict_vars)
@@ -151,41 +155,41 @@ class Properties(metaclass=Singleton):
     Loads and stores properties files.
     '''
     def __init__(self):
-        super(Properties, self).__init__()        
+        super(Properties, self).__init__()
         self._initialized = False
-        
+
     @property
     def _filters_ordered(self):
         return sorted(self._filters.keys())
-    
+
     @property
     def _groups_ordered(self):
         return sorted(self._groups.keys())
-    
+
     @property
     def gates_ordered(self):
         return sorted(self.gates.keys())
-    
+
     def __str__(self):
         s=''
         for k, v in sorted(self.__dict__.items()):
             if not str(k).startswith('_'):
                 s += k+" = "+str(v)+"\n"
         return s
-        
+
     def __getattr__(self, field):
         # The name may not be loaded for optional fields.
         if (field not in self.__dict__) and (field in valid_vars):
             return None
         else:
             return self.__dict__[field]
-        
+
     def __setattr__(self, field, val):
         self.__dict__[field] = val
 
     def show_load_dialog(self):
         '''
-        Note: this is only used for loading properties files. To load Columbus 
+        Note: this is only used for loading properties files. To load Columbus
         output files, use guiutils.show_load_dialog
         '''
         import wx
@@ -199,7 +203,7 @@ class Properties(metaclass=Singleton):
             return True
         else:
             return False
-        
+
     def parse_list_value(self, list_str):
         '''parses a list property given as a string and returns it as a list
         '''
@@ -209,11 +213,11 @@ class Properties(metaclass=Singleton):
         if list_str.strip().startswith("`") and list_str.strip().endswith("`"):
             return [v.strip() for v in list_str.strip()[1:-1].split("`,`") if v.strip() != '']
         return [v.strip() for v in list_str.split(',') if v.strip() != '']
-        
+
     def load_file(self, filename):
         ''' Loads variables in from a properties file. '''
         from .sqltools import Gate, Filter, OldFilter
-        
+
         self.clear()
         self._filename        = filename
         self._groups          = {}
@@ -237,13 +241,13 @@ class Properties(metaclass=Singleton):
                     raise Exception('[Properties] ERROR: Could not parse line #%d\n'
                                     '\t"%s"\n'
                                     'Did you accidentally load your training set instead of your properties file?'%(idx + 1, line))
-                
+
                 if name in string_vars:
                     self.__dict__[name] = val or None
-                
+
                 elif name in list_vars:
                     self.__dict__[name] = self.parse_list_value(val) or None
-                    
+
                 elif name.startswith('group_SQL_'):
                     group_name = name[10:]
                     if group_name == '':
@@ -258,7 +262,7 @@ class Properties(metaclass=Singleton):
                         logging.warn('[Properties] WARNING (%s): Undefined group'%(name))
                         continue
                     self._groups[group_name] = val
-                    
+
                 elif name.startswith('filter_SQL_'):
                     # Load old-style SQL filters:
                     filter_name = name[11:]
@@ -276,11 +280,11 @@ class Properties(metaclass=Singleton):
                         logging.warn('[Properties] WARNING (%s): Undefined filter'%(name))
                         continue
                     self._filters[filter_name] = OldFilter(val)
-                
+
                 elif name == 'groups':
                     logging.warn('[Properties] INFO (%s): This field is no longer necessary in the properties file.\n'
                               'Only the group_SQL_XXX and filter_SQL_XXX fields are needed when defining groups and filters.'%(name))
-                    
+
                 elif name == 'filters':
                     # Load new-style filters
                     if val.strip() == '':
@@ -292,7 +296,7 @@ class Properties(metaclass=Singleton):
                     for k, v in list(d.items()):
                         self._filters[k] = Filter.decode(v)
                     del d
-                        
+
                 elif name == 'gates':
                     d = eval(val)
                     if type(d) != dict:
@@ -300,12 +304,12 @@ class Properties(metaclass=Singleton):
                     for k, v in list(d.items()):
                         self.gates[k] = Gate.decode(v)
                     del d
-                    
+
                 else:
                     logging.warn('[Properties] INFO: Unrecognized field "%s" in properties file'%(name))
-                
+
         f.close()
-        
+
         #if classification_type is defined
         if self.field_defined('classification_type') and self.classification_type.lower() in ['image']:
             self.classification_type = 'image'
@@ -318,9 +322,11 @@ class Properties(metaclass=Singleton):
             self.object_id = 'ObjectNumber'
             self.cell_x_loc = 'Image_x_loc'
             self.cell_y_loc = 'Image_y_loc'
+            self.cell_z_loc = 'Image_z_loc'
+
             self.object_name = ['image','images']
 
-            # image_width and image_height refer to the full image width and height while 
+            # image_width and image_height refer to the full image width and height while
             # image_tile_size refers to the size of tiles for classification
             # NB: if image_width and image_height are defined, they override image_tile_size
             if self.field_defined('image_width') and self.field_defined('image_height'):
@@ -362,7 +368,7 @@ class Properties(metaclass=Singleton):
 
         if not os.path.exists(properties_filename):
             self.save_file(properties_filename)
-        
+
     def save_file(self, filename):
         '''
         Saves the file.
@@ -371,13 +377,13 @@ class Properties(metaclass=Singleton):
         from . import sqltools
         fd = open(filename, 'w')
         self._filename = filename
-        
+
         # Write revision first
         #import util.version
         #__version__ = util.version.
         #fd.write('# CellProfiler Analyst revision: %s\n'%(__version__))
-        
-        fields_to_write = sorted([k for k, v in list(self.__dict__.items()) 
+
+        fields_to_write = sorted([k for k, v in list(self.__dict__.items())
                                   if not k.startswith('_') and v is not None])
 
         for field in fields_to_write:
@@ -391,13 +397,13 @@ class Properties(metaclass=Singleton):
                 fd.write('%s  =  %s\n'%(field, val))
 
         # Write new filters
-        encoded = repr( dict([ (k, f.encode()) 
-                              for k, f in list(self._filters.items()) 
+        encoded = repr( dict([ (k, f.encode())
+                              for k, f in list(self._filters.items())
                               if isinstance(f,sqltools.Filter) and f.is_not_empty() ])
                         )
         fd.write('# These filters were created while using CPAnalyst. Do not edit.\n')
         fd.write('filters  =  %s\n'%(encoded))
-                
+
         # write old groups and filters back as they were
         for line in StringIO(self._textfile):
             if not (line.strip().startswith('#') or line.strip()==''):
@@ -411,8 +417,8 @@ class Properties(metaclass=Singleton):
                 if field.startswith('group_SQL_'):
                     fd.write(line)
         fd.close()
-        
-        
+
+
 ##        # Write whole file out replacing any changed values
 ##        for line in StringIO(self._textfile):
 ##            if line.strip().startswith('#') or line.strip()=='':
@@ -438,7 +444,7 @@ class Properties(metaclass=Singleton):
 ##                    else:
 ##                        fd.write('%s  =  %s\n'%(name, val))
 ##                fields_to_write.remove(name)
-##        
+##
 ##        fd.write('\n')
 ##        # Write out fields that weren't present in the file
 ##        for field in fields_to_write:
@@ -449,9 +455,9 @@ class Properties(metaclass=Singleton):
 ##                fd.write(repr(dict(zip(val.keys(), [g.encode() for g in val.values()]))))
 ##            else:
 ##                fd.write('%s  =  %s\n'%(field, val))
-##        
+##
 ##        fd.close()
-        
+
     def clear(self):
         from .utils import ObservableDict
         # only clear known variables
@@ -460,14 +466,14 @@ class Properties(metaclass=Singleton):
         self._groups      = {}
         self._filters     = ObservableDict()
         self._initialized = False
-        
+
     def is_initialized(self):
         return self._initialized
 
     def field_defined(self, name):
         # field name exists and has a non-empty value.
         return self.__dict__.get(name, None) not in ['', None]
-    
+
     def backwards_compatiblize(self):
         ''' Update any old fields to new ones in field_mappings.
         '''
@@ -489,12 +495,12 @@ class Properties(metaclass=Singleton):
         '''
         # update old fields
         self.backwards_compatiblize()
-        
+
         # check that all required fields are defined
         required_vars_all = required_vars
         for name in required_vars_all:
             assert self.field_defined(name), '[Properties] ERROR (%s): Field is missing or empty.'%(name)
-        
+
         assert self.db_type.lower() in ['mysql', 'sqlite'], '[Properties] ERROR (db_type): Value must be either "mysql" or "sqlite".'
 
         # BELOW: Check sometimes-optional fields, and print warnings etc
@@ -502,21 +508,21 @@ class Properties(metaclass=Singleton):
             for field in ['db_port', 'db_host', 'db_name', 'db_user', 'db_passwd',]:
                 if self.field_defined(field):
                     logging.info('[Properties] DEBUG (%s): Field not required with db_type=sqlite.'%(field))
-            
+
             assert any([self.field_defined(field) for field in ['image_csv_file','object_csv_file','db_sql_file','db_sqlite_file']]), \
                     '[Properties] ERROR: When using db_type=sqlite, you must also supply the fields "image_csv_file" and "object_csv_file" OR "db_sql_file" OR "db_sqlite_file". See the README.'
-            
+
             if self.field_defined('db_sqlite_file'):
                 if not os.path.isabs(self.db_sqlite_file):
                     # Make relative paths relative to the props file location
                     # TODO: This sholdn't be permanent
-                    self.db_sqlite_file = os.path.join(os.path.dirname(self._filename), self.db_sqlite_file)                
+                    self.db_sqlite_file = os.path.join(os.path.dirname(self._filename), self.db_sqlite_file)
                 try:
                     f = open(self.db_sqlite_file, 'r')
                     f.close()
                 except:
                     raise Exception('[Properties] ERROR (%s): SQLite database could not be found at "%s".'%('db_sqlite_file', self.db_sqlite_file))
-            
+
             if self.field_defined('db_sql_file'):
                 if not os.path.isabs(self.db_sql_file):
                     # Make relative paths relative to the props file location
@@ -527,10 +533,10 @@ class Properties(metaclass=Singleton):
                     f.close()
                 except:
                     raise Exception('[Properties] ERROR (%s): File "%s" could not be found.'%('db_sql_file', self.db_sql_file))
-                
+
                 for field in ['image_csv_file','object_csv_file']:
                     assert not self.field_defined(field), '[Properties] ERROR (%s, db_sql_file): Both of these fields cannot be used at the same time.'%(field)
-            else:        
+            else:
                 for field in ['image_csv_file','object_csv_file']:
                     if self.field_defined(field):
                         if not os.path.isabs(self.__dict__[field]):
@@ -543,7 +549,7 @@ class Properties(metaclass=Singleton):
                             f.close()
                         except:
                             raise Exception('[Properties] ERROR (%s): File "%s" could not be found.'%(field, self.__dict__[field]))
-            
+
         if self.db_type.lower()=='mysql':
             for field in ['db_host', 'db_name', 'db_user',]:
                 assert self.field_defined(field), '[Properties] ERROR (%s): Field is required with db_type=mysql.'%(field)
@@ -553,14 +559,14 @@ class Properties(metaclass=Singleton):
             for field in ['image_csv_file','object_csv_file']:
                 if self.field_defined(field):
                     logging.warn('[Properties] INFO (%s): Field not required with db_type=mysql.'%(field))
-        
+
         if self.field_defined('area_scoring_column'):
             logging.warn('[Properties]: Area scoring will be used.')
-                
+
         if not self.field_defined('image_channel_colors'):
             logging.warn('[Properties] INFO (image_channel_colors): No value(s) specified. CPA will use a generic channel-color mapping.')
             self.image_channel_colors = ['red', 'green', 'blue']+['none' for x in range(97)]
-        
+
         if not self.field_defined('channels_per_image'):
             logging.warn('[Properties] INFO (channels_per_image): No value(s) specified. CPA will assume 1 channel per image.')
             self.channels_per_image = ['1' for i in range(len(self.image_file_cols))]
@@ -582,28 +588,28 @@ class Properties(metaclass=Singleton):
 
         assert len(self.image_file_cols) == len(self.image_path_cols), \
                '[Properties] ERROR: image_file_cols and image_path_cols must have an equal number of values.'
-        
+
         assert len(self.image_file_cols) == len(self.channels_per_image), \
                '[Properties] ERROR: channels_per_image must have the same number of values as image_file_cols  and image_path_cols.'
 
         assert len(self.image_file_cols) == len(self.image_names), \
                '[Properties] ERROR: image_names must have the same number of values as image_file_cols  and image_path_cols.'
-                    
+
         if self.field_defined('image_channel_blend_modes'):
             for mode in self.image_channel_blend_modes:
                 assert mode in ['add', 'subtract', 'solid'], '[Properties] ERROR (image_channel_blend_modes): Blend modes must list of modes (1 for each image channel). Valid modes are add, subtract and solid.'
-            
+
         if not self.field_defined('classifier_ignore_columns'):
             logging.warn('[Properties] INFORNING (classifier_ignore_columns): No value(s) specified. Classifier will use ALL NUMERIC per_object columns when training.')
-        
+
         if not self.field_defined('image_buffer_size'):
             logging.info('[Properties]: Using default image_buffer_size=1')
             self.image_buffer_size = '1'
-            
+
         if not self.field_defined('tile_buffer_size'):
             logging.info('[Properties]: Using default tile_buffer_size=1')
             self.tile_buffer_size = '1'
-            
+
         if not self.field_defined('object_name'):
             logging.warn('[Properties] WARNING (object_name): No object name specified, will use default: "object_name=cell,cells"')
             self.object_name = ['cell', 'cells']
@@ -622,18 +628,18 @@ class Properties(metaclass=Singleton):
             except:
                 logging.warn('[Properties] WARNING (training_set): Training set at "%s" could not be found.'%(self.training_set))
             logging.warn('[Properties]: Training set found at "%s"'%(self.training_set))
-        
+
         if self.field_defined('class_table'):
             assert self.class_table != self.image_table, '[Properties] ERROR (class_table): class_table cannot be the same as image_table!'
             assert self.class_table != self.object_table, '[Properties] ERROR (class_table): class_table cannot be the same as object_table!'
             logging.info('[Properties]: Per-Object classes will be written to table "%s"'%(self.class_table))
-            
+
         if not self.field_defined('plate_id'):
             logging.warn('[Properties] INFO (plate_id): Field is required for plate map viewer.')
-                                    
+
         if not self.field_defined('well_id'):
             logging.warn('[Properties] INFO (well_id): Field is required for plate map viewer.')
-        
+
         #
         # plate_shape
         # This field can be set directly, otherwise it is set indirectly by the plate_type field
@@ -648,7 +654,7 @@ class Properties(metaclass=Singleton):
             except:
                 raise Exception('[Properties] ERROR: invalid value (%s) for plate_shape. Expected: rows, cols'
                                 %(self.__dict__['plate_shape']))
-            
+
         #
         # plate_type
         # This field is used to set the plate_shape field indirectly
@@ -691,6 +697,16 @@ class Properties(metaclass=Singleton):
         else:
             self.use_legacy_fetcher = False
 
+        if self.field_defined('process_3D') and self.process_3D.lower() in ['true', 'yes', 'on', 't', 'y']:
+            self.process_3D = True
+        elif self.field_defined('process_3D') and self.process_3D.lower() in ['false', 'no', 'off', 'f', 'n']:
+            self.process_3D = False
+        elif self.field_defined('process_3D'):
+            logging.warn(f'[Properties] WARNING (process_3D): Field was invalid ({self.process_3D}), using default of "False".')
+            self.process_3D = False
+        else:
+            self.process_3D = False
+
         if self.use_larger_image_scale in [True, False]:
             pass
         elif not self.field_defined('use_larger_image_scale') or self.use_larger_image_scale.lower() in ['false', 'no', 'off', 'f', 'n']:
@@ -700,7 +716,7 @@ class Properties(metaclass=Singleton):
         else:
             logging.warn('[Properties] WARNING (use_larger_image_scale): Field value "%s" is invalid. Replacing with "false".'%(self.use_larger_image_scale))
             self.use_larger_image_scale = False
-            
+
         if self.rescale_object_coords in [True, False]:
             pass
         elif not self.field_defined('rescale_object_coords') or self.rescale_object_coords.lower() in ['false', 'no', 'off', 'f', 'n']:
@@ -710,32 +726,32 @@ class Properties(metaclass=Singleton):
         else:
             logging.warn('[Properties] WARNING (rescale_object_coords): Field value "%s" is invalid. Replacing with "false".'%(self.rescale_object_coords))
             self.rescale_object_coords = False
-            
+
         if not self.field_defined('well_format'):
             self.well_format = 'A01'
             logging.info('[Properties] WARNING (well_format): Field was not defined, using default format of "A01".')
-            
+
         if not self.field_defined('link_tables_table'):
             self.link_tables_table = '_link_tables_%s_%s_'%(self.image_table, (self.object_table or ''))
             if len(self.link_tables_table) >= 64:
                 from hashlib import md5
                 self.link_tables_table = '_link_tables_%s'%(md5((self.image_table+(self.object_table or '')).encode()).hexdigest())
-            
+
         if not self.field_defined('link_columns_table'):
             self.link_columns_table = '_link_columns_%s_%s_'%(self.image_table, (self.object_table or ''))
             if len(self.link_columns_table) >= 64:
                 from hashlib import md5
                 self.link_columns_table = '_link_columns_%s'%(md5((self.image_table+(self.object_table or '')).encode()).hexdigest())
-            
+
         if not self.field_defined('gates'):
             from .utils import ObservableDict
             self.gates = ObservableDict()
-        
+
 
 if __name__ == "__main__":
     import sys
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    
+
     p = Properties()
     if len(sys.argv) >= 2:
         filename = sys.argv[1]
@@ -743,5 +759,5 @@ if __name__ == "__main__":
         filename = '/Users/afraser/cpa_example/example.properties'
 
     p.load_file(filename)
-    
+
     print(p)

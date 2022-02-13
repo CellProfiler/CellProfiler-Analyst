@@ -6,7 +6,7 @@
 #image_file_cols = Image_FileName_OutlinedAxons,Image_FileName_SomaOutlines,Image_FileName_SkelDendrites,Image_FileName_SkelAxons,Image_FileName_ColorImage,Image_FileName_OrigD,Image_FileName_OrigA,Image_FileName_OrigN,Image_FileName_OutlinedDendrites
 #image_names = OutlinedAxons,SomaOutlines,SkelDendrites,SkelAxons,ColorImage,OrigD,OrigA,OrigN,OutlinedDendrites
 #channels_per_image  = 3,3,1,1,3,1,1,1,3
-#image_channel_colors = none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, 
+#image_channel_colors = none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none, none,
 #########################
 
 import cpa.helpmenu
@@ -61,7 +61,7 @@ def rescale_display_coord_to_image(x, y):
 
 class ImageViewerPanel(ImagePanel):
     '''
-    ImagePanel with selection and object class labels. 
+    ImagePanel with selection and object class labels.
     '''
     def __init__(self, imgs, chMap, img_key, parent, scale=1.0, brightness=1.0, contrast=None):
         super(ImageViewerPanel, self).__init__(imgs, chMap, parent, scale, brightness, contrast=contrast, display_whole_image=True)
@@ -154,7 +154,7 @@ class ImageViewerPanel(ImagePanel):
 
         self.classVisible = {}
         for className in classes.keys():
-            self.classVisible[className] = True 
+            self.classVisible[className] = True
         self.Refresh()
 
     def ToggleObjectNumbers(self):
@@ -177,15 +177,15 @@ class ImageViewerPanel(ImagePanel):
 
 class ImageViewer(wx.Frame):
     '''
-    A frame that takes a list of np arrays representing image channels 
+    A frame that takes a list of np arrays representing image channels
     and merges and displays them as a single image.
     Menus are provided to change the RGB mapping of each channel passed in.
     Note: chMap is passed by reference by default, this means that the caller
        of ImageViewer can have it's own chMap (if any) updated by changes
        made in the viewer.  Otherwise pass in a copy.
     '''
-    def __init__(self, imgs=None, chMap=None, img_key=None, parent=None, title='Image Viewer', 
-                 classifier=None, brightness=1.0, scale=1.0, contrast=None, 
+    def __init__(self, imgs=None, chMap=None, img_key=None, parent=None, title='Image Viewer',
+                 classifier=None, brightness=1.0, scale=1.0, contrast=None,
                  classCoords=None):
         '''
         imgs  : [np.array(dtype=float32), ... ]
@@ -254,8 +254,8 @@ class ImageViewer(wx.Frame):
         self.toggleChMap = self.chMap[:]
         if self.imagePanel:
             self.imagePanel.Destroy()
-        self.imagePanel = ImageViewerPanel(imgs, self.chMap, self.img_key, 
-                                           self.sw, brightness=brightness, 
+        self.imagePanel = ImageViewerPanel(imgs, self.chMap, self.img_key,
+                                           self.sw, brightness=brightness,
                                            scale=scale, contrast=contrast)
         self.imagePanel.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.imagePanel.Bind(wx.EVT_SIZE, self.OnResizeImagePanel)
@@ -285,7 +285,7 @@ class ImageViewer(wx.Frame):
 
 
     #######################################
-    # CreateChannelMenus 
+    # CreateChannelMenus
     #######################################
     def CreateChannelMenus(self):
         ''' Create color-selection menus for each channel. '''
@@ -315,7 +315,7 @@ class ImageViewer(wx.Frame):
         startIndex = 0
 
         # Construct channel names, for RGB images, append a # to the end of
-        # each channel. 
+        # each channel.
         for i, chans in enumerate(p.channels_per_image):
             chans = int(chans)
             name = p.image_names[i]
@@ -339,34 +339,34 @@ class ImageViewer(wx.Frame):
                 channel_menu = wx.Menu()
                 for color in ['Red', 'Green', 'Blue', 'Cyan', 'Magenta', 'Yellow', 'Gray', 'None']:
                     id = wx.NewId()
-                    # Create a radio item that maps an id and a color. 
+                    # Create a radio item that maps an id and a color.
                     item = channel_menu.AppendRadioItem(id,color)
                     # Add a new chmapbyId object
                     self.chMapById[id] = (chIndex, color, item, channel_menu)
                     # If lowercase color matches what it was originally set to...
                     if color.lower() == setColor.lower():
-                        # Check off the item 
+                        # Check off the item
                         item.Check()
                     # Bind
                     self.Bind(wx.EVT_MENU, self.OnMapChannels, item)
                     # Add appropriate Ids to imMapById
-                    if ((int(p.channels_per_image[i]) == 1 and color == 'Gray') or 
-                        (int(p.channels_per_image[i]) > 1 and j == 0 and color == 'Red') or 
-                        (int(p.channels_per_image[i]) > 1 and j == 2 and color == 'Blue') or 
-                        (int(p.channels_per_image[i]) > 1 and j == 1 and color == 'Green')): 
+                    if ((int(p.channels_per_image[i]) == 1 and color == 'Gray') or
+                        (int(p.channels_per_image[i]) > 1 and j == 0 and color == 'Red') or
+                        (int(p.channels_per_image[i]) > 1 and j == 2 and color == 'Blue') or
+                        (int(p.channels_per_image[i]) > 1 and j == 1 and color == 'Green')):
                         channelIds = channelIds + [id]
-                # Add new menu item  
+                # Add new menu item
                 self.GetMenuBar().Append(channel_menu, channel)
                 chIndex+=1
             # New id for the image as a whole
             id = wx.NewId()
             item = self.imagesMenu.AppendRadioItem(id, p.image_names[i])
             #Effectively this code creates a data structure that stores relevant info with ID as a key
-            self.imMapById[id] = (int(p.channels_per_image[i]), item, startIndex, channelIds) 
-            # Binds the event menu to OnFetchImage (below) and item 
+            self.imMapById[id] = (int(p.channels_per_image[i]), item, startIndex, channelIds)
+            # Binds the event menu to OnFetchImage (below) and item
             self.Bind(wx.EVT_MENU, self.OnFetchImage, item)
             startIndex += int(p.channels_per_image[i])
-        # Add the "none" image and check it off. 
+        # Add the "none" image and check it off.
         id= wx.NewId()
         item = self.imagesMenu.AppendRadioItem(id, 'None')
         self.Bind(wx.EVT_MENU, self.OnFetchImage, item)
@@ -374,14 +374,14 @@ class ImageViewer(wx.Frame):
         # Add new "Images" menu bar item
         self.GetMenuBar().Append(self.imagesMenu, 'Images')
     #######################################
-    # /CreateChannelMenus 
+    # /CreateChannelMenus
     #######################################
 
 
 
     #######################################
     # OnFetchImage
-    # 
+    #
     # Allows user to display one image at a time.  If image is single channel,
     # displays the image as gray.  If image is multichannel, displays image as
     # RGB.
@@ -391,9 +391,9 @@ class ImageViewer(wx.Frame):
 
         # Set every channel to black and set all the toggle options to 'none'
         for ids in list(self.chMapById.keys()):
-            (chIndex, color, item, channel_menu) = self.chMapById[ids] 
+            (chIndex, color, item, channel_menu) = self.chMapById[ids]
             if (color.lower() == 'none'):
-                item.Check()		
+                item.Check()
         for ids in list(self.imMapById.keys()):
             (cpi, itm, si, channelIds) = self.imMapById[ids]
             if cpi == 3:
@@ -413,22 +413,22 @@ class ImageViewer(wx.Frame):
             (chanPerIm, item, startIndex, channelIds) = self.imMapById[evt.GetId()]
 
             if chanPerIm == 1:
-                # Set channel map and toggleChMap values. 
+                # Set channel map and toggleChMap values.
                 self.chMap[startIndex] = 'gray'
                 self.toggleChMap[startIndex] = 'gray'
 
                 # Toggle the option for the independent channel menu
-                (chIndex, color, item, channel_menu) = self.chMapById[channelIds[0]] 
+                (chIndex, color, item, channel_menu) = self.chMapById[channelIds[0]]
                 item.Check()
             else:
                 RGB = ['red', 'green', 'blue'] + ['none'] * chanPerIm
                 for i in range(chanPerIm):
                     # Set chMap and toggleChMap values
                     self.chMap[startIndex + i] = RGB[i]
-                    self.toggleChMap[startIndex + i] = RGB[i]                
+                    self.toggleChMap[startIndex + i] = RGB[i]
                     # Toggle the option in the independent channel menus
-                    (chIndex, color, item, channel_menu) = self.chMapById[channelIds[i]] 
-                    item.Check()                
+                    (chIndex, color, item, channel_menu) = self.chMapById[channelIds[i]]
+                    item.Check()
 
         self.MapChannels(self.chMap)
         #######################################
@@ -441,9 +441,9 @@ class ImageViewer(wx.Frame):
             if not self.cp:
                 self.cp = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
                 self.SetBackgroundColour('white') # color for the background of panel
-                self.controls  = ImageControlPanel(self.cp.GetPane(), self.imagePanel, 
+                self.controls  = ImageControlPanel(self.cp.GetPane(), self.imagePanel,
                                                    brightness=self.imagePanel.brightness,
-                                                   scale=self.imagePanel.scale, 
+                                                   scale=self.imagePanel.scale,
                                                    contrast=self.imagePanel.contrast)
                 self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.OnPaneChanged, self.cp)
                 # self.cp.Collapse(collapse=False) # default open controls
@@ -463,7 +463,7 @@ class ImageViewer(wx.Frame):
             self.CreateChannelMenus()
 
             # Annoying: Need to bind 3 windows to KEY_DOWN in case focus changes.
-            self.Bind(wx.EVT_KEY_DOWN, self.HoldKey) 
+            self.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
             self.sw.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
             self.cp.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
             self.imagePanel.Bind(wx.EVT_KEY_DOWN, self.HoldKey)
@@ -552,7 +552,7 @@ class ImageViewer(wx.Frame):
                 brightness = self.imagePanel.tmp_brightness
                 self.imagePanel.SetBrightness(brightness)
                 self.inspect_release = True # Tell the panel, F key is not pressed anymore, otherwise it is stuck in key down events.
-            elif len(self.chMap) > chIdx >= 0:   
+            elif len(self.chMap) > chIdx >= 0:
                 # ctrl+n where n is the nth channel
                 self.ToggleChannel(chIdx)
             else:
@@ -571,7 +571,7 @@ class ImageViewer(wx.Frame):
         if self.chMap[chIdx] == 'None':
             for (idx, color, item, menu) in list(self.chMapById.values()):
                 if idx == chIdx and color.lower() == self.toggleChMap[chIdx].lower():
-                    item.Check()   
+                    item.Check()
             self.chMap[chIdx] = self.toggleChMap[chIdx]
             self.MapChannels(self.chMap)
         else:
@@ -594,7 +594,7 @@ class ImageViewer(wx.Frame):
         self.imagePanel.DeselectAll()
 
     def SelectObject(self, obkey):
-        coord = db.GetObjectCoords(obkey)
+        coord = db.GetObjectCoords(obkey)[0:2] #x and y only
         if p.rescale_object_coords:
             coord = rescale_image_coord_to_display(coord[0], coord[1])
         self.selection += [coord]
@@ -628,7 +628,7 @@ class ImageViewer(wx.Frame):
                     self.selection.remove(obKey)
 
             # select the object
-            (x,y) = db.GetObjectCoords(obKey)            
+            (x,y,*other) = db.GetObjectCoords(obKey)
             if p.rescale_object_coords:
                 x, y = rescale_image_coord_to_display(x, y)
             self.imagePanel.TogglePointSelection((x,y))
@@ -692,7 +692,7 @@ class ImageViewer(wx.Frame):
             errdlg = wx.MessageDialog(self, 'There is no image with that key.', "Couldn't find image", wx.OK|wx.ICON_EXCLAMATION)
             errdlg.ShowModal()
             self.Destroy()
-        else:            
+        else:
             # load the image
             self.img_key = imkey
             self.SetImage(imagetools.FetchImage(imkey), p.image_channel_colors)
@@ -702,7 +702,7 @@ class ImageViewer(wx.Frame):
         import os
         saveDialog = wx.FileDialog(self, message="Save as:",
                                    defaultDir=self.defaultPath, defaultFile=self.defaultFile,
-                                   wildcard='PNG file (*.png)|*.png|JPG file (*.jpg, *.jpeg)|*.jpg', 
+                                   wildcard='PNG file (*.png)|*.png|JPG file (*.jpg, *.jpeg)|*.jpg',
                                    style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         if saveDialog.ShowModal()==wx.ID_OK:
             filename = str(saveDialog.GetPath())
@@ -780,7 +780,7 @@ if __name__ == "__main__":
               ]
 
     pixels = []
-    for channel in p.image_channel_colors:        
+    for channel in p.image_channel_colors:
         pixels += [imagetools.tile_images(images)]
 
     f = ImageViewer(pixels)
@@ -791,11 +791,11 @@ if __name__ == "__main__":
 ##        logging.error('ImageViewer requires a properties file.  Exiting.')
 ##        wx.GetApp().Exit()
 ##        raise Exception('ImageViewer requires a properties file.  Exiting.')
-##    
+##
 ##    db = DBConnect()
 ##    dm = DataModel()
 ##    ir = ImageReader()
-##    
+##
 ##    obKey = dm.GetRandomObject()
 ##    imagetools.ShowImage(obKey[:-1], p.image_channel_colors, None)
 #    filenames = db.GetFullChannelPathsForImage(obKey[:-1])

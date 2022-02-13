@@ -45,8 +45,8 @@ class TrainingSet:
         self.classifier_labels = []     # set of possible class labels (for classifier)
                                         #     eg: [[+1,-1,-1], [-1,+1,-1], [-1,-1,+1]]
         self.label_matrix = []          # n x k matrix of classifier labels for each sample
-        self.label_array = []           # n x 1 vector of classifier labels (indexed with 1) 
-                                        #     eg: [1,1,2,3,1,2] 
+        self.label_array = []           # n x 1 vector of classifier labels (indexed with 1)
+                                        #     eg: [1,1,2,3,1,2]
         self.values = []                # array of measurements (data from db) for each sample
         self.entries = []               # list of (label, obKey) pairs
         self.coordinates = []           # list of coordinates per obKey
@@ -55,20 +55,20 @@ class TrainingSet:
         try:
             self.cache.clear_if_objects_modified()
         except:
-            logging.info("Couldn't check for cache freshness. Connection to DB broken?") #let it pass to allow saving 
-            
+            logging.info("Couldn't check for cache freshness. Connection to DB broken?") #let it pass to allow saving
+
     def Create(self, labels, keyLists, labels_only=False, callback=None):
         '''
         labels:   list of class labels
                   Example: ['pos','neg','other']
         keyLists: list of lists of obKeys in the respective classes
-                  Example: [[k1,k2], [k3], [k4,k5,k6]] 
+                  Example: [[k1,k2], [k3], [k4,k5,k6]]
         '''
         assert len(labels)==len(keyLists), 'Class labels and keyLists must be of equal size.'
         self.Clear()
         self.labels = numpy.array(labels)
         self.classifier_labels = 2 * numpy.eye(len(labels), dtype=int) - 1
-        
+
         num_to_fetch = sum([len(k) for k in keyLists])
         num_fetched = [0] # use a list to get static scoping
 
@@ -101,8 +101,8 @@ class TrainingSet:
         if len(self.label_matrix) > 0:
             self.label_array = numpy.nonzero(self.label_matrix + 1)[1] + 1 # Convert to array
         else:
-            self.label_array = self.label_matrix      
-            
+            self.label_array = self.label_matrix
+
 
     def Load(self, filename, labels_only=False):
         self.Clear()
@@ -118,14 +118,14 @@ class TrainingSet:
                 if l.startswith('#'):
                     self.cache.load_from_string(l[2:])
                     continue
-                
+
                 label = l.strip().split(' ')[0]
                 if (label == "label"):
                     for labelname in l.strip().split(' ')[1:]:
                         if labelname not in labelDict:
                             labelDict[labelname] = []
                     continue
-                
+
                 obKey = tuple([int(float(k)) for k in l.strip().split(' ')[1:len(object_key_columns())+1]])
                 labelDict[label] = labelDict.get(label, []) + [obKey]
 
@@ -133,13 +133,13 @@ class TrainingSet:
                 logging.error('Error parsing training set %s, line >>>%s<<<'%(filename, l.strip()))
                 f.close()
                 raise
-            
+
         # validate positions and renumber if necessary
         self.Renumber(labelDict)
         self.Create(list(labelDict.keys()), list(labelDict.values()), labels_only=labels_only)
-        
+
         f.close()
-        
+
     def LoadCSV(self, filename, labels_only=True):
         self.Clear()
         df = pd.read_csv(filename)
@@ -156,15 +156,15 @@ class TrainingSet:
                 assert(len(key_names) == 3)
                 keys = [tuple((x[0],x[1],x[2])) for x in keys]
                 labelDict[label] = keys
-            
+
         # validate positions and renumber if necessary
         self.Renumber(labelDict)
         self.Create(list(labelDict.keys()), list(labelDict.values()), labels_only=labels_only)
-        
+
     def Renumber(self, label_dict):
         from .properties import Properties
         obkey_length = 3 if Properties().table_id else 2
-        
+
         have_asked = False
         progress = None
         for label in list(label_dict.keys()):
@@ -172,7 +172,7 @@ class TrainingSet:
                 if len(key) > obkey_length:
                     obkey = key[:obkey_length]
                     x, y = key[obkey_length:obkey_length+2]
-                    coord = db.GetObjectCoords(obkey, none_ok=True, silent=True) 
+                    coord = db.GetObjectCoords(obkey, none_ok=True, silent=True)[0:2] 
                     if coord == None or (int(coord[0]), int(coord[1])) != (x, y):
                         if not have_asked:
                             dlg = wx.MessageDialog(None, 'Cells in the training set and database have different image positions.  This could be caused by running CellProfiler with different image analysis parameters.  Should CPA attempt to remap cells in the training set to their nearest match in the database?',
@@ -194,7 +194,7 @@ class TrainingSet:
                         if not cont:
                             label_dict.clear()
                             return
-                        
+
         have_asked = False
         for label in list(label_dict.keys()):
             if None in label_dict[label]:
@@ -207,8 +207,8 @@ class TrainingSet:
                         label_dict.clear()
                         return
                 label_dict[label] = [k for k in label_dict[label] if k is not None]
-                
-            
+
+
 
     def Save(self, filename):
         # check cache freshness
@@ -282,7 +282,7 @@ class TrainingSet:
 
         logging.info('Training set saved to %s as CSV'%filename)
         self.saved = True
-            
+
 
     def get_object_keys(self):
         return [e[1] for e in self.entries]
@@ -355,7 +355,7 @@ class CellCache(metaclass=Singleton):
         if not db.verify_objects_modify_date_earlier(self.last_update):
             self.data = {}
             self.last_update = db.get_objects_modify_date()
-        
+
 
 if __name__ == "__main__":
     from sys import argv
@@ -367,4 +367,3 @@ if __name__ == "__main__":
     for i in range(len(tr.labels)):
         print(tr.labels[i], end=' ')
         print(" ".join([str(v) for v in tr.values[i]]))
-        

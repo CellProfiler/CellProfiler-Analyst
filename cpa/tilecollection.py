@@ -63,9 +63,9 @@ class TileCollection(metaclass=Singleton):
         self.loader = TileLoader(self, None)
 
     def GetTileData(self, obKey, notify_window, priority=1):
-        return self.GetTiles([obKey], notify_window, priority)[0]
+        return self.GetTiles([obKey], notify_window, priority, processStack=p.process_3D)[0]
 
-    def GetTiles(self, obKeys, notify_window, priority=1, display_whole_image=False):
+    def GetTiles(self, obKeys, notify_window, priority=1, display_whole_image=False, processStack=False):
         '''
         obKeys: object tiles to fetch
         notify_window: window that will handle TileUpdatedEvent(s)
@@ -84,7 +84,7 @@ class TileCollection(metaclass=Singleton):
         with self.cv:
             for order, obKey in enumerate(obKeys):
                 if not obKey in self.tileData:
-                    if obKey[0] in seen:
+                    if obKey[0] in seen and not processStack:
                         # An item in the queue had the same source image, process them together.
                         # Heapqueue and the inbuilt cache will allow us to only load the source image once.
                         heappush(self.loadq, ((priority, seen[obKey[0]], order), obKey, display_whole_image))

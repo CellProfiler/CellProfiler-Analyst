@@ -28,23 +28,23 @@ class CellMontageFrame(wx.Frame):
         self.sb = SortBin(self)
         self.cp = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
         self.icp = ImageControlPanel(self.cp.GetPane(), self)
-        
+
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(self.sb, 1, wx.EXPAND)
         self.Sizer.Add(self.cp, 0, wx.EXPAND)
-        
+
         self.cp.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self._on_control_pane_change)
-        
+
     def _on_control_pane_change(self, evt=None):
         self.Layout()
         if self.cp.IsExpanded():
             self.cp.SetLabel('Hide controls')
         else:
             self.cp.SetLabel('Show controls')
-        
+
     def add_objects(self, obkeys):
         self.sb.AddObjects(obkeys)
-        
+
     #
     # required by ImageControlPanel
     #
@@ -83,7 +83,7 @@ class SortBinDropTarget(wx.DropTarget):
         self.data = wx.CustomDataObject("application.cpa.ObjectKey")
         self.SetDataObject(self.data)
         self.bin = bin
-        
+
     def OnData(self, x, y, dragres):
         if not self.GetData():
             return wx.DragNone
@@ -198,7 +198,7 @@ class SortBin(wx.ScrolledWindow):
                 else:
                     imViewer = imagetools.ShowImage(key[:-1], self.chMap[:], parent=self)
 
-                imViewer.imagePanel.SelectPoint(db.GetObjectCoords(key))
+                imViewer.imagePanel.SelectPoint(db.GetObjectCoords(key)[0:2])
         elif choice == 1:
             self.SelectAll()
         elif choice == 2:
@@ -243,7 +243,7 @@ class SortBin(wx.ScrolledWindow):
             source.UpdateQuantity()
         else:
             imgSet = self.tile_collection.GetTiles(obKeys, (self.classifier or self), priority,
-                                                   display_whole_image=display_whole_image)
+                                                   display_whole_image=display_whole_image, processStack=p.process_3D)
             for i, obKey, imgs in zip(list(range(len(obKeys))), obKeys, imgSet):
                 if self.classifier:
                     newTile = ImageTile(self, obKey, imgs, chMap, False,
@@ -423,7 +423,7 @@ class SortBin(wx.ScrolledWindow):
     def OnTileUpdated(self, evt):
         ''' When the tile loader returns the cropped image update the tile. '''
         self.UpdateTile(evt.data)
-            
+
     def UpdateTile(self, obKey):
         ''' Called when image data is available for a specific tile. '''
         for t in self.tiles:
@@ -434,7 +434,7 @@ class SortBin(wx.ScrolledWindow):
             self.UpdateSizer()
 
     def UpdateSizer(self):
-        return self.SetVirtualSize(self.sizer.CalcMin())        
+        return self.SetVirtualSize(self.sizer.CalcMin())
 
     def UpdateQuantity(self):
         '''
@@ -457,11 +457,11 @@ class SortBin(wx.ScrolledWindow):
 
 if __name__ == '__main__':
     app = wx.App()
- 
-    p.show_load_dialog()    
+
+    p.show_load_dialog()
     from . import datamodel
     dm = datamodel.DataModel()
-    
+
     f = wx.Frame(None)
     sb = SortBin(f)
     f.Show()
