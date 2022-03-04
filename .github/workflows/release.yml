@@ -1,7 +1,7 @@
 name: create-release
 on:
   push:
-#    branches: [ master ]
+    branches: [ build_on_11 ]
     tags:
       - "*"
 
