@@ -12,7 +12,7 @@ SHELL := bash
 
 CellProfiler-Analyst:
 	git clone https://github.com/CellProfiler/CellProfiler-Analyst.git
-
+	git checkout build_on_11
 	cd $@
 
 .PHONY: dependencies
