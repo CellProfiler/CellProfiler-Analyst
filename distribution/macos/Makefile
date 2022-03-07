@@ -25,7 +25,7 @@ dependencies: CellProfiler-Analyst
 	pip3 install --editable .
 	cd ..
 
-dist/CellProfiler-Analyst.app: CellProfiler-Analyst dependencies Info.plist
+dist/CellProfiler-Analyst.app: Info.plist
 	pyinstaller --noconfirm CellProfiler-Analyst.spec
 
 	cp $(word 3, $^) $@/Contents
