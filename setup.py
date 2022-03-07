@@ -79,7 +79,7 @@ setuptools.setup(
         "python-javabridge>=4.0.3",
         "pytz>=2021.1",
         "requests>=2.25.1",
-        "scikit-learn>=0.24.1",
+        "scikit-learn==0.24.2",
         "scipy>=1.6.1",
         "seaborn>=0.11.1",
         "tifffile>=2021.3.31",
