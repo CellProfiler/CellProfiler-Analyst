@@ -19,7 +19,7 @@ CellProfiler-Analyst:
 
 .PHONY: dependencies
 dependencies: CellProfiler-Analyst
-	cd CellProfiler-Analyst
+	cd /Users/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/distribution/macos/CellProfiler-Analyst
 	git status
 	git log | head
 	pip3 install --editable .
