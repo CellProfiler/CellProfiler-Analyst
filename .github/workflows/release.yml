@@ -16,7 +16,14 @@ jobs:
           path: ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
           restore-keys: |
-            ${{ runner.os }}-pip-         
+            ${{ runner.os }}-pip-  
+      - if: ${{ matrix.os == 'macos-10.15' }}
+        uses: actions/cache@v2
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
@@ -44,7 +51,13 @@ jobs:
           git checkout print
           pip install -e .
           cd ..
-          make clean
+          git clone https://github.com/CellProfiler/CellProfiler-Analyst.git
+          cd CellProfiler-Analyst
+          git status
+          git log | head
+          git checkout build_on_11
+          pip install -e .
+          cd ..
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
           chmod +x osx-codesign.sh && ./osx-codesign.sh
