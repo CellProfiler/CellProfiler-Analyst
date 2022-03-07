@@ -66,7 +66,7 @@ jobs:
         run: |
           pyinstaller distribution/windows/CellProfiler-Analyst.spec
           iscc /dMyAppVersion="3.0.4" "distribution/windows/CellProfiler-Analyst.iss"
-      - if: ${{ matrix.os == 'macos-10.15' }}
+      - if: ${{ matrix.os == 'macos-11' }}
         uses: actions/upload-artifact@v1
         with:
           name: CellProfiler-Analyst-macOS-3.0.4.zip
