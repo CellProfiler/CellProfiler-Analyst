@@ -51,6 +51,7 @@ jobs:
           git checkout print
           pip install -e .
           cd ..
+          make clean
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
           chmod +x osx-codesign.sh && ./osx-codesign.sh
