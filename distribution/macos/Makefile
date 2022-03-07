@@ -21,8 +21,10 @@ CellProfiler-Analyst:
 dependencies: CellProfiler-Analyst
         cd CellProfiler-Analyst
 	git status
+	git log | head
 	pip3 install --editable .
-	
+	cd ..
+
 dist/CellProfiler-Analyst.app: CellProfiler-Analyst dependencies Info.plist
 	pyinstaller --noconfirm CellProfiler-Analyst.spec
 
