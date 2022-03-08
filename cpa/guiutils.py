@@ -822,7 +822,7 @@ def show_load_dialog():
         path, fname = os.path.split(filename)
         os.chdir(path)  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
         logging.info(f"[Properties]: Loading {fname}")
-        elif filename.endswith('.xml'):
+        if filename.endswith('.xml'):
             from .parseperkinelmer import load_harmony
             load_harmony(filename)            
         else:
