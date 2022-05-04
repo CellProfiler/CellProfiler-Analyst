@@ -37,7 +37,7 @@ jobs:
       - run: |
           pip install --upgrade pip setuptools wheel
           pip install numpy
-          pip install pyinstaller==4.3
+          pip install pyinstaller==4.10
       - env:
           LDFLAGS: -L/usr/local/opt/openssl/lib
           CERTIFICATE_OSX_APPLICATION: ${{ secrets.BUILD_CERTIFICATE_BASE64_CIMINI }}
