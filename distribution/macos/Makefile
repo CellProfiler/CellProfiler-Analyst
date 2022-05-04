@@ -12,17 +12,17 @@ SHELL := bash
 
 CellProfiler-Analyst:
 	git clone https://github.com/CellProfiler/CellProfiler-Analyst.git
-
 	cd $@
 
 .PHONY: dependencies
 dependencies: CellProfiler-Analyst
 	pip3 install --editable CellProfiler-Analyst --upgrade
+	cd ..
 
-dist/CellProfiler-Analyst.app: CellProfiler-Analyst dependencies Info.plist
+dist/CellProfiler-Analyst.app: Info.plist
 	pyinstaller --noconfirm CellProfiler-Analyst.spec
 
-	cp $(word 3, $^) $@/Contents
+	cp Info.plist $@/Contents
 
 	cp entitlements.plist $@/Contents/MacOS
 
