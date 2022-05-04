@@ -7,8 +7,8 @@ find . -type f | xargs -I file codesign --timestamp -f -s "Developer ID Applicat
 cd ../MacOS
 find . -type f | xargs -I file sudo codesign --timestamp -f -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" file
 codesign --timestamp -f -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" _elementtree.cpython-38-darwin.so
-codesign --entitlements entitlements.plist --timestamp -o runtime -s -f "Developer ID Application: Beth Cimini (27YQ9U45D9)" ./cpanalyst
+codesign --entitlements entitlements.plist --timestamp -f -o runtime -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" ./cpanalyst
 cd ..
-codesign --timestamp -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" Info.plist
+codesign --timestamp -f -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" Info.plist
 
 
