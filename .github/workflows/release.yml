@@ -42,7 +42,7 @@ jobs:
           LDFLAGS: -L/usr/local/opt/openssl/lib
           CERTIFICATE_OSX_APPLICATION: ${{ secrets.BUILD_CERTIFICATE_BASE64_CIMINI }}
           CERTIFICATE_PASSWORD: ${{ secrets.P12_PASSWORD_CIMINI }}
-        if: ${{ matrix.os == 'macos-11' }}
+        if: ${{ matrix.os == 'macos-12' }}
         run: |
           sed -i '' 's/4.0.0/3.0.4/' Info.plist
           brew install mysql
@@ -73,7 +73,7 @@ jobs:
         run: |
           pyinstaller distribution/windows/CellProfiler-Analyst.spec
           iscc /dMyAppVersion="3.0.4" "distribution/windows/CellProfiler-Analyst.iss"
-      - if: ${{ matrix.os == 'macos-11' }}
+      - if: ${{ matrix.os == 'macos-12' }}
         uses: actions/upload-artifact@v1
         with:
           name: CellProfiler-Analyst-macOS-3.0.4.zip
@@ -85,7 +85,7 @@ jobs:
           path: ./distribution/windows/Output/CellProfiler-Analyst-Windows-3.0.4.exe
     strategy:
       matrix:
-        os: [macos-11, windows-2019]
+        os: [macos-12, windows-2019]
         python-version: [ "3.8" ]
   upload:
     name: upload
