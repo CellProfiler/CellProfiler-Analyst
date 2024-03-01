@@ -707,20 +707,10 @@ class DBConnect(metaclass=Singleton):
             return res[0]
 
     def GetObjectsCoords(self, obKeys, none_ok=False, silent=False):
-        '''Returns the specified objects' x, y, (and sometimes) z coordinates in an image.
-        '''
-        if p.process_3D:
-            res = self.execute('SELECT %s, %s, %s, %s, %s FROM %s WHERE %s'%(
-                        p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc, p.cell_z_loc, p.object_table,
-                        GetWhereClauseForObjects(obKeys)), silent=silent)
-            reslist = [list(coord) for coord in res] #tuples are immutable so first make tuple of tuples a list of lists
-            reslist[0][2]=round(reslist[0][2]) #round to get z slice
-            restup = [tuple(coord) for coord in reslist] #then convert back to list of tuples
-            res = tuple(restup) #convert to tuple of tuples
-        else:
-            res = self.execute('SELECT %s, %s, %s, %s FROM %s WHERE %s'%(
-                        p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc, p.object_table,
-                        GetWhereClauseForObjects(obKeys)), silent=silent)
+        # Returns the specified objects' x and y coordinates in an image.
+        res = self.execute('SELECT %s, %s, %s, %s FROM %s WHERE %s'%(
+                    p.image_id, p.object_id, p.cell_x_loc, p.cell_y_loc, p.object_table,
+                    GetWhereClauseForObjects(obKeys)), silent=silent)
         if len(res) == 0 or res[0][0] is None or res[0][1] is None:
             message = ('Failed to load coordinates for object key %s. This may '
                        'indicate a problem with your per-object table.\n'
