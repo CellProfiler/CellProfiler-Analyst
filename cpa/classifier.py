@@ -1671,12 +1671,12 @@ class Classifier(wx.Frame):
         for className, obKeys in classHits.items():
             training_keys = [key for key in obKeys if key in training_obKeys]
             if training_keys:
-                trainingCoords['training ' + className] = db.GetObjectsCoords(training_keys)[0:2]
+                trainingCoords['training ' + className] = db.GetObjectsCoords(training_keys)
             else:
                 trainingCoords['training ' + className] = []
             object_keys = [key for key in obKeys if key not in training_obKeys]
             if object_keys:
-                classCoords[className] = db.GetObjectsCoords(object_keys)[0:2]
+                classCoords[className] = db.GetObjectsCoords(object_keys)
             else:
                 classCoords[className] = []
         classCoords.update(trainingCoords)
