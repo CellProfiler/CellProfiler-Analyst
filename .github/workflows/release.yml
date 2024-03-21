@@ -1,0 +1,121 @@
+name: create-release
+on:
+  push:
+#    branches: [ master ]
+    tags:
+      - "*"
+
+jobs:
+  build:
+    name: build
+    runs-on: ${{ matrix.os }}
+    steps:
+      - if: ${{ matrix.os == 'windows-2019' }}
+        uses: actions/cache@v2
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-pip-${{ hashFiles('setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - if: ${{ matrix.os == 'macos-10.15' }}
+        uses: actions/cache@v2
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          architecture: x64
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '14.0.1' # The JDK version to make available on the path.
+          java-package: jdk
+          architecture: x64
+      - run: |
+          pip install --upgrade pip setuptools wheel
+          pip install numpy
+          pip install pyinstaller==4.3
+      - env:
+          LDFLAGS: -L/usr/local/opt/openssl/lib
+          CERTIFICATE_OSX_APPLICATION: ${{ secrets.CERTIFICATE_OSX_APPLICATION }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        if: ${{ matrix.os == 'macos-10.15' }}
+        run: |
+          sed -i '' 's/4.0.0/3.0.4/' Info.plist
+          brew install mysql
+          git clone https://github.com/CellProfiler/python-javabridge.git
+          cd python-javabridge/ 
+          git checkout print
+          pip install -e .
+          cd ..
+          make
+          chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
+          chmod +x osx-codesign.sh && ./osx-codesign.sh
+          ditto -ck --keepParent --rsrc --sequesterRsrc ./dist/CellProfiler-Analyst.app ./dist/CellProfiler-Analyst-macOS-3.0.4.zip
+        working-directory: ./distribution/macos
+      - env:
+          JDK_HOME: C:\hostedtoolcache\windows\jdk\14.0.1\x64
+        if: ${{ matrix.os == 'windows-2019' }}
+        run: |
+          pip install cython
+          pip install --editable .
+      - if: ${{ matrix.os == 'windows-2019' }}
+        run: |
+          pyinstaller distribution/windows/CellProfiler-Analyst.spec
+          iscc /dMyAppVersion="3.0.4" "distribution/windows/CellProfiler-Analyst.iss"
+      - if: ${{ matrix.os == 'macos-10.15' }}
+        uses: actions/upload-artifact@v1
+        with:
+          name: CellProfiler-Analyst-macOS-3.0.4.zip
+          path: ./distribution/macos/dist/CellProfiler-Analyst-macOS-3.0.4.zip
+      - if: ${{ matrix.os == 'windows-2019' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: CellProfiler-Analyst-Windows-3.0.4.exe
+          path: ./distribution/windows/Output/CellProfiler-Analyst-Windows-3.0.4.exe
+    strategy:
+      matrix:
+        os: [macos-10.15, windows-2019]
+        python-version: [ "3.8" ]
+  upload:
+    name: upload
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          draft: true
+          prerelease: true
+          release_name: ${{ github.ref }}
+          tag_name: ${{ github.ref }}
+      - uses: actions/download-artifact@v1
+        with:
+          name: CellProfiler-Analyst-macOS-3.0.4.zip
+          path: ./
+      - uses: actions/download-artifact@v1
+        with:
+          name: CellProfiler-Analyst-Windows-3.0.4.exe
+          path: ./
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-release-asset@v1
+        with:
+          asset_content_type: application/zip
+          asset_name: CellProfiler-Analyst-macOS-3.0.4.zip
+          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-macOS-3.0.4.zip
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-release-asset@v1
+        with:
+          asset_content_type: application/exe
+          asset_name: CellProfiler-Analyst-Windows-3.0.4.exe
+          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-Windows-3.0.4.exe
+          upload_url: ${{ steps.create_release.outputs.upload_url }}

@@ -1,19 +1,19 @@
+import logging
+import platform
 import wx
-import wx.combo
+import wx.adv
 import os
 import re
-import icons
-import properties
-import dbconnect
-import logging
-import sqltools
+from cpa.icons import get_icon
+from . import properties
+from . import dbconnect
+from . import sqltools
 import numpy as np
-from utils import Observable
-from wx.combo import OwnerDrawnComboBox as ComboBox
-from wx.lib.combotreebox import ComboTreeBox
+from .utils import Observable
+from wx.adv import OwnerDrawnComboBox as ComboBox
 
-p = properties.Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = properties.Properties()
+db = dbconnect.DBConnect()
 
 def get_main_frame_or_none():
     return wx.GetApp().__dict__.get('frame', None)
@@ -38,13 +38,13 @@ class _ColumnLinkerPanel(wx.Panel):
         self.Sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.Sizer.Add(wx.StaticText(self, -1, table_a+'.'), 0, wx.TOP, 4)
         self.Sizer.Add(self.aChoice, 1, wx.EXPAND)
-        self.Sizer.AddSpacer((10,-1))
+        self.Sizer.AddSpacer(10)
         self.Sizer.Add(wx.StaticText(self, -1, '<=>'), 0, wx.TOP, 4)
-        self.Sizer.AddSpacer((10,-1))
+        self.Sizer.AddSpacer(10)
         self.Sizer.Add(wx.StaticText(self, -1, table_b+'.'), 0, wx.TOP, 4)
         self.Sizer.Add(self.bChoice, 1, wx.EXPAND)
         if allow_delete:
-            self.Sizer.AddSpacer((10,-1))
+            self.Sizer.AddSpacer(10)
             self.Sizer.Add(self.x_btn)
             self.x_btn.Bind(wx.EVT_BUTTON, self.GrandParent.on_remove_panel)
 
@@ -80,7 +80,7 @@ class LinkTablesDialog(wx.Dialog):
                                      'columns in "%s" that will be used to join the two tables.'
                                      %(table_a, table_b)), 
                        0, wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.TOP|wx.CENTER, 10)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
 
         self.sw = wx.ScrolledWindow(self)
         if a_cols:
@@ -89,7 +89,7 @@ class LinkTablesDialog(wx.Dialog):
             b_cols = b_cols[1:]
         else:
             self.panels = [_ColumnLinkerPanel(self.sw, table_a, table_b, allow_delete=False)]
-        self.sw.EnableScrolling(x_scrolling=False, y_scrolling=True)
+        self.sw.EnableScrolling(xScrolling=False, yScrolling=True)
         self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
         (w,h) = self.sw.Sizer.GetSize()
         self.sw.SetScrollbars(20,20,w/20,h/20,0,0)
@@ -97,22 +97,22 @@ class LinkTablesDialog(wx.Dialog):
         self.Sizer.Add(self.sw, 1, wx.EXPAND)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.addbtn, 0)
         sz.AddStretchSpacer()
         sz.Add(self.ok, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.cancel, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
 
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
         self.Sizer.Add(sz, 0, wx.EXPAND)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
 
         for cola, colb in zip(a_cols, b_cols):
             self.add_column(cola, colb)
 
-        if 'size' not in kwargs.keys():
+        if 'size' not in list(kwargs.keys()):
             self.resize_to_fit()
 
         self.addbtn.Bind(wx.EVT_BUTTON, self.add_column)
@@ -190,7 +190,7 @@ def prompt_user_to_link_table(parent, table):
     dlg.Sizer.Children[2].GetSizer().Insert(0, show_table_button, 0, wx.ALL, 10)
     dlg.Sizer.Children[2].GetSizer().InsertStretchSpacer(1, 1)
     def on_show_table(evt):
-        from tableviewer import TableViewer
+        from .tableviewer import TableViewer
         tableview = TableViewer(get_main_frame_or_none())
         tableview.Show()
         tableview.load_db_table(table)
@@ -208,7 +208,7 @@ def prompt_user_to_link_table(parent, table):
                                'new set of images in your experiment?', 
                                'New per-image table', wx.YES_NO)
         if dlg.ShowModal() == wx.ID_YES:
-            wx.MessageDialog('Sorry, CPA does not currently support multiple\n'
+            wx.MessageDialog(parent,'Sorry, CPA does not currently support multiple\n'
                              'per-image tables unless they are referring to the\n'
                              'same images.\n\n'
                              'Please see the manual for more information',
@@ -222,7 +222,7 @@ def prompt_user_to_link_table(parent, table):
                                'new set of objects in your experiment?', 
                                'New per-object table', wx.YES_NO)
         if dlg.ShowModal() == wx.ID_YES:
-            wx.MessageDialog('Sorry, CPA does not currently support multiple\n'
+            wx.MessageDialog(parent,'Sorry, CPA does not currently support multiple\n'
                              'per-object tables unless they are referring to the\n'
                              'same objects.\n\n'
                              'Please see the manual for more information',
@@ -235,7 +235,7 @@ def prompt_user_to_link_table(parent, table):
         else:
             # There should never be an object table without another object 
             # table existing first. Connecting this table to the image_table is
-            # asking for trouble.            
+            # asking for trouble.
             return None
 
     else:
@@ -282,7 +282,7 @@ class TableComboBox(ComboBox):
             self.Select(0)
 
 
-class FilterComboBox(wx.combo.BitmapComboBox):
+class FilterComboBox(wx.adv.BitmapComboBox):
     '''A combobox for selecting/creating filters. This box will automatically
     update it's choices as filters and gates are created and deleted.
     '''
@@ -290,7 +290,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
     NEW_FILTER = 'CREATE NEW FILTER'
     def __init__(self, parent, id=-1, **kwargs):
         choices = kwargs.get('choices', self.get_choices())
-        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=choices, **kwargs)
+        wx.adv.BitmapComboBox.__init__(self, parent, id, choices=choices, **kwargs)
         self.Select(0)
         self.reset_bitmaps()
         p._filters.addobserver(self.update_choices)
@@ -312,7 +312,7 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         '''returns a Filter (or OldFilter) for the selected object or None
         if the selection is NO_FILTER or NEW_FILTER
         '''
-        kind = self.get_item_kind(self.Selection)
+        kind = self.get_item_kind(self.GetSelection()) # Fix selection issue
         if kind == 'filter':
             return p._filters[self.Value]
         elif kind == 'gate':
@@ -339,11 +339,11 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         '''returns the bitmap corresponding with the nth item'''
         kind = self.get_item_kind(n)
         if kind == 'filter':
-            return icons.filter.ConvertToBitmap()
+            return get_icon("filter").ConvertToBitmap()
         elif kind == 'gate':
-            return icons.gate.ConvertToBitmap()
+            return get_icon("gate").ConvertToBitmap()
         elif self.get_choices()[n] == FilterComboBox.NEW_FILTER:
-            return icons.filter_new.ConvertToBitmap()
+            return get_icon("filter_new").ConvertToBitmap()
         else:
             return wx.NullBitmap
 
@@ -363,13 +363,18 @@ class FilterComboBox(wx.combo.BitmapComboBox):
         '''Show the ColumnFilterDialog if user wants to make a new filter.'''
         ftr = self.Value
         if ftr == FilterComboBox.NEW_FILTER:
-            from columnfilter import ColumnFilterDialog
-            cff = ColumnFilterDialog(self, tables=[p.image_table], size=(600,150))
+            from .columnfilter import ColumnFilterDialog
+            tables = []
+            for t in [p.image_table, p.object_table, p.class_table]:
+                if isinstance(t, str):
+                    tables.append(t)
+            cff = ColumnFilterDialog(self, tables=tables, size=(600,150))
             if cff.ShowModal()==wx.OK:
                 fltr = cff.get_filter()
                 fname = str(cff.get_filter_name())
                 p._filters[fname] = fltr
                 self.SetStringSelection(fname)
+                print((fname, p._filters[fname]))
             else:
                 self.Select(0)
             cff.Destroy()
@@ -377,22 +382,23 @@ class FilterComboBox(wx.combo.BitmapComboBox):
             evt.Skip()
 
 
-class GateComboBox(wx.combo.BitmapComboBox, Observable):
+class GateComboBox(wx.adv.BitmapComboBox, Observable):
     '''A combobox for selecting/creating gates. This box will automatically 
-    update it's choices as gates are created and deleted.
+    update its choices as gates are created and deleted.
     '''
     NO_GATE = 'NO GATE'
     NEW_GATE = 'CREATE NEW GATE'
     MANAGE_GATES = 'MANAGE GATES'
     def __init__(self, parent, id=-1, **kwargs):
         self.gatable_columns = None
-        wx.combo.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
+        wx.adv.BitmapComboBox.__init__(self, parent, id, choices=self.get_choices(), **kwargs)
         self.Select(0)
         self.reset_bitmaps()
         p.gates.addobserver(self.update_choices)
         self.Bind(wx.EVT_COMBOBOX, self.on_select)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
-        
+        # self.update_info()
+
     def get_choices(self):
         choices = [GateComboBox.NO_GATE]
         if self.gatable_columns == None:
@@ -411,20 +417,28 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
             self.SetStringSelection(selected_string)
         else:
             self.Select(0)
-        
+
+    def update_info(self):
+        # Disabled for now
+        return
+    #     gate = self.get_gatename_or_none()
+    #     if gate:
+    #         p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
+
     def get_gatename_or_none(self):
-        if self.GetStringSelection() in (GateComboBox.NO_GATE, 
+        selection = self.GetSelection() # Fix to replace self.GetStringSelection()
+        if self.GetString(selection) in (GateComboBox.NO_GATE, 
                                          GateComboBox.NEW_GATE, 
                                          GateComboBox.MANAGE_GATES):
             return None
-        return self.GetStringSelection()
+        return self.GetString(selection) 
         
     def get_item_bitmap(self, n):
         '''returns the bitmap corresponding with the nth item'''
         if n != 0 and n < len(self.Items)-2:
-            return icons.gate.ConvertToBitmap()
+            return get_icon("gate").ConvertToBitmap()
         elif self.get_choices()[n] == GateComboBox.NEW_GATE:
-            return icons.gate_new.ConvertToBitmap()
+            return get_icon("gate_new").ConvertToBitmap()
         else:
             return wx.NullBitmap
 
@@ -455,6 +469,9 @@ class GateComboBox(wx.combo.BitmapComboBox, Observable):
                 self.Items = self.Items[:-1] + [dlg.Value] + self.Items[-1:]
                 self.SetStringSelection(dlg.Value)
                 p.gates[dlg.Value] = sqltools.Gate()
+
+                # p._filters[dlg.Value] = sqltools.Filter()
+
             else:
                 self.Select(0)
             dlg.Destroy()
@@ -501,7 +518,7 @@ class GateDialog(wx.TextEntryDialog):
         if not valid:
             self.txtCtrl.SetForegroundColour('red')
         else:
-            self.txtCtrl.SetForegroundColour('black')
+            self.txtCtrl.SetForegroundColour('black') # Text color
         self.okbtn.Enable(valid)
         evt.Skip()
                 
@@ -533,7 +550,7 @@ class TableSelectionDialog(wx.SingleChoiceDialog):
 def prompt_user_to_create_loadimages_table(parent, select_gates=[]):
     dlg = CreateLoadImagesTableDialog(parent, select_gates)
     if dlg.ShowModal() == wx.ID_OK:
-        import tableviewer
+        from . import tableviewer
         return tableviewer.show_loaddata_table(dlg.get_selected_gates(), dlg.get_gates_as_columns())
     else:
         return None
@@ -565,7 +582,7 @@ class CreateLoadImagesTableDialog(wx.Dialog):
         btnsizer = wx.StdDialogButtonSizer()
 
         helpbtn = wx.Button(self, wx.ID_HELP)
-        helpbtn.Bind(wx.EVT_BUTTON, lambda(evt): wx.TipWindow(
+        helpbtn.Bind(wx.EVT_BUTTON, lambda evt: wx.TipWindow(
             self, 'This dialog a list of per_image gates which you may apply'
             'to your per_image data to generate a filtered list of images for'
             'input to CellProfiler LoadImages.\n\n'
@@ -595,7 +612,7 @@ class CreateLoadImagesTableDialog(wx.Dialog):
     
 class GateManager(wx.Dialog):
     def __init__(self, parent, **kwargs):
-        kwargs['style'] = kwargs.get('style',wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER|wx.THICK_FRAME)
+        kwargs['style'] = kwargs.get('style',wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
         wx.Dialog.__init__(self, parent, title="Gate Inspector", **kwargs)
         
         self.gatelist = wx.ListBox(self, choices=p.gates_ordered)
@@ -604,12 +621,12 @@ class GateManager(wx.Dialog):
         
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(wx.StaticText(self, -1, 'Gates:'), 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.gatelist, 1, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.deletebtn, 0, wx.LEFT|wx.RIGHT, 15)
         self.Sizer.Add(wx.StaticText(self, -1, 'Gate info:'), 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.gateinfo, 2, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
         self.Sizer.Add(wx.Button(self, wx.ID_OK, 'Close'), 0, wx.ALIGN_RIGHT|wx.ALL, 15 )
         
@@ -634,9 +651,10 @@ class GateManager(wx.Dialog):
         self.deletebtn.Enable(gate in p.gates)
         if gate:
             self.gateinfo.Value = str(p.gates[gate])
+            # p._filters[gate] = sqltools.Filter(p.gates[gate].as_filter())
         else:
             self.gateinfo.Value = ''
-        
+
     def update_choices(self, evt):
         sel = self.gatelist.GetStringSelection()
         self.gatelist.SetItems(p.gates_ordered)
@@ -656,11 +674,11 @@ class GateManager(wx.Dialog):
             p.gates.pop(gate)
 
             
-class CheckListComboBox(wx.combo.ComboCtrl):
+class CheckListComboBox(wx.ComboCtrl):
     '''A handy concoction for doing selecting multiple items with a ComboBox.
     '''
     def __init__(self, parent, choices=[], **kwargs):
-        wx.combo.ComboCtrl.__init__(self, parent, -1, **kwargs)
+        wx.ComboCtrl.__init__(self, parent, -1, **kwargs)
         self.popup = CheckListComboPopup(choices)
         self.SetPopupControl(self.popup)
         
@@ -681,11 +699,11 @@ class CheckListComboBox(wx.combo.ComboCtrl):
         self.Value = self.popup.GetStringValue()
 
         
-class CheckListComboPopup(wx.combo.ComboPopup):
+class CheckListComboPopup(wx.ComboPopup):
     '''A ComboBox that provides a CheckList for multiple selection. Hurray!
     '''
     def __init__(self, choices=[]):
-        wx.combo.ComboPopup.__init__(self)
+        wx.ComboPopup.__init__(self)
         self.choices = choices
 
     def on_dclick(self, evt):
@@ -723,14 +741,12 @@ class BitmapPopup(wx.MiniFrame):
         self.SetPosition(kwargs.get('pos', (-1,-1)))
         self.SetSize(bitmap.Size)
 
-        self.Bind(wx.EVT_LEFT_DOWN, lambda(e): self.Destroy())
+        self.Bind(wx.EVT_LEFT_DOWN, lambda e: self.Destroy())
         self.Bind(wx.EVT_PAINT, self._on_paint)
 
     def _on_paint(self, evt):
         dc = wx.BufferedPaintDC(self)
-        dc.BeginDrawing()
         dc.DrawBitmap(self.bmp, 0, 0)
-        dc.EndDrawing()
 
         
         
@@ -750,7 +766,7 @@ def show_objects_from_gate(gatename, warn=100):
         te = wx.TextEntryDialog(get_main_frame_or_none(), 'You have selected %s %s. '
                     'How many would you like to show at random?'%(len(keys), 
                     p.object_name[1]), 'Choose # of %s'%
-                    (p.object_name[1]), defaultValue='100')
+                    (p.object_name[1]), value='100')
         te.ShowModal()
         try:
             numobs = int(te.Value)
@@ -759,7 +775,7 @@ def show_objects_from_gate(gatename, warn=100):
         except ValueError:
             wx.MessageDialog(get_main_frame_or_none(), 'You have entered an invalid number', 'Error').ShowModal()
             return
-    import sortbin
+    from . import sortbin
     f = sortbin.CellMontageFrame(get_main_frame_or_none())
     f.Show()
     f.add_objects(keys)
@@ -784,7 +800,7 @@ def show_images_from_gate(gatename, warn=10):
         if response != wx.ID_YES:
             return
     logging.info('Opening %s images.'%(len(res)))
-    import imagetools
+    from . import imagetools
     for row in res:
         imagetools.ShowImage(tuple(row), p.image_channel_colors, parent=get_main_frame_or_none())
         
@@ -800,60 +816,42 @@ def show_load_dialog():
                     'Properties file (*.properties, *.txt)|*.properties;*.txt|'
                     'Columbus MeasurementIndex file (*.ColumbusIDX.xml)|*.ColumbusIDX.xml|'
                     'Harmony PlateResults file (*.xml)|*.xml',
-                    style=wx.OPEN|wx.FD_CHANGE_DIR)
-    if dlg.ShowModal() == wx.ID_OK:
+                    style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
+    response = dlg.ShowModal()
+    
+    if response == wx.ID_OK:
         filename = dlg.GetPath()
-        os.chdir(os.path.split(filename)[0])  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        path, fname = os.path.split(filename)
+        os.chdir(path)  # wx.FD_CHANGE_DIR doesn't seem to work in the FileDialog, so I do it explicitly
+        logging.info(f"[Properties]: Loading {fname}")
         if filename.endswith('ColumbusIDX.xml'):
-            from parseperkinelmer import load_columbus
+            from .parseperkinelmer import load_columbus
             load_columbus(filename)
         elif filename.endswith('.xml'):
-            from parseperkinelmer import load_harmony
+            from .parseperkinelmer import load_harmony
             load_harmony(filename)            
         else:
             p.load_file(filename)
+
+        wx.CallAfter(dlg.Destroy) # Force it to destroy
         return True
     else:
+        wx.CallAfter(dlg.Destroy)
         return False
-            
-        
-if __name__ == "__main__":
-    app = wx.PySimpleApp()
-    import logging, sys
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    p.load_file('/Users/afraser/cpa_example/example.properties')
 
-    f = wx.Frame(None)
-    f.Sizer = wx.BoxSizer(wx.VERTICAL)
-    #f.Sizer.Add(CheckListComboBox(f, 'asdf'))
-    
-    
-    treebox = ComboTreeBox(f, style=wx.CB_READONLY)
-    def build_tree(colnames, parent=None):
-        #i = 1
-        #while 1:
-            #prefixes, b = zip(*[col.split('_', i) for col in colnames])
-            #prefixes = set(prefixes)
-            #if len(prefixes) > 1 or :
-                #break
-            #i += 1
-        for prefix in prefixes:
-            subcols = [col.split('_', 1)[1] for col in colnames if col.startswith(prefix+'_')]
-            if len(subcols) == 1:
-                treebox.Append(prefix+'_'+subcols[0], parent)
-            elif subcols:
-                child = treebox.Append(prefix, parent)
-                build_tree(subcols, child)
-            else:
-                treebox.Append(prefix, parent)
-    cols = ['test_t_t_t_1', 'test_t_t_t_2']
-    build_tree(cols)
-    for table in sorted(db.get_linkable_tables()):
-        child = treebox.Append(table)
-        cols = db.GetColumnNames(table)
-        build_tree(cols, child)
-
-    f.Sizer.Add(treebox, 0, wx.EXPAND)
-    f.Show()
-
-    app.MainLoop()
+def create_status_bar(parent, force=False):
+    if platform.system() == "Darwin" and platform.mac_ver()[0].startswith('11'):
+        # wx 4.1.0 crashes on Big Sur if you try to make a status bar.
+        # Redirect messages to the log instead.
+        # Provide a toolbar if we need to place buttons in the status bar.
+        def log_status(text):
+            logging.info(text)
+        parent.SetStatusText = log_status
+        if force:
+            tb = wx.ToolBar(parent, style=wx.TB_BOTTOM)
+            parent.SetToolBar(tb)
+            return tb
+        else:
+            return None
+    else:
+        return parent.CreateStatusBar()

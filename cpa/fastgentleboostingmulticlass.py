@@ -1,6 +1,7 @@
+
 from numpy import *
 import sys
-from fastgentleboostingworkermulticlass import train_weak_learner
+from .fastgentleboostingworkermulticlass import train_weak_learner
 
 
 def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False, test_values=None, callback=None):
@@ -95,7 +96,7 @@ def train(colnames, num_learners, label_matrix, values, fout=None, do_prof=False
 def xvalidate(colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback):
     # if everything's in the same group, ignore the labels
     if all([g == group_labels[0] for g in group_labels]):
-        group_labels = range(len(group_labels))
+        group_labels = list(range(len(group_labels)))
     
     # randomize the order of labels
     unique_labels = list(set(group_labels))
@@ -107,14 +108,14 @@ def xvalidate(colnames, num_learners, label_matrix, values, folds, group_labels,
     
     # break into folds, randomly, but with all identical group_labels together
     for f in range(folds):
-        print "fold", f
+        print(("fold", f))
         current_holdout = [False] * len(group_labels)
         while unique_labels and (sum(current_holdout) < fold_min_size):
             to_add = unique_labels.pop()
             current_holdout = [(a or b) for a, b in zip(current_holdout, [g == to_add for g in group_labels])]
         
         if sum(current_holdout) == 0:
-            print "no holdout"
+            print("no holdout")
             break
 
         holdout_idx = nonzero(current_holdout)[0]
@@ -138,20 +139,20 @@ def xvalidate(colnames, num_learners, label_matrix, values, folds, group_labels,
         
 
 def usage(name):
-    print "usage %s:"%(name)
-    print "%s num_learners              - read from stdin, write to stdout"%(name)
-    print "%s num_learners file         - read from file, write to stdout"%(name)
-    print "%s num_learners file1 file2  - read from file1, write to file2"%(name)
-    print ""
-    print "Input files should be tab delimited."
-    print "Example:"
-    print "ClassLabel	Value1_name	Value2_name	Value3_name"
-    print "2	0.1	0.3	1.5"
-    print "1	0.5	-0.3	0.5"
-    print "3	0.1	1.0	0.5"
-    print ""
-    print "Labels should be positive integers."
-    print "Note that if one learner is sufficient, only one will be written."
+    print(("usage %s:"%(name)))
+    print(("%s num_learners              - read from stdin, write to stdout"%(name)))
+    print(("%s num_learners file         - read from file, write to stdout"%(name)))
+    print(("%s num_learners file1 file2  - read from file1, write to file2"%(name)))
+    print("")
+    print("Input files should be tab delimited.")
+    print("Example:")
+    print("ClassLabel	Value1_name	Value2_name	Value3_name")
+    print("2	0.1	0.3	1.5")
+    print("1	0.5	-0.3	0.5")
+    print("3	0.1	1.0	0.5")
+    print("")
+    print("Labels should be positive integers.")
+    print("Note that if one learner is sufficient, only one will be written.")
     sys.exit(1)
 
 if __name__ == '__main__':
@@ -172,14 +173,14 @@ if __name__ == '__main__':
 
     import csv
     reader = csv.reader(fin, delimiter='	')
-    header = reader.next()
+    header = next(reader)
     label_to_labelidx = {}
     curlabel = 1
     def get_numlabel(strlabel):
         if strlabel in label_to_labelidx:
             return label_to_labelidx[strlabel]
         global curlabel
-        print "LABEL: ", curlabel, strlabel
+        print(("LABEL: ", curlabel, strlabel))
         label_to_labelidx[strlabel] = curlabel
         curlabel += 1
         return label_to_labelidx[strlabel]
@@ -225,12 +226,12 @@ if __name__ == '__main__':
     # convert labels to a matrix with +1/-1 values only (+1 in the column matching the label, 1-indexed)
     num_classes = max(labels)
     label_matrix = -ones((len(labels), num_classes), int32)
-    for i, j in zip(range(len(labels)), array(labels)-1):
+    for i, j in zip(list(range(len(labels))), array(labels)-1):
         label_matrix[i, j] = 1
 
     wl = train(colnames, num_learners, label_matrix, values, fout)
     for w in wl:
-        print w
-    print label_matrix.shape, "groups"
-    print xvalidate(colnames, num_learners, label_matrix, values, 20, range(1, label_matrix.shape[0]+1), None)
+        print(w)
+    print((label_matrix.shape, "groups"))
+    print((xvalidate(colnames, num_learners, label_matrix, values, 20, list(range(1, label_matrix.shape[0]+1)), None)))
 

@@ -1,5 +1,7 @@
-from scipy.ndimage import median_filter
+from scipy.ndimage import median_filter, uniform_filter
 import numpy as np
+import logging
+
 
 G_EXPERIMENT = "Experiment"
 G_PLATE = "Plate"
@@ -10,6 +12,7 @@ G_CONSTANT = "Constant"
 M_MEDIAN = "Median"
 M_MEAN = "Mean"
 M_MODE = "Mode"
+M_NEGCTRL = "Negative Control" # DMSO Standardization
 M_ZSCORE = "Z score"
 
 W_SQUARE = "Square"
@@ -77,7 +80,12 @@ def square_filter_normalization(data, aggregate_type, win_size):
     else:
         raise ValueError('Programming Error: Unknown window type supplied.')
     
-    return data / normalization_values
+    try:
+        res = data / normalization_values
+    except:
+        logging.error("Division by zero, replace value with 0")
+        res = 0
+    
 
 def linear_filter_normalization(data, aggregate_type, win_size):
     '''
@@ -90,7 +98,13 @@ def linear_filter_normalization(data, aggregate_type, win_size):
     else:
         raise ValueError('Programming Error: Unknown window type supplied.')
     
-    return data / normalization_values
+    try:
+        res = data / normalization_values
+    except:
+        logging.error("Division by zero, replace value with 0")
+        res = 0
+
+    return res
 
 def do_normalization(data, aggregate_type_or_const):
     '''
@@ -98,7 +112,9 @@ def do_normalization(data, aggregate_type_or_const):
     aggregate_type_or_const -- specify an aggregation type or a numeric constant
        to divide by
     '''
-    if aggregate_type_or_const == M_MEDIAN:
+    if aggregate_type_or_const == M_NEGCTRL:
+        normalization_value = 1 # Keep data the same
+    elif aggregate_type_or_const == M_MEDIAN:
         normalization_value = np.median(data.flatten())
     elif aggregate_type_or_const == M_MEAN:
         normalization_value = np.mean(data.flatten())
@@ -111,6 +127,13 @@ def do_normalization(data, aggregate_type_or_const):
         h = scipy.ndimage.histogram(data.flatten(), robust_min, robust_max, nbins)
         index = np.argmax(h)
         normalization_value = np.min(data) + float(index)/float(nbins-1)*(np.max(data) - np.min(data))
-    elif type(aggregate_type_or_const) in (float, int, long):
+    elif type(aggregate_type_or_const) in (float, int):
         normalization_value = aggregate_type_or_const
-    return data / normalization_value
+
+    try:
+        res = data / normalization_value
+    except:
+        logging.error("Division by zero, replace value with 0!")
+        res = 0
+
+    return res

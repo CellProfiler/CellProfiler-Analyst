@@ -1,13 +1,13 @@
+
 import logging
 import wx
 import numpy as np
-from properties import Properties
-from dbconnect import *
-from UserDict import DictMixin
-import imagetools
+from .properties import Properties
+from .dbconnect import *
+from . import imagetools
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 class ImageListCtrl(wx.ListCtrl):
     def __init__(self, parent, imkeys):
@@ -51,7 +51,7 @@ class ImageListCtrl(wx.ListCtrl):
         f.Raise()
 
     def OnGetItemText(self, row, col):
-        return self.data[row][col]
+        return str(self.data[row][col])
 
 
 class ImageListFrame(wx.Frame):
@@ -68,11 +68,11 @@ class ImageListFrame(wx.Frame):
         
         
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
     
     if not p.show_load_dialog():
-        print 'Props file required'
+        print('Props file required')
         sys.exit()
     
     ilf = ImageListFrame(None, db.execute('SELECT %s from %s'%(UniqueImageClause(), p.image_table)))

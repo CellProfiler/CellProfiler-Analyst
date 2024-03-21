@@ -1,25 +1,22 @@
-from cpatool import CPATool
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns, object_key_columns
-import sqltools as sql
-from multiclasssql import filter_table_prefix
-from properties import Properties
-import guiutils as ui 
-from gating import GatingHelper
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
+
+from .cpatool import CPATool
+from .dbconnect import DBConnect
+from . import sqltools as sql
+from .properties import Properties
+from . import guiutils as ui 
+from .gating import GatingHelper
+from wx.adv import OwnerDrawnComboBox as ComboBox
 import logging
 import numpy as np
-import os
 import sys
-import re
 import wx
 import matplotlib.cm
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 ID_EXIT = wx.NewId()
 LOG_SCALE    = 'log'
@@ -33,6 +30,7 @@ class DataSourcePanel(wx.Panel):
     def __init__(self, parent, figpanel, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
         # the panel to draw charts on
+        self.SetBackgroundColour('white') # color for the background of panel
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -42,7 +40,7 @@ class DataSourcePanel(wx.Panel):
         self.x_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.y_choice = ComboBox(self, -1, size=(200,-1), style=wx.CB_READONLY)
         self.gridsize_input = wx.TextCtrl(self, -1, '50')
-        maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
+        maps = [m for m in list(matplotlib.cm.datad.keys()) if not m.endswith("_r")]
         maps.sort()
         self.colormap_choice = ComboBox(self, -1, choices=maps, style=wx.CB_READONLY)
         self.colormap_choice.SetSelection(maps.index('jet'))
@@ -53,6 +51,7 @@ class DataSourcePanel(wx.Panel):
         self.y_scale_choice = ComboBox(self, -1, choices=[LINEAR_SCALE, LOG_SCALE], style=wx.CB_READONLY)
         self.y_scale_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
         self.gate_choice = ui.GateComboBox(self, style=wx.CB_READONLY)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
@@ -61,75 +60,79 @@ class DataSourcePanel(wx.Panel):
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "x-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_table_choice, 1, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_choice, 2, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))
+        sizer.Add(-1, 2, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "y-axis:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_table_choice, 1, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_choice, 2, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, -1, "scale:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.y_scale_choice)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,2))
+        sizer.Add(-1, 2, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)        
         sz.Add(wx.StaticText(self, -1, "grid size:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.gridsize_input, 1, wx.TOP, 3)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, label='color map:'), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.colormap_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, label='color scale:'), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.color_scale_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.Add(-1, 5, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.filter_choice, 1, wx.EXPAND)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(wx.StaticText(self, -1, "gate:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.gate_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,5))
+        sizer.Add(-1, 5, 0)
         
         sizer.Add(self.update_chart_btn)    
-        
-        wx.EVT_COMBOBOX(self.x_table_choice, -1, self.on_x_table_selected)
-        wx.EVT_COMBOBOX(self.y_table_choice, -1, self.on_y_table_selected)
+
+        self.x_table_choice.Bind(wx.EVT_COMBOBOX, self.on_x_table_selected)
+        self.y_table_choice.Bind(wx.EVT_COMBOBOX, self.on_y_table_selected)
         self.gate_choice.addobserver(self.on_gate_selected)
-        wx.EVT_COMBOBOX(self.colormap_choice, -1, self.on_cmap_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)
-        
+        self.colormap_choice.Bind(wx.EVT_COMBOBOX, self.on_cmap_selected)
+        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
+
         self.SetSizer(sizer)
         self.Show(1)
 
     @property
     def x_column(self):
-        return sql.Column(self.x_table_choice.GetStringSelection(), 
-                          self.x_choice.GetStringSelection())
+        x_table_choice_id = self.x_table_choice.GetSelection()
+        x_choice_id = self.x_choice.GetSelection()
+        return sql.Column(self.x_table_choice.GetString(x_table_choice_id), 
+                          self.x_choice.GetString(x_choice_id))
     @property
     def y_column(self):
-        return sql.Column(self.y_table_choice.GetStringSelection(), 
-                          self.y_choice.GetStringSelection())
+        y_table_choice_id = self.y_table_choice.GetSelection()
+        y_choice_id = self.y_choice.GetSelection()
+        return sql.Column(self.y_table_choice.GetString(y_table_choice_id), 
+                          self.y_choice.GetString(y_choice_id))
     @property
     def filter(self):
         return self.filter_choice.get_filter_or_none()
@@ -175,7 +178,7 @@ class DataSourcePanel(wx.Panel):
             self.figpanel.gate_helper.disable()
 
     def on_cmap_selected(self, evt):
-        self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
+        self.figpanel.set_colormap(self.colormap_choice.GetString(self.colormap_choice.GetSelection()))
         
     def update_x_choices(self):
         tablename = self.x_table_choice.Value
@@ -195,7 +198,7 @@ class DataSourcePanel(wx.Panel):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        return [m for m,t in zip(measurements, types) if t in (float, int)]
         
     def _plotting_per_object_data(self):
         return (p.object_table and
@@ -208,12 +211,12 @@ class DataSourcePanel(wx.Panel):
         self.gate_choice.set_gatable_columns([self.x_column, self.y_column])
         points = self._load_points()
         self.figpanel.setgridsize(int(self.gridsize_input.GetValue()))
-        self.figpanel.set_x_scale(self.x_scale_choice.GetStringSelection())
-        self.figpanel.set_y_scale(self.y_scale_choice.GetStringSelection())
-        self.figpanel.set_color_scale(self.color_scale_choice.GetStringSelection())
+        self.figpanel.set_x_scale(self.x_scale_choice.GetString(self.x_scale_choice.GetSelection()))
+        self.figpanel.set_y_scale(self.y_scale_choice.GetString(self.y_scale_choice.GetSelection()))
+        self.figpanel.set_color_scale(self.color_scale_choice.GetString(self.color_scale_choice.GetSelection()))
         self.figpanel.set_x_label(self.x_column.col)
         self.figpanel.set_y_label(self.y_column.col)
-        self.figpanel.set_colormap(self.colormap_choice.GetStringSelection())
+        self.figpanel.set_colormap(self.colormap_choice.GetString(self.colormap_choice.GetSelection()))
         self.figpanel.setpointslists(points)
         self.figpanel.draw()
         self.update_gate_helper()
@@ -231,22 +234,22 @@ class DataSourcePanel(wx.Panel):
         '''save_settings is called when saving a workspace to file.
         returns a dictionary mapping setting names to values encoded as strings
         '''
-        d = {'x-table'     : self.x_table_choice.GetStringSelection(),
-             'y-table'     : self.y_table_choice.GetStringSelection(),
-             'x-axis'      : self.x_choice.GetStringSelection(),
-             'y-axis'      : self.y_choice.GetStringSelection(),
-             'x-scale'     : self.x_scale_choice.GetStringSelection(),
-             'y-scale'     : self.y_scale_choice.GetStringSelection(),
+        d = {'x-table'     : self.x_table_choice.GetString(self.x_table_choice.GetSelection()),
+             'y-table'     : self.y_table_choice.GetString(self.y_table_choice.GetSelection()),
+             'x-axis'      : self.x_choice.GetString(self.x_choice.GetSelection()),
+             'y-axis'      : self.y_choice.GetString(self.y_choice.GetSelection()),
+             'x-scale'     : self.x_scale_choice.GetString(self.x_scale_choice.GetSelection()),
+             'y-scale'     : self.y_scale_choice.GetString(self.y_scale_choice.GetSelection()),
              'grid size'   : self.gridsize_input.GetValue(),
-             'colormap'    : self.colormap_choice.GetStringSelection(),
-             'color scale' : self.color_scale_choice.GetStringSelection(),
-             'filter'      : self.filter_choice.GetStringSelection(),
+             'colormap'    : self.colormap_choice.GetString(self.colormap_choice.GetSelection()),
+             'color scale' : self.color_scale_choice.GetString(self.color_scale_choice.GetSelection()),
+             'filter'      : self.filter_choice.GetString(self.filter_choice.GetSelection()),
              'x-lim'       : self.figpanel.subplot.get_xlim(),
              'y-lim'       : self.figpanel.subplot.get_ylim(),
              'version'     : '1',
              }
         if self.gate_choice.get_gatename_or_none():
-            d['gate'] = self.gate_choice.GetStringSelection()
+            d['gate'] = self.gate_choice.GetString(self.gate_choice.GetSelection())
         return d
     
     def load_settings(self, settings):
@@ -334,13 +337,15 @@ class DensityPanel(FigureCanvasWxAgg):
                                  yscale=self.y_scale,
                                  bins=self.color_scale,
                                  cmap=matplotlib.cm.get_cmap(self.cmap))
+
         
         if self.cb:
             # Remove the existing colorbar and reclaim the space so when we add
             # a colorbar to the new hexbin subplot, it doesn't get indented.
-            self.figure.delaxes(self.figure.axes[1])
+            #self.figure.delaxes(self.figure.axes[1])
+            self.cb.remove()
             self.figure.subplots_adjust(right=0.90)
-        self.cb = self.figure.colorbar(hb)
+        self.cb = self.figure.colorbar(hb, fraction=0.046, pad=0.04)
         if self.color_scale==LOG_SCALE:
             self.cb.set_label('log10(N)')
         
@@ -406,8 +411,7 @@ class DensityPanel(FigureCanvasWxAgg):
     def reset_toolbar(self):
         # Cheat since there is no way reset
         if self.navtoolbar:
-            self.navtoolbar._views.clear()
-            self.navtoolbar._positions.clear()
+            self.navtoolbar._nav_stack.clear()
             self.navtoolbar.push_current()
     
     def set_configpanel(self,configpanel):
@@ -418,7 +422,8 @@ class DensityPanel(FigureCanvasWxAgg):
         if evt.button == 3: # right click
             self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
             
-    def show_popup_menu(self, (x,y), data):
+    def show_popup_menu(self, xxx_todo_changeme, data):
+        (x,y) = xxx_todo_changeme
         self.popup_menu_filters = {}
         popup = wx.Menu()
         loadimages_table_item = popup.Append(-1, 'Create gated table for CellProfiler LoadImages')
@@ -427,14 +432,14 @@ class DensityPanel(FigureCanvasWxAgg):
         if selected_gate:
             selected_gates = [selected_gate]
         self.Bind(wx.EVT_MENU, 
-                  lambda(e):ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
+                  lambda e:ui.prompt_user_to_create_loadimages_table(self, selected_gates), 
                   loadimages_table_item)
         
         show_images_in_gate_item = popup.Append(-1, 'Show images in gate')
         show_images_in_gate_item.Enable(selected_gate is not None)
         self.Bind(wx.EVT_MENU, self.show_images_from_gate, show_images_in_gate_item)
         if p.object_table:
-            show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate'%(p.object_name[1]))
+            show_objects_in_gate_item = popup.Append(-1, 'Show %s in gate (montage)'%(p.object_name[1]))
             show_objects_in_gate_item.Enable(selected_gate is not None)
             self.Bind(wx.EVT_MENU, self.show_objects_from_gate, show_objects_in_gate_item)
 
@@ -460,7 +465,7 @@ class Density(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Density Plot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         figpanel = DensityPanel(self)
         configpanel = DataSourcePanel(self, figpanel)
         figpanel.set_configpanel(configpanel)
@@ -469,16 +474,84 @@ class Density(wx.Frame, CPATool):
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
-        
+        self.fig = figpanel
         #
         # Forward save and load settings functionality to the configpanel
         #
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
 
+    # Hack: See http://stackoverflow.com/questions/6124419/matplotlib-navtoolbar-doesnt-realize-in-wx-2-9-mac-os-x
+    def SetToolBar(self, toolbar):
+        from matplotlib.backends.backend_wx import _load_bitmap
+        toolbar.Hide()
+        tb = self.CreateToolBar((wx.TB_HORIZONTAL|wx.TB_TEXT))
+
+        _NTB2_HOME = wx.NewId()
+        _NTB2_BACK = wx.NewId()
+        _NTB2_FORWARD = wx.NewId()
+        _NTB2_PAN = wx.NewId()
+        _NTB2_ZOOM = wx.NewId()
+        _NTB2_SAVE = wx.NewId()
+        _NTB2_SUBPLOT = wx.NewId()
+        tb.AddTool(_NTB2_HOME, "", _load_bitmap('home.png'), 'Home')
+        tb.AddTool(_NTB2_BACK, "", _load_bitmap('back.png'), 'Back')
+        tb.AddTool(_NTB2_FORWARD, "", _load_bitmap('forward.png'), 'Forward')
+
+        tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+
+        tb.AddSeparator()
+        tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
+        tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
+
+        def on_toggle_pan(evt):
+            tb.ToggleTool(_NTB2_ZOOM, False)
+            evt.Skip()
+
+        def on_toggle_zoom(evt):
+            tb.ToggleTool(_NTB2_PAN, False)
+            evt.Skip()
+
+        self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
+        self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
+        self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
+        self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
+        self.Bind(wx.EVT_TOOL, self.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+        self.Bind(wx.EVT_TOOL, on_toggle_zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, on_toggle_pan, id=_NTB2_PAN)
+
+        tb.Realize()  
+        # Hack end
+
+    def configure_subplots(self, *args):
+        # Fixed MPL subplot window generator
+        from matplotlib.backends.backend_wx import _set_frame_icon, FigureManagerWx
+        from matplotlib.widgets import SubplotTool
+
+        frame = wx.Frame(None, -1, "Configure subplots")
+        _set_frame_icon(frame)
+
+        toolfig = Figure((6, 3))
+        canvas = FigureCanvasWxAgg(frame, -1, toolfig)
+
+        # Create a figure manager to manage things
+        FigureManagerWx(canvas, 1, frame)
+
+        # Now put all into a sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # This way of adding to sizer allows resizing
+        sizer.Add(canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
+        frame.SetSizer(sizer)
+        frame.Fit()
+        SubplotTool(self.fig.canvas.figure, toolfig)
+        frame.Show()
+
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
@@ -486,7 +559,7 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
     else:
         if not p.show_load_dialog():
-            print 'Density plot requires a properties file.  Exiting.'
+            print('Density plot requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()

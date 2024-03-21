@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-from dbconnect import *
-from datamodel import DataModel
-from properties import Properties
-from StringIO import StringIO, StringIO
-from trainingset import TrainingSet
+
+from .dbconnect import *
+from .datamodel import DataModel
+from .properties import Properties
+from io import StringIO, StringIO
+from .trainingset import TrainingSet
 from time import time
-import dirichletintegrate
-import fastgentleboostingmulticlass
-import multiclasssql
-import polyafit
+from . import dirichletintegrate
+from . import fastgentleboostingmulticlass
+from . import multiclasssql
+from . import polyafit
 import logging
 import numpy as np
 import os
@@ -41,34 +42,34 @@ def score(properties, ts, nRules, filter_name=None, group='Image',
     '''
     
     p = properties
-    db = DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    db = DBConnect()
+    dm = DataModel()
 
     if group == None:
         group = 'Image'
         
     if results_table:
         if db.table_exists(results_table) and not overwrite:
-            print 'Table "%s" already exists. Delete this table before running scoreall.'%(results_table)
+            print(('Table "%s" already exists. Delete this table before running scoreall.'%(results_table)))
             return None
 
-    print ''
-    print 'properties:    ', properties
-    print 'training set:  ', ts
-    print '# rules:       ', nRules
-    print 'filter:        ', filter_name
-    print 'grouping by:   ', group
-    print 'show results:  ', show_results
-    print 'results table: ', results_table
-    print 'overwrite:     ', overwrite
-    print ''
+    print('')
+    print(('properties:    ', properties))
+    print(('training set:  ', ts))
+    print(('# rules:       ', nRules))
+    print(('filter:        ', filter_name))
+    print(('grouping by:   ', group))
+    print(('show results:  ', show_results))
+    print(('results table: ', results_table))
+    print(('overwrite:     ', overwrite))
+    print('')
             
     nClasses = len(ts.labels)
     nKeyCols = len(image_key_columns())
     
     assert 200 > nRules > 0, '# of rules must be between 1 and 200.  Value was %s'%(nRules,)
-    assert filter_name in p._filters.keys()+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter_name, ','.join(p._filters.keys()),)
-    assert group in p._groups.keys()+['Image'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, ','.join(p._groups.keys()),)
+    assert filter_name in list(p._filters.keys())+[None], 'Filter %s not found in properties file.  Valid filters are: %s'%(filter_name, ','.join(list(p._filters.keys())),)
+    assert group in list(p._groups.keys())+['Image'], 'Group %s not found in properties file.  Valid groups are: %s'%(group, ','.join(list(p._groups.keys())),)
     
     output = StringIO()
     logging.info('Training classifier with %s rules...'%nRules)
@@ -99,7 +100,7 @@ def score(properties, ts, nRules, filter_name=None, group='Image',
             key = tuple(row[:nKeyCols])
             imData[key] = np.array([float(v) for v in row[nKeyCols:]])
         
-        groupedKeysAndCounts = np.array([list(k)+vals.tolist() for k, vals in dm.SumToGroup(imData, group).items()], dtype=object)
+        groupedKeysAndCounts = np.array([list(k)+vals.tolist() for k, vals in list(dm.SumToGroup(imData, group).items())], dtype=object)
         nKeyCols = len(dm.GetGroupColumnNames(group))
         logging.info('Grouping done in %f seconds'%(time()-t0))
     else:
@@ -162,18 +163,18 @@ def score(properties, ts, nRules, filter_name=None, group='Image',
     if group != 'Image':
         colnames += ['Number_of_Images']
     colnames += ['Total_%s_Count'%(p.object_name[0].capitalize())]
-    for i in xrange(nClasses):
+    for i in range(nClasses):
         colnames += ['%s_%s_Count'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
     if p.area_scoring_column is not None:
         colnames += ['Total_%s_Area'%(p.object_name[0].capitalize())]
-        for i in xrange(nClasses):
+        for i in range(nClasses):
             colnames += ['%s_%s_Area'%(ts.labels[i].capitalize(), p.object_name[0].capitalize())]
-    for i in xrange(nClasses):
+    for i in range(nClasses):
         colnames += ['pEnriched_%s'%(ts.labels[i])]
     if nClasses==2:
         colnames += ['Enriched_Score_%s'%(ts.labels[0])]
     else:
-        for i in xrange(nClasses):
+        for i in range(nClasses):
             colnames += ['Enriched_Score_%s'%(ts.labels[i])]
 
     title = results_table or "Enrichments_per_%s"%(group,)
@@ -182,13 +183,13 @@ def score(properties, ts, nRules, filter_name=None, group='Image',
     title += ' (%s)'%(os.path.split(p._filename)[1])
     
     if results_table:
-        print 'Creating table %s'%(results_table)
+        print(('Creating table %s'%(results_table)))
         success = db.CreateTableFromData(tableData, colnames, results_table, temporary=False)
         if not success:
-            print 'Failed to create results table :('
+            print('Failed to create results table :(')
     
     if show_results:
-        import tableviewer
+        from . import tableviewer
         tableview = tableviewer.TableViewer(None, title=title)
         if results_table and overwrite:
             tableview.load_db_table(results_table)
@@ -207,28 +208,28 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
     if len(sys.argv) < 3:
-        print USAGE
+        print(USAGE)
         sys.exit()
 
     props_file = sys.argv[1]
     ts_file    = sys.argv[2]
     
-    app = wx.PySimpleApp()
+    app = wx.App()
     
-    nRules = int(raw_input('# of rules: '))
+    nRules = int(eval(input('# of rules: ')))
     
-    filter_name = raw_input('Filter name (return for none): ')
+    filter_name = eval(input('Filter name (return for none): '))
     if filter_name == '':
         filter_name = None
     
-    group = raw_input('Group name (return for none): ')
+    group = eval(input('Group name (return for none): '))
     if group=='':
         group = 'Image'
         
-    results_table = raw_input('Results table name (return for none): ')
+    results_table = eval(input('Results table name (return for none): '))
 
     logging.info('Loading properties file...')
-    p = Properties.getInstance()
+    p = Properties()
     p.LoadFile(props_file)
     logging.info('Loading training set...')
     ts = TrainingSet(p)
@@ -248,4 +249,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

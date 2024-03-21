@@ -1,9 +1,10 @@
+
 import xml.dom.minidom as dom
 import os
 import re
 import numpy as np
-from properties import Properties
-import dbconnect
+from .properties import Properties
+from . import dbconnect
 import wx
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -34,8 +35,8 @@ FILE_COLUMN_PREFIX = 'Image_File_'
 DEFAULT_DB_NAME = 'cpa.db'
 DEFAULT_PROPERTIES_FILENAME = 'cpa.properties'
 
-p = Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = Properties()
+db = dbconnect.DBConnect()
 
 
 def load_harmony(plate_results):
@@ -61,25 +62,25 @@ def load_harmony(plate_results):
     channels = get_channel_names(plates, wells, images)
     object_results_files = get_object_results_files_harmony(results_dir)
     
-    print 'Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    print(('Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))))
     create_properties_file(image_index, channels, len(object_results_files)>0)
     db.connect(empty_sqlite_db = True)
     p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
     
-    print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
-    print 'Creating per_image table...'
+    print(('Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))))
+    print('Creating per_image table...')
     imagesets = create_image_set_dict(plates, wells, images)
     create_per_image_table(plates, channels, imagesets, image_dir)
-    print '...done'
+    print('...done')
     
-    print 'Creating per_well table...'
+    print('Creating per_well table...')
     create_harmony_per_well_table(plate_results)
-    print '...done'
+    print('...done')
     
     if object_results_files:
-        print 'Creating per_object table...'
+        print('Creating per_object table...')
         create_per_object_table(object_results_files)
-        print '...done'
+        print('...done')
     
     
 
@@ -104,23 +105,23 @@ def load_columbus(measurements_index):
     plates, wells, images = get_plates_wells_and_images(image_index)
     channels = get_channel_names(plates, wells, images)
 
-    print 'Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
+    print(('Creating properties file at: %s'%(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))))
     create_properties_file(image_index, channels)
     db.connect(empty_sqlite_db = True)
     p.load_file(os.path.join(results_dir, DEFAULT_PROPERTIES_FILENAME))
 
-    print 'Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))
-    print 'Creating per_image table...'
+    print(('Creating SQLite database at: %s'%(os.path.join(results_dir, DEFAULT_DB_NAME))))
+    print('Creating per_image table...')
     imagesets = create_image_set_dict(plates, wells, images)
     create_per_image_table(plates, channels, imagesets, image_dir)
-    print '...done'
+    print('...done')
     
-    print 'Creating per_object table...'
+    print('Creating per_object table...')
     from time import time
     t = time()
     object_results_files = get_object_results_files_columbus(doc)
     create_per_object_table(object_results_files)
-    print '...done in %.2f seconds'%(time() - t)
+    print(('...done in %.2f seconds'%(time() - t)))
     
 
 def create_properties_file(image_index, channels, has_per_object=True):
@@ -169,7 +170,7 @@ def create_per_object_table(well_result_files):
         doc = dom.parse(os.path.join(results_dir, well_res_file))
         for ref in doc.getElementsByTagName('ParameterAnnotations'):
             for param in ref.getElementsByTagName('Parameter'):
-                ob_col_dict[param.getAttribute('id')] = dict(param.attributes.items())
+                ob_col_dict[param.getAttribute('id')] = dict(list(param.attributes.items()))
                 
         params_node = doc.getElementsByTagName('ResultTable')[0].getElementsByTagName('Parameters')[0]
         measurement_ids = [p.getAttribute('parID') 
@@ -230,7 +231,7 @@ def create_image_set_dict(plates, wells, images):
     returns a dict d[plateid, well, fieldid, planeid, timepointid] = [ImageInfo, ...]
     '''
     imagesets = {}
-    for pid, pinfo in plates.items():
+    for pid, pinfo in list(plates.items()):
         for wid in pinfo.well_ids:
             winfo = wells[wid]
             well = convert_rowcol_to_wellid(winfo.Row, winfo.Col)
@@ -255,7 +256,7 @@ def create_per_image_table(plates, channels, imagesets, image_dir):
                 ]
     # Metadata columns stored in the Plate tags of the ImageIndex
     col_defs += [(col, 'TEXT')
-                 for col in plates.values()[0].__dict__.keys() 
+                 for col in list(list(plates.values())[0].__dict__.keys()) 
                  if col not in ['PlateID', 'well_ids'] ]
     # Image file and path columns from the Image tags
     col_defs += [(FILE_COLUMN_PREFIX + cname, 'TEXT')
@@ -270,9 +271,9 @@ def create_per_image_table(plates, channels, imagesets, image_dir):
     # Populate the table
     imagenumber = 1
     colnames = [col for col, typ in col_defs]
-    for (plate, well, fid, pid, tid), imageset in imagesets.items():
+    for (plate, well, fid, pid, tid), imageset in list(imagesets.items()):
         row = [ imagenumber, plate, well, fid, pid, tid ]
-        row += [v for col, v in plates[plate].__dict__.items() 
+        row += [v for col, v in list(plates[plate].__dict__.items()) 
                 if col not in ['PlateID', 'well_ids']]
         row += [None] * (len(colnames) - len(row))
         for iinfo in imageset:
@@ -321,7 +322,7 @@ def create_harmony_per_well_table(plate_results_file):
             if not res.childNodes or res.tagName != 'Result':
                 continue
             for val in res.getElementsByTagName('value'):
-                for att, attval in val.attributes.items():
+                for att, attval in list(val.attributes.items()):
                     if att == 'parID' and attval in par_id_set:
                         results[attval] = val.firstChild.data
                         
@@ -386,7 +387,7 @@ class ImageInfo:
                 self.__dict__[ch.localName] = None
             else:
                 self.__dict__[ch.localName] = ch.firstChild.data
-            for att_name, att_val in dict(ch.attributes).items():
+            for att_name, att_val in list(dict(ch.attributes).items()):
                 self.__dict__[ch.localName + '_' + att_name] = att_val.firstChild.data
 
 
@@ -447,7 +448,7 @@ def get_channel_names(plates, wells, images):
     sets in the experiment are assumed to have the same channels.
     '''
     return list(set([images[im_id].ChannelName 
-                     for im_id in wells[plates.values()[0].well_ids[0]].image_ids]))
+                     for im_id in wells[list(plates.values())[0].well_ids[0]].image_ids]))
 
 def get_columbus_image_index_file(doc):
     '''
@@ -492,7 +493,7 @@ def get_url_protocol(image_index):
     images_node = doc.getElementsByTagName('Images')[0]
     image_node = images_node.getElementsByTagName('Image')[0]
     url = image_node.getElementsByTagName('URL')[0].firstChild.data
-    assert type(url) in [str, unicode]
+    assert type(url) == str
     if url.lower().startswith('http://'):
         return 'http'
     else:
@@ -531,7 +532,7 @@ def get_param_map_from_plate_results(plate_results_file):
     doc = dom.parse(plate_results_file)
     for ref in doc.getElementsByTagName('ParameterAnnotations'):
         for param in ref.getElementsByTagName('Parameter'):
-            col_dict[param.getAttribute('id')] = dict(param.attributes.items())
+            col_dict[param.getAttribute('id')] = dict(list(param.attributes.items()))
     return col_dict
 
 def convert_to_friendly_column_name(param_name):
@@ -553,7 +554,7 @@ def get_resultgroup_param_ids_from_plate_results(plate_results_file):
 #
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 ##    load_columbus('/Users/afraser/Desktop/PKI Example Data/Columbus/P010-R ETAR[56]_SinglePlaneTIF/MeasurementIndex.ColumbusIDX.xml')
 ##    load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P010-R ETAR__2009-02-12T17_11_35-Measurement1/Evaluation1/PlateResults.xml')
     load_harmony('/Users/afraser/Desktop/PKI Example Data/Harmony/P018-Colony Formation__2010-09-17T11_57_24-Measurement1/Evaluation1/PlateResults.xml')
@@ -573,4 +574,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

@@ -1,12 +1,11 @@
 # =============================================================================
 #
-#             Properties file README for CellProfiler Analyst 2.0
+#             Properties file README for CellProfiler Analyst 3.0
 #
-# NOTE: CPA 2.0 will not read old CPA properties files, nor will CPA read this
-#       properties file format.  The two formats can, however be easily 
-#       converted by hand.
+# NOTE: CPA 3.0 will read CPA properties files from 2.x versions, but older
+#       files from 1.x versions are incompatible.
 #
-# This file is an example properties file to help users of CPA 2.0 to set up
+# This file is an example properties file to help users of CPA 3.0 to set up
 # your own properties file.  The syntax is simple.  Lines that begin with the
 # "#" sign are comments which are ignored by CPA.  All other lines must be in
 # one of one of the following 2 forms:
@@ -108,6 +107,7 @@ well_id     =  <your_well_id_column>
 
 cell_x_loc  =  <your_object_x_location_column>
 cell_y_loc  =  <your_object_y_location_column>
+cell_z_loc  =  <your_object_z_location_column>
 
 
 # ======== Image Path and Filename Columns ========
@@ -258,6 +258,28 @@ classifier_ignore_columns  =  <your_object_x_location_column>, <your_object_y_lo
 
 image_tile_size  =  50
 
+# OPTIONAL
+# Provides the image width and height. Used for per-image classification.
+# If not set, it will be obtained from the Image_Width and Image_Height 
+# measurements in CellProfiler.
+
+image_width  = 
+image_height = 
+
+# OPTIONAL
+# Image Gallery can use a different tile size (in pixels) to create thumbnails for images
+# If not set, it will be the same as image_tile_size
+
+image_size = 
+
+# ======== Classification type =======
+# OPTIONAL
+# CPA 2.2.0 allows image classification instead of object classification.
+# If left blank or set to "object", then Classifier will fetch objects (default).
+# If set to "image", then Classifier will fetch whole images instead of objects.
+
+classification_type =  
+
 
 # ======== Auto Load Training Set ========
 # OPTIONAL
@@ -294,5 +316,34 @@ class_table  =
 
 check_tables = yes
 
+
+# ======== Force BioFormats ========
+# OPTIONAL
+# [yes/no]  By default, CPA will try to use the imageio library to load images
+# which are in supported formats, then fall back to using the older BioFormats
+# loader if something goes wrong. ImageIO is faster but some unusual file
+# compression formats can cause errors when loading. This option forces CPA to
+# always use the BioFormats reader. Try this if images aren't displayed correctly.
+
+force_bioformats = no
+
+
+# ======== Use Legacy Fetcher ========
+# OPTIONAL
+# [yes/no]  In CPA 3.0 the object fetching system has been revised to be more
+# efficient. In the vast majority of cases it should be faster than the previous
+# versions. However, some complex object filters can still cause problems. If you
+# encounter slowdowns this setting allows you to switch back to the old method of
+# fetching and randomisation.
+
+use_legacy_fetcher = no
+
+# ======== Process as 3D (visualize a different z position per object) ========
+# OPTIONAL
+# [yes/no]  In 3D datasets, this optionally displays in CPA classifier a separate
+# z slice for each object depending on that object's center position in z. Useful
+# for classifying cells from 3D data.
+
+process_3D = no
 
 

@@ -1,22 +1,34 @@
+
 import re
-import dbconnect
+from . import dbconnect
 import logging
-import multiclasssql
+from . import multiclasssql_legacy as multiclasssql # Legacy code for scoring cells
 import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdin, stdout, argv, exit
 from time import time
 
+
 class FastGentleBoosting(object):
     def __init__(self, classifier = None):
-        logging.info('Initialized New Fast Gentle Boosting Classifier')
+        logging.info('Initialized New Classifier: FastGentleBoosting')
+        self.name = self.name()
         self.model = None
         self.classBins = []
         self.classifier = classifier
+        self.scaler = None
+        self.features = []
+
+    # Set features
+    def _set_features(self, features):
+        self.features = features
+
+    def name(self):
+        return self.__class__.__name__
 
     def CheckProgress(self):
         import wx
-        ''' Called when the CheckProgress Button is pressed. '''
+        ''' Called when the Cross Validation Button is pressed. '''
         # get wells if available, otherwise use imagenumbers
         try:
             nRules = int(self.classifier.nRulesTxt.GetValue())
@@ -27,8 +39,9 @@ class FastGentleBoosting(object):
         if not self.classifier.UpdateTrainingSet():
             self.PostMessage('Cross-validation canceled.')
             return
+
         
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
 
         t1 = time()
@@ -76,9 +89,9 @@ class FastGentleBoosting(object):
             dlg.Destroy()
             figure = plt.figure()
             plt.clf()
-            plt.hold(True)
-            plt.plot(range(1, nRules + 1), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
-            plt.plot(range(1, nRules + 1), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
+            plt.plot()
+            plt.plot(list(range(1, nRules + 1)), 1.0 - xvalid_50 / float(len(groups)), 'r', label='50% cross-validation accuracy')
+            plt.plot(list(range(1, nRules + 1)), 1.0 - xvalid_95[0] / float(len(groups)), 'b', label='95% cross-validation accuracy')
             chance_level = 1.0 / len(self.classifier.trainingSet.labels)
             plt.plot([1, nRules + 1], [chance_level, chance_level], 'k--', label='accuracy of random classifier')
             plt.legend(loc='lower right')
@@ -96,10 +109,14 @@ class FastGentleBoosting(object):
         self.classBins = []
         self.model = None
 
-    def ComplexityTxt(self):
-        return 'Max # of rules: '
+    # Adjust text for the classifier rules panel
+    def panelTxt(self):
+        return 'with'
 
-    def CreatePerObjectClassTable(self, labels):
+    def panelTxt2(self):
+        return 'max rules'
+
+    def CreatePerObjectClassTable(self, labels, updater=None):
         multiclasssql.create_perobject_class_table(labels, self.model)
 
     def FilterObjectsFromClassN(self, obClass, obKeysToTry):
@@ -108,18 +125,19 @@ class FastGentleBoosting(object):
     def IsTrained(self):
         return self.model is not None
 
+    def toggle_scaler(self, status):
+        logging.info("Scaling is not supported by FastGentleBoosting, will have no effect")
+
     def LoadModel(self, model_filename):
-        import cPickle
-        fh = open(model_filename, 'r')
+        
+        import joblib
         try:
-            self.model, self.bin_labels = cPickle.load(fh)
+            self.model, self.bin_labels, self.name = joblib.load(model_filename)
         except:
             self.model = None
             self.bin_labels = None
-            logging.error('The loaded model was not a fast gentle boosting model')
+            logging.error('Loading trained model failed')
             raise TypeError
-        finally:
-            fh.close()
 
     def ParseModel(self, string):
         self.model = []
@@ -133,25 +151,25 @@ class FastGentleBoosting(object):
                 raise ValueError
             colname, thresh, a, b = m.groups()
             thresh = float(thresh)
-            a = map(float, a.split(','))
-            b = map(float, b.split(','))
+            a = list(map(float, a.split(',')))
+            b = list(map(float, b.split(',')))
             if len(a) != len(b):
-                raise ValueError, 'Alpha and beta must have the same cardinality in "IF (column > threshold, alpha, beta)"'
+                raise ValueError('Alpha and beta must have the same cardinality in "IF (column > threshold, alpha, beta)"')
             self.model.append((colname, thresh, a, b, None))
         n_classes = len(self.model[0][2])
         for wl in self.model:
             if len(wl[2]) != n_classes:
-                raise ValueError, 'Number of classes must remain the same between rules.'
+                raise ValueError('Number of classes must remain the same between rules.')
         return self.model
 
     def PerImageCounts(self, filter_name=None, cb=None):
         return multiclasssql.PerImageCounts(self.model, filter_name=filter_name, cb=cb)
 
     def SaveModel(self, model_filename, bin_labels):
-        import cPickle
-        fh = open(model_filename, 'w')
-        cPickle.dump((self.model, bin_labels), fh)
-        fh.close()
+
+        # For loading scikit learn library
+        import joblib
+        joblib.dump((self.model, bin_labels, self.name), model_filename, compress=1)
 
     def ShowModel(self):
         '''
@@ -322,26 +340,26 @@ class FastGentleBoosting(object):
         self.classBins = classBins
 
     def Usage(self, name):
-        print "usage %s:" % (name)
-        print "%s num_learners              - read from stdin, write to stdout" % (name)
-        print "%s num_learners file         - read from file, write to stdout" % (name)
-        print "%s num_learners file1 file2  - read from file1, write to file2" % (name)
-        print ""
-        print "Input files should be tab delimited."
-        print "Example:"
-        print "ClassLabel	Value1_name	Value2_name	Value3_name"
-        print "2	0.1	0.3	1.5"
-        print "1	0.5	-0.3	0.5"
-        print "3	0.1	1.0	0.5"
-        print ""
-        print "Labels should be positive integers."
-        print "Note that if one learner is sufficient, only one will be written."
+        print(("usage %s:" % (name)))
+        print(("%s num_learners              - read from stdin, write to stdout" % (name)))
+        print(("%s num_learners file         - read from file, write to stdout" % (name)))
+        print(("%s num_learners file1 file2  - read from file1, write to file2" % (name)))
+        print("")
+        print("Input files should be tab delimited.")
+        print("Example:")
+        print("ClassLabel	Value1_name	Value2_name	Value3_name")
+        print("2	0.1	0.3	1.5")
+        print("1	0.5	-0.3	0.5")
+        print("3	0.1	1.0	0.5")
+        print("")
+        print("Labels should be positive integers.")
+        print("Note that if one learner is sufficient, only one will be written.")
         exit(1)
 
-    def XValidate(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback):
+    def XValidate(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback, confusion=False):
         # if everything's in the same group, ignore the labels
         if all([g == group_labels[0] for g in group_labels]):
-            group_labels = range(len(group_labels))
+            group_labels = list(range(len(group_labels)))
 
         # randomize the order of labels
         unique_labels = list(set(group_labels))
@@ -349,6 +367,9 @@ class FastGentleBoosting(object):
 
         fold_min_size = len(group_labels) / float(folds)
         num_misclassifications = np.zeros(num_learners, int)
+
+        np_holdout_results = np.array([])
+        np_holdout_labels = np.array([])
 
         # break into folds, randomly, but with all identical group_labels together
         for f in range(folds):
@@ -358,7 +379,7 @@ class FastGentleBoosting(object):
                 current_holdout = [(a or b) for a, b in zip(current_holdout, [g == to_add for g in group_labels])]
 
             if sum(current_holdout) == 0:
-                logging.error("No holdout")
+                logging.error("no holdout")
                 break
 
             holdout_idx = np.nonzero(current_holdout)[0]
@@ -375,11 +396,154 @@ class FastGentleBoosting(object):
             if len(holdout_results) < num_learners:
                 holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
             holdout_labels = label_matrix[holdout_idx, :].argmax(axis=1)
+
+            if confusion:
+                np_holdout_results = np.concatenate((np_holdout_results,np.array(holdout_results).flatten()))
+                np_holdout_labels = np.concatenate((np_holdout_labels,np.tile(holdout_labels,(num_learners,1)).flatten()))
+                
+            num_misclassifications += [sum(hr != holdout_labels) for hr in holdout_results]
+            if progress_callback:
+                progress_callback(f / float(folds))
+
+        if confusion:
+            return np_holdout_results, np_holdout_labels
+        else:
+            return [num_misclassifications]
+
+    def XValidatePredict(self, colnames, num_learners, label_matrix, values, folds, group_labels, progress_callback):
+        # if everything's in the same group, ignore the labels
+        if all([g == group_labels[0] for g in group_labels]):
+            group_labels = list(range(len(group_labels)))
+
+        # randomize the order of labels
+        unique_labels = list(set(group_labels))
+        np.random.shuffle(unique_labels)
+
+        fold_min_size = len(group_labels) / float(folds)
+        num_misclassifications = np.zeros(num_learners, int)
+
+        # break into folds, randomly, but with all identical group_labels together
+        for f in range(folds):
+            current_holdout = [False] * len(group_labels)
+            while unique_labels and (sum(current_holdout) < fold_min_size):
+                to_add = unique_labels.pop()
+                current_holdout = [(a or b) for a, b in zip(current_holdout, [g == to_add for g in group_labels])]
+
+            if sum(current_holdout) == 0:
+                logging.error("no holdout")
+                break
+
+            holdout_idx = np.nonzero(current_holdout)[0]
+            current_holdin = ~ np.array(current_holdout)
+            holdin_idx = np.nonzero(current_holdin)[0]
+            holdin_labels = label_matrix[holdin_idx, :]
+            holdin_values = values[holdin_idx, :]
+            holdout_values = values[holdout_idx, :]
+            holdout_results = self.Train(colnames, num_learners, holdin_labels, holdin_values, test_values=holdout_values)
+            if holdout_results is None:
+                return None
+            # pad the end of the holdout set with the last element
+            if len(holdout_results) < num_learners:
+                holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))
+            holdout_labels = label_matrix[holdout_idx, :].argmax(axis=1)
+
             num_misclassifications += [sum(hr != holdout_labels) for hr in holdout_results]
             if progress_callback:
                 progress_callback(f / float(folds))
 
         return [num_misclassifications]
+
+    # Confusion Matrix
+    def plot_confusion_matrix(self, conf_arr, title='Confusion matrix', cmap=plt.cm.Blues):
+        import seaborn as sns
+
+        sns.set_style("whitegrid", {'axes.grid' : False})
+
+        #plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        norm_conf = []
+        for i in conf_arr:
+            a = 0
+            tmp_arr = []
+            a = sum(i, 0)
+            for j in i:
+                tmp_arr.append(float(j)/float(a))
+            norm_conf.append(tmp_arr)
+
+        fig = plt.figure()
+        fig.canvas.set_window_title(f"{fig.canvas.get_window_title()} - {self.name}")
+        plt.clf()
+        ax = fig.add_subplot(111)
+        ax.set_aspect(1)
+        res = ax.imshow(np.array(norm_conf), cmap=cmap, 
+                        interpolation='nearest')
+
+        width = len(conf_arr)
+        height = len(conf_arr[0])
+
+        for x in range(width):
+            for y in range(height):
+                if conf_arr[x][y] != 0:
+                    ax.annotate("%.2f" % conf_arr[x][y], xy=(y, x), 
+                                horizontalalignment='center',
+                                verticalalignment='center')
+        plt.title(title)
+        plt.colorbar(res)
+        tick_marks = np.arange(len(self.classifier.trainingSet.labels))
+        plt.xticks(tick_marks, self.classifier.trainingSet.labels, rotation=45)
+        plt.yticks(tick_marks, self.classifier.trainingSet.labels)
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+
+    def ConfusionMatrix(self, folds):
+
+        from sklearn.metrics import confusion_matrix
+        import wx
+        # get wells if available, otherwise use imagenumbers
+        try:
+            nRules = int(self.classifier.nRulesTxt.GetValue())
+        except:
+            logging.error('Unable to parse number of rules')
+            return
+
+        if not self.classifier.UpdateTrainingSet():
+            self.PostMessage('Cross-validation canceled.')
+            return
+
+        
+        db = dbconnect.DBConnect()
+        groups = [db.get_platewell_for_object(key) for key in self.classifier.trainingSet.get_object_keys()]
+
+        #t1 = time()
+        #dlg = wx.ProgressDialog('Computing cross validation accuracy...', '0% Complete', 100, self.classifier, wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME | wx.PD_CAN_ABORT)        
+        #base = 0.0
+        #scale = 1.0
+
+        if(folds):
+            folds = folds
+        else:
+            folds = 5
+        
+        class StopXValidation(Exception):
+            pass
+
+        # def progress_callback(amount):
+        #     pct = min(int(100 * (amount * scale + base)), 100)
+        #     cont, skip = dlg.Update(pct, '%d%% Complete'%(pct))
+        #     self.classifier.PostMessage('Computing cross validation accuracy... %s%% Complete'%(pct))
+        #     if not cont:
+        #         raise StopXValidation
+
+        y_pred, y_test = self.XValidate(self.classifier.trainingSet.colnames, nRules, self.classifier.trainingSet.label_matrix,
+                    self.classifier.trainingSet.values, folds, groups, None, confusion=True)
+
+        cm = confusion_matrix(y_test, y_pred)
+        cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+        np.set_printoptions(precision=2)
+        self.plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
+        
+        plt.show()
 
 if __name__ == '__main__':
     fgb = FastGentleBoosting()
@@ -401,7 +565,7 @@ if __name__ == '__main__':
 
     import csv
     reader = csv.reader(fin, delimiter='	')
-    header = reader.next()
+    header = next(reader)
     label_to_labelidx = {}
     curlabel = 1
 
@@ -409,7 +573,7 @@ if __name__ == '__main__':
         if strlabel in label_to_labelidx:
             return label_to_labelidx[strlabel]
         global curlabel
-        print "LABEL: ", curlabel, strlabel
+        print(("LABEL: ", curlabel, strlabel))
         label_to_labelidx[strlabel] = curlabel
         curlabel += 1
         return label_to_labelidx[strlabel]
@@ -428,14 +592,14 @@ if __name__ == '__main__':
     # convert labels to a matrix with +1/-1 values only (+1 in the column matching the label, 1-indexed)
     num_classes = max(labels)
     label_matrix = -np.ones((len(labels), num_classes), np.int32)
-    for i, j in zip(range(len(labels)), np.array(labels)-1):
+    for i, j in zip(list(range(len(labels))), np.array(labels)-1):
         label_matrix[i, j] = 1
 
     wl = fgb.Train(colnames, num_learners, label_matrix, values, fout)
     for w in wl:
-        print w
-    print label_matrix.shape, "groups"
-    print fgb.xvalidate(colnames, num_learners, label_matrix, values, 20, range(1, label_matrix.shape[0]+1), None)
+        print(w)
+    print((label_matrix.shape, "groups"))
+    print((fgb.xvalidate(colnames, num_learners, label_matrix, values, 20, list(range(1, label_matrix.shape[0]+1)), None)))
 
 #def train_classifier(labels, values, iterations):
 #    # make sure these are arrays (not matrices)

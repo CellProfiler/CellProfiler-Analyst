@@ -6,65 +6,39 @@
 # when user requests images.
 #
 
+
 import csv
 import os
 import re
+import logging
+
+import numpy as np
+
 import wx
 import wx.grid as  gridlib
-import wx.lib.intctrl as intctrl
-import logging
-import numpy as np
 import cpa.helpmenu
-from cpatool import CPATool
-from properties import Properties
-import dbconnect
-from datamodel import DataModel
-import imagetools
-from UserDict import DictMixin
+from cpa.guiutils import create_status_bar
+from .properties import Properties
+from . import dbconnect
+from .datamodel import DataModel
+from . import imagetools
 
-p = Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = Properties()
+db = dbconnect.DBConnect()
 
 ABC = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 ABC += [x+y for x in ABC for y in ABC] + [x+y+z for x in ABC for y in ABC for z in ABC]
 ROW_LABEL_SIZE = 30
 
-class odict(DictMixin):
-    ''' Ordered dictionary '''
-    def __init__(self):
-        self._keys = []
-        self._data = {}
-        
-    def __setitem__(self, key, value):
-        if key not in self._data:
-            self._keys.append(key)
-        self._data[key] = value
-        
-    def __getitem__(self, key):
-        return self._data[key]
-    
-    def __delitem__(self, key):
-        del self._data[key]
-        self._keys.remove(key)
-        
-    def keys(self):
-        return list(self._keys)
-    
-    def copy(self):
-        copyDict = odict()
-        copyDict._data = self._data.copy()
-        copyDict._keys = self._keys[:]
-        return copyDict
 
-    
-class TableData(gridlib.PyGridTableBase):
+class TableData(gridlib.GridTableBase):
     '''
     Interface connecting the table grid GUI to the underlying table data.
     '''
     def __init__(self):
         self._rows = self.GetNumberRows()
         self._cols = self.GetNumberCols()
-        gridlib.PyGridTableBase.__init__(self)
+        gridlib.GridTableBase.__init__(self)
     
     def set_sort_col(self, col_index, add=False):
         '''Sort rows by the column indicated indexed by col_index. If add is 
@@ -201,7 +175,7 @@ class PlainTable(TableData):
         eg: to relate a unique (Table, Well, Replicate) to a unique image key.
         '''
         for i in indices: 
-            assert 0 < i < len(sortcols), 'Key column index (%s) was outside the realm of possible indices (0-%d).'%(i, len(self.sortcols)-1)
+            assert 0 < i < len(self.sortcols), 'Key column index (%s) was outside the realm of possible indices (0-%d).'%(i, len(self.sortcols)-1)
         self.key_indices = indices
         
     def get_image_keys_at_row(self, row):
@@ -216,7 +190,7 @@ class PlainTable(TableData):
             elif self.grouping.lower() == 'object': 
                 return [tuple(self.data[self.row_order,:][row, self.key_indices[:-1]])]
             else:
-                dm = DataModel.getInstance()
+                dm = DataModel()
                 return dm.GetImagesInGroup(self.grouping, self.get_row_key(row))
         
     def get_object_keys_at_row(self, row):
@@ -226,7 +200,7 @@ class PlainTable(TableData):
         if self.key_indices is None or self.grouping is None:
             return None
         else:
-            dm = DataModel.getInstance()
+            dm = DataModel()
             # If the key index for the row is an object key, just return that key
             if self.grouping.lower() == 'object': 
                 return [tuple(self.data[self.row_order,:][row, self.key_indices])]
@@ -346,7 +320,7 @@ class DBTable(TableData):
         else:
             self.grouping = None
         self.table_name = table_name
-        self.cache = odict()
+        self.cache = {}
         self.col_labels = np.array(db.GetColumnNames(self.table_name))
         self.shown_columns = np.arange(len(self.col_labels))
         self.order_by = [self.col_labels[0]]
@@ -442,7 +416,7 @@ class DBTable(TableData):
             key = self.get_row_key(row)
             if key is None:
                 return None
-            dm = DataModel.getInstance()
+            dm = DataModel()
             n_objects = dm.GetObjectCountFromImage(key)
             return [tuple(list(key) + [i]) for i in range(n_objects)]
         elif self.table_name == p.object_table:
@@ -519,12 +493,12 @@ class DBTable(TableData):
             self.cache.update((lo+i, v) for i,v in enumerate(vals))
             # if cache exceeds 1000 entries, clip to last 500
             if len(self.cache) > 5000:
-                for key in self.cache.keys()[:-500]:
+                for key in list(self.cache.keys())[:-500]:
                     del self.cache[key]
         return self.cache[row][col]
 
     def SetValue(self, row, col, value):
-        print 'SetValue(%d, %d, "%s") ignored.\n' % (row, col, value)
+        print(('SetValue(%d, %d, "%s") ignored.\n' % (row, col, value)))
         
     def GetColValues(self, col):
         colname = self.col_labels[self.shown_columns][col]
@@ -584,13 +558,14 @@ class TableViewer(wx.Frame):
         self.GetMenuBar().Append(view_menu, 'View')
         column_width_menu = wx.Menu()
         show_hide_cols_item = view_menu.Append(-1, 'Show/Hide columns')
-        view_menu.AppendMenu(-1, 'Column widths', column_width_menu)
+        view_menu.Append(-1, 'Column widths', column_width_menu)
         fixed_cols_menu_item = column_width_menu.Append(-1, 'Fixed width', kind=wx.ITEM_RADIO)
         fit_cols_menu_item = column_width_menu.Append(-1, 'Fit to table', kind=wx.ITEM_RADIO)
+        auto_cols_menu_item = column_width_menu.Append(-1, 'Auto width', kind=wx.ITEM_RADIO)
 
-        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, manual_url="6_table_viewer.html"), 'Help')
         
-        self.CreateStatusBar()
+        self.status_bar = create_status_bar(self)
         
         self.Bind(wx.EVT_MENU, self.on_new_table, new_table_item)
         self.Bind(wx.EVT_MENU, self.on_load_csv, load_csv_menu_item)
@@ -600,6 +575,7 @@ class TableViewer(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_show_hide_cols, show_hide_cols_item)
         self.Bind(wx.EVT_MENU, self.on_set_fixed_col_widths, fixed_cols_menu_item)
         self.Bind(wx.EVT_MENU, self.on_set_fitted_col_widths, fit_cols_menu_item)
+        self.Bind(wx.EVT_MENU, self.on_set_auto_col_widths, auto_cols_menu_item)
 ##        self.Bind(wx.EVT_MENU, self.on_compute_tsne, tsne_menu_item)
         
         #
@@ -611,16 +587,16 @@ class TableViewer(wx.Frame):
         self.grid.EnableEditing(False)
         self.grid.SetCellHighlightPenWidth(0)
         # Help prevent spurious horizontal scrollbar
-        self.grid.SetMargins(0-wx.SystemSettings_GetMetric(wx.SYS_VSCROLL_X),
-                             0-wx.SystemSettings_GetMetric(wx.SYS_HSCROLL_Y))
+        self.grid.SetMargins(0-wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X),
+                             0-wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y))
         self.grid.SetRowLabelSize(ROW_LABEL_SIZE)
 
         self.grid.Bind(gridlib.EVT_GRID_CMD_LABEL_LEFT_CLICK, self.on_leftclick_label)
-        gridlib.EVT_GRID_LABEL_LEFT_DCLICK(self.grid, self.on_dclick_label)
-        gridlib.EVT_GRID_LABEL_RIGHT_CLICK(self.grid, self.on_rightclick_label)
-        gridlib.EVT_GRID_SELECT_CELL(self.grid, self.on_select_cell)
-        gridlib.EVT_GRID_RANGE_SELECT(self.grid, self.on_select_range)
-        
+        self.grid.Bind(gridlib.EVT_GRID_LABEL_LEFT_DCLICK, self.on_dclick_label)
+        self.grid.Bind(gridlib.EVT_GRID_LABEL_RIGHT_CLICK, self.on_rightclick_label)
+        self.grid.Bind(gridlib.EVT_GRID_SELECT_CELL, self.on_select_cell)
+        self.grid.Bind(gridlib.EVT_GRID_RANGE_SELECT, self.on_select_range)
+
 ##    def on_select_filter(self, evt):
 ##        #
 ##        #  CONSTRUCTION (add filters to dbtable), ignore for plaintable
@@ -643,7 +619,7 @@ class TableViewer(wx.Frame):
             block = np.empty((n, m))
             for k, j in enumerate(self.selected_cols):
                 block[:,k] = self.grid.Table.GetColValues(j)
-                self.SetStatusText(u"Sum: %f — Mean: %f — Std: %f" %
+                self.SetStatusText("Sum: %f — Mean: %f — Std: %f" %
                                                (block.sum(), block.mean(), block.std()))
         except:
             self.SetStatusText("Cannot summarize columns.")
@@ -663,17 +639,25 @@ class TableViewer(wx.Frame):
         self.set_fixed_col_widths()
     def set_fixed_col_widths(self):
         self.Disconnect(-1, -1, wx.wxEVT_SIZE)
+        print(('default ', gridlib.GRID_DEFAULT_COL_WIDTH))
         self.grid.SetDefaultColSize(gridlib.GRID_DEFAULT_COL_WIDTH, True)
         self.Refresh()
-    
+
+    def on_set_auto_col_widths(self, evt):
+        self.set_auto_col_widths()
+    def set_auto_col_widths(self):
+        self.Disconnect(-1, -1, wx.wxEVT_SIZE)
+        self.grid.AutoSize()
+        self.Refresh()
+
     def on_set_fitted_col_widths(self, evt):
         self.set_fitted_col_widths()
     def set_fitted_col_widths(self):
         # Note: I disconnect EVT_SIZE before binding in case it's already bound.
         # Otherwise it will get bound twice and set_fixed_col_widths won't work 
-        # unles called twice.
+        # unless called twice.
         self.Disconnect(-1, -1, wx.wxEVT_SIZE)
-        wx.EVT_SIZE(self, self.on_size)
+        self.Bind(wx.EVT_SIZE, self.on_size)
         self.RescaleGrid()
         
     # TODO:
@@ -714,7 +698,7 @@ class TableViewer(wx.Frame):
         '''
         table_base = PlainTable(self, data, col_labels, key_indices, grouping)
         self.grid.SetTable(table_base, True)
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
 
     def on_new_table(self, evt=None):
         '''Prompts user to for table dimensions and creates the table.
@@ -751,7 +735,9 @@ class TableViewer(wx.Frame):
         frame.Show(True)
         frame.new_blank_table(rows, cols)
         frame.SetTitle('New_Table')
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        if self.GetTitle() == "":
+            self.Destroy()
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
         
     def new_blank_table(self, rows, cols):
         '''Sort of pointless since the table can't be edited... yet.
@@ -760,10 +746,10 @@ class TableViewer(wx.Frame):
         table_base = PlainTable(self, data)
         self.grid.SetTable(table_base, True)
         self.RescaleGrid()
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
         
     def on_load_db_table(self, evt=None):
-        from guiutils import TableSelectionDialog
+        from .guiutils import TableSelectionDialog
         dlg = TableSelectionDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
             table_name = dlg.GetStringSelection()
@@ -771,6 +757,9 @@ class TableViewer(wx.Frame):
             frame = TableViewer(self.Parent, pos=pos)
             frame.Show(True)
             frame.load_db_table(table_name)
+            if self.GetTitle() == "":
+                self.Destroy()
+
 
     def load_db_table(self, tablename):
         '''Populates the grid with the data found in a given table.
@@ -779,7 +768,7 @@ class TableViewer(wx.Frame):
         self.grid.SetTable(table_base, True)
         self.SetTitle(tablename)
         self.RescaleGrid()
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
 
     def on_load_csv(self, evt=None):
         '''Prompts the user for a csv file and loads it.
@@ -787,13 +776,15 @@ class TableViewer(wx.Frame):
         dlg = wx.FileDialog(self, message='Choose a CSV file to load',
                             defaultDir=os.getcwd(),
                             wildcard='CSV files (*.csv)|*.csv',
-                            style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             pos = (self.Position[0]+10, self.Position[1]+10)
             frame = TableViewer(self.Parent, pos=pos)
             frame.Show(True)
             frame.load_csv(filename)
+            if self.GetTitle() == "":
+                self.Destroy()
             
     def load_csv(self, filename):
         '''Populates the grid with the the data in a CSV file.
@@ -820,7 +811,7 @@ class TableViewer(wx.Frame):
         # read data
         r = csv.reader(open(filename))
         if has_header_row:
-            labels = r.next()
+            labels = next(r)
         else:
             labels = None
         data = []
@@ -833,7 +824,7 @@ class TableViewer(wx.Frame):
         self.grid.Refresh()
         self.SetTitle(filename)
         self.RescaleGrid()
-        self.grid.SetSelectionMode(self.grid.wxGridSelectColumns)
+        self.grid.SetSelectionMode(self.grid.GridSelectColumns)
 
     def on_leftclick_label(self, evt):
         if evt.Col >= 0:
@@ -862,7 +853,7 @@ class TableViewer(wx.Frame):
     def show_popup_menu(self, items, pos):
         self.popupItemById = {}
         menu = wx.Menu()
-        menu.SetTitle('Show Image')
+        menu.SetTitle('Show Image:')
         for item in items:
             id = wx.NewId()
             self.popupItemById[id] = item
@@ -910,7 +901,7 @@ class TableViewer(wx.Frame):
             else:
                 key_cols = self.grid.Table.get_row_key(evt.Row)
                 if key_cols:
-                    dm = DataModel.getInstance()
+                    dm = DataModel()
                     imkeys = dm.GetImagesInGroup(self.grid.Table.grouping, key_cols)
                     for imkey in imkeys:
                         imagetools.ShowImage(imkey, p.image_channel_colors,
@@ -922,7 +913,7 @@ class TableViewer(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal() == wx.ID_OK:
             filename = saveDialog.GetPath()
@@ -931,7 +922,7 @@ class TableViewer(wx.Frame):
         saveDialog.Destroy()
 
     def save_to_csv(self, filename):
-        f = open(filename, 'wb')
+        f = open(filename, 'w', newline="")
         w = csv.writer(f)
         w.writerow([self.grid.Table.GetColLabelValueWithoutDecoration(col) 
                     for col in range(self.grid.Table.GetNumberCols())])
@@ -975,7 +966,7 @@ class TableViewer(wx.Frame):
         data = [[self.grid.Table.GetValue(row, col) 
                 for col in range(self.grid.Table.GetNumberCols())]
                 for row in range(self.grid.Table.GetNumberRows())]
-        db.CreateTableFromData(data, dbconnect.clean_up_colnames(colnames), 
+        db.CreateTableFromData(data, colnames,
                                tablename, temporary=temporary)
         self.Title = tablename
         try:
@@ -1038,7 +1029,10 @@ def show_loaddata_table(gate_names, as_columns=True):
     for g in gate_names:
         for t in p.gates[g].get_tables():
             assert t == p.image_table, 'this function only takes per-image gates'
-    columns = list(dbconnect.image_key_columns() + dbconnect.well_key_columns()) + p.image_file_cols + p.image_path_cols
+    wellkeys = dbconnect.well_key_columns()
+    if wellkeys is None:
+        wellkeys = ()
+    columns = list(dbconnect.image_key_columns() + wellkeys) + p.image_file_cols + p.image_path_cols
     if as_columns:
         query_columns = columns + ['(%s) AS %s'%(str(p.gates[g]), g) for g in gate_names]
         columns += gate_names
@@ -1054,14 +1048,13 @@ def show_loaddata_table(gate_names, as_columns=True):
         return None
     grid = TableViewer(None, title="Gated Data")
     grid.table_from_array(np.array(data, dtype='object'), columns, grouping='image', 
-                          key_indices=range(len(dbconnect.image_key_columns())))
+                          key_indices=list(range(len(dbconnect.image_key_columns()))))
     grid.Show()
     return grid
 
 
 if __name__ == '__main__':
-    import sys
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
     if p.show_load_dialog():
         frame = TableViewer(None)

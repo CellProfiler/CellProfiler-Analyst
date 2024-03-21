@@ -1,17 +1,18 @@
+# Unused module? Mar 2021
 
 # -*- Encoding: utf-8 -*-
 import os
 import re
 import wx
-import wx.wizard as wiz
+import wx.adv as wiz
 from wx.lib.dialogs import ScrolledMessageDialog
-from dbconnect import DBConnect
-from properties import Properties
+from .dbconnect import DBConnect
+from .properties import Properties
 import logging
 logging.basicConfig()
 
-db = DBConnect.getInstance()
-p = Properties.getInstance()
+db = DBConnect()
+p = Properties()
 
 def makePageTitle(wizPg, title):
     def __init__(self, parent):
@@ -19,8 +20,8 @@ def makePageTitle(wizPg, title):
         sizer = wx.BoxSizer(wx.VERTICAL)
         title = wx.StaticText(wizPg, -1, title)
         title.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD))
-        sizer.AddWindow(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        sizer.AddWindow(wx.StaticLine(wizPg, -1), 0, wx.EXPAND|wx.ALL, 5)
+        sizer.Add(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
+        sizer.Add(wx.StaticLine(wizPg, -1), 0, wx.EXPAND|wx.ALL, 5)
         return sizer
      
     
@@ -31,11 +32,11 @@ class Page1(wiz.WizardPageSimple):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         title = wx.StaticText(self, -1, 'Connect (step 1 of 4)')
         title.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD))
-        self.sizer.AddWindow(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
+        self.sizer.Add(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
+        self.sizer.Add(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         directions = wx.StaticText(self, -1, "Load a Properties file that contains the database info below.", style=wx.ALIGN_CENTRE)
-        browseBtn = wx.Button(self, wx.NewId(), u'Choose file…')
+        browseBtn = wx.Button(self, wx.NewId(), 'Choose file…')
         self.Bind(wx.EVT_BUTTON, self.OnBrowse, browseBtn)
         label_2 = wx.StaticText(self, -1, "DB Host: ")
         self.lblDBHost = wx.StaticText(self, -1, "")
@@ -70,9 +71,9 @@ class Page1(wiz.WizardPageSimple):
         self.Bind(wiz.EVT_WIZARD_PAGE_CHANGING, self.OnPageChanging)
 
     def OnBrowse(self, evt):
-        dlg = wx.FileDialog(self, "Select a properties file", defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+        dlg = wx.FileDialog(self, "Select a properties file", defaultDir=os.getcwd(), style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
-            p = Properties.getInstance()
+            p = Properties()
             p.LoadFile(dlg.GetPath())
             self.lblDBHost.SetLabel(p.db_host)
             self.lblDBName.SetLabel(p.db_name)
@@ -115,8 +116,8 @@ class Page2(wiz.WizardPageSimple):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         title = wx.StaticText(self, -1, 'Choose Tables (step 2 of 4)')
         title.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD))
-        self.sizer.AddWindow(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
+        self.sizer.Add(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
+        self.sizer.Add(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         self.directions = wx.StaticText(self, -1, "Select the tables you wish to include in the master.", style=wx.ALIGN_CENTRE)
         self.listTables = wx.ListBox(self, -1, choices=[], style=wx.LB_HSCROLL|wx.LB_EXTENDED)
@@ -195,17 +196,17 @@ def find_master_tables():
         res = db.execute('SHOW INDEX FROM %s'%(t))
         if t.lower().endswith('per_image'):
             if 'TableNumber' in [r[4] for r in res]:
-                if not masters.has_key(t[:-10]):
+                if t[:-10] not in masters:
                     masters[t[:-10]] = t
                 else:
                     masters[t[:-10]] = t + ',' + masters[t[:-10]] 
         if t.lower().endswith('per_object'):
             if 'TableNumber' in [r[4] for r in res]:
-                if not masters.has_key(t[:-11]):
+                if t[:-11] not in masters:
                     masters[t[:-11]] = t
                 else:
                     masters[t[:-11]] += ',' + t
-    return masters.values()
+    return list(masters.values())
 
         
 class Page3(wiz.WizardPageSimple):
@@ -214,8 +215,8 @@ class Page3(wiz.WizardPageSimple):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         title = wx.StaticText(self, -1, 'Choose Master (step 3 of 4)')
         title.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD))
-        self.sizer.AddWindow(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
+        self.sizer.Add(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
+        self.sizer.Add(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         self.txtPrefix = wx.TextCtrl(self, -1, 'CPA')
         self.example = wx.StaticText(self, -1, 'Output tables: "CPA_Per_Image", "CPA_Per_Object"')
@@ -311,11 +312,11 @@ class Page4(wiz.WizardPageSimple):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         title = wx.StaticText(self, -1, 'Summary (step 4 of 4)')
         title.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD))
-        self.sizer.AddWindow(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.sizer.AddWindow(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
+        self.sizer.Add(title, 0, wx.ALIGN_CENTRE|wx.ALL, 5)
+        self.sizer.Add(wx.StaticLine(self, -1), 0, wx.EXPAND|wx.ALL, 5)
         
         label_1 = wx.StaticText(self, -1, 'Confirm that the following information is correct and click "Finish".', style=wx.ALIGN_CENTRE)
-        self.report = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_AUTO_SCROLL)
+        self.report = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
         
         sizer1 = wx.BoxSizer(wx.VERTICAL)
         sizer1.SetMinSize((600,200))
@@ -383,7 +384,7 @@ class Page4(wiz.WizardPageSimple):
             
             # Insert values from each table into the master
             dlg.Update(0, ___ing+' "'+self.Parent.outPerImage+'": 0%')
-            for i in xrange(nTables):
+            for i in range(nTables):
                 db.execute('INSERT INTO '+self.Parent.outPerImage+' SELECT '+im_cols+','+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perImageTables[i])
                 percent = 100*i/nTables
                 dlg.Update(percent, ___ing+' "'+self.Parent.outPerImage+'": '+str(percent)+'%')
@@ -406,7 +407,7 @@ class Page4(wiz.WizardPageSimple):
             
             # Insert values from each table into the master
             dlg.Update(0, ___ing+' "'+self.Parent.outPerObject+'": 0%')
-            for i in xrange(nTables):
+            for i in range(nTables):
                 db.execute('INSERT INTO '+self.Parent.outPerObject+' SELECT '+ob_cols+','+str(t0+i)+' FROM '+self.Parent.inDB+'.'+self.Parent.perObjectTables[i])
                 percent = 100*i/nTables
                 dlg.Update(percent, ___ing+' "'+self.Parent.outPerObject+'": '+str(percent)+'%')
@@ -418,14 +419,14 @@ class Page4(wiz.WizardPageSimple):
             #
             
             db.execute('CREATE TABLE IF NOT EXISTS '+prefix+'_table_index (TableNumber INT, PerImageTable varchar(60), PerObjectTable varchar(60), PRIMARY KEY (TableNumber))')
-            for i in xrange(nTables):
+            for i in range(nTables):
                 db.execute('INSERT INTO '+prefix+'_table_index (TableNumber, PerImageTable, PerObjectTable) VALUES('+str(t0+i)+', "'+self.Parent.perImageTables[i]+'", "'+self.Parent.perObjectTables[i]+'")')
             
             # Log the newly created table names in CPA_Merged_Tables.merged
             try:
                 db.execute('INSERT INTO CPA_Merged_Tables.merged (per_image, per_object, table_index) VALUES("'+self.Parent.outDB+'.'+self.Parent.outPerImage+'", "'+self.Parent.outDB+'.'+self.Parent.outPerObject+'", "'+self.Parent.outDB+'.'+prefix+'_table_index")' )
             except:
-                print 'Logging merge to CPA_Merged_Tables.merged failed.'
+                print('Logging merge to CPA_Merged_Tables.merged failed.')
             
             dlg.Destroy()
             
@@ -434,15 +435,15 @@ class Page4(wiz.WizardPageSimple):
             
 
 
-app = wx.PySimpleApp()
+app = wx.App()
 wizard = wiz.Wizard(None, -1, "Create Master Table", style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
 page1 = Page1(wizard)
 page2 = Page2(wizard)
 page3 = Page3(wizard)
 page4 = Page4(wizard)
-wiz.WizardPageSimple_Chain(page1,page2)
-wiz.WizardPageSimple_Chain(page2,page3)
-wiz.WizardPageSimple_Chain(page3,page4)
+wiz.WizardPageSimple.Chain(page1,page2)
+wiz.WizardPageSimple.Chain(page2,page3)
+wiz.WizardPageSimple.Chain(page3,page4)
 wizard.FitToPage(page1)
 wizard.RunWizard(page1)
 wizard.Destroy()

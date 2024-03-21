@@ -1,30 +1,31 @@
+
 import re
 import wx
 import wx.lib.intctrl
 import wx.lib.agw.floatspin as FS
-import normalize as norm
+from . import normalize as norm
 # Grouping options
-from normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
+from .normalize import G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT
 # Aggregation options
-from normalize import M_MEDIAN, M_MEAN, M_MODE
+from .normalize import M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL
 # Window options
-from normalize import W_SQUARE, W_MEANDER
+from .normalize import W_SQUARE, W_MEANDER
 import numpy as np
-import dbconnect
+from . import dbconnect
 import logging
-import properties
+from . import properties
 from itertools import groupby
-from plateviewer import FormatPlateMapData
-import sqltools as sql
-import guiutils as ui
-from cpatool import CPATool
+from .plateviewer import FormatPlateMapData
+from . import sqltools as sql
+from . import guiutils as ui
+from .cpatool import CPATool
 
 GROUP_CHOICES = [G_EXPERIMENT, G_PLATE, G_QUADRANT, G_WELL_NEIGHBORS, G_CONSTANT]
-AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE]
+AGG_CHOICES = [M_MEDIAN, M_MEAN, M_MODE, M_NEGCTRL]
 WINDOW_CHOICES = [W_MEANDER, W_SQUARE]
 
-p = properties.Properties.getInstance()
-db = dbconnect.DBConnect.getInstance()
+p = properties.Properties()
+db = dbconnect.DBConnect()
 
 class NormalizationStepPanel(wx.Panel):
     def __init__(self, parent, id=-1, allow_delete=True, **kwargs):
@@ -37,6 +38,10 @@ class NormalizationStepPanel(wx.Panel):
             GROUP_CHOICES.remove(G_PLATE)
             GROUP_CHOICES.remove(G_QUADRANT)
             GROUP_CHOICES.remove(G_WELL_NEIGHBORS)
+
+        if not p.negative_control and M_NEGCTRL in AGG_CHOICES:
+            AGG_CHOICES.remove(M_NEGCTRL)
+            
         self.window_group = wx.Choice(self, -1, choices=GROUP_CHOICES)
         self.window_group.Select(0)
         self.window_group.SetHelpText("Set the grouping to be used for the normalization.\n"
@@ -69,9 +74,9 @@ class NormalizationStepPanel(wx.Panel):
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, 'Divide values by:'))
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(self.window_group)
-        sz.AddSpacer((5,-1))
+        sz.AddSpacer(5)
         sz.Add(self.agg_type)
         sz.Add(self.constant_float)
         if allow_delete:
@@ -89,7 +94,6 @@ class NormalizationStepPanel(wx.Panel):
         self.Sizer.Add(sz, 1, wx.EXPAND|wx.LEFT, 30)
         
         self.window_group.Bind(wx.EVT_CHOICE, self.on_window_group_selected)
-        self.Fit()
 
     def on_window_group_selected(self, evt):
         self.update_visible_fields()
@@ -160,15 +164,21 @@ class NormalizationUI(wx.Frame, CPATool):
         kwargs['size'] = kwargs.get('size', (500,500))
         wx.Frame.__init__(self, parent, id, title=title, **kwargs)
         CPATool.__init__(self)
-        wx.HelpProvider_Set(wx.SimpleHelpProvider())
+        wx.HelpProvider.Set(wx.SimpleHelpProvider())
 
         self.n_steps = 1
+
+        self.SetBackgroundColour("white")
+
         
         #
         # Define the controls
         #
         tables = ([p.image_table] or []) + ([p.object_table] if p.object_table else [])
         self.table_choice = wx.Choice(self, -1, choices=tables)
+        select_all_btn = wx.Button(self, -1, 'Select all columns')
+        select_all_btn.SetHelpText("Click this button to check all columns.")
+
         self.table_choice.Select(0)
         self.table_choice.SetHelpText("Select the table containing the measurement columns to normalize.")
         self.col_choices = wx.CheckListBox(self, -1, choices=[], size=(-1, 100))
@@ -203,10 +213,11 @@ class NormalizationUI(wx.Frame, CPATool):
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, 'Select a table:'), 0, wx.EXPAND|wx.RIGHT, 5)
         sz.Add(self.table_choice, 0)
+        sz.Add(select_all_btn, 0, wx.EXPAND)
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
         self.col_choices_desc = wx.StaticText(self, -1, 'Select measurements to normalize:')
         self.Sizer.Add(self.col_choices_desc, 0, wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, 15)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
         self.Sizer.Add(self.col_choices, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
         
         #
@@ -223,7 +234,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.sw.Sizer.Add(sbs, 0, wx.EXPAND)
         (w,h) = self.sw.Sizer.GetSize()
-        self.sw.SetScrollbars(20,20,w/20,h/20,0,0)
+        self.sw.SetScrollbars(20,20,w//20,h//20,0,0)
         self.Sizer.Add(self.sw, 1, wx.EXPAND|wx.LEFT|wx.RIGHT, 15)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
@@ -251,11 +262,12 @@ class NormalizationUI(wx.Frame, CPATool):
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.ALL, 15)
         
         self.table_choice.Bind(wx.EVT_CHOICE, self.on_select_table)
+        select_all_btn.Bind(wx.EVT_BUTTON, self.on_select_all_columns)
         add_norm_step_btn.Bind(wx.EVT_BUTTON, self.on_add_norm_step)
-        self.col_choices.Bind(wx.EVT_CHECKLISTBOX, lambda(e):self.validate())
-        self.norm_meas_checkbox.Bind(wx.EVT_CHECKBOX, lambda(e):self.validate())
-        self.norm_factor_checkbox.Bind(wx.EVT_CHECKBOX, lambda(e):self.validate())
-        self.output_table.Bind(wx.EVT_TEXT, lambda(e):self.validate())
+        self.col_choices.Bind(wx.EVT_CHECKLISTBOX, lambda e: self.validate())
+        self.norm_meas_checkbox.Bind(wx.EVT_CHECKBOX, lambda e: self.validate())
+        self.norm_factor_checkbox.Bind(wx.EVT_CHECKBOX, lambda e: self.validate())
+        self.output_table.Bind(wx.EVT_TEXT, lambda e: self.validate())
         self.do_norm_btn.Bind(wx.EVT_BUTTON, self.on_do_normalization)
         
         self.update_measurement_choices()
@@ -268,7 +280,7 @@ class NormalizationUI(wx.Frame, CPATool):
     def update_measurement_choices(self):
         measurements = db.GetColumnNames(self.table_choice.GetStringSelection())
         types = db.GetColumnTypes(self.table_choice.GetStringSelection())
-        numeric_columns = [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        numeric_columns = [m for m,t in zip(measurements, types) if t in (float, int)]
         self.col_choices.SetItems(numeric_columns)
         self.validate()
         
@@ -280,14 +292,20 @@ class NormalizationUI(wx.Frame, CPATool):
         else:
             for panel in self.norm_steps:
                 panel.set_group_choices(GROUP_CHOICES)
-        
+
+    def on_select_all_columns(self, evt):
+        self.select_all_columns()
+
+    def select_all_columns(self):
+        self.col_choices.SetCheckedStrings(self.col_choices.GetItems())
+
     def on_add_norm_step(self, evt):
         self.add_norm_step()
 
     def validate(self):
         is_valid = True
 
-        if not self.col_choices.GetChecked():
+        if not self.col_choices.GetCheckedItems():
             is_valid = False
             self.col_choices_desc.SetForegroundColour((255,0,0))
         else:
@@ -319,7 +337,7 @@ class NormalizationUI(wx.Frame, CPATool):
         self.norm_steps += [NormalizationStepPanel(self.sw)]
         self.boxes += [sz]
         sz.Add(self.norm_steps[-1], 0, wx.EXPAND)
-        self.sw.Sizer.InsertSizer(len(self.norm_steps)-1, sz, 0, wx.EXPAND|wx.TOP, 15)
+        self.sw.Sizer.Insert(len(self.norm_steps)-1, sz, 0, wx.EXPAND|wx.TOP, 15)
         self.sw.FitInside()
         self.Layout()
         self.update_steps()
@@ -373,7 +391,7 @@ class NormalizationUI(wx.Frame, CPATool):
         else:
             BATCH_SIZE = 1
         if input_table == p.object_table: 
-            FIRST_MEAS_INDEX += 1
+            FIRST_MEAS_INDEX += 1 # Original
         if wellkey_cols:
             if input_table == p.image_table:
                 WELL_KEY_INDEX = len(imkey_cols)
@@ -403,18 +421,48 @@ class NormalizationUI(wx.Frame, CPATool):
                             input_table)
         elif input_table == p.object_table:
             if p.image_table and wellkey_cols:
-                # If there are well columns, fetch them from the per-image table.
-                query = "SELECT %s, %s, %s FROM %s, %s WHERE %s"%(
-                            dbconnect.UniqueObjectClause(p.object_table),
-                            well_clause(p.image_table), 
-                            ', '.join(['%s.%s'%(p.object_table, col) for col in meas_cols]),
-                            p.image_table, p.object_table,
-                            ' AND '.join(['%s.%s=%s.%s'%(p.image_table, c, p.object_table, c) 
-                                          for c in imkey_cols]) )
+
+                # If we have x and y from cells, we can use that for classifier
+                if p.cell_x_loc and p.cell_y_loc:
+                    FIRST_MEAS_INDEX += 2 # Cell X and Y Location are fixed to for classifier
+                    # If there are well columns, fetch them from the per-image table.
+                    query = "SELECT %s, %s, %s, %s, %s FROM %s, %s WHERE %s"%(
+                                dbconnect.UniqueObjectClause(p.object_table),
+                                well_clause(p.image_table),
+                                p.cell_x_loc,
+                                p.cell_y_loc,
+                                ', '.join(['%s.%s'%(p.object_table, col) for col in meas_cols]),
+                                p.image_table, p.object_table,
+                                ' AND '.join(['%s.%s=%s.%s'%(p.image_table, c, p.object_table, c) 
+                                              for c in imkey_cols]) )
+
+                else:
+                    # If there are well columns, fetch them from the per-image table.
+                    query = "SELECT %s, %s, %s FROM %s, %s WHERE %s"%(
+                                dbconnect.UniqueObjectClause(p.object_table),
+                                well_clause(p.image_table), 
+                                ', '.join(['%s.%s'%(p.object_table, col) for col in meas_cols]),
+                                p.image_table, p.object_table,
+                                ' AND '.join(['%s.%s=%s.%s'%(p.image_table, c, p.object_table, c) 
+                                              for c in imkey_cols]) )
+
             else:
-                query = "SELECT %s, %s FROM %s"%(
+
+                if p.cell_x_loc and p.cell_y_loc:
+                    FIRST_MEAS_INDEX += 2 # Cell X and Y Location are fixed to for classifier
+                    
+                    query = "SELECT %s, %s, %s, %s FROM %s"%(
+                            im_clause(), p.cell_x_loc, p.cell_y_loc, ', '.join(meas_cols),
+                            input_table)
+
+                else:
+                    query = "SELECT %s, %s FROM %s"%(
                             im_clause(), ', '.join(meas_cols),
                             input_table)
+
+        if p.negative_control: # if the user defined negative control, we can use that to fetch the wellkeys
+                    neg_query = query + ' AND ' + p.negative_control # fetch all the negative control elements
+
         if wellkey_cols:
             query += " ORDER BY %s"%(well_clause(p.image_table))
             
@@ -426,9 +474,17 @@ class NormalizationUI(wx.Frame, CPATool):
         dlg.Pulse()
         #
         # MAKE THE QUERY
-        #
-        input_data = np.array(db.execute(query), dtype=object)
-                
+        # 
+
+        input_data = np.array(db.execute(query), dtype=object)  
+        if p.negative_control:
+            import pandas as pd
+            negative_control = pd.DataFrame(db.execute(neg_query), dtype=float)
+            logging.info("# of objects in negative control: " + str(negative_control.shape[0]))
+            logging.info("# of objects queried: " + str(input_data.shape[0]))
+            neg_mean_plate = negative_control.groupby([WELL_KEY_INDEX]).mean()
+            neg_std_plate = negative_control.groupby([WELL_KEY_INDEX]).std()
+
         output_columns = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape) * np.nan
         output_factors = np.ones(input_data[:,FIRST_MEAS_INDEX:].shape) * np.nan
         for colnum, col in enumerate(input_data[:,FIRST_MEAS_INDEX:].T):
@@ -442,10 +498,10 @@ class NormalizationUI(wx.Frame, CPATool):
                 if d[norm.P_GROUPING] in (norm.G_QUADRANT, norm.G_WELL_NEIGHBORS):
                     # Reshape data if normalization step is plate sensitive.
                     assert p.plate_id and p.well_id
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
+                    well_keys = input_data[:, list(range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2)) ] 
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
-                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
+                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda row: row[0]):
                         keys_and_vals = np.array(list(plate_grp))
                         plate_data, wks, ind = FormatPlateMapData(keys_and_vals)
                         pnorm_data = norm.do_normalization_step(plate_data, **d)
@@ -453,12 +509,35 @@ class NormalizationUI(wx.Frame, CPATool):
                     norm_data = new_norm_data
                 elif d[norm.P_GROUPING] == norm.G_PLATE:
                     assert p.plate_id and p.well_id
-                    well_keys = input_data[:, range(WELL_KEY_INDEX, FIRST_MEAS_INDEX)]
+
+                    if d[norm.P_AGG_TYPE] == norm.M_NEGCTRL:
+                        mean_plate_col = neg_mean_plate[colnum + FIRST_MEAS_INDEX]
+                        std_plate_col = neg_std_plate[colnum + FIRST_MEAS_INDEX]  
+                        print(mean_plate_col)
+                        print(std_plate_col)            
+
+                    well_keys = input_data[:, list(range(WELL_KEY_INDEX, FIRST_MEAS_INDEX - 2))]
                     wellkeys_and_vals = np.hstack((well_keys, np.array([norm_data]).T))
                     new_norm_data    = []
-                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda(row): row[0]):
+                    # print wellkeys_and_vals
+                    for plate, plate_grp in groupby(wellkeys_and_vals, lambda row: row[0]):
                         plate_data = np.array(list(plate_grp))[:,-1].flatten()
                         pnorm_data = norm.do_normalization_step(plate_data, **d)
+
+                        if d[norm.P_AGG_TYPE] == norm.M_NEGCTRL:
+                            try:
+                                plate_mean = mean_plate_col[plate]
+                                plate_std = std_plate_col[plate]
+                            except:
+                                plate_mean = mean_plate_col[int(plate)]
+                                plate_std = std_plate_col[int(plate)]
+
+                            try:
+                                pnorm_data = (pnorm_data - plate_mean) / plate_std
+                                print(pnorm_data)
+                            except:
+                                logging.error("Plate std is zero, division by zero!")
+
                         new_norm_data += pnorm_data.tolist()
                     norm_data = new_norm_data
                 else:
@@ -468,7 +547,7 @@ class NormalizationUI(wx.Frame, CPATool):
             output_factors[:,colnum] = col.astype(float) / np.array(norm_data,dtype=float)
 
         dlg.Destroy()
-                
+
         norm_table_cols = []
         # Write new table
         db.execute('DROP TABLE IF EXISTS %s'%(output_table))
@@ -484,12 +563,19 @@ class NormalizationUI(wx.Frame, CPATool):
             norm_table_cols += wellkey_cols
             col_defs +=  ', '+ ', '.join(['%s %s'%(col, db.GetColumnTypeString(p.image_table, col))
                                         for col in wellkey_cols])
+
+        if input_table == p.object_table:
+            if p.cell_x_loc and p.cell_y_loc:
+                norm_table_cols += [p.cell_x_loc, p.cell_y_loc]
+                col_defs += ', %s %s'%(p.cell_x_loc, db.GetColumnTypeString(p.object_table, p.cell_x_loc)) + ', ' + '%s %s'%(p.cell_y_loc, db.GetColumnTypeString(p.object_table, p.cell_y_loc))
+
         if wants_norm_meas:
             col_defs += ', '+ ', '.join(['%s_NmM %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
         if wants_norm_factor:
             col_defs += ', '+ ', '.join(['%s_NmF %s'%(col, db.GetColumnTypeString(input_table, col))
                                          for col in meas_cols]) 
+
         for col in meas_cols:
             if wants_norm_meas:
                 norm_table_cols += ['%s_NmM'%(col)]
@@ -543,7 +629,7 @@ class NormalizationUI(wx.Frame, CPATool):
         #
         # Show the resultant table        
         #
-        import tableviewer
+        from . import tableviewer
         tv = tableviewer.TableViewer(ui.get_main_frame_or_none())
         tv.Show()
         tv.load_db_table(output_table)
@@ -566,7 +652,7 @@ class NormalizationUI(wx.Frame, CPATool):
             self.table_choice.SetStringSelection(settings['table'])
             self.update_measurement_choices()
         if 'columns' in settings:
-            cols = map(str.strip, settings['columns'].split(','))
+            cols = list(map(str.strip, settings['columns'].split(',')))
             self.col_choices.SetCheckedStrings(cols)
         if 'steps' in settings:
             steps = eval(settings['steps'])
@@ -585,7 +671,7 @@ class NormalizationUI(wx.Frame, CPATool):
 
             
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG)
     
     if p.show_load_dialog():

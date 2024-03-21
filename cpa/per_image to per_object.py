@@ -1,7 +1,8 @@
-import dbconnect
-import properties
+
+from . import dbconnect
+from . import properties
 import os
-import imagereader
+from . import imagereader
 import re
 import wx
 import sys
@@ -13,7 +14,7 @@ def LoadFile():
      path=''
      dlg = wx.FileDialog(app.GetTopWindow(), message="Choose a properties file",
             defaultDir=os.getcwd(), defaultFile="", wildcard=wildcard,
-            style=wx.OPEN | wx.CHANGE_DIR)
+            style=wx.FD_OPEN | wx.FD_CHANGE_DIR)
      if dlg.ShowModal() == wx.ID_OK:
           path=dlg.GetPaths()
      else:
@@ -54,11 +55,11 @@ def conflict_resolution(name):
 
 def run():
     # Get properties file
-    p=properties.Properties.getInstance()
+    p=properties.Properties()
     p.LoadFile(LoadFile())
 
     # Create the DB according to the instructions in the properties file
-    db=dbconnect.DBConnect.getInstance()
+    db=dbconnect.DBConnect()
     db.execute('SELECT 1')
 
     # Create a copy of the per_image table
@@ -70,7 +71,7 @@ def run():
          if not conflict_table(fake_obj_table):
               temp=conflict_resolution(fake_obj_table)
               if temp == '':
-                   print 'Error: No name recorded.'
+                   print('Error: No name recorded.')
               else:
                    fake_obj_table=temp
          else:
@@ -80,7 +81,7 @@ def run():
     # Remove the columns with files names and paths
     cols_im=db.GetColumnNames(p.image_table)
     cols_types=db.GetColumnTypes(p.image_table)
-    cols_names_types=zip(cols_im, cols_types)
+    cols_names_types=list(zip(cols_im, cols_types))
     db.execute('CREATE TABLE %s AS SELECT %s FROM %s' %(fake_obj_table, ', '.join([x[0] for x in cols_names_types if x[1]!=str]), p.image_table))
 
     # Add columns to the new per_image table such that it looks like a per_object table
@@ -146,7 +147,7 @@ def run():
          if not conflict_file(filename):
               temp=conflict_resolution(filename)
               if temp == '':
-                   print 'Error: No name recorded.'
+                   print('Error: No name recorded.')
               else:
                    filename=temp
          else:
@@ -156,7 +157,7 @@ def run():
     sys.exit()
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     run()
     app.MainLoop()
 

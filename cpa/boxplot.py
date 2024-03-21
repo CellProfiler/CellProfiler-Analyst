@@ -1,25 +1,22 @@
-from dbconnect import DBConnect, UniqueImageClause, image_key_columns
-from multiclasssql import filter_table_prefix
-from properties import Properties
-import datamodel
-import guiutils as ui 
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import sqltools as sql
-import imagetools
+
+from .dbconnect import DBConnect
+from .properties import Properties
+from . import datamodel
+from . import guiutils as ui 
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import sqltools as sql
 import logging
 import numpy as np
-import os
 import sys
-import re
 import wx
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
-from cpatool import CPATool
+from .cpatool import CPATool
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 NO_GROUP = "Whole column"
 ID_EXIT = wx.NewId()
@@ -33,6 +30,7 @@ class DataSourcePanel(wx.Panel):
         wx.Panel.__init__(self, parent, **kwargs)
         
         # the panel to draw charts on
+        self.SetBackgroundColour('white') # color for the background of panel
         self.figpanel = figpanel
         
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -45,49 +43,50 @@ class DataSourcePanel(wx.Panel):
         self.group_choice = ComboBox(self, -1, choices=[NO_GROUP]+p._groups_ordered, style=wx.CB_READONLY)
         self.group_choice.Select(0)
         self.filter_choice = ui.FilterComboBox(self, style=wx.CB_READONLY)
+        self.filter_choice.Select(0)
         self.update_chart_btn = wx.Button(self, -1, "Update Chart")
         
         self.update_column_fields()
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "table:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.table_choice, 1, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(wx.StaticText(self, -1, "measurement:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_choice, 2, wx.EXPAND)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.x_multiple, 0, wx.EXPAND|wx.TOP, 2)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,3))
+        sizer.Add(-1, 3, 0)
         
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "group x-axis by:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.group_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,3))
+        sizer.Add(-1, 3, 0)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
         sz.Add(wx.StaticText(self, -1, "filter:"), 0, wx.TOP, 4)
-        sz.AddSpacer((3,-1))
+        sz.AddSpacer(3)
         sz.Add(self.filter_choice, 1, wx.EXPAND)
         sizer.Add(sz, 1, wx.EXPAND)
-        sizer.AddSpacer((-1,3))
+        sizer.Add(-1, 3, 0)
         
         sizer.Add(self.update_chart_btn)    
-        
-        wx.EVT_BUTTON(self.x_multiple, -1, self.on_select_multiple)
-        wx.EVT_COMBOBOX(self.table_choice, -1, self.on_table_selected)
-        wx.EVT_COMBOBOX(self.x_choice, -1, self.on_column_selected)
-        wx.EVT_BUTTON(self.update_chart_btn, -1, self.update_figpanel)   
-        
+
+        self.x_multiple.Bind(wx.EVT_BUTTON, self.on_select_multiple)
+        self.table_choice.Bind(wx.EVT_COMBOBOX, self.on_table_selected)
+        self.x_choice.Bind(wx.EVT_COMBOBOX, self.on_column_selected)
+        self.update_chart_btn.Bind(wx.EVT_BUTTON, self.update_figpanel)
+
         self.SetSizer(sizer)
         self.Show(1)
 
     def on_select_multiple(self, evt):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         column_names = self.get_numeric_columns_from_table(tablename)
         dlg = wx.MultiChoiceDialog(self, 
                                    'Select the columns you would like to plot',
@@ -117,17 +116,18 @@ class DataSourcePanel(wx.Panel):
         self.group_choice.Enable()        
     
     def update_column_fields(self):
-        tablename = self.table_choice.GetStringSelection()
+        tablename = self.table_choice.GetString(self.table_choice.GetSelection())
         fieldnames = self.get_numeric_columns_from_table(tablename)
         self.x_choice.Clear()
         self.x_choice.AppendItems(fieldnames)
+        self.x_choice.Append(SELECT_MULTIPLE)
         self.x_choice.SetSelection(0)
 
     def get_numeric_columns_from_table(self, table):
         ''' Fetches names of numeric columns for the given table. '''
         measurements = db.GetColumnNames(table)
         types = db.GetColumnTypes(table)
-        return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+        return [m for m,t in zip(measurements, types) if t in (float, int)]
         
     def update_figpanel(self, evt=None):
         table = self.table_choice.Value
@@ -137,7 +137,7 @@ class DataSourcePanel(wx.Panel):
             points_dict = {}
             for col in self.x_columns:
                 pts = self.loadpoints(table, col, fltr, NO_GROUP)
-                for k in pts.keys(): assert k not in points_dict.keys()
+                for k in list(pts.keys()): assert k not in points_dict
                 points_dict.update(pts)
         else:
             col = self.x_choice.Value
@@ -171,7 +171,7 @@ class DataSourcePanel(wx.Panel):
         q = sql.QueryBuilder()
         select = [sql.Column(tablename, col)]
         if grouping != NO_GROUP:
-            dm = datamodel.DataModel.getInstance()
+            dm = datamodel.DataModel()
             group_cols = dm.GetGroupColumnNames(grouping, include_table_name=True)
             select += [sql.Column(*col.split('.')) for col in group_cols]
         q.set_select_clause(select)
@@ -202,7 +202,7 @@ class DataSourcePanel(wx.Panel):
         if self.x_choice.Value == SELECT_MULTIPLE:
             cols = self.x_columns
         else:
-            cols = [self.x_choice.GetStringSelection()]
+            cols = [self.x_choice.GetString(self.x_choice.GetSelection())]
         return {'table'  : self.table_choice.Value,
                 'x-axis' : ','.join(cols),
                 'filter' : self.filter_choice.Value,
@@ -225,7 +225,7 @@ class DataSourcePanel(wx.Panel):
             self.table_choice.SetStringSelection(settings['table'])
             self.update_column_fields()
         if 'x-axis' in settings:
-            cols = map(str.strip, settings['x-axis'].split(','))
+            cols = list(map(str.strip, settings['x-axis'].split(',')))
             if len(cols) == 1:
                 self.x_choice.SetStringSelection(cols[0])
             else:
@@ -281,7 +281,7 @@ class BoxPlotPanel(FigureCanvasWxAgg):
         if len(self.points)==0:
             logging.warn('No data to plot.')
             return
-        self.subplot.boxplot(self.points)
+        self.subplot.boxplot(self.points, sym='k.')
         if len(self.points) > 1:
             self.figure.autofmt_xdate()
         self.subplot.set_xticklabels(self.xlabels)
@@ -313,8 +313,7 @@ class BoxPlotPanel(FigureCanvasWxAgg):
     def reset_toolbar(self):
         # Cheat since there is no way reset
         if self.navtoolbar:
-            self.navtoolbar._views.clear()
-            self.navtoolbar._positions.clear()
+            self.navtoolbar._nav_stack.clear()
             self.navtoolbar.push_current()
 
 
@@ -326,7 +325,7 @@ class BoxPlot(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='BoxPlot', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white")
         points = {}
         figpanel = BoxPlotPanel(self, points)
         configpanel = DataSourcePanel(self, figpanel)
@@ -335,28 +334,96 @@ class BoxPlot(wx.Frame, CPATool):
         sizer.Add(figpanel, 1, wx.EXPAND)
         sizer.Add(configpanel, 0, wx.EXPAND|wx.ALL, 5)
         self.SetSizer(sizer)
-        
+        self.fig = figpanel
         #
         # Forward save and load settings functionality to the configpanel
         #
         self.save_settings = configpanel.save_settings
         self.load_settings = configpanel.load_settings
 
+    # Hack: See http://stackoverflow.com/questions/6124419/matplotlib-navtoolbar-doesnt-realize-in-wx-2-9-mac-os-x
+    def SetToolBar(self, toolbar):
+        from matplotlib.backends.backend_wx import _load_bitmap
+        toolbar.Hide()
+        tb = self.CreateToolBar((wx.TB_HORIZONTAL|wx.TB_TEXT))
+
+        _NTB2_HOME = wx.NewId()
+        _NTB2_BACK = wx.NewId()
+        _NTB2_FORWARD = wx.NewId()
+        _NTB2_PAN = wx.NewId()
+        _NTB2_ZOOM = wx.NewId()
+        _NTB2_SAVE = wx.NewId()
+        _NTB2_SUBPLOT = wx.NewId()
+        tb.AddTool(_NTB2_HOME, "", _load_bitmap('home.png'), 'Home')
+        tb.AddTool(_NTB2_BACK, "", _load_bitmap('back.png'), 'Back')
+        tb.AddTool(_NTB2_FORWARD, "", _load_bitmap('forward.png'), 'Forward')
+
+        tb.AddCheckTool(_NTB2_PAN, "", _load_bitmap('move.png'), shortHelp='Pan', longHelp='Pan with left, zoom with right')
+        tb.AddCheckTool(_NTB2_ZOOM, "", _load_bitmap('zoom_to_rect.png'), shortHelp='Zoom', longHelp='Zoom to rectangle')
+
+        tb.AddSeparator()
+        tb.AddTool(_NTB2_SUBPLOT, "", _load_bitmap('subplots.png'), 'Configure subplots')
+        tb.AddTool(_NTB2_SAVE, "", _load_bitmap('filesave.png'), 'Save plot')
+
+        def on_toggle_pan(evt):
+            tb.ToggleTool(_NTB2_ZOOM, False)
+            evt.Skip()
+
+        def on_toggle_zoom(evt):
+            tb.ToggleTool(_NTB2_PAN, False)
+            evt.Skip()
+
+        self.Bind(wx.EVT_TOOL, toolbar.home, id=_NTB2_HOME)
+        self.Bind(wx.EVT_TOOL, toolbar.forward, id=_NTB2_FORWARD)
+        self.Bind(wx.EVT_TOOL, toolbar.back, id=_NTB2_BACK)
+        self.Bind(wx.EVT_TOOL, toolbar.zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, toolbar.pan, id=_NTB2_PAN)
+        self.Bind(wx.EVT_TOOL, self.configure_subplots, id=_NTB2_SUBPLOT)
+        self.Bind(wx.EVT_TOOL, toolbar.save_figure, id=_NTB2_SAVE)
+        self.Bind(wx.EVT_TOOL, on_toggle_zoom, id=_NTB2_ZOOM)
+        self.Bind(wx.EVT_TOOL, on_toggle_pan, id=_NTB2_PAN)
+
+        tb.Realize()  
+        # Hack end
+
+    def configure_subplots(self, *args):
+        # Fixed MPL subplot window generator
+        from matplotlib.backends.backend_wx import _set_frame_icon, FigureManagerWx
+        from matplotlib.widgets import SubplotTool
+
+        frame = wx.Frame(None, -1, "Configure subplots")
+        _set_frame_icon(frame)
+
+        toolfig = Figure((6, 3))
+        canvas = FigureCanvasWxAgg(frame, -1, toolfig)
+
+        # Create a figure manager to manage things
+        FigureManagerWx(canvas, 1, frame)
+
+        # Now put all into a sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # This way of adding to sizer allows resizing
+        sizer.Add(canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
+        frame.SetSizer(sizer)
+        frame.Fit()
+        SubplotTool(self.fig.canvas.figure, toolfig)
+        frame.Show()
+
                     
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
     logging.basicConfig(level=logging.DEBUG,)
 
     if len(sys.argv) > 1:
         # Load a properties file if passed in args
-        p = Properties.getInstance()
+        p = Properties()
         p.LoadFile(sys.argv[1])
     elif not p.show_load_dialog():
-        print 'BoxPlot requires a properties file.  Exiting.'
+        print('BoxPlot requires a properties file.  Exiting.')
         # necessary in case other modal dialogs are up
         wx.GetApp().Exit()
         sys.exit()
-        afraser
+
     boxplot = BoxPlot(None)
     boxplot.Show()
     
@@ -371,4 +438,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

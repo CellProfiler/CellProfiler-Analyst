@@ -8,7 +8,7 @@ class Observable:
         self._observers.append(observer)
 
     def removeobserver(self, observer):
-        if observer in self._observers:
+        if self._observers and observer in self._observers:
             self._observers.remove(observer)
 
     def notify(self, event):
@@ -33,3 +33,20 @@ class ObservableDict(dict, Observable):
     def clear(self):
         dict.clear(self)
         self.notify(None)
+
+
+# AutoSave
+import threading
+from functools import wraps
+
+def delay(delay=0.):
+    """
+    Decorator delaying the execution of a function for a while.
+    """
+    def wrap(f):
+        @wraps(f)
+        def delayed(*args, **kwargs):
+            timer = threading.Timer(delay, f, args=args, kwargs=kwargs)
+            timer.start()
+        return delayed
+    return wrap

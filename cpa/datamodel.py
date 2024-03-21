@@ -1,14 +1,13 @@
-import logging
-from random import randint
-import numpy as np
-from dbconnect import *
-from singleton import *
-from properties import Properties
+from itertools import islice
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+from .dbconnect import *
+from .singleton import *
+from .properties import Properties
 
-class DataModel(Singleton):
+p = Properties()
+db = DBConnect()
+
+class DataModel(metaclass=Singleton):
     '''
     DataModel is a dictionary of perImageObjectCounts indexed by (TableNumber,ImageNumber)
     '''
@@ -70,7 +69,7 @@ class DataModel(Singleton):
         self.groupMaps, self.groupColNames = db.GetGroupMaps()
         self.revGroupMaps, _ = db.GetGroupMaps(reverse=True)
         for group in self.groupMaps:
-            self.groupColTypes[group] = [type(col) for col in self.groupMaps[group].items()[0][1]]
+            self.groupColTypes[group] = [type(col) for col in list(self.groupMaps[group].items())[0][1]]
 
     def DeleteModel(self):
         self.data = {}
@@ -86,7 +85,7 @@ class DataModel(Singleton):
         self._if_empty_populate()
         return self.obCount
         
-    def GetRandomObject(self):
+    def GetRandomObject(self, N):
         '''
         Returns a random object key
         We expect self.data.keys() to return the keys in the SAME ORDER
@@ -94,67 +93,98 @@ class DataModel(Singleton):
         need not necessarily be in sorted order.
         '''
         self._if_empty_populate()
-        obIdx = randint(1, self.obCount)
-        imIdx = np.searchsorted(self.cumSums, obIdx, 'left')
-        # SUBTLETY: images which have zero objects will appear as repeated
-        #    sums in the cumulative array, so we must pick the first index
-        #    of any repeated sum, otherwise we are picking an image with no
-        #    objects
-        while self.cumSums[imIdx] == self.cumSums[imIdx-1]:
-            imIdx -= 1
-        imKey = self.data.keys()[imIdx-1]
-        obIdx = obIdx-self.cumSums[imIdx-1]  # object number relative to this image
-                    
-        obKey = db.GetObjectIDAtIndex(imKey, obIdx)
-        return obKey
+        obIdxs = random.sample(list(range(1, self.obCount + 1)), N)
+        obKeys = []
+        for obIdx in obIdxs:
+            imIdx = np.searchsorted(self.cumSums, obIdx, 'left')
+            # SUBTLETY: images which have zero objects will appear as repeated
+            #    sums in the cumulative array, so we must pick the first index
+            #    of any repeated sum, otherwise we are picking an image with no
+            #    objects
+            while self.cumSums[imIdx] == self.cumSums[imIdx-1]:
+                imIdx -= 1
+            imKey = list(self.data.keys())[imIdx-1]
+            obIdx = obIdx-self.cumSums[imIdx-1]  # object number relative to this image
+            obKeys.append(db.GetObjectIDAtIndex(imKey, obIdx))
+        return obKeys
 
-    def GetRandomObjects(self, N, imKeys=None):
+    def GetRandomObjects(self, N, imKeys=None, with_replacement=False):
         '''
         Returns N random objects.
         If a list of imKeys is specified, GetRandomObjects will return 
         objects from only these images.
         '''
         self._if_empty_populate()
+        if N > self.obCount:
+            logging.info(f"{N} is greater than the number of objects. Fetching {self.obCount} objects.")
+            N = self.obCount
         if imKeys == None:
-            return [self.GetRandomObject() for i in xrange(N)]
+            if p.use_legacy_fetcher:
+                return self.GetRandomObject(N)
+            else:
+                return db.GetRandomObjectsSQL(None, N)
         elif imKeys == []:
             return []
         else:
-            sums = np.cumsum([self.data[imKey] for imKey in imKeys])
-            if sums[-1] < 1:
-                return []
-            obs = []
-            for i in xrange(N):
-                obIdx = randint(1, sums[-1])
-                index = np.searchsorted(sums, obIdx, 'left')
-                if index != 0:
-                    while sums[index] == sums[index-1]:
-                        index -= 1
-                    obIdx = obIdx-sums[index-1]
-                obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
-                obs.append(obKey)
+            if p.use_legacy_fetcher:
+                sums = np.cumsum([self.data[imKey] for imKey in imKeys])
+                if sums[-1] < 1:
+                    return []
+                obs = []
+                if with_replacement:
+                    obIdxs = random.choices(list(range(1, sums[-1] + 1)), k=N)
+                else:
+                    if N > sums[-1]:
+                        logging.info(f"Number of available objects is less than {N}. Fetching {sums[-1]} objects.")
+                        N = sums[-1]
+                    obIdxs = random.sample(list(range(1, sums[-1]+1)), k=N)
+                for obIdx in obIdxs:
+                    index = np.searchsorted(sums, obIdx, 'left')
+                    if index != 0:
+                        while sums[index] == sums[index-1]:
+                            index -= 1
+                        obIdx = obIdx-sums[index-1]
+                    obKey = db.GetObjectIDAtIndex(imKeys[index], obIdx)
+                    obs.append(obKey)
+            else:
+                obs = db.GetRandomObjectsSQL(imKeys, N)
+                if with_replacement and 0 < len(obs) < N:
+                    obs = random.choices(obs, k=N)
             return obs
-            
+
+    def GetAllObjects(self, filter_name=None, gate_name=None, imkeys=[], N=None):
+        self._if_empty_populate()
+        if imkeys == []:
+            imkeys = self.GetAllImageKeys(filter_name=filter_name, gate_name=gate_name)
+        if p.use_legacy_fetcher:
+            obs = (x for im in imkeys for x in self.GetObjectsFromImage(im))
+            if N is None:
+                return list(obs)
+            else:
+                return list(islice(obs, N))
+        else:
+            return db.GetAllObjectsSQL(imkeys, N)
+
     def GetObjectsFromImage(self, imKey):
         self._if_empty_populate()
-        obKeys=[]
-        for i in xrange(1,self.GetObjectCountFromImage(imKey)+1):
-            obKeys.append(db.GetObjectIDAtIndex(imKey, i))
+        if p.use_legacy_fetcher:
+            obKeys=[]
+            for i in range(1,self.GetObjectCountFromImage(imKey)+1):
+                obKeys.append(db.GetObjectIDAtIndex(imKey, i))
+        else:
+            obKeys = db.GetAllObjectsSQL([imKey])
         return obKeys
-        # JK - The above code was previously removed in favor of the code below.
-        # However the new code is sensitive to objects not having consecutive IDs 
-        # in an image, whereas the above code is not making it more robust
-#        return [tuple(list(imKey) + [i]) 
-#                for i in xrange(1, self.GetObjectCountFromImage(imKey) + 1)]
-    
-    def GetAllImageKeys(self, filter_name=None):
+
+    def GetAllImageKeys(self, filter_name=None, gate_name=None):
         ''' Returns all object keys. If a filter is passed in, only the image
         keys that fall within the filter will be returned.'''
         self._if_empty_populate()
-        if filter_name is None:
-            return list(self.data.keys())
+        if filter_name is not None:
+            return db.GetFilteredImages(filter_name)
+        elif gate_name is not None:
+            return db.GetGatedImages(gate_name)
         else:
-            return list(db.GetFilteredImages(filter_name))
+            return list(self.data.keys())
 
     def GetObjectCountFromImage(self, imKey):
         ''' Returns the number of objects in the specified image. '''
@@ -165,7 +195,7 @@ class DataModel(Singleton):
         ''' Returns pairs of imageKeys and object counts. '''
         self._if_empty_populate()
         if filter_name is None:
-            return self.data.items()
+            return list(self.data.items())
         else:
             return [(imKey, self.data[imKey]) for imKey in db.GetFilteredImages(filter_name)]
     
@@ -192,12 +222,12 @@ class DataModel(Singleton):
         '''
         self._if_empty_populate()
         groupData = {}
-        nvals = len(imdata.values()[0])
-        for imKey in imdata.keys():
+        nvals = len(list(imdata.values())[0])
+        for imKey in list(imdata.keys()):
             # initialize each entry to [0,0,...]
             groupData[self.groupMaps[group][imKey]] = np.zeros(nvals)
             
-        for imKey, vals in imdata.items():
+        for imKey, vals in list(imdata.items()):
             # add values to running sum of this group
             groupData[self.groupMaps[group][imKey]] += vals
         
@@ -215,7 +245,7 @@ class DataModel(Singleton):
             def matches(key1, key2):
                 return all([(a==b or b=='__ANY__') for a,b in zip(key1,key2)])
             imkeys = []
-            for gkey, ikeys in self.revGroupMaps[group].items():
+            for gkey, ikeys in list(self.revGroupMaps[group].items()):
                 if matches(gkey,groupKey):
                     imkeys += ikeys
             return imkeys
@@ -233,7 +263,7 @@ class DataModel(Singleton):
             
         # apply filter if supplied
         if filter_name is not None:
-            if filter_name not in self.filterkeys.keys():
+            if filter_name not in list(self.filterkeys.keys()):
                 self.filterkeys[filter_name] = db.GetFilteredImages(filter_name)
             imkeys = set(imkeys).intersection(self.filterkeys[filter_name])    
         
@@ -267,16 +297,23 @@ class DataModel(Singleton):
             well = r[0]
             # Make sure all well entries match the naming format
             if type(well) == str:
+                well = well.strip()
                 assert re.match(well_re, well), 'Well "%s" did not match well naming format "%s"'%(r[0], p.well_format)
-            elif type(well) in [int, long]:
+            elif type(well) == int:
                 if not p.well_format == '123':
+                    '''
                     import wx
                     wx.MessageBox('Well "%s" did not match well naming format "%s".\n'
                                   'If your wells are in numerical format then add\n'
                                   'the line "well_format = 123" to your properties'
                                   'file. Trying well_format = 123.'%(r[0], p.well_format), 'Error')
+                    '''
                     p.well_format = '123'
-                    self.populate_plate_maps()
+                    try:
+                        self.populate_plate_maps()
+                    except:
+                        import wx
+                        wx.MessageBox('Error when trying well_format = 123. Try another well naming format.', 'Error')
                     return
 
             if p.well_format == 'A01':
@@ -291,7 +328,7 @@ class DataModel(Singleton):
                 self.plate_map[well] = (row, col)
                 self.rev_plate_map[(row, col)] = well
             elif p.well_format == '123':
-                row = (int(well) - 1) / pshape[1]
+                row = (int(well) - 1) // pshape[1]
                 col = (int(well) - 1) % pshape[1]
                 self.plate_map[well] = (row, col)
                 self.rev_plate_map[(row, col)] = well
@@ -300,29 +337,34 @@ class DataModel(Singleton):
         '''returns the plate position tuple (row, col) corresponding to 
         the given well_name.
         '''
+        try:
+            well_name = well_name.strip()
+        except:
+            pass
         if self.plate_map == {}:
             self.populate_plate_maps()
-        if well_name in self.plate_map.keys():
+        if well_name in list(self.plate_map.keys()):
             return self.plate_map[well_name]
         else:
             raise KeyError('Well name "%s" could not be mapped to a plate position.' % well_name)
 
-    def get_well_name_from_position(self, (row, col)):
+    def get_well_name_from_position(self, xxx_todo_changeme):
         '''returns the well name (eg: "A01") corresponding to the given 
         plate position tuple.
         '''
+        (row, col) = xxx_todo_changeme
         if self.plate_map == {}:
             self.populate_plate_maps()
-        if (row, col) in self.rev_plate_map.keys():
+        if (row, col) in list(self.rev_plate_map.keys()):
             return self.rev_plate_map[(row, col)]
         else:
             raise KeyError('Plate position "%s" could not be mapped to a well key.' % str((row,col)))
 
 
 if __name__ == "__main__":
-    p = Properties.getInstance()
+    p = Properties()
     p.LoadFile('../properties/2009_02_19_MijungKwon_Centrosomes.properties')
-    db = DBConnect.getInstance()
+    db = DBConnect()
     db.connect()
-    d = DataModel.getInstance()
+    d = DataModel()
     d.PopulateModel()

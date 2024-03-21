@@ -8,7 +8,7 @@ class ExecuteTestCase(unittest.TestCase):
 
     def setUp(self):
         self.p = cpa.dbconnect.p
-        self.db = cpa.dbconnect.DBConnect.getInstance()
+        self.db = cpa.dbconnect.DBConnect()
         cursor = Mock()
         connID = threading.currentThread().getName()
         self.db.connections[connID] = Mock()
@@ -21,7 +21,7 @@ class ExecuteTestCase(unittest.TestCase):
         
 class CheckColnameUserTestCase(unittest.TestCase):
     def setUp(self):
-        self.db = cpa.dbconnect.DBConnect.getInstance()
+        self.db = cpa.dbconnect.DBConnect()
         self.p = cpa.dbconnect.p
         self.p.image_table = 'Per_Image'
         self.p.object_table = 'Per_Object'
@@ -45,7 +45,7 @@ class CheckColnameUserTestCase(unittest.TestCase):
 
 class AppendColumnTestCase(unittest.TestCase):
     def setUp(self):
-        self.db = cpa.dbconnect.DBConnect.getInstance()
+        self.db = cpa.dbconnect.DBConnect()
         self.p = cpa.dbconnect.p
         self.p.image_table = 'Per_Image'
         self.p.object_table = 'Per_Object'
@@ -62,7 +62,7 @@ class AppendColumnTestCase(unittest.TestCase):
 
 class UpdateWellsTestCase(unittest.TestCase):
     def setUp(self):
-        self.db = cpa.dbconnect.DBConnect.getInstance()
+        self.db = cpa.dbconnect.DBConnect()
         self.p = cpa.dbconnect.p
         self.p.image_table = 'Per_Image'
         self.p.object_table = 'Per_Object'

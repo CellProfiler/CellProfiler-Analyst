@@ -1,24 +1,24 @@
 # -*- Encoding: utf-8 -*-
-from datamodel import DataModel
-from properties import Properties
-from sys import stderr
+
+from cpa import dbconnect
+from cpa.dbconnect import DBConnect
+from cpa.guiutils import create_status_bar
+from .datamodel import DataModel
+from .properties import Properties
 from tempfile import gettempdir
-from time import ctime, time
-#from wx.lib.embeddedimage import PyEmbeddedImage
-import dbconnect
-import imagetools
+from time import ctime
+from . import imagetools
 import csv
 import logging
 import numpy as np
 import os
-import sys
 import weakref
 import wx
 import wx.grid
 
-dm = DataModel.getInstance()
-db = dbconnect.DBConnect.getInstance()
-p = Properties.getInstance()
+dm = DataModel()
+db = DBConnect()
+p = Properties()
 
 ID_LOAD_CSV = wx.NewId()
 ID_SAVE_CSV = wx.NewId()
@@ -30,7 +30,7 @@ ROW_LABEL_SIZE = 30
 # Icon to be used for row headers (difficult to implement) 
 #img_icon = PyEmbeddedImage('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')
 
-class HugeTable(wx.grid.PyGridTableBase):
+class HugeTable(wx.grid.GridTableBase):
     '''
     This class abstracts the underlying data and labels used in the DataGrid.
     The data is stored as a 2d numpy array. The data itself never changes but
@@ -48,7 +48,7 @@ class HugeTable(wx.grid.PyGridTableBase):
         col_labels -- text labels for each column
         key_col_indices -- column indexes for group IDs
         '''
-        wx.grid.PyGridTableBase.__init__(self)
+        wx.grid.GridTableBase.__init__(self)
         
         assert len(col_labels) == data.shape[1], "DataGrid.__init__: Number of column labels does not match the number of columns in data."
         self.sortdir      =  1    # sort direction (1=descending, -1=descending)
@@ -207,11 +207,11 @@ class HugeTableGrid(wx.grid.Grid):
         # it's Destroy method later.
         self.SetTable(table, True)
         # Avoid self.AutoSize() because it hangs on large tables.
-        self.SetSelectionMode(self.wxGridSelectColumns)
+        self.SetSelectionMode(self.GridSelectColumns)
         self.SetColumnLabels(self.GetTable().col_labels)
         # Help prevent spurious horizontal scrollbar
-        self.SetMargins(0-wx.SystemSettings_GetMetric(wx.SYS_VSCROLL_X),
-                        0-wx.SystemSettings_GetMetric(wx.SYS_HSCROLL_Y))
+        self.SetMargins(0-wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X),
+                        0-wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y))
         self.SetRowLabelSize(ROW_LABEL_SIZE)
         
         wx.grid.EVT_GRID_SELECT_CELL(self, self.OnSelectCell)
@@ -244,7 +244,7 @@ class HugeTableGrid(wx.grid.Grid):
             block = np.empty((n, m))
             for k, j in enumerate(self.selectedColumns):
                 block[:,k] = self.GetTable().GetColValues(j)
-            self.GetParent().SetStatusText(u"Sum: %f — Mean: %f — Std: %f" %
+            self.GetParent().SetStatusText("Sum: %f — Mean: %f — Std: %f" %
                                            (block.sum(), block.mean(), block.std()))
         except:
             self.GetParent().SetStatusText("Cannot summarize columns.")
@@ -352,24 +352,24 @@ class DataGrid(wx.Frame):
         self.loadCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_LOAD_CSV,
                         text='Load data from CSV\tCtrl+O',
-                        help='Load data from CSV.')
+                        helpString='Load data from CSV.')
         self.saveCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_SAVE_CSV,
                         text='Save data to CSV\tCtrl+S',
-                        help='Saves data as comma separated values.')
+                        helpString='Saves data as comma separated values.')
         self.savePerImageCountsToCSVMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=-1,
                         text='Save per-image counts to CSV',
-                        help='Saves per-image phenotype counts as comma separated values.')
+                        helpString='Saves per-image phenotype counts as comma separated values.')
         self.exitMenuItem = \
             wx.MenuItem(parentMenu=self.filemenu, id=ID_EXIT,
                         text='Exit\tCtrl+Q',
-                        help='Close the Data Table')
-        self.filemenu.AppendItem(self.loadCSVMenuItem)
-        self.filemenu.AppendItem(self.saveCSVMenuItem)
-        self.filemenu.AppendItem(self.savePerImageCountsToCSVMenuItem)
+                        helpString='Close the Data Table')
+        self.filemenu.Append(self.loadCSVMenuItem)
+        self.filemenu.Append(self.saveCSVMenuItem)
+        self.filemenu.Append(self.savePerImageCountsToCSVMenuItem)
         self.filemenu.AppendSeparator()
-        self.filemenu.AppendItem(self.exitMenuItem)
+        self.filemenu.Append(self.exitMenuItem)
         menuBar = wx.MenuBar()
         self.SetMenuBar(menuBar)
         self.GetMenuBar().Append(self.filemenu, 'File')
@@ -377,12 +377,12 @@ class DataGrid(wx.Frame):
         self.writeToTempTableMenuItem = \
             wx.MenuItem(parentMenu=self.dbmenu, id=-1,
                         text='Write temporary table for Plate Viewer',
-                        help='Writes this table to a temporary table in your database so Plate Viewer can access it.')
-        self.dbmenu.AppendItem(self.writeToTempTableMenuItem)
+                        helpString='Writes this table to a temporary table in your database so Plate Viewer can access it.')
+        self.dbmenu.Append(self.writeToTempTableMenuItem)
         self.GetMenuBar().Append(self.dbmenu, 'Database')
         if self.grid:
             self.CreateColumnMenu()
-        self.CreateStatusBar()
+        self.status_bar = create_status_bar(self)
 
         self.SetSize((800,500))
         if self.grid:
@@ -393,7 +393,7 @@ class DataGrid(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSavePerImageCountsToCSV, self.savePerImageCountsToCSVMenuItem)
         self.Bind(wx.EVT_MENU, self.OnWriteTempTableToDB, self.writeToTempTableMenuItem)
         self.Bind(wx.EVT_MENU, self.OnExit, self.exitMenuItem)
-        wx.EVT_SIZE(self, self.OnSize)
+        self.Bind(wx.EVT_SIZE, self.OnSize, self)
         
         accelerator_table = wx.AcceleratorTable([(wx.ACCEL_CTRL,ord('O'),ID_LOAD_CSV),
                                                  (wx.ACCEL_CTRL,ord('S'),ID_SAVE_CSV),
@@ -430,7 +430,7 @@ class DataGrid(wx.Frame):
         adjustment = ROW_LABEL_SIZE
         if self.grid.GetScrollRange(wx.VERTICAL)>0:
             adjustment = wx.SYS_VSCROLL_ARROW_X + 12
-        cw = (evt.GetSize()[0] - adjustment) / self.grid.GetTable().GetNumberCols()
+        cw = (evt.GetSize()[0] - adjustment) // self.grid.GetTable().GetNumberCols()
         self.grid.SetDefaultColSize(cw, True)
         evt.Skip()
         
@@ -450,7 +450,7 @@ class DataGrid(wx.Frame):
     def OnLoadCSV(self, evt):
         dlg = wx.FileDialog(self, message='Choose a CSV file to load',
                             defaultDir=os.getcwd(),
-                            style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() != wx.ID_OK:
             return
         filename = dlg.GetPath()
@@ -475,7 +475,7 @@ class DataGrid(wx.Frame):
             self.colmenu.Destroy()
         except: pass
         r = csv.reader(open(csvfile))
-        labels = r.next()
+        labels = next(r)
         dtable = dbconnect.get_data_table_from_csv_reader(r)
         coltypes = db.InferColTypesFromData(dtable, len(labels))
         for i in range(len(coltypes)):
@@ -483,7 +483,7 @@ class DataGrid(wx.Frame):
             elif coltypes[i] == 'FLOAT': coltypes[i] = float
             else: coltypes[i] = str
         r = csv.reader(open(csvfile))
-        r.next() # skip col-headers
+        next(r) # skip col-headers
         data = []
         for row in r:
             data += [[coltypes[i](v) for i,v in enumerate(row)]]
@@ -492,9 +492,9 @@ class DataGrid(wx.Frame):
         if group == DO_NOT_LINK_TO_IMAGES:
             keycols = []
         elif group == 'Image':
-            keycols = range(len(dbconnect.image_key_columns()))
+            keycols = list(range(len(dbconnect.image_key_columns())))
         else:
-            keycols = range(len(dm.GetGroupColumnNames(group)))
+            keycols = list(range(len(dm.GetGroupColumnNames(group))))
         
         self.grid = HugeTableGrid(self, data, labels, key_col_indices=keycols, grouping=group, chMap=p.image_channel_colors)
         self.Title = '%s (%s)'%(csvfile, group)
@@ -511,7 +511,7 @@ class DataGrid(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         res = saveDialog.ShowModal()
         if res==wx.ID_OK:
@@ -525,7 +525,7 @@ class DataGrid(wx.Frame):
                                    defaultDir=os.getcwd(),
                                    defaultFile=defaultFileName,
                                    wildcard='csv|*',
-                                   style=(wx.SAVE | wx.FD_OVERWRITE_PROMPT |
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
                                           wx.FD_CHANGE_DIR))
         if saveDialog.ShowModal()==wx.ID_OK:
             colHeaders = list(dbconnect.image_key_columns())
@@ -570,8 +570,7 @@ class DataGrid(wx.Frame):
         self.file = filename
         
     def OnWriteTempTableToDB(self, evt):
-        from classifier import Classifier
-        db.CreateTempTableFromData(self.grid.GetTable().data, 
+        db.CreateTempTableFromData(self.grid.GetTable().data,
                            dbconnect.clean_up_colnames(self.grid.GetTable().col_labels), 
                            '__Classifier_output')
         try:
@@ -609,15 +608,14 @@ Parameters:
 
 if __name__ == "__main__":
     import sys
-    app = wx.PySimpleApp()
+    app = wx.App()
 
     if len(sys.argv) == 1:
         # ---- testing ----
         
-#        p.LoadFile('/Users/afraser/CPA/properties/nirht_test.properties')
-        p.LoadFile('/Users/afraser/cpa_example/example.properties')
-        
-        print 'TESTING DATA GRID' 
+        p.show_load_dialog()
+
+        print('TESTING DATA GRID') 
         classes = ['a', 'b']
         data = np.array([['key 0',10,20,-30,40.123456789],
                          ['key 1',11,21,31,41.1],
@@ -633,31 +631,31 @@ if __name__ == "__main__":
 #        grid = DataGrid()
         grid = DataGrid(data, labels, key_col_indices=[0,1], title='TEST', autosave=False)
         grid.Show()
-        print grid.GetData()
+        print((grid.GetData()))
         app.MainLoop()
         # -------------------
       
     if not (3 <= len(sys.argv) <= 4):
-        print usage
+        print(usage)
         sys.exit()
     csvfile = sys.argv[1]
     propsfile = sys.argv[2]
     
-    p = Properties.getInstance()
-    db = dbconnect.DBConnect.getInstance()
-    dm = DataModel.getInstance()
+    p = Properties()
+    db = DBConnect()
+    dm = DataModel()
 
     p.LoadFile(propsfile)
     r = csv.reader(open(csvfile))
-    labels = r.next()
-    dtable = DBConnect.get_data_table_from_csv_reader(r)
+    labels = next(r)
+    dtable = dbconnect.get_data_table_from_csv_reader(r)
     coltypes = db.InferColTypesFromData(dtable, len(labels))
     for i in range(len(coltypes)):
         if coltypes[i] == 'INT': coltypes[i] = int
         elif coltypes[i] == 'FLOAT': coltypes[i] = float
         else: coltypes[i] = str
     r = csv.reader(open(csvfile))
-    r.next() # skip col-headers
+    next(r) # skip col-headers
     data = []
     for row in r:
         data += [[coltypes[i](v) for i,v in enumerate(row)]]
@@ -668,9 +666,9 @@ if __name__ == "__main__":
         group = sys.argv[3]
     
     if group == 'Image':
-        keycols = range(len(dbconnect.image_key_columns()))
+        keycols = list(range(len(dbconnect.image_key_columns())))
     else:
-        keycols = range(len(dm.GetGroupColumnNames(group)))
+        keycols = list(range(len(dm.GetGroupColumnNames(group))))
     
     grid = DataGrid(data, labels, grouping=group, 
                     key_col_indices=keycols,
@@ -680,4 +678,3 @@ if __name__ == "__main__":
     grid.Show()
     
     app.MainLoop()
-

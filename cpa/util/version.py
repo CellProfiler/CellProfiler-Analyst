@@ -1,24 +1,30 @@
 '''version.py - Version fetching and comparison.
 
-CellProfiler is distributed under the GNU General Public License,
+CellProfiler Analyst is distributed under the GNU General Public License,
 but this file is licensed under the more permissive BSD license.
 See the accompanying file LICENSE for details.
 
 Copyright (c) 2003-2009 Massachusetts Institute of Technology
-Copyright (c) 2009-2011 Broad Institute
+Copyright (c) 2009-2021 Broad Institute
+
 All rights reserved.
 
 Please see the AUTHORS file for credits.
 
-Website: http://www.cellprofiler.org
+Website: http://www.cellprofileranalyst.org
 '''
+
 
 import re
 import sys
 import os.path
-import verlib
 
 _cached_description = None
+
+__version__ = '3.0.4' # Version used by update checker, must be in format "N.N.N"
+_sub_version = '' # Use this to tag release candidates, betas, etc.
+
+display_version = __version__ + _sub_version
 
 def _get_description():
     """Get description from git or file system.
@@ -57,7 +63,7 @@ def _get_description():
 
     if git_description and git_description != _cached_description:
         with open(description_file, 'w') as f:
-            print >>f, '__description__ = "%s"' % git_description
+            print('__description__ = "%s"' % git_description, file=f)
 
     return git_description or _cached_description
 
@@ -70,44 +76,6 @@ def _parse_description(description):
     else:
         return m.groups()
 
-def _get_parsed():
-    return _parse_description(_get_description())
-
-def get_display_version(_description=_get_description()):
-    tag, additional, commit = _parse_description(_description)
-    version = get_normalized_version()
-    return '%s (rev. %s)' % (version, commit)
-
-def get_normalized_version(_description=_get_description()):
-    """Return the normalized version or None.
-
-    Normalized versions are defined by PEP 386, and are what should go
-    in the module's __version__ variable.
-
-    """
-    if _description is None:
-        return None
-    tag, additional, commit = _parse_description(_description)
-    if additional == '0':
-        s = tag
-    else:
-        s = tag + '.post' + additional
-    return verlib.suggest_normalized_version(s)
-
-def get_bundle_version(_description=_get_description()):
-    """Get the MacOS X bundle version.
-
-    The MacOS X bundle version is always three integers separated by
-    dots. If our version does not match that (e.g., because we have
-    additional commits past a tag), return "0.0.0".
-
-    """
-    tag, additional, commit = _parse_description(_description)
-    if additional == '0' and re.match('\d+\.\d+\.\d+$', tag):
-        return tag
-    else:
-        return '0.0.0'
-
 def get_commit(_description=_get_description()):
     tag, additional, commit = _parse_description(_description)
     return commit
@@ -118,10 +86,8 @@ if __name__ == '__main__':
     elif len(sys.argv) == 1:
         description = _get_description()
     else:
-        print >>sys.stderr, "Usage: %s [DESCRIPTION]" % os.path.basename(sys.argv[0])
+        print("Usage: %s [DESCRIPTION]" % os.path.basename(sys.argv[0]), file=sys.stderr)
         sys.exit(64) # EX_USAGE
-    print 'Description:', description
-    print 'Normalized version:', get_normalized_version(description)
-    print 'Bundle version:', get_bundle_version(description)
-    print 'Commit:', get_commit(description)
-    print 'Display version:', get_display_version(description)
+    print('Description:', description)
+    print('Version:', __version__)
+    print('Commit:', get_commit(description))

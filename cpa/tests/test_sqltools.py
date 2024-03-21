@@ -9,8 +9,9 @@ class TestOldFilter(unittest.TestCase):
     def setUp(self):
         fn = os.path.join(os.path.dirname(__file__),
                        'test_sqltools_old_filter.properties')
-        cpa.properties.LoadFile(fn)
-        self.db = cpa.dbconnect.DBConnect.getInstance()
+        p = cpa.properties.Properties()
+        p.load_file(fn)
+        self.db = cpa.dbconnect.DBConnect()
         cursor = Mock()
         connID = threading.currentThread().getName()
         self.db.connections[connID] = Mock()
@@ -18,10 +19,11 @@ class TestOldFilter(unittest.TestCase):
 
 
     def test_get_tables(self):
-        filter = cpa.properties._filters['MCF7wt']
+        p = cpa.properties.Properties()
+        filter = p._filters['MCF7wt']
         with patch.object(cpa.db, 'execute') as execute:
             with patch.object(cpa.db, 'GetResultColumnNames') as GetResultColumnNames:
-                execute.return_value = [(1L, 'SIMPLE', 'Morphology_Per_Image', 'ALL', None, None, None, None, 107760L, 'Using where')]
+                execute.return_value = [(1, 'SIMPLE', 'Morphology_Per_Image', 'ALL', None, None, None, None, 107760, 'Using where')]
                 GetResultColumnNames.return_value = ['id', 'select_type', 'table', 'type', 'possible_keys', 'key', 'key_len', 'ref', 'rows', 'Extra']
                 tables = filter.get_tables()
         self.assertEqual(tables, set(['Morphology_Per_Image']))

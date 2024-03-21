@@ -1,18 +1,31 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
+# =============================================================================
+#
+#   Main file for CellProfiler-Analyst
+#
+# =============================================================================
 
-from __future__ import with_statement
+
 import sys
 import os
 import os.path
 import logging
-import re
-import javabridge
-import bioformats
-from cpa import __version__
-import cpa.helpmenu
+
+from cpa.dimensionreduction import DimensionReduction
+from cpa.guiutils import create_status_bar
+from cpa.util.version import display_version
 from cpa.properties import Properties
 from cpa.dbconnect import DBConnect
+from cpa.classifier import Classifier
+from cpa.tableviewer import TableViewer
+from cpa.plateviewer import PlateViewer
+from cpa.imageviewer import ImageViewer
+from cpa.imagegallery import ImageGallery
+from cpa.boxplot import BoxPlot
+from cpa.scatter import Scatter
+from cpa.histogram import Histogram
+from cpa.density import Density
+from cpa.querymaker import QueryMaker
+from cpa.normalizationtool import NormalizationUI
 
 
 class FuncLog(logging.Handler):
@@ -25,37 +38,6 @@ class FuncLog(logging.Handler):
     def emit(self, record):
         self.update(self.format(record))
 
-
-def setup_frozen_logging():
-    # py2exe has a version of this in boot_common.py, but it causes an
-    # error window to appear if any messages are actually written.
-    class Stderr(object):
-        softspace = 0 # python uses this for printing
-        _file = None
-        _error = None
-        def write(self, text, fname=None):
-            if fname is None:
-                fname = sys.executable + '.log'
-                if not os.access(fname, os.W_OK):
-                    fname = os.path.expanduser("~/CellProfilerAnalyst.log")
-            if self._file is None and self._error is None:
-                try:
-                    self._file = open(fname, 'w')
-                except Exception, details:
-                    self._error = details
-            if self._file is not None:
-                self._file.write(text)
-                self._file.flush()
-        def flush(self):
-            if self._file is not None:
-                self._file.flush()
-    # send everything to logfile
-    sys.stderr = Stderr()
-    sys.stdout = sys.stderr
-
-if hasattr(sys, 'frozen') and sys.platform.startswith('win'):
-    # on windows, log to a file (Mac goes to console)
-    setup_frozen_logging()
 logging.basicConfig(level=logging.DEBUG)
 
 # Handles args to MacOS "Apps"
@@ -64,7 +46,7 @@ if len(sys.argv) > 1 and sys.argv[1].startswith('-psn'):
 
 if len(sys.argv) > 1:
     # Load a properties file if passed in args
-    p = Properties.getInstance()
+    p = Properties()
     if sys.argv[1] == '--incell':
         # GE Incell xml wrapper
         # LOOP
@@ -72,38 +54,24 @@ if len(sys.argv) > 1:
     else:
         p.LoadFile(sys.argv[1])
 
-import threading
-from cpa.classifier import Classifier
-from cpa.tableviewer import TableViewer
-from cpa.plateviewer import PlateViewer
-from cpa.imageviewer import ImageViewer
-from cpa.boxplot import BoxPlot
-from cpa.scatter import Scatter
-from cpa.histogram import Histogram
-from cpa.density import Density
-from cpa.querymaker import QueryMaker
-from cpa.normalizationtool import NormalizationUI
-from cpa.tracer import Tracer
-import cpa.icons
-import cpa.cpaprefs
 from cpa.cpatool import CPATool
 import inspect
 
-from cpa.icons import get_cpa_icon
-import cpa.dbconnect
 import cpa.multiclasssql
 # ---
 import wx
 
-ID_CLASSIFIER = wx.NewId()
-ID_PLATE_VIEWER = wx.NewId()
-ID_TABLE_VIEWER = wx.NewId()
-ID_IMAGE_VIEWER = wx.NewId()
-ID_SCATTER = wx.NewId()
-ID_HISTOGRAM = wx.NewId()
-ID_DENSITY = wx.NewId()
-ID_BOXPLOT = wx.NewId()
-ID_NORMALIZE = wx.NewId()
+ID_CLASSIFIER = wx.NewIdRef()
+ID_IMAGE_GALLERY = wx.NewIdRef()
+ID_PLATE_VIEWER = wx.NewIdRef()
+ID_TABLE_VIEWER = wx.NewIdRef()
+ID_IMAGE_VIEWER = wx.NewIdRef()
+ID_SCATTER = wx.NewIdRef()
+ID_HISTOGRAM = wx.NewIdRef()
+ID_DENSITY = wx.NewIdRef()
+ID_BOXPLOT = wx.NewIdRef()
+ID_DIMENSREDUX = wx.NewIdRef()
+ID_NORMALIZE = wx.NewIdRef()
 ID_TRACER = wx.NewId()
 
 def get_cpatool_subclasses():
@@ -117,64 +85,68 @@ class MainGUI(wx.Frame):
     '''Main GUI frame for CellProfiler Analyst
     '''
     def __init__(self, properties, parent, id=-1, **kwargs):
-        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst 2.0 (r%s)'%(__version__), **kwargs)
 
+        from cpa.icons import get_icon, get_cpa_icon
+
+        wx.Frame.__init__(self, parent, id=id, title='CellProfiler Analyst %s'%(display_version), **kwargs)
         self.properties = properties
         self.SetIcon(get_cpa_icon())
-        if not sys.platform.startswith('win'):
-            # this is good for Mac, but on windows creates a (currently) unused icon in the system tray
-            self.tbicon = wx.TaskBarIcon()
-            self.tbicon.SetIcon(get_cpa_icon(), 'CellProfiler Analyst 2.0')
-        else:
-            self.tbicon = None
+        self.tbicon = None
         self.SetName('CPA')
         self.Center(wx.HORIZONTAL)
-        self.CreateStatusBar()
+        self.status_bar = create_status_bar(self)
+        self.log_io = True
 
         #
         # Setup toolbar
         #
         tb = self.CreateToolBar(wx.TB_HORZ_TEXT|wx.TB_FLAT)
         tb.SetToolBitmapSize((32,32))
-        tb.SetSize((-1,200))
-        tb.AddLabelTool(ID_CLASSIFIER, 'Classifier', cpa.icons.classifier.ConvertToBitmap(), shortHelp='Classifier', longHelp='Launch Classifier')
-        tb.AddLabelTool(ID_PLATE_VIEWER, 'PlateViewer', cpa.icons.platemapbrowser.ConvertToBitmap(), shortHelp='Plate Viewer', longHelp='Launch Plate Viewer')
-        tb.AddLabelTool(ID_TABLE_VIEWER, 'TableViewer', cpa.icons.data_grid.ConvertToBitmap(), shortHelp='Table Viewer', longHelp='Launch TableViewer')
-        tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', cpa.icons.image_viewer.ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
-        tb.AddLabelTool(ID_SCATTER, 'ScatterPlot', cpa.icons.scatter.ConvertToBitmap(), shortHelp='Scatter Plot', longHelp='Launch Scatter Plot')
-        tb.AddLabelTool(ID_HISTOGRAM, 'Histogram', cpa.icons.histogram.ConvertToBitmap(), shortHelp='Histogram', longHelp='Launch Histogram')
-        tb.AddLabelTool(ID_DENSITY, 'DensityPlot', cpa.icons.density.ConvertToBitmap(), shortHelp='Density Plot', longHelp='Launch Density Plot')
-        tb.AddLabelTool(ID_BOXPLOT, 'BoxPlot', cpa.icons.boxplot.ConvertToBitmap(), shortHelp='Box Plot', longHelp='Launch Box Plot')
+        tb.SetSize((-1,132))
+        tb.AddTool(ID_IMAGE_GALLERY.GetId(), 'Image Gallery', get_icon("image_gallery").ConvertToBitmap(), shortHelp='Image Gallery')
+        tb.AddTool(ID_CLASSIFIER.GetId(), 'Classifier', get_icon("classifier").ConvertToBitmap(), shortHelp='Classifier')
+        # tb.AddLabelTool(ID_CLASSIFIER, 'PixelClassifier', get_icon("pixelclassifier").ConvertToBitmap(), shortHelp='Pixel-based Classifier', longHelp='Launch pixel-based Classifier')
+        tb.AddTool(ID_PLATE_VIEWER.GetId(), 'Plate Viewer', get_icon("platemapbrowser").ConvertToBitmap(), shortHelp='Plate Viewer')
+        # tb.AddLabelTool(ID_IMAGE_VIEWER, 'ImageViewer', get_icon("image_viewer").ConvertToBitmap(), shortHelp='Image Viewer', longHelp='Launch ImageViewer')
+        tb.AddTool(ID_SCATTER.GetId(), 'Scatter Plot', get_icon("scatter").ConvertToBitmap(), shortHelp='Scatter Plot')
+        tb.AddTool(ID_HISTOGRAM.GetId(), 'Histogram', get_icon("histogram").ConvertToBitmap(), shortHelp='Histogram')
+        tb.AddTool(ID_DENSITY.GetId(), 'Density Plot', get_icon("density").ConvertToBitmap(), shortHelp='Density Plot')
+        tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', get_icon("boxplot").ConvertToBitmap(), shortHelp='Box Plot')
+        tb.AddTool(ID_DIMENSREDUX.GetId(), 'Reduction', get_icon("dimensionality").ConvertToBitmap(), shortHelp='Dimensionality Reduction')
+        tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', get_icon("data_grid").ConvertToBitmap(), shortHelp='Table Viewer')
         tb.AddLabelTool(ID_TRACER, 'Tracer', cpa.icons.tracer.ConvertToBitmap(), shortHelp='Tracer', longHelp='Launch Tracer')
+        # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', get_icon("normalize").ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
-        # TODO: IMG-1071 - The following was meant to resize based on the toolbar size but GetEffectiveMinSize breaks on Macs
-        #self.SetDimensions(-1, -1, tb.GetEffectiveMinSize().width, -1, wx.SIZE_USE_EXISTING)
 
         #
         # Setup menu items
         #
         self.SetMenuBar(wx.MenuBar())
         fileMenu = wx.Menu()
-        savePropertiesMenuItem = fileMenu.Append(-1, 'Save properties\tCtrl+S', help='Save the properties.')
-##        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load properties\tCtrl+O', help='Open another properties file.')
+        loadPropertiesMenuItem = fileMenu.Append(-1, 'Load properties file', helpString='Load a properties file.')
+        savePropertiesMenuItem = fileMenu.Append(-1, 'Save properties\tCtrl+S', helpString='Save the properties.')
+##        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load properties\tCtrl+O', helpString='Open another properties file.')
         fileMenu.AppendSeparator()
-        saveWorkspaceMenuItem = fileMenu.Append(-1, 'Save workspace\tCtrl+Shift+S', help='Save the currently open plots and settings.')
-        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load workspace\tCtrl+Shift+O', help='Open plots saved in a previous workspace.')
+        saveWorkspaceMenuItem = fileMenu.Append(-1, 'Save workspace\tCtrl+Shift+S', helpString='Save the currently open plots and settings.')
+        loadWorkspaceMenuItem = fileMenu.Append(-1, 'Load workspace\tCtrl+Shift+O', helpString='Open plots saved in a previous workspace.')
         fileMenu.AppendSeparator()
-        saveLogMenuItem = fileMenu.Append(-1, 'Save log', help='Save the contents of the log window.')
+        saveLogMenuItem = fileMenu.Append(-1, 'Save log', helpString='Save the contents of the log window.')
         fileMenu.AppendSeparator()
-        self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', help='Exit classifier')
+        self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', helpString='Exit classifier')
         self.GetMenuBar().Append(fileMenu, 'File')
 
         toolsMenu = wx.Menu()
-        classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', help='Launches Classifier.')
-        plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', help='Launches the Plate Viewer tool.')
-        dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Data Table\tCtrl+Shift+T', help='Launches the Data Table tool.')
-        imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', help='Launches the ImageViewer tool.')
-        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', help='Launches the Scatter Plot tool.')
-        histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', help='Launches the Histogram Plot tool.')
-        densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', help='Launches the Density Plot tool.')
-        boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', help='Launches the Box Plot tool.')
+        imageGalleryMenuItem = toolsMenu.Append(ID_IMAGE_GALLERY, 'Image Gallery Viewer\tCtrl+Shift+I', helpString='Launches the Image Gallery')
+        classifierMenuItem  = toolsMenu.Append(ID_CLASSIFIER, 'Classifier\tCtrl+Shift+C', helpString='Launches Classifier.')
+        plateMapMenuItem    = toolsMenu.Append(ID_PLATE_VIEWER, 'Plate Viewer\tCtrl+Shift+P', helpString='Launches the Plate Viewer tool.')
+        #imageViewerMenuItem = toolsMenu.Append(ID_IMAGE_VIEWER, 'Image Viewer\tCtrl+Shift+I', helpString='Launches the ImageViewer tool.')
+        scatterMenuItem     = toolsMenu.Append(ID_SCATTER, 'Scatter Plot\tCtrl+Shift+A', helpString='Launches the Scatter Plot tool.')
+        histogramMenuItem   = toolsMenu.Append(ID_HISTOGRAM, 'Histogram Plot\tCtrl+Shift+H', helpString='Launches the Histogram Plot tool.')
+        densityMenuItem     = toolsMenu.Append(ID_DENSITY, 'Density Plot\tCtrl+Shift+D', helpString='Launches the Density Plot tool.')
+        boxplotMenuItem     = toolsMenu.Append(ID_BOXPLOT, 'Box Plot\tCtrl+Shift+B', helpString='Launches the Box Plot tool.')
+        dimensionMenuItem   = toolsMenu.Append(ID_DIMENSREDUX, 'Dimensionality Reduction', helpString='Launches the Dimensionality Reduction tool.')
+        dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', helpString='Launches the Table Viewer tool.')
+        normalizeMenuItem   = toolsMenu.Append(ID_NORMALIZE, 'Normalization Tool\tCtrl+Shift+T', helpString='Launches a tool for generating normalized values for measurement columns in your tables.')
         tlmMenuItem         = toolsMenu.Append(ID_TRACER, 'Tracer\tCtrl+Shift+L', help='Launches the Tracer time-lapse viewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
@@ -184,30 +156,39 @@ class MainGUI(wx.Frame):
         warnMenuItem     = logMenu.AppendRadioItem(-1, 'Warnings\tCtrl+3', help='Logging window will display warning-level messages.')
         errorMenuItem    = logMenu.AppendRadioItem(-1, 'Errors\tCtrl+4', help='Logging window will display error-level messages.')
         criticalMenuItem = logMenu.AppendRadioItem(-1, 'Critical\tCtrl+5', help='Logging window will only display critical messages.')
+        logioItem = logMenu.AppendCheckItem(-1, item='Log image loading', help='Log image loader events')
         infoMenuItem.Check()
+        logioItem.Check()
         self.GetMenuBar().Append(logMenu, 'Logging')
 
         advancedMenu = wx.Menu()
-        normalizeMenuItem = advancedMenu.Append(-1, 'Launch feature normalization tool', help='Launches a tool for generating normalized values for measurement columns in your tables.')
-        queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', help='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
-        clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', help='Removes the tables from your database that tell CPA how to link your tables.')
+        #normalizeMenuItem = advancedMenu.Append(-1, 'Launch feature normalization tool', helpString='Launches a tool for generating normalized values for measurement columns in your tables.')
+        queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', helpString='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
+        clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', helpString='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
+<<<<<<< HEAD
 
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
         helpMenu = wx.Menu()
         aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
         self.GetMenuBar().Append(helpMenu, 'Help')
+=======
+        import cpa.helpmenu
+        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, main=True), 'Help')
+>>>>>>> master
 
         # console and logging
-        self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY)
+        self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH2)
         self.console.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-        self.console.SetBackgroundColour('#111111')
+        
+        # Black background and white font
+        self.console.SetDefaultStyle(wx.TextAttr(wx.WHITE,wx.BLACK))
+        self.console.SetBackgroundColour('#000000')
 
-        self.console.SetForegroundColour('#DDDDDD')
-        log_level = logging.DEBUG
+        log_level = logging.INFO # INFO is the default log level
         self.logr = logging.getLogger()
         self.set_log_level(log_level)
-        self.log_text = ''
+        self.log_text = ""
         def update(x):
             self.log_text += x+'\n'
         hdlr = FuncLog(update)
@@ -215,13 +196,15 @@ class MainGUI(wx.Frame):
 #        hdlr.setFormatter(logging.Formatter('%(levelname)s | %(name)s | %(message)s [@ %(asctime)s in %(filename)s:%(lineno)d]'))
         self.logr.addHandler(hdlr)
         # log_levels are 10,20,30,40,50
-        logMenu.GetMenuItems()[(log_level/10)-1].Check()
+        logMenu.GetMenuItems()[(log_level//10)-1].Check()
 
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.DEBUG), debugMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.INFO), infoMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.WARN), warnMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.ERROR), errorMenuItem)
-        self.Bind(wx.EVT_MENU, lambda(_):self.set_log_level(logging.CRITICAL), criticalMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.DEBUG), debugMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.INFO), infoMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.WARN), warnMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.ERROR), errorMenuItem)
+        self.Bind(wx.EVT_MENU, lambda _:self.set_log_level(logging.CRITICAL), criticalMenuItem)
+        self.Bind(wx.EVT_MENU, self.on_toggle_iologging, logioItem)
+        self.Bind(wx.EVT_MENU, self.on_load_properties, loadPropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_properties, savePropertiesMenuItem)
         self.Bind(wx.EVT_MENU, self.on_save_workspace, saveWorkspaceMenuItem)
         self.Bind(wx.EVT_MENU, self.on_load_workspace, loadWorkspaceMenuItem)
@@ -234,51 +217,76 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_image_viewer, id=ID_IMAGE_VIEWER)
+<<<<<<< HEAD
+=======
+        self.Bind(wx.EVT_TOOL, self.launch_image_gallery, id=ID_IMAGE_GALLERY)
+>>>>>>> master
         self.Bind(wx.EVT_TOOL, self.launch_scatter_plot, id=ID_SCATTER)
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
         self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
+<<<<<<< HEAD
         self.Bind(wx.EVT_TOOL, self.launch_tracer, id=ID_TRACER)
+=======
+        self.Bind(wx.EVT_TOOL, self.launch_dimens_redux, id=ID_DIMENSREDUX)
+        self.Bind(wx.EVT_TOOL, self.launch_normalization_tool, id=ID_NORMALIZE)
+>>>>>>> master
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
 
+    def confirm_properties(self):
+        if self.properties.is_initialized():
+            return True
+        else:
+            dlg = wx.MessageDialog(self, 'A valid properties file must be loaded to use this functionality',
+                                   'Properties file needed', wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
+            return False
+
     def launch_classifier(self, evt=None):
-        classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
-        if classifier:
-            classifier.Show()
-            classifier.SetFocus()
-            logging.warn('You may only run one instance of Classifier at a time.')
-            return
-        classifier = Classifier(parent=self, properties=self.properties)
-        classifier.Show(True)
+        if self.confirm_properties():
+            classifier = Classifier(parent=self, properties=self.properties)
+            classifier.Show(True)
 
     def launch_plate_map_browser(self, evt=None):
-        self.pv = PlateViewer(parent=self)
-        self.pv.Show(True)
+        if self.confirm_properties():
+            self.pv = PlateViewer(parent=self)
+            self.pv.Show(True)
 
     def launch_table_viewer(self, evt=None):
-        table = TableViewer(parent=self)
-        table.new_blank_table(100,10)
-        table.Show(True)
+        if self.confirm_properties():
+            table = TableViewer(parent=self)
+            table.new_blank_table(100,10)
+            table.Show(True)
 
     def launch_scatter_plot(self, evt=None):
-        scatter = Scatter(parent=self)
-        scatter.Show(True)
+        if self.confirm_properties():
+            scatter = Scatter(parent=self)
+            scatter.Show(True)
 
     def launch_histogram_plot(self, evt=None):
-        hist = Histogram(parent=self)
-        hist.Show(True)
+        if self.confirm_properties():
+            hist = Histogram(parent=self)
+            hist.Show(True)
 
     def launch_density_plot(self, evt=None):
-        density = Density(parent=self)
-        density.Show(True)
+        if self.confirm_properties():
+            density = Density(parent=self)
+            density.Show(True)
 
     def launch_image_viewer(self, evt=None):
-        imviewer = ImageViewer(parent=self)
-        imviewer.Show(True)
+        if self.confirm_properties():
+            imviewer = ImageViewer(parent=self)
+            imviewer.Show(True)
+
+    def launch_image_gallery(self, evt=None):
+        if self.confirm_properties():
+            colViewer = ImageGallery(parent=self, properties=self.properties)
+            colViewer.Show(True)
 
     def launch_box_plot(self, evt=None):
+<<<<<<< HEAD
         boxplot = BoxPlot(parent=self)
         boxplot.Show(True)
         
@@ -289,39 +297,118 @@ class MainGUI(wx.Frame):
     def launch_query_maker(self, evt=None):
         querymaker = QueryMaker(parent=self)
         querymaker.Show(True)
+=======
+        if self.confirm_properties():
+            boxplot = BoxPlot(parent=self)
+            boxplot.Show(True)
+
+    def launch_dimens_redux(self, evt=None):
+        if self.confirm_properties():
+            dimens = DimensionReduction(parent=self)
+            dimens.Show(True)
+
+    def launch_query_maker(self, evt=None):
+        if self.confirm_properties():
+            querymaker = QueryMaker(parent=self)
+            querymaker.Show(True)
+>>>>>>> master
 
     def launch_normalization_tool(self, evt=None):
-        normtool = NormalizationUI(parent=self)
-        normtool.Show(True)
+        if self.confirm_properties():
+            normtool = NormalizationUI(parent=self)
+            normtool.Show(True)
+
+    def on_toggle_iologging(self, evt):
+        if evt.IsChecked():
+            self.log_io = True
+        else:
+            self.log_io = False
+
+    def on_load_properties(self, evt):
+        # Show confirmation dialog.
+        if self.properties.is_initialized():
+            dlg = wx.MessageDialog(None, "Loading a new file will close all windows and clear unsaved data. Proceed?", 'Load properties file', wx.OK|wx.CANCEL)
+            response = dlg.ShowModal()
+            if response != wx.ID_OK:
+                return
+
+        # Close all subwindows
+        for window in self.GetChildren():
+            if isinstance(window, wx.Frame):
+                window.Destroy()
+
+        # Shut down existing connections and wipe properties.
+        db = DBConnect()
+        db.Disconnect()
+        p = Properties()
+        p.clear()
+        from cpa.datamodel import DataModel
+        DataModel.forget()
+        from cpa.trainingset import CellCache
+        CellCache.forget()
+        self.console.Clear()
+
+        if not p.is_initialized():
+            from cpa.guiutils import show_load_dialog
+            if not show_load_dialog():
+                example_link_address = 'cellprofileranalyst.org'
+                dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
+                                           example_link_address), 'Properties file required', wx.OK)
+                response = dlg.ShowModal()
+                logging.error('CellProfiler Analyst requires a properties file.')
+            else:
+                db.connect()
+                db.register_gui_parent(self)
 
     def on_save_properties(self, evt):
-        p = Properties.getInstance()
+        if not self.confirm_properties():
+            return
+        p = Properties()
         dirname, filename = os.path.split(p._filename)
         ext = os.path.splitext(p._filename)[-1]
         dlg = wx.FileDialog(self, message="Save properties as...", defaultDir=dirname,
                             defaultFile=filename, wildcard=ext,
+<<<<<<< HEAD
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+=======
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+>>>>>>> master
         if dlg.ShowModal() == wx.ID_OK:
             p.save_file(dlg.GetPath())
 
     def on_save_workspace(self, evt):
+<<<<<<< HEAD
         p = Properties.getInstance()
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
                             defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+=======
+        if not self.confirm_properties():
+            return
+        p = Properties()
+        dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
+                            defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+>>>>>>> master
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().save_workspace(dlg.GetPath())
 
     def on_load_workspace(self, evt):
+        if not self.confirm_properties():
+            return
         dlg = wx.FileDialog(self, "Select the file containing your CPAnalyst workspace...", wildcard="Workspace file (*.workspace)|*.workspace",
-                            defaultDir=os.getcwd(), style=wx.OPEN|wx.FD_CHANGE_DIR)
+                            defaultDir=os.getcwd(), style=wx.FD_OPEN|wx.FD_CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().load_workspace(dlg.GetPath())
 
     def save_log(self, evt=None):
         dlg = wx.FileDialog(self, message="Save log as...", defaultDir=os.getcwd(),
                             defaultFile='CPA_log.txt', wildcard='txt',
+<<<<<<< HEAD
                             style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+=======
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+>>>>>>> master
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             f = open(filename, 'w')
@@ -334,7 +421,9 @@ class MainGUI(wx.Frame):
         self.console.AppendText('Logging level: %s\n'%(logging.getLevelName(level)))
 
     def clear_link_tables(self, evt=None):
-        p = Properties.getInstance()
+        if not self.confirm_properties():
+            return
+        p = Properties()
         dlg = wx.MessageDialog(self, 'This will delete the tables '
                     '"%s" and "%s" from your database. '
                     'CPA will automatically recreate these tables as it '
@@ -346,7 +435,7 @@ class MainGUI(wx.Frame):
         response = dlg.ShowModal()
         if response != wx.ID_YES:
             return
-        db = dbconnect.DBConnect.getInstance()
+        db = DBConnect()
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_tables_table))
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_columns_table))
         db.Commit()
@@ -371,22 +460,28 @@ class MainGUI(wx.Frame):
         classifier = wx.FindWindowById(ID_CLASSIFIER) or wx.FindWindowByName('Classifier')
         if classifier and classifier.Close() == False:
             return
+            
         if any(wx.GetApp().get_plots()):
             dlg = wx.MessageDialog(self, 'Some tools are open, are you sure you want to quit CPA?', 'Quit CellProfiler Analyst?', wx.YES_NO|wx.NO_DEFAULT|wx.ICON_QUESTION)
             response = dlg.ShowModal()
             if response != wx.ID_YES:
                 return
+
         try:
+            logging.debug("Shutting of Java VM")
             import javabridge
-            javabridge.kill_vm()
+            if javabridge.get_env() is not None:
+                javabridge.kill_vm()
         except:
-            print "Failed to kill the Java VM"
+            logging.debug("Failed to kill the Java VM")
+
         # Blow up EVVVVERYTHIIINGGG!!! Muahahahahhahahah!
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
             win.Destroy()
         if self.tbicon is not None:
             self.tbicon.Destroy()
+        
         self.Destroy()
 
     def on_idle(self, evt=None):
@@ -394,6 +489,7 @@ class MainGUI(wx.Frame):
             self.console.AppendText(self.log_text)
             self.log_text = ''
 
+<<<<<<< HEAD
 # new version check
 def new_version_cb(new_version, new_version_info):
     # called from a child thread, so use CallAfter to bump it to the gui thread
@@ -415,15 +511,33 @@ def new_version_cb(new_version, new_version_info):
         dlg.Show()
 
     wx.CallAfter(cb2)
+=======
+>>>>>>> master
 
 class CPAnalyst(wx.App):
     '''The CPAnalyst application.
     This launches the main UI, and keeps track of the session.
     '''
-    def OnInit(self):
+    def Start(self):
         '''Initialize CPA
         '''
+        if hasattr(sys, "frozen") and sys.platform == "darwin":
+            # Some versions of Macos like to put CPA in a sandbox. If we're frozen Java should be packed in,
+            # so let's just figure out the directory on run time.
+            os.environ["CP_JAVA_HOME"] = os.path.abspath(os.path.join(sys.prefix, "..",  "Resources/Home"))
+        elif sys.platform == "win32":
+            # Windows gets very upset if system locale and wxpython locale don't match exactly.
+            import locale
+            # Need to startup wx in English, otherwise C++ can't load images.
+            self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
+            # Ensure Python uses the same locale as wx
+            try:
+                locale.setlocale(locale.LC_ALL, self.locale.GetName())
+            except:
+                logging.info(f"Python rejected the system locale detected by WX ('{self.locale.GetName()}').\n"
+                      "This shouldn't cause problems, but please let us know if you encounter errors.")
 
+<<<<<<< HEAD
         '''List of tables created by the user during this session'''
         self.user_tables = []
 
@@ -475,6 +589,37 @@ class CPAnalyst(wx.App):
         except ImportError:
             logging.warn("CPA was unable to check for updates. Could not import cellprofiler.utilities.check_for_updates.")
 
+=======
+        p = Properties()
+        self.frame = MainGUI(p, None, size=(1000,-1))
+        self.frame.Show() # Show frame
+        if not p.is_initialized():
+            from cpa.guiutils import show_load_dialog
+            try:
+                if not show_load_dialog():
+                    example_link_address = 'cellprofileranalyst.org'
+                    dlg = wx.MessageDialog(None, 'CellProfiler Analyst requires a properties file. Download an example at %s' % (
+                                               example_link_address), 'Properties file required', wx.OK)
+                    response = dlg.ShowModal()
+                    logging.error('CellProfiler Analyst requires a properties file.')
+                    return False
+                else:
+                    db = DBConnect()
+                    db.connect()
+                    db.register_gui_parent(self.frame)
+            except Exception as e:
+                p._initialized = False
+                # Fully raising the exception during this startup sequence will crash CPA.
+                # So we'll display it manually.
+                show_exception_as_dialog(type(e), e, e.__traceback__, raisefurther=False)
+                logging.critical(e)
+
+        try:
+            from cpa.updatechecker import check_update
+            check_update(self.frame, event=False)
+        except:
+            logging.warn("CPA was unable to check for updates.")
+>>>>>>> master
         return True
 
     def get_plots(self):
@@ -502,7 +647,7 @@ class CPAnalyst(wx.App):
                     logging.info('opening plot "%s"'%(lines[i]))
                     while lines[i+1].startswith('\t'):
                         i += 1
-                        setting, value = map(str.strip, lines[i].split(':', 1))
+                        setting, value = list(map(str.strip, lines[i].split(':', 1)))
                         settings[setting] = value
                     pos += 15
                     plot = cpatool(parent=self.frame, pos=(pos,pos))
@@ -517,16 +662,17 @@ class CPAnalyst(wx.App):
         f = open(filepath, 'w')
         f.write('CellProfiler Analyst workflow\n')
         f.write('version: 1\n')
-        f.write('CPA version: %s\n'%(__version__))
+        f.write('CPA version: %s\n'%(display_version))
         f.write('\n')
         for plot in self.get_plots():
             f.write('%s\n'%(plot.tool_name))
-            for setting, value in plot.save_settings().items():
+            for setting, value in list(plot.save_settings().items()):
                 assert ':' not in setting
                 f.write('\t%s : %s\n'%(setting, str(value)))
             f.write('\n')
         f.close()
 
+<<<<<<< HEAD
     def make_unique_plot_name(self, prefix):
         '''This function must be called to generate a unique name for each plot.
         eg: plot.SetName(wx.GetApp().make_unique_plot_name('Histogram'))
@@ -534,18 +680,22 @@ class CPAnalyst(wx.App):
         plot_num = max([int(plot.Name[len(prefix):])
                         for plot in self.plots if plot.Name.startswith(prefix)])
         return '%s %d'%(prefix, plot_num)
+=======
+>>>>>>> master
 
-
-if __name__ == "__main__":
+if __name__ == "__main__":    
     # Initialize the app early because the fancy exception handler
-    # depends on it in order to show a dialog.
+    # depends on it in order to show a 
     app = CPAnalyst(redirect=False)
-
     # Install our own pretty exception handler unless one has already
     # been installed (e.g., a debugger)
     if sys.excepthook == sys.__excepthook__:
        from cpa.errors import show_exception_as_dialog
        sys.excepthook = show_exception_as_dialog
+<<<<<<< HEAD
 
+=======
+    app.Start()
+>>>>>>> master
     app.MainLoop()
-#    os._exit(0)
+    os._exit(0) # Enforces Exit, see issue #102

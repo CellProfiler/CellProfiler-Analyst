@@ -1,14 +1,13 @@
-from datamodel import *
-import dbconnect
-from properties import Properties
-import imagetools
+from .datamodel import *
+from . import dbconnect
+from .properties import Properties
+from . import imagetools
 import wx
 import numpy as np
 import matplotlib.cm
-import PIL.Image as Image
 from base64 import b64decode
-from guiutils import BitmapPopup
-from StringIO import StringIO
+from .guiutils import BitmapPopup
+import imageio
 
 abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -65,11 +64,11 @@ class PlateMapPanel(wx.Panel):
         self.SetData(data, shape, data_range=data_range)
         
         self.well_keys = np.ones(np.prod(self.data.shape), dtype=np.object)
-        for i in xrange(len(self.well_keys)):
+        for i in range(len(self.well_keys)):
             self.well_keys[i] = ('Unknown Plate','Unknown Well')
         self.well_keys = self.well_keys.reshape(self.data.shape)
         for key in well_keys:
-            self.well_keys[DataModel.getInstance().get_well_position_from_name(key[-1])] = key
+            self.well_keys[DataModel().get_well_position_from_name(key[-1])] = key
 ##        for i, key in enumerate(well_keys):
 ##            if i % self.data.shape[1] == 0:
 ##                self.well_keys += [[]]	
@@ -242,7 +241,6 @@ class PlateMapPanel(wx.Panel):
     def OnPaint(self, evt=None):
         dc = wx.PaintDC(self)
         dc.Clear()
-        dc.BeginDrawing()
 
         w_win, h_win = (float(self.Size[0]), float(self.Size[1]))
         cols_data, rows_data = (self.data.shape[1], self.data.shape[0])
@@ -270,7 +268,7 @@ class PlateMapPanel(wx.Panel):
         wtext, htext = font.GetPixelSize()[0]*2, font.GetPixelSize()[1]
         dc.SetFont(font)
 
-        db = dbconnect.DBConnect.getInstance()
+        db = dbconnect.DBConnect()
         bmp = {}
         imgs = {}
         if self.well_disp == IMAGE:
@@ -296,11 +294,9 @@ class PlateMapPanel(wx.Panel):
 
             for wims in wells_and_images:
                 try:
-                    ims = [Image.open(StringIO(im), 'r') for im in wims[1:]]
-                except IOError, e:
-                    ims = [Image.open(StringIO(b64decode(im)), 'r') for im in wims[1:]]
-                ims = [np.fromstring(im.tostring(), dtype='uint8').reshape(im.size[1], im.size[0]).astype('float32') / 255
-                       for im in ims]
+                    ims = [imageio.imread(b64decode(im)).astype('float32') / 255 for im in wims[1:]]
+                except Exception as e:
+                    ims = [imageio.imread(im.encode()).astype('float32') / 255 for im in wims[1:]]
                 imgs[wims[0]] =  ims
 
         py = self.yo
@@ -353,20 +349,27 @@ class PlateMapPanel(wx.Panel):
                     elif self.well_disp == THUMBNAIL:
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
-                        if imgs.has_key(well):
+                        if well in imgs:
                             size = imgs[well][0].shape
                             scale = r*2./max(size)
-                            bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale)
+                            bmp[well] = imagetools.MergeToBitmap(imgs[well], p.image_channel_colors, scale=scale,
+                                                                 display_whole_image=True)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     elif self.well_disp == IMAGE:
                         p.image_buffer_size = p.plate_shape[0] * p.plate_shape[1]
                         wellkey = self.GetWellKeyAtCoord(px+r, py+r)
                         well = wellkey[-1]
-                        if imgs.has_key(well):
+                        if well in imgs:
                             ims = imagetools.FetchImage(imgs[well])
+                            # Hacky rescale for now
+                            # Todo: Write proper rescale function
+                            for i in range(len(ims)):
+                                if ims[i].max() > 1:
+                                    ims[i] = ims[i] * (1 / np.iinfo(ims[i].dtype).max)
                             size = ims[0].shape
                             scale = r*2./max(size)
-                            bmp[well] = imagetools.MergeToBitmap(ims, p.image_channel_colors, scale=scale)
+                            bmp[well] = imagetools.MergeToBitmap(ims, p.image_channel_colors, scale=scale,
+                                                                 display_whole_image=True)
                             dc.DrawBitmap(bmp[well], px+1, py+1)
                     # Draw text data
                     if self.text_data is not None:
@@ -383,7 +386,6 @@ class PlateMapPanel(wx.Panel):
                         dc.DrawLine(px+3, py+r*2-2, px+r*2-2, py+3)
                 px += 2*r+1
             py += 2*r+1
-        dc.EndDrawing()
         return dc
 
     def OnSize(self, evt):
@@ -462,7 +464,7 @@ class PlateMapPanel(wx.Panel):
         popupMenu.SetTitle('well: %s'%(well_label))
         if p.image_thumbnail_cols:
             item = popupMenu.Append(-1, 'Show thumbnail montage')
-            show_montage = lambda(e): self.show_thumbnail_montage(wellkey, (self.GetX(evt), self.GetY(evt)))
+            show_montage = lambda e: self.show_thumbnail_montage(wellkey, (self.GetX(evt), self.GetY(evt)))
             popupMenu.Bind(wx.EVT_MENU, show_montage, item)
         for key in imkeys:
             item = popupMenu.Append(-1, ','.join([str(k) for k in key]))
@@ -481,26 +483,23 @@ class PlateMapPanel(wx.Panel):
         imsets = []
         for channels in images:
             try:
-                pngs = [Image.open(StringIO(im), 'r') for im in channels]
-            except IOError, e:
-                pngs = [Image.open(StringIO(b64decode(im)), 'r') for im in channels]
+                imsets += [[imageio.imread(b64decode(im)).astype('float32') / 255 for im in channels]]
+            except Exception as e:
+                imsets += [[imageio.imread(im.encode()).astype('float32') / 255 for im in channels]]
 
-            imsets += [[np.fromstring(png.tostring(), dtype='uint8').reshape(png.size[1], png.size[0]).astype('float32') / 255
-                        for png in pngs]]                
-        
         n_channels = len(imsets[0])
         composite = []
-        for i in xrange(n_channels):
+        for i in range(n_channels):
             # composite each channel separately
             composite += [imagetools.tile_images([imset[i] for imset in imsets])]
-        bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors)
+        bmp = imagetools.MergeToBitmap(composite, p.image_channel_colors, display_whole_image=True)
         
         popup = BitmapPopup(self, bmp, pos=pos)
         popup.Show()
 
         
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 
     data = np.arange(5600.)
     a = np.zeros((40,140))
@@ -520,6 +519,3 @@ if __name__ == "__main__":
     frame.Show()
 
     app.MainLoop()
-
-
-

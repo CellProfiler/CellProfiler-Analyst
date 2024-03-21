@@ -5,9 +5,10 @@ it is not used by the CPA application itself.
 
 import os
 import operator
-import cPickle
+import pickle
 from contextlib import contextmanager
 import numpy as np
+from functools import reduce
 # This module should be usable on systems without wx.
 
 def bin_centers(x):
@@ -20,8 +21,8 @@ def bin_centers(x):
 def heatmap(datax, datay, resolutionx=200, resolutiony=200, logscale=False, 
             extent=False):
     """
-    >>> heat = heatmap(DNAvals, pH3vals-DNAvals, 200, 200, logscale=True)
-    >>> pylab.imshow(heat[0], origin='lower', extent=heat[1])
+    > heat = heatmap(DNAvals, pH3vals-DNAvals, 200, 200, logscale=True)
+    > pylab.imshow(heat[0], origin='lower', extent=heat[1])
     """
     datax = np.array(datax)
     datay = np.array(datay)
@@ -66,7 +67,7 @@ def unpickle(file_or_filename, nobjects=None, new=True):
     shape tuple and then a (raw) numpy array of that type are assumed to
     immediately follow the dtype objects.
     """
-    if isinstance(file_or_filename, file):
+    if hasattr(file_or_filename, 'read'):
         f = file_or_filename
     elif file_or_filename[-3:] == ".gz":
         import gzip
@@ -74,10 +75,10 @@ def unpickle(file_or_filename, nobjects=None, new=True):
     else:
         f = open(file_or_filename)
     def unpickle1():
-        o = cPickle.load(f)
+        o = pickle.load(f)
         if isinstance(o, np.dtype):
             if new:
-                shape = cPickle.load(f)
+                shape = pickle.load(f)
             a = np.fromfile(f, dtype=o, count=reduce(operator.mul, shape))
             if new:
                 return a.reshape(shape)
@@ -96,7 +97,7 @@ def unpickle(file_or_filename, nobjects=None, new=True):
                 raise
         if nobjects is not None and len(results) == nobjects:
             break
-    if not isinstance(file_or_filename, file):
+    if not hasattr(file_or_filename, 'read'):
         f.close()
     return tuple(results)
 
@@ -111,7 +112,7 @@ def pickle(file_or_filename, *objects):
     When encountering a numpy.ndarray in OBJECTS, first pickle the
     dtype, then the shape, then write the raw array data.
     """
-    if isinstance(file_or_filename, file):
+    if hasattr(file_or_filename, 'read'):
         f = file_or_filename
     elif file_or_filename[-3:] == ".gz":
         import gzip
@@ -120,12 +121,12 @@ def pickle(file_or_filename, *objects):
         f = open(file_or_filename, 'wb')
     for o in objects:
         if isinstance(o, np.ndarray):
-            cPickle.dump(o.dtype, f)
-            cPickle.dump(o.shape, f)
+            pickle.dump(o.dtype, f)
+            pickle.dump(o.shape, f)
             o.tofile(f)
         else:
-            cPickle.dump(o, f)
-    if not isinstance(file_or_filename, file):
+            pickle.dump(o, f)
+    if not hasattr(file_or_filename, 'read'):
         f.close()
 
 
@@ -146,8 +147,8 @@ class sample(object):
         if n is None or n > length:
             n = length
         if n < 0:
-            raise ValueError, \
-                "N must be at least 0 and at most the length of the sequence."
+            raise ValueError(
+                "N must be at least 0 and at most the length of the sequence.")
         self.m = 0
         self.i = 0
         self.n = n
@@ -166,10 +167,10 @@ class sample(object):
         else:
             return self.n
 
-    def next(self):
+    def __next__(self):
         import random
         while True:
-            e = self.s.next()
+            e = next(self.s)
             i = self.i
             self.i += 1
             u = random.random()

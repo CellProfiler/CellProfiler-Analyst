@@ -1,14 +1,15 @@
-from cpatool import CPATool
-from colorbarpanel import ColorBarPanel
-from dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
-import dbconnect
-import sqltools as sql
-import platemappanel as pmp
-from datamodel import DataModel
-from guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
-from wx.combo import OwnerDrawnComboBox as ComboBox
-import imagetools
-import properties
+
+from .cpatool import CPATool
+from .colorbarpanel import ColorBarPanel
+from .dbconnect import DBConnect, UniqueImageClause, UniqueWellClause, image_key_columns, GetWhereClauseForWells, well_key_columns
+from . import dbconnect
+from . import sqltools as sql
+from . import platemappanel as pmp
+from .datamodel import DataModel
+from .guiutils import TableComboBox, FilterComboBox, get_other_table_from_user
+from wx.adv import OwnerDrawnComboBox as ComboBox
+from . import imagetools
+from . import properties
 import logging
 import matplotlib.cm
 import numpy as np
@@ -18,20 +19,23 @@ import sys
 import re
 import wx
 import cpa.helpmenu
+import csv
 
-p = properties.Properties.getInstance()
+p = properties.Properties()
 # Hack the properties module so it doesn't require the object table.
 properties.optional_vars += ['object_table']
-db = DBConnect.getInstance()
+db = DBConnect()
 
 required_fields = ['plate_shape', 'plate_id', 'well_id']
+
+fixed_width = (200,-1)
 
 class PlateViewer(wx.Frame, CPATool):
     def __init__(self, parent, size=(800,-1), **kwargs):
         wx.Frame.__init__(self, parent, -1, size=size, title='Plate Viewer', **kwargs)
         CPATool.__init__(self)
         self.SetName(self.tool_name)
-        self.SetBackgroundColour(wx.NullColour)
+        self.SetBackgroundColour("white") # Fixing the color
 
         # Check for required properties fields.
         fail = False
@@ -52,53 +56,55 @@ class PlateViewer(wx.Frame, CPATool):
         self.menuBar = wx.MenuBar()
         self.SetMenuBar(self.menuBar)
         self.fileMenu = wx.Menu()
-        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, text='Exit\tCtrl+Q', help='Close Plate Viewer')
+        self.exitMenuItem = self.fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Close Plate Viewer')
         self.GetMenuBar().Append(self.fileMenu, 'File')
-        self.menuBar.Append(cpa.helpmenu.make_help_menu(self), 'Help')
+        self.menuBar.Append(cpa.helpmenu.make_help_menu(self, manual_url="8_plate_viewer.html"), 'Help')
+        save_csv_menu_item = self.fileMenu.Append(-1, 'Save table to CSV\tCtrl+S')
+        self.Bind(wx.EVT_MENU, self.on_save_csv, save_csv_menu_item)
         
-        wx.EVT_MENU(self, wx.ID_EXIT, lambda(_):self.Close())
+        self.Bind(wx.EVT_MENU, lambda _:self.Close(), id=wx.ID_EXIT)
 
         dataSourceSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Source:'), wx.VERTICAL)
         dataSourceSizer.Add(wx.StaticText(self, label='Data source:'))
-        self.sourceChoice = TableComboBox(self, -1, style=wx.CB_READONLY)
+        self.sourceChoice = TableComboBox(self, -1, size=fixed_width)
         dataSourceSizer.Add(self.sourceChoice)
-        dataSourceSizer.AddSpacer((-1,3))
+        dataSourceSizer.Add(-1, 3, 0)
         dataSourceSizer.Add(wx.StaticText(self, label='Measurement:'))
         measurements = get_non_blob_types_from_table(p.image_table)
-        self.measurementsChoice = ComboBox(self, choices=measurements, style=wx.CB_READONLY)
+        self.measurementsChoice = ComboBox(self, choices=measurements, size=fixed_width, style=wx.CB_READONLY)
         self.measurementsChoice.Select(0)
         dataSourceSizer.Add(self.measurementsChoice)
         dataSourceSizer.Add(wx.StaticText(self, label='Filter:'))
-        self.filterChoice = FilterComboBox(self)
+        self.filterChoice = FilterComboBox(self, size=fixed_width, style=wx.CB_READONLY)
         dataSourceSizer.Add(self.filterChoice)
         
         groupingSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='Data aggregation:'), wx.VERTICAL)
         groupingSizer.Add(wx.StaticText(self, label='Aggregation method:'))
         aggregation = ['mean', 'sum', 'median', 'stdev', 'cv%', 'min', 'max']
-        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation, style=wx.CB_READONLY)
+        self.aggregationMethodsChoice = ComboBox(self, choices=aggregation, size=fixed_width)
         self.aggregationMethodsChoice.Select(0)
         groupingSizer.Add(self.aggregationMethodsChoice)
 
         viewSizer = wx.StaticBoxSizer(wx.StaticBox(self, label='View options:'), wx.VERTICAL)
         viewSizer.Add(wx.StaticText(self, label='Color map:'))
-        maps = [m for m in matplotlib.cm.datad.keys() if not m.endswith("_r")]
+        maps = [m for m in list(matplotlib.cm.datad.keys()) if not m.endswith("_r")]
         maps.sort()
-        self.colorMapsChoice = ComboBox(self, choices=maps, style=wx.CB_READONLY)
+        self.colorMapsChoice = ComboBox(self, choices=maps, size=fixed_width)
         self.colorMapsChoice.SetSelection(maps.index('jet'))
         viewSizer.Add(self.colorMapsChoice)
 
-        viewSizer.AddSpacer((-1,3))
+        viewSizer.Add(-1, 3, 0)
         viewSizer.Add(wx.StaticText(self, label='Well display:'))
         if p.image_thumbnail_cols:
             choices = pmp.all_well_shapes
         else:
             choices = list(pmp.all_well_shapes)
             choices.remove(pmp.THUMBNAIL)
-        self.wellDisplayChoice = ComboBox(self, choices=choices, style=wx.CB_READONLY)
+        self.wellDisplayChoice = ComboBox(self, choices=choices, size=fixed_width)
         self.wellDisplayChoice.Select(0)
         viewSizer.Add(self.wellDisplayChoice)
 
-        viewSizer.AddSpacer((-1,3))
+        viewSizer.Add(-1, 3, 0)
         viewSizer.Add(wx.StaticText(self, label='Number of plates:'))
         self.numberOfPlatesTE = wx.TextCtrl(self, -1, '1', style=wx.TE_PROCESS_ENTER)
         viewSizer.Add(self.numberOfPlatesTE)
@@ -110,25 +116,25 @@ class PlateViewer(wx.Frame, CPATool):
         annotationColSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.annotation_cols = dict([(col, db.GetColumnType(p.image_table, col)) 
                                      for col in db.GetUserColumnNames(p.image_table)])
-        self.annotationCol = ComboBox(self, choices=self.annotation_cols.keys(), size=(120,-1), style=wx.CB_READONLY)
+        self.annotationCol = ComboBox(self, choices=list(self.annotation_cols.keys()), size=(120,-1))
         if len(self.annotation_cols) > 0:
             self.annotationCol.SetSelection(0)
-        annotationColSizer.Add(self.annotationCol)
-        annotationColSizer.AddSpacer((3,-1))
+        annotationColSizer.Add(self.annotationCol, flag=wx.ALIGN_CENTER_VERTICAL)
+        annotationColSizer.AddSpacer(3)
         self.addAnnotationColBtn = wx.Button(self, -1, 'Add', size=(44,-1))
-        annotationColSizer.Add(self.addAnnotationColBtn, 0, wx.TOP, 3)
+        annotationColSizer.Add(self.addAnnotationColBtn, flag=wx.ALIGN_CENTER_VERTICAL)
         annotationSizer.Add(annotationColSizer)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         annotationSizer.Add(wx.StaticText(self, label='Label:'))
         self.annotationLabel = wx.TextCtrl(self, -1, 'Select wells')#, style=wx.TE_PROCESS_ENTER)
         self.annotationLabel.Disable()
         self.annotationLabel.SetForegroundColour(wx.Colour(80,80,80))
         self.annotationLabel.SetBackgroundColour(wx.LIGHT_GREY)
         annotationSizer.Add(self.annotationLabel)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         self.outlineMarked = wx.CheckBox(self, -1, label='Outline annotated wells')
         annotationSizer.Add(self.outlineMarked)
-        annotationSizer.AddSpacer((-1,3))
+        annotationSizer.Add(-1, 3, 0)
         self.annotationShowVals = wx.CheckBox(self, -1, label='Show values on plate')
         annotationSizer.Add(self.annotationShowVals)
         if len(db.GetUserColumnNames(p.image_table)) == 0:
@@ -137,11 +143,11 @@ class PlateViewer(wx.Frame, CPATool):
             
         controlSizer = wx.BoxSizer(wx.VERTICAL)
         controlSizer.Add(dataSourceSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(groupingSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(viewSizer, 0, wx.EXPAND)
-        controlSizer.AddSpacer((-1,3))
+        controlSizer.Add(-1, 3, 0)
         controlSizer.Add(annotationSizer, 0 , wx.EXPAND)
 
         self.plateMapSizer = wx.GridSizer(1,1,5,5)
@@ -151,7 +157,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.rightSizer = wx.BoxSizer(wx.VERTICAL)
         self.rightSizer.Add(self.plateMapSizer, 1, wx.EXPAND|wx.BOTTOM, 10)
         self.colorBar = ColorBarPanel(self, 'jet', size=(-1,25))
-        self.rightSizer.Add(self.colorBar, 0, wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL)
+        self.rightSizer.Add(self.colorBar, 0, wx.EXPAND)
 
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
         mainSizer.Add(controlSizer, 0, wx.LEFT|wx.TOP|wx.BOTTOM, 10)
@@ -162,6 +168,7 @@ class PlateViewer(wx.Frame, CPATool):
 
         self.sourceChoice.Bind(wx.EVT_COMBOBOX, self.UpdateMeasurementChoice)
         self.measurementsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectMeasurement)
+        self.measurementsChoice.Select(0)
         self.aggregationMethodsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectAggregationMethod)
         self.colorMapsChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectColorMap)
         self.numberOfPlatesTE.Bind(wx.EVT_TEXT_ENTER, self.OnEnterNumberOfPlates)
@@ -170,11 +177,12 @@ class PlateViewer(wx.Frame, CPATool):
         self.addAnnotationColBtn.Bind(wx.EVT_BUTTON, self.OnAddAnnotationCol)
         self.annotationLabel.Bind(wx.EVT_KEY_UP, self.OnEnterAnnotation)
         self.outlineMarked.Bind(wx.EVT_CHECKBOX, self.OnOutlineMarked)
-        self.annotationShowVals.Bind(wx.EVT_CHECKBOX, self.OnShowAnotationValues)
+        self.annotationShowVals.Bind(wx.EVT_CHECKBOX, self.OnShowAnnotationValues)
         self.filterChoice.Bind(wx.EVT_COMBOBOX, self.OnSelectFilter)
-        
+
         self.AddPlateMap()
         self.OnSelectMeasurement()
+
 
     def AddPlateMap(self, plateIndex=0):
         '''
@@ -187,17 +195,16 @@ class PlateViewer(wx.Frame, CPATool):
                          (dbconnect.UniqueWellClause(), p.image_table, p.well_id, p.well_id))
 
         if p.plate_id:
-            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), 
-                                              style=wx.CB_READONLY, size=(100,-1))]
+            self.plateMapChoices += [ComboBox(self, choices=db.GetPlateNames(), size=(400,-1))]
             self.plateMapChoices[-1].Select(plateIndex)
             self.plateMapChoices[-1].Bind(wx.EVT_COMBOBOX, self.OnSelectPlate)
     
-            plate_col_type = db.GetColumnType(p.image_table, p.plate_id)
-            plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
+            #plate_col_type = db.GetColumnType(p.image_table, p.plate_id)
+            #plate_id = plate_col_type(self.plateMapChoices[-1].GetString(plateIndex))
             
             plateMapChoiceSizer = wx.BoxSizer(wx.HORIZONTAL)
-            plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), 0, wx.EXPAND)
-            plateMapChoiceSizer.Add(self.plateMapChoices[-1])
+            plateMapChoiceSizer.Add(wx.StaticText(self, label='Plate:'), flag=wx.ALIGN_CENTER_VERTICAL)
+            plateMapChoiceSizer.Add(self.plateMapChoices[-1], flag=wx.ALIGN_CENTER_VERTICAL)
         well_keys = res
 
         platemap = pmp.PlateMapPanel(self, data, well_keys, p.plate_shape,
@@ -209,14 +216,15 @@ class PlateViewer(wx.Frame, CPATool):
         singlePlateMapSizer = wx.BoxSizer(wx.VERTICAL)
         if p.plate_id:
             singlePlateMapSizer.Add(plateMapChoiceSizer, 0, wx.ALIGN_CENTER)
-        singlePlateMapSizer.Add(platemap, 1, wx.EXPAND|wx.ALIGN_CENTER)
+        singlePlateMapSizer.Add(platemap, 1, wx.EXPAND)
 
-        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
+        self.plateMapSizer.Add(singlePlateMapSizer, 1, wx.EXPAND)
 
     def UpdatePlateMaps(self):
-        measurement = self.measurementsChoice.Value
+        self.measurement = self.measurementsChoice.Value
+        measurement = self.measurement
         table       = self.sourceChoice.Value
-        aggMethod   = self.aggregationMethodsChoice.Value
+        self.aggMethod   = self.aggregationMethodsChoice.Value
         categorical = measurement not in get_numeric_columns_from_table(table)
         fltr        = self.filterChoice.Value
         self.colorBar.ClearNotifyWindows()
@@ -225,24 +233,24 @@ class PlateViewer(wx.Frame, CPATool):
         well_key_cols = [sql.Column(p.image_table, col) for col in well_key_columns()]
         select = list(well_key_cols)
         if not categorical:
-            if aggMethod=='mean': 
+            if self.aggMethod=='mean':
                 select += [sql.Column(table, measurement, 'AVG')]
-            elif aggMethod=='stdev': 
+            elif self.aggMethod=='stdev':
                 select += [sql.Column(table, measurement, 'STDDEV')]
-            elif aggMethod=='cv%':
+            elif self.aggMethod=='cv%':
                 # stddev(col) / avg(col) * 100
                 select += [sql.Expression(
-                              sql.Column(table, measurement, 'STDDEV'), ' / ', 
+                              sql.Column(table, measurement, 'STDDEV'), ' / ',
                               sql.Column(table, measurement, 'AVG'), ' * 100')]
-            elif aggMethod=='sum':    
+            elif self.aggMethod=='sum':
                 select += [sql.Column(table, measurement, 'SUM')]
-            elif aggMethod=='min':    
+            elif self.aggMethod=='min':
                 select += [sql.Column(table, measurement, 'MIN')]
-            elif aggMethod=='max':    
+            elif self.aggMethod=='max':
                 select += [sql.Column(table, measurement, 'MAX')]
-            elif aggMethod=='median': 
+            elif self.aggMethod=='median':
                 select += [sql.Column(table, measurement, 'MEDIAN')]
-            elif aggMethod=='none':   
+            elif self.aggMethod=='none':
                 select += [sql.Column(table, measurement)]
         else:
             select += [sql.Column(table, measurement)]
@@ -273,13 +281,13 @@ class PlateViewer(wx.Frame, CPATool):
                 plate = plateChoice.Value
                 plateMap.SetPlate(plate)
                 self.colorBar.AddNotifyWindow(plateMap)
-                keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
-                platedata, wellkeys, ignore = FormatPlateMapData(keys_and_vals, categorical)
+                self.keys_and_vals = [v for v in wellkeys_and_values if str(v[0])==plate]
+                platedata, wellkeys, ignore = FormatPlateMapData(self.keys_and_vals, categorical)
                 data += [platedata]
                 key_lists += [wellkeys]
                 if not categorical:
-                    dmin = np.nanmin([float(kv[-1]) for kv in keys_and_vals]+[dmin])
-                    dmax = np.nanmax([float(kv[-1]) for kv in keys_and_vals]+[dmax])
+                    dmin = np.nanmin([float(kv[-1]) for kv in self.keys_and_vals]+[dmin])
+                    dmax = np.nanmax([float(kv[-1]) for kv in self.keys_and_vals]+[dmax])
         else:
             self.colorBar.AddNotifyWindow(self.plateMaps[0])
             platedata, wellkeys, ignore = FormatPlateMapData(wellkeys_and_values, categorical)
@@ -355,6 +363,28 @@ class PlateViewer(wx.Frame, CPATool):
         self.colorBar.ResetInterval()
         self.UpdatePlateMaps()
 
+    def on_save_csv(self, evt):
+        defaultFileName = 'my_plate_table.csv'
+        saveDialog = wx.FileDialog(self, message="Save as:",
+                                   defaultDir=os.getcwd(),
+                                   defaultFile=defaultFileName,
+                                   wildcard='csv|*',
+                                   style=(wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT |
+                                          wx.FD_CHANGE_DIR))
+        if saveDialog.ShowModal() == wx.ID_OK:
+            filename = saveDialog.GetPath()
+            self.save_to_csv(filename)
+            self.Title = filename
+        saveDialog.Destroy()
+
+    def save_to_csv(self, filename):
+        with open(filename, 'w', newline="") as f:
+            w = csv.writer(f)
+            w.writerow(['Plate', 'Well', self.measurement + ' ' + self.aggMethod])
+            w.writerows(self.keys_and_vals)
+
+        logging.info('Table saved to %s'%filename)
+
     def OnSelectPlate(self, evt):
         ''' Handles the selection of a plate from the plate choice box. '''
         self.UpdatePlateMaps()
@@ -425,7 +455,7 @@ class PlateViewer(wx.Frame, CPATool):
         currentPlates = [plateChoice.GetSelection() for plateChoice in self.plateMapChoices]
         currentPlates = (currentPlates+[(currentPlates[-1]+1+p) % len(db.GetPlateNames()) for p in range(nPlates)])[:nPlates]
         # Remove all plateMaps
-        self.plateMapSizer.Clear(deleteWindows=True)
+        self.plateMapSizer.Clear(delete_windows=True)
         self.plateMaps = []
         self.plateMapChoices = []
         # Restructure the plateMapSizer appropriately
@@ -482,7 +512,7 @@ class PlateViewer(wx.Frame, CPATool):
                     'Number' : ('FLOAT', float)}
         dlg = wx.SingleChoiceDialog(self, 
                 'What type of annotation column would you like to add?\nThis can not be changed.',
-                'Add Annotation Column', coltypes.keys(), wx.CHOICEDLG_STYLE)
+                'Add Annotation Column', list(coltypes.keys()), wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() != wx.ID_OK:
             return
         usertype = dlg.GetStringSelection()
@@ -490,7 +520,7 @@ class PlateViewer(wx.Frame, CPATool):
         self.annotation_cols[new_column] = coltypes[usertype][1]
         self.annotationCol.Items += [new_column]
         self.annotationCol.SetSelection(len(self.annotation_cols) - 1)
-        current_selection = self.measurementsChoice.Selection
+        current_selection = self.measurementsChoice.GetSelection()
         self.measurementsChoice.SetItems(self.measurementsChoice.Strings + [new_column])
         if self.annotationShowVals.IsChecked():
             column = self.annotationCol.Value
@@ -579,7 +609,7 @@ class PlateViewer(wx.Frame, CPATool):
                 pm.SetOutlinedWells([])
         self.UpdatePlateMaps()
                 
-    def OnShowAnotationValues(self, evt=None):
+    def OnShowAnnotationValues(self, evt=None):
         '''Handler for the show values checkbox.
         '''
         if self.annotationShowVals.IsChecked():
@@ -601,7 +631,7 @@ class PlateViewer(wx.Frame, CPATool):
             if db.GetColumnType(self.sourceChoice.Value, self.measurementsChoice.Value) != str:
                 self.aggregationMethodsChoice.Enable()
                 self.aggregationMethodsChoice.SetSelection(0)
-        self.UpdatePlateMaps()
+        self.UpdatePlateMaps() 
         
     def OnSelectFilter(self, evt):
         self.filterChoice.on_select(evt)
@@ -645,7 +675,7 @@ class PlateViewer(wx.Frame, CPATool):
         if 'number of plates' in settings:
             self.numberOfPlatesTE.SetValue(settings['number of plates'])
             self.OnEnterNumberOfPlates()
-        for s, v in settings.items():
+        for s, v in list(settings.items()):
             if s.startswith('plate '):
                 self.plateMapChoices[int(s.strip('plate ')) - 1].SetValue(v)
         # set well display last since each step currently causes a redraw and
@@ -690,7 +720,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
     # compute the number of sites-per-well as the max number of rows with the same well-key
     nsites = max([len(list(grp))
                   for k, grp in groupby(keys_and_vals, 
-                                        lambda(row): tuple(row[:nkeycols]))
+                                        lambda row: tuple(row[:nkeycols]))
                   ])
     if nsites > 1:
         # add a sites dimension to the array shape if there's >1 site per well
@@ -706,10 +736,10 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
                          dtype=object).reshape(shape + [nkeycols])
     sort_indices = np.ones(data.shape)*np.nan
     
-    dm = DataModel.getInstance()
+    dm = DataModel()
     ind = keys_and_vals.argsort(axis=0)
     for i, (k, well_grp) in enumerate(groupby(keys_and_vals[ind[:,len(dummy_key)-1],:], 
-                                              lambda(row): tuple(row[:len(dummy_key)]))):
+                                              lambda row: tuple(row[:len(dummy_key)]))):
         (row, col) = dm.get_well_position_from_name(k[-1])
         well_data = np.array(list(well_grp))[:,-1]
         if len(well_data) == 1:
@@ -717,7 +747,7 @@ def FormatPlateMapData(keys_and_vals, categorical=False):
             sort_indices[row,col] = ind[:,len(dummy_key)-1][i]
         else:
             data[row, col] = well_data
-            sort_indices[row,col] = ind[:,len(dummy_key)-1][i*nsites + np.array(range(nsites))] 
+            sort_indices[row,col] = ind[:,len(dummy_key)-1][i*nsites + np.array(list(range(nsites)))] 
         well_keys[row, col] = k
         
     return data, well_keys, sort_indices
@@ -739,7 +769,7 @@ def get_numeric_columns_from_table(table):
     ''' Fetches names of numeric columns for the given table. '''
     measurements = db.GetColumnNames(table)
     types = db.GetColumnTypes(table)
-    return [m for m,t in zip(measurements, types) if t in [float, int, long]]
+    return [m for m,t in zip(measurements, types) if t in (float, int)]
 
 def get_non_blob_types_from_table(table):
     measurements = db.GetColumnNames(table)
@@ -747,7 +777,7 @@ def get_non_blob_types_from_table(table):
     return [m for m,t in zip(measurements, types) if not 'blob' in t.lower()]
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp()
+    app = wx.App()
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -757,7 +787,7 @@ if __name__ == "__main__":
         p.LoadFile(propsFile)
     else:
         if not p.show_load_dialog():
-            print 'Plate Viewer requires a properties file.  Exiting.'
+            print('Plate Viewer requires a properties file.  Exiting.')
             # necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
@@ -774,9 +804,9 @@ if __name__ == "__main__":
     # Kill the Java VM
     #
     try:
-        import javavbridge
-        javabridge.kill_vm()
+        import javabridge
+        javabridge.kill_vm()  # noqa: F821
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")

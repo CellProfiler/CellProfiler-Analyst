@@ -1,12 +1,15 @@
+import logging
+import sys
 import wx
 import re
-import sqltools as sql
-from properties import Properties
-from dbconnect import DBConnect
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from time import time
+from . import sqltools as sql
+from .properties import Properties
+from .dbconnect import DBConnect
+from wx.adv import OwnerDrawnComboBox as ComboBox
 
-p = Properties.getInstance()
-db = DBConnect.getInstance()
+p = Properties()
+db = DBConnect()
 
 class ColumnFilterPanel(wx.Panel):
     '''
@@ -28,7 +31,7 @@ class ColumnFilterPanel(wx.Panel):
             choices += db.GetColumnNames(table)
         self.colChoice = ComboBox(self, choices=choices, size=(150,-1), style=wx.CB_READONLY)
         self.colChoice.Select(0)
-        self.comparatorChoice = ComboBox(self, size=(80,-1))
+        self.comparatorChoice = ComboBox(self, size=(80,-1), style=wx.CB_READONLY)
         self.update_comparator_choice()
         self.valueField = wx.ComboBox(self, -1, value='')
         if allow_delete:
@@ -39,14 +42,14 @@ class ColumnFilterPanel(wx.Panel):
 
         colSizer = wx.BoxSizer(wx.HORIZONTAL)
         colSizer.Add(self.tableChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
         colSizer.Add(self.colChoice, 1, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
-        colSizer.Add(self.comparatorChoice, 0.5, wx.EXPAND)
-        colSizer.AddSpacer((5,-1))
+        colSizer.AddSpacer(5)
+        colSizer.Add(self.comparatorChoice, 1, wx.EXPAND)
+        colSizer.AddSpacer(5)
         colSizer.Add(self.valueField, 1, wx.EXPAND)
         if allow_delete:
-            colSizer.AddSpacer((5,-1))
+            colSizer.AddSpacer(5)
             colSizer.Add(self.x_btn, 0, wx.EXPAND)
 
         self.SetSizer(colSizer)
@@ -81,9 +84,9 @@ class ColumnFilterPanel(wx.Panel):
     def update_comparator_choice(self):
         coltype = self._get_col_type()
         comparators = []
-        if coltype in [str, unicode]:
+        if coltype == str:
             comparators = ['=', '!=', 'REGEXP', 'IS', 'IS NOT']
-        if coltype in [int, float, long]:
+        if coltype in (int, float):
             comparators = ['=', '!=', '<', '>', '<=', '>=', 'IS', 'IS NOT']
         self.comparatorChoice.SetItems(comparators)
         self.comparatorChoice.Select(0)
@@ -94,9 +97,9 @@ class ColumnFilterPanel(wx.Panel):
         colidx = self.colChoice.GetSelection()
         coltype = db.GetColumnTypes(table)[colidx]
         vals = []
-        if coltype == str:# or coltype == int or coltype == long:
-            res = db.execute('SELECT DISTINCT %s FROM %s ORDER BY %s'%(column, table, column))
-            vals = [str(row[0]) for row in res]
+        # if coltype == str:# or coltype == int or coltype == long:
+        #     res = db.execute('SELECT DISTINCT %s FROM %s ORDER BY %s'%(column, table, column))
+        #     vals = [str(row[0]) for row in res]
         self.valueField.SetItems(vals)
 
     def get_filter(self):
@@ -104,7 +107,7 @@ class ColumnFilterPanel(wx.Panel):
         column = self.colChoice.Value
         comparator = self.comparatorChoice.GetValue()
         value = self.valueField.GetValue()
-        if self._get_col_type() in [int, float, long]:
+        if self._get_col_type() in (int, float):
             # Don't quote numbers
             return sql.Filter(sql.Column(table, column), comparator, '%s'%(value))
         if comparator.upper() in ['IS', 'IS NOT'] and value.upper() == 'NULL':
@@ -139,6 +142,8 @@ class ColumnFilterDialog(wx.Dialog):
 ##        self.filter_name = ComboBox(self, choices=p._filters_ordered)
 ##        self.filter_name.SetStringSelection('My_Filter')
         self.addbtn = wx.Button(self, -1, 'Add Column')
+        self.testbtn = wx.Button(self, -1, 'Test Filter')
+        self.testlabel = wx.StaticText(self, label='')
         self.ok = wx.Button(self, -1, 'OK')
         self.cancel = wx.Button(self, -1, 'Cancel')
 
@@ -148,40 +153,49 @@ class ColumnFilterDialog(wx.Dialog):
         sz.Add(wx.StaticText(self, -1, 'Name your filter: '), 0, wx.CENTER)
         sz.Add(self.filter_name, 1, wx.EXPAND)
         self.Sizer.Add(sz, 0, wx.EXPAND|wx.ALL, 5)
-        self.Sizer.AddSpacer((-1,5))
+        self.Sizer.Add(-1, 5, 0)
 
         self.Sizer.Add(wx.StaticText(self, -1, 'Choose constraints for your filter: '), 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1, 10, 0)
 
         self.sw = wx.ScrolledWindow(self)
         self.panels = [ColumnFilterPanel(self.sw, tables, False)]
         self.sw.Sizer = wx.BoxSizer(wx.VERTICAL)
         (w,h) = self.sw.Sizer.GetSize()
-        self.sw.SetScrollbars(20,20,w/20,h/20,0,0)
+        self.sw.SetScrollbars(20,20,w//20,h//20,0,0)
         self.sw.Sizer.Add(self.panels[0], 0, wx.EXPAND|wx.BOTTOM|wx.LEFT|wx.RIGHT, 5)
         self.Sizer.Add(self.sw, 1, wx.EXPAND)
 
         sz = wx.BoxSizer(wx.HORIZONTAL)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.addbtn, 0)
+        sz.AddSpacer(3)
+        sz.Add(self.testbtn, 0)
+        sz.AddSpacer(3)
+        sz.Add(self.testlabel, 0, wx.ALIGN_CENTER_VERTICAL)
+
         sz.AddStretchSpacer()
         sz.Add(self.ok, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
         sz.Add(self.cancel, 0)
-        sz.AddSpacer((10,-1))
+        sz.AddSpacer(10)
 
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(0,10)
         self.Sizer.Add(sz, 0, wx.EXPAND)
-        self.Sizer.AddSpacer((-1,10))
+        self.Sizer.Add(-1,10)
 
         self.validate_filter_name()
 
         self.addbtn.Bind(wx.EVT_BUTTON, self.on_add_column)
+        self.testbtn.Bind(wx.EVT_BUTTON, self.on_test)
         self.ok.Bind(wx.EVT_BUTTON, self.on_ok)
         self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
         self.filter_name.Bind(wx.EVT_TEXT, self.validate_filter_name)
 ##        self.filter_name.Bind(wx.EVT_COMBOBOX, self.on_select_existing_filter)
-
+        if sys.platform == 'win32':
+            self.size_mod = 30
+        else:
+            self.size_mod = 7
         self.resize_to_fit()
 
     def reset(self):
@@ -218,9 +232,7 @@ class ColumnFilterDialog(wx.Dialog):
     def remove(self, panel):
         i = self.panels.index(panel)
         if 0 < i <= len(self.conjunctions):
-            self.sw.Sizer.Remove(self.conjunctions[i-1])
             self.conjunctions.pop(i-1).Destroy()
-        self.Sizer.Remove(panel)
         self.panels.remove(panel)
         panel.Destroy()
         self.sw.FitInside()
@@ -228,6 +240,7 @@ class ColumnFilterDialog(wx.Dialog):
 
     def on_add_column(self, evt):
         self.add_column()
+
     def add_column(self, conjunction='AND', expression=None):
         '''expression -- sqltools.Expression instance
         '''
@@ -239,13 +252,28 @@ class ColumnFilterDialog(wx.Dialog):
         self.sw.FitInside()
         self.resize_to_fit()
 
+    def on_test(self, evt):
+        fltr = self.get_filter()
+        logging.info(f"Testing filter: {fltr}")
+        self.testlabel.SetLabelText(f"Testing filter...")
+        try:
+            t0 = time()
+            data = db.GetFilteredObjects(fltr, random=False)
+            t1 = time()
+            num_ims = len(set([x for x, _ in data]))
+            logging.info(f"Filter found {len(data)} {p.object_name[1]} from {num_ims} images in {(t1 - t0):.2f}s")
+            self.testlabel.SetLabelText(f"[OK] Found {len(data)} {p.object_name[1]} from {num_ims} images in {(t1 - t0):.2f}s")
+        except Exception as exc:
+            logging.error(f"Filter Failed: {exc}")
+            last_err = list(filter(None, str(exc).split('\n')))[-1]
+            self.testlabel.SetLabelText(f"[ERROR] {last_err}")
+
     def resize_to_fit(self):
         w = min(self.sw.Sizer.MinSize[0] + self.Sizer.MinSize[0], 
                 wx.GetDisplaySize()[0] - self.Position[0])
         h = min(self.sw.Sizer.MinSize[1] + self.Sizer.MinSize[1],
                 wx.GetDisplaySize()[1] - self.Position[1])
-        self.SetSize((w,h+7))
-        
+        self.SetSize((w, h + self.size_mod))
 ##    def on_select_existing_filter(self, evt):
 ##        self.load_existing_filter(self.filter_name.GetStringSelection())
         
@@ -265,28 +293,21 @@ class ColumnFilterDialog(wx.Dialog):
 
 
 if __name__ == "__main__":
-    import sys
-    import logging
     logging.basicConfig(level=logging.DEBUG)
-    app = wx.PySimpleApp()
+    app = wx.App()
     
     # Load a properties file if passed in args
-    if len(sys.argv) > 1:
-        propsFile = sys.argv[1]
-        p.LoadFile(propsFile)
-    else:
-        p.LoadFile('/Users/afraser/cpa_example/example.properties')
-
-    p._filters['test'] = sql.Filter(('per_image', 'gene'), 'REGEXP', 'MAP*',
+    if p.show_load_dialog():
+        p._filters['test'] = sql.Filter(('per_image', 'gene'), 'REGEXP', 'MAP*',
                                     'OR', sql.Column('per_image', 'gene'), 'IS', 'NULL')
-    p._filters_ordered += ['test']
+        p._filters_ordered += ['test']
 
-    p._filters['test2'] = sql.Filter(('per_image', 'well'), '!=', 'A01')
-    p._filters_ordered += ['test2']
+        p._filters['test2'] = sql.Filter(('per_image', 'well'), '!=', 'A01')
+        p._filters_ordered += ['test2']
 
-    cff = ColumnFilterDialog(None, tables=[p.image_table])
-    if cff.ShowModal()==wx.OK:
-        print cff.get_filter()
+        cff = ColumnFilterDialog(None, tables=[p.image_table])
+        if cff.ShowModal()==wx.OK:
+            print((cff.get_filter()))
 
-    cff.Destroy()
-    app.MainLoop()
+        cff.Destroy()
+        app.MainLoop()
