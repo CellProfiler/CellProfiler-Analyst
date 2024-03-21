@@ -378,11 +378,6 @@ class Properties(metaclass=Singleton):
         fd = open(filename, 'w')
         self._filename = filename
 
-        # Write revision first
-        #import util.version
-        #__version__ = util.version.
-        #fd.write('# CellProfiler Analyst revision: %s\n'%(__version__))
-
         fields_to_write = sorted([k for k, v in list(self.__dict__.items())
                                   if not k.startswith('_') and v is not None])
 
