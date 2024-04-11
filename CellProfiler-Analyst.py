@@ -166,16 +166,8 @@ class MainGUI(wx.Frame):
         queryMenuItem = advancedMenu.Append(-1, 'Launch SQL query tool', helpString='Opens a tool for making SQL queries to the CPA database. Advanced users only.')
         clearTableLinksMenuItem = advancedMenu.Append(-1, 'Clear table linking information', helpString='Removes the tables from your database that tell CPA how to link your tables.')
         self.GetMenuBar().Append(advancedMenu, 'Advanced')
-<<<<<<< HEAD
-
-        self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self), 'Help')
-        helpMenu = wx.Menu()
-        aboutMenuItem = helpMenu.Append(-1, text='About', help='About CPA 2.0')
-        self.GetMenuBar().Append(helpMenu, 'Help')
-=======
         import cpa.helpmenu
         self.GetMenuBar().Append(cpa.helpmenu.make_help_menu(self, main=True), 'Help')
->>>>>>> master
 
         # console and logging
         self.console = wx.TextCtrl(self, -1, '', style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH2)
@@ -217,20 +209,14 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_image_viewer, id=ID_IMAGE_VIEWER)
-<<<<<<< HEAD
-=======
         self.Bind(wx.EVT_TOOL, self.launch_image_gallery, id=ID_IMAGE_GALLERY)
->>>>>>> master
         self.Bind(wx.EVT_TOOL, self.launch_scatter_plot, id=ID_SCATTER)
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
         self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
-<<<<<<< HEAD
         self.Bind(wx.EVT_TOOL, self.launch_tracer, id=ID_TRACER)
-=======
         self.Bind(wx.EVT_TOOL, self.launch_dimens_redux, id=ID_DIMENSREDUX)
         self.Bind(wx.EVT_TOOL, self.launch_normalization_tool, id=ID_NORMALIZE)
->>>>>>> master
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_IDLE, self.on_idle)
@@ -285,19 +271,11 @@ class MainGUI(wx.Frame):
             colViewer = ImageGallery(parent=self, properties=self.properties)
             colViewer.Show(True)
 
-    def launch_box_plot(self, evt=None):
-<<<<<<< HEAD
-        boxplot = BoxPlot(parent=self)
-        boxplot.Show(True)
-        
     def launch_tracer(self, evt=None):
         tracer = Tracer(parent=self)
         tracer.Show(True)        
         
-    def launch_query_maker(self, evt=None):
-        querymaker = QueryMaker(parent=self)
-        querymaker.Show(True)
-=======
+    def launch_box_plot(self, evt=None):
         if self.confirm_properties():
             boxplot = BoxPlot(parent=self)
             boxplot.Show(True)
@@ -311,7 +289,6 @@ class MainGUI(wx.Frame):
         if self.confirm_properties():
             querymaker = QueryMaker(parent=self)
             querymaker.Show(True)
->>>>>>> master
 
     def launch_normalization_tool(self, evt=None):
         if self.confirm_properties():
@@ -368,28 +345,17 @@ class MainGUI(wx.Frame):
         ext = os.path.splitext(p._filename)[-1]
         dlg = wx.FileDialog(self, message="Save properties as...", defaultDir=dirname,
                             defaultFile=filename, wildcard=ext,
-<<<<<<< HEAD
-                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
-=======
                             style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
->>>>>>> master
         if dlg.ShowModal() == wx.ID_OK:
             p.save_file(dlg.GetPath())
 
     def on_save_workspace(self, evt):
-<<<<<<< HEAD
-        p = Properties.getInstance()
-        dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
-                            defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
-                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
-=======
         if not self.confirm_properties():
             return
         p = Properties()
         dlg = wx.FileDialog(self, message="Save workspace as...", defaultDir=os.getcwd(),
                             defaultFile='%s_%s.workspace'%(os.path.splitext(os.path.split(p._filename)[1])[0], p.image_table),
                             style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
->>>>>>> master
         if dlg.ShowModal() == wx.ID_OK:
             wx.GetApp().save_workspace(dlg.GetPath())
 
@@ -404,11 +370,7 @@ class MainGUI(wx.Frame):
     def save_log(self, evt=None):
         dlg = wx.FileDialog(self, message="Save log as...", defaultDir=os.getcwd(),
                             defaultFile='CPA_log.txt', wildcard='txt',
-<<<<<<< HEAD
-                            style=wx.SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
-=======
                             style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
->>>>>>> master
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetPath()
             f = open(filename, 'w')
@@ -489,31 +451,6 @@ class MainGUI(wx.Frame):
             self.console.AppendText(self.log_text)
             self.log_text = ''
 
-<<<<<<< HEAD
-# new version check
-def new_version_cb(new_version, new_version_info):
-    # called from a child thread, so use CallAfter to bump it to the gui thread
-    def cb2():
-        def set_check_pref(val):
-            cpa.cpaprefs.set_check_new_versions(val)
-
-        def skip_this_version():
-            cpa.cpaprefs.set_skip_version(new_version)
-
-        # showing a modal dialog while the splashscreen is up causes a hang
-        try: wx.GetApp().splash.Destroy()
-        except: pass
-
-        import cellprofiler.gui.newversiondialog as nvd
-        dlg = nvd.NewVersionDialog(None, "CellProfiler Analyst update available (version %d)"%(new_version),
-                                   new_version_info, 'http://cellprofiler.org/downloadCPA.htm',
-                                   cpa.cpaprefs.get_check_new_versions(), set_check_pref, skip_this_version)
-        dlg.Show()
-
-    wx.CallAfter(cb2)
-=======
->>>>>>> master
-
 class CPAnalyst(wx.App):
     '''The CPAnalyst application.
     This launches the main UI, and keeps track of the session.
@@ -537,59 +474,6 @@ class CPAnalyst(wx.App):
                 logging.info(f"Python rejected the system locale detected by WX ('{self.locale.GetName()}').\n"
                       "This shouldn't cause problems, but please let us know if you encounter errors.")
 
-<<<<<<< HEAD
-        '''List of tables created by the user during this session'''
-        self.user_tables = []
-
-        # splashscreen
-        splashimage = cpa.icons.cpa_splash.ConvertToBitmap()
-        # If the splash image has alpha, it shows up transparently on
-        # windows, so we blend it into a white background.
-        splashbitmap = wx.EmptyBitmapRGBA(splashimage.GetWidth(),
-                                          splashimage.GetHeight(),
-                                          255, 255, 255, 255)
-        dc = wx.MemoryDC()
-        dc.SelectObject(splashbitmap)
-        dc.DrawBitmap(splashimage, 0, 0)
-        dc.Destroy() # necessary to avoid a crash in splashscreen
-        splash = wx.SplashScreen(splashbitmap, wx.SPLASH_CENTRE_ON_SCREEN |
-                                 wx.SPLASH_TIMEOUT, 2000, None, -1)
-        self.splash = splash
-
-        p = Properties.getInstance()
-        if not p.is_initialized():
-            from cpa.guiutils import show_load_dialog
-            splash.Destroy()
-            if not show_load_dialog():
-                logging.error('CellProfiler Analyst requires a properties file. Exiting.')
-                return False
-        self.frame = MainGUI(p, None, size=(1000,-1))
-        self.frame.Show(True)
-        db = cpa.dbconnect.DBConnect.getInstance()
-        # Black magic: Bus errors occur on Mac OS X if we wait until
-        # the JVM or the wx event look has started to connect. But it
-        # has to be done after we have read the properties file. So we
-        # do it here.
-        db.connect()
-        db.register_gui_parent(self.frame)
-
-        # The JVM has to be started after db.connect(), otherwise bus errors
-        # occur on Mac OS X.
-        javabridge.start_vm(class_path=bioformats.JARS, run_headless=False)
-        javabridge.attach()
-        javabridge.activate_awt()
-
-        try:
-            if __version__ != -1:
-                import cellprofiler.utilities.check_for_updates as cfu
-                cfu.check_for_updates('http://cellprofiler.org/CPAupdate.html',
-                                      max(__version__, cpa.cpaprefs.get_skip_version()),
-                                      new_version_cb,
-                                      user_agent='CPAnalyst/2.0.%s'%(__version__))
-        except ImportError:
-            logging.warn("CPA was unable to check for updates. Could not import cellprofiler.utilities.check_for_updates.")
-
-=======
         p = Properties()
         self.frame = MainGUI(p, None, size=(1000,-1))
         self.frame.Show() # Show frame
@@ -619,7 +503,6 @@ class CPAnalyst(wx.App):
             check_update(self.frame, event=False)
         except:
             logging.warn("CPA was unable to check for updates.")
->>>>>>> master
         return True
 
     def get_plots(self):
@@ -672,16 +555,6 @@ class CPAnalyst(wx.App):
             f.write('\n')
         f.close()
 
-<<<<<<< HEAD
-    def make_unique_plot_name(self, prefix):
-        '''This function must be called to generate a unique name for each plot.
-        eg: plot.SetName(wx.GetApp().make_unique_plot_name('Histogram'))
-        '''
-        plot_num = max([int(plot.Name[len(prefix):])
-                        for plot in self.plots if plot.Name.startswith(prefix)])
-        return '%s %d'%(prefix, plot_num)
-=======
->>>>>>> master
 
 if __name__ == "__main__":    
     # Initialize the app early because the fancy exception handler
@@ -692,10 +565,6 @@ if __name__ == "__main__":
     if sys.excepthook == sys.__excepthook__:
        from cpa.errors import show_exception_as_dialog
        sys.excepthook = show_exception_as_dialog
-<<<<<<< HEAD
-
-=======
     app.Start()
->>>>>>> master
     app.MainLoop()
     os._exit(0) # Enforces Exit, see issue #102
