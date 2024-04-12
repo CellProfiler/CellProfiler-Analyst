@@ -55,8 +55,8 @@ ComboBox.GetStringSelection = __GetStringSelection
 
 required_fields = ['series_id', 'group_id', 'timepoint_id']
 
-db = DBConnect.getInstance()
-props = Properties.getInstance()
+db = DBConnect()
+props = Properties()
 
 TRACKING_MODULE_NAME = "TrackObjects"
 OTHER_METRICS = "Other derived metrics..."
@@ -1235,7 +1235,7 @@ class Tracer(wx.Frame, CPATool):
         self.helpMenuItem         = helpMenu.Append(-1, 'Tracer webpage', help='Go to Tracer webpage.')
         self.GetMenuBar().Append(helpMenu, 'Help')         
 
-        props = Properties.getInstance()
+        props = Properties()
         props, success = add_props_field(props)
         # If a required column or table/view is missing, terminate
         if not success:
@@ -2938,7 +2938,7 @@ if __name__ == "__main__":
     app = wx.PySimpleApp()
     logging.basicConfig(level=logging.DEBUG,)
     
-    props = Properties.getInstance()
+    props = Properties()
 
     # Load a properties file if passed in args
     if len(sys.argv) > 1:
