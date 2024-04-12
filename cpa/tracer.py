@@ -652,6 +652,7 @@ class TracerControlPanel(wx.Panel):
                                                     METRIC_CROSSINGS: None}
         
         # Define events
+        # TODO Update to using self.<x>.Bind(wx.EVT_<y>, <obj>) when Tracer is running so can visually confirm it works
         wx.EVT_COMBOBOX(self.dataset_choice, -1, self.on_dataset_selected)
         wx.EVT_COMBOBOX(self.track_collection, -1, self.on_track_collection_selected)
         wx.EVT_COMBOBOX(self.dataset_measurement_choice, -1, self.on_dataset_measurement_selected)
@@ -1853,7 +1854,7 @@ class Tracer(wx.Frame, CPATool):
             # Create new column containing 1 if edge is kept, 0 if not
             newcol = len(self.relationship_data[key])*[1]
             attr = nx.get_node_attributes(self.directed_graph[selected_dataset][selected_dataset_track], IS_REMOVED)
-            all_edges = map(itemgetter(0,1,2,3), self.relationship_data[key])
+            all_edges = list(map(itemgetter(0,1,2,3), self.relationship_data[key]))
             for _ in attr.items():
                 if _[1]:
                     for successor in self.directed_graph[selected_dataset][selected_dataset_track].successors_iter(_[0]):
@@ -2077,7 +2078,7 @@ class Tracer(wx.Frame, CPATool):
                 
                 relationship_index = {}
                 for key in [NODE_TBL_ID, EDGE_TBL_ID]:
-                    relationship_index[key] = map(itemgetter(self.relationship_cols[key].index(track_id)),self.relationship_data[key])
+                    relationship_index[key] = list(map(itemgetter(self.relationship_cols[key].index(track_id)),self.relationship_data[key]))
                     dataset_index = map(itemgetter(self.relationship_cols[key].index(props.group_id)),self.relationship_data[key])
                     # Index is 1 if (a) the row was flagged in the saved track and (b) the dataset is currently active 
                     relationship_index[key] = [_[0] == 1 and _[1] == int(dataset_id) for _ in zip(relationship_index[key], dataset_index)] # Convert to boolean            
@@ -2094,15 +2095,15 @@ class Tracer(wx.Frame, CPATool):
             
                 # Add nodes
                 selected_relationships = [_[0] for _ in zip(self.relationship_data[NODE_TBL_ID],relationship_index[NODE_TBL_ID]) if _[1]]
-                selected_node_ids = map(itemgetter(0,1),selected_relationships)
+                selected_node_ids = list(map(itemgetter(0,1),selected_relationships))
                 temp = dict(zip(node_ids,attr))
-                self.directed_graph[dataset_id][track_id].add_nodes_from(zip(selected_node_ids,
-                                                                             [temp[_] for _ in selected_node_ids]))
+                self.directed_graph[dataset_id][track_id].add_nodes_from(list(zip(selected_node_ids,
+                                                                             [temp[_] for _ in selected_node_ids])))
             
                 # Add edges
                 selected_relationships = [_[0] for _ in zip(self.relationship_data[EDGE_TBL_ID],relationship_index[EDGE_TBL_ID]) if _[1]]
                 selected_node_ids = map(itemgetter(2,3),selected_relationships)
-                selected_parent_node_ids = map(itemgetter(0,1),selected_relationships)       
+                selected_parent_node_ids = list(map(itemgetter(0,1),selected_relationships))
                 attr = [{VISIBLE: True, IS_REMOVED: False} for _ in selected_parent_node_ids]
                 self.directed_graph[dataset_id][track_id].add_edges_from(zip(selected_parent_node_ids,
                                                                              selected_node_ids, 
@@ -2119,8 +2120,9 @@ class Tracer(wx.Frame, CPATool):
                 glayout.layer_layout(G, level_attribute = "t")
                 nx.relabel_nodes(G, mapping,copy=False) # Map back to original graph labels
                 node_positions = dict(zip(G.nodes(),[[G.node[key]["t"],G.node[key]["y"]] for key in G.nodes()]))
-                self.end_frame = end_frame = max(np.array(node_positions.values())[:,0])
-                self.start_frame = start_frame = min(np.array(node_positions.values())[:,0])
+                node_pos_ar = np.array(node_positions.values())
+                self.end_frame = end_frame = max(node_pos_ar[:,0])
+                self.start_frame = start_frame = min(node_pos_ar[:,0])
             
                 # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
                 # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
@@ -2277,7 +2279,7 @@ class Tracer(wx.Frame, CPATool):
                     indices = range(0,key_length)
                     node_ids = map(itemgetter(*indices),trajectory_info)
                     getitem = itemgetter(len(trajectory_info[0])-1) # Last value is the measurement value               
-                    attr = dict(zip(node_ids,[item for item in map(getitem,trajectory_info)]))  
+                    attr = dict(zip(node_ids,map(getitem,trajectory_info)))  
                     attr = {_:attr[_] for _ in selected_node_ids}
                 else:
                     node_ids = sorted(self.directed_graph[dataset_id][track_id]) # Needs to be sorted, for now, due to output from derivied meas calc
