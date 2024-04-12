@@ -19,7 +19,7 @@ from cpa.classifier import Classifier
 from cpa.tableviewer import TableViewer
 from cpa.plateviewer import PlateViewer
 from cpa.imageviewer import ImageViewer
-from cpa.imagegallery import ImageGallery
+from cpa.tracer import Tracer
 from cpa.boxplot import BoxPlot
 from cpa.scatter import Scatter
 from cpa.histogram import Histogram
@@ -72,7 +72,7 @@ ID_DENSITY = wx.NewIdRef()
 ID_BOXPLOT = wx.NewIdRef()
 ID_DIMENSREDUX = wx.NewIdRef()
 ID_NORMALIZE = wx.NewIdRef()
-ID_TRACER = wx.NewId()
+ID_TRACER = wx.NewIdRef()
 
 def get_cpatool_subclasses():
     '''returns a list of CPATool subclasses.
@@ -114,7 +114,7 @@ class MainGUI(wx.Frame):
         tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', get_icon("boxplot").ConvertToBitmap(), shortHelp='Box Plot')
         tb.AddTool(ID_DIMENSREDUX.GetId(), 'Reduction', get_icon("dimensionality").ConvertToBitmap(), shortHelp='Dimensionality Reduction')
         tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', get_icon("data_grid").ConvertToBitmap(), shortHelp='Table Viewer')
-        tb.AddLabelTool(ID_TRACER, 'Tracer', cpa.icons.tracer.ConvertToBitmap(), shortHelp='Tracer', longHelp='Launch Tracer')
+        tb.AddTool(ID_TRACER.GetId(), 'Tracer', get_icon("tracer").ConvertToBitmap(), shortHelp='Tracer')
         # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', get_icon("normalize").ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
 
@@ -147,7 +147,7 @@ class MainGUI(wx.Frame):
         dimensionMenuItem   = toolsMenu.Append(ID_DIMENSREDUX, 'Dimensionality Reduction', helpString='Launches the Dimensionality Reduction tool.')
         dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', helpString='Launches the Table Viewer tool.')
         normalizeMenuItem   = toolsMenu.Append(ID_NORMALIZE, 'Normalization Tool\tCtrl+Shift+T', helpString='Launches a tool for generating normalized values for measurement columns in your tables.')
-        tlmMenuItem         = toolsMenu.Append(ID_TRACER, 'Tracer\tCtrl+Shift+L', help='Launches the Tracer time-lapse viewer tool.')
+        tlmMenuItem         = toolsMenu.Append(ID_TRACER, 'Tracer\tCtrl+Shift+L', helpString='Launches the Tracer time-lapse viewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()
@@ -204,7 +204,6 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_MENU, self.launch_normalization_tool, normalizeMenuItem)
         self.Bind(wx.EVT_MENU, self.clear_link_tables, clearTableLinksMenuItem)
         self.Bind(wx.EVT_MENU, self.launch_query_maker, queryMenuItem)
-        self.Bind(wx.EVT_MENU, self.on_show_about, aboutMenuItem)
         self.Bind(wx.EVT_TOOL, self.launch_classifier, id=ID_CLASSIFIER)
         self.Bind(wx.EVT_TOOL, self.launch_plate_map_browser, id=ID_PLATE_VIEWER)
         self.Bind(wx.EVT_TOOL, self.launch_table_viewer, id=ID_TABLE_VIEWER)
@@ -401,21 +400,6 @@ class MainGUI(wx.Frame):
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_tables_table))
         db.execute('DROP TABLE IF EXISTS %s'%(p.link_columns_table))
         db.Commit()
-
-    def on_show_about(self, evt):
-        ''' Shows a message box with the version number etc.'''
-        message = ('CellProfiler Analyst was developed at The Broad Institute\n'
-                   'Imaging Platform and is distributed under the GNU General\n'
-                   'Public License version 2.')
-        info = wx.AboutDialogInfo()
-        info.SetIcon(icons.get_cpa_icon())
-        info.SetName('CellProfiler Analyst 2.0 (%s)'%('r'+str(__version__) or 'unknown revision'))
-        info.SetDescription(message)
-        info.AddDeveloper('Adam Fraser')
-        info.AddDeveloper('Thouis (Ray) Jones')
-        info.AddDeveloper('Vebjorn Ljosa')
-        info.SetWebSite('www.CellProfiler.org')
-        wx.AboutBox(info)
 
     def on_close(self, evt=None):
         # Classifier needs to be told to close so it can clean up it's threads
