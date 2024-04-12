@@ -13,18 +13,14 @@ import networkx as nx
 import numpy as np
 import hashlib
 from operator import itemgetter
-import glayout
 
 import logging
 import time
-import sortbin
-import imagetools
-from guiutils import get_main_frame_or_none
-from dbconnect import DBConnect, image_key_columns, object_key_columns
-from properties import Properties
-from cpatool import CPATool
-import tableviewer
-from columnfilter import ColumnFilterDialog
+from cpa import glayout, sortbin, imagetools, guiutils, tableviewer
+from cpa.dbconnect import DBConnect, image_key_columns, object_key_columns
+from cpa.properties import Properties
+from cpa.cpatool import CPATool
+from cpa.columnfilter import ColumnFilterDialog
 
 import matplotlib
 from matplotlib import gridspec
@@ -1702,7 +1698,7 @@ class Tracer(wx.Frame, CPATool):
         # Do piecemeal to prevent wrong path being picked if selected node is on a loop
         current_trajectory_keys = nx.shortest_path(connected_nodes[trajectory_to_use], selected_endpoints[0],self.selected_node) + \
                                     nx.shortest_path(connected_nodes[trajectory_to_use], self.selected_node, selected_endpoints[1])[1:]
-        montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s"%(trajectory_to_use, props.object_name[0], self.selected_node))
+        montage_frame = sortbin.CellMontageFrame(guiutils.get_main_frame_or_none(),"Image montage from trajectory %d containing %s %s"%(trajectory_to_use, props.object_name[0], self.selected_node))
         montage_frame.Show()
         montage_frame.add_objects(current_trajectory_keys)
         [tile.Select() for tile in montage_frame.sb.tiles if tile.obKey == self.selected_node]
@@ -1731,7 +1727,7 @@ class Tracer(wx.Frame, CPATool):
     
     def show_cell_tile(self, event = None):
         trajectory_to_use = self.pick_trajectory_to_use()
-        montage_frame = sortbin.CellMontageFrame(get_main_frame_or_none(),"Image tile of %s %s in trajectory %d"%(props.object_name[0],self.selected_node,trajectory_to_use))
+        montage_frame = sortbin.CellMontageFrame(guiutils.get_main_frame_or_none(),"Image tile of %s %s in trajectory %d"%(props.object_name[0],self.selected_node,trajectory_to_use))
         montage_frame.Show()
         montage_frame.add_objects([self.selected_node])   
     
