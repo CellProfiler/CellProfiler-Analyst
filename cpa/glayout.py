@@ -28,10 +28,10 @@ def layer_layout(g, level_attribute = "t"):
     as described by sydney.edu.au/engineering/it/~visual/comp4048/slides03.ppt
     '''
     
-    subgraphs = nx.weakly_connected_component_subgraphs(g)
+    subgraphs = nx.weakly_connected_components(g)
     y = 0
-    for subgraph in subgraphs:
-        y = layer_layout_subgraph(g, subgraph, y, level_attribute)
+    for s in subgraphs:
+        y = layer_layout_subgraph(g, g.subgraph(s).copy(), y, level_attribute)
         
 def layer_layout_subgraph(g, sg, y0, level_attribute):
     '''Lay out a connected subgraph
