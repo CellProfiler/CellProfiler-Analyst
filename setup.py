@@ -72,6 +72,7 @@ setuptools.setup(
         "mock>=4.0.3",
         "mysqlclient>=2.0.3",
         "mayavi",
+        "networkx",
         "numpy>=1.20.1",
         "pandas>=1.2.2",
         "Pillow>=8.1.0",

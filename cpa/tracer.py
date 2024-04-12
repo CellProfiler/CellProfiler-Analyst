@@ -7,7 +7,7 @@ NumPy-MKL (1.71+): http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
 configobj (required by Enthought): https://pypi.python.org/pypi/configobj
 '''
 import wx
-from wx.combo import OwnerDrawnComboBox as ComboBox
+from wx.adv import OwnerDrawnComboBox as ComboBox
 from wx.lib.scrolledpanel import ScrolledPanel
 import networkx as nx
 import numpy as np
@@ -1327,7 +1327,7 @@ class Tracer(wx.Frame, CPATool):
             from cellprofiler.utilities.jutil import kill_vm
             kill_vm()
         except:
-            print "Failed to kill the Java VM"
+            print("Failed to kill the Java VM")
         for win in wx.GetTopLevelWindows():
             logging.debug('Destroying: %s'%(win))
             win.Destroy()
@@ -1681,7 +1681,7 @@ class Tracer(wx.Frame, CPATool):
         # Pick out the trajectory containing the selected node
         trajectory_to_use = [key for key, subgraph in self.connected_nodes[self.selected_dataset][self.selected_dataset_track].items() if self.selected_node in subgraph]
         if len(trajectory_to_use) > 1:
-            print "Should have only one trajectory selected"
+            print("Should have only one trajectory selected")
             return [],[]
         else:
             trajectory_to_use = trajectory_to_use[0]    
@@ -2951,7 +2951,7 @@ if __name__ == "__main__":
         props, success = add_props_field(props)
     else:
         if not props.show_load_dialog():
-            print 'Time Visualizer requires a properties file.  Exiting.'
+            print('Time Visualizer requires a properties file.  Exiting.')
             # Necessary in case other modal dialogs are up
             wx.GetApp().Exit()
             sys.exit()
@@ -2972,4 +2972,4 @@ if __name__ == "__main__":
     except:
         import traceback
         traceback.print_exc()
-        print "Caught exception while killing VM"
+        print("Caught exception while killing VM")
