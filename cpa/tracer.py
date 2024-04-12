@@ -945,7 +945,7 @@ class MayaviView(HasTraits):
              
             #mlab.title("Lineage tree",size=2.0,figure=self.lineage_scene.mayavi_scene)   
             
-            t1 = time.clock()
+            t1 = time.process_time()
             
             G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
             xys = np.array([[directed_graph.node[node][L_TCOORD],directed_graph.node[node][L_YCOORD],directed_graph.node[node][SCALAR_VAL]] for node in sorted(directed_graph.nodes()) ])
@@ -1009,7 +1009,7 @@ class MayaviView(HasTraits):
                                   opacity = self.axes_opacity,
                                   figure = self.lineage_scene.mayavi_scene) 
             
-            t2 = time.clock()
+            t2 = time.process_time()
             logging.info("Computed layout (%.2f sec)"%(t2-t1))   
         else:
             logging.info("Re-drawing lineage tree...")
@@ -1050,7 +1050,7 @@ class MayaviView(HasTraits):
     
             #mlab.title("Trajectory plot",size=2.0,figure=self.trajectory_scene.mayavi_scene)   
     
-            t1 = time.clock()
+            t1 = time.process_time()
             
             G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
     
@@ -1142,7 +1142,7 @@ class MayaviView(HasTraits):
             #c.scalar_bar_representation.position2[1] = 0.05
             #c.scalar_bar.height = 0.05
             
-            t2 = time.clock()
+            t2 = time.process_time()
             logging.info("Computed trajectory layout (%.2f sec)"%(t2-t1))              
         else:
             logging.info("Re-drawing trajectories...")
@@ -2111,7 +2111,7 @@ class Tracer(wx.Frame, CPATool):
                 logging.info("Constructed graph consisting of %d nodes and %d edges"%(self.directed_graph[dataset_id][track_id].number_of_nodes(),
                                                                                       self.directed_graph[dataset_id][track_id].number_of_edges()))
             
-                t1 = time.clock()
+                t1 = time.process_time()
                 G = nx.convert_node_labels_to_integers(self.directed_graph[dataset_id][track_id],
                                                        first_label=0,
                                                        ordering="default")
@@ -2140,7 +2140,7 @@ class Tracer(wx.Frame, CPATool):
                                        L_YCOORD,
                                        dict(zip(node_positions.keys(), [item[1] for item in node_positions.values()])))         
                 
-                t2 = time.clock()
+                t2 = time.process_time()
                 logging.info("Computed lineage layout: %s (%s): %.2f sec"%(dataset_id, track_id, t2-t1))
             
                 # Each track gets its own indexed subgraph. Later operations to the graphs are referenced to this key.
@@ -2668,7 +2668,7 @@ class Tracer(wx.Frame, CPATool):
     def add_derived_measurements(self, selected_dataset=None, selected_dataset_track=None):
         logging.info("Calculating derived measurements")
                     
-        t1 = time.clock()   
+        t1 = time.process_time()   
         # TODO: Allow for user choice to add derived measurements
         # TODO: Figure out where to best store this information: as a graph attrubute, subgraph attribute, or a separate matrix
         # Create dict for QC measurements derived from graph properities
@@ -2689,7 +2689,7 @@ class Tracer(wx.Frame, CPATool):
         # Crossings: Transient merges, followed by split
         derived_measurements[METRIC_CROSSINGS] = self.calc_crossings(selected_dataset, selected_dataset_track)          
 
-        t2 = time.clock()
+        t2 = time.process_time()
         logging.info("Computed derived measurements (%.2f sec)"%(t2-t1))    
         
         return derived_measurements
