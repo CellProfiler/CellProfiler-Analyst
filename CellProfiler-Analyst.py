@@ -19,6 +19,7 @@ from cpa.classifier import Classifier
 from cpa.tableviewer import TableViewer
 from cpa.plateviewer import PlateViewer
 from cpa.imageviewer import ImageViewer
+from cpa.imagegallery import ImageGallery
 from cpa.tracer import Tracer
 from cpa.boxplot import BoxPlot
 from cpa.scatter import Scatter
