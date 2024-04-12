@@ -1218,21 +1218,21 @@ class Tracer(wx.Frame, CPATool):
         wx.Frame.__init__(self, parent, -1, size=size, title='Tracer Time-Lapse Visualization Tool', **kwargs)
         self.SetBackgroundColour(wx.NullColour)
         CPATool.__init__(self)
-        wx.HelpProvider_Set(wx.SimpleHelpProvider())
+        wx.HelpProvider.Set(wx.SimpleHelpProvider())
         self.SetName(self.tool_name)
         
         self.SetMenuBar(wx.MenuBar())
         fileMenu = wx.Menu()
-        self.exitMenuItem = fileMenu.Append(wx.ID_EXIT, 'Exit\tCtrl+Q', help='Exit this tool')
+        self.exitMenuItem = fileMenu.Append(id=wx.ID_EXIT, item='Exit\tCtrl+Q', helpString='Exit this tool')
         self.GetMenuBar().Append(fileMenu, 'File')  
         
         # TODO: Add this option back when I feel more confident re: track pruning
         #toolsMenu = wx.Menu()
-        #pruneMenuItem         = toolsMenu.Append(-1, 'Save pruned tracks', help='Save pruned tracks.')
+        #pruneMenuItem         = toolsMenu.Append(-1, item='Save pruned tracks', helpString='Save pruned tracks.')
         #self.GetMenuBar().Append(toolsMenu, 'Tools')        
         
         helpMenu = wx.Menu()
-        self.helpMenuItem         = helpMenu.Append(-1, 'Tracer webpage', help='Go to Tracer webpage.')
+        self.helpMenuItem         = helpMenu.Append(-1, item='Tracer webpage', helpString='Go to Tracer webpage.')
         self.GetMenuBar().Append(helpMenu, 'Help')         
 
         props = Properties()
