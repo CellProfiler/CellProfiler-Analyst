@@ -215,8 +215,8 @@ def create_update_relationship_tables():
         
     def create_table_hash():
         query = "SELECT * FROM %s"%(props.relationship_table)
-        h = hashlib.sha1()
-        h.update(repr(db.execute(query)))
+        h = hashlib.md5()
+        h.update(repr(db.execute(query)).encode())
         d = np.frombuffer(h.digest(), np.uint8)
         return "".join(["%02x" % b for b in d])   
     
