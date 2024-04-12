@@ -470,7 +470,7 @@ class TracerControlPanel(wx.Panel):
         # Get names of fields
         measurements = db.GetColumnNames(props.object_table)
         coltypes = db.GetColumnTypes(props.object_table)
-        fields = [m for m,t in zip(measurements, coltypes) if t in [float, int, long]]
+        fields = [m for m,t in zip(measurements, coltypes) if t in [float, int]]
         self.dataset_measurement_choices = fields
         
         sizer = wx.BoxSizer(wx.VERTICAL)
