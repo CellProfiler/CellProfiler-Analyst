@@ -46,6 +46,8 @@ def layer_layout_subgraph(g, sg, y0, level_attribute):
     
     returns the height of the graph
     '''
+    # TODO if have removed objects then an error can occur here
+    # Objects that have been removed are still kept in the subgraph, but they have empty dicts so the [level_attribute] indexing fails with a key error
     nodes = sg.nodes(data=True)
     t = np.array([float(x[1][level_attribute]) for x in nodes])
     idx = np.array([x[0] for x in nodes])

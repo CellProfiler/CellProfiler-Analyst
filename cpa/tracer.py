@@ -783,6 +783,7 @@ class MayaviView(HasTraits):
         start_nodes = {}
         for key,subgraph in self.connected_nodes.items():
             start_nodes[key] = [_[0] for _ in nx.get_node_attributes(subgraph,START_NODES).items() if _[1]]
+        # TODO Get list index out of range error here, but it doesn't crash the program
         self.lineage_label_collection = dict(zip(self.connected_nodes.keys(),
                                                  [mlab.text3d(t[start_nodes[key][0]]-0.75*self.lineage_temporal_scaling,
                                                               y[start_nodes[key][0]],
