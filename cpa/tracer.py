@@ -937,7 +937,7 @@ class MayaviView(HasTraits):
             t1 = time.process_time()
             
             G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
-            xys = np.array([[directed_graph.node[node][L_TCOORD],directed_graph.node[node][L_YCOORD],directed_graph.node[node][SCALAR_VAL]] for node in sorted(directed_graph.nodes()) ])
+            xys = np.array([[directed_graph.nodes[node][L_TCOORD],directed_graph.nodes[node][L_YCOORD],directed_graph.nodes[node][SCALAR_VAL]] for node in sorted(directed_graph.nodes()) ])
             #if len(xys) == 0:
                 #xys = np.array(3*[np.NaN],ndmin=2)
             dt = np.median(np.diff(np.unique(nx.get_node_attributes(directed_graph,"t").values())))
@@ -990,8 +990,8 @@ class MayaviView(HasTraits):
             self.lineage_node_scale_factor = node_scale_factor
             
             # Add axes outlines
-            self.lineage_extent = (0,np.max(nx.get_node_attributes(directed_graph,L_TCOORD).values()),
-                                   0,np.max(nx.get_node_attributes(directed_graph,L_YCOORD).values()),
+            self.lineage_extent = (0,np.max(list(nx.get_node_attributes(directed_graph,L_TCOORD).values())),
+                                   0,np.max(list(nx.get_node_attributes(directed_graph,L_YCOORD).values())),
                                    0,0)
             self.lineage_outline = mlab.pipeline.outline(self.lineage_node_collection,
                                   extent = self.lineage_extent,
@@ -1043,11 +1043,11 @@ class MayaviView(HasTraits):
             
             G = nx.convert_node_labels_to_integers(directed_graph,ordering="sorted")
     
-            xyts = np.array([(directed_graph.node[key]["x"],
-                               directed_graph.node[key]["y"],
-                               directed_graph.node[key]["t"],
-                               directed_graph.node[key][SCALAR_VAL],
-                               directed_graph.node[key][VISIBLE]) 
+            xyts = np.array([(directed_graph.nodes[key]["x"],
+                               directed_graph.nodes[key]["y"],
+                               directed_graph.nodes[key]["t"],
+                               directed_graph.nodes[key][SCALAR_VAL],
+                               directed_graph.nodes[key][VISIBLE]) 
                              for key in sorted(directed_graph)])
             
             visible = xyts[:, -1]
@@ -2135,7 +2135,7 @@ class Tracer(wx.Frame, CPATool):
                 # Each track gets its own indexed subgraph. Later operations to the graphs are referenced to this key.
                 # According to http://stackoverflow.com/questions/18643789/how-to-find-subgraphs-in-a-directed-graph-without-converting-to-undirected-graph,
                 #  weakly_connected_component_subgraphs maintains directionality
-                connected_nodes = tuple(nx.weakly_connected_components(self.directed_graph[dataset_id][track_id]))
+                connected_nodes = [self.directed_graph[dataset_id][track_id].subgraph(x).copy() for x in nx.weakly_connected_components(self.directed_graph[dataset_id][track_id])]
                 self.connected_nodes[dataset_id][track_id] = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
                 for key, s in self.connected_nodes[dataset_id][track_id].items():
                     subgraph = self.directed_graph[dataset_id][track_id].subgraph(s).copy()
@@ -2204,7 +2204,7 @@ class Tracer(wx.Frame, CPATool):
                                         
                     # Set finishing nodes: nodes at the end of the movie; subset of terminal nodes
                     idx = np.nonzero(np.array(subgraph.nodes())[:,0] == end_frame)[0]
-                    finishing_nodes = itemgetter(*idx)(subgraph.nodes()) if len(idx) > 0 else []  
+                    finishing_nodes = itemgetter(*idx)(list(subgraph.nodes())) if len(idx) > 0 else []  
                     if finishing_nodes != []:
                         finishing_nodes = list(finishing_nodes) if isinstance(finishing_nodes[0],tuple) else list((finishing_nodes,))                 
                     attr = dict.fromkeys(subgraph.nodes(), False)
@@ -2228,7 +2228,7 @@ class Tracer(wx.Frame, CPATool):
         self.control_panel.dataset_measurement_choice.SetItems(measurement_choices)
         self.control_panel.dataset_measurement_choice.SetSelection(current_measurement_choice)
         
-        self.control_panel.derived_measurement_choice.SetItems(self.derived_measurements[dataset_id][track_id].keys())
+        self.control_panel.derived_measurement_choice.SetItems(list(self.derived_measurements[dataset_id][track_id].keys()))
         self.control_panel.derived_measurement_choice.SetSelection(0)
         
         # When visualizing a new dataset, select all trajectories by default
@@ -2287,7 +2287,7 @@ class Tracer(wx.Frame, CPATool):
                 #attr = {_:attr[_] for _ in selected_node_ids}
                 #nx.set_node_attributes(self.directed_graph[dataset_id][track_id],"f",attr)
             
-        self.scalar_data = np.array([self.directed_graph[selected_dataset][selected_track].node[key][SCALAR_VAL] 
+        self.scalar_data = np.array([self.directed_graph[selected_dataset][selected_track].nodes[key][SCALAR_VAL] 
                                      for key in sorted(self.directed_graph[selected_dataset][selected_track])]).astype(float)
 
     def distance_plot(self, selected_dataset=None, selected_dataset_track=None):
