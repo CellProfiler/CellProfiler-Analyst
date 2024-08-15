@@ -146,7 +146,7 @@ def layer_layout_subgraph(g, sg, y0, level_attribute):
         # only disambiguate if more than one at same height
         #
         if np.any(v_level_count > 1):
-            v_level = np.delete(v_level, v_level_first[v_level_count == 1])
+            v_level = np.delete(v_level, v_level_first[(v_level_count == 1).astype(int)])
             #
             # Use "unique" to get new indexes to firsts and reverse
             #
