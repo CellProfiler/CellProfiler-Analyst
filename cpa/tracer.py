@@ -2135,25 +2135,29 @@ class Tracer(wx.Frame, CPATool):
                 # Each track gets its own indexed subgraph. Later operations to the graphs are referenced to this key.
                 # According to http://stackoverflow.com/questions/18643789/how-to-find-subgraphs-in-a-directed-graph-without-converting-to-undirected-graph,
                 #  weakly_connected_component_subgraphs maintains directionality
-                connected_nodes = tuple(nx.weakly_connected_component_subgraphs(self.directed_graph[dataset_id][track_id]))
+                connected_nodes = tuple(nx.weakly_connected_components(self.directed_graph[dataset_id][track_id]))
                 self.connected_nodes[dataset_id][track_id] = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
-                for key, subgraph in self.connected_nodes[dataset_id][track_id].items():
+                for key, s in self.connected_nodes[dataset_id][track_id].items():
+                    subgraph = self.directed_graph[dataset_id][track_id].subgraph(s).copy()
+                    # Error in this line: 'subgraph' is a Set which has no nodes. Need to change it to be a subgraph somewhere.
+                    # In cpa/glayout.py A similar change in cpa/glayout.py (git 6fb277cc) involved: 
                     nx.set_node_attributes(subgraph, name=COMPONENT_ID, values={_:key for _ in subgraph.nodes()})
             
                 # Set graph attributes
-                for key,subgraph in self.connected_nodes[dataset_id][track_id].items():
+                for key,s in self.connected_nodes[dataset_id][track_id].items():
+                    subgraph = self.directed_graph[dataset_id][track_id].subgraph(s).copy()
                     # Set connect component ID in ful graph                
                     nodes = subgraph.nodes()
                     nx.set_node_attributes(self.directed_graph[dataset_id][track_id], name=SUBGRAPH_ID, values=dict(zip(nodes,[key]*len(nodes))))
                     
                     # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
                     # Set end nodes
-                    out_degrees = subgraph.out_degree()
+                    out_degrees = dict(subgraph.out_degree())
                     # HT to http://stackoverflow.com/questions/9106065/python-list-slicing-with-arbitrary-indices
                     #  for using itemgetter to slice a list using a list of indices
-                    idx = np.nonzero(np.array(out_degrees.values()) == 0)[0]
+                    idx = np.nonzero(np.array(list(out_degrees.values())) == 0)[0]
                     # If 1 node is returned, it's a naked tuple instead of a tuple of tuples, so we have to extract the innermost element in this case
-                    end_nodes = itemgetter(*idx)(out_degrees.keys())
+                    end_nodes = itemgetter(*idx)(list(out_degrees.keys()))
                     end_nodes = list(end_nodes) if isinstance(end_nodes[0],tuple) else list((end_nodes,))
                     attr = dict.fromkeys(subgraph.nodes(), False)
                     for _ in end_nodes:
@@ -2161,19 +2165,19 @@ class Tracer(wx.Frame, CPATool):
                     nx.set_node_attributes(subgraph, name=END_NODES, values=attr)
                     
                     # Set start nodes: nodes at the beginning of the track
-                    in_degrees = subgraph.in_degree()
+                    in_degrees = dict(subgraph.in_degree())
                     # Since it's a directed graph, I know that the in_degree result will have the starting node at index 0.
                     #  So even if there are multiple nodes with in-degree 0, this approach will get the first one.
                     #  HT to http://stackoverflow.com/a/13149770/2116023 for the index approach
-                    start_nodes = [in_degrees.keys()[in_degrees.values().index(0)]]   
+                    start_nodes = [list(in_degrees.keys())[list(in_degrees.values()).index(0)]]   
                     attr = dict.fromkeys(subgraph.nodes(), False)
                     for _ in start_nodes:
                         attr[_] = True   
                     nx.set_node_attributes(subgraph, name=START_NODES, values=attr)
                     
                     # Set branchpoints: nodes with two or more children
-                    idx = np.nonzero(np.array(out_degrees.values()) > 1)[0]
-                    branch_nodes = itemgetter(*idx)(out_degrees.keys()) if len(idx) > 0 else []
+                    idx = np.nonzero(np.array(list(out_degrees.values())) > 1)[0]
+                    branch_nodes = itemgetter(*idx)(list(out_degrees.keys())) if len(idx) > 0 else []
                     if branch_nodes != []:
                         branch_nodes = list(branch_nodes) if isinstance(branch_nodes[0],tuple) else list((branch_nodes,))                
                     attr = dict.fromkeys(subgraph.nodes(), False)
@@ -2301,9 +2305,9 @@ class Tracer(wx.Frame, CPATool):
             if branch_nodes != []:
                 for source_node in branch_nodes:
                     # Find out-degrees for all nodes within N nodes of branchpoint
-                    out_degrees = subgraph.out_degree(nx.single_source_shortest_path_length(subgraph,
+                    out_degrees = dict(subgraph.out_degree(nx.single_source_shortest_path_length(subgraph,
                                                                                             source_node,
-                                                                                            cutoff_dist_from_branch).keys())
+                                                                                            cutoff_dist_from_branch).keys()))
                     # Find all nodes for which the out-degree is 0 (i.e, all terminal nodes (leaves)) and not a terminal node (i.e, at end of movie)
                     branch_to_leaf_endpoints = [(source_node,path_node) for (path_node,degree) in out_degrees.items() if degree == 0 and path_node not in finishing_nodes]
                     if len(branch_to_leaf_endpoints) > 0:
