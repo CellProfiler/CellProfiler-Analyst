@@ -810,7 +810,7 @@ class ReduxControlPanel(wx.Panel):
             start = time()
 
             dlg.Pulse('Generating model and plot')
-            selected_method = self.method_choice.GetStringSelection()
+            selected_method = self.method_choice.GetValue()
             selected_plot = self.plot_choice.GetStringSelection()
 
             if self.figpanel.calculated != selected_method:
