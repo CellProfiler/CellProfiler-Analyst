@@ -1788,7 +1788,7 @@ class Tracer(wx.Frame, CPATool):
                 is_currently_visible = self.trajectory_selection[key] 
                 for _ in subgraph.nodes():
                     attr[_] = is_currently_visible      
-        nx.set_node_attributes(directed_graph, VISIBLE, attr)
+        nx.set_node_attributes(directed_graph, name=VISIBLE, values=attr)
         
         self.do_plots_need_updating["trajectories"] = True
         self.update_plot(selected_dataset,selected_dataset_track)
@@ -1802,14 +1802,14 @@ class Tracer(wx.Frame, CPATool):
             subattr = nx.get_node_attributes(subgraph, self.selected_metric+VISIBLE_SUFFIX)
             for _ in subattr.items():
                 attr[_[0]] = (not _[1]) or attr[_[0]]  # A node is removed if it's pruned (i.e, not visible) or it's already removed
-        nx.set_node_attributes(directed_graph, IS_REMOVED, attr) 
+        nx.set_node_attributes(directed_graph,name= IS_REMOVED,values= attr) 
         
         attr = nx.get_edge_attributes(directed_graph, IS_REMOVED)
         for key,subgraph in connected_nodes.items():
             subattr = nx.get_edge_attributes(subgraph, self.selected_metric+VISIBLE_SUFFIX)
             for _ in subattr.items():
                 attr[_[0]] = (not _[1]) or attr[_[0]]  # An edge is removed if it's pruned (i.e, not visible) or it's already removed
-        nx.set_edge_attributes(directed_graph, IS_REMOVED, attr) 
+        nx.set_edge_attributes(directed_graph,name= IS_REMOVED,values= attr) 
         
         dlg = wx.MessageDialog(self, 
                                "The selected pruning has been added to the list of trajectory edits."
@@ -1922,7 +1922,7 @@ class Tracer(wx.Frame, CPATool):
             for _ in node_list:
                 if _ in attr:
                     attr[_] = True
-            nx.set_node_attributes(self.directed_graph[selected_dataset][selected_dataset_track],"f",attr)   
+            nx.set_node_attributes(self.directed_graph[selected_dataset][selected_dataset_track],name="f",values=attr)   
             
             #for key,subgraph in self.connected_nodes.items():
                 #for node_key in self.connected_nodes[key]:
@@ -2107,28 +2107,27 @@ class Tracer(wx.Frame, CPATool):
                 mapping = dict(zip(G.nodes(),self.directed_graph[dataset_id][track_id].nodes()))
                 glayout.layer_layout(G, level_attribute = "t")
                 nx.relabel_nodes(G, mapping,copy=False) # Map back to original graph labels
-                node_positions = dict(zip(G.nodes(),[[G.node[key]["t"],G.node[key]["y"]] for key in G.nodes()]))
-                node_pos_ar = np.array(node_positions.values())
+                node_positions = dict(zip(G.nodes(),[[node[0],node[1]] for node in G.nodes]))
+                node_pos_ar = np.array(list(node_positions.values()))
                 self.end_frame = end_frame = max(node_pos_ar[:,0])
                 self.start_frame = start_frame = min(node_pos_ar[:,0])
             
                 # Adjust the y-spacing between trajectories so it the plot is roughly square, to avoid nasty Mayavi axis scaling issues later
                 # See: http://stackoverflow.com/questions/13015097/how-do-i-scale-the-x-and-y-axes-in-mayavi2
-                xy = np.array([node_positions[key] for key in G.nodes()])
-                ys = float(max(xy[:,1]) - min(xy[:,1]))
+                ys = float(max(node_pos_ar[:,1]) - min(node_pos_ar[:,1]))
                 if ys == 0.0: 
                     scaling_y = 1.0
                 else:
-                    scaling_y = 1.0/ys*float(max(xy[:,0]) - min(xy[:,0]))
+                    scaling_y = 1.0/ys*float(max(node_pos_ar[:,0]) - min(node_pos_ar[:,0]))
                 for key in G.nodes(): node_positions[key][1] *= scaling_y
             
-                self.lineage_node_positions = node_positions  
+                #self.lineage_node_positions = node_positions  
                 nx.set_node_attributes(self.directed_graph[dataset_id][track_id],
-                                       L_TCOORD,
-                                       dict(zip(node_positions.keys(), [item[0] for item in node_positions.values()])))
+                                       name=L_TCOORD,
+                                       values=dict(zip(node_positions.keys(), [item[0] for item in node_positions.values()])))
                 nx.set_node_attributes(self.directed_graph[dataset_id][track_id],
-                                       L_YCOORD,
-                                       dict(zip(node_positions.keys(), [item[1] for item in node_positions.values()])))         
+                                       name=L_YCOORD,
+                                       values=dict(zip(node_positions.keys(), [item[1] for item in node_positions.values()])))         
                 
                 t2 = time.process_time()
                 logging.info("Computed lineage layout: %s (%s): %.2f sec"%(dataset_id, track_id, t2-t1))
@@ -2139,13 +2138,13 @@ class Tracer(wx.Frame, CPATool):
                 connected_nodes = tuple(nx.weakly_connected_component_subgraphs(self.directed_graph[dataset_id][track_id]))
                 self.connected_nodes[dataset_id][track_id] = dict(zip(range(1,len(connected_nodes)+1),connected_nodes))
                 for key, subgraph in self.connected_nodes[dataset_id][track_id].items():
-                    nx.set_node_attributes(subgraph, COMPONENT_ID, {_:key for _ in subgraph.nodes()})
+                    nx.set_node_attributes(subgraph, name=COMPONENT_ID, values={_:key for _ in subgraph.nodes()})
             
                 # Set graph attributes
                 for key,subgraph in self.connected_nodes[dataset_id][track_id].items():
                     # Set connect component ID in ful graph                
                     nodes = subgraph.nodes()
-                    nx.set_node_attributes(self.directed_graph[dataset_id][track_id], SUBGRAPH_ID, dict(zip(nodes,[key]*len(nodes))))
+                    nx.set_node_attributes(self.directed_graph[dataset_id][track_id], name=SUBGRAPH_ID, values=dict(zip(nodes,[key]*len(nodes))))
                     
                     # Find start/end nodes by checking for nodes with no outgoing/ingoing edges
                     # Set end nodes
@@ -2159,7 +2158,7 @@ class Tracer(wx.Frame, CPATool):
                     attr = dict.fromkeys(subgraph.nodes(), False)
                     for _ in end_nodes:
                         attr[_] = True
-                    nx.set_node_attributes(subgraph, END_NODES, attr)
+                    nx.set_node_attributes(subgraph, name=END_NODES, values=attr)
                     
                     # Set start nodes: nodes at the beginning of the track
                     in_degrees = subgraph.in_degree()
@@ -2170,7 +2169,7 @@ class Tracer(wx.Frame, CPATool):
                     attr = dict.fromkeys(subgraph.nodes(), False)
                     for _ in start_nodes:
                         attr[_] = True   
-                    nx.set_node_attributes(subgraph, START_NODES, attr)
+                    nx.set_node_attributes(subgraph, name=START_NODES, values=attr)
                     
                     # Set branchpoints: nodes with two or more children
                     idx = np.nonzero(np.array(out_degrees.values()) > 1)[0]
@@ -2180,7 +2179,7 @@ class Tracer(wx.Frame, CPATool):
                     attr = dict.fromkeys(subgraph.nodes(), False)
                     for _ in branch_nodes:
                         attr[_] = True                   
-                    nx.set_node_attributes(subgraph, BRANCH_NODES, attr)
+                    nx.set_node_attributes(subgraph, name=BRANCH_NODES, values=attr)
                     
                     # Set terminal nodes: nodes at the end of the track; subset of end nodes
                     # Pick terminal nodes based on distance from start node
@@ -2197,7 +2196,7 @@ class Tracer(wx.Frame, CPATool):
                     attr = dict.fromkeys(subgraph.nodes(), False)
                     for _ in terminal_nodes:
                         attr[_] = True    
-                    nx.set_node_attributes(subgraph, TERMINAL_NODES, attr)                     
+                    nx.set_node_attributes(subgraph, name=TERMINAL_NODES, values=attr)                     
                                         
                     # Set finishing nodes: nodes at the end of the movie; subset of terminal nodes
                     idx = np.nonzero(np.array(subgraph.nodes())[:,0] == end_frame)[0]
@@ -2207,7 +2206,7 @@ class Tracer(wx.Frame, CPATool):
                     attr = dict.fromkeys(subgraph.nodes(), False)
                     for _ in finishing_nodes:
                         attr[_] = True    
-                    nx.set_node_attributes(subgraph, FINISH_NODES, attr)      
+                    nx.set_node_attributes(subgraph, name=FINISH_NODES, values=attr)      
 
                 # Calculate measurements created from existing measurments
                 self.derived_measurements[dataset_id][track_id] = self.add_derived_measurements(dataset_id, track_id)
@@ -2276,7 +2275,7 @@ class Tracer(wx.Frame, CPATool):
                     elif self.selected_metric == METRIC_SINGLETONS:
                         self.derived_measurements[dataset_id][track_id][self.selected_metric] = self.calc_singletons(dataset_id, track_id)
                     attr = dict(zip(node_ids,self.derived_measurements[dataset_id][track_id][self.selected_metric]))
-                nx.set_node_attributes(self.directed_graph[dataset_id][track_id],SCALAR_VAL,attr)
+                nx.set_node_attributes(self.directed_graph[dataset_id][track_id],name=SCALAR_VAL,values=attr)
                 
                 ## Filter values
                 #getitem = itemgetter(len(trajectory_info[0])-1)
@@ -2322,25 +2321,25 @@ class Tracer(wx.Frame, CPATool):
             attr = dict.fromkeys(subgraph.nodes(),False)
             for _ in end_nodes_for_pruning[key]:
                 attr[_] = True
-            nx.set_node_attributes(subgraph,METRIC_NODESWITHINDIST,attr)
+            nx.set_node_attributes(subgraph,name=METRIC_NODESWITHINDIST,values=attr)
             attr = dict.fromkeys(subgraph.edges(),False)
             for _ in end_nodes_for_pruning[key]:
                 ebunch = nx.edges(subgraph,_)
                 for e in ebunch:
                     attr[e] = True
-            nx.set_edge_attributes(subgraph,METRIC_NODESWITHINDIST,attr)                
+            nx.set_edge_attributes(subgraph,name=METRIC_NODESWITHINDIST,values=attr)                
             
             # Set visibility attributes
             attr = dict.fromkeys(subgraph.nodes(),True) 
             for _ in end_nodes_for_pruning[key]:
                 attr[_] = False
-            nx.set_node_attributes(subgraph,METRIC_NODESWITHINDIST_VISIBLE,attr)            
+            nx.set_node_attributes(subgraph,name=METRIC_NODESWITHINDIST_VISIBLE,values=attr)            
             attr = dict.fromkeys(subgraph.edges(),True)
             for _ in end_nodes_for_pruning[key]:
                 ebunch = nx.edges(subgraph,_)
                 for e in ebunch:
                     attr[e] = False
-            nx.set_edge_attributes(subgraph,METRIC_NODESWITHINDIST_VISIBLE,attr)       
+            nx.set_edge_attributes(subgraph,name=METRIC_NODESWITHINDIST_VISIBLE,values=attr)       
 
         sorted_nodes = sorted(directed_graph)
 
@@ -2374,25 +2373,25 @@ class Tracer(wx.Frame, CPATool):
             attr = dict.fromkeys(subgraph.nodes(), False)
             for _ in singleton_nodes:
                 attr[_] = True
-            nx.set_node_attributes(subgraph,METRIC_SINGLETONS,attr)  
+            nx.set_node_attributes(subgraph,name=METRIC_SINGLETONS,values=attr)  
             attr = dict.fromkeys(subgraph.edges(),False)
             for _ in singleton_nodes:
                 ebunch = nx.edges(subgraph,_)
                 for e in ebunch:
                     attr[e] = True
-            nx.set_edge_attributes(subgraph,METRIC_SINGLETONS,attr)            
+            nx.set_edge_attributes(subgraph,name=METRIC_SINGLETONS,values=attr)            
 
             # Set visibility attribute 
             attr = dict.fromkeys(subgraph.nodes(), True)
             for _ in singleton_nodes:
                 attr[_] = False            
-            nx.set_node_attributes(subgraph,METRIC_SINGLETONS_VISIBLE,attr)
+            nx.set_node_attributes(subgraph,name=METRIC_SINGLETONS_VISIBLE,values=attr)
             attr = dict.fromkeys(subgraph.edges(), True)
             for _ in singleton_nodes:
                 ebunch = nx.edges(subgraph,_)
                 for e in ebunch:
                     attr[e] = False            
-            nx.set_edge_attributes(subgraph,METRIC_SINGLETONS_VISIBLE,attr)            
+            nx.set_edge_attributes(subgraph,name=METRIC_SINGLETONS_VISIBLE,values=attr)            
             
             for _ in singleton_nodes:
                 temp_full_graph_dict[_] = 1.0
@@ -2476,7 +2475,7 @@ class Tracer(wx.Frame, CPATool):
                 temp_full_graph_dict[node] = value
                 attr[node] = value
             # Set identity attributes
-            nx.set_node_attributes(subgraph, METRIC_BC, attr)
+            nx.set_node_attributes(subgraph, name=METRIC_BC, values=attr)
             # Set visibility attribute 
             # TODO: Come up with a heuristic to determine which branch to prune based on this value 
             branch_nodes = [_[0] for _ in nx.get_node_attributes(subgraph,BRANCH_NODES).items() if _[1]]
@@ -2493,13 +2492,13 @@ class Tracer(wx.Frame, CPATool):
             attr = dict.fromkeys(subgraph.nodes(), True)
             for _ in nodes_to_prune[key]:
                 attr[_] = False                        
-            nx.set_node_attributes(subgraph, METRIC_BC_VISIBLE, attr)
+            nx.set_node_attributes(subgraph, name=METRIC_BC_VISIBLE, values=attr)
             attr = dict.fromkeys(subgraph.edges(), True)
             for _ in nodes_to_prune[key]:
                 ebunch = nx.edges(subgraph,_)
                 for e in ebunch:
                     attr[e] = False 
-            nx.set_edge_attributes(subgraph, METRIC_BC_VISIBLE, attr)
+            nx.set_edge_attributes(subgraph,name= METRIC_BC_VISIBLE,values= attr)
         
         return np.array([temp_full_graph_dict[node] for node in sorted_nodes ]).astype(float)      
     
@@ -2584,25 +2583,25 @@ class Tracer(wx.Frame, CPATool):
             attr = dict.fromkeys(subgraph.nodes(), False)
             for _ in crossings:
                 attr[_] = True
-            nx.set_node_attributes(subgraph,METRIC_CROSSINGS,attr)
+            nx.set_node_attributes(subgraph,name=METRIC_CROSSINGS,values=attr)
             attr = dict.fromkeys(subgraph.edges(), False)
             for _ in crossings:
                 ebunch = nx.edges(subgraph,_)
                 for e in ebunch:
                     attr[e] = True 
-            nx.set_edge_attributes(subgraph,METRIC_CROSSINGS,attr)  
+            nx.set_edge_attributes(subgraph,name=METRIC_CROSSINGS,values=attr)  
             
             # Set visibility attribute 
             attr = dict.fromkeys(subgraph.nodes(), True)
             for _ in crossings:
                 attr[_] = False            
-            nx.set_node_attributes(subgraph,METRIC_CROSSINGS_VISIBLE,attr)  
+            nx.set_node_attributes(subgraph,name=METRIC_CROSSINGS_VISIBLE,values=attr)  
             attr = dict.fromkeys(subgraph.edges(), True)
             for _ in crossings:
                 ebunch = nx.edges(subgraph,_)
                 for e in ebunch:                
                     attr[e] = False            
-            nx.set_edge_attributes(subgraph,METRIC_CROSSINGS_VISIBLE,attr)              
+            nx.set_edge_attributes(subgraph,name=METRIC_CROSSINGS_VISIBLE,values=attr)              
             
             for _ in crossings:
                 temp_full_graph_dict[_] = 1.0            
@@ -2630,20 +2629,20 @@ class Tracer(wx.Frame, CPATool):
             for _ in cycles:
                 for item in _:
                     attr[item] = True
-            nx.set_node_attributes(subgraph,METRIC_LOOPS,attr)  
+            nx.set_node_attributes(subgraph,name=METRIC_LOOPS,values=attr)  
             # Set visibility attribute 
             attr = dict.fromkeys(subgraph.nodes(), True)
             for _ in cycles:
                 for item in _:
                     attr[item] = False            
-            nx.set_node_attributes(subgraph,METRIC_LOOPS_VISIBLE,attr)
+            nx.set_node_attributes(subgraph,name=METRIC_LOOPS_VISIBLE,values=attr)
             attr = dict.fromkeys(subgraph.edges(), True)
             for _ in cycles:
                 for item in _:
                     ebunch = nx.edges(subgraph,item)
                     for e in ebunch:
                         attr[e] = False           
-            nx.set_edge_attributes(subgraph,METRIC_LOOPS_VISIBLE,attr)            
+            nx.set_edge_attributes(subgraph,name=METRIC_LOOPS_VISIBLE,values=attr)            
             
             for _ in cycles:
                 t = [subgraph.node[item]["t"] for item in _]
