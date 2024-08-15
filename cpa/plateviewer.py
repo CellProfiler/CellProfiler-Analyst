@@ -26,7 +26,7 @@ p = properties.Properties()
 properties.optional_vars += ['object_table']
 db = DBConnect()
 
-required_fields = ['plate_shape', 'well_id']
+required_fields = ['plate_shape', 'plate_id', 'well_id']
 
 fixed_width = (200,-1)
 
@@ -42,7 +42,11 @@ class PlateViewer(wx.Frame, CPATool):
         for field in required_fields:
             if not p.field_defined(field):
                 fail = True
-                raise Exception('Properties field "%s" is required for PlateViewer.'%(field))
+                message = 'Properties field "%s" is required for PlateViewer.'%(field)
+                wx.MessageBox(message,'Required field missing')
+                logging.error(message)
+                break
+                #raise Exception('Properties field "%s" is required for PlateViewer.'%(field))
         if fail:    
             self.Destroy()
             return

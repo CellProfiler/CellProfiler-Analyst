@@ -1290,7 +1290,7 @@ class DBConnect(metaclass=Singleton):
         if not all([type(x) in valid_types for x in data[0]]):
             raise ValueError("Invalid column types were found in the data. "
                              "Only numerical columns can be present in the object table")
-        return np.array(data, dtype=np.float)
+        return np.array(data, dtype='float')
 
     def GetCellData(self, obKey):
         '''

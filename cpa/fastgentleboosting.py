@@ -391,6 +391,7 @@ class FastGentleBoosting(object):
             holdout_results = self.Train(colnames, num_learners, holdin_labels, holdin_values, test_values=holdout_values)
             if holdout_results is None:
                 return None
+            
             # pad the end of the holdout set with the last element
             if len(holdout_results) < num_learners:
                 holdout_results += [holdout_results[-1]] * (num_learners - len(holdout_results))

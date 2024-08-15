@@ -208,8 +208,6 @@ class DataSourcePanel(wx.Panel):
                 'filter' : self.filter_choice.Value,
                 'x-lim'  : self.figpanel.subplot.get_xlim(),
                 'y-lim'  : self.figpanel.subplot.get_ylim(),
-##                'grouping': self.group_choice.Value,
-##                'version': '1',
                 }
     
     def load_settings(self, settings):
@@ -218,9 +216,6 @@ class DataSourcePanel(wx.Panel):
         settings - a dictionary mapping setting names to values encoded as
                    strings.
         '''
-##        if 'version' not in settings:
-##            settings['grouping'] = NO_GROUP
-##            settings['version'] = '1'
         if 'table' in settings:
             self.table_choice.SetStringSelection(settings['table'])
             self.update_column_fields()

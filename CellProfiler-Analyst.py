@@ -5,7 +5,6 @@
 # =============================================================================
 
 
-
 import sys
 import os
 import os.path
@@ -21,6 +20,7 @@ from cpa.tableviewer import TableViewer
 from cpa.plateviewer import PlateViewer
 from cpa.imageviewer import ImageViewer
 from cpa.imagegallery import ImageGallery
+from cpa.tracer import Tracer
 from cpa.boxplot import BoxPlot
 from cpa.scatter import Scatter
 from cpa.histogram import Histogram
@@ -55,7 +55,6 @@ if len(sys.argv) > 1:
     else:
         p.LoadFile(sys.argv[1])
 
-
 from cpa.cpatool import CPATool
 import inspect
 
@@ -74,6 +73,7 @@ ID_DENSITY = wx.NewIdRef()
 ID_BOXPLOT = wx.NewIdRef()
 ID_DIMENSREDUX = wx.NewIdRef()
 ID_NORMALIZE = wx.NewIdRef()
+ID_TRACER = wx.NewIdRef()
 
 def get_cpatool_subclasses():
     '''returns a list of CPATool subclasses.
@@ -115,6 +115,7 @@ class MainGUI(wx.Frame):
         tb.AddTool(ID_BOXPLOT.GetId(), 'Box Plot', get_icon("boxplot").ConvertToBitmap(), shortHelp='Box Plot')
         tb.AddTool(ID_DIMENSREDUX.GetId(), 'Reduction', get_icon("dimensionality").ConvertToBitmap(), shortHelp='Dimensionality Reduction')
         tb.AddTool(ID_TABLE_VIEWER.GetId(), 'Table Viewer', get_icon("data_grid").ConvertToBitmap(), shortHelp='Table Viewer')
+        tb.AddTool(ID_TRACER.GetId(), 'Tracer', get_icon("tracer").ConvertToBitmap(), shortHelp='Tracer')
         # tb.AddLabelTool(ID_NORMALIZE, 'Normalize', get_icon("normalize").ConvertToBitmap(), shortHelp='Normalization Tool', longHelp='Launch Feature Normalization Tool')
         tb.Realize()
 
@@ -147,6 +148,7 @@ class MainGUI(wx.Frame):
         dimensionMenuItem   = toolsMenu.Append(ID_DIMENSREDUX, 'Dimensionality Reduction', helpString='Launches the Dimensionality Reduction tool.')
         dataTableMenuItem   = toolsMenu.Append(ID_TABLE_VIEWER, 'Table Viewer\tCtrl+Shift+T', helpString='Launches the Table Viewer tool.')
         normalizeMenuItem   = toolsMenu.Append(ID_NORMALIZE, 'Normalization Tool\tCtrl+Shift+T', helpString='Launches a tool for generating normalized values for measurement columns in your tables.')
+        tlmMenuItem         = toolsMenu.Append(ID_TRACER, 'Tracer\tCtrl+Shift+L', helpString='Launches the Tracer time-lapse viewer tool.')
         self.GetMenuBar().Append(toolsMenu, 'Tools')
 
         logMenu = wx.Menu()
@@ -212,6 +214,7 @@ class MainGUI(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.launch_histogram_plot, id=ID_HISTOGRAM)
         self.Bind(wx.EVT_TOOL, self.launch_density_plot, id=ID_DENSITY)
         self.Bind(wx.EVT_TOOL, self.launch_box_plot, id=ID_BOXPLOT)
+        self.Bind(wx.EVT_TOOL, self.launch_tracer, id=ID_TRACER)
         self.Bind(wx.EVT_TOOL, self.launch_dimens_redux, id=ID_DIMENSREDUX)
         self.Bind(wx.EVT_TOOL, self.launch_normalization_tool, id=ID_NORMALIZE)
         self.Bind(wx.EVT_MENU, self.on_close, self.exitMenuItem)
@@ -268,6 +271,10 @@ class MainGUI(wx.Frame):
             colViewer = ImageGallery(parent=self, properties=self.properties)
             colViewer.Show(True)
 
+    def launch_tracer(self, evt=None):
+        tracer = Tracer(parent=self)
+        tracer.Show(True)        
+        
     def launch_box_plot(self, evt=None):
         if self.confirm_properties():
             boxplot = BoxPlot(parent=self)
@@ -428,7 +435,6 @@ class MainGUI(wx.Frame):
         if self.log_text != '':
             self.console.AppendText(self.log_text)
             self.log_text = ''
-
 
 class CPAnalyst(wx.App):
     '''The CPAnalyst application.

@@ -23,8 +23,8 @@ EVT_QUANTITY_CHANGED = wx.PyEventBinder(wx.NewEventType(), 1)
 class CellMontageFrame(wx.Frame):
     '''A frame that allows you to add a bunch of object tiles
     '''
-    def __init__(self, parent, **kwargs):
-        wx.Frame.__init__(self, parent, **kwargs)
+    def __init__(self, parent, title="", **kwargs):
+        wx.Frame.__init__(self, parent, title=title, **kwargs)
         self.sb = SortBin(self)
         self.cp = wx.CollapsiblePane(self, label='Show controls', style=wx.CP_DEFAULT_STYLE|wx.CP_NO_TLW_RESIZE)
         self.icp = ImageControlPanel(self.cp.GetPane(), self)
