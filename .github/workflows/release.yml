@@ -67,12 +67,24 @@ jobs:
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
           echo "Finished add-osx-certificate"
-          chmod +x osx-codesign.sh && ./osx-codesign.sh
-          ditto -ck --keepParent --rsrc --sequesterRsrc ./dist/CellProfiler-Analyst.app ./dist/CellProfiler-Analyst-macOS-3.0.4.1.zip
         working-directory: ./distribution/macos
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      - env:
+          LDFLAGS: "-L/usr/local/opt/mysql@8.0/lib -L/usr/local/opt/openssl/lib"
+          CERTIFICATE_OSX_APPLICATION: ${{ secrets.BUILD_CERTIFICATE_BASE64_CIMINI }}
+          CERTIFICATE_PASSWORD: ${{ secrets.P12_PASSWORD_CIMINI }}
+          # needed for mysql@8.0
+          CPPFLAGS: -I/usr/local/opt/mysql@8.0/include
+          PKG_CONFIG_PATH: /usr/local/opt/mysql@8.0/lib/pkgconfig
+        if: ${{ matrix.os == 'macos-13' }}
+        run: |
+          chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
+          echo "Finished add-osx-certificate"
+          chmod +x osx-codesign.sh && ./osx-codesign.sh
+          ditto -ck --keepParent --rsrc --sequesterRsrc ./dist/CellProfiler-Analyst.app ./dist/CellProfiler-Analyst-macOS-3.0.4.1.zip
+        working-directory: ./distribution/macos
       - env:
           JDK_HOME: C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\11.0.20-8\x64
         if: ${{ matrix.os == 'windows-latest' }}
