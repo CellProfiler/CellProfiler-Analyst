@@ -35,7 +35,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\CellProfiler-Analyst\CellProfiler-Analyst.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\a\CellProfiler-Analyst\CellProfiler-Analyst\dist\CellProfiler-Analyst\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "C:\hostedtoolcache\windows\jdk\14.0.1\x64\*"; DestDir: "{app}\java"; Flags: recursesubdirs
+Source: "C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\11.0.20-8\x64\*"; DestDir: "{app}\java"; Flags: recursesubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
