@@ -29,6 +29,7 @@ hiddenimports += PyInstaller.utils.hooks.collect_submodules("scipy.special")
 hiddenimports += PyInstaller.utils.hooks.collect_submodules('skimage.io._plugins')
 hiddenimports += PyInstaller.utils.hooks.collect_submodules("skimage.feature")
 hiddenimports += PyInstaller.utils.hooks.collect_submodules("skimage.filters")
+hiddenimports += ["cmath", "scipy._lib.messagestream", "sklearn.utils.sparsetools",]
 
 a = Analysis(['../../CellProfiler-Analyst.py'],
              pathex=['CellProfiler-Analyst'],
