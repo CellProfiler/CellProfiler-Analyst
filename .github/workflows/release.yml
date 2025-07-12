@@ -69,7 +69,7 @@ jobs:
           pyinstaller distribution/windows/CellProfiler-Analyst.spec
           iscc /dMyAppVersion="3.0.4.1" "distribution/windows/CellProfiler-Analyst.iss"
       - if: ${{ matrix.os == 'macos-13' }}
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: CellProfiler-Analyst-macOS-3.0.4.1.zip
           path: ./distribution/macos/dist/CellProfiler-Analyst-macOS-3.0.4.1.zip
@@ -97,11 +97,11 @@ jobs:
           prerelease: true
           release_name: ${{ github.ref }}
           tag_name: ${{ github.ref }}
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v3
         with:
           name: CellProfiler-Analyst-macOS-3.0.4.1.zip
           path: ./
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v3
         with:
           name: CellProfiler-Analyst-Windows-3.0.4.1.exe
           path: ./
