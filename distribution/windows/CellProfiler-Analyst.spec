@@ -22,6 +22,12 @@ datas += [
 hiddenimports = []
 
 hiddenimports += PyInstaller.utils.hooks.collect_submodules('sklearn.utils')
+hiddenimports += PyInstaller.utils.hooks.collect_submodules('scipy.libs')
+hiddenimports += PyInstaller.utils.hooks.collect_submodules("scipy")
+hiddenimports += PyInstaller.utils.hooks.collect_submodules("scipy.special")
+hiddenimports += PyInstaller.utils.hooks.collect_submodules('skimage.io._plugins')
+hiddenimports += PyInstaller.utils.hooks.collect_submodules("skimage.feature")
+hiddenimports += PyInstaller.utils.hooks.collect_submodules("skimage.filters")
 
 a = Analysis(['../../CellProfiler-Analyst.py'],
              pathex=['CellProfiler-Analyst'],
