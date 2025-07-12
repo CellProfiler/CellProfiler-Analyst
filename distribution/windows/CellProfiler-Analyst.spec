@@ -15,7 +15,6 @@ datas = []
 
 datas += PyInstaller.utils.hooks.collect_data_files("bioformats")
 datas += PyInstaller.utils.hooks.collect_data_files("javabridge")
-datas += PyInstaller.utils.hooks.collect_data_files("scipy.libs")
 
 datas += [
     ("../../cpa/icons/*", "cpa/icons"),
