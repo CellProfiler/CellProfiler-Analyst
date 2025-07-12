@@ -2,13 +2,13 @@
 
 cd ./dist/CellProfiler-Analyst.app/Contents/Resources
 sudo rm -r Home/legal/
-sudo codesign --timestamp -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" Home/lib/server/classes.jsa
-find . -type f | xargs -I file codesign --timestamp -f -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" file
+sudo codesign --timestamp -s "Apple Development: Beth Cimini (27YQ9U45D9)" Home/lib/server/classes.jsa
+find . -type f | xargs -I file codesign --timestamp -f -s "Apple Development: Beth Cimini (27YQ9U45D9)" file
 cd ../MacOS
-find . -type f | xargs -I file sudo codesign --timestamp -f -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" file
-codesign --timestamp -f -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" _elementtree.cpython-38-darwin.so
-codesign --entitlements entitlements.plist --timestamp -o runtime -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" ./cpanalyst
+find . -type f | xargs -I file sudo codesign --timestamp -f -s "Apple Development: Beth Cimini (27YQ9U45D9)" file
+codesign --timestamp -f -s "Apple Development: Beth Cimini (27YQ9U45D9)" _elementtree.cpython-38-darwin.so
+codesign --entitlements entitlements.plist --timestamp -o runtime -s "Apple Development: Beth Cimini (27YQ9U45D9)" ./cpanalyst
 cd ..
-codesign --timestamp -s "Apple Development: alicelucas93@gmail.com (P6D4NCA4CT)" Info.plist
+codesign --timestamp -s "Apple Development: Beth Cimini (27YQ9U45D9)" Info.plist
 
 
