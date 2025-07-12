@@ -7,6 +7,7 @@ import PyInstaller.compat
 import PyInstaller.utils.hooks
 
 binaries = []
+binaries += PyInstaller.utils.hooks.collect_dynamic_libs("scipy")
 
 block_cipher = None
 
