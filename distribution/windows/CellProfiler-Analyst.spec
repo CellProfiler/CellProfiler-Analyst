@@ -7,7 +7,7 @@ import PyInstaller.compat
 import PyInstaller.utils.hooks
 
 binaries = []
-binaries += PyInstaller.utils.hooks.collect_dynamic_libs("scipy")
+binaries += PyInstaller.utils.hooks.collect_dynamic_libs("scipy.libs")
 
 block_cipher = None
 
@@ -15,6 +15,7 @@ datas = []
 
 datas += PyInstaller.utils.hooks.collect_data_files("bioformats")
 datas += PyInstaller.utils.hooks.collect_data_files("javabridge")
+datas += PyInstaller.utils.hooks.collect_data_files("scipy.libs")
 
 datas += [
     ("../../cpa/icons/*", "cpa/icons"),
