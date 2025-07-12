@@ -40,6 +40,14 @@ jobs:
           pip install --upgrade pip setuptools wheel
           pip install numpy==1.23.1 matplotlib==3.1.3
           pip install pyinstaller==4.10
+      # this is a separate step because we need to set the CPPFLAGS and LDFLAGS env variables *after* installing mysql, in the next step
+      - if: ${{ matrix.os == 'macos-13' }}
+        run: |
+          brew install mysql@8.0
+          # needed for mysql@8.0
+          # must be run PRIOR to the step its accessed
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-system-path
+          echo "/usr/local/opt/mysql@8.0/bin" >> $GITHUB_PATH
       - env:
           LDFLAGS: "-L/usr/local/opt/mysql@8.0/lib -L/usr/local/opt/openssl/lib"
           CERTIFICATE_OSX_APPLICATION: ${{ secrets.CERTIFICATE_OSX_APPLICATION }}
@@ -50,14 +58,6 @@ jobs:
         if: ${{ matrix.os == 'macos-13' }}
         run: |
           sed -i '' 's/4.0.0/3.0.4.1/' Info.plist
-          brew install mysql@8.0
-          # needed for mysql@8.0
-          # must be run PRIOR to the step its accessed
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-system-path
-          echo "/usr/local/opt/mysql@8.0/bin" >> $GITHUB_PATH
-        if: ${{ matrix.os == 'macos-13' }}
-        working-directory: ./distribution/macos
-        run: |
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
           chmod +x osx-codesign.sh && ./osx-codesign.sh
