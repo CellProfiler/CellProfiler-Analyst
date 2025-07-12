@@ -51,6 +51,13 @@ jobs:
         run: |
           sed -i '' 's/4.0.0/3.0.4.1/' Info.plist
           brew install mysql@8.0
+          # needed for mysql@8.0
+          # must be run PRIOR to the step its accessed
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-system-path
+          echo "/usr/local/opt/mysql@8.0/bin" >> $GITHUB_PATH
+        if: ${{ matrix.os == 'macos-13' }}
+        working-directory: ./distribution/macos
+        run: |
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
           chmod +x osx-codesign.sh && ./osx-codesign.sh
