@@ -60,6 +60,7 @@ jobs:
           sed -i '' 's/4.0.0/3.0.4.1/' Info.plist
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
+          echo "Finished add-osx-certificate"
           chmod +x osx-codesign.sh && ./osx-codesign.sh
           ditto -ck --keepParent --rsrc --sequesterRsrc ./dist/CellProfiler-Analyst.app ./dist/CellProfiler-Analyst-macOS-3.0.4.1.zip
         working-directory: ./distribution/macos
