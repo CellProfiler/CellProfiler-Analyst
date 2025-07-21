@@ -2,7 +2,11 @@
 
 cd ./dist/CellProfiler-Analyst.app/Contents/Resources
 sudo rm -r Home/legal/
-sudo codesign --timestamp -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" Home/lib/server/classes.jsa
+#sudo codesign --timestamp -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" Home/lib/server/classes.jsa
+find . -type f | xargs -I file codesign --timestamp -f -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" file
+cd ./dist/CellProfiler-Analyst.app/Contents/Frameworks
+sudo rm -r Home/legal/
+#sudo codesign --timestamp -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" Home/lib/server/classes.jsa
 find . -type f | xargs -I file codesign --timestamp -f -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" file
 cd ../MacOS
 find . -type f | xargs -I file sudo codesign --timestamp -f -s "Developer ID Application: Beth Cimini (27YQ9U45D9)" file
