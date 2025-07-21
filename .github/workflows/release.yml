@@ -63,7 +63,7 @@ jobs:
           PKG_CONFIG_PATH: /usr/local/opt/mysql@8.0/lib/pkgconfig
         if: ${{ matrix.os == 'macos-13' }}
         run: |
-          sed -i '' 's/4.0.0/3.0.4.1/' Info.plist
+          sed -i '' 's/4.0.0/3.0.5/' Info.plist
           make
           chmod +x add-osx-certificate.sh && ./add-osx-certificate.sh
           echo "Finished add-osx-certificate"
@@ -81,7 +81,7 @@ jobs:
         if: ${{ matrix.os == 'macos-13' }}
         run: |
           chmod +x osx-codesign.sh && ./osx-codesign.sh
-          ditto -ck --keepParent --rsrc --sequesterRsrc ./dist/CellProfiler-Analyst.app ./dist/CellProfiler-Analyst-macOS-3.0.4.1.zip
+          ditto -ck --keepParent --rsrc --sequesterRsrc ./dist/CellProfiler-Analyst.app ./dist/CellProfiler-Analyst-macOS-3.0.5.zip
         working-directory: ./distribution/macos
       - env:
           JDK_HOME: C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\11.0.20-8\x64
@@ -92,17 +92,17 @@ jobs:
       - if: ${{ matrix.os == 'windows-latest' }}
         run: |
           pyinstaller distribution/windows/CellProfiler-Analyst.spec
-          iscc /dMyAppVersion="3.0.4.1" "distribution/windows/CellProfiler-Analyst.iss"
+          iscc /dMyAppVersion="3.0.5" "distribution/windows/CellProfiler-Analyst.iss"
       - if: ${{ matrix.os == 'macos-13' }}
         uses: actions/upload-artifact@v4
         with:
-          name: CellProfiler-Analyst-macOS-3.0.4.1.zip
-          path: ./distribution/macos/dist/CellProfiler-Analyst-macOS-3.0.4.1.zip
+          name: CellProfiler-Analyst-macOS-3.0.5.zip
+          path: ./distribution/macos/dist/CellProfiler-Analyst-macOS-3.0.5.zip
       - if: ${{ matrix.os == 'windows-latest' }}
         uses: actions/upload-artifact@v4
         with:
-          name: CellProfiler-Analyst-Windows-3.0.4.1.exe
-          path: ./distribution/windows/Output/CellProfiler-Analyst-Windows-3.0.4.1.exe
+          name: CellProfiler-Analyst-Windows-3.0.5.exe
+          path: ./distribution/windows/Output/CellProfiler-Analyst-Windows-3.0.5.exe
     strategy:
       matrix:
         os: [macos-13, windows-latest]
@@ -124,25 +124,25 @@ jobs:
           tag_name: ${{ github.ref }}
       - uses: actions/download-artifact@v4
         with:
-          name: CellProfiler-Analyst-macOS-3.0.4.1.zip
+          name: CellProfiler-Analyst-macOS-3.0.5.zip
           path: ./
       - uses: actions/download-artifact@v4
         with:
-          name: CellProfiler-Analyst-Windows-3.0.4.1.exe
+          name: CellProfiler-Analyst-Windows-3.0.5.exe
           path: ./
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: actions/upload-release-asset@v1
         with:
           asset_content_type: application/zip
-          asset_name: CellProfiler-Analyst-macOS-3.0.4.1.zip
-          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-macOS-3.0.4.1.zip
+          asset_name: CellProfiler-Analyst-macOS-3.0.5.zip
+          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-macOS-3.0.5.zip
           upload_url: ${{ steps.create_release.outputs.upload_url }}
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: actions/upload-release-asset@v1
         with:
           asset_content_type: application/exe
-          asset_name: CellProfiler-Analyst-Windows-3.0.4.1.exe
-          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-Windows-3.0.4.1.exe
+          asset_name: CellProfiler-Analyst-Windows-3.0.5.exe
+          asset_path: /home/runner/work/CellProfiler-Analyst/CellProfiler-Analyst/CellProfiler-Analyst-Windows-3.0.5.exe
           upload_url: ${{ steps.create_release.outputs.upload_url }}
