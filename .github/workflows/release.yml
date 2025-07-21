@@ -17,7 +17,7 @@ jobs:
     name: build
     runs-on: ${{ matrix.os }}
     steps:
-      - if: ${{ matrix.os == 'windows-latest' }}
+      - if: ${{ matrix.os == 'windows-2019' }}
         uses: actions/cache@v3
         with:
           path: ~\AppData\Local\pip\Cache
@@ -89,7 +89,7 @@ jobs:
         run: |
           pip install cython
           pip install --editable .
-      - if: ${{ matrix.os == 'windows-latest' }}
+      - if: ${{ matrix.os == 'windows-2019' }}
         run: |
           pyinstaller distribution/windows/CellProfiler-Analyst.spec
           iscc /dMyAppVersion="3.0.4.1" "distribution/windows/CellProfiler-Analyst.iss"
@@ -98,14 +98,14 @@ jobs:
         with:
           name: CellProfiler-Analyst-macOS-3.0.4.1.zip
           path: ./distribution/macos/dist/CellProfiler-Analyst-macOS-3.0.4.1.zip
-      - if: ${{ matrix.os == 'windows-latest' }}
+      - if: ${{ matrix.os == 'windows-2019' }}
         uses: actions/upload-artifact@v4
         with:
           name: CellProfiler-Analyst-Windows-3.0.4.1.exe
           path: ./distribution/windows/Output/CellProfiler-Analyst-Windows-3.0.4.1.exe
     strategy:
       matrix:
-        os: [macos-13, windows-latest]
+        os: [macos-13, windows-2019]
         python-version: [ "3.8" ]
   upload:
     name: upload
