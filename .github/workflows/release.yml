@@ -8,7 +8,7 @@ on:
         required: false
         default: false
   push:
-    branches: [ master ]
+    #branches: [ master ]
     tags:
       - "*"
 
