@@ -306,7 +306,7 @@ class ReduxPanel(FigureCanvasWxAgg):
         self.Scores = scores
 
         # Add class PCA table to database
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().name
         if connID not in db.connections:
             db.connect()
         conn = db.connections[connID]

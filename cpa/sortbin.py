@@ -68,8 +68,8 @@ class CellMontageFrame(wx.Frame):
         # If no other windows are attached to the loader we shut it down and delete the tilecollection.
         if len(t.loader.notify_window) == 0:
             for thread in threading.enumerate():
-                if thread != threading.currentThread() and thread.getName().lower().startswith('tileloader'):
-                    logging.debug('Aborting thread %s' % thread.getName())
+                if thread != threading.current_thread() and thread.name.lower().startswith('tileloader'):
+                    logging.debug('Aborting thread %s' % thread.name)
                     try:
                         thread.abort()
                     except:
