@@ -140,7 +140,7 @@ class TileLoader(threading.Thread):
     '''
     def __init__(self, tc, notify_window):
         threading.Thread.__init__(self)
-        self.setName('TileLoader_%s'%(self.getName()))
+        self.setName('TileLoader_%s'%(self.name))
         self.notify_window = []
         if notify_window is not None:
             self.notify_window.append(notify_window)
@@ -165,7 +165,7 @@ class TileLoader(threading.Thread):
                     self.tile_collection.cv.release()
                     db = DBConnect()
                     db.CloseConnection()
-                    logging.info('%s aborted'%self.getName())
+                    logging.info('%s aborted'%self.name)
                     return
 
                 data = heappop(self.tile_collection.loadq)
@@ -228,7 +228,7 @@ if __name__ == "__main__":
         test.GetTileData((0,1,1), f)
 
     for t in threading.enumerate():
-        if t != threading.currentThread():
+        if t != threading.current_thread():
             t.abort()
     f.Destroy()
 

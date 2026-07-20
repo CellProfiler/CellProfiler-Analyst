@@ -66,7 +66,7 @@ def create_perobject_class_table(classifier, classNames, updater):
         try:
             logging.debug('Preparing data table...')
             # We need to pass a connection object to Pandas so it can do all the work for us.
-            connID = threading.currentThread().getName()
+            connID = threading.current_thread().name
             if connID not in db.connections:
                 db.connect()
             conn = db.connections[connID]

@@ -10,7 +10,7 @@ class ExecuteTestCase(unittest.TestCase):
         self.p = cpa.dbconnect.p
         self.db = cpa.dbconnect.DBConnect()
         cursor = Mock()
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().name
         self.db.connections[connID] = Mock()
         self.db.cursors[connID] = cursor
 
@@ -89,6 +89,3 @@ class UpdateWellsTestCase(unittest.TestCase):
         with patch.object(self.db, 'execute') as execute:
             self.db.UpdateWells("Per_Image", "User_BarColumn", "baz", [('A01',)])
             execute.assert_called_with('UPDATE Per_Image SET User_BarColumn="baz" WHERE Well IN ("A01")')
-
-
-

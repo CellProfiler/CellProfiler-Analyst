@@ -13,7 +13,7 @@ class TestOldFilter(unittest.TestCase):
         p.load_file(fn)
         self.db = cpa.dbconnect.DBConnect()
         cursor = Mock()
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().name
         self.db.connections[connID] = Mock()
         self.db.cursors[connID] = cursor
 
