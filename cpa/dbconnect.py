@@ -305,7 +305,7 @@ class DBConnect(metaclass=Singleton):
           temporary directory from the csv files specified by
           properties.image_csv_file and properties.object_csv_file
         '''
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
 
         logging.info('[%s] Connecting to the database...'%(connID))
         # If this connection ID already exists print a warning
@@ -470,7 +470,7 @@ class DBConnect(metaclass=Singleton):
 
     def CloseConnection(self, connID=None):
         if not connID:
-            connID = threading.currentThread().getName()
+            connID = threading.current_thread().getName()
         if connID in self.connections:
             try:
                 self.connections[connID].commit()
@@ -494,7 +494,7 @@ class DBConnect(metaclass=Singleton):
                 raise TypeError('Can\'t pass args to sqlite execute!')
 
         # Grab a new connection if this is a new thread
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
         if not connID in self.connections:
             self.connect()
 
@@ -529,7 +529,7 @@ class DBConnect(metaclass=Singleton):
                                   '\nSecond exception was: %s'%(connID, query, e, e2))
 
     def Commit(self):
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
         try:
             logging.debug('[%s] Commit'%(connID))
             self.connections[connID].commit()
@@ -539,7 +539,7 @@ class DBConnect(metaclass=Singleton):
             raise DBException('No such connection: "%s".\n' %(connID))
 
     def GetNextResult(self):
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
         try:
             return next(self.cursors[connID])
         except DBError() as e:
@@ -555,7 +555,7 @@ class DBConnect(metaclass=Singleton):
         Returns a list of results retrieved from the last execute query.
         NOTE: this function automatically called by execute.
         '''
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
         return list(self.cursors[connID].fetchall())
 
     def result_dtype(self):
@@ -564,7 +564,7 @@ class DBConnect(metaclass=Singleton):
         result can be stored.
         """
         #XXX: This doesn't work for SQLite... no cursor.description_flags
-        cursor = self.cursors[threading.currentThread().getName()]
+        cursor = self.cursors[threading.current_thread().getName()]
         descr = []
         for (name, type_code, display_size, internal_size, precision,
              scale, null_ok), flags in zip(cursor.description,
@@ -590,7 +590,7 @@ class DBConnect(metaclass=Singleton):
     def get_results_as_structured_array(self, n=None):
         #XXX: this doesn't work for SQLite
         col_names = self.GetResultColumnNames()
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
         records = []
         while True:
             r = self.cursors[connID].fetchmany(n)
@@ -1259,7 +1259,7 @@ class DBConnect(metaclass=Singleton):
 
     def GetResultColumnNames(self):
         ''' Returns the column names of the last query on this connection. '''
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
         return [x[0] for x in self.cursors[connID].description]
 
     def GetCellDataForRedux(self):
@@ -1534,7 +1534,7 @@ class DBConnect(metaclass=Singleton):
         total_bytes = float(total_bytes)
 
         base_bytes = 0
-        connID = threading.currentThread().getName()
+        connID = threading.current_thread().getName()
         # populate tables with contents of csv files
         for file in imcsvs:
             logging.info('Populating image table with data from %s'%file)
@@ -2059,7 +2059,7 @@ class Entity(object):
                     raise StopIteration
             except GeneratorExit:
                 print("GeneratorExit")
-                connID = threading.currentThread().getName()
+                connID = threading.current_thread().getName()
                 self.db.cursors[connID].fetchall()
 
     def __init__(self):
